@@ -1,0 +1,148 @@
+<script lang="ts">
+	import { currentInput, historyUp, historyDown } from '$lib/stores/terminal';
+	import { getCommandCompletions } from '$lib/commands';
+	import { onMount } from 'svelte';
+
+	interface Props {
+		prompt: string;
+		onSubmit: (command: string) => void;
+	}
+
+	let { prompt, onSubmit }: Props = $props();
+
+	let inputRef: HTMLInputElement;
+	let completions: string[] = $state([]);
+	let showCompletions = $state(false);
+	let selectedCompletion = $state(0);
+
+	onMount(() => {
+		// Focus input on mount
+		inputRef?.focus();
+	});
+
+	function handleKeyDown(event: KeyboardEvent) {
+		switch (event.key) {
+			case 'Enter':
+				event.preventDefault();
+				if (showCompletions && completions.length > 0) {
+					// Apply completion
+					const parts = $currentInput.split(' ');
+					parts[parts.length - 1] = completions[selectedCompletion];
+					currentInput.set(parts.join(' '));
+					showCompletions = false;
+				} else if ($currentInput.trim()) {
+					onSubmit($currentInput);
+					currentInput.set('');
+				}
+				break;
+
+			case 'ArrowUp':
+				event.preventDefault();
+				if (showCompletions) {
+					selectedCompletion = Math.max(0, selectedCompletion - 1);
+				} else {
+					historyUp();
+				}
+				break;
+
+			case 'ArrowDown':
+				event.preventDefault();
+				if (showCompletions) {
+					selectedCompletion = Math.min(completions.length - 1, selectedCompletion + 1);
+				} else {
+					historyDown();
+				}
+				break;
+
+			case 'Tab':
+				event.preventDefault();
+				handleTab();
+				break;
+
+			case 'Escape':
+				showCompletions = false;
+				break;
+
+			case 'c':
+				if (event.ctrlKey) {
+					event.preventDefault();
+					currentInput.set('');
+					showCompletions = false;
+				}
+				break;
+		}
+	}
+
+	function handleTab() {
+		const input = $currentInput;
+		const parts = input.split(' ');
+		const lastPart = parts[parts.length - 1];
+
+		// If at start, complete commands
+		if (parts.length === 1) {
+			const matches = getCommandCompletions(lastPart);
+			if (matches.length === 1) {
+				currentInput.set(matches[0] + ' ');
+				showCompletions = false;
+			} else if (matches.length > 1) {
+				completions = matches;
+				showCompletions = true;
+				selectedCompletion = 0;
+			}
+		}
+		// TODO: Add path completion for arguments
+	}
+
+	function handleInput() {
+		// Reset completions on input change
+		showCompletions = false;
+	}
+
+	// Keep input focused
+	function handleBlur() {
+		setTimeout(() => {
+			inputRef?.focus();
+		}, 10);
+	}
+</script>
+
+<div class="relative">
+	<div class="flex items-center gap-2">
+		<span class="whitespace-nowrap text-terminal-accent-green">{prompt}</span>
+		<input
+			bind:this={inputRef}
+			bind:value={$currentInput}
+			onkeydown={handleKeyDown}
+			oninput={handleInput}
+			onblur={handleBlur}
+			type="text"
+			class="flex-1 border-none bg-transparent text-terminal-text-primary caret-terminal-accent-orange outline-none"
+			spellcheck="false"
+			autocomplete="off"
+			autocapitalize="off"
+		/>
+		<span class="cursor-blink h-5 w-2 bg-terminal-accent-orange"></span>
+	</div>
+
+	<!-- Completions dropdown -->
+	{#if showCompletions && completions.length > 0}
+		<div class="absolute bottom-full left-0 mb-1 rounded border border-terminal-border bg-terminal-bg-secondary p-1">
+			{#each completions as completion, i}
+				<div
+					class="cursor-pointer rounded px-2 py-0.5 {i === selectedCompletion
+						? 'bg-terminal-bg-hover text-terminal-accent-orange'
+						: 'text-terminal-text-primary'}"
+					onclick={() => {
+						const parts = $currentInput.split(' ');
+						parts[parts.length - 1] = completion;
+						currentInput.set(parts.join(' ') + ' ');
+						showCompletions = false;
+						inputRef?.focus();
+					}}
+				>
+					{completion}
+				</div>
+			{/each}
+		</div>
+	{/if}
+</div>
