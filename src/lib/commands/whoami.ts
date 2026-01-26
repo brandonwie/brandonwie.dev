@@ -5,27 +5,27 @@ registerCommand('whoami', () => {
 	const output: OutputLine[] = [
 		{ type: 'text', content: '' },
 		{
-			type: 'success',
+			type: 'purple',
 			content: '  ██████╗ ██████╗  █████╗ ███╗   ██╗██████╗  ██████╗ ███╗   ██╗'
 		},
 		{
-			type: 'success',
+			type: 'purple',
 			content: '  ██╔══██╗██╔══██╗██╔══██╗████╗  ██║██╔══██╗██╔═══██╗████╗  ██║'
 		},
 		{
-			type: 'success',
+			type: 'purple',
 			content: '  ██████╔╝██████╔╝███████║██╔██╗ ██║██║  ██║██║   ██║██╔██╗ ██║'
 		},
 		{
-			type: 'success',
+			type: 'purple',
 			content: '  ██╔══██╗██╔══██╗██╔══██║██║╚██╗██║██║  ██║██║   ██║██║╚██╗██║'
 		},
 		{
-			type: 'success',
+			type: 'purple',
 			content: '  ██████╔╝██║  ██║██║  ██║██║ ╚████║██████╔╝╚██████╔╝██║ ╚████║'
 		},
 		{
-			type: 'success',
+			type: 'purple',
 			content: '  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝ ╚═╝  ╚═══╝'
 		},
 		{ type: 'text', content: '' },

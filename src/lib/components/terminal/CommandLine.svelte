@@ -126,10 +126,13 @@
 
 	<!-- Completions dropdown -->
 	{#if showCompletions && completions.length > 0}
-		<div class="absolute bottom-full left-0 mb-1 rounded border border-terminal-border bg-terminal-bg-secondary p-1">
+		<div class="absolute bottom-full left-0 mb-1 rounded border border-terminal-border bg-terminal-bg-secondary p-1" role="listbox">
 			{#each completions as completion, i}
-				<div
-					class="cursor-pointer rounded px-2 py-0.5 {i === selectedCompletion
+				<button
+					type="button"
+					role="option"
+					aria-selected={i === selectedCompletion}
+					class="block w-full cursor-pointer rounded px-2 py-0.5 text-left {i === selectedCompletion
 						? 'bg-terminal-bg-hover text-terminal-accent-orange'
 						: 'text-terminal-text-primary'}"
 					onclick={() => {
@@ -141,7 +144,7 @@
 					}}
 				>
 					{completion}
-				</div>
+				</button>
 			{/each}
 		</div>
 	{/if}

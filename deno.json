@@ -1,11 +1,10 @@
 {
   "tasks": {
-    "dev": "deno run -A npm:vite dev",
-    "build": "deno run -A npm:vite build",
-    "preview": "deno run -A npm:vite preview",
-    "check": "deno run -A npm:svelte-kit sync && deno run -A npm:svelte-check --tsconfig ./tsconfig.json",
-    "sync": "deno run --allow-read --allow-write scripts/sync-from-3b.ts",
-    "install": "npm install"
+    "dev": "npm run dev",
+    "build": "npm run build",
+    "preview": "npm run preview",
+    "check": "npm run check",
+    "sync": "deno run --allow-read --allow-write scripts/sync-from-3b.ts"
   },
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"],

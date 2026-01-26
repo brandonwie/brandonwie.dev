@@ -19,20 +19,25 @@
 				return 'text-terminal-accent-green';
 			case 'link':
 				return 'text-terminal-accent-cyan hover:underline cursor-pointer';
+			case 'purple':
+				return 'text-terminal-accent-purple';
 			default:
 				return 'text-terminal-text-primary';
 		}
 	}
 
-	function handleClick(line: OutputLine) {
-		if (line.link) {
-			if (line.link.startsWith('http') || line.link.startsWith('mailto')) {
-				window.open(line.link, '_blank', 'noopener,noreferrer');
-			} else {
-				// Internal link - navigate
-				window.location.href = line.link;
-			}
+	function getLinkHref(link: string): string {
+		if (link.startsWith('http') || link.startsWith('mailto')) {
+			return link;
 		}
+		return link;
+	}
+
+	function getLinkTarget(link: string): string | undefined {
+		if (link.startsWith('http') || link.startsWith('mailto')) {
+			return '_blank';
+		}
+		return undefined;
 	}
 </script>
 
@@ -46,15 +51,17 @@
 			<div class="prose-terminal prose max-w-none">
 				{line.content}
 			</div>
-		{:else}
-			<div
+		{:else if line.link}
+			<a
+				href={getLinkHref(line.link)}
+				target={getLinkTarget(line.link)}
+				rel={line.link.startsWith('http') ? 'noopener noreferrer' : undefined}
 				class={getLineClass(line.type)}
-				class:cursor-pointer={!!line.link}
-				onclick={() => handleClick(line)}
-				onkeydown={(e) => e.key === 'Enter' && handleClick(line)}
-				role={line.link ? 'link' : undefined}
-				tabindex={line.link ? 0 : undefined}
 			>
+				<pre class="m-0 whitespace-pre-wrap break-words font-mono">{line.content}</pre>
+			</a>
+		{:else}
+			<div class={getLineClass(line.type)}>
 				<pre class="m-0 whitespace-pre-wrap break-words font-mono">{line.content}</pre>
 			</div>
 		{/if}

@@ -13,35 +13,23 @@ interface PostModule {
 	};
 }
 
+// Pre-load all post modules
+const modules = import.meta.glob('../../../content/posts/**/*.md');
+
 export const load: PageLoad = async ({ params }) => {
-	try {
-		// Dynamic import of markdown file
-		const post = (await import(`../../../content/posts/**/${params.slug}.md`)) as PostModule;
-
-		return {
-			content: post.default,
-			meta: {
-				...post.metadata,
-				slug: params.slug
-			}
-		};
-	} catch {
-		// Try to find in any category directory
-		const modules = import.meta.glob('../../../content/posts/**/*.md');
-
-		for (const path of Object.keys(modules)) {
-			if (path.endsWith(`/${params.slug}.md`)) {
-				const post = (await modules[path]()) as PostModule;
-				return {
-					content: post.default,
-					meta: {
-						...post.metadata,
-						slug: params.slug
-					}
-				};
-			}
+	// Find the matching post by slug
+	for (const [path, resolver] of Object.entries(modules)) {
+		if (path.endsWith(`/${params.slug}.md`)) {
+			const post = (await resolver()) as PostModule;
+			return {
+				content: post.default,
+				meta: {
+					...post.metadata,
+					slug: params.slug
+				}
+			};
 		}
-
-		throw new Error(`Post not found: ${params.slug}`);
 	}
+
+	throw new Error(`Post not found: ${params.slug}`);
 };

@@ -88,7 +88,10 @@
 
 		<!-- Content -->
 		<div class="prose-terminal prose prose-invert max-w-none">
-			<svelte:component this={data.content} />
+			{#if data.content}
+				{@const Content = data.content}
+				<Content />
+			{/if}
 		</div>
 	</article>
 

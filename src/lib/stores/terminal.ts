@@ -7,7 +7,7 @@ export interface CommandHistoryEntry {
 }
 
 export interface OutputLine {
-	type: 'text' | 'error' | 'success' | 'directory' | 'file' | 'link' | 'markdown' | 'html';
+	type: 'text' | 'error' | 'success' | 'directory' | 'file' | 'link' | 'markdown' | 'html' | 'purple';
 	content: string;
 	link?: string;
 }

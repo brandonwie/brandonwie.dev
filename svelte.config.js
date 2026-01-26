@@ -30,7 +30,11 @@ const mdsvexOptions = {
 				]
 			});
 			const html = highlighter.codeToHtml(code, { lang, theme: 'github-dark' });
-			return `{@html \`${html.replace(/`/g, '\\`')}\`}`;
+			// Escape backticks and template literal syntax for Svelte
+			const escaped = html
+				.replace(/`/g, '&#96;')
+				.replace(/\${/g, '&#36;{');
+			return `{@html \`${escaped}\`}`;
 		}
 	}
 };
@@ -49,6 +53,12 @@ const config = {
 		}),
 		prerender: {
 			handleHttpError: 'warn'
+		},
+		alias: {
+			$components: 'src/lib/components',
+			$stores: 'src/lib/stores',
+			$commands: 'src/lib/commands',
+			$content: 'src/content'
 		}
 	}
 };
