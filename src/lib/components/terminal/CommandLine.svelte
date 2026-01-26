@@ -126,10 +126,10 @@
 	}
 </script>
 
-<div class="relative">
-	<div class="flex items-center gap-2">
-		<span class="whitespace-nowrap text-terminal-accent-green">{prompt}</span>
-		<div class="relative flex-1">
+<div class="relative min-w-0">
+	<div class="flex flex-wrap items-center gap-x-2 gap-y-1 md:flex-nowrap">
+		<span class="shrink-0 text-terminal-accent-green">{prompt}</span>
+		<div class="relative min-w-0 flex-1 basis-full md:basis-auto">
 			<!-- Hidden input for actual typing -->
 			<input
 				bind:this={inputRef}
@@ -147,11 +147,7 @@
 				autocapitalize="off"
 			/>
 			<!-- Visible text with block cursor -->
-			<div class="pointer-events-none flex whitespace-pre text-terminal-text-primary">
-				<span>{$currentInput.slice(0, cursorPosition)}</span>
-				<span class="cursor-block">{$currentInput[cursorPosition] || ' '}</span>
-				<span>{$currentInput.slice(cursorPosition + 1)}</span>
-			</div>
+			<div class="pointer-events-none break-all text-terminal-text-primary"><span class="whitespace-pre-wrap">{$currentInput.slice(0, cursorPosition)}</span><span class="cursor-block">{$currentInput[cursorPosition] || ' '}</span><span class="whitespace-pre-wrap">{$currentInput.slice(cursorPosition + 1)}</span></div>
 		</div>
 	</div>
 
