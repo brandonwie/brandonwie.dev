@@ -103,8 +103,10 @@
 		color: var(--accent-green);
 	}
 
-	/* Terminal cursor */
-	.cursor-blink {
+	/* Terminal block cursor */
+	.cursor-block {
+		background-color: var(--accent-orange);
+		color: var(--bg-primary);
 		animation: blink 1s step-end infinite;
 	}
 

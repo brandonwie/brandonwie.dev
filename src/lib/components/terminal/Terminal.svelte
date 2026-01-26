@@ -42,8 +42,9 @@
 		fs = buildFileSystem($posts);
 	});
 
-	// Show welcome message on mount
+	// Show welcome message on mount (clean slate)
 	onMount(() => {
+		clearOutput();
 		showWelcome();
 	});
 

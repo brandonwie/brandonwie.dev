@@ -14,11 +14,16 @@
 	let completions: string[] = $state([]);
 	let showCompletions = $state(false);
 	let selectedCompletion = $state(0);
+	let cursorPosition = $state(0);
 
 	onMount(() => {
 		// Focus input on mount
 		inputRef?.focus();
 	});
+
+	function updateCursorPosition() {
+		cursorPosition = inputRef?.selectionStart ?? $currentInput.length;
+	}
 
 	// Refocus when fuzzy finder closes
 	let wasFuzzyOpen = $state(false);
@@ -124,19 +129,30 @@
 <div class="relative">
 	<div class="flex items-center gap-2">
 		<span class="whitespace-nowrap text-terminal-accent-green">{prompt}</span>
-		<input
-			bind:this={inputRef}
-			bind:value={$currentInput}
-			onkeydown={handleKeyDown}
-			oninput={handleInput}
-			onblur={handleBlur}
-			type="text"
-			class="flex-1 border-none bg-transparent text-terminal-text-primary caret-terminal-accent-orange outline-none"
-			spellcheck="false"
-			autocomplete="off"
-			autocapitalize="off"
-		/>
-		<span class="cursor-blink h-5 w-2 bg-terminal-accent-orange"></span>
+		<div class="relative flex-1">
+			<!-- Hidden input for actual typing -->
+			<input
+				bind:this={inputRef}
+				bind:value={$currentInput}
+				onkeydown={handleKeyDown}
+				oninput={() => { handleInput(); updateCursorPosition(); }}
+				onblur={handleBlur}
+				onclick={updateCursorPosition}
+				onkeyup={updateCursorPosition}
+				onselect={updateCursorPosition}
+				type="text"
+				class="absolute inset-0 w-full border-none bg-transparent text-transparent caret-transparent outline-none"
+				spellcheck="false"
+				autocomplete="off"
+				autocapitalize="off"
+			/>
+			<!-- Visible text with block cursor -->
+			<div class="pointer-events-none flex whitespace-pre text-terminal-text-primary">
+				<span>{$currentInput.slice(0, cursorPosition)}</span>
+				<span class="cursor-block">{$currentInput[cursorPosition] || ' '}</span>
+				<span>{$currentInput.slice(cursorPosition + 1)}</span>
+			</div>
+		</div>
 	</div>
 
 	<!-- Completions dropdown -->

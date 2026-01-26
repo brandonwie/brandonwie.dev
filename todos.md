@@ -9,18 +9,25 @@
 - Deployed to Cloudflare Pages
 - Custom domain configured and working
 - GitHub repo: [brandonwie/brandonwie.dev](https://github.com/brandonwie/brandonwie.dev)
+- Added terminal-themed favicon (`>_`)
+- Fixed fuzzy finder focus management
+- Block cursor for terminal input (tracks actual position)
+- Backspace navigation on post pages
+- Clean slate terminal on return from posts
+- Improved fuzzy finder selection visibility
+- BRANDON ASCII art uses Claude Code orange
 
-**What's Next:** Add favicon, sync real content from 3B, verify all features.
+**What's Next:** Sync real content from 3B, verify all features in production.
 
 ---
 
 ## Immediate Next
 
-### 1. Add Favicon
+### ~~1. Add Favicon~~ ✓
 
-- [ ] Create favicon.ico (terminal/code themed)
-- [ ] Place in `static/favicon.ico`
-- [ ] Commit and push (auto-deploys)
+- [x] Created SVG favicon with `>_` prompt
+- [x] Placed in `static/favicon.svg`
+- [x] Committed and pushed (auto-deploying)
 
 ---
 
@@ -79,6 +86,13 @@ git push
 - [x] **Deployed to Cloudflare Pages** (2026-01-26)
 - [x] **Custom domain configured** - brandonwie.dev
 - [x] **GitHub repo created** - brandonwie/brandonwie.dev
+- [x] **Favicon added** - SVG with `>_` terminal prompt
+- [x] **Fuzzy finder focus fix** - proper focus management, ESC works, refocus on close
+- [x] **Block cursor** - terminal-style cursor at actual typing position
+- [x] **Backspace navigation** - press Backspace on post page to return
+- [x] **Clean slate terminal** - fresh welcome on return from posts
+- [x] **Fuzzy finder UX** - improved selection visibility with orange border
+- [x] **BRANDON ASCII** - changed from purple to Claude Code orange
 - [x] SvelteKit project setup with adapter-static
 - [x] Tailwind CSS with Claude Code terminal theme
 - [x] mdsvex for markdown with Shiki syntax highlighting
@@ -96,7 +110,7 @@ git push
 - [x] Sitemap (/sitemap.xml)
 - [x] Content sync script from 3B
 - [x] Path aliases ($lib, $components, $stores, $commands, $content)
-- [x] Neon purple BRANDON ASCII art
+- [x] BRANDON ASCII art (Claude Code orange)
 - [x] Production build verified
 - [x] 3B integration (symlinks, PROJECT-CONFIG, CLAUDE.md)
 
@@ -134,4 +148,7 @@ e57c7b4 feat: implement terminal commands
 4ea2f07 feat: add content routes and SEO features
 d565f6e fix: resolve build issues and add enhancements
 2edb122 chore: add 3B integration
+45fe29a docs: update todos with deployment instructions
+7730e46 feat: add terminal-themed favicon
+b6ba98f fix: improve fuzzy finder focus management
 ```

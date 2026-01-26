@@ -20,7 +20,7 @@
 			case 'link':
 				return 'text-terminal-accent-cyan hover:underline cursor-pointer';
 			case 'purple':
-				return 'text-terminal-accent-purple';
+				return 'text-terminal-accent-orange';
 			default:
 				return 'text-terminal-text-primary';
 		}

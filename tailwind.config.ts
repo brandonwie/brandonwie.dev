@@ -23,7 +23,7 @@ export default {
 						blue: '#6b9eff',
 						green: '#7ec699',
 						yellow: '#e5c07b',
-						purple: '#bf5af2',  // Neon purple - vibrant and glowing
+						purple: '#c678dd',  // Claude Code theme purple
 						cyan: '#56b6c2',
 						red: '#e06c75'
 					},

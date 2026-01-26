@@ -8,6 +8,18 @@
 		goto('/');
 	}
 
+	function handleKeyDown(event: KeyboardEvent) {
+		// Backspace to go back (unless user is typing in an input)
+		if (event.key === 'Backspace') {
+			const target = event.target as HTMLElement;
+			const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+			if (!isEditable) {
+				event.preventDefault();
+				goBack();
+			}
+		}
+	}
+
 	function formatDate(dateStr: string): string {
 		return new Date(dateStr).toLocaleDateString('en-US', {
 			year: 'numeric',
@@ -16,6 +28,8 @@
 		});
 	}
 </script>
+
+<svelte:window onkeydown={handleKeyDown} />
 
 <svelte:head>
 	<title>{data.meta.title} | Brandon Wie</title>

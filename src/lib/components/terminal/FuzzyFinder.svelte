@@ -128,9 +128,9 @@
 			{:else}
 				{#each results as result, i (result.item.slug)}
 					<div
-						class="cursor-pointer border-b border-terminal-border/50 px-4 py-3 last:border-b-0 {i === selectedIndex
-							? 'bg-terminal-bg-hover'
-							: ''}"
+						class="cursor-pointer border-b border-terminal-border/50 py-3 last:border-b-0 {i === selectedIndex
+							? 'border-l-2 border-l-terminal-accent-orange bg-terminal-accent-orange/10 pl-3.5 pr-4'
+							: 'px-4'}"
 						onclick={() => onSelect(result.item.slug)}
 						onkeydown={(e) => e.key === 'Enter' && onSelect(result.item.slug)}
 						role="option"
