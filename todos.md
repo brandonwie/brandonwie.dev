@@ -2,48 +2,21 @@
 
 ## Context for Next Session
 
-**Project Status:** Core build complete, ready for deployment.
+**Project Status:** Live in production at [brandonwie.dev](https://brandonwie.dev)
 
-**Last Session (2026-01-26):** Built entire terminal blog from scratch:
+**Last Session (2026-01-26):**
 
-- SvelteKit + Tailwind + mdsvex
-- Interactive CLI with Claude Code theme
-- Fuzzy finder, all commands working
-- Build verified: `npm run build` succeeds
-- 3B integration complete
+- Deployed to Cloudflare Pages
+- Custom domain configured and working
+- GitHub repo: [brandonwie/brandonwie.dev](https://github.com/brandonwie/brandonwie.dev)
 
-**What's Blocking:** Nothing - just needs deployment.
+**What's Next:** Add favicon, sync real content from 3B, verify all features.
 
 ---
 
-## Immediate Next (Deploy to Production)
+## Immediate Next
 
-### 1. Create GitHub Repository
-
-```bash
-cd ~/dev/personal/brandonwie.dev
-gh repo create brandonwie/brandonwie.dev --public --source=. --push
-```
-
-### 2. Connect to Cloudflare Pages
-
-1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → Pages
-2. Create new project → Connect to Git
-3. Select `brandonwie/brandonwie.dev`
-4. Build settings:
-   - Build command: `npm run build`
-   - Build output directory: `build`
-   - Root directory: `/`
-5. Deploy
-
-### 3. Set Custom Domain
-
-1. In Cloudflare Pages project → Custom domains
-2. Add `brandonwie.dev`
-3. DNS should auto-configure (domain already in Cloudflare)
-4. Verify HTTPS works
-
-### 4. Add Favicon
+### 1. Add Favicon
 
 - [ ] Create favicon.ico (terminal/code themed)
 - [ ] Place in `static/favicon.ico`
@@ -103,6 +76,9 @@ git push
 
 ## Completed
 
+- [x] **Deployed to Cloudflare Pages** (2026-01-26)
+- [x] **Custom domain configured** - brandonwie.dev
+- [x] **GitHub repo created** - brandonwie/brandonwie.dev
 - [x] SvelteKit project setup with adapter-static
 - [x] Tailwind CSS with Claude Code terminal theme
 - [x] mdsvex for markdown with Shiki syntax highlighting
