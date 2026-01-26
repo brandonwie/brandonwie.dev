@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	:root {
+		/* Claude Code Theme CSS Variables */
+		--bg-primary: #1a1a1a;
+		--bg-secondary: #2d2d2d;
+		--bg-hover: #353535;
+		--text-primary: #e5e5e5;
+		--text-muted: #888888;
+		--text-dim: #666666;
+		--accent-orange: #da7756;
+		--accent-blue: #6b9eff;
+		--accent-green: #7ec699;
+		--accent-yellow: #e5c07b;
+		--accent-purple: #c678dd;
+		--accent-cyan: #56b6c2;
+		--accent-red: #e06c75;
+		--border: #404040;
+	}
+
+	html {
+		font-family: 'JetBrains Mono', monospace;
+		background-color: var(--bg-primary);
+		color: var(--text-primary);
+	}
+
+	body {
+		margin: 0;
+		padding: 0;
+		min-height: 100vh;
+		background-color: var(--bg-primary);
+	}
+
+	/* Custom scrollbar for terminal aesthetic */
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: var(--bg-secondary);
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: var(--border);
+		border-radius: 4px;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: var(--text-dim);
+	}
+
+	/* Selection colors */
+	::selection {
+		background-color: var(--accent-orange);
+		color: var(--bg-primary);
+	}
+}
+
+@layer components {
+	/* Terminal prompt styling */
+	.prompt-user {
+		color: var(--accent-green);
+	}
+
+	.prompt-at {
+		color: var(--text-muted);
+	}
+
+	.prompt-host {
+		color: var(--accent-blue);
+	}
+
+	.prompt-path {
+		color: var(--accent-yellow);
+	}
+
+	.prompt-symbol {
+		color: var(--accent-orange);
+	}
+
+	/* Command output colors */
+	.output-directory {
+		color: var(--accent-yellow);
+	}
+
+	.output-file {
+		color: var(--accent-green);
+	}
+
+	.output-link {
+		color: var(--accent-cyan);
+	}
+
+	.output-error {
+		color: var(--accent-red);
+	}
+
+	.output-success {
+		color: var(--accent-green);
+	}
+
+	/* Terminal cursor */
+	.cursor-blink {
+		animation: blink 1s step-end infinite;
+	}
+
+	@keyframes blink {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0;
+		}
+	}
+
+	/* Fuzzy finder styling */
+	.fuzzy-overlay {
+		background-color: rgba(26, 26, 26, 0.95);
+		backdrop-filter: blur(4px);
+	}
+
+	.fuzzy-match {
+		color: var(--accent-orange);
+		font-weight: 600;
+	}
+
+	/* Code block enhancements */
+	pre {
+		border: 1px solid var(--border);
+		border-radius: 0.375rem;
+	}
+
+	code {
+		font-family: 'JetBrains Mono', monospace;
+	}
+}
+
+@layer utilities {
+	/* Terminal text effects */
+	.text-glow {
+		text-shadow: 0 0 10px currentColor;
+	}
+
+	/* Focus visible for accessibility */
+	.focus-terminal:focus-visible {
+		outline: 2px solid var(--accent-orange);
+		outline-offset: 2px;
+	}
+}
