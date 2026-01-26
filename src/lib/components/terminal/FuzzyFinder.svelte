@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import type { PostMetadata } from '$lib/stores/posts';
 	import { createPostsFuse, fuzzySearch, highlightMatches, type FuzzyResult } from '$lib/fuzzy';
 	import type Fuse from 'fuse.js';
@@ -18,9 +18,8 @@
 	let selectedIndex = $state(0);
 	let fuse: Fuse<PostMetadata>;
 
-	onMount(() => {
+	onMount(async () => {
 		fuse = createPostsFuse(posts);
-		inputRef?.focus();
 
 		// Initial results - show all posts sorted by date
 		results = posts
@@ -28,6 +27,10 @@
 			.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 			.slice(0, 10)
 			.map((post) => ({ item: post, score: 0 }));
+
+		// Wait for DOM to be ready, then focus
+		await tick();
+		inputRef?.focus();
 	});
 
 	function handleInput() {
@@ -77,7 +80,18 @@
 		}
 		return [{ text: result.item.title, highlighted: false }];
 	}
+
+	// Global escape handler to ensure ESC always works
+	function handleGlobalKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			event.stopPropagation();
+			onClose();
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleGlobalKeyDown} />
 
 <div
 	class="fuzzy-overlay fixed inset-0 z-50 flex items-start justify-center pt-24"

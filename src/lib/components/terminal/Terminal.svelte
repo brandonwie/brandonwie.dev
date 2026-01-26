@@ -54,7 +54,7 @@
 			{ type: 'text', content: '' },
 			{ type: 'text', content: "  Type 'help' for available commands" },
 			{ type: 'text', content: "  Type 'whoami' to learn about me" },
-			{ type: 'text', content: '  Press Ctrl+P for fuzzy search' },
+			{ type: 'text', content: '  Press Ctrl+P (or Cmd+P) for fuzzy search' },
 			{ type: 'text', content: '' }
 		]);
 	}

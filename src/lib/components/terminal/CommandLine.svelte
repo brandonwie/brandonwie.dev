@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { currentInput, historyUp, historyDown } from '$lib/stores/terminal';
+	import { currentInput, historyUp, historyDown, fuzzyFinderOpen } from '$lib/stores/terminal';
 	import { getCommandCompletions } from '$lib/commands';
 	import { onMount } from 'svelte';
 
@@ -18,6 +18,19 @@
 	onMount(() => {
 		// Focus input on mount
 		inputRef?.focus();
+	});
+
+	// Refocus when fuzzy finder closes
+	let wasFuzzyOpen = $state(false);
+	$effect(() => {
+		const isOpen = $fuzzyFinderOpen;
+		if (wasFuzzyOpen && !isOpen) {
+			// Fuzzy finder just closed, refocus terminal input
+			setTimeout(() => {
+				inputRef?.focus();
+			}, 50);
+		}
+		wasFuzzyOpen = isOpen;
 	});
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -98,10 +111,12 @@
 		showCompletions = false;
 	}
 
-	// Keep input focused
+	// Keep input focused (unless fuzzy finder is open)
 	function handleBlur() {
 		setTimeout(() => {
-			inputRef?.focus();
+			if (!$fuzzyFinderOpen) {
+				inputRef?.focus();
+			}
 		}, 10);
 	}
 </script>

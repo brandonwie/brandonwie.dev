@@ -136,7 +136,7 @@ registerCommand('help', (args) => {
 		{ type: 'text', content: '  grep <pattern>   Search post content' },
 		{ type: 'text', content: '  find <name>      Find by filename' },
 		{ type: 'text', content: '  search           Open fuzzy finder' },
-		{ type: 'text', content: '  Ctrl+P / Ctrl+K  Quick fuzzy search' },
+		{ type: 'text', content: '  Ctrl/Cmd+P/K     Quick fuzzy search' },
 		{ type: 'text', content: '' },
 		{ type: 'text', content: 'INFO:' },
 		{ type: 'text', content: '  whoami           About me' },
