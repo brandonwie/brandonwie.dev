@@ -147,3 +147,38 @@ Added full internationalization support and synced real content from 3B:
 | 7fd1f20 | feat: sync 8 posts with Korean translations |
 
 **Next:** Publish more posts, add newsletter signup
+
+---
+
+### 2026-01-28 (Session 2)
+
+**Giscus Comments Integration**
+
+Added GitHub Discussions-based comments using giscus:
+
+1. **Giscus Setup**
+   - Created `Blog Comments` category in GitHub Discussions
+   - Configured giscus.app with repo-id and category-id
+   - Selected "specific term" mapping for shared EN/KO threads
+
+2. **Implementation**
+   - Created `Giscus.svelte` component with dynamic script injection
+   - Uses post slug as discussion term (not pathname)
+   - Lazy loading, dark_dimmed theme, reactions enabled
+   - Added i18n messages for comments section title
+
+3. **Design Decision**
+   - EN (`/posts/slug`) and KO (`/ko/posts/slug`) share same comment thread
+   - Uses slug-based mapping so both languages contribute to one discussion
+
+4. **Bug Fix**
+   - Fixed Mermaid.svelte: `{variable}` in HTML comment was interpreted as Svelte expression
+   - Removed curly braces from comment text to fix build error
+
+**Commits:**
+
+| Hash | Description |
+| ---- | ----------- |
+| 847f7fb | feat: add Giscus comments to blog posts |
+
+**Next:** Newsletter signup, more posts
