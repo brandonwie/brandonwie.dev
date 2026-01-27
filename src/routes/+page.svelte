@@ -98,6 +98,17 @@
 </script>
 
 <!--
+  <svelte:head> - Override Document Title
+  ---------------------------------------
+  WHY: When navigating back from a post page (which sets its own title),
+  we need to explicitly reset the title to the home page default.
+  Without this, client-side navigation would leave the post's title in place.
+-->
+<svelte:head>
+	<title>Brandon Wie | Software Engineer</title>
+</svelte:head>
+
+<!--
   COMPONENT USAGE: Terminal
   -------------------------
   PROPS SYNTAX: `onNavigateToPost={handleNavigateToPost}`
