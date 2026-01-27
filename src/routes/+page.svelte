@@ -39,36 +39,23 @@
 	// LIFECYCLE - onMount
 	// -------------------
 	// `onMount` runs once when the component is first rendered to the DOM.
-	// WHY: We need to load posts after the component mounts (client-side only).
-	// IMPORTANT: onMount does NOT run during SSR (server-side rendering).
-	// For data that needs SSR, use `+page.ts` or `+page.server.ts` instead.
+	// WHY: We need to populate the posts store after the component mounts.
 	// REFERENCE: https://svelte.dev/docs/svelte/lifecycle-hooks#onMount
 	import { onMount } from 'svelte';
 
-	// LIFECYCLE: Load sample posts on mount
-	// -------------------------------------
-	// TODO: In production, this data should come from `+page.ts` load function
-	// for proper SSR and SEO. Currently using client-side sample data.
-	onMount(async () => {
-		// Sample posts - only include posts that actually exist
-		// TODO: In production, load from +page.ts for proper SSR
-		const samplePosts = [
-			{
-				slug: 'redis-caching-patterns',
-				title: 'Redis Caching Patterns for APIs',
-				description: 'Effective caching strategies for backend APIs using Redis',
-				date: '2026-01-15',
-				tags: ['redis', 'caching', 'backend'],
-				category: 'backend'
-			}
-		];
+	// PAGE DATA FROM +page.ts
+	// -----------------------
+	// `data` prop receives the return value from the `load` function in +page.ts.
+	// This data is loaded during SSR and hydrated on the client.
+	// REFERENCE: https://svelte.dev/docs/kit/load
+	let { data } = $props();
 
-		// STORE MUTATION
-		// --------------
-		// `posts.set(value)` replaces the entire store value.
-		// Other methods: `posts.update(fn)` for transforming current value.
-		// Subscribers (components using `$posts`) auto-update when store changes.
-		posts.set(samplePosts);
+	// LIFECYCLE: Populate posts store on mount
+	// ----------------------------------------
+	// The posts store is used by Terminal, FuzzyFinder, and commands.
+	// We populate it with real data from +page.ts load function.
+	onMount(() => {
+		posts.set(data.posts);
 	});
 
 	// EVENT HANDLER: Navigation callback for Terminal

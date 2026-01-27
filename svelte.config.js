@@ -26,6 +26,9 @@ const mdsvexOptions = {
 					'go',
 					'rust',
 					'dockerfile',
+					'hcl',
+					'terraform',
+					'mermaid',
 					'text'
 				]
 			});

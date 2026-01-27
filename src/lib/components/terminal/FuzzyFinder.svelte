@@ -53,8 +53,47 @@
 	let inputRef: HTMLInputElement;
 	let query = $state('');                     // Search query
 	let results: FuzzyResult[] = $state([]);    // Search results
-	let selectedIndex = $state(0);               // Currently selected result
+	let selectedIndex = $state(0);              // Currently selected result
 	let fuse: Fuse<PostMetadata>;               // Fuse.js instance (not reactive)
+
+	// RESULTS CONTAINER REF
+	// ---------------------
+	// WHAT: Reference to the scrollable results list container (<div> with overflow-y-auto).
+	// WHY:  Need direct DOM access to scroll selected items into view during keyboard navigation.
+	// HOW:  Bound via `bind:this={resultsContainerRef}` in template.
+	//       Container's children are the result items, accessed by index: children[selectedIndex].
+	let resultsContainerRef: HTMLDivElement;
+
+	// AUTO-SCROLL TO SELECTED ITEM ($effect)
+	// --------------------------------------
+	// WHAT: Reactive effect that scrolls the selected result item into view.
+	// WHY:  When user navigates with ↑/↓ keys beyond visible area, the selected item
+	//       would be hidden. This ensures the selection is always visible (like VS Code's Ctrl+P).
+	// HOW:  $effect() runs whenever its dependencies change (selectedIndex, results.length).
+	//
+	// SVELTE 5 $effect RUNE:
+	// - Automatically tracks reactive state read inside the function
+	// - Re-runs when any tracked state changes
+	// - Here it tracks: `resultsContainerRef`, `results.length`, `selectedIndex`
+	// - REFERENCE: https://svelte.dev/docs/svelte/$effect
+	//
+	// scrollIntoView OPTIONS:
+	// - `block: 'nearest'`: Only scrolls if element is outside visible area.
+	//   - If already visible → no scroll (prevents jarring jumps)
+	//   - If above viewport → scrolls up to show at top
+	//   - If below viewport → scrolls down to show at bottom
+	// - `behavior: 'smooth'`: Animates the scroll for better UX.
+	// - REFERENCE: https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView
+	$effect(() => {
+		if (resultsContainerRef && results.length > 0) {
+			// Access the selected item via container's children NodeList
+			// children[selectedIndex] corresponds to the result item at that index
+			const selectedElement = resultsContainerRef.children[selectedIndex] as HTMLElement;
+			if (selectedElement) {
+				selectedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+			}
+		}
+	});
 
 	// INITIALIZATION ON MOUNT
 	// -----------------------
@@ -225,12 +264,23 @@
 		</div>
 
 		<!--
-		  RESULTS LIST
-		  ------------
-		  max-h-96: Limit height with scroll
-		  overflow-y-auto: Show scrollbar when needed
+		  RESULTS LIST CONTAINER
+		  ----------------------
+		  WHAT: Scrollable container for search results.
+		  WHY:  Limits visible results to prevent modal from growing too tall.
+		  HOW:  CSS constraints + overflow creates scrollable region.
+
+		  STYLING:
+		  - max-h-96: Maximum height of 24rem (384px) - shows ~5-6 results
+		  - overflow-y-auto: Shows vertical scrollbar only when content exceeds max-h
+
+		  DOM REFERENCE (bind:this):
+		  - `bind:this={resultsContainerRef}` stores DOM element reference
+		  - Used by $effect to access children for auto-scrolling
+		  - Children are the result item divs, indexed 0 to results.length-1
+		  - REFERENCE: https://svelte.dev/docs/svelte/bind#bind:this
 		-->
-		<div class="max-h-96 overflow-y-auto">
+		<div bind:this={resultsContainerRef} class="max-h-96 overflow-y-auto">
 			{#if results.length === 0}
 				<div class="p-4 text-center text-terminal-text-muted">
 					No posts found

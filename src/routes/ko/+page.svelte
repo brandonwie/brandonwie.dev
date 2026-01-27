@@ -11,21 +11,12 @@
 	import { onMount } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
 
-	onMount(async () => {
-		// Sample posts - only include posts that actually exist
-		// TODO: In production, load from +page.ts for proper SSR
-		const samplePosts = [
-			{
-				slug: 'redis-caching-patterns',
-				title: 'Redis Caching Patterns for APIs',
-				description: 'Effective caching strategies for backend APIs using Redis',
-				date: '2026-01-15',
-				tags: ['redis', 'caching', 'backend'],
-				category: 'backend'
-			}
-		];
+	// PAGE DATA FROM +page.ts
+	let { data } = $props();
 
-		posts.set(samplePosts);
+	// Populate posts store with Korean posts
+	onMount(() => {
+		posts.set(data.posts);
 	});
 
 	function handleNavigateToPost(slug: string) {
