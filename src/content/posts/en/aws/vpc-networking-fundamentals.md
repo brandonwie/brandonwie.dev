@@ -20,12 +20,9 @@ references:
     type: official
 ---
 
-# AWS VPC Networking Fundamentals
-
-Comprehensive guide to AWS VPC networking concepts, CIDR notation, and network
-architecture patterns.
-
----
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
 
 ## IP Addressing and CIDR
 
@@ -158,7 +155,7 @@ only).
 
 **Critical placement rule**: NAT Gateway must be in a **public subnet**.
 
-```mermaid
+<Mermaid code={`
 flowchart LR
     subgraph Private["Private Subnet"]
         EC2["EC2 Instance"]
@@ -168,11 +165,10 @@ flowchart LR
     end
     IGW["Internet Gateway"]
     Internet["Internet"]
-
     EC2 --> NAT
     NAT --> IGW
     IGW --> Internet
-```
+`} />
 
 ```terraform
 # EIP for NAT Gateway

@@ -25,11 +25,9 @@ references:
     type: official
 ---
 
-# AWS VPC 네트워킹 기초
-
-AWS VPC 네트워킹 개념, CIDR 표기법, 네트워크 아키텍처 패턴을 정리한 가이드입니다.
-
----
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
 
 ## IP 주소와 CIDR
 
@@ -160,7 +158,7 @@ NAT Gateway는 private 서브넷의 리소스가 인터넷에 접근할 수 있�
 
 **중요한 배치 규칙**: NAT Gateway는 **public 서브넷**에 있어야 합니다.
 
-```mermaid
+<Mermaid code={`
 flowchart LR
     subgraph Private["Private 서브넷"]
         EC2["EC2 인스턴스"]
@@ -170,11 +168,10 @@ flowchart LR
     end
     IGW["Internet Gateway"]
     Internet["인터넷"]
-
     EC2 --> NAT
     NAT --> IGW
     IGW --> Internet
-```
+`} />
 
 ```terraform
 # NAT Gateway용 EIP

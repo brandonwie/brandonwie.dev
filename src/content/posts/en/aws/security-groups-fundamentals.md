@@ -20,13 +20,6 @@ references:
     type: official
 ---
 
-# AWS Security Groups Fundamentals
-
-Security Groups are virtual firewalls for AWS resources, controlling inbound
-(ingress) and outbound (egress) traffic at the instance level.
-
----
-
 ## Core Concepts
 
 ### Stateful Firewall

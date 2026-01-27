@@ -214,15 +214,72 @@ function transformFrontmatter(
   return target;
 }
 
+/**
+ * Clean the markdown body for blog publication.
+ *
+ * IMPORTANT: Remove H1 title and first paragraph (description) from body.
+ *
+ * WHY: The blog page layout (src/routes/posts/[slug]/+page.svelte) renders
+ * both `data.meta.title` as <h1> and `data.meta.description` as <p> from
+ * frontmatter. If we keep these in the body, they appear twice on the page.
+ *
+ * The sync process:
+ * 1. extractTitle() → pulls H1 from body → stores in frontmatter.title
+ * 2. extractDescription() → pulls first paragraph → stores in frontmatter.description
+ * 3. cleanBody() → removes both from body to prevent duplication
+ *
+ * Page layout renders: frontmatter.title + frontmatter.description + body
+ * So body should start with the first ## section, not # title.
+ */
 function cleanBody(body: string): string {
-  // Remove 3B-specific sections
   let cleaned = body;
+
+  // Remove H1 title (already extracted to frontmatter.title)
+  // The page layout renders frontmatter.title as <h1>, so body shouldn't have it
+  cleaned = cleaned.replace(/^#\s+.+\n+/, "");
+
+  // Remove the first paragraph after H1 (already used as description in frontmatter)
+  // Match: first non-empty line that's not a heading, code block, quote, or list
+  const lines = cleaned.split("\n");
+  let foundFirstParagraph = false;
+  const filteredLines: string[] = [];
+
+  for (const line of lines) {
+    // Skip empty lines at the start
+    if (!foundFirstParagraph && line.trim() === "") {
+      continue;
+    }
+
+    // Skip the first paragraph line (description)
+    if (
+      !foundFirstParagraph &&
+      line.trim() &&
+      !line.startsWith("#") &&
+      !line.startsWith("```") &&
+      !line.startsWith(">") &&
+      !line.startsWith("-") &&
+      !line.startsWith("---")
+    ) {
+      foundFirstParagraph = true;
+      continue; // Skip this line (it's the description)
+    }
+
+    // Keep everything else
+    if (foundFirstParagraph || line.trim() === "") {
+      filteredLines.push(line);
+    }
+  }
+
+  cleaned = filteredLines.join("\n");
 
   // Remove related sections (handled by frontmatter)
   cleaned = cleaned.replace(/##\s*Related[\s\S]*?(?=##|$)/gi, "");
 
   // Remove when_used sections
   cleaned = cleaned.replace(/##\s*When This Came Up[\s\S]*?(?=##|$)/gi, "");
+
+  // Remove horizontal rules at the start (often after title/description)
+  cleaned = cleaned.replace(/^[\s\n]*---[\s\n]+/, "");
 
   // Clean up multiple blank lines
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n");

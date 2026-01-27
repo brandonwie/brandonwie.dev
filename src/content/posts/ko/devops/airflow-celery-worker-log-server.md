@@ -27,10 +27,6 @@ references:
     type: official
 ---
 
-# Airflow Celery Worker 로그 서버 설정
-
-CeleryExecutor를 쓰면서 워커가 별도 머신에 있으면, 웹서버가 HTTP로 워커에서 로그를 가져와야 합니다. 워커의 hostname이 제대로 설정되지 않으면 로그 URL에 호스트가 비어버립니다.
-
 ## 문제 상황
 
 Airflow UI에서 task 로그를 볼 때 이런 에러가 나옵니다:

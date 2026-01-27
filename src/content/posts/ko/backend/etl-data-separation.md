@@ -23,11 +23,11 @@ references:
     type: official
 ---
 
-# ETL 데이터 분리 전략
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
 
 ## 문제
-
-자동화된 ETL 데이터와 수동으로 복구한 백필 데이터를 같은 S3 경로에 섞어두면 여러 문제가 생깁니다:
 
 1. **데이터 출처 추적 불가** - 자동화 데이터인지 수동 데이터인지 구분이 안 됨
 2. **처리 제어 어려움** - 일일 ETL이 백필 데이터를 실수로 처리할 수 있음
@@ -130,16 +130,14 @@ python cli.py amplitude-etl \
 
 ## 데이터 흐름도
 
-```mermaid
+<Mermaid code={`
 flowchart LR
-    A[Amplitude Export] -->|자동 저장| B[s3://.../{PROJECT_ID}/]
+    A[Amplitude Export] -->|자동 저장| B[s3://.../PROJECT_ID/]
     B -->|일일 ETL| C[s3://.../event/]
-
-    D[Backfill API] -->|수동 저장| E[s3://.../{PROJECT_ID}-backfill/]
+    D[Backfill API] -->|수동 저장| E[s3://.../PROJECT_ID-backfill/]
     E -->|수동 ETL| C
-
     C --> F[Analytics/BI 도구]
-```
+`} />
 
 ## 장점 정리
 

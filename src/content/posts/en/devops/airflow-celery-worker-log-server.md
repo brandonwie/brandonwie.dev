@@ -24,12 +24,6 @@ references:
     type: official
 ---
 
-# Airflow Celery Worker Log Server Configuration
-
-When using CeleryExecutor with workers on separate machines, the webserver needs
-to fetch logs from workers via HTTP. If the worker's hostname isn't configured
-correctly, the log URL will have an empty host.
-
 ## The Problem
 
 Error in Airflow UI when viewing task logs:

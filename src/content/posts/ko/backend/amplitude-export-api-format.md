@@ -22,10 +22,6 @@ references:
     type: official
 ---
 
-# Amplitude Export API 응답 포맷
-
-Amplitude Export API는 **중첩 압축 형식**으로 데이터를 반환하는데, 이게 좀 헷갈리기 쉽습니다.
-
 ## 헷갈리는 파일 확장자
 
 파일명이 `*.json.gz`인데, 단순한 gzip 파일이 아닙니다:

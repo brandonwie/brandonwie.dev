@@ -28,8 +28,6 @@ references:
     type: official
 ---
 
-# RRULE EXDATE 타임존 파싱 문제
-
 ## 문제 상황
 
 `rrule` JavaScript 라이브러리의 `rrulestr()` 함수가 다음 상황에서 제대로 동작하지 않습니다:

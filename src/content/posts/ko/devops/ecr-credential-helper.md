@@ -25,9 +25,9 @@ references:
     type: official
 ---
 
-# ECR Credential Helper
-
-ECR 인증을 자동으로 처리해주는 AWS 공식 도구입니다. 만료되는 토큰을 저장하는 대신, 필요할 때마다 새 토큰을 가져옵니다.
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
 
 ## 문제 상황
 
@@ -58,21 +58,20 @@ ECR 토큰은 12시간 후에 만료됩니다. 토큰을 저장해두면 다음�
 
 ## 동작 원리
 
-```mermaid
+<Mermaid code={`
 sequenceDiagram
     participant Docker as Docker Client
     participant Helper as docker-credential-ecr-login
     participant STS as AWS STS
     participant ECR as ECR Registry
-
     Docker->>Docker: ~/.docker/config.json 읽기
-    Note over Docker: credHelpers → ecr-login 확인
+    Note over Docker: credHelpers - ecr-login 확인
     Docker->>Helper: registry 인증 정보 요청
     Helper->>STS: aws ecr get-authorization-token
-    STS-->>Helper: 새 토큰 (12시간 유효)
+    STS-->>Helper: 새 토큰 12시간 유효
     Helper-->>Docker: username + password 반환
     Docker->>ECR: 새 인증 정보로 Pull
-```
+`} />
 
 ## 설정 방법
 

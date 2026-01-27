@@ -22,9 +22,9 @@ references:
     type: official
 ---
 
-# 바이너리 체크섬 검증
-
-SHA256 체크섬을 사용해서 다운로드한 바이너리가 변조되지 않았는지 검증하는 방법입니다.
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
 
 ## 문제 상황
 
@@ -57,13 +57,13 @@ RUN curl -sL "https://example.com/binary" -o /usr/local/bin/binary \
 
 ## 동작 원리
 
-```mermaid
+<Mermaid code={`
 flowchart LR
     Download["바이너리 다운로드"] --> Compute["SHA256 계산"]
     Compute --> Compare{"예상값과 일치?"}
     Compare -->|Yes| Install["바이너리 설치"]
-    Compare -->|No| Fail["빌드 실패 ❌"]
-```
+    Compare -->|No| Fail["빌드 실패"]
+`} />
 
 ## 예상 체크섬 구하기
 

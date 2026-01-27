@@ -19,11 +19,6 @@ references:
     type: official
 ---
 
-# Amplitude Export API Response Format
-
-The Amplitude Export API returns data in a **nested compression format** that's
-easy to misunderstand.
-
 ## The Misleading Extension
 
 Files are named `*.json.gz` but they're NOT simple gzip files:

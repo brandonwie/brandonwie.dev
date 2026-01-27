@@ -23,8 +23,6 @@ references:
     type: official
 ---
 
-# RRULE EXDATE Parsing with Timezone
-
 ## Problem
 
 The `rrule` JavaScript library's `rrulestr()` function fails when:

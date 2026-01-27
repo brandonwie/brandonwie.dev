@@ -17,9 +17,9 @@ references:
     type: official
 ---
 
-# Binary Checksum Verification
-
-Verify downloaded binaries haven't been tampered with using SHA256 checksums.
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
 
 ## The Problem
 
@@ -52,13 +52,13 @@ RUN curl -sL "https://example.com/binary" -o /usr/local/bin/binary \
 
 ## How It Works
 
-```mermaid
+<Mermaid code={`
 flowchart LR
     Download["Download Binary"] --> Compute["Compute SHA256"]
     Compute --> Compare{"Match Expected?"}
     Compare -->|Yes| Install["Install Binary"]
-    Compare -->|No| Fail["Build Fails ❌"]
-```
+    Compare -->|No| Fail["Build Fails"]
+`} />
 
 ## Getting the Expected Checksum
 

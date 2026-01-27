@@ -25,12 +25,6 @@ references:
     type: official
 ---
 
-# AWS Security Group 기초
-
-Security Group은 AWS 리소스의 가상 방화벽으로, 인스턴스 레벨에서 인바운드(ingress)와 아웃바운드(egress) 트래픽을 제어합니다.
-
----
-
 ## 핵심 개념
 
 ### Stateful 방화벽

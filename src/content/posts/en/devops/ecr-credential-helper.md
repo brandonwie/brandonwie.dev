@@ -22,9 +22,9 @@ references:
     type: official
 ---
 
-# ECR Credential Helper
-
-AWS's official solution for automatic ECR authentication. Instead of storing tokens that expire, it fetches fresh tokens on-demand.
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
 
 ## The Problem
 
@@ -55,21 +55,20 @@ NEW WAY (Credential helper):
 
 ## How It Works
 
-```mermaid
+<Mermaid code={`
 sequenceDiagram
     participant Docker as Docker Client
     participant Helper as docker-credential-ecr-login
     participant STS as AWS STS
     participant ECR as ECR Registry
-
     Docker->>Docker: Read ~/.docker/config.json
-    Note over Docker: Sees credHelpers → ecr-login
+    Note over Docker: Sees credHelpers - ecr-login
     Docker->>Helper: Get credentials for registry
     Helper->>STS: aws ecr get-authorization-token
-    STS-->>Helper: Fresh token (valid 12h)
+    STS-->>Helper: Fresh token valid 12h
     Helper-->>Docker: Return username + password
     Docker->>ECR: Pull with fresh credentials
-```
+`} />
 
 ## Configuration
 

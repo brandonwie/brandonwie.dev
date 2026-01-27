@@ -20,11 +20,11 @@ references:
     type: official
 ---
 
-# ETL Data Separation Strategy
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
 
 ## Problem
-
-Mixing regular ETL data with manually recovered backfill data in the same S3 path makes it hard to:
 
 1. **Track data sources** - Can't distinguish automated vs manual data
 2. **Control processing** - Daily ETL may accidentally process backfilled data
@@ -127,16 +127,14 @@ python cli.py amplitude-etl \
 
 ## Data Flow Diagram
 
-```mermaid
+<Mermaid code={`
 flowchart LR
-    A[Amplitude Export] -->|Auto Save| B[s3://.../{PROJECT_ID}/]
+    A[Amplitude Export] -->|Auto Save| B[s3://.../PROJECT_ID/]
     B -->|Daily ETL| C[s3://.../event/]
-
-    D[Backfill API] -->|Manual Save| E[s3://.../{PROJECT_ID}-backfill/]
+    D[Backfill API] -->|Manual Save| E[s3://.../PROJECT_ID-backfill/]
     E -->|Manual ETL| C
-
     C --> F[Analytics/BI Tools]
-```
+`} />
 
 ## Benefits
 
