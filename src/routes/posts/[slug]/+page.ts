@@ -1,7 +1,14 @@
 import type { PageLoad } from './$types';
+import type { Component } from 'svelte';
 
+// POST MODULE TYPE
+// ----------------
+// mdsvex compiles markdown files into Svelte components.
+// Each .md file exports:
+// - default: The Svelte component (rendered content)
+// - metadata: Frontmatter parsed as an object
 interface PostModule {
-	default: unknown;
+	default: Component;  // Svelte component type for proper TypeScript inference
 	metadata: {
 		title: string;
 		description: string;
