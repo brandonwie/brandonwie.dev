@@ -2,8 +2,8 @@
 	/**
 	 * Language Toggle Component
 	 *
-	 * Fixed-position toggle button in top-right corner.
-	 * Switches between English (EN) and Korean (KR).
+	 * Inline toggle button for EN/KR switching.
+	 * Designed to be placed inside headers for proper alignment.
 	 *
 	 * Uses URL path to detect locale (works with SSG).
 	 */
@@ -27,10 +27,10 @@
 
 <a
 	href={toggleUrl}
-	class="fixed top-4 right-4 z-50 font-mono text-sm px-3 py-2 bg-terminal-bg-secondary border border-terminal-border rounded text-terminal-text-muted no-underline transition-all duration-200 hover:border-terminal-accent-orange"
+	class="font-mono text-xs px-2 py-1 bg-terminal-bg-primary border border-terminal-border rounded text-terminal-text-muted no-underline transition-all duration-200 hover:border-terminal-accent-orange shrink-0"
 	aria-label={isKorean ? 'Switch to English' : '한국어로 전환'}
 >
 	<span class={!isKorean ? 'text-terminal-accent-orange font-semibold' : ''}>EN</span>
-	<span class="mx-1 opacity-50">/</span>
+	<span class="mx-0.5 opacity-50">/</span>
 	<span class={isKorean ? 'text-terminal-accent-orange font-semibold' : ''}>KR</span>
 </a>

@@ -24,6 +24,7 @@
 	import type { PageData } from './$types';
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
+	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -116,24 +117,16 @@
 <div class="min-h-screen bg-terminal-bg-primary">
 	<!-- Header -->
 	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
-		<div class="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-			<!--
-			  <button> vs <a> for navigation
-			  ------------------------------
-			  Here we use <button> because goBack() might do more than just navigate
-			  (e.g., use history.back() in the future). For simple links, prefer <a>.
-
-			  ACCESSIBILITY: buttons are for actions, links are for navigation.
-			  In this case, it's a bit of both - navigating via an action.
-			-->
+		<div class="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
 			<button
 				onclick={goBack}
-				class="flex items-center gap-2 text-terminal-text-muted transition-colors hover:text-terminal-accent-orange"
+				class="flex items-center gap-2 text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0"
 			>
 				<span>←</span>
-				<span>{m.back_to_terminal()}</span>
+				<span class="hidden sm:inline">{m.back_to_terminal()}</span>
 			</button>
-			<a href="/" class="text-terminal-accent-orange">brandonwie.dev</a>
+			<a href="/" class="text-terminal-accent-orange truncate hidden sm:block">brandonwie.dev</a>
+			<LanguageToggle />
 		</div>
 	</header>
 

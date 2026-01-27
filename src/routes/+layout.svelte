@@ -32,9 +32,6 @@
 	// Tailwind CSS with custom terminal theme variables
 	import '../app.css';
 
-	// Language toggle for i18n
-	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
-
 	// Paraglide for i18n
 	import { page } from '$app/state';
 	import { locales, localizeHref } from '$lib/paraglide/runtime';
@@ -97,8 +94,6 @@
   REFERENCE: https://svelte.dev/docs/svelte/snippet#Passing-snippets-to-components
 -->
 <div class="min-h-screen bg-terminal-bg-primary text-terminal-text-primary font-mono">
-	<!-- Language toggle in top-right corner -->
-	<LanguageToggle />
 	{@render children()}
 </div>
 

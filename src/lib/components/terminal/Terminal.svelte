@@ -25,6 +25,7 @@
 	import CommandLine from './CommandLine.svelte';
 	import Output from './Output.svelte';
 	import FuzzyFinder from './FuzzyFinder.svelte';
+	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 
 	// SVELTE STORES - Shared State
 	// ----------------------------
@@ -238,14 +239,17 @@
 	  Classic macOS-style window decoration with traffic light buttons.
 	  Pure decoration - buttons don't do anything.
 	-->
-	<div class="flex items-center gap-2 border-b border-terminal-border bg-terminal-bg-secondary px-4 py-2">
-		<div class="flex gap-1.5">
-			<!-- Traffic light buttons (close, minimize, maximize) -->
-			<div class="h-3 w-3 rounded-full bg-terminal-accent-red"></div>
-			<div class="h-3 w-3 rounded-full bg-terminal-accent-yellow"></div>
-			<div class="h-3 w-3 rounded-full bg-terminal-accent-green"></div>
+	<div class="flex items-center justify-between gap-2 border-b border-terminal-border bg-terminal-bg-secondary px-4 py-2">
+		<div class="flex items-center gap-2 min-w-0">
+			<div class="flex gap-1.5 shrink-0">
+				<!-- Traffic light buttons (close, minimize, maximize) -->
+				<div class="h-3 w-3 rounded-full bg-terminal-accent-red"></div>
+				<div class="h-3 w-3 rounded-full bg-terminal-accent-yellow"></div>
+				<div class="h-3 w-3 rounded-full bg-terminal-accent-green"></div>
+			</div>
+			<span class="ml-2 text-sm text-terminal-text-muted truncate hidden sm:inline">visitor@brandonwie.dev</span>
 		</div>
-		<span class="ml-2 text-sm text-terminal-text-muted">visitor@brandonwie.dev</span>
+		<LanguageToggle />
 	</div>
 
 	<!--

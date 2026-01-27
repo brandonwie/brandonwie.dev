@@ -14,10 +14,10 @@
   REFERENCE: https://svelte.dev/docs/kit/load
 -->
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
+	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -46,27 +46,16 @@
 <div class="min-h-screen bg-terminal-bg-primary">
 	<!-- Header with back navigation -->
 	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
-		<div class="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-			<!--
-			  <a> vs goto()
-			  -------------
-			  For navigation, prefer <a> tags when possible:
-			  - Accessible (right-click, open in new tab)
-			  - SEO-friendly (crawlers follow links)
-			  - Works without JavaScript
-
-			  Use goto() for:
-			  - Programmatic navigation (after form submit, etc.)
-			  - When you need to prevent default behavior
-			-->
+		<div class="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
 			<a
 				href="/"
-				class="flex items-center gap-2 text-terminal-text-muted transition-colors hover:text-terminal-accent-orange"
+				class="flex items-center gap-2 text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0"
 			>
 				<span>←</span>
-				<span>{m.back_to_terminal()}</span>
+				<span class="hidden sm:inline">{m.back_to_terminal()}</span>
 			</a>
-			<a href="/" class="text-terminal-accent-orange">brandonwie.dev</a>
+			<a href="/" class="text-terminal-accent-orange truncate hidden sm:block">brandonwie.dev</a>
+			<LanguageToggle />
 		</div>
 	</header>
 
