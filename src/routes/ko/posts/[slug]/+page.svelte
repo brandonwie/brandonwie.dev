@@ -10,6 +10,7 @@
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
+	import Giscus from '$lib/components/Giscus.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -137,6 +138,9 @@
 				<Content />
 			{/if}
 		</div>
+
+		<!-- Comments (uses same slug for shared EN/KO thread) -->
+		<Giscus slug={data.meta.slug} lang="ko" />
 	</article>
 
 	<footer class="border-t border-terminal-border py-8">

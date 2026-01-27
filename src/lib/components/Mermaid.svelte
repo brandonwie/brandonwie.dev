@@ -30,8 +30,8 @@
 	`} />
 	```
 
-	NOTE: Curly braces in mermaid code (like {variable}) will be interpreted
-	as Svelte expressions. Either escape them or avoid using braces in labels.
+	NOTE: Curly braces in mermaid code will be interpreted as Svelte expressions.
+	Either escape them or avoid using braces in labels.
 
 	REFERENCES:
 	- MDsveX + Mermaid issue: https://github.com/pngwn/MDsveX/issues/737
