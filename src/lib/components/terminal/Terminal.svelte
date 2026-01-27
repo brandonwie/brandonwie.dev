@@ -247,7 +247,7 @@
 				<div class="h-3 w-3 rounded-full bg-terminal-accent-yellow"></div>
 				<div class="h-3 w-3 rounded-full bg-terminal-accent-green"></div>
 			</div>
-			<span class="ml-2 text-sm text-terminal-text-muted truncate hidden sm:inline">visitor@brandonwie.dev</span>
+			<span class="ml-2 text-sm text-terminal-text-muted truncate">visitor@brandonwie.dev</span>
 		</div>
 		<LanguageToggle />
 	</div>
