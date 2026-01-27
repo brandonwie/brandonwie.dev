@@ -32,6 +32,13 @@
 	// Tailwind CSS with custom terminal theme variables
 	import '../app.css';
 
+	// Language toggle for i18n
+	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
+
+	// Paraglide for i18n
+	import { page } from '$app/state';
+	import { locales, localizeHref } from '$lib/paraglide/runtime';
+
 	// SVELTE 5 RUNES: $props()
 	// ------------------------
 	// `$props()` replaces Svelte 4's `export let` for declaring component props.
@@ -65,6 +72,9 @@
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content="Brandon Wie | Software Engineer" />
 	<meta name="twitter:description" content="Software engineering insights, tutorials, and learnings" />
+	<!-- RSS Feeds -->
+	<link rel="alternate" type="application/rss+xml" title="Brandon Wie (English)" href="https://brandonwie.dev/rss.xml" />
+	<link rel="alternate" type="application/rss+xml" title="Brandon Wie (한국어)" href="https://brandonwie.dev/ko/rss.xml" />
 </svelte:head>
 
 <!--
@@ -87,5 +97,14 @@
   REFERENCE: https://svelte.dev/docs/svelte/snippet#Passing-snippets-to-components
 -->
 <div class="min-h-screen bg-terminal-bg-primary text-terminal-text-primary font-mono">
+	<!-- Language toggle in top-right corner -->
+	<LanguageToggle />
 	{@render children()}
+</div>
+
+<!-- Hidden links for SSG prerendering - allows SvelteKit to crawl all locale versions -->
+<div style="display:none">
+	{#each locales as locale}
+		<a href={localizeHref(page.url.pathname, { locale })}>{locale}</a>
+	{/each}
 </div>

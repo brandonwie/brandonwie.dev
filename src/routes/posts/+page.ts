@@ -24,7 +24,8 @@ export interface PostEntry {
 }
 
 export const load: PageLoad = async () => {
-	const modules = import.meta.glob('../../content/posts/**/*.md');
+	// Load only English posts
+	const modules = import.meta.glob('../../content/posts/en/**/*.md');
 	const posts: PostEntry[] = [];
 
 	for (const [path, resolver] of Object.entries(modules)) {

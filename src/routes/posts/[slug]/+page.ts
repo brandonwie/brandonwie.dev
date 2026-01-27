@@ -20,8 +20,8 @@ interface PostModule {
 	};
 }
 
-// Pre-load all post modules
-const modules = import.meta.glob('../../../content/posts/**/*.md');
+// Pre-load English post modules
+const modules = import.meta.glob('../../../content/posts/en/**/*.md');
 
 export const load: PageLoad = async ({ params }) => {
 	// Find the matching post by slug

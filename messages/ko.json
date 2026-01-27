@@ -1,0 +1,15 @@
+{
+	"site_title": "Brandon Wie | 소프트웨어 엔지니어",
+	"site_description": "소프트웨어 엔지니어링 인사이트, 튜토리얼, 배움",
+	"posts_title": "모든 글",
+	"posts_description": "Brandon Wie의 모든 블로그 글",
+	"back_to_terminal": "터미널로 돌아가기",
+	"no_posts": "아직 글이 없습니다. 곧 돌아와주세요!",
+	"translation_notice": "이 글은 아직 한국어로 번역되지 않았습니다.",
+	"view_in_english": "영어로 보기",
+	"request_translation": "번역 요청하기",
+	"language_switch_to_korean": "한국어로 전환",
+	"language_switch_to_english": "Switch to English",
+	"published": "발행일",
+	"updated": "수정일"
+}

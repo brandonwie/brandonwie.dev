@@ -15,24 +15,45 @@ interface PostModule {
 
 const siteUrl = 'https://brandonwie.dev';
 const siteName = 'Brandon Wie';
-const siteDescription = 'Software engineering insights, tutorials, and learnings';
+const siteDescription = '소프트웨어 엔지니어링 인사이트, 튜토리얼, 배움';
 
 export const prerender = true;
 
 export const GET: RequestHandler = async () => {
-	// Load only English posts for the main RSS feed
-	const modules = import.meta.glob('../../content/posts/en/**/*.md');
-	const posts: { slug: string; metadata: PostModule['metadata'] }[] = [];
+	// Load Korean posts first, then English as fallback
+	const koModules = import.meta.glob('../../../content/posts/ko/**/*.md');
+	const enModules = import.meta.glob('../../../content/posts/en/**/*.md');
 
-	for (const [path, resolver] of Object.entries(modules)) {
+	const posts: { slug: string; metadata: PostModule['metadata']; lang: string }[] = [];
+	const koSlugs = new Set<string>();
+
+	// Load Korean posts
+	for (const [path, resolver] of Object.entries(koModules)) {
 		const post = (await resolver()) as PostModule;
 		const slug = path.split('/').pop()?.replace('.md', '') ?? '';
 
 		if (post.metadata.draft) continue;
 
+		koSlugs.add(slug);
 		posts.push({
 			slug,
-			metadata: post.metadata
+			metadata: post.metadata,
+			lang: 'ko'
+		});
+	}
+
+	// Load English posts as fallback (for posts without Korean translation)
+	for (const [path, resolver] of Object.entries(enModules)) {
+		const post = (await resolver()) as PostModule;
+		const slug = path.split('/').pop()?.replace('.md', '') ?? '';
+
+		if (post.metadata.draft) continue;
+		if (koSlugs.has(slug)) continue; // Skip if Korean exists
+
+		posts.push({
+			slug,
+			metadata: post.metadata,
+			lang: 'en'
 		});
 	}
 
@@ -44,9 +65,9 @@ export const GET: RequestHandler = async () => {
   <channel>
     <title>${siteName}</title>
     <description>${siteDescription}</description>
-    <link>${siteUrl}</link>
-    <atom:link href="${siteUrl}/rss.xml" rel="self" type="application/rss+xml"/>
-    <language>en-us</language>
+    <link>${siteUrl}/ko</link>
+    <atom:link href="${siteUrl}/ko/rss.xml" rel="self" type="application/rss+xml"/>
+    <language>ko</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     ${posts
 			.map(
@@ -54,8 +75,8 @@ export const GET: RequestHandler = async () => {
     <item>
       <title><![CDATA[${post.metadata.title}]]></title>
       <description><![CDATA[${post.metadata.description}]]></description>
-      <link>${siteUrl}/posts/${post.slug}</link>
-      <guid isPermaLink="true">${siteUrl}/posts/${post.slug}</guid>
+      <link>${siteUrl}/ko/posts/${post.slug}</link>
+      <guid isPermaLink="true">${siteUrl}/ko/posts/${post.slug}</guid>
       <pubDate>${new Date(post.metadata.date).toUTCString()}</pubDate>
       ${post.metadata.tags.map((tag) => `<category>${tag}</category>`).join('\n      ')}
     </item>`

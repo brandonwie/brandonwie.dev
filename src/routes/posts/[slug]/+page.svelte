@@ -22,27 +22,20 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
+	import { m } from '$lib/paraglide/messages';
+	import { getLocale } from '$lib/paraglide/runtime';
 
-	// Receive data from +page.ts load function
-	// `data.meta` = Post metadata (title, description, date, tags, etc.)
-	// `data.content` = The Svelte component generated from markdown by mdsvex
 	let { data }: { data: PageData } = $props();
 
-	// Navigation helper
 	function goBack() {
 		goto('/');
 	}
 
-	// KEYBOARD EVENT HANDLER
-	// ----------------------
-	// WHY: UX improvement - let users press Backspace to go back.
-	// GUARD: Only trigger if user isn't typing in an input/textarea.
-	// This is a common pattern for keyboard shortcuts in SPAs.
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Backspace') {
 			const target = event.target as HTMLElement;
-			// Check if user is typing in an editable element
-			const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+			const isEditable =
+				target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 			if (!isEditable) {
 				event.preventDefault();
 				goBack();
@@ -50,9 +43,10 @@
 		}
 	}
 
-	// Date formatting utility
+	// Locale-aware date formatting
 	function formatDate(dateStr: string): string {
-		return new Date(dateStr).toLocaleDateString('en-US', {
+		const locale = getLocale();
+		return new Date(dateStr).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
 			year: 'numeric',
 			month: 'long',
 			day: 'numeric'
@@ -113,6 +107,10 @@
 	<meta name="twitter:description" content={data.meta.description} />
 	<!-- Canonical URL for SEO (prevents duplicate content issues) -->
 	<link rel="canonical" href="https://brandonwie.dev/posts/{data.meta.slug}" />
+	<!-- hreflang for multilingual SEO -->
+	<link rel="alternate" hreflang="en" href="https://brandonwie.dev/posts/{data.meta.slug}" />
+	<link rel="alternate" hreflang="ko" href="https://brandonwie.dev/ko/posts/{data.meta.slug}" />
+	<link rel="alternate" hreflang="x-default" href="https://brandonwie.dev/posts/{data.meta.slug}" />
 </svelte:head>
 
 <div class="min-h-screen bg-terminal-bg-primary">
@@ -133,7 +131,7 @@
 				class="flex items-center gap-2 text-terminal-text-muted transition-colors hover:text-terminal-accent-orange"
 			>
 				<span>←</span>
-				<span>Back to terminal</span>
+				<span>{m.back_to_terminal()}</span>
 			</button>
 			<a href="/" class="text-terminal-accent-orange">brandonwie.dev</a>
 		</div>
@@ -177,7 +175,7 @@
 				</time>
 				{#if data.meta.updated && data.meta.updated !== data.meta.date}
 					<span>•</span>
-					<span>Updated {formatDate(data.meta.updated)}</span>
+					<span>{m.updated()} {formatDate(data.meta.updated)}</span>
 				{/if}
 			</div>
 		</header>
@@ -218,7 +216,7 @@
 				onclick={goBack}
 				class="text-terminal-text-muted transition-colors hover:text-terminal-accent-orange"
 			>
-				← Back to terminal
+				← {m.back_to_terminal()}
 			</button>
 		</div>
 	</footer>

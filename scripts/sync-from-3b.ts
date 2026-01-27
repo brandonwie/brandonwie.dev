@@ -21,7 +21,7 @@ import { basename, dirname, join } from "https://deno.land/std@0.220.0/path/mod.
 
 // Configuration
 const SOURCE_DIR = Deno.env.get("HOME") + "/dev/personal/3b/knowledge";
-const TARGET_DIR = "./src/content/posts";
+const TARGET_DIR = "./src/content/posts/en";
 const EXCLUDED_CATEGORIES = ["moba"]; // Company-specific content (backup filter)
 
 // ============================================================================
@@ -66,6 +66,7 @@ interface TargetFrontmatter {
   tags: string[];
   category: string;
   draft: boolean;
+  lang: string;
   references?: { url: string; title: string; type: string }[];
 }
 
@@ -198,6 +199,7 @@ function transformFrontmatter(
     tags: source.tags,
     category,
     draft: source.status !== "completed",
+    lang: "en",
   };
 
   // Include simplified references for blog
