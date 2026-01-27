@@ -50,7 +50,8 @@
 	// TODO: In production, this data should come from `+page.ts` load function
 	// for proper SSR and SEO. Currently using client-side sample data.
 	onMount(async () => {
-		// Sample posts - will be replaced with actual content from markdown files
+		// Sample posts - only include posts that actually exist
+		// TODO: In production, load from +page.ts for proper SSR
 		const samplePosts = [
 			{
 				slug: 'redis-caching-patterns',
@@ -59,22 +60,6 @@
 				date: '2026-01-15',
 				tags: ['redis', 'caching', 'backend'],
 				category: 'backend'
-			},
-			{
-				slug: 'kubernetes-pod-lifecycle',
-				title: 'Understanding Kubernetes Pod Lifecycle',
-				description: 'Deep dive into how Kubernetes manages pod states',
-				date: '2026-01-10',
-				tags: ['kubernetes', 'devops', 'containers'],
-				category: 'kubernetes'
-			},
-			{
-				slug: 'terraform-best-practices',
-				title: 'Terraform Best Practices for AWS',
-				description: 'Organizing and scaling Terraform configurations',
-				date: '2026-01-05',
-				tags: ['terraform', 'aws', 'iac'],
-				category: 'devops'
 			}
 		];
 

@@ -34,7 +34,7 @@ const commandHelp: Record<string, { usage: string; description: string; examples
 	grep: {
 		usage: 'grep <pattern>',
 		description: 'Search posts by content',
-		examples: ['grep kubernetes', 'grep "api design"']
+		examples: ['grep redis', 'grep "caching patterns"']
 	},
 	search: {
 		usage: 'search [pattern]',
