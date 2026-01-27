@@ -4,17 +4,26 @@
 	import { onMount } from 'svelte';
 
 	interface Props {
-		prompt: string;
+		cwd: string;
 		onSubmit: (command: string) => void;
 	}
 
-	let { prompt, onSubmit }: Props = $props();
+	let { cwd, onSubmit }: Props = $props();
+
+	// Full prompt for desktop, short for mobile
+	const fullPrompt = $derived(`visitor@brandonwie.dev:${cwd}$`);
+	const shortPrompt = $derived(`${cwd}$`);
 
 	let inputRef: HTMLInputElement;
 	let completions: string[] = $state([]);
 	let showCompletions = $state(false);
 	let selectedCompletion = $state(0);
 	let cursorPosition = $state(0);
+
+	// Expose focus method for parent components
+	export function focus() {
+		inputRef?.focus();
+	}
 
 	onMount(() => {
 		// Focus input on mount
@@ -126,11 +135,15 @@
 	}
 </script>
 
-<div class="relative min-w-0">
-	<div class="flex flex-wrap items-center gap-x-2 gap-y-1 md:flex-nowrap">
-		<span class="shrink-0 text-terminal-accent-green">{prompt}</span>
-		<div class="relative min-w-0 flex-1 basis-full md:basis-auto">
-			<!-- Hidden input for actual typing -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<div class="relative min-w-0" onclick={() => inputRef?.focus()} role="textbox" tabindex="-1">
+	<div class="flex items-center gap-x-2">
+		<!-- Short prompt on mobile, full prompt on desktop -->
+		<span class="shrink-0 text-terminal-accent-green md:hidden">{shortPrompt}</span>
+		<span class="hidden shrink-0 text-terminal-accent-green md:inline">{fullPrompt}</span>
+		<div class="relative min-w-0 flex-1">
+			<!-- svelte-ignore a11y_autofocus -->
+			<!-- Hidden input for actual typing - autofocus is intentional for terminal UX -->
 			<input
 				bind:this={inputRef}
 				bind:value={$currentInput}
@@ -141,10 +154,12 @@
 				onkeyup={updateCursorPosition}
 				onselect={updateCursorPosition}
 				type="text"
-				class="absolute inset-0 w-full border-none bg-transparent text-transparent caret-transparent outline-none"
+				class="absolute inset-0 z-10 h-full w-full border-none bg-transparent caret-transparent outline-none"
+				style="color: transparent; -webkit-text-fill-color: transparent; font-size: 16px;"
 				spellcheck="false"
 				autocomplete="off"
 				autocapitalize="off"
+				autofocus
 			/>
 			<!-- Visible text with block cursor -->
 			<div class="pointer-events-none break-all text-terminal-text-primary"><span class="whitespace-pre-wrap">{$currentInput.slice(0, cursorPosition)}</span><span class="cursor-block">{$currentInput[cursorPosition] || ' '}</span><span class="whitespace-pre-wrap">{$currentInput.slice(cursorPosition + 1)}</span></div>

@@ -35,6 +35,7 @@
 	let { onNavigateToPost }: Props = $props();
 
 	let terminalRef: HTMLDivElement;
+	let commandLineRef: { focus: () => void };
 	let fs: FSNode = $state(buildFileSystem([]));
 
 	// Rebuild filesystem when posts change
@@ -147,10 +148,13 @@
 		<span class="ml-2 text-sm text-terminal-text-muted">visitor@brandonwie.dev</span>
 	</div>
 
-	<!-- Terminal Body -->
+	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+	<!-- Terminal Body - clicking focuses input for better UX -->
 	<div
 		bind:this={terminalRef}
 		class="flex-1 overflow-y-auto p-4 font-mono text-sm leading-relaxed"
+		onclick={() => commandLineRef?.focus()}
+		role="log"
 	>
 		<Output lines={$outputBuffer} />
 	</div>
@@ -158,7 +162,8 @@
 	<!-- Command Input -->
 	<div class="border-t border-terminal-border bg-terminal-bg-secondary p-4">
 		<CommandLine
-			prompt={formatPrompt($cwd)}
+			bind:this={commandLineRef}
+			cwd={$cwd}
 			onSubmit={handleCommand}
 		/>
 	</div>

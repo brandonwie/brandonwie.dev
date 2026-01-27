@@ -4,9 +4,9 @@
 
 - [x] Project initialized with 3B integration
 - [x] Core terminal functionality complete
-- [ ] First deployment to Cloudflare Pages
+- [x] First deployment to Cloudflare Pages
 - [ ] 10 posts published
-- [ ] Custom domain live
+- [x] Custom domain live
 
 ## Session Log
 
@@ -62,3 +62,35 @@ Built the complete personal blog with interactive terminal UI:
 | d565f6e | Build fixes + enhancements |
 
 **Next:** Deploy to Cloudflare Pages
+
+---
+
+### 2026-01-27
+
+**Mobile UX Improvements**
+
+Fixed mobile web issues and improved terminal responsiveness:
+
+1. **Mobile Input Fix**
+   - Added `z-10` to ensure input receives touch events
+   - Added `font-size: 16px` to prevent iOS Safari zoom
+   - Added `-webkit-text-fill-color: transparent` for better mobile compatibility
+   - Added `autofocus` attribute for focus on page load
+
+2. **Responsive Prompt**
+   - Mobile: `~$` (short, fits on one line with input)
+   - Desktop: `visitor@brandonwie.dev:~$` (full prompt)
+   - Uses Tailwind responsive classes (`md:hidden`/`md:inline`)
+
+3. **Click-to-Focus**
+   - Clicking anywhere on terminal body focuses input
+   - Exposed `focus()` method from CommandLine component
+   - Better UX for both desktop and mobile
+
+**Commits:**
+
+| Hash | Description |
+| ---- | ----------- |
+| TBD | fix: mobile input and responsive prompt |
+
+**Next:** Sync real content from 3B

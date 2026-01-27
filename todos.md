@@ -4,18 +4,13 @@
 
 **Project Status:** Live in production at [brandonwie.dev](https://brandonwie.dev)
 
-**Last Session (2026-01-26):**
+**Last Session (2026-01-27):**
 
-- Deployed to Cloudflare Pages
-- Custom domain configured and working
-- GitHub repo: [brandonwie/brandonwie.dev](https://github.com/brandonwie/brandonwie.dev)
-- Added terminal-themed favicon (`>_`)
-- Fixed fuzzy finder focus management
-- Block cursor for terminal input (tracks actual position)
-- Backspace navigation on post pages
-- Clean slate terminal on return from posts
-- Improved fuzzy finder selection visibility
-- BRANDON ASCII art uses Claude Code orange
+- Fixed mobile input not receiving touch events (z-index, font-size 16px)
+- Added autofocus on page load
+- Responsive prompt: `~$` on mobile, full `visitor@brandonwie.dev:~$` on desktop
+- Fixed command line wrapping - prompt and input stay on same line
+- Click anywhere on terminal body to focus input
 
 **What's Next:** Sync real content from 3B, verify all features in production.
 
@@ -64,7 +59,7 @@ git push
 - [ ] /posts/[slug] pages render correctly
 - [ ] RSS feed at /rss.xml
 - [ ] Sitemap at /sitemap.xml
-- [ ] Mobile responsive
+- [x] Mobile responsive (input works, responsive prompt)
 
 ---
 
@@ -93,6 +88,9 @@ git push
 - [x] **Clean slate terminal** - fresh welcome on return from posts
 - [x] **Fuzzy finder UX** - improved selection visibility with orange border
 - [x] **BRANDON ASCII** - changed from purple to Claude Code orange
+- [x] **Mobile input fix** - z-index, font-size 16px, autofocus (2026-01-27)
+- [x] **Responsive prompt** - `~$` on mobile, full prompt on desktop (2026-01-27)
+- [x] **Click-to-focus** - click terminal body to focus input (2026-01-27)
 - [x] SvelteKit project setup with adapter-static
 - [x] Tailwind CSS with Claude Code terminal theme
 - [x] mdsvex for markdown with Shiki syntax highlighting
