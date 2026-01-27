@@ -1,6 +1,6 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
-import { mdsvex } from 'mdsvex';
+import { mdsvex } from 'mdsvex'; // markdown processor for Svelte
 import rehypeSlug from 'rehype-slug';
 import remarkGfm from 'remark-gfm';
 

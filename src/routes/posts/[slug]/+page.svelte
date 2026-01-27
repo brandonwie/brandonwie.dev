@@ -1,17 +1,47 @@
+<!--
+  /posts/[slug]/+page.svelte - Dynamic Post Detail Page
+  =====================================================
+
+  WHAT: Displays individual blog post content.
+  WHY:  Each post needs its own URL for direct linking and SEO.
+  HOW:  Uses dynamic route parameter [slug] to identify which post to show.
+
+  DYNAMIC ROUTES (SvelteKit):
+  - `[slug]` in the folder name creates a dynamic route parameter.
+  - URL `/posts/redis-caching` → `params.slug = 'redis-caching'`
+  - The +page.ts load function receives `params` and fetches the right post.
+
+  REFERENCE: https://svelte.dev/docs/kit/routing#Advanced-routing
+
+  LOAD FUNCTION FLOW:
+  1. User visits /posts/my-post-slug
+  2. +page.ts load({ params }) runs with params.slug = 'my-post-slug'
+  3. Load function finds the post and returns { meta, content }
+  4. This component receives it as `data` prop
+-->
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 
+	// Receive data from +page.ts load function
+	// `data.meta` = Post metadata (title, description, date, tags, etc.)
+	// `data.content` = The Svelte component generated from markdown by mdsvex
 	let { data }: { data: PageData } = $props();
 
+	// Navigation helper
 	function goBack() {
 		goto('/');
 	}
 
+	// KEYBOARD EVENT HANDLER
+	// ----------------------
+	// WHY: UX improvement - let users press Backspace to go back.
+	// GUARD: Only trigger if user isn't typing in an input/textarea.
+	// This is a common pattern for keyboard shortcuts in SPAs.
 	function handleKeyDown(event: KeyboardEvent) {
-		// Backspace to go back (unless user is typing in an input)
 		if (event.key === 'Backspace') {
 			const target = event.target as HTMLElement;
+			// Check if user is typing in an editable element
 			const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 			if (!isEditable) {
 				event.preventDefault();
@@ -20,6 +50,7 @@
 		}
 	}
 
+	// Date formatting utility
 	function formatDate(dateStr: string): string {
 		return new Date(dateStr).toLocaleDateString('en-US', {
 			year: 'numeric',
@@ -29,25 +60,58 @@
 	}
 </script>
 
+<!--
+  <svelte:window> - Global Event Binding
+  --------------------------------------
+  WHAT: Binds event listeners to the `window` object.
+  WHY:  Keyboard shortcuts need to work anywhere on the page, not just focused elements.
+  HOW:  `onkeydown={handler}` is Svelte 5 syntax (was `on:keydown` in Svelte 4).
+
+  CLEANUP: Svelte automatically removes the listener when component is destroyed.
+  This prevents memory leaks - you don't need manual removeEventListener().
+
+  REFERENCE: https://svelte.dev/docs/svelte/svelte-window
+-->
 <svelte:window onkeydown={handleKeyDown} />
 
+<!--
+  <svelte:head> - SEO Meta Tags for Article
+  -----------------------------------------
+  DYNAMIC VALUES: Use `{expression}` to insert JavaScript values.
+  This page overrides the root layout's meta tags with post-specific content.
+
+  ARTICLE SCHEMA (Open Graph):
+  - og:type="article" tells social platforms this is an article
+  - article:published_time, article:modified_time for date metadata
+  - article:tag for categorization
+-->
 <svelte:head>
 	<title>{data.meta.title} | Brandon Wie</title>
 	<meta name="description" content={data.meta.description} />
+	<!-- Open Graph (Facebook, LinkedIn, etc.) -->
 	<meta property="og:title" content={data.meta.title} />
 	<meta property="og:description" content={data.meta.description} />
 	<meta property="og:type" content="article" />
 	<meta property="og:url" content="https://brandonwie.dev/posts/{data.meta.slug}" />
 	<meta property="article:published_time" content={data.meta.date} />
+	<!--
+	  CONDITIONAL RENDERING in head
+	  -----------------------------
+	  {#if} blocks work inside <svelte:head> too.
+	  Only add updated time if it exists and differs from publish date.
+	-->
 	{#if data.meta.updated}
 		<meta property="article:modified_time" content={data.meta.updated} />
 	{/if}
+	<!-- Loop through tags to add each as an article:tag -->
 	{#each data.meta.tags as tag}
 		<meta property="article:tag" content={tag} />
 	{/each}
+	<!-- Twitter Card -->
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={data.meta.title} />
 	<meta name="twitter:description" content={data.meta.description} />
+	<!-- Canonical URL for SEO (prevents duplicate content issues) -->
 	<link rel="canonical" href="https://brandonwie.dev/posts/{data.meta.slug}" />
 </svelte:head>
 
@@ -55,6 +119,15 @@
 	<!-- Header -->
 	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
 		<div class="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
+			<!--
+			  <button> vs <a> for navigation
+			  ------------------------------
+			  Here we use <button> because goBack() might do more than just navigate
+			  (e.g., use history.back() in the future). For simple links, prefer <a>.
+
+			  ACCESSIBILITY: buttons are for actions, links are for navigation.
+			  In this case, it's a bit of both - navigating via an action.
+			-->
 			<button
 				onclick={goBack}
 				class="flex items-center gap-2 text-terminal-text-muted transition-colors hover:text-terminal-accent-orange"
@@ -68,8 +141,9 @@
 
 	<!-- Article -->
 	<article class="mx-auto max-w-4xl px-6 py-12">
-		<!-- Meta -->
+		<!-- Meta Header -->
 		<header class="mb-8">
+			<!-- Category and Tags -->
 			<div class="mb-4 flex flex-wrap items-center gap-3">
 				<span class="rounded bg-terminal-accent-yellow/20 px-2 py-1 text-sm text-terminal-accent-yellow">
 					{data.meta.category}
@@ -89,7 +163,15 @@
 				{data.meta.description}
 			</p>
 
+			<!-- Date with semantic <time> element -->
 			<div class="flex items-center gap-4 text-sm text-terminal-text-dim">
+				<!--
+				  <time> HTML Element
+				  -------------------
+				  WHAT: Semantic element for dates/times.
+				  WHY:  Helps search engines and screen readers understand the date.
+				  `datetime` attribute must be machine-readable (ISO 8601 format).
+				-->
 				<time datetime={data.meta.date}>
 					{formatDate(data.meta.date)}
 				</time>
@@ -102,8 +184,28 @@
 
 		<!-- Content -->
 		<div class="prose-terminal prose prose-invert max-w-none">
+			<!--
+			  RENDERING DYNAMIC COMPONENTS
+			  ----------------------------
+			  `data.content` is a Svelte component generated by mdsvex from markdown.
+
+			  {@const} - BLOCK-LEVEL CONSTANT
+			  WHY: Create a local constant within a template block.
+			  Here we alias `data.content` to `Content` for cleaner JSX-like usage.
+
+			  PATTERN: Capitalizing component names is convention (Content vs content)
+			  to distinguish components from regular variables.
+
+			  REFERENCE: https://svelte.dev/docs/svelte/const
+			-->
 			{#if data.content}
 				{@const Content = data.content}
+				<!--
+				  COMPONENT INSTANTIATION
+				  -----------------------
+				  <Content /> renders the mdsvex-compiled markdown as a Svelte component.
+				  This is how dynamic/runtime components are rendered in Svelte.
+				-->
 				<Content />
 			{/if}
 		</div>

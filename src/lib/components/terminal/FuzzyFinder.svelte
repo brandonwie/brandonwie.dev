@@ -1,56 +1,112 @@
+<!--
+  FuzzyFinder.svelte - Search Modal Component
+  ===========================================
+
+  WHAT: A modal search dialog for finding posts with fuzzy matching.
+  WHY:  Quick navigation - users can search posts without typing full names.
+  HOW:  Uses Fuse.js for fuzzy search, renders as an overlay modal.
+
+  FUZZY SEARCH:
+  - "redis" matches "Redis Caching Patterns"
+  - "k8s pod" matches "Kubernetes Pod Lifecycle"
+  - Typo-tolerant: "redsi" still finds "redis"
+
+  UX INSPIRATION: VS Code's Ctrl+P file finder, Spotlight search
+
+  KEYBOARD SHORTCUTS:
+  - ↑/↓: Navigate results
+  - Enter: Select result
+  - Escape: Close modal
+  - Click outside: Close modal
+-->
 <script lang="ts">
+	// SVELTE IMPORTS
+	// --------------
+	// `tick` - Returns promise that resolves after Svelte has applied pending state changes.
+	// WHY: Need to wait for DOM update before focusing input.
+	// REFERENCE: https://svelte.dev/docs/svelte/lifecycle-hooks#tick
 	import { onMount, tick } from 'svelte';
 	import type { PostMetadata } from '$lib/stores/posts';
+
+	// FUSE.JS INTEGRATION
+	// -------------------
+	// Fuse.js is a lightweight fuzzy-search library.
+	// - `createPostsFuse`: Factory to create Fuse instance with posts
+	// - `fuzzySearch`: Wrapper to search and return results
+	// - `highlightMatches`: Utility to highlight matched portions
+	// - `FuzzyResult`: Type for search results with match info
 	import { createPostsFuse, fuzzySearch, highlightMatches, type FuzzyResult } from '$lib/fuzzy';
 	import type Fuse from 'fuse.js';
 
+	// PROPS INTERFACE
+	// ---------------
 	interface Props {
-		posts: PostMetadata[];
-		onSelect: (slug: string) => void;
-		onClose: () => void;
+		posts: PostMetadata[];          // Posts to search through
+		onSelect: (slug: string) => void; // Called when user selects a post
+		onClose: () => void;            // Called when user closes modal
 	}
 
 	let { posts, onSelect, onClose }: Props = $props();
 
+	// COMPONENT STATE
+	// ---------------
 	let inputRef: HTMLInputElement;
-	let query = $state('');
-	let results: FuzzyResult[] = $state([]);
-	let selectedIndex = $state(0);
-	let fuse: Fuse<PostMetadata>;
+	let query = $state('');                     // Search query
+	let results: FuzzyResult[] = $state([]);    // Search results
+	let selectedIndex = $state(0);               // Currently selected result
+	let fuse: Fuse<PostMetadata>;               // Fuse.js instance (not reactive)
 
+	// INITIALIZATION ON MOUNT
+	// -----------------------
+	// `async` in onMount allows using await inside.
+	// WHY async here: Need to await `tick()` before focusing.
 	onMount(async () => {
+		// Create Fuse.js instance with posts data
 		fuse = createPostsFuse(posts);
 
-		// Initial results - show all posts sorted by date
+		// Initial results - show recent posts when no search query
+		// PATTERN: Default to showing useful content (recent posts) vs empty state
 		results = posts
-			.slice()
+			.slice()                    // Copy array to avoid mutating original
 			.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-			.slice(0, 10)
+			.slice(0, 10)               // Limit to 10 results
 			.map((post) => ({ item: post, score: 0 }));
 
-		// Wait for DOM to be ready, then focus
+		// TICK - WAIT FOR DOM UPDATE
+		// --------------------------
+		// `tick()` returns a promise that resolves after DOM updates.
+		// WHY: Input element doesn't exist until Svelte renders it.
+		// Without tick, inputRef might be undefined.
 		await tick();
 		inputRef?.focus();
 	});
 
+	// SEARCH HANDLER
+	// --------------
+	// Called on every input change to update results.
 	function handleInput() {
 		if (query.trim()) {
+			// Perform fuzzy search
 			results = fuzzySearch(fuse, query).slice(0, 10);
 		} else {
-			// Show recent posts when no query
+			// No query - show recent posts
 			results = posts
 				.slice()
 				.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 				.slice(0, 10)
 				.map((post) => ({ item: post, score: 0 }));
 		}
+		// Reset selection to first item
 		selectedIndex = 0;
 	}
 
+	// KEYBOARD NAVIGATION
+	// -------------------
+	// Arrow keys to navigate, Enter to select, Escape to close.
 	function handleKeyDown(event: KeyboardEvent) {
 		switch (event.key) {
 			case 'ArrowUp':
-				event.preventDefault();
+				event.preventDefault();  // Prevent cursor moving in input
 				selectedIndex = Math.max(0, selectedIndex - 1);
 				break;
 
@@ -73,6 +129,10 @@
 		}
 	}
 
+	// HIGHLIGHT MATCHING TEXT
+	// -----------------------
+	// Returns array of text segments with highlighted flag.
+	// Used to highlight matched portions in search results.
 	function getHighlightedTitle(result: FuzzyResult): { text: string; highlighted: boolean }[] {
 		const titleMatch = result.matches?.find((m) => m.key === 'title');
 		if (titleMatch && titleMatch.indices) {
@@ -81,7 +141,10 @@
 		return [{ text: result.item.title, highlighted: false }];
 	}
 
-	// Global escape handler to ensure ESC always works
+	// GLOBAL ESCAPE HANDLER
+	// ---------------------
+	// WHY: Ensure ESC always closes modal, even if focus is elsewhere.
+	// stopPropagation prevents parent handlers from also receiving the event.
 	function handleGlobalKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
 			event.preventDefault();
@@ -91,8 +154,34 @@
 	}
 </script>
 
+<!--
+  <svelte:window> - Global Escape Handler
+  ---------------------------------------
+  Captures Escape key at window level for reliable modal closing.
+  This ensures ESC works even if focus moves unexpectedly.
+-->
 <svelte:window onkeydown={handleGlobalKeyDown} />
 
+<!--
+  MODAL OVERLAY
+  -------------
+  POSITIONING:
+  - fixed inset-0: Covers entire viewport
+  - z-50: High z-index to appear above everything
+  - pt-24: Push dialog down from top
+
+  BACKDROP CLICK TO CLOSE:
+  `onclick={(e) => e.target === e.currentTarget && onClose()}`
+  - Only close if clicking the overlay itself
+  - NOT if clicking the dialog (bubbled event)
+  - `e.target === e.currentTarget` checks if click was directly on this element
+
+  ACCESSIBILITY:
+  - role="dialog": Screen readers announce as dialog
+  - aria-modal="true": Indicates modal behavior
+  - aria-label: Describes the dialog purpose
+  - tabindex="-1": Allows programmatic focus
+-->
 <div
 	class="fuzzy-overlay fixed inset-0 z-50 flex items-start justify-center pt-24"
 	onclick={(e) => e.target === e.currentTarget && onClose()}
@@ -102,10 +191,25 @@
 	aria-label="Search posts"
 	tabindex="-1"
 >
+	<!-- DIALOG CONTAINER -->
 	<div class="w-full max-w-2xl rounded-lg border border-terminal-border bg-terminal-bg-secondary shadow-2xl">
-		<!-- Search Input -->
+		<!--
+		  SEARCH INPUT HEADER
+		  -------------------
+		  Contains prompt icon, input field, and keyboard hint.
+		-->
 		<div class="flex items-center gap-3 border-b border-terminal-border p-4">
+			<!-- Prompt icon (terminal aesthetic) -->
 			<span class="text-terminal-accent-orange">❯</span>
+			<!--
+			  TWO-WAY BINDING: bind:value
+			  ---------------------------
+			  `bind:value={query}` creates two-way binding:
+			  - Input changes → query updates
+			  - query changes → input updates
+
+			  REFERENCE: https://svelte.dev/docs/svelte/bind#input-bind:value
+			-->
 			<input
 				bind:this={inputRef}
 				bind:value={query}
@@ -116,17 +220,44 @@
 				class="flex-1 border-none bg-transparent text-terminal-text-primary placeholder-terminal-text-dim outline-none"
 				spellcheck="false"
 			/>
+			<!-- Keyboard hint -->
 			<kbd class="rounded bg-terminal-bg-primary px-2 py-1 text-xs text-terminal-text-muted">esc</kbd>
 		</div>
 
-		<!-- Results -->
+		<!--
+		  RESULTS LIST
+		  ------------
+		  max-h-96: Limit height with scroll
+		  overflow-y-auto: Show scrollbar when needed
+		-->
 		<div class="max-h-96 overflow-y-auto">
 			{#if results.length === 0}
 				<div class="p-4 text-center text-terminal-text-muted">
 					No posts found
 				</div>
 			{:else}
+				<!--
+				  KEYED EACH - Using slug as key
+				  ------------------------------
+				  WHY slug instead of index?
+				  - Posts have stable identity (slug is unique)
+				  - Results can be reordered (by search relevance)
+				  - Using slug ensures DOM elements are reused correctly
+				-->
 				{#each results as result, i (result.item.slug)}
+					<!--
+					  RESULT ITEM
+					  -----------
+					  CONDITIONAL CLASSES:
+					  Selected items get:
+					  - Orange left border (visual indicator)
+					  - Orange tinted background
+					  - Adjusted padding to account for border
+
+					  TEMPLATE EXPRESSION IN CLASS:
+					  `class="... {condition ? 'class-a' : 'class-b'}"`
+					  Svelte allows JS expressions in class attribute.
+					-->
 					<div
 						class="cursor-pointer border-b border-terminal-border/50 py-3 last:border-b-0 {i === selectedIndex
 							? 'border-l-2 border-l-terminal-accent-orange bg-terminal-accent-orange/10 pl-3.5 pr-4'
@@ -139,22 +270,37 @@
 					>
 						<div class="flex items-start justify-between gap-4">
 							<div class="min-w-0 flex-1">
+								<!--
+								  HIGHLIGHTED TITLE
+								  -----------------
+								  Renders title with matched portions highlighted.
+								  Each segment is either highlighted or plain text.
+								-->
 								<div class="truncate font-medium text-terminal-text-primary">
 									{#each getHighlightedTitle(result) as segment}
 										{#if segment.highlighted}
+											<!-- fuzzy-match class defined in app.css for highlight styling -->
 											<span class="fuzzy-match">{segment.text}</span>
 										{:else}
 											{segment.text}
 										{/if}
 									{/each}
 								</div>
+								<!-- Description -->
 								<div class="mt-1 truncate text-sm text-terminal-text-muted">
 									{result.item.description}
 								</div>
+								<!-- Tags and category -->
 								<div class="mt-2 flex flex-wrap gap-2">
 									<span class="rounded bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-accent-yellow">
 										{result.item.category}
 									</span>
+									<!--
+									  INLINE ARRAY OPERATION: .slice(0, 3)
+									  ------------------------------------
+									  Only show first 3 tags to prevent overflow.
+									  This runs every render, but is cheap (array.slice).
+									-->
 									{#each result.item.tags.slice(0, 3) as tag}
 										<span class="rounded bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted">
 											{tag}
@@ -162,6 +308,7 @@
 									{/each}
 								</div>
 							</div>
+							<!-- Date -->
 							<div class="text-xs text-terminal-text-dim">
 								{result.item.date}
 							</div>
@@ -171,12 +318,24 @@
 			{/if}
 		</div>
 
-		<!-- Footer -->
+		<!--
+		  FOOTER - Keyboard hints and result count
+		  ----------------------------------------
+		  Helps users discover keyboard shortcuts.
+		  Result count updates reactively as results change.
+		-->
 		<div class="flex items-center justify-between border-t border-terminal-border px-4 py-2 text-xs text-terminal-text-muted">
 			<div class="flex gap-4">
 				<span><kbd class="rounded bg-terminal-bg-primary px-1">↑↓</kbd> navigate</span>
 				<span><kbd class="rounded bg-terminal-bg-primary px-1">↵</kbd> select</span>
 			</div>
+			<!--
+			  PLURALIZATION
+			  -------------
+			  `results.length === 1 ? '' : 's'`
+			  Simple approach: add 's' for plural.
+			  For complex i18n, use a library like svelte-i18n.
+			-->
 			<div>
 				{results.length} result{results.length === 1 ? '' : 's'}
 			</div>
