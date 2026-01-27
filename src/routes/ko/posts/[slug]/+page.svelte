@@ -67,15 +67,15 @@
 
 <div class="min-h-screen bg-terminal-bg-primary">
 	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
-		<div class="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+		<div class="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
 			<button
 				onclick={goBack}
-				class="flex items-center gap-2 text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0"
+				class="flex items-center gap-1 text-xs text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0 sm:gap-2 sm:text-sm"
 			>
 				<span>←</span>
-				<span class="hidden sm:inline">{m.back_to_terminal()}</span>
+				<span>{m.back_to_terminal()}</span>
 			</button>
-			<a href="/ko" class="text-terminal-accent-orange truncate hidden sm:block">brandonwie.dev</a>
+			<a href="/ko" class="text-terminal-accent-orange text-xs truncate sm:text-base">brandonwie.dev</a>
 			<LanguageToggle />
 		</div>
 	</header>
