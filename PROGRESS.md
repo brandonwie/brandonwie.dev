@@ -217,3 +217,34 @@ a broken sync command:
 | `3b/.claude/skills/blog-publish/references/translation-guide.md` | Created translation reference           |
 
 **Next:** Test `/blog-publish` end-to-end, publish new posts
+
+---
+
+### 2026-02-12 (Session 2)
+
+**Blog Post Recreation (1 of 8)**
+
+Started recreating 8 published blog posts that read like raw reference material.
+Expanded EN with narrative content and retranslated KO with natural 해요체:
+
+1. **vpc-networking-fundamentals (EN)**
+   - Added hook (past-self VPC confusion story)
+   - Added context paragraphs from 3B Problem/Difficulties sections
+   - Added transitions between all sections
+   - Added "Practical Takeaway" conclusion (when-to-use / when-not-to-use)
+   - Updated description and dates
+
+2. **vpc-networking-fundamentals (KO)**
+   - Full retranslation from expanded EN post
+   - Natural 해요체 register throughout (no 합니다 mixing)
+   - Korean SOV sentence restructure, removed nominalizations
+   - Updated all frontmatter dates
+
+**Files Modified:**
+
+| File                                                      | Action                  |
+| --------------------------------------------------------- | ----------------------- |
+| `src/content/posts/en/aws/vpc-networking-fundamentals.md` | Expanded with narrative |
+| `src/content/posts/ko/aws/vpc-networking-fundamentals.md` | Retranslated            |
+
+**Next:** Continue with remaining 7 posts (security-groups-fundamentals next)

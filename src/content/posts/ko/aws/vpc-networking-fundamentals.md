@@ -1,9 +1,8 @@
 ---
-title: 'AWS VPC 네트워킹 기초'
-description: >-
-  AWS VPC 네트워킹 개념, CIDR 표기법, 네트워크 아키텍처 패턴을 정리한 가이드입니다.
+title: "AWS VPC 네트워킹 기초"
+description: "CIDR 계산, NAT Gateway 배치, Route Table — 왜 다들 처음에 헤매는지, 어떻게 제대로 잡는지 정리했어요."
 date: 2025-04-29T00:00:00.000Z
-updated: '2026-01-28'
+updated: "2026-02-12"
 tags:
   - aws
   - networking
@@ -14,13 +13,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: vpc-networking-fundamentals
-source_updated: 2026-01-27T00:00:00.000Z
-translation_date: '2026-01-28'
+source_updated: "2026-02-12"
+translation_date: "2026-02-12"
 references:
-  - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/'
+  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/"
     title: AWS VPC 사용자 가이드
     type: official
-  - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html'
+  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html"
     title: NAT Gateway 문서
     type: official
 ---
@@ -29,13 +28,21 @@ references:
 import Mermaid from '$lib/components/Mermaid.svelte';
 </script>
 
+AWS를 처음 쓸 때 Terraform으로 VPC, 서브넷 4개, NAT Gateway, Internet Gateway를 만들었는데 — 어떤 리소스가 인터넷이 필요한 건지 전혀 감이 안 왔어요. "Private" 서브넷의 EC2가 외부와 통신되고(나쁨), "public" 서브넷의 EC2는 인터넷이 안 되더라고요(역시 나쁨). VPC 네트워킹은 쉬워 보이다가 갑자기 안 됩니다.
+
+핵심 문제는 VPC가 모든 AWS 서비스의 기반이라는 거예요. CIDR 블록을 너무 작게 잡으면 팀이 커질 때 IP가 부족해지고, NAT Gateway를 private 서브넷에 놓으면(논리적으로 맞아 보이지만) 라우팅이 전혀 안 돼요. Route table을 명시적으로 연결하지 않으면 "private" 서브넷이 main route table의 IGW 라우트를 상속받아서 — 아무도 모르게 public이 되어버려요.
+
+이 글에서는 VPC 네트워킹을 처음부터 다룰게요. CIDR 표기법, 서브넷 설계, 게이트웨이, Route Table, 그리고 직접 쓸 수 있는 Terraform 예시까지 정리했어요.
+
 ## IP 주소와 CIDR
+
+서브넷을 설계하려면 IP 주소 범위가 어떻게 동작하는지 먼저 알아야 해요. 2의 거듭제곱으로 생각해야 하기 때문에 여기서 많이 헤매요.
 
 ### CIDR 표기법 기초
 
-IP 주소(IPv4)는 32비트 숫자로, 보통 점으로 구분된 4개의 옥텟으로 표기합니다 (예: `10.0.1.5`). 각 옥텟은 0-255 범위입니다.
+IP 주소(IPv4)는 32비트 숫자로, 점으로 구분된 4개의 옥텟으로 표기해요(예: `10.0.1.5`). 각 옥텟은 0-255 범위예요.
 
-CIDR (Classless Inter-Domain Routing) 표기법: `기본_주소/프리픽스_길이`
+CIDR(Classless Inter-Domain Routing) 표기법은 기본 주소와 프리픽스 길이를 조합해요: `기본_주소/프리픽스_길이`
 
 ```text
 예시: 10.0.0.0/24
@@ -44,25 +51,29 @@ CIDR (Classless Inter-Domain Routing) 표기법: `기본_주소/프리픽스_길
 - 나머지 8비트 = 호스트 부분 (가변)
 ```
 
+프리픽스 길이가 네트워크 식별자로 고정되는 비트 수를 알려줘요. 나머지 비트를 개별 호스트에 할당할 수 있어요.
+
 ### 프리픽스 길이별 IP 주소 개수
 
-| 프리픽스 | 호스트 비트 | 총 IP 수 | AWS 사용 가능 |
-| -------- | ----------- | -------- | ------------- |
-| /32 | 0 | 1 | 단일 IP |
-| /28 | 4 | 16 | 11 |
-| /27 | 5 | 32 | 27 |
-| /26 | 6 | 64 | 59 |
-| /25 | 7 | 128 | 123 |
-| /24 | 8 | 256 | 251 |
-| /23 | 9 | 512 | 507 |
-| /22 | 10 | 1,024 | 1,019 |
-| /16 | 16 | 65,536 | 일반적인 VPC 크기 |
+| 프리픽스 | 호스트 비트 | 총 IP 수 | AWS 사용 가능     |
+| -------- | ----------- | -------- | ----------------- |
+| /32      | 0           | 1        | 단일 IP           |
+| /28      | 4           | 16       | 11                |
+| /27      | 5           | 32       | 27                |
+| /26      | 6           | 64       | 59                |
+| /25      | 7           | 128      | 123               |
+| /24      | 8           | 256      | 251               |
+| /23      | 9           | 512      | 507               |
+| /22      | 10          | 1,024    | 1,019             |
+| /16      | 16          | 65,536   | 일반적인 VPC 크기 |
 
-공식: `2^(32-프리픽스_길이) = 총 IP 수`
+공식: `2^(32 - 프리픽스_길이) = 총 IP 수`
+
+"AWS 사용 가능" 열이 총 IP 수보다 항상 적은 거 보이시죠? AWS가 모든 서브넷에서 주소를 예약하기 때문이에요.
 
 ### AWS 예약 IP
 
-각 서브넷에서 AWS가 5개의 IP 주소를 예약합니다:
+각 서브넷에서 AWS가 리소스에 할당할 수 없는 IP 5개를 예약해요:
 
 ```text
 10.0.1.0/24 서브넷:
@@ -75,17 +86,19 @@ CIDR (Classless Inter-Domain Routing) 표기법: `기본_주소/프리픽스_길
 사용 가능: 10.0.1.4 ~ 10.0.1.254 (251개)
 ```
 
----
+생각보다 중요해요. /28 서브넷은 16개 IP처럼 보이지만, AWS가 5개를 가져가면 실제로는 11개뿐이에요. 작은 클러스터를 운영한다면 확장 여지가 있느냐 없느냐의 차이가 돼요.
 
 ## 서브넷 IP vs 연결 용량
 
-**중요한 구분**: 서브넷 IP 개수 ≠ 연결 용량
+서브넷 크기와 트래픽 용량을 혼동하는 분이 정말 많아요. 이 둘은 완전히 다른 걸 측정해요.
 
-- IP 주소는 배포할 수 있는 **리소스** 수를 제한 (EC2, RDS 등)
-- 각 EC2 인스턴스는 수천 개의 동시 연결을 처리할 수 있음
-- 연결 용량은 인스턴스 타입과 애플리케이션 설계에 따라 달라짐
+**서브넷 IP 개수 ≠ 연결 용량**
 
-예시 아키텍처:
+- IP 주소는 배포할 수 있는 **리소스 수**를 제한해요(EC2, RDS 등)
+- 각 EC2 인스턴스는 수천 개의 동시 연결을 처리할 수 있어요
+- 연결 용량은 인스턴스 타입과 애플리케이션 설계에 따라 달라져요
+
+실제로는 이런 모습이에요:
 
 ```text
 /24 서브넷 (251개 사용 가능 IP):
@@ -96,11 +109,15 @@ CIDR (Classless Inter-Domain Routing) 표기법: `기본_주소/프리픽스_길
 - 총 용량: ~10,000 동시 연결
 ```
 
----
+251개 IP를 가진 /24 서브넷으로 10,000명 이상의 동시 사용자를 처리할 수 있어요. 연결이 251개로 제한되는 게 아니에요. 서브넷 크기는 예상 트래픽이 아니라, 배포할 리소스 수를 기준으로 정하세요.
 
 ## VPC 아키텍처
 
+CIDR과 서브넷을 이해했으니, VPC 자체를 어떻게 구성하는지 볼게요.
+
 ### 표준 VPC 설계
+
+/16 블록은 65,536개 IP를 제공해요 — 대부분의 프로덕션 워크로드에 충분해요:
 
 ```terraform
 resource "aws_vpc" "main" {
@@ -111,6 +128,8 @@ resource "aws_vpc" "main" {
 ```
 
 ### 서브넷 레이아웃 컨벤션
+
+예측 가능한 번호 체계를 쓰면 나중에 디버깅 시간을 크게 줄일 수 있어요. 확장성이 좋은 패턴은 이래요:
 
 ```text
 VPC: 10.0.0.0/16
@@ -128,23 +147,20 @@ Private 서브넷 (내부용):
 └── 10.0.14.0/24 - AZ-d private
 ```
 
-**컨벤션의 장점:**
-
-- 예측 가능한 IP 패턴
-- IP만 보고 서브넷 용도 파악 가능
-- 확장 여지 있음
-- 명확한 보안 경계
-
----
+세 번째 옥텟이 한 자리(1-4)면 public, 두 자리(11-14)면 private이에요. IP 주소만 보고도 어떤 서브넷인지 바로 알 수 있어서 스프레드시트를 뒤질 필요가 없어요.
 
 ## 네트워크 구성 요소
 
+서브넷이 준비됐으니, 트래픽을 실제로 이동시킬 게이트웨이와 Route Table이 필요해요. 구성 요소부터 보고, 그다음에 연결해 볼게요.
+
 ### Internet Gateway (IGW)
 
-- VPC를 인터넷에 연결
-- VPC당 하나만 가능 (하드 리밋)
-- IP 주소 소비 없음
-- public 서브넷의 인터넷 접근 활성화
+Internet Gateway는 VPC의 정문이에요:
+
+- VPC를 인터넷에 연결해요
+- VPC당 하나만 가능해요(하드 리밋)
+- IP 주소를 소비하지 않아요
+- Public 서브넷의 인터넷 접근을 활성화해요
 
 ```terraform
 resource "aws_internet_gateway" "main" {
@@ -152,14 +168,15 @@ resource "aws_internet_gateway" "main" {
 }
 ```
 
+IGW를 만든다고 바로 public이 되는 건 아니에요 — 그건 곧 다룰 Route Table이 결정해요.
+
 ### NAT Gateway
 
-NAT Gateway는 private 서브넷의 리소스가 인터넷에 접근할 수 있게 합니다 (아웃바운드만).
+NAT Gateway는 private 서브넷 리소스가 아웃바운드 트래픽(Docker 이미지 pull이나 외부 API 호출 등)으로 인터넷에 접근하면서도 외부에서는 접근 불가능하게 해줘요.
 
-**중요한 배치 규칙**: NAT Gateway는 **public 서브넷**에 있어야 합니다.
+여기서 다들 헤매는 부분이에요: **NAT Gateway는 public 서브넷에 있어야 해요**, 리소스가 있는 private 서브넷이 아니라요. 거꾸로 같지만, NAT Gateway가 private 리소스의 트래픽을 프록시하려면 자기 자신이 먼저 인터넷에 접근(IGW를 통해)할 수 있어야 해요.
 
-<Mermaid code={`
-flowchart LR
+<Mermaid code={`flowchart LR
     subgraph Private["Private 서브넷"]
         EC2["EC2 인스턴스"]
     end
@@ -170,8 +187,7 @@ flowchart LR
     Internet["인터넷"]
     EC2 --> NAT
     NAT --> IGW
-    IGW --> Internet
-`} />
+    IGW --> Internet`} />
 
 ```terraform
 # NAT Gateway용 EIP
@@ -182,37 +198,32 @@ resource "aws_eip" "nat" {
 
 # NAT Gateway는 PUBLIC 서브넷에 배치
 resource "aws_nat_gateway" "main" {
-  subnet_id     = aws_subnet.public_a.id  # 반드시 public이어야 함!
+  subnet_id     = aws_subnet.public_a.id  # 반드시 public이어야 해요!
   allocation_id = aws_eip.nat.id
   depends_on    = [aws_internet_gateway.main]
 }
 ```
 
-**비용 고려**: NAT Gateway는 월 ~$32 + 데이터 처리 비용. private 서브넷이 인터넷 접근이 필요할 때만 생성하세요.
+**비용을 주의하세요.** NAT Gateway 하나에 월 ~$32, 여기에 데이터 처리 비용이 추가돼요. 프로덕션 멀티 AZ 구성에서 AZ마다 하나씩 두면 데이터 비용 전에 월 ~$96이에요. 개발 환경이라면 private 서브넷에서 인터넷 접근이 정말 필요한지 먼저 생각해 보세요.
 
 ### Elastic IP (EIP)
 
-- 고정 public IP 주소
-- 인스턴스 중지/시작해도 유지됨
-- 실행 중인 인스턴스에 연결되면 무료
-- 연결 안 되면 과금 (월 ~$3.6)
+Elastic IP는 인스턴스를 중지/시작해도 유지되는 고정 public IP예요. 실행 중인 인스턴스에 연결돼 있으면 무료지만, 연결 안 된 EIP는 월 ~$3.6이 과금돼요 — Terraform으로 만들어 놓고 나중에 분리하면 슬며시 비용이 나가요.
 
-**EIP 대안:**
-
-| 옵션 | 비용 | 사용 사례 |
-| ---- | ---- | --------- |
-| 기본 public IP | 무료 | 개발/테스트, LB 뒤 |
-| EIP | 무료 (연결 시) | 고정 IP 필요 |
-| Load Balancer | 월 ~$16 | 프로덕션 서비스 |
-| Route 53 | 월 ~$0.50 | DNS 기반 라우팅 |
-
----
+| 옵션           | 비용          | 사용 사례          |
+| -------------- | ------------- | ------------------ |
+| 기본 public IP | 무료          | 개발/테스트, LB 뒤 |
+| EIP            | 무료(연결 시) | 고정 IP 필요       |
+| Load Balancer  | 월 ~$16       | 프로덕션 서비스    |
+| Route 53       | 월 ~$0.50     | DNS 기반 라우팅    |
 
 ## Route Table
 
+Route Table은 VPC의 트래픽 규칙이에요. 모든 서브넷은 트래픽의 목적지를 결정하는 Route Table과 연결돼요. "public vs private" 구분이 실제로 일어나는 곳은 서브넷 자체가 아니라, 서브넷에 연결된 Route Table이에요.
+
 ### Public Route Table
 
-인터넷 트래픽을 IGW로 라우팅:
+Public Route Table은 로컬이 아닌 모든 트래픽(`0.0.0.0/0`)을 Internet Gateway로 보내요:
 
 ```terraform
 resource "aws_route_table" "public" {
@@ -232,7 +243,7 @@ resource "aws_route_table_association" "public_a" {
 
 ### Private Route Table
 
-인터넷 트래픽을 NAT Gateway로 라우팅:
+Private Route Table은 아웃바운드 트래픽을 NAT Gateway로 보내요:
 
 ```terraform
 resource "aws_route_table" "private" {
@@ -240,7 +251,7 @@ resource "aws_route_table" "private" {
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id  # 참고: gateway_id가 아님
+    nat_gateway_id = aws_nat_gateway.main.id  # gateway_id가 아님에 주의
   }
 }
 
@@ -250,9 +261,11 @@ resource "aws_route_table_association" "private_a" {
 }
 ```
 
----
+**꼭 알아둘 점:** Route Table과 명시적으로 연결되지 않은 서브넷은 VPC의 **main route table**을 사용해요. 누군가 main table에 IGW 라우트를 추가하면, 연결되지 않은 모든 서브넷이 명시적 변경 없이 public이 돼요. 항상 Route Table을 직접 만들어서 명시적으로 연결하세요 — 기본값에 의존하면 안 돼요.
 
 ## 트래픽 흐름
+
+패킷이 VPC를 통해 어떻게 이동하는지 이해하면 연결 문제를 훨씬 빨리 디버깅할 수 있어요. 세 가지 일반적인 패턴이에요:
 
 ### Public 서브넷 트래픽
 
@@ -266,36 +279,40 @@ resource "aws_route_table_association" "private_a" {
 EC2 (private) → Private Route Table → NAT Gateway → IGW → 인터넷
 ```
 
-### Private 서브넷 인바운드 (ALB 통해)
+### Private 서브넷 인바운드 (ALB 경유)
 
 ```text
 인터넷 → IGW → ALB (public) → EC2 (private)
 ```
 
----
+ALB 패턴이 대부분의 프로덕션 애플리케이션에서 쓰이는 방식이에요. 로드 밸런서가 public 서브넷에서 트래픽을 받고, 실제 애플리케이션 서버는 외부에서 직접 접근할 수 없는 private 서브넷에 있어요.
 
 ## VPC 관련 AWS 비용
+
+어떤 게 돈이 드는지 알아두면 AWS 요금 폭탄을 피할 수 있어요.
 
 **무료 리소스:**
 
 - VPC 자체
 - 서브넷
-- Route table
-- Security group
+- Route Table
+- Security Group
 - Network ACL
 - Private IP 주소
 
 **유료 리소스:**
 
-- NAT Gateway (시간당 ~$0.045 + 데이터)
-- Elastic IP (연결 안 됐을 때)
-- 데이터 전송 (cross-AZ, 인터넷 아웃바운드)
+- NAT Gateway(시간당 ~$0.045 + 데이터)
+- Elastic IP(연결 안 됐을 때)
+- 데이터 전송(cross-AZ, 인터넷 아웃바운드)
 - VPN 연결
 - Transit Gateway
 
----
+가장 흔한 요금 폭탄은 NAT Gateway예요. 항상 켜져 있고, 항상 과금되고, 아웃바운드 트래픽이 많으면 데이터 처리 비용이 빠르게 쌓여요.
 
 ## 전체 VPC 예시
+
+여기까지 다룬 내용을 모두 연결한 프로덕션 수준의 Terraform 설정이에요. 이걸 시작점으로 AZ를 추가하거나 애플리케이션별 리소스를 확장하면 돼요:
 
 ```terraform
 # VPC
@@ -373,7 +390,19 @@ resource "aws_route_table_association" "private_a" {
 }
 ```
 
----
+## 정리
+
+VPC는 AWS 인프라의 기반이에요. 처음에 제대로 잡는 게 중요한데 — 서비스가 돌아가는 상태에서 CIDR 블록과 서브넷을 바꾸는 건 정말 고통스러워요.
+
+**커스텀 VPC를 쓸 때:** 네트워크 격리가 필요한 컴퓨팅 리소스(EC2, ECS, RDS)를 배포하거나, public과 내부 전용 티어로 나뉘는 멀티 티어 아키텍처를 구성하거나, 데이터베이스와 애플리케이션 서버용 private 서브넷이 있는 프로덕션 환경에서 사용하세요.
+
+**커스텀 VPC를 안 써도 될 때:** 서버리스 전용 스택(Lambda + DynamoDB + S3)이라면 VPC를 추가하면 콜드 스타트 지연이 늘어나요. S3 + CloudFront 정적 사이트도 VPC가 필요 없어요. 빠른 프로토타이핑에는 기본 VPC로 충분해요.
+
+**꼭 피해야 할 실수 세 가지:**
+
+1. NAT Gateway를 private 서브넷에 놓는 것 — public 서브넷에 있어야 해요
+2. Main route table에 의존하는 것 — 항상 Route Table을 직접 만들어서 명시적으로 연결하세요
+3. 개발 환경에 NAT Gateway를 만드는 것 — 월 $32씩, 아웃바운드 인터넷 접근이 필요 없는 리소스에는 낭비예요
 
 ## 참고 자료
 
