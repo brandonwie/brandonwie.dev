@@ -52,14 +52,14 @@ Built the complete personal blog with interactive terminal UI:
 
 **Commits:**
 
-| Hash | Description |
-| ---- | ----------- |
-| 8811ecd | Project setup |
+| Hash    | Description                  |
+| ------- | ---------------------------- |
+| 8811ecd | Project setup                |
 | 8aeb926 | Terminal stores + filesystem |
-| e57c7b4 | Terminal commands |
-| 7c683ab | Terminal UI + fuzzy finder |
-| 4ea2f07 | Content routes + SEO |
-| d565f6e | Build fixes + enhancements |
+| e57c7b4 | Terminal commands            |
+| 7c683ab | Terminal UI + fuzzy finder   |
+| 4ea2f07 | Content routes + SEO         |
+| d565f6e | Build fixes + enhancements   |
 
 **Next:** Deploy to Cloudflare Pages
 
@@ -89,9 +89,9 @@ Fixed mobile web issues and improved terminal responsiveness:
 
 **Commits:**
 
-| Hash | Description |
-| ---- | ----------- |
-| TBD | fix: mobile input and responsive prompt |
+| Hash | Description                             |
+| ---- | --------------------------------------- |
+| TBD  | fix: mobile input and responsive prompt |
 
 **Next:** Sync real content from 3B
 
@@ -134,17 +134,17 @@ Added full internationalization support and synced real content from 3B:
 
 **Commits:**
 
-| Hash | Description |
-| ---- | ----------- |
-| 415ca9a | feat(i18n): add Paraglide internationalization |
-| 95f40ee | feat(i18n): add translation workflow scripts |
-| 01ab340 | docs: add README with i18n docs |
-| a6df126 | fix: add error page |
+| Hash    | Description                                     |
+| ------- | ----------------------------------------------- |
+| 415ca9a | feat(i18n): add Paraglide internationalization  |
+| 95f40ee | feat(i18n): add translation workflow scripts    |
+| 01ab340 | docs: add README with i18n docs                 |
+| a6df126 | fix: add error page                             |
 | 56182a6 | fix(ui): integrate language toggle into headers |
-| 4cc0f06 | fix(ui): show hostname on mobile |
-| 6b655ef | fix(ui): smaller font on mobile header |
-| 4086633 | fix(ui): remove code block background |
-| 7fd1f20 | feat: sync 8 posts with Korean translations |
+| 4cc0f06 | fix(ui): show hostname on mobile                |
+| 6b655ef | fix(ui): smaller font on mobile header          |
+| 4086633 | fix(ui): remove code block background           |
+| 7fd1f20 | feat: sync 8 posts with Korean translations     |
 
 **Next:** Publish more posts, add newsletter signup
 
@@ -177,8 +177,43 @@ Added GitHub Discussions-based comments using giscus:
 
 **Commits:**
 
-| Hash | Description |
-| ---- | ----------- |
+| Hash    | Description                             |
+| ------- | --------------------------------------- |
 | 847f7fb | feat: add Giscus comments to blog posts |
 
 **Next:** Newsletter signup, more posts
+
+---
+
+### 2026-02-12
+
+**Blog Publish Skill & Sync Fix**
+
+Created `/blog-publish` skill to automate the full publish pipeline and fixed
+a broken sync command:
+
+1. **Sync Command Fix**
+   - Added `--allow-env` to Deno flags in `package.json`
+   - Script uses `Deno.env.get("HOME")` which requires env permission
+   - `npm run sync -- --dry-run` now works correctly
+
+2. **Blog Publish Skill** (`3b/.claude/skills/blog-publish/`)
+   - 9-step pipeline: discover → select → fix blockers → sync → template
+     → translate → build → report
+   - Parses dry-run output into 3 categories (ready, updated, almost ready)
+   - User checkpoints at selection and blocker-fixing stages
+   - Includes standalone translation guide reference
+
+3. **Translation Guide Reference**
+   - Extracted from `docs/TRANSLATION.md` for standalone skill use
+   - Covers tone, technical terms, common mistakes, quality checklist
+
+**Files Created/Modified:**
+
+| File                                                             | Action                                  |
+| ---------------------------------------------------------------- | --------------------------------------- |
+| `package.json`                                                   | Fixed sync script (added `--allow-env`) |
+| `3b/.claude/skills/blog-publish/SKILL.md`                        | Created skill definition                |
+| `3b/.claude/skills/blog-publish/references/translation-guide.md` | Created translation reference           |
+
+**Next:** Test `/blog-publish` end-to-end, publish new posts
