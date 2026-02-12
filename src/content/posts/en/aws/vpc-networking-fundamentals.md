@@ -1,8 +1,8 @@
 ---
 title: AWS VPC Networking Fundamentals
-description: "Why CIDR math, NAT Gateway placement, and route tables trip up every developer — and how to get them right from the start."
+description: "Comprehensive guide to AWS VPC networking concepts, CIDR notation, and network"
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-02-12T00:00:00.000Z
+updated: 2026-01-27T00:00:00.000Z
 tags:
   - aws
   - networking
@@ -13,10 +13,10 @@ draft: false
 lang: en
 references:
   - url: "https://docs.aws.amazon.com/vpc/latest/userguide/"
-    title: AWS VPC User Guide
+    title: userguide
     type: official
   - url: "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html"
-    title: NAT Gateway Documentation
+    title: vpc nat gateway.html
     type: official
 ---
 
@@ -24,15 +24,15 @@ references:
 import Mermaid from '$lib/components/Mermaid.svelte';
 </script>
 
-I spent my first week with AWS staring at a Terraform plan that created a VPC, four subnets, a NAT Gateway, and an Internet Gateway — with no idea which resources actually needed internet access. My EC2 instance in a "private" subnet could reach the outside world (bad), and the one in a "public" subnet couldn't (also bad). VPC networking looked straightforward until it wasn't.
+When I first set up AWS infrastructure with Terraform, I created a VPC, four subnets, a NAT Gateway, and an Internet Gateway -- with no real understanding of which resources needed internet access. My "private" subnet EC2 instances could reach the outside world (bad), and my "public" subnet EC2 instances could not reach the internet (also bad). VPC networking looks straightforward until it stops working.
 
-The root problem is that VPC is the foundation every other AWS service builds on. Get the CIDR block too small and you run out of IPs when the team scales. Put the NAT Gateway in the private subnet (where it seems logical) and nothing routes correctly. Forget to explicitly associate a route table and your "private" subnet silently inherits the main table's Internet Gateway route — making it public without anyone noticing.
+The core problem is that VPC is the foundation every other AWS service builds on. Size the CIDR block too small and you run out of IPs as the team grows. Put the NAT Gateway in the private subnet (which seems logical) and routing breaks entirely. Skip the explicit route table association and your "private" subnet inherits the main route table's IGW route -- becoming public without anyone noticing.
 
-This post walks through VPC networking from the ground up: CIDR notation, subnet design, gateways, route tables, and a complete Terraform example you can adapt for your own infrastructure.
+This post covers VPC networking from the ground up: CIDR notation, subnet design, gateways, route tables, and Terraform examples you can use directly.
 
 ## IP Addressing and CIDR
 
-Before you can design subnets, you need to understand how IP address ranges work. This is the part that trips most people up because it requires thinking in powers of two.
+Before designing subnets, you need to understand how IP address ranges work. This is where most people stumble, because it requires thinking in powers of two.
 
 ### CIDR Notation Basics
 
@@ -47,7 +47,7 @@ Example: 10.0.0.0/24
 - Remaining 8 bits = host portion (variable)
 ```
 
-The prefix length tells you how many bits are locked in as the network identifier. The remaining bits are yours to assign to individual hosts.
+The prefix length tells you how many bits are locked as the network identifier. The remaining bits are available for individual hosts.
 
 ### Prefix Length to IP Address Count
 
@@ -63,13 +63,13 @@ The prefix length tells you how many bits are locked in as the network identifie
 | /22    | 10        | 1,024     | 1,019           |
 | /16    | 16        | 65,536    | Common VPC size |
 
-Formula: `2^(32 - prefix_length) = total IPs`
+Formula: `2^(32-prefix_length) = total IPs`
 
-Notice the "AWS Usable" column — it's always less than the total. That's because AWS reserves addresses in every subnet.
+Notice the "AWS Usable" column is always less than total IPs. That is because AWS reserves addresses in every subnet.
 
 ### AWS Reserved IPs
 
-In each subnet, AWS reserves 5 IP addresses that you cannot assign to your resources:
+In each subnet, AWS reserves 5 IP addresses that you cannot assign to resources:
 
 ```text
 10.0.1.0/24 subnet:
@@ -82,19 +82,19 @@ In each subnet, AWS reserves 5 IP addresses that you cannot assign to your resou
 Usable: 10.0.1.4 to 10.0.1.254 (251 addresses)
 ```
 
-This matters more than you'd think. A /28 subnet looks like it gives you 16 IPs, but after AWS takes its 5, you only have 11. If you're running a small cluster, that can be the difference between having room to grow and needing to re-architect your subnets.
+This matters more than you think. A /28 subnet looks like 16 IPs, but after AWS takes 5, you only get 11. For a small cluster, that is the difference between having room to grow and hitting a ceiling.
 
 ## Subnet IP vs Connection Capacity
 
-One of the most common misconceptions is equating subnet size with traffic capacity. They measure completely different things.
+A confusion I see constantly: people equate subnet size with traffic capacity. These measure completely different things.
 
-**Subnet IP count ≠ connection capacity.**
+**Subnet IP count does not equal connection capacity.**
 
-- IP addresses limit **how many resources** you can deploy (EC2, RDS, etc.)
+- IP addresses limit the **resources** you can deploy (EC2, RDS, etc.)
 - Each EC2 instance can handle thousands of concurrent connections
 - Connection capacity depends on instance type and application design
 
-Here's what this looks like in practice:
+In practice, it looks like this:
 
 ```text
 /24 subnet (251 usable IPs):
@@ -105,15 +105,15 @@ Here's what this looks like in practice:
 - Total capacity: ~10,000 concurrent connections
 ```
 
-A /24 subnet with 251 IPs can serve 10,000+ concurrent users — you're not limited to 251 connections. Size your subnets based on how many resources you need to deploy, not how much traffic you expect.
+A /24 subnet with 251 IPs can serve 10,000+ concurrent users. The 251 IPs do not limit you to 251 connections. Size subnets based on how many resources you plan to deploy, not expected traffic volume.
 
 ## VPC Architecture
 
-With CIDR and subnets understood, let's look at how to structure the VPC itself.
+With CIDR and subnets understood, here is how to structure the VPC itself.
 
 ### Standard VPC Design
 
-A /16 block gives you 65,536 IPs — plenty of room for most production workloads:
+A /16 block gives you 65,536 IPs -- enough for most production workloads:
 
 ```terraform
 resource "aws_vpc" "main" {
@@ -125,7 +125,7 @@ resource "aws_vpc" "main" {
 
 ### Subnet Layout Convention
 
-A predictable numbering convention saves hours of debugging later. Here's a pattern that scales well:
+A predictable numbering scheme saves debugging time later. Here is a pattern that scales well:
 
 ```text
 VPC: 10.0.0.0/16
@@ -143,19 +143,19 @@ Private Subnets (internal):
 └── 10.0.14.0/24 - AZ-d private
 ```
 
-Single-digit third octets (1-4) for public, double-digit (11-14) for private. Anyone looking at an IP address can immediately tell which subnet type it belongs to — no need to cross-reference a spreadsheet.
+The third octet tells you the subnet type at a glance: single digit (1-4) is public, double digit (11-14) is private. You can identify which subnet a resource is in from its IP alone, without digging through a spreadsheet.
 
 ## Network Components
 
-Now that subnets are in place, they need gateways and route tables to actually move traffic. Let's start with the components, then wire them together.
+With subnets in place, you need gateways and route tables to actually move traffic. Let me cover the components first, then how they connect.
 
 ### Internet Gateway (IGW)
 
 The Internet Gateway is the front door of your VPC:
 
-- Connects your VPC to the public internet
+- Connects VPC to the internet
 - One IGW per VPC (hard limit)
-- Consumes no IP addresses
+- No IP address consumption
 - Enables public subnet internet access
 
 ```terraform
@@ -164,13 +164,13 @@ resource "aws_internet_gateway" "main" {
 }
 ```
 
-Creating an IGW alone doesn't make anything public — that's determined by route tables, which we'll cover shortly.
+Creating an IGW does not make anything public by itself -- that is determined by route tables, which I will cover next.
 
 ### NAT Gateway
 
-NAT Gateway enables private subnet resources to reach the internet for outbound traffic (like pulling Docker images or calling external APIs) while remaining unreachable from the outside.
+NAT Gateway enables private subnet resources to access the internet for outbound traffic (like pulling Docker images or calling external APIs) while remaining unreachable from outside.
 
-Here's the part that trips everyone up: **the NAT Gateway must live in a public subnet**, not the private subnet where your resources are. It seems backwards, but the NAT Gateway needs its own internet access (via the IGW) before it can proxy traffic for private resources.
+Here is where most people get confused: **the NAT Gateway must live in a public subnet**, not the private subnet where the resources that need it are. It seems backwards, but the NAT Gateway needs internet access itself (via the IGW) to proxy traffic for private resources.
 
 <Mermaid code={`flowchart LR
     subgraph Private["Private Subnet"]
@@ -200,11 +200,11 @@ resource "aws_nat_gateway" "main" {
 }
 ```
 
-**Watch the costs.** A single NAT Gateway runs ~$32/month plus data processing fees. In a production multi-AZ setup with one NAT Gateway per AZ, that's ~$96/month before any data charges. For dev environments, consider whether you actually need private subnet internet access at all.
+**Watch the cost.** A single NAT Gateway runs ~$32/month plus data processing fees. For a production multi-AZ setup with one per AZ, that is ~$96/month before data costs. For dev environments, think carefully about whether your private subnets actually need internet access.
 
 ### Elastic IP (EIP)
 
-An Elastic IP is a static public IP that persists across instance stop/start cycles. It's free while attached to a running instance, but AWS charges ~$3.6/month for unattached EIPs — a subtle cost that catches teams who create EIPs in Terraform and later detach them.
+An Elastic IP is a static public IP that persists across instance stop/start cycles. It is free when attached to a running instance but costs ~$3.6/month when unattached -- a sneaky cost if you create one in Terraform and later detach it.
 
 | Option            | Cost            | Use Case             |
 | ----------------- | --------------- | -------------------- |
@@ -215,11 +215,11 @@ An Elastic IP is a static public IP that persists across instance stop/start cyc
 
 ## Route Tables
 
-Route tables are the traffic rules of your VPC. Every subnet is associated with a route table that determines where its traffic goes. This is where the "public vs private" distinction actually happens — not in the subnet itself, but in the route table attached to it.
+Route tables are the traffic rules of your VPC. Every subnet is associated with a route table that determines where traffic goes. The "public vs private" distinction is not inherent to the subnet itself -- it is determined by which route table the subnet is associated with.
 
 ### Public Route Table
 
-A public route table sends all non-local traffic (`0.0.0.0/0`) to the Internet Gateway:
+The public route table sends all non-local traffic (`0.0.0.0/0`) to the Internet Gateway:
 
 ```terraform
 resource "aws_route_table" "public" {
@@ -239,7 +239,7 @@ resource "aws_route_table_association" "public_a" {
 
 ### Private Route Table
 
-A private route table sends outbound traffic through the NAT Gateway instead:
+The private route table sends outbound traffic through the NAT Gateway:
 
 ```terraform
 resource "aws_route_table" "private" {
@@ -257,7 +257,7 @@ resource "aws_route_table_association" "private_a" {
 }
 ```
 
-**A critical gotcha:** subnets that aren't explicitly associated with a route table use the VPC's **main route table**. If someone adds an IGW route to the main table, every unassociated subnet becomes public without anyone explicitly changing it. Always create and explicitly associate route tables — never rely on the default.
+**Critical gotcha:** Subnets not explicitly associated with a route table use the VPC's **main route table**. If someone adds an IGW route to the main table, every unassociated subnet becomes public with no explicit change. Always create and explicitly associate route tables -- never rely on the default.
 
 ## Traffic Flow
 
@@ -266,26 +266,26 @@ Understanding how packets move through the VPC makes debugging connectivity issu
 ### Public Subnet Traffic
 
 ```text
-Internet → IGW → Public Route Table → Public Subnet → EC2
+Internet -> IGW -> Public Route Table -> Public Subnet -> EC2
 ```
 
 ### Private Subnet Outbound
 
 ```text
-EC2 (private) → Private Route Table → NAT Gateway → IGW → Internet
+EC2 (private) -> Private Route Table -> NAT Gateway -> IGW -> Internet
 ```
 
 ### Private Subnet Inbound (via ALB)
 
 ```text
-Internet → IGW → ALB (public) → EC2 (private)
+Internet -> IGW -> ALB (public) -> EC2 (private)
 ```
 
-The ALB pattern is how most production applications work: the load balancer sits in a public subnet accepting traffic, while the actual application servers stay in private subnets where they can't be directly reached from the internet.
+The ALB pattern is how most production applications work. The load balancer sits in the public subnet accepting traffic, while the actual application servers are in private subnets where they cannot be reached directly from the internet.
 
 ## AWS Billing for VPC
 
-Understanding what costs money helps you avoid surprises on your AWS bill.
+Knowing what costs money helps avoid surprise bills:
 
 **Free resources:**
 
@@ -304,11 +304,11 @@ Understanding what costs money helps you avoid surprises on your AWS bill.
 - VPN connections
 - Transit Gateway
 
-The most common budget surprise is NAT Gateway. It's always running, always charging, and the data processing fees add up fast with heavy outbound traffic.
+The most common surprise bill is NAT Gateway. It is always on, always charging, and data processing fees add up fast if you have significant outbound traffic.
 
 ## Complete VPC Example
 
-Here's a production-ready Terraform configuration that ties everything together. You can use this as a starting point and extend it with additional AZs and application-specific resources:
+Here is a production-ready Terraform configuration that ties everything together. Use this as a starting point and add more AZs or application-specific resources as needed:
 
 ```terraform
 # VPC
@@ -388,17 +388,17 @@ resource "aws_route_table_association" "private_a" {
 
 ## Practical Takeaway
 
-VPC is the foundation of your AWS infrastructure, and it's worth getting right the first time — restructuring CIDR blocks and subnets after services are running is painful.
+VPC is the foundation of AWS infrastructure. Getting it right early matters -- changing CIDR blocks and subnet layouts with running services is painful.
 
-**Use a custom VPC when** you're deploying any compute resources (EC2, ECS, RDS) that need network isolation, building multi-tier architectures with public-facing and internal-only resources, or running production environments with private subnets for databases and application servers.
+**Use a custom VPC when:** You are deploying compute resources (EC2, ECS, RDS) that need network isolation, building multi-tier architectures with public and internal-only tiers, or running production environments with private subnets for databases and application servers.
 
-**Skip the custom VPC when** you're building a serverless-only stack (Lambda + DynamoDB + S3) where adding a VPC increases cold start latency. Static sites on S3 + CloudFront don't need a VPC either. And for quick prototyping, the default VPC works fine.
+**Skip the custom VPC when:** You are running a serverless-only stack (Lambda + DynamoDB + S3) where adding a VPC increases cold start latency, hosting static sites with S3 + CloudFront, or doing quick prototyping where the default VPC is sufficient.
 
-**The three mistakes to avoid:**
+**Three mistakes to avoid:**
 
-1. Putting the NAT Gateway in the private subnet — it needs to be in a public subnet
-2. Relying on the main route table — always create and explicitly associate route tables
-3. Creating NAT Gateways in dev environments — at $32/month each, they add up fast for resources that might not need outbound internet access
+1. Putting the NAT Gateway in a private subnet -- it must be in a public subnet
+2. Relying on the main route table -- always create and explicitly associate route tables
+3. Creating NAT Gateways for dev environments -- that is $32/month per gateway for resources that may not need outbound internet access
 
 ## References
 

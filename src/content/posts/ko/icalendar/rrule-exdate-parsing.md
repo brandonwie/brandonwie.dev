@@ -1,9 +1,9 @@
 ---
-title: 'RRULE EXDATE 타임존 파싱 문제'
+title: "RRULE EXDATE 타임존 파싱 문제"
 description: >-
   rrule JavaScript 라이브러리에서 EXDATE가 RRULE보다 먼저 오거나 TZID 파라미터가 있으면 파싱이 제대로 안 됩니다. 해결 방법을 알아봅니다.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-01-28'
+updated: 2026-01-23T00:00:00.000Z
 tags:
   - backend
 category: icalendar
@@ -11,59 +11,83 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: rrule-exdate-parsing
-source_updated: 2026-01-23T00:00:00.000Z
-translation_date: '2026-01-28'
+source_updated: "2026-01-23"
+translation_date: "2026-02-12"
 references:
-  - url: 'https://github.com/jkbrzt/rrule/issues/556'
-    title: 'GitHub Issue #556 - BYDAY 관련'
+  - url: "https://github.com/jkbrzt/rrule/issues/556"
+    title: "GitHub Issue #556 - BYDAY 관련"
     type: official
-  - url: 'https://github.com/jkbrzt/rrule/issues/523'
-    title: 'GitHub Issue #523 - TZID 관련'
+  - url: "https://github.com/jkbrzt/rrule/issues/523"
+    title: "GitHub Issue #523 - TZID 관련"
     type: official
-  - url: 'https://github.com/jkbrzt/rrule/issues/364'
-    title: 'GitHub Issue #364 - TZID 무시됨'
+  - url: "https://github.com/jkbrzt/rrule/issues/364"
+    title: "GitHub Issue #364 - TZID 무시됨"
     type: official
-  - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
+  - url: "https://datatracker.ietf.org/doc/html/rfc5545"
     title: RFC 5545 - iCalendar 명세
     type: official
 ---
 
-## 문제 상황
+분석 대시보드가 이벤트를 잘못된 시간에 보여주고 있었어요. 몇 시간 밀린 게
+아니라 완전히 틀렸습니다. 제외 날짜가 있는 모든 반복 이벤트가 예정된 시간 대신
+현재 타임스탬프에 결과를 생성하고 있었어요. `rrule` 라이브러리가 조용히 실패하고
+있었고, 원인을 알아내는 데 시간이 걸렸습니다.
 
-`rrule` JavaScript 라이브러리의 `rrulestr()` 함수가 다음 상황에서 제대로 동작하지 않습니다:
+## 조용한 실패
+
+`rrule` JavaScript 라이브러리의 `rrulestr()` 함수가 두 가지 조건에서 고장납니다:
 
 1. EXDATE가 recurrence 배열에서 RRULE보다 먼저 올 때
-2. EXDATE에 TZID 파라미터가 있을 때 (타임존 지정된 제외 날짜)
+2. EXDATE에 TZID 파라미터가 있을 때 (타임존 지정 제외 날짜)
 
-**증상:** 정상적인 RRULE 반복 일정 대신, **현재 시간**에 인스턴스가 생성됩니다.
+어느 조건이든 해당하면, 라이브러리가 에러를 던지지 않아요. 빈 배열을 반환하지도
+않습니다. 조용히 **현재 타임스탬프**에 결과를 생성합니다. 날짜를 자세히 확인해서
+모든 결과가 지금 시각이라는 걸 깨달을 때까지는 출력이 정상으로 보여요.
 
-## 원인
+## 왜 이런 일이 발생하나
 
-Google Calendar는 recurrence를 혼합된 내용의 배열로 저장합니다:
+Google Calendar은 recurrence를 혼합된 내용의 배열로 저장합니다:
 
 ```javascript
 [
   "EXDATE;TZID=Asia/Seoul:20251219T180000,20251226T180000",
-  "RRULE:FREQ=WEEKLY;BYDAY=FR"
-]
+  "RRULE:FREQ=WEEKLY;BYDAY=FR",
+];
 ```
 
-`rrulestr()`가 이걸 파싱하려고 하면:
+순서를 보세요: EXDATE가 먼저, RRULE이 나중. `rrulestr()`가 이걸 파싱하려고 하면:
 
-- RRULE이 먼저 오고 EXDATE가 뒤에 오길 기대함
+- RRULE이 먼저 오고 EXDATE가 뒤에 오길 기대
 - EXDATE의 TZID 파라미터를 제대로 처리 못함
-- 결국 현재 타임스탬프로 폴백해서 반복 일정을 생성함
+- 현재 타임스탬프로 폴백해서 결과 생성
 
-## 해결 방법
+순서 민감성은 어디에도 문서화되어 있지 않아요. Google Calendar API가 EXDATE를
+RRULE보다 먼저 반환한 후 시행착오로 발견했습니다.
 
-RRULE과 EXDATE를 따로 파싱한 다음 `RRuleSet`으로 합칩니다:
+## 잘못된 방향: forceset
+
+`rrulestr(fullString, { forceset: true })`로 해결될 거라 생각할 수 있어요.
+`forceset` 옵션은 RRULE+EXDATE 조합을 처리하기 위해 존재하니까요. 하지만 여전히
+실패합니다:
+
+1. EXDATE의 TZID를 여전히 파싱 못함
+2. 문자열 내 라인 순서가 여전히 중요
+3. 라이브러리 자체에 타임존 처리 관련 문서화된 이슈가 있음
+
+라이브러리의 내장 EXDATE 처리가 타임존 지정 제외 날짜에 대해 고장났다는 걸
+받아들이기 전에 이 잘못된 방향에 상당한 디버깅 시간을 썼어요.
+
+## 해결법: 따로 파싱하고 수동으로 합치기
+
+수정은 간단합니다: `rrulestr()`에게 EXDATE 라인을 보여주지 않는 거예요. RRULE과
+EXDATE를 따로 파싱한 다음 `RRuleSet`으로 합칩니다:
 
 ```typescript
-import { RRuleSet, rrulestr } from 'rrule';
+import { RRuleSet, rrulestr } from "rrule";
 
 // 1. RRULE 라인만 추출 (EXDATE, RDATE 제외)
 const rruleLines = extractRRulesOnly(block.recurrence);
-const rruleString = rruleLines.join('\n');
+const rruleString = rruleLines.join("\n");
 
 // 2. RRULE만 파싱
 const baseRule = rrulestr(rruleString, { dtstart: parentStart });
@@ -82,45 +106,75 @@ for (const exdate of exdates) {
 const occurrences = ruleSet.between(periodStart, periodEnd, true);
 ```
 
-## 핵심 함수
+핵심 통찰: `rrulestr()`는 RRULE 라인만 보면 잘 동작합니다. EXDATE 라인이 있을 때
+실패하는 거예요. EXDATE를 필터링하고 직접 처리하면 버그를 완전히 우회합니다.
+
+## 헬퍼 함수
 
 ### extractRRulesOnly
 
-recurrence 배열에서 RRULE 라인만 필터링합니다:
+recurrence 배열에서 RRULE 라인만 유지하는 함수입니다:
 
 ```typescript
 export function extractRRulesOnly(recurrence: string[] | null): string[] {
   if (!recurrence || recurrence.length === 0) return [];
 
   return recurrence
-    .filter((line) => line.startsWith('RRULE:') || line.startsWith('RRULE;'))
+    .filter((line) => line.startsWith("RRULE:") || line.startsWith("RRULE;"))
     .map(sanitizeRRule);
 }
 ```
 
 ### parseExdates
 
-타임존을 제대로 처리하면서 EXDATE 라인을 파싱합니다:
+Google Calendar이 생성하는 네 가지 EXDATE 형식을 모두 처리하는 함수입니다:
 
 ```typescript
-export function parseExdates(recurrence: string[] | null, blockTimeZone: string): Date[] {
+export function parseExdates(
+  recurrence: string[] | null,
+  blockTimeZone: string,
+): Date[] {
   // 지원하는 형식:
   // - EXDATE:20251219T090000Z (UTC)
   // - EXDATE;VALUE=DATE:20251219 (날짜만)
   // - EXDATE;TZID=Asia/Seoul:20251219T180000 (타임존 포함)
   // - EXDATE;TZID=Asia/Seoul:20251219T180000,20251226T180000 (여러 개)
-
   // UTC Date 객체 배열 반환
 }
 ```
 
-## rrulestr의 forceset 옵션은 왜 안 되나
+Google Calendar은 제외가 어떻게 생성되었느냐에 따라 네 가지 형식을 모두
+사용합니다. UTC 형식(`...Z`)은 라이브러리가 기본적으로 처리하지만 TZID 형식은
+안 됩니다. 커스텀 파서가 네 가지 모두를 처리하고 `RRuleSet.exdate()`가 받을 수
+있는 UTC Date 객체를 반환합니다.
 
-`rrulestr(fullString, { forceset: true })`를 쓰면 될 것 같지만:
+## 이런 경우에 사용하세요
 
-1. EXDATE의 TZID를 여전히 파싱 못함
-2. 문자열 내 라인 순서가 중요함
-3. 라이브러리 자체에 타임존 처리 관련 문서화된 이슈들이 있음
+- EXDATE에 TZID 파라미터가 포함된 Google Calendar 반복 이벤트를 파싱할 때
+- `rrulestr()`가 예상 날짜 대신 현재 타임스탬프에 결과를 생성하는 모든 시나리오
+- 네 가지 EXDATE 형식(UTC, 날짜만, TZID 단일, TZID 다중)을 모두 처리해야 하는
+  캘린더 통합
+
+## 이런 경우에는 사용하지 마세요
+
+- **EXDATE 라인이 없는 경우** -- RRULE만 있는 입력에는 표준 `rrulestr()`가
+  정상 동작합니다.
+- **UTC 전용 EXDATE** -- RRULE이 먼저 오면 라이브러리가 `EXDATE:...Z`를 올바르게
+  처리합니다.
+- **다른 rrule 라이브러리** -- 이 우회법은 `jkbrzt/rrule` JavaScript
+  라이브러리에만 해당됩니다. Python의 `dateutil` 등은 EXDATE+TZID를 올바르게
+  처리할 수 있어요.
+- **RDATE 처리** -- 이 솔루션은 RDATE 라인을 필터링합니다. RDATE 지원이
+  필요하면 추가 파싱이 필요합니다.
+
+## 핵심 정리
+
+`rrulestr()`가 예상 스케줄 대신 현재 시간에 결과를 생성하면, 가장 유력한 원인은
+TZID 파라미터가 있는 EXDATE입니다. 수정법은 EXDATE 라인을 절대 `rrulestr()`에
+전달하지 않는 것이에요. RRULE 라인을 따로 추출하고, Google Calendar의 네 가지
+형식을 모두 처리하는 커스텀 함수로 EXDATE를 파싱하고, `RRuleSet`으로 합치세요.
+라이브러리가 EXDATE/TZID 처리를 수정할 때까지 이것이 유일하게 신뢰할 수 있는
+접근법입니다.
 
 ## 참고 자료
 

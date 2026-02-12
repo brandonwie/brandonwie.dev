@@ -17,7 +17,11 @@ import {
   parse as parseYaml,
   stringify as stringifyYaml,
 } from "https://deno.land/std@0.220.0/yaml/mod.ts";
-import { basename, dirname, join } from "https://deno.land/std@0.220.0/path/mod.ts";
+import {
+  basename,
+  dirname,
+  join,
+} from "https://deno.land/std@0.220.0/path/mod.ts";
 
 // Configuration
 const SOURCE_DIR = Deno.env.get("HOME") + "/dev/personal/3b/knowledge";
@@ -33,6 +37,7 @@ interface BlogMeta {
   ready: boolean;
   published_at: string | null;
   last_synced: string | null;
+  needs_resync?: boolean;
   exclude_reason: string | null;
 }
 
@@ -138,7 +143,7 @@ function parseFrontmatter(content: string): {
  */
 function shouldSync(
   frontmatter: SourceFrontmatter,
-  category: string
+  category: string,
 ): { sync: boolean; reason: string } {
   // Backup filter: excluded categories
   if (EXCLUDED_CATEGORIES.includes(category)) {
@@ -172,7 +177,7 @@ function shouldSync(
 
   // Must have at least one official or authoritative reference
   const hasCredibleRef = frontmatter.references.some(
-    (ref) => ref.type === "official" || ref.type === "authoritative"
+    (ref) => ref.type === "official" || ref.type === "authoritative",
   );
   if (!hasCredibleRef) {
     return { sync: false, reason: "no official/authoritative reference" };
@@ -189,7 +194,7 @@ function shouldSync(
 function transformFrontmatter(
   source: SourceFrontmatter,
   body: string,
-  category: string
+  category: string,
 ): TargetFrontmatter {
   const target: TargetFrontmatter = {
     title: extractTitle(body),
@@ -205,9 +210,9 @@ function transformFrontmatter(
   // Include simplified references for blog
   if (source.references && source.references.length > 0) {
     target.references = source.references.map((ref) => ({
-      url: ref.url,
-      title: ref.title,
-      type: ref.type,
+      url: ref.url ?? null,
+      title: ref.title ?? "",
+      type: ref.type ?? "experience",
     }));
   }
 
@@ -294,7 +299,7 @@ async function updateSourceFile(
   sourcePath: string,
   content: string,
   frontmatter: SourceFrontmatter,
-  isFirstSync: boolean
+  isFirstSync: boolean,
 ): Promise<void> {
   const today = new Date().toISOString().split("T")[0];
 
@@ -304,6 +309,8 @@ async function updateSourceFile(
     if (isFirstSync) {
       frontmatter.blog.published_at = today;
     }
+    // Clear resync flag after successful sync
+    frontmatter.blog.needs_resync = false;
   }
 
   // Reconstruct file content
@@ -348,7 +355,8 @@ async function syncPosts() {
 
     // Skip if no frontmatter
     if (!frontmatter) {
-      if (verbose) console.log(`⏭️  Skipping (no frontmatter): ${relativePath}`);
+      if (verbose)
+        console.log(`⏭️  Skipping (no frontmatter): ${relativePath}`);
       skipReasons["no frontmatter"] = (skipReasons["no frontmatter"] || 0) + 1;
       skipped++;
       continue;
@@ -399,7 +407,7 @@ ${cleanedBody}
     console.log("");
     console.log("   Skip reasons:");
     for (const [reason, count] of Object.entries(skipReasons).sort(
-      (a, b) => b[1] - a[1]
+      (a, b) => b[1] - a[1],
     )) {
       console.log(`     - ${reason}: ${count}`);
     }

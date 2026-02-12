@@ -1,9 +1,8 @@
 ---
-title: 'AWS Security Group 기초'
-description: >-
-  Security Group은 AWS 리소스의 가상 방화벽으로, 인스턴스 레벨에서 인바운드/아웃바운드 트래픽을 제어합니다.
+title: "AWS Security Group 기초"
+description: "Security Group의 stateful 동작, 최소 권한 원칙, 실전 패턴 — 연결 안 되는 원인 1위를 파헤쳐요."
 date: 2025-04-29T00:00:00.000Z
-updated: '2026-01-28'
+updated: "2026-02-12"
 tags:
   - aws
   - security
@@ -13,38 +12,65 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: security-groups-fundamentals
-source_updated: 2026-01-27T00:00:00.000Z
-translation_date: '2026-01-28'
+source_updated: "2026-01-27"
+translation_date: "2026-02-12"
 references:
-  - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html'
+  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html"
     title: AWS Security Group 공식 문서
     type: official
-  - url: >-
-      https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules-reference.html
+  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules-reference.html"
     title: Security Group 규칙 레퍼런스
     type: official
 ---
+
+ECS 서비스를 배포하고, task definition을 설정하고, 컨테이너가 정상인 걸 확인했는데 -- 아무것도 접근이 안 됐어요. 에러도 없고, 타임아웃 메시지도 없고, 그냥 침묵이었어요. 코드, 환경 변수, DNS를 한 시간 동안 확인한 뒤에야 security group에 애플리케이션 포트의 ingress 규칙이 없다는 걸 깨달았어요. 규칙 하나 누락, 도움 되는 에러 메시지 제로.
+
+Security group은 "로컬에서는 되는데 AWS에서는 안 되는" 문제의 가장 흔한 원인이고, 트래픽을 차단할 때 로그를 남기지 않아요.
+
+## 왜 중요한가
+
+VPC의 모든 AWS 리소스에는 네트워크 레벨 접근 제어가 필요해요. Security group이 제대로 설정되지 않으면 리소스가 인터넷 전체에 노출되거나(보안 위험), 완전히 접근 불가능해져요(연결 끊김). 잘못 설정된 규칙은 AWS 보안 감사에서 가장 자주 발견되는 항목이고, 모든 포트에 `0.0.0.0/0`처럼 과도하게 허용적인 규칙은 공격의 빌미가 돼요.
+
+## 헤맸던 부분들
+
+실제로 디버깅 시간을 잡아먹은 함정들이에요:
+
+- **Stateful 동작이 처음엔 헷갈려요.** 포트 443의 인바운드를 허용하면, 응답 트래픽이 명시적 egress 규칙 없이 자동으로 허용돼요. 양방향을 모두 설정하는 전통적인 방화벽 경험이 있으면 직관적이지 않아요.
+- **기본 거부 vs 기본 허용 비대칭.** 인바운드는 기본 전체 차단인데 아웃바운드는 기본 전체 허용이에요. 이걸 잊으면 왜 아무것도 연결 안 되는지(ingress 누락) 헤매거나, egress 제한이 있다고 착각해요.
+- **Security group 참조 vs CIDR 블록.** 서비스 간 통신(앱-데이터베이스 등)에 CIDR 블록을 쓰면 IP가 바뀔 때 깨져요. Security group 참조는 자동 업데이트되지만, Terraform 문법이 다르고 헷갈리기 쉬워요.
+- **연결 디버깅이 불투명해요.** Security group 거부는 기본적으로 로그를 남기지 않아요(NACL과 다름). 거부된 트래픽을 보려면 VPC Flow Logs를 명시적으로 활성화해야 하고, 그래도 어떤 security group 규칙이 원인인지는 안 알려줘요.
+- **규칙 한도에 쉽게 도달해요.** 기본 한도가 security group당 60개 규칙, ENI당 5개 security group이에요. 규칙을 통합하려면 포트 범위와 CIDR 집합을 이해해야 해요.
+
+## 사용하면 좋을 때
+
+Security group은 VPC의 모든 리소스(EC2, RDS, ECS, VPC 내 Lambda)의 접근 제어, 서비스 티어 간 최소 권한 네트워크 접근 구현, 데이터베이스 접근을 애플리케이션 서버로만 제한, SSH/RDP 접근을 특정 IP 범위나 bastion 호스트로 제한할 때 적합해요.
+
+서브넷 레벨 트래픽 제어(NACL 사용), 특정 IP 차단(security group에는 deny 규칙이 없음 -- NACL 사용), 속도 제한이나 DDoS 방어(AWS WAF나 Shield 사용), 애플리케이션 레이어 필터링(security group은 L3/L4만 -- ALB 규칙이나 WAF 사용), 크로스 VPC 규칙(security group 참조는 같은 VPC나 피어링된 VPC에서만 동작)에는 적합하지 않아요.
 
 ## 핵심 개념
 
 ### Stateful 방화벽
 
-Security Group은 **stateful**입니다:
+Security Group은 **stateful**이에요. 이게 가장 중요한 이해 포인트예요:
 
-- 인바운드 트래픽이 허용되면 응답 트래픽은 자동으로 허용됨
-- 응답을 위한 egress 규칙을 따로 만들 필요 없음
-- 규칙 관리가 단순해짐
+- 인바운드 트래픽이 허용되면 응답 트래픽은 자동으로 아웃바운드 허용
+- 응답을 위한 별도 egress 규칙 불필요
+- 규칙 관리가 크게 단순해짐
+
+Stateless인 Network ACL(NACL)과 비교하세요. NACL은 양방향에 명시적 규칙이 필요해요.
 
 ### 기본 동작
+
+많은 분을 당황하게 하는 두 가지 기본값:
 
 - **인바운드**: 모든 트래픽 기본 차단
 - **아웃바운드**: 모든 트래픽 기본 허용
 
----
+이 비대칭은 커스텀 규칙이 없는 새 security group이 들어오는 연결은 모두 차단하지만, 리소스가 인터넷의 모든 곳에 접근할 수 있다는 뜻이에요.
 
 ## Ingress 규칙 (인바운드)
 
-리소스로 **들어오는** 트래픽을 제어합니다:
+Ingress 규칙은 리소스로 **들어오는** 트래픽을 제어해요:
 
 ```hcl
 ingress {
@@ -56,18 +82,16 @@ ingress {
 }
 ```
 
-**파라미터:**
+핵심 파라미터:
 
 - `from_port` / `to_port`: 포트 범위 (단일 포트면 같은 값)
-- `protocol`: `tcp`, `udp`, `icmp`, 또는 `-1` (전체)
-- `cidr_blocks`: 소스 IP 범위
-- `security_groups`: 소스 security group (권장)
-
----
+- `protocol`: `tcp`, `udp`, `icmp`, 또는 `-1` (전체 프로토콜)
+- `cidr_blocks`: CIDR 표기법의 소스 IP 범위
+- `security_groups`: 소스 security group (서비스 간 트래픽에 권장)
 
 ## Egress 규칙 (아웃바운드)
 
-리소스에서 **나가는** 트래픽을 제어합니다:
+Egress 규칙은 리소스에서 **나가는** 트래픽을 제어해요:
 
 ```hcl
 # 모든 아웃바운드 허용 (일반적인 기본값)
@@ -80,17 +104,17 @@ egress {
 }
 ```
 
-**특수 값:**
+알아둘 특수 값:
 
-- `from_port = 0, to_port = 0, protocol = "-1"`: 모든 트래픽
+- `from_port = 0, to_port = 0, protocol = "-1"`: 모든 포트의 모든 트래픽
 - `cidr_blocks = ["0.0.0.0/0"]`: 모든 IPv4 목적지
 - `ipv6_cidr_blocks = ["::/0"]`: 모든 IPv6 목적지
-
----
 
 ## 보안 모범 사례
 
 ### 1. 최소 권한 원칙
+
+보안 감사 통과와 실패의 차이는 규칙이 얼마나 구체적인지에 달려 있어요:
 
 ```hcl
 # BAD: 너무 허용적
@@ -112,7 +136,7 @@ ingress {
 
 ### 2. Security Group 참조 사용
 
-CIDR 블록보다 다른 security group 참조를 선호하세요:
+서비스 간 통신에는 CIDR 블록보다 항상 security group 참조를 사용하세요:
 
 ```hcl
 # 데이터베이스는 앱 서버에서만 트래픽 허용
@@ -124,13 +148,11 @@ ingress {
 }
 ```
 
-**장점:**
-
-- 소스 IP가 바뀌면 자동 업데이트
-- 의도가 명확함 (app → db)
-- 감사하기 쉬움
+이 방식은 소스 IP가 바뀌면 자동 업데이트되고, 의도가 명확하고(app -> db), IP 범위보다 감사하기 쉬워요.
 
 ### 3. SSH/RDP 접근 제한
+
+SSH를 절대 `0.0.0.0/0`으로 열지 마세요. 알려진 IP 범위나 bastion 호스트로 제한하세요:
 
 ```hcl
 # 회사 IP 범위에서만 SSH 허용
@@ -145,6 +167,8 @@ ingress {
 
 ### 4. 가능하면 Egress도 제한
 
+대부분의 팀이 egress를 완전히 열어둬요. 민감한 워크로드에는 제한하세요:
+
 ```hcl
 # 특정 서비스로만 HTTPS 아웃바운드 허용
 egress {
@@ -155,11 +179,11 @@ egress {
 }
 ```
 
----
-
 ## 일반적인 패턴
 
 ### 웹 서버 Security Group
+
+일반적인 웹 서버는 인터넷에서 HTTP/HTTPS, bastion에서만 SSH가 필요해요:
 
 ```hcl
 resource "aws_security_group" "web" {
@@ -203,6 +227,8 @@ resource "aws_security_group" "web" {
 
 ### 데이터베이스 Security Group
 
+데이터베이스는 애플리케이션 서버에서만 연결을 받아야 하고, 인터넷에서 절대 직접 접근하면 안 돼요:
+
 ```hcl
 resource "aws_security_group" "database" {
   name        = "database-sg"
@@ -229,6 +255,8 @@ resource "aws_security_group" "database" {
 
 ### ALB Security Group
 
+ALB는 인터넷에서 HTTPS를 받고 특정 포트로 애플리케이션 서버에 전달해요:
+
 ```hcl
 resource "aws_security_group" "alb" {
   name        = "alb-sg"
@@ -253,9 +281,9 @@ resource "aws_security_group" "alb" {
 }
 ```
 
----
-
 ## 디버깅 팁
+
+뭔가 연결이 안 되고 security group을 의심할 때 이 명령어들이 도움이 돼요:
 
 ```bash
 # security group 규칙 확인
@@ -271,7 +299,15 @@ nc -zv <ip> <port>  # 소스에서
 telnet <ip> <port>  # 대안
 ```
 
----
+`nc`가 아무것도 반환하지 않고 에러도 없으면, security group이 트래픽을 조용히 드롭하고 있는 거예요. VPC Flow Logs를 활성화해서 확인하세요.
+
+## 실전 정리
+
+Security group은 두 가지를 내재화하면 간단해요: stateful이라서 응답이 자동이고, 인바운드 거부/아웃바운드 허용이 기본값이에요.
+
+서비스 간 규칙에는 항상 CIDR 블록 대신 security group 참조를 사용하세요. CIDR 블록은 배포나 스케일링 이벤트 중에 IP가 바뀌면 깨져요. Security group 참조는 이걸 자동으로 처리해요.
+
+연결 문제를 디버깅할 때는 다른 것보다 security group부터 확인하세요. AWS 네트워크 문제의 가장 흔한 원인이고, 기본적으로 로그 출력이 전혀 없어요. 트러블슈팅이 필요할 수 있는 환경에는 VPC Flow Logs를 활성화해 두세요.
 
 ## 참고 자료
 

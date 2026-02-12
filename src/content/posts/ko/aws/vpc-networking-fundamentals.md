@@ -28,9 +28,9 @@ references:
 import Mermaid from '$lib/components/Mermaid.svelte';
 </script>
 
-AWS를 처음 쓸 때 Terraform으로 VPC, 서브넷 4개, NAT Gateway, Internet Gateway를 만들었는데 — 어떤 리소스가 인터넷이 필요한 건지 전혀 감이 안 왔어요. "Private" 서브넷의 EC2가 외부와 통신되고(나쁨), "public" 서브넷의 EC2는 인터넷이 안 되더라고요(역시 나쁨). VPC 네트워킹은 쉬워 보이다가 갑자기 안 됩니다.
+AWS를 처음 쓸 때 Terraform으로 VPC, 서브넷 4개, NAT Gateway, Internet Gateway를 만들었는데 -- 어떤 리소스가 인터넷이 필요한 건지 전혀 감이 안 왔어요. "Private" 서브넷의 EC2가 외부와 통신되고(나쁨), "public" 서브넷의 EC2는 인터넷이 안 되더라고요(역시 나쁨). VPC 네트워킹은 쉬워 보이다가 갑자기 안 돼요.
 
-핵심 문제는 VPC가 모든 AWS 서비스의 기반이라는 거예요. CIDR 블록을 너무 작게 잡으면 팀이 커질 때 IP가 부족해지고, NAT Gateway를 private 서브넷에 놓으면(논리적으로 맞아 보이지만) 라우팅이 전혀 안 돼요. Route table을 명시적으로 연결하지 않으면 "private" 서브넷이 main route table의 IGW 라우트를 상속받아서 — 아무도 모르게 public이 되어버려요.
+핵심 문제는 VPC가 모든 AWS 서비스의 기반이라는 거예요. CIDR 블록을 너무 작게 잡으면 팀이 커질 때 IP가 부족해지고, NAT Gateway를 private 서브넷에 놓으면(논리적으로 맞아 보이지만) 라우팅이 전혀 안 돼요. Route table을 명시적으로 연결하지 않으면 "private" 서브넷이 main route table의 IGW 라우트를 상속받아서 -- 아무도 모르게 public이 되어버려요.
 
 이 글에서는 VPC 네트워킹을 처음부터 다룰게요. CIDR 표기법, 서브넷 설계, 게이트웨이, Route Table, 그리고 직접 쓸 수 있는 Terraform 예시까지 정리했어요.
 
@@ -117,7 +117,7 @@ CIDR과 서브넷을 이해했으니, VPC 자체를 어떻게 구성하는지 �
 
 ### 표준 VPC 설계
 
-/16 블록은 65,536개 IP를 제공해요 — 대부분의 프로덕션 워크로드에 충분해요:
+/16 블록은 65,536개 IP를 제공해요 -- 대부분의 프로덕션 워크로드에 충분해요:
 
 ```terraform
 resource "aws_vpc" "main" {
@@ -168,7 +168,7 @@ resource "aws_internet_gateway" "main" {
 }
 ```
 
-IGW를 만든다고 바로 public이 되는 건 아니에요 — 그건 곧 다룰 Route Table이 결정해요.
+IGW를 만든다고 바로 public이 되는 건 아니에요 -- 그건 곧 다룰 Route Table이 결정해요.
 
 ### NAT Gateway
 
@@ -208,7 +208,7 @@ resource "aws_nat_gateway" "main" {
 
 ### Elastic IP (EIP)
 
-Elastic IP는 인스턴스를 중지/시작해도 유지되는 고정 public IP예요. 실행 중인 인스턴스에 연결돼 있으면 무료지만, 연결 안 된 EIP는 월 ~$3.6이 과금돼요 — Terraform으로 만들어 놓고 나중에 분리하면 슬며시 비용이 나가요.
+Elastic IP는 인스턴스를 중지/시작해도 유지되는 고정 public IP예요. 실행 중인 인스턴스에 연결돼 있으면 무료지만, 연결 안 된 EIP는 월 ~$3.6이 과금돼요 -- Terraform으로 만들어 놓고 나중에 분리하면 슬며시 비용이 나가요.
 
 | 옵션           | 비용          | 사용 사례          |
 | -------------- | ------------- | ------------------ |
@@ -261,7 +261,7 @@ resource "aws_route_table_association" "private_a" {
 }
 ```
 
-**꼭 알아둘 점:** Route Table과 명시적으로 연결되지 않은 서브넷은 VPC의 **main route table**을 사용해요. 누군가 main table에 IGW 라우트를 추가하면, 연결되지 않은 모든 서브넷이 명시적 변경 없이 public이 돼요. 항상 Route Table을 직접 만들어서 명시적으로 연결하세요 — 기본값에 의존하면 안 돼요.
+**꼭 알아둘 점:** Route Table과 명시적으로 연결되지 않은 서브넷은 VPC의 **main route table**을 사용해요. 누군가 main table에 IGW 라우트를 추가하면, 연결되지 않은 모든 서브넷이 명시적 변경 없이 public이 돼요. 항상 Route Table을 직접 만들어서 명시적으로 연결하세요 -- 기본값에 의존하면 안 돼요.
 
 ## 트래픽 흐름
 
@@ -270,19 +270,19 @@ resource "aws_route_table_association" "private_a" {
 ### Public 서브넷 트래픽
 
 ```text
-인터넷 → IGW → Public Route Table → Public 서브넷 → EC2
+인터넷 -> IGW -> Public Route Table -> Public 서브넷 -> EC2
 ```
 
 ### Private 서브넷 아웃바운드
 
 ```text
-EC2 (private) → Private Route Table → NAT Gateway → IGW → 인터넷
+EC2 (private) -> Private Route Table -> NAT Gateway -> IGW -> 인터넷
 ```
 
 ### Private 서브넷 인바운드 (ALB 경유)
 
 ```text
-인터넷 → IGW → ALB (public) → EC2 (private)
+인터넷 -> IGW -> ALB (public) -> EC2 (private)
 ```
 
 ALB 패턴이 대부분의 프로덕션 애플리케이션에서 쓰이는 방식이에요. 로드 밸런서가 public 서브넷에서 트래픽을 받고, 실제 애플리케이션 서버는 외부에서 직접 접근할 수 없는 private 서브넷에 있어요.
@@ -390,9 +390,9 @@ resource "aws_route_table_association" "private_a" {
 }
 ```
 
-## 정리
+## 실전 정리
 
-VPC는 AWS 인프라의 기반이에요. 처음에 제대로 잡는 게 중요한데 — 서비스가 돌아가는 상태에서 CIDR 블록과 서브넷을 바꾸는 건 정말 고통스러워요.
+VPC는 AWS 인프라의 기반이에요. 처음에 제대로 잡는 게 중요한데 -- 서비스가 돌아가는 상태에서 CIDR 블록과 서브넷을 바꾸는 건 정말 고통스러워요.
 
 **커스텀 VPC를 쓸 때:** 네트워크 격리가 필요한 컴퓨팅 리소스(EC2, ECS, RDS)를 배포하거나, public과 내부 전용 티어로 나뉘는 멀티 티어 아키텍처를 구성하거나, 데이터베이스와 애플리케이션 서버용 private 서브넷이 있는 프로덕션 환경에서 사용하세요.
 
@@ -400,9 +400,9 @@ VPC는 AWS 인프라의 기반이에요. 처음에 제대로 잡는 게 중요�
 
 **꼭 피해야 할 실수 세 가지:**
 
-1. NAT Gateway를 private 서브넷에 놓는 것 — public 서브넷에 있어야 해요
-2. Main route table에 의존하는 것 — 항상 Route Table을 직접 만들어서 명시적으로 연결하세요
-3. 개발 환경에 NAT Gateway를 만드는 것 — 월 $32씩, 아웃바운드 인터넷 접근이 필요 없는 리소스에는 낭비예요
+1. NAT Gateway를 private 서브넷에 놓는 것 -- public 서브넷에 있어야 해요
+2. Main route table에 의존하는 것 -- 항상 Route Table을 직접 만들어서 명시적으로 연결하세요
+3. 개발 환경에 NAT Gateway를 만드는 것 -- 월 $32씩, 아웃바운드 인터넷 접근이 필요 없는 리소스에는 낭비예요
 
 ## 참고 자료
 
