@@ -108,7 +108,6 @@
 		results = posts
 			.slice()                    // Copy array to avoid mutating original
 			.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-			.slice(0, 10)               // Limit to 10 results
 			.map((post) => ({ item: post, score: 0 }));
 
 		// TICK - WAIT FOR DOM UPDATE
@@ -126,13 +125,12 @@
 	function handleInput() {
 		if (query.trim()) {
 			// Perform fuzzy search
-			results = fuzzySearch(fuse, query).slice(0, 10);
+			results = fuzzySearch(fuse, query);
 		} else {
 			// No query - show recent posts
 			results = posts
 				.slice()
 				.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-				.slice(0, 10)
 				.map((post) => ({ item: post, score: 0 }));
 		}
 		// Reset selection to first item
