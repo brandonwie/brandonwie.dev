@@ -286,3 +286,30 @@ security(4), icalendar(2), ai-ml(1), data(1)
 | e53bc2e | content: publish 44 new blog posts (EN+KO) with build fixes |
 
 **Next:** Monitor Cloudflare deployment, spot-check rendered posts
+
+---
+
+### 2026-02-12 (Session 4)
+
+**Friction Feedback Loop for Claude Config**
+
+Implemented the "Reinforced Learning" system — a feedback loop
+for self-improving Claude configuration. No brandonwie.dev code
+changes; all work was on 3B infrastructure.
+
+1. **Friction-log system** (7 artifacts)
+   - `friction-log.json` persistent store with 5W1H observation
+     schema
+   - `[FRICTION]` buffer format for tagging friction events
+   - Step 4.6 (Friction Analysis) added to /wrap skill
+   - `friction-analysis.md` reference with full extraction,
+     pattern matching, and verification rules
+   - Stop hook extended with friction reminder
+   - Global CLAUDE.md template updated with Friction Capture
+     section
+
+2. **ADR-001** — First Architecture Decision Record in
+   claude-forge documenting the design choice
+
+**Next:** Test friction capture during real sessions, continue
+blog post recreation
