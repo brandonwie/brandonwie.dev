@@ -6,6 +6,7 @@
 - [x] Core terminal functionality complete
 - [x] First deployment to Cloudflare Pages
 - [x] 8 posts published (EN + KO)
+- [x] 52 posts published (EN + KO) with full blog narratives
 - [x] Custom domain live
 
 ## Session Log
@@ -248,3 +249,40 @@ Expanded EN with narrative content and retranslated KO with natural 해요체:
 | `src/content/posts/ko/aws/vpc-networking-fundamentals.md` | Retranslated            |
 
 **Next:** Continue with remaining 7 posts (security-groups-fundamentals next)
+
+---
+
+### 2026-02-12 (Session 3)
+
+**Mass Blog Publish — 44 New Posts (EN+KO)**
+
+Completed the full blog publish pipeline, going from 8 to 52 posts:
+
+1. **Parallel Expansion (10 agents)**
+   - 44 new posts expanded from 3B knowledge to narrative blog format
+   - 8 existing posts re-expanded with richer narrative
+   - 44 new Korean translations + 8 Korean retranslations
+   - All using blog-writing-guide.md and translation-guide.md
+
+2. **Build Fixes (4 iterations)**
+   - Added 6 missing Shiki languages (css, html, svelte, toml, ini, tsx)
+   - Escaped bare `<` characters in markdown (Svelte tag parsing)
+   - Removed tsx grammar (Oniguruma regex crash)
+   - **Critical fix:** Shiki singleton pattern — mdsvex was creating 700+
+     highlighter instances, exhausting Oniguruma WASM memory
+
+3. **Final State**
+   - 52 EN posts + 52 KO posts across 9 categories
+   - 106 files committed, 20,033 lines added
+   - Build succeeds in 22s
+
+**Categories:** backend(15), devops(13), general(8), aws(4), frontend(4),
+security(4), icalendar(2), ai-ml(1), data(1)
+
+**Commits:**
+
+| Hash    | Description                                                 |
+| ------- | ----------------------------------------------------------- |
+| e53bc2e | content: publish 44 new blog posts (EN+KO) with build fixes |
+
+**Next:** Monitor Cloudflare deployment, spot-check rendered posts
