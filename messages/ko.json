@@ -16,5 +16,7 @@
   "blog_tagline": "백엔드 시스템, DevOps, 그리고 실제 제품을 만들며 배운 것들을 기록합니다.",
   "recent_posts": "최근 글",
   "see_all_posts": "전체 {count}개 글 보기",
-  "back_to_home": "홈으로 돌아가기"
+  "back_to_home": "홈으로 돌아가기",
+  "all_categories": "전체",
+  "category_filter": "카테고리"
 }

@@ -51,12 +51,14 @@
 
 	// Locale-aware date formatting
 	function formatDate(dateStr: string): string {
-		const locale = getLocale();
-		return new Date(dateStr).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric'
-		});
+		const d = new Date(dateStr);
+		if (getLocale() === 'ko') {
+			const y = d.getFullYear();
+			const mo = String(d.getMonth() + 1).padStart(2, '0');
+			const day = String(d.getDate()).padStart(2, '0');
+			return `${y}.${mo}.${day}`;
+		}
+		return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 	}
 </script>
 

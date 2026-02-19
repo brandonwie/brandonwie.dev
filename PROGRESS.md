@@ -329,6 +329,54 @@ Completed the dual-view toggle feature and fixed several UX issues:
 | d8138e0 | fix(ui): show full name in visible content      |
 | 5a669a2 | fix(ui): make terminal block cursor visible     |
 
+**Next:** Category sidebar, continue recreating remaining 7 blog posts
+
+---
+
+### 2026-02-19 (Session 2)
+
+**Category Sidebar + Korean Date Fix**
+
+Added category filtering to blog mode and fixed Korean date formatting:
+
+1. **Category Sidebar** (`CategorySidebar.svelte`)
+   - Desktop (lg+): vertical `<nav>` sidebar, 192px, inside flex layout
+   - Mobile (<lg): horizontal scrollable pill bar with `scrollbar-none`
+   - Client-side `$state` filtering — no URL changes, instant filtering
+   - `getCategoriesWithCounts()` helper in `posts.ts` (shared EN/KO)
+   - Categories sorted by count descending (backend 15 → ai-ml 1)
+   - Not on BlogHome — only on `/posts` and `/ko/posts`
+   - Layout widened from `max-w-4xl` to `max-w-6xl` to fit sidebar
+   - 2 new i18n keys: `all_categories`, `category_filter`
+
+2. **Korean Date Format Fix**
+   - `toLocaleDateString('ko-KR')` produced `2026년 2월 11일` — too wide,
+     line-breaks on `일` in post cards
+   - Changed to manual `YYYY.MM.DD` format (Korean convention with dots)
+   - Applied to all 5 `formatDate` instances: BlogHome, posts list (EN/KO),
+     post detail (EN/KO)
+
+3. **Documentation Updates**
+   - CLAUDE.md: added dual-view architecture, category sidebar design
+     decisions, date formatting rationale, updated repo structure tree
+   - todos.md: updated session context, added completed items
+   - PROGRESS.md: this entry
+
+**Files Modified:**
+
+| File                                        | Change                                    |
+| ------------------------------------------- | ----------------------------------------- |
+| `src/lib/components/CategorySidebar.svelte` | Created                                   |
+| `src/lib/stores/posts.ts`                   | Added `getCategoriesWithCounts()`         |
+| `src/routes/posts/+page.svelte`             | Sidebar + filtering + date fix            |
+| `src/routes/ko/posts/+page.svelte`          | Sidebar + filtering + date fix            |
+| `src/lib/components/BlogHome.svelte`        | Korean date fix                           |
+| `src/routes/posts/[slug]/+page.svelte`      | Korean date fix                           |
+| `src/routes/ko/posts/[slug]/+page.svelte`   | Korean date fix                           |
+| `src/app.css`                               | Added `.scrollbar-none` utility           |
+| `messages/en.json`                          | Added `all_categories`, `category_filter` |
+| `messages/ko.json`                          | Added `all_categories`, `category_filter` |
+
 **Next:** Continue recreating remaining 7 blog posts
 
 ---

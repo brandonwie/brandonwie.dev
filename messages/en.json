@@ -16,5 +16,7 @@
   "blog_tagline": "Software engineer writing about backend systems, DevOps, and lessons learned building real products.",
   "recent_posts": "Recent Posts",
   "see_all_posts": "See all {count} posts",
-  "back_to_home": "Back to home"
+  "back_to_home": "Back to home",
+  "all_categories": "All",
+  "category_filter": "Categories"
 }

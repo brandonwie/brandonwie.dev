@@ -10,19 +10,34 @@
 	import { getLocale } from '$lib/paraglide/runtime';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 	import ViewToggle from '$lib/components/ViewToggle.svelte';
+	import CategorySidebar from '$lib/components/CategorySidebar.svelte';
 	import { viewMode } from '$lib/stores/viewMode';
+	import { getCategoriesWithCounts } from '$lib/stores/posts';
 
 	let { data }: { data: PageData } = $props();
 
 	const backLabel = $derived($viewMode === 'terminal' ? m.back_to_terminal() : m.back_to_home());
 
+	// Category filtering
+	let activeCategory: string | null = $state(null);
+	const categoriesWithCounts = $derived(getCategoriesWithCounts(data.posts));
+	const filteredPosts = $derived(
+		activeCategory ? data.posts.filter((p) => p.category === activeCategory) : data.posts
+	);
+
+	function handleCategorySelect(category: string | null) {
+		activeCategory = category;
+	}
+
 	function formatDate(dateStr: string): string {
-		const locale = getLocale();
-		return new Date(dateStr).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric'
-		});
+		const d = new Date(dateStr);
+		if (getLocale() === 'ko') {
+			const y = d.getFullYear();
+			const mo = String(d.getMonth() + 1).padStart(2, '0');
+			const day = String(d.getDate()).padStart(2, '0');
+			return `${y}.${mo}.${day}`;
+		}
+		return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 </script>
 
@@ -33,7 +48,7 @@
 
 <div class="min-h-screen bg-terminal-bg-primary">
 	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
-		<div class="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
+		<div class="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
 			<a
 				href="/ko"
 				class="flex items-center gap-1 text-xs text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0 sm:gap-2 sm:text-sm"
@@ -49,46 +64,52 @@
 		</div>
 	</header>
 
-	<main class="mx-auto max-w-4xl px-6 py-12">
+	<main class="mx-auto max-w-6xl px-6 py-12">
 		<h1 class="mb-8 text-2xl font-bold text-terminal-text-primary">{m.posts_title()}</h1>
 
-		{#if data.posts.length === 0}
-			<p class="text-terminal-text-muted">{m.no_posts()}</p>
-		{:else}
-			<div class="space-y-6">
-				{#each data.posts as post}
-					<a
-						href="/ko/posts/{post.slug}"
-						class="block rounded-lg border border-terminal-border bg-terminal-bg-secondary p-6 transition-colors hover:border-terminal-accent-orange"
-					>
-						<div class="mb-2 flex flex-wrap items-center gap-2">
-							<span
-								class="rounded bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow"
+		<div class="lg:flex lg:gap-8">
+			<CategorySidebar
+				categories={categoriesWithCounts}
+				{activeCategory}
+				onSelect={handleCategorySelect}
+			/>
+
+			<div class="flex-1 min-w-0">
+				{#if filteredPosts.length === 0}
+					<p class="text-terminal-text-muted">{m.no_posts()}</p>
+				{:else}
+					<div class="space-y-6">
+						{#each filteredPosts as post (post.slug)}
+							<a
+								href="/ko/posts/{post.slug}"
+								class="block rounded-lg border border-terminal-border bg-terminal-bg-secondary p-6 transition-colors hover:border-terminal-accent-orange"
 							>
-								{post.category}
-							</span>
-							<span class="text-sm text-terminal-text-dim">
-								{formatDate(post.date)}
-							</span>
-						</div>
-						<h2 class="mb-2 text-xl font-semibold text-terminal-text-primary">
-							{post.title}
-						</h2>
-						<p class="mb-3 text-terminal-text-muted">
-							{post.description}
-						</p>
-						<div class="flex flex-wrap gap-2">
-							{#each post.tags as tag}
-								<span
-									class="rounded bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted"
-								>
-									{tag}
-								</span>
-							{/each}
-						</div>
-					</a>
-				{/each}
+								<div class="mb-2 flex flex-wrap items-center gap-2">
+									<span class="rounded bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow">
+										{post.category}
+									</span>
+									<span class="text-sm text-terminal-text-dim">
+										{formatDate(post.date)}
+									</span>
+								</div>
+								<h2 class="mb-2 text-xl font-semibold text-terminal-text-primary">
+									{post.title}
+								</h2>
+								<p class="mb-3 text-terminal-text-muted">
+									{post.description}
+								</p>
+								<div class="flex flex-wrap gap-2">
+									{#each post.tags as tag}
+										<span class="rounded bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted">
+											{tag}
+										</span>
+									{/each}
+								</div>
+							</a>
+						{/each}
+					</div>
+				{/if}
 			</div>
-		{/if}
+		</div>
 	</main>
 </div>

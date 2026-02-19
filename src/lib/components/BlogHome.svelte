@@ -8,14 +8,17 @@
 	let { posts, basePath = '/' }: { posts: PostMetadata[]; basePath?: string } = $props();
 
 	const recentPosts = $derived(posts.slice(0, 10));
+	const rssHref = $derived(basePath === '/' ? '/rss.xml' : `${basePath}/rss.xml`);
 
 	function formatDate(dateStr: string): string {
-		const locale = getLocale();
-		return new Date(dateStr).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric'
-		});
+		const d = new Date(dateStr);
+		if (getLocale() === 'ko') {
+			const y = d.getFullYear();
+			const mo = String(d.getMonth() + 1).padStart(2, '0');
+			const day = String(d.getDate()).padStart(2, '0');
+			return `${y}.${mo}.${day}`;
+		}
+		return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 
 	function postHref(slug: string): string {
@@ -129,6 +132,15 @@
 					rel="noopener noreferrer"
 				>
 					LinkedIn
+				</a>
+				<a
+					href={rssHref}
+					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors flex items-center gap-1"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+					RSS
 				</a>
 			</div>
 		</div>
