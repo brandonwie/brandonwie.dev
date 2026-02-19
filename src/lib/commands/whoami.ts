@@ -35,7 +35,7 @@ registerCommand("whoami", () => {
         "  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝ ╚═╝  ╚═══╝",
     },
     { type: "text", content: "" },
-    { type: "text", content: "  Brandon Wie (위석현)" },
+    { type: "text", content: "  Brandon (Seokhyun) Wie | 위석현" },
     {
       type: "text",
       content: "  Product Engineer (Co-Lead Backend) @ Moba | Seoul",
@@ -132,8 +132,8 @@ registerCommand("whoami", () => {
 registerCommand("about", () => {
   const output: OutputLine[] = [
     { type: "text", content: "" },
-    { type: "text", content: "  About Brandon Wie" },
-    { type: "text", content: "  ─────────────────" },
+    { type: "text", content: "  About Brandon (Seokhyun) Wie" },
+    { type: "text", content: "  ──────────────────────────────" },
     { type: "text", content: "" },
     {
       type: "text",

@@ -37,7 +37,7 @@
 				href={basePath}
 				class="text-terminal-accent-orange font-semibold text-sm sm:text-base no-underline"
 			>
-				Brandon Wie
+				Brandon (Seokhyun) Wie
 			</a>
 			<div class="flex items-center gap-2">
 				<a
@@ -112,7 +112,7 @@
 	<!-- Footer -->
 	<footer class="border-t border-terminal-border mt-auto">
 		<div class="mx-auto max-w-2xl px-4 py-6 sm:px-6 flex items-center justify-between text-xs text-terminal-text-dim">
-			<span>&copy; Brandon Wie</span>
+			<span>&copy; Brandon (Seokhyun) Wie</span>
 			<div class="flex items-center gap-4">
 				<a
 					href="https://github.com/brandonwie"
