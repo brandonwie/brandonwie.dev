@@ -1,70 +1,45 @@
-import type { PageLoad } from './$types';
+import type { PageLoad } from "./$types";
+import type { PostMetadata } from "$lib/stores/posts";
 
-interface PostModule {
-	metadata: {
-		title: string;
-		description: string;
-		date: string;
-		updated?: string;
-		tags: string[];
-		category: string;
-		draft?: boolean;
-		lang?: string;
-	};
-}
-
-export interface PostEntry {
-	slug: string;
-	title: string;
-	description: string;
-	date: string;
-	updated?: string;
-	tags: string[];
-	category: string;
-	draft?: boolean;
-	lang?: string;
+interface PostEntryWithLang extends PostMetadata {
+  lang?: string;
 }
 
 // Load Korean posts, with fallback to English
-const koModules = import.meta.glob('../../../content/posts/ko/**/*.md');
-const enModules = import.meta.glob('../../../content/posts/en/**/*.md');
+const koModules = import.meta.glob("../../../content/posts/ko/**/*.md", {
+  import: "metadata",
+  eager: true,
+}) as Record<string, PostMetadata>;
 
-export const load: PageLoad = async () => {
-	const posts: PostEntry[] = [];
-	const koSlugs = new Set<string>();
+const enModules = import.meta.glob("../../../content/posts/en/**/*.md", {
+  import: "metadata",
+  eager: true,
+}) as Record<string, PostMetadata>;
 
-	// First, load Korean posts
-	for (const [path, resolver] of Object.entries(koModules)) {
-		const post = (await resolver()) as PostModule;
-		const slug = path.split('/').pop()?.replace('.md', '') ?? '';
+export const load: PageLoad = () => {
+  const posts: PostEntryWithLang[] = [];
+  const koSlugs = new Set<string>();
 
-		if (post.metadata.draft) continue;
+  // First, load Korean posts
+  for (const [path, metadata] of Object.entries(koModules)) {
+    if (metadata.draft) continue;
 
-		koSlugs.add(slug);
-		posts.push({
-			slug,
-			...post.metadata,
-			lang: 'ko'
-		});
-	}
+    const slug = path.split("/").pop()?.replace(".md", "") ?? "";
+    koSlugs.add(slug);
+    posts.push({ slug, ...metadata, lang: "ko" });
+  }
 
-	// Then, load English posts that don't have Korean translations
-	for (const [path, resolver] of Object.entries(enModules)) {
-		const post = (await resolver()) as PostModule;
-		const slug = path.split('/').pop()?.replace('.md', '') ?? '';
+  // Then, load English posts that don't have Korean translations
+  for (const [path, metadata] of Object.entries(enModules)) {
+    if (metadata.draft) continue;
 
-		if (post.metadata.draft) continue;
-		if (koSlugs.has(slug)) continue; // Skip if Korean translation exists
+    const slug = path.split("/").pop()?.replace(".md", "") ?? "";
+    if (koSlugs.has(slug)) continue;
 
-		posts.push({
-			slug,
-			...post.metadata,
-			lang: 'en' // Mark as English fallback
-		});
-	}
+    posts.push({ slug, ...metadata, lang: "en" });
+  }
 
-	// Sort by date (newest first)
-	posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-	return { posts };
+  return { posts };
 };
