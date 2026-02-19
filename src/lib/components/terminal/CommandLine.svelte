@@ -276,7 +276,7 @@
 			  break-all: Allows text to wrap within container.
 			  whitespace-pre-wrap: Preserves spaces, allows wrapping.
 			-->
-			<div class="pointer-events-none break-all text-terminal-text-primary"><span class="whitespace-pre-wrap">{$currentInput.slice(0, cursorPosition)}</span><span class="cursor-block">{$currentInput[cursorPosition] || ' '}</span><span class="whitespace-pre-wrap">{$currentInput.slice(cursorPosition + 1)}</span></div>
+			<div class="pointer-events-none relative z-20 break-all text-terminal-text-primary"><span class="whitespace-pre-wrap">{$currentInput.slice(0, cursorPosition)}</span><span class="cursor-block">{$currentInput[cursorPosition] || ' '}</span><span class="whitespace-pre-wrap">{$currentInput.slice(cursorPosition + 1)}</span></div>
 		</div>
 	</div>
 
