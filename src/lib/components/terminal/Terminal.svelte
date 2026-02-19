@@ -26,6 +26,7 @@
 	import Output from './Output.svelte';
 	import FuzzyFinder from './FuzzyFinder.svelte';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
+	import ViewToggle from '$lib/components/ViewToggle.svelte';
 
 	// SVELTE STORES - Shared State
 	// ----------------------------
@@ -249,7 +250,10 @@
 			</div>
 			<span class="ml-2 text-sm text-terminal-text-muted truncate">visitor@brandonwie.dev</span>
 		</div>
-		<LanguageToggle />
+		<div class="flex items-center gap-2">
+			<ViewToggle />
+			<LanguageToggle />
+		</div>
 	</div>
 
 	<!--
