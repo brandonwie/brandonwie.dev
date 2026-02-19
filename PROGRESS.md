@@ -289,6 +289,50 @@ security(4), icalendar(2), ai-ml(1), data(1)
 
 ---
 
+### 2026-02-19
+
+**Blog/Terminal Dual-View Toggle + Performance & Cursor Fixes**
+
+Completed the dual-view toggle feature and fixed several UX issues:
+
+1. **Blog/Terminal View Toggle** (13 files)
+   - `ViewToggle.svelte` — Blog/CLI toggle button with orange highlight
+   - `viewMode.ts` — localStorage-persisted writable store
+   - `BlogHome.svelte` — Full blog-style homepage with i18n
+   - Conditional rendering on home pages (EN + KO)
+   - Context-aware back labels on post list and detail pages
+   - Added 4 new i18n keys (en.json + ko.json)
+
+2. **Performance Fix** — Slow page load (~10s)
+   - Root cause: `import.meta.glob` loading full compiled mdsvex modules
+     (52+ sequential async imports)
+   - Fix: `{ import: 'metadata', eager: true }` across 4 listing loaders
+   - Changed async load functions to synchronous
+
+3. **Terminal Cursor Fix** — Block cursor invisible
+   - Debugged via Playwright MCP (screenshots, DOM evaluation)
+   - Root cause: hidden input (`z-10`) painted on top of cursor overlay
+   - CSS fixes: `display: inline-block`, `min-width: 1ch`,
+     `height: 1.2em`, `vertical-align: text-bottom` in `.cursor-block`
+   - Final fix: `relative z-20` on cursor overlay div in CommandLine.svelte
+
+4. **Name Format Update**
+   - "Brandon (Seokhyun) Wie" in BlogHome header/footer + whoami command
+
+**Commits:**
+
+| Hash    | Description                                     |
+| ------- | ----------------------------------------------- |
+| b896c9e | feat(ui): add blog/terminal dual-view toggle    |
+| cb8338b | perf: use eager metadata-only glob for listings |
+| adefc2d | fix(ui): add ViewToggle to terminal header      |
+| d8138e0 | fix(ui): show full name in visible content      |
+| 5a669a2 | fix(ui): make terminal block cursor visible     |
+
+**Next:** Continue recreating remaining 7 blog posts
+
+---
+
 ### 2026-02-12 (Session 4)
 
 **Friction Feedback Loop for Claude Config**
