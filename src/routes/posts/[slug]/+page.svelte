@@ -25,9 +25,13 @@
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
+	import ViewToggle from '$lib/components/ViewToggle.svelte';
+	import { viewMode } from '$lib/stores/viewMode';
 	import Giscus from '$lib/components/Giscus.svelte';
 
 	let { data }: { data: PageData } = $props();
+
+	const backLabel = $derived($viewMode === 'terminal' ? m.back_to_terminal() : m.back_to_home());
 
 	function goBack() {
 		goto('/');
@@ -124,10 +128,13 @@
 				class="flex items-center gap-1 text-xs text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0 sm:gap-2 sm:text-sm"
 			>
 				<span>←</span>
-				<span>{m.back_to_terminal()}</span>
+				<span>{backLabel}</span>
 			</button>
 			<a href="/" class="text-terminal-accent-orange text-xs truncate sm:text-base">brandonwie.dev</a>
-			<LanguageToggle />
+			<div class="flex items-center gap-2">
+				<ViewToggle />
+				<LanguageToggle />
+			</div>
 		</div>
 	</header>
 
@@ -213,7 +220,7 @@
 				onclick={goBack}
 				class="text-terminal-text-muted transition-colors hover:text-terminal-accent-orange"
 			>
-				← {m.back_to_terminal()}
+				← {backLabel}
 			</button>
 		</div>
 	</footer>

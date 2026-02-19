@@ -18,8 +18,12 @@
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
+	import ViewToggle from '$lib/components/ViewToggle.svelte';
+	import { viewMode } from '$lib/stores/viewMode';
 
 	let { data }: { data: PageData } = $props();
+
+	const backLabel = $derived($viewMode === 'terminal' ? m.back_to_terminal() : m.back_to_home());
 
 	// Locale-aware date formatting
 	function formatDate(dateStr: string): string {
@@ -52,10 +56,13 @@
 				class="flex items-center gap-1 text-xs text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0 sm:gap-2 sm:text-sm"
 			>
 				<span>←</span>
-				<span>{m.back_to_terminal()}</span>
+				<span>{backLabel}</span>
 			</a>
 			<a href="/" class="text-terminal-accent-orange text-xs truncate sm:text-base">brandonwie.dev</a>
-			<LanguageToggle />
+			<div class="flex items-center gap-2">
+				<ViewToggle />
+				<LanguageToggle />
+			</div>
 		</div>
 	</header>
 
