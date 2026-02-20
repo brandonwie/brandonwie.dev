@@ -2,7 +2,7 @@
 title: "AWS Security Group 기초"
 description: "Security Group의 stateful 동작, 최소 권한 원칙, 실전 패턴 — 연결 안 되는 원인 1위를 파헤쳐요."
 date: 2025-04-29T00:00:00.000Z
-updated: "2026-02-12"
+updated: "2026-02-19"
 tags:
   - aws
   - security
@@ -12,8 +12,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: security-groups-fundamentals
-source_updated: "2026-01-27"
-translation_date: "2026-02-12"
+source_updated: "2026-02-19"
+translation_date: "2026-02-20"
 references:
   - url: "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html"
     title: AWS Security Group 공식 문서
@@ -280,6 +280,83 @@ resource "aws_security_group" "alb" {
   }
 }
 ```
+
+## Terraform에서 Inline vs Standalone 규칙
+
+Terraform으로 security group 규칙을 관리하는 방법은 두 가지예요. 어떤 방식을
+선택하느냐에 따라 state drift가 발생할 수 있어요. 저도 직접 겪었는데 --
+`terraform plan`이 AWS 콘솔에서 직접 추가한 개발자 IP를 삭제하려 했어요.
+security group에 inline ingress 블록이 하나라도 있으면, Terraform이 모든
+ingress 규칙의 소유권을 가져가거든요.
+
+### Inline 규칙 (`aws_security_group` 내부)
+
+```hcl
+resource "aws_security_group" "app" {
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion.id]
+  }
+}
+```
+
+inline `ingress` 블록이 하나라도 있으면, Terraform은 이 security group의
+모든 ingress 규칙을 관리해요. `terraform plan` 실행 시 AWS에서 현재 state를
+가져와서 코드에 없는 규칙은 삭제 대상으로 표시해요. egress도 독립적으로
+동일하게 적용돼요.
+
+### Standalone 규칙 (`aws_security_group_rule`)
+
+```hcl
+resource "aws_security_group_rule" "app_ssh" {
+  type                     = "ingress"
+  from_port                = 22
+  to_port                  = 22
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.app.id
+  source_security_group_id = aws_security_group.bastion.id
+}
+```
+
+각 규칙이 독립적인 리소스예요. 부모 security group은 standalone 규칙을 알지
+못하고 -- 해당 규칙이 state에 표시되지 않아요. standalone 규칙을 추가하거나
+삭제해도 다른 규칙(수동 추가나 다른 standalone 리소스)에 영향을 주지 않아요.
+
+### 핵심 규칙
+
+| Inline ingress 블록 수 | Terraform 동작                                  |
+| ---------------------- | ----------------------------------------------- |
+| 1개 이상               | 모든 ingress 관리 -- 코드에 없는 규칙 삭제      |
+| 0개                    | ingress 관리 안 함 -- 수동/standalone 규칙 무시 |
+
+egress 블록도 ingress와 독립적으로 동일하게 적용돼요.
+
+### Standalone 규칙을 쓸 때
+
+**순환 의존성:** SG A가 어떤 규칙에서 SG B를 참조하고, SG B가 또 다른 규칙에서
+SG A를 참조하는 경우예요. 두 리소스에 inline 블록을 쓰면 Terraform 의존성 사이클이
+생겨요. 한 방향을 standalone 규칙으로 분리해서 사이클을 끊으세요.
+
+**혼합 소유권:** 일부 규칙은 Terraform으로 관리하고, 나머지는 수동으로 관리하는
+경우예요(개발자 IP, 운영팀 추가 규칙 등). inline 블록을 아예 없애고 Terraform
+규칙은 standalone 리소스로 관리하세요. 수동 규칙이 plan/apply 사이클에서 살아남아야
+한다면 SG 리소스에 `lifecycle { ignore_changes = [ingress] }`를 추가하세요.
+
+**크로스 모듈 참조:** 다른 모듈에 정의된 security group을 참조하는 규칙이
+필요할 때예요. standalone 규칙을 쓰면 모듈 간 결합도를 낮출 수 있고, inline
+규칙을 작성하기 위해 SG ID를 모듈 output으로 굳이 넘길 필요도 없어요.
+
+### Import ID 형식
+
+기존 standalone 규칙을 Terraform state로 import해야 할 때 사용하는 ID 형식이에요:
+
+```text
+{sg_id}_{type}_{protocol}_{from_port}_{to_port}_{source}
+```
+
+예시: `sg-abc123_ingress_tcp_22_22_sg-def456`
 
 ## 디버깅 팁
 
