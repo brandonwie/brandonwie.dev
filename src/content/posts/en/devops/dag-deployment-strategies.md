@@ -19,42 +19,35 @@ references:
     type: official
 ---
 
-I spent half a day reading blog posts, Helm chart defaults, and GitHub issues
-trying to answer one question: how do my DAG files get from Git onto the
-running Airflow containers? The Airflow docs describe multiple approaches
-without recommending one, and picking the wrong strategy early means a painful
-migration later.
+## The Problem
 
-## Why This Matters
-
-DAG deployment is a decision you make once and live with for months. It
-touches iteration speed (how fast can I test a DAG change?), operational
-safety (does deploying a DAG restart my scheduler?), and security (what gets
-exposed on the EC2 instance?). Most guides bundle DAG deployment with
-application deployment -- building new Docker images whenever a DAG file
-changes. Those are independent concerns, and conflating them leads to
-unnecessary downtime.
+When setting up Airflow on EC2 with Docker Compose, the first question was: how
+do DAG files get from the Git repository onto the running containers? There is
+no single "official" deployment method -- Airflow documentation describes
+multiple approaches without recommending one. Picking the wrong strategy early
+means painful migration later as the team or infrastructure grows.
 
 ---
 
-## The Difficulties I Ran Into
+## Difficulties Encountered
 
-- **No single recommended approach** -- Airflow docs describe several
-  strategies but never say "use this one for EC2." I had to piece together
-  trade-offs from blog posts, GitHub issues, and Helm chart defaults.
-- **Conflating DAG deployment with code deployment** -- Early research mixed
-  up deploying DAG Python files with deploying the Airflow application itself
-  (Docker image). Most guides bundle them, but they are separate concerns.
-- **Git-sync sidecar docs assume Kubernetes** -- The most-documented approach
-  (git-sync sidecar) is Kubernetes-native. Translating it to Docker Compose
-  on EC2 felt like forcing a pattern that did not fit.
-- **Security implications of full repo on EC2** -- Cloning the full repository
-  onto the EC2 instance exposes non-DAG files (credentials, CI configs). I
-  had to assess whether `.gitignore` and deploy keys were sufficient.
+- **No single recommended approach** - Airflow docs describe several strategies
+  but do not clearly recommend one for a given setup. Had to research blog
+  posts, GitHub issues, and Helm chart defaults to piece together the
+  trade-offs.
+- **Conflating DAG deployment with code deployment** - Early research mixed up
+  deploying DAG Python files with deploying the Airflow application itself
+  (Docker image). These are independent concerns but most guides bundle them.
+- **Git-sync sidecar docs assume Kubernetes** - The most-documented approach
+  (git-sync sidecar) is Kubernetes-native. Translating it to Docker Compose on
+  EC2 was not straightforward and felt like forcing a pattern.
+- **Security implications of full repo on EC2** - Cloning the full repository
+  onto the EC2 instance exposes non-DAG files (credentials, CI configs). Had to
+  assess whether `.gitignore` and deploy keys were sufficient mitigations.
 
 ---
 
-## Options Explored
+## Options Considered
 
 | Option                      | Pros                                                             | Cons                                                         |
 | --------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -63,21 +56,18 @@ unnecessary downtime.
 | Git-Sync Sidecar            | Auto-syncs, standard for K8s, no restart needed                  | Requires sidecar container, designed for Kubernetes          |
 | S3/EFS Sync                 | AWS-native, works multi-region                                   | Extra infra (S3 bucket or EFS), sync lag                     |
 
-Each approach targets a different infrastructure shape. The right choice
-depends on team size, platform (EC2 vs Kubernetes), and how often DAGs change.
-
 ---
 
-## The Decision: Full Git Repo on EC2
+## Why This Approach
 
-I chose the Git repo approach because my situation had clear constraints:
+Chose **Full Git Repo on EC2** because:
 
-- Small team (2 people) on EC2-based infrastructure, not Kubernetes
+- Small team (2 people) with EC2-based infrastructure, not Kubernetes
 - DAG changes are frequent and need fast iteration (seconds, not minutes)
 - Zero downtime is critical -- no container restarts for DAG-only changes
 - Git provides built-in version control and instant rollback
-- The downsides (repo exposure, auth) are easily mitigated with deploy keys
-  and `.gitignore`
+- The downsides (repo exposure, auth) are easily mitigated with deploy keys and
+  `.gitignore`
 
 ---
 
@@ -86,20 +76,21 @@ I chose the Git repo approach because my situation had clear constraints:
 ### 1. Full Git Repo on EC2
 
 ```text
-EC2 /opt/airflow/          <- Full Git repository
-├── dags/                  <- DAG files
+EC2 /opt/airflow/          ← Full Git repository
+├── dags/                  ← DAG files
 ├── master/
 │   └── docker-compose.yml
 ├── worker/
 └── .git/
 ```
 
-The EC2 instance holds the full repository via `git clone`. Changes sync via
-`git pull`. Containers volume-mount the `dags/` folder, so Airflow picks up
-changes without a restart.
+**How it works:**
 
-This works best for small teams (2-10 people) running EC2-based
-infrastructure with frequent DAG changes.
+1. EC2 has full repository via `git clone`
+2. Changes sync via `git pull`
+3. Containers volume-mount the `dags/` folder
+
+**Best for:** Small teams (2-10), EC2-based, frequent DAG changes
 
 ### 2. Docker Image with DAGs (Bake into Image)
 
@@ -108,10 +99,13 @@ infrastructure with frequent DAG changes.
 COPY dags/ /opt/airflow/dags/
 ```
 
-DAG files are included at Docker image build time. Any DAG change requires an
-image rebuild and container restart. This is the right choice when you need
-immutable infrastructure with strict versioning -- every deployment is an
-auditable image tag.
+**How it works:**
+
+1. DAG files included at Docker image build time
+2. DAG changes require image rebuild
+3. Image swap requires container restart
+
+**Best for:** Immutable infrastructure, strict versioning
 
 ### 3. Git-Sync Sidecar (Kubernetes Standard)
 
@@ -125,22 +119,28 @@ containers:
     args: ["--repo=https://github.com/...", "--branch=main"]
 ```
 
-A separate git-sync container periodically pulls from the repository into a
-shared volume. The Airflow containers read from that volume. This is the
-standard pattern for Kubernetes environments and scales well for large teams.
+**How it works:**
+
+1. Separate git-sync container periodically pulls
+2. Shared volume provides DAGs to Airflow containers
+3. Standard pattern for Kubernetes
+
+**Best for:** Kubernetes environments, large teams
 
 ### 4. S3/EFS Sync
 
 ```text
 S3 bucket                    EC2
-s3://airflow-dags/   --->  /opt/airflow/dags/
+s3://airflow-dags/   ───►  /opt/airflow/dags/
 ```
 
-DAG files are uploaded to S3, and the EC2 instance syncs via `aws s3 sync`.
-Alternatively, EFS can be mounted directly. This fits AWS-native workflows,
-especially multi-region deployments where S3 replication handles distribution.
+**How it works:**
 
----
+1. DAG files uploaded to S3
+2. EC2 syncs via `aws s3 sync`
+3. Or EFS directly mounted
+
+**Best for:** AWS-native workflows, multi-region
 
 ## Comparison Matrix
 
@@ -153,8 +153,6 @@ especially multi-region deployments where S3 replication handles distribution.
 | **Best environment**  | EC2 small team  | Immutable infra | Kubernetes | AWS native   |
 | **Team size**         | 2-10            | Any             | Large      | Medium-Large |
 
----
-
 ## Decision Tree
 
 ```text
@@ -162,7 +160,7 @@ What's your infrastructure?
 ├─ Kubernetes
 │   └─ Use Git-Sync Sidecar
 │
-├─ EC2 with small team (< 10)
+├─ EC2 with small team (under 10)
 │   └─ Use Full Git Repo on EC2
 │
 ├─ Strict immutable requirements
@@ -172,9 +170,7 @@ What's your infrastructure?
     └─ Use S3/EFS Sync
 ```
 
----
-
-## Full Git Repo: The Detailed Workflow
+## Full Git Repo: Detailed Workflow
 
 ### Directory Structure
 
@@ -183,7 +179,7 @@ EC2 /opt/airflow/
 ├── .git/
 ├── dags/
 │   ├── __init__.py
-│   └── my_pipeline.py    # <- Changes here sync automatically
+│   └── my_pipeline.py    # ← Changes here sync automatically
 ├── master/
 │   ├── docker-compose.yml
 │   └── docker-compose.prod.yml
@@ -195,28 +191,25 @@ EC2 /opt/airflow/
 
 ```text
 1. Developer edits DAG
-   └── git push origin main
+   └─► git push origin main
 
 2. GitHub Actions triggers
-   └── dags/ change detected
+   └─► dags/ change detected
 
 3. SSM command to EC2
-   └── cd /opt/airflow && git pull
+   └─► cd /opt/airflow && git pull
 
 4. Scheduler detects (~30 seconds)
-   └── New DAG parsed and ready
+   └─► New DAG parsed and ready
 
 Container restart: NOT NEEDED
 Downtime: NONE
 Reflection time: ~30 seconds
 ```
 
-The key insight is that Airflow's scheduler polls the `dags/` directory on a
-configurable interval (default ~30 seconds). A simple `git pull` is all it
-takes to deploy a DAG change. No image builds, no container restarts, no
-downtime.
+### Pros and Cons
 
-### Pros
+**Pros:**
 
 | Advantage             | Description                                  |
 | --------------------- | -------------------------------------------- |
@@ -227,7 +220,7 @@ downtime.
 | **Version control**   | Git history for DAG changes                  |
 | **Easy rollback**     | `git checkout <commit>` for instant rollback |
 
-### Cons
+**Cons:**
 
 | Disadvantage      | Description                    | Mitigation                       |
 | ----------------- | ------------------------------ | -------------------------------- |
@@ -236,39 +229,31 @@ downtime.
 | Auth required     | Private repo needs credentials | Deploy Key or HTTPS + PAT        |
 | Manual sync       | Not auto-synced                | CI/CD automation (SSM)           |
 
----
+## `/opt/airflow` Convention
 
-## Why This Works
-
-The core insight is separation of concerns. DAG files are code that changes
-frequently, but the Airflow application (Docker image) changes rarely. By
-volume-mounting a Git-managed `dags/` directory, DAG changes flow through Git
-while the application stays stable. No rebuilds, no restarts, no downtime.
-
-The `/opt/airflow` convention comes from Linux standards -- `/opt` is the
-standard directory for third-party software. Apache Airflow's official
-documentation uses `AIRFLOW_HOME=/opt/airflow` as the default.
+`/opt` is the Linux standard directory for third-party software.
 
 ```text
-/opt        <- Third-party apps (Airflow, Jenkins, etc.)
-/usr        <- System-installed software
-/home       <- User home directories
+/opt        ← Third-party apps (Airflow, Jenkins, etc.)
+/usr        ← System-installed software
+/home       ← User home directories
 ```
+
+Apache Airflow official documentation uses `AIRFLOW_HOME=/opt/airflow` as
+default.
+
+## When to Use
+
+- Deploying Airflow on self-managed EC2 or Docker Compose and need to choose a
+  DAG distribution method
+- Setting up a new Airflow cluster and evaluating deployment trade-offs
+  (iteration speed vs security vs team size)
+- Outgrowing your current DAG deployment approach and need a migration path to a
+  more scalable strategy
 
 ---
 
-## Practical Takeaway
-
-Use this decision framework:
-
-- **Deploying Airflow on EC2 or Docker Compose** -- Start with the full Git
-  repo approach. It is the simplest path that supports fast iteration.
-- **Setting up a new cluster** -- Evaluate trade-offs between iteration speed,
-  security, and team size using the comparison matrix above.
-- **Outgrowing your current approach** -- Use the migration table below as a
-  guide for when to switch strategies.
-
-### When to Migrate
+## When to Migrate to Different Strategy
 
 | Situation               | Recommended Change |
 | ----------------------- | ------------------ |
@@ -277,16 +262,20 @@ Use this decision framework:
 | Multi-Region deployment | S3 + CloudFront    |
 | DAG 10+, team 5+        | Git-Sync or S3     |
 
-### When NOT to Use Each Strategy
+---
 
-- **Full Git Repo on EC2** -- Do not use if the repository contains secrets
-  that cannot be excluded via `.gitignore`, or if compliance requires
-  immutable deployments with auditable image tags.
-- **Bake into Image** -- Do not use if DAG iteration speed matters.
-  Rebuilding and restarting containers for every DAG change creates
-  unacceptable feedback loops during development.
-- **Git-Sync Sidecar** -- Do not use on plain EC2 or Docker Compose setups.
-  The sidecar pattern adds unnecessary complexity outside of Kubernetes.
-- **S3/EFS Sync** -- Do not use if you need strict version control of DAG
+## When NOT to Use
+
+These are anti-patterns for each strategy:
+
+- **Full Git Repo on EC2** - Do not use if the repository contains secrets that
+  cannot be excluded via `.gitignore`, or if compliance requires immutable
+  deployments with auditable image tags.
+- **Bake into Image** - Do not use if DAG iteration speed matters. Rebuilding
+  and restarting containers for every DAG change creates unacceptable feedback
+  loops during development.
+- **Git-Sync Sidecar** - Do not use on plain EC2 or Docker Compose setups. The
+  sidecar pattern adds unnecessary complexity outside of Kubernetes.
+- **S3/EFS Sync** - Do not use if you need strict version control of DAG
   deployments. S3 sync does not provide atomic updates or rollback guarantees
   the way Git does.

@@ -20,39 +20,77 @@ references:
     type: official
 ---
 
-I set `target_value = 70` for CPU auto-scaling and assumed it meant "if CPU exceeds 70%, add one container." It does not. The algorithm calculated that I needed three additional containers at once, and my database connection pool immediately ran out. That misunderstanding cost me an hour of debugging and an embarrassing page in production.
+orchestration.
 
-ECS auto-scaling is not a thermostat. It is proportional control, and the difference matters.
+---
 
-## Why This Matters
+## The Problem
 
-Running containers at a fixed count wastes money during low traffic and drops requests during spikes. ECS auto-scaling solves this, but configuring it correctly requires understanding target tracking algorithms, cooldown periods, the difference between scaling policies and CloudWatch alarms, and how scaling interacts with deployments.
+Running containers at a fixed count wastes money during low traffic and drops
+requests during spikes. ECS auto-scaling solves this, but configuring it
+correctly requires understanding target tracking algorithms, cooldown periods,
+the difference between scaling policies and CloudWatch alarms, and how scaling
+interacts with deployments. Misconfiguration leads to flapping (rapid
+scale-out/in cycles), runaway costs from unbounded scaling, or unresponsive
+services that fail to scale when needed.
 
-Misconfiguration leads to flapping (rapid scale-out/in cycles), runaway costs from unbounded scaling, or unresponsive services that fail to scale when needed.
+---
 
-## The Mistakes I Made
+## Difficulties Encountered
 
-Every one of these came from real production incidents:
+- **Target tracking is not threshold-based** -- the initial assumption was "if
+  CPU > 70%, add one container," but the actual algorithm calculates the
+  proportional number of tasks needed to bring the metric back to target, which
+  can add multiple tasks at once
+- **Cooldown asymmetry is not obvious** -- using the same cooldown for scale-in
+  and scale-out causes flapping; scale-in must be much longer (300s+) because
+  removing capacity too quickly leads to immediate scale-out again
+- **Auto-scaling vs CloudWatch alarms confusion** -- both reference CPU
+  thresholds but serve completely different purposes; alarms notify humans while
+  scaling policies act automatically, and setting them to the same value defeats
+  the purpose of the alarm as an early warning
+- **Memory scaling is often forgotten** -- CPU-only policies miss memory leaks
+  entirely; a Node.js app can OOM-kill at 95% memory while CPU sits at 30%, and
+  no scaling event fires
+- **Max capacity without context is dangerous** -- setting `max_capacity = 100`
+  as a "safe high number" can exhaust database connection pools or hit API rate
+  limits long before reaching that count
 
-- **Target tracking is not threshold-based.** I assumed "if CPU > 70%, add one container." The actual algorithm calculates the proportional number of tasks needed to bring the metric back to target, which can add multiple tasks at once.
-- **Cooldown asymmetry is not obvious.** Using the same cooldown for scale-in and scale-out causes flapping. Scale-in must be much longer (300s+) because removing capacity too quickly leads to immediate scale-out again.
-- **Auto-scaling and CloudWatch alarms are different things.** Both reference CPU thresholds but serve completely different purposes. Alarms notify humans while scaling policies act automatically. Setting them to the same value defeats the purpose of the alarm as an early warning.
-- **Memory scaling is often forgotten.** CPU-only policies miss memory leaks entirely. A Node.js app can OOM-kill at 95% memory while CPU sits at 30%, and no scaling event fires.
-- **Max capacity without context is dangerous.** Setting `max_capacity = 100` as a "safe high number" can exhaust database connection pools or hit API rate limits long before reaching that count.
+---
 
-## When to Use Auto-Scaling
+## When to Use
 
-It fits well for stateless HTTP services behind a load balancer with variable traffic, microservices with different load profiles, production workloads that need automatic recovery from traffic spikes, and cost optimization for services with predictable daily or weekly traffic patterns (combine with scheduled scaling).
+- Stateless HTTP services behind a load balancer with variable traffic
+- Microservices architecture where individual services have different load
+  profiles
+- Production workloads that need automatic recovery from traffic spikes
+- Cost optimization for services with predictable daily or weekly traffic
+  patterns (combine with scheduled scaling)
 
-Skip it for stateful services with persistent connections (WebSocket, gRPC streams), services with very slow startup (5+ minutes), single-task services where `min = max = 1`, batch processing workloads, and development/staging environments where you want predictable billing.
+---
+
+## When NOT to Use
+
+- **Stateful services with persistent connections** -- WebSocket servers or
+  long-lived gRPC streams break when tasks are removed; use sticky sessions or
+  connection draining instead
+- **Services with very slow startup** -- if your container takes 5+ minutes to
+  become healthy (heavy initialization, large ML model loading), auto-scaling
+  cannot respond to sudden spikes fast enough; pre-warm with scheduled scaling
+- **Single-task services at minimum** -- if `min_capacity = max_capacity = 1`,
+  auto-scaling adds configuration complexity with zero benefit; just set a fixed
+  desired count
+- **Batch processing workloads** -- jobs that run to completion do not benefit
+  from target tracking; use ECS scheduled tasks or Step Functions instead
+- **Development and staging environments** -- auto-scaling adds unpredictable
+  cost variance; use fixed task counts for non-production to keep billing
+  predictable
+
+---
 
 ## Container Orchestration Concepts
 
-Before diving into auto-scaling specifics, it helps to understand where ECS fits in the container landscape.
-
 ### What Container Orchestration Does
-
-Container orchestration handles five core responsibilities:
 
 - **Scheduling**: Decides where containers run
 - **Scaling**: Adds/removes containers based on demand
@@ -62,25 +100,29 @@ Container orchestration handles five core responsibilities:
 
 ### ECS vs EKS vs Fargate
 
-A common confusion: Fargate is NOT an orchestrator. It is a compute engine.
-
 ```text
 ORCHESTRATORS:
-├── ECS (AWS Native)     <- Simpler, AWS-integrated
-└── EKS (Kubernetes)     <- Industry standard, portable
+├── ECS (AWS Native)     ← Simpler, AWS-integrated
+└── EKS (Kubernetes)     ← Industry standard, portable
 
 COMPUTE ENGINES:
-├── Fargate (Serverless) <- No server management
-└── EC2 (Virtual Machines) <- Full control
+├── Fargate (Serverless) ← No server management
+└── EC2 (Virtual Machines) ← Full control
 ```
 
-Think of it this way: the orchestrator (ECS/EKS) is the brain deciding what to do, and the compute engine (Fargate/EC2) is the muscles doing the work. Fargate works with either ECS or EKS.
+**Clarification**: Fargate is NOT Kubernetes. Fargate is serverless compute that
+works with EITHER ECS or EKS.
+
+- **Orchestrator** (ECS/EKS) = The brain deciding what to do
+- **Compute** (Fargate/EC2) = The muscles doing the work
+
+---
 
 ## Auto-Scaling Types
 
 ### Horizontal Scaling (Recommended)
 
-Horizontal scaling adds or removes container instances to handle load changes:
+Adds/removes container instances:
 
 ```text
 Normal Load:           High Load (Horizontal):
@@ -88,22 +130,26 @@ Normal Load:           High Load (Horizontal):
                        [Container 2 @ 35%]
 ```
 
-This is the right choice for stateless applications. No downtime during scaling.
+- Better for stateless applications
+- No downtime during scaling
 
 ### Vertical Scaling (Not Recommended for Auto-Scaling)
 
-Vertical scaling changes container size:
+Changes container size:
 
 ```text
 Normal:                High Load (Vertical):
-[2 CPU, 4GB RAM]  ->    [4 CPU, 8GB RAM]
+[2 CPU, 4GB RAM]  →    [4 CPU, 8GB RAM]
 ```
 
-This requires a container restart, causing downtime. Use horizontal scaling instead.
+- Requires container restart
+- Causes downtime
+
+---
 
 ## Target Tracking Scaling Algorithm
 
-Target tracking is like cruise control for your service. It maintains a metric at a specified value by adding or removing tasks proportionally:
+Target tracking maintains a metric value (like cruise control):
 
 ```python
 # Simplified algorithm
@@ -119,29 +165,31 @@ if current_cpu > target_cpu:
         scale_to(desired_tasks)
 ```
 
-This is the critical insight: it is NOT "if CPU > 70% add one container." If you have 2 tasks running at 140% average CPU with a 70% target, the algorithm calculates `2 * (140 / 70) = 4` tasks needed. It adds two at once, not one.
+**Important**: It's NOT a simple "if CPU > 70% add one container".
+
+---
 
 ## Cooldown Periods
 
 ### Why Cooldowns Exist
 
-Without cooldowns, auto-scaling over-provisions and creates flapping:
+Prevent over-provisioning and flapping:
 
 **Without Cooldowns (BAD):**
 
 ```text
-12:00:00 - CPU 75% -> Add container
-12:00:10 - Still 75% -> Add container (new one not ready!)
-12:00:20 - Still 75% -> Add container
-12:01:00 - CPU 20% each -> WASTED MONEY
+12:00:00 - CPU 75% → Add container
+12:00:10 - Still 75% → Add container (new one not ready!)
+12:00:20 - Still 75% → Add container
+12:01:00 - CPU 20% each → WASTED MONEY
 ```
 
 **With Cooldowns (GOOD):**
 
 ```text
-12:00:00 - CPU 75% -> Add container
-12:00:10 - Still 75% -> WAIT (cooldown)
-12:01:00 - CPU 40% each -> Perfect!
+12:00:00 - CPU 75% → Add container
+12:00:10 - Still 75% → WAIT (cooldown)
+12:01:00 - CPU 40% each → Perfect!
 ```
 
 ### Recommended Cooldown Values
@@ -151,11 +199,11 @@ Without cooldowns, auto-scaling over-provisions and creates flapping:
 | Scale-Out | 60s   | Responsive to load |
 | Scale-In  | 300s  | Prevents flapping  |
 
-The asymmetry is deliberate. You want to add capacity fast when needed, but remove it slowly to avoid thrashing. Scale-in at 60 seconds causes a common pattern: scale out, load drops, scale in too fast, load spikes again, scale out again -- an expensive oscillation.
+---
 
 ## Auto-Scaling vs CloudWatch Alarms
 
-These serve different purposes and should use different thresholds:
+**These serve different purposes:**
 
 | Feature      | Auto-Scaling Policy   | CloudWatch Alarm    |
 | ------------ | --------------------- | ------------------- |
@@ -164,7 +212,12 @@ These serve different purposes and should use different thresholds:
 | Action       | Immediate scaling     | Human notification  |
 | Intervention | None needed           | May require action  |
 
-Why different thresholds? The 70% target keeps your service running optimally through auto-scaling. The 85% alarm fires when auto-scaling might not be keeping up, warning a human to investigate. If both are at 70%, every normal scaling event triggers an alert, creating noise.
+**Why different thresholds?**
+
+- 70% target: Auto-scaling maintains this level
+- 85% alarm: Warns when auto-scaling might not be enough
+
+---
 
 ## Industry Standard Settings
 
@@ -181,21 +234,19 @@ Why different thresholds? The 70% target keeps your service running optimally th
 
 ### How Major Companies Configure
 
-For reference, here is what large-scale services typically use:
-
 ```text
 Netflix:    CPU 60-75%, Scale-Out 60s, Scale-In 300s
 Uber:       CPU 65-70%, Scale-Out 30s, Scale-In 600s
 Airbnb:     CPU 65%,    Scale-Out 90s, Scale-In 600s
 ```
 
-The pattern is clear: aggressive scale-out, conservative scale-in.
+---
 
 ## Cost Optimization
 
 ### Fargate Pricing
 
-Fargate charges per-second based on vCPU and memory:
+Per-second billing based on vCPU and memory:
 
 ```text
 Example: 2 vCPU, 4 GB Memory
@@ -207,18 +258,16 @@ Example: 2 vCPU, 4 GB Memory
 
 ### Cost Strategies
 
-Four ways to reduce your auto-scaling costs:
+1. **Right-sizing**: Monitor actual usage, reduce if CPU is below 50%
+2. **Higher thresholds**: 75% target = fewer containers
+3. **Scheduled scaling**: Reduce min at night
+4. **Fargate Spot**: Up to 70% savings for fault-tolerant workloads
 
-1. **Right-sizing**: Monitor actual usage. If CPU stays below 50%, reduce the task size.
-2. **Higher thresholds**: A 75% target runs fewer containers than 65%.
-3. **Scheduled scaling**: Reduce minimum capacity at night if traffic drops.
-4. **Fargate Spot**: Up to 70% savings for fault-tolerant workloads that can handle interruptions.
+---
 
 ## Monitoring During Scaling
 
 ### Key Metrics to Watch
-
-Track three categories:
 
 **Performance:**
 
@@ -227,12 +276,12 @@ Track three categories:
 
 **Scaling:**
 
-- Task Count (should stay within min-max range)
-- Scaling Events (look for frequent oscillation)
+- Task Count (within min-max range)
+- Scaling Events (history)
 
 **Health:**
 
-- HTTP 5xx Rate (spikes during scaling indicate health check issues)
+- HTTP 5xx Rate
 - Response Time (P50/P95/P99)
 
 ### CloudWatch Dashboard Setup
@@ -250,6 +299,8 @@ aws application-autoscaling describe-scaling-activities \
   --resource-id service/my-cluster/my-service
 ```
 
+---
+
 ## Common Mistakes
 
 ### 1. Thresholds Too Low
@@ -261,8 +312,6 @@ target_value = 40.0  # Too aggressive, wastes money
 # GOOD
 target_value = 70.0  # Balanced
 ```
-
-A 40% target keeps containers barely utilized, doubling your costs for marginal latency improvement.
 
 ### 2. Same Cooldowns for Scale-In/Out
 
@@ -286,8 +335,6 @@ max_capacity = 100  # Runaway costs possible
 max_capacity = 4    # Based on DB connection limits
 ```
 
-Set max capacity based on your downstream limits: database connection pools, API rate limits, or budget constraints.
-
 ### 4. Only CPU Scaling (No Memory)
 
 ```hcl
@@ -298,7 +345,7 @@ resource "aws_appautoscaling_policy" "cpu" { ... }
 resource "aws_appautoscaling_policy" "memory" { ... }
 ```
 
-A Node.js app with a memory leak can OOM-kill while CPU auto-scaling sits idle at 30%.
+---
 
 ## Troubleshooting
 
@@ -321,7 +368,9 @@ aws application-autoscaling describe-scaling-activities \
 
 ### Rapid Scaling (Flapping)
 
-If containers constantly add and remove, increase cooldowns:
+**Symptom**: Containers constantly adding/removing
+
+**Solution**: Increase cooldowns
 
 ```hcl
 scale_in_cooldown  = 600  # 10 minutes
@@ -330,17 +379,17 @@ scale_out_cooldown = 120  # 2 minutes
 
 ### Decision Tree
 
-When debugging scaling issues, follow this path:
-
 ```text
 High CPU Alert?
-├── YES -> Check Task Count
-│   ├── At Max -> Increase max_capacity
-│   └── Not at Max -> Check IAM permissions
-└── NO -> Check Memory
-    ├── High (>80%) -> Check for memory leaks
-    └── Normal -> System operating correctly
+├── YES → Check Task Count
+│   ├── At Max → Increase max_capacity
+│   └── Not at Max → Check IAM permissions
+└── NO → Check Memory
+    ├── High (>80%) → Check for memory leaks
+    └── Normal → System operating correctly
 ```
+
+---
 
 ## Quick Reference
 
@@ -378,13 +427,10 @@ aws application-autoscaling describe-scaling-policies \
   --service-namespace ecs
 ```
 
-## Practical Takeaway
-
-ECS auto-scaling works well once you understand that it is proportional, not threshold-based. The target value is not a trigger -- it is a goal the algorithm continuously works toward.
-
-Start with these settings: CPU target at 70%, memory target at 80%, scale-out cooldown at 60 seconds, scale-in cooldown at 300 seconds. Then tune based on your specific traffic patterns. And always set max capacity based on what your downstream services (databases, APIs) can actually handle, not what sounds like a safe number.
+---
 
 ## References
 
 - [ECS Best Practices Guide](https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/)
 - [Application Auto Scaling](https://docs.aws.amazon.com/autoscaling/application/userguide/)
+- See also: [ecs-autoscaling-patterns.md](./ecs-autoscaling-patterns.md)

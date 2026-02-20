@@ -162,7 +162,7 @@ DAG 파일을 S3에 업로드하고, EC2가 `aws s3 sync`로 동기화해요. �
 ├─ Kubernetes
 │   └─ Git-Sync Sidecar 사용
 │
-├─ EC2 + 소규모 팀 (< 10명)
+├─ EC2 + 소규모 팀 (10명 미만)
 │   └─ EC2에 전체 Git Repo 사용
 │
 ├─ 엄격한 불변 요구사항
