@@ -4,7 +4,7 @@ description: >-
   Multiple `.map()` calls over the same array force the CPU to reload each
   object
 date: 2026-02-11T00:00:00.000Z
-updated: 2026-02-11T00:00:00.000Z
+updated: 2026-02-20T00:00:00.000Z
 tags:
   - backend
   - performance
@@ -105,6 +105,51 @@ for (const block of blocks) {
 One loop. One pass. Each block is loaded into the cache once, and all 18
 fields are read while the data is still hot. The CPU never reloads the same
 object.
+
+## Why `for...of` Over `forEach`?
+
+You might wonder -- if the problem is multiple passes, wouldn't `forEach`
+also work? After all, it is also a single-pass construct:
+
+```typescript
+// Also single-pass — same cache locality as for...of
+blocks.forEach((block) => {
+  ids.push(block.id);
+  titles.push(block.title);
+  starts.push(block.startDateTime);
+});
+```
+
+The answer is yes, for cache locality. Both `for...of` and `forEach` traverse
+the array sequentially, touching each element once. The CPU sees the same
+memory access pattern. The hardware prefetcher works equally well for both.
+
+The difference is in how V8's TurboFan JIT optimizes each construct under the
+hood:
+
+**`for...of`** uses the iterator protocol -- it calls `Symbol.iterator()` to
+get an iterator, then `.next()` in a loop. This looks heavier because it
+allocates an iterator object and a `{value, done}` result per step. But V8's
+escape analysis eliminates both allocations for plain arrays, since neither
+object escapes the loop scope. The result is predictably zero-overhead.
+
+**`forEach`** invokes a callback per element. TurboFan has inlined
+`Array.prototype.forEach` since V8 v6.1 (Chrome 61, mid-2017), but the
+user-supplied callback is inlined _speculatively_. If the callback becomes
+polymorphic (called with different shapes) or grows too large, TurboFan gives
+up on inlining. Each iteration then pays a full function call: frame setup,
+argument passing, frame teardown.
+
+| Aspect           | `for...of`                 | `forEach`                             |
+| ---------------- | -------------------------- | ------------------------------------- |
+| Cache locality   | Single-pass, sequential    | Single-pass, sequential (identical)   |
+| V8 mechanism     | Iterator + escape analysis | Callback inlining (speculative)       |
+| Early exit       | `break` works              | Cannot `break` out of `forEach`       |
+| Degradation risk | Predictable on arrays      | 20-40% slower if callback not inlined |
+
+For hot paths extracting multiple fields from large arrays, `for...of` is the
+safer default: more predictable optimization, supports early exit with `break`,
+and makes the single-pass intent visually explicit.
 
 ## Why This Works
 

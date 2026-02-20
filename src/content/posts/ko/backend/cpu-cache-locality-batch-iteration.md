@@ -4,7 +4,7 @@ description: >-
   같은 배열에 대해 여러 번 `.map()`을 호출하면 CPU가 매번 객체를 메모리에서
   다시 불러와야 합니다
 date: 2026-02-11T00:00:00.000Z
-updated: 2026-02-11T00:00:00.000Z
+updated: 2026-02-20T00:00:00.000Z
 tags:
   - backend
   - performance
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: cpu-cache-locality-batch-iteration
-source_updated: "2026-02-11"
-translation_date: "2026-02-12"
+source_updated: "2026-02-20"
+translation_date: "2026-02-20"
 references:
   - url: "https://en.wikipedia.org/wiki/Locality_of_reference"
     title: Locality of reference - Wikipedia
@@ -107,6 +107,49 @@ for (const block of blocks) {
 
 루프 하나. 패스 하나. 각 블록이 cache에 한 번 로드되고, 데이터가 아직 hot한
 상태에서 18개 필드를 전부 읽어요. CPU가 같은 객체를 다시 불러올 일이 없어요.
+
+## 왜 `forEach`가 아니라 `for...of`인가?
+
+혹시 이런 생각이 들 수 있어요 -- 문제가 여러 번 순회하는 거라면, `forEach`도
+되지 않나? 맞아요, `forEach`도 단일 패스예요:
+
+```typescript
+// 역시 단일 패스 — for...of와 동일한 cache locality
+blocks.forEach((block) => {
+  ids.push(block.id);
+  titles.push(block.title);
+  starts.push(block.startDateTime);
+});
+```
+
+cache locality 측면에서는 맞아요. `for...of`와 `forEach` 모두 배열을 순차적으로
+순회하면서 각 요소를 한 번만 접근해요. CPU가 보는 메모리 접근 패턴이 동일해요.
+하드웨어 prefetcher도 둘 다 똑같이 잘 동작하고요.
+
+차이는 V8의 TurboFan JIT가 각 구문을 최적화하는 방식에 있어요:
+
+**`for...of`** 는 iterator 프로토콜을 사용해요 -- `Symbol.iterator()`로
+iterator를 얻고, `.next()`를 루프에서 호출해요. iterator 객체와 매 단계마다
+`{value, done}` 결과 객체를 할당하니까 더 무거워 보여요. 하지만 V8의 escape
+analysis가 일반 배열에서는 두 할당을 모두 제거해요. 어느 객체도 루프 스코프를
+벗어나지 않으니까요. 결과적으로 예측 가능하게 zero-overhead예요.
+
+**`forEach`** 는 요소마다 콜백을 호출해요. TurboFan이 V8 v6.1(Chrome 61,
+2017년 중반) 이후로 `Array.prototype.forEach` 자체는 인라인하지만, 사용자가
+제공한 콜백은 _추측적으로(speculatively)_ 인라인해요. 콜백이 다형적(polymorphic,
+다른 shape으로 호출됨)이 되거나 너무 커지면 TurboFan이 인라인을 포기해요. 그러면
+매 반복마다 전체 함수 호출 비용(프레임 설정, 인자 전달, 프레임 해제)을 지불해요.
+
+| 측면           | `for...of`                 | `forEach`                       |
+| -------------- | -------------------------- | ------------------------------- |
+| Cache locality | 단일 패스, 순차적          | 단일 패스, 순차적 (동일)        |
+| V8 메커니즘    | Iterator + escape analysis | 콜백 인라인 (추측적)            |
+| 조기 종료      | `break` 사용 가능          | `forEach`에서 `break` 불가      |
+| 성능 저하 위험 | 배열에서 예측 가능         | 콜백 인라인 안 되면 20-40% 느림 |
+
+큰 배열에서 여러 필드를 추출하는 hot path에서는 `for...of`가 더 안전한
+기본 선택이에요. 더 예측 가능한 최적화, `break`을 통한 조기 종료 지원, 그리고
+단일 패스 의도를 시각적으로 명확하게 드러내요.
 
 ## 이게 왜 효과적인가
 
