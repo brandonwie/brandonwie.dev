@@ -1,25 +1,14 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
-	import { getLocale } from '$lib/paraglide/runtime';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 	import ViewToggle from '$lib/components/ViewToggle.svelte';
 	import type { PostMetadata } from '$lib/stores/posts';
+	import { formatDateShort } from '$lib/utils/date';
 
 	let { posts, basePath = '/' }: { posts: PostMetadata[]; basePath?: string } = $props();
 
 	const recentPosts = $derived(posts.slice(0, 10));
 	const rssHref = $derived(basePath === '/' ? '/rss.xml' : `${basePath}/rss.xml`);
-
-	function formatDate(dateStr: string): string {
-		const d = new Date(dateStr);
-		if (getLocale() === 'ko') {
-			const y = d.getFullYear();
-			const mo = String(d.getMonth() + 1).padStart(2, '0');
-			const day = String(d.getDate()).padStart(2, '0');
-			return `${y}.${mo}.${day}`;
-		}
-		return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-	}
 
 	function postHref(slug: string): string {
 		const base = basePath === '/' ? '' : basePath;
@@ -81,7 +70,7 @@
 								datetime={post.date}
 								class="text-xs text-terminal-text-dim shrink-0 w-[5.5rem] tabular-nums"
 							>
-								{formatDate(post.date)}
+								{formatDateShort(post.date)}
 							</time>
 							<div class="min-w-0">
 								<span class="text-sm text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">

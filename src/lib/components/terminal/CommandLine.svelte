@@ -256,6 +256,7 @@
 				onkeyup={updateCursorPosition}
 				onselect={updateCursorPosition}
 				type="text"
+				aria-label="Terminal command input"
 				class="absolute inset-0 z-10 h-full w-full border-none bg-transparent caret-transparent outline-none"
 				style="color: transparent; -webkit-text-fill-color: transparent; font-size: 16px;"
 				spellcheck="false"

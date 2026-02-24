@@ -405,3 +405,52 @@ changes; all work was on 3B infrastructure.
 
 **Next:** Test friction capture during real sessions, continue
 blog post recreation
+
+---
+
+### 2026-02-25
+
+**Codebase Audit Implementation**
+
+Implemented a 5-step improvement plan from a full codebase audit (3 exploration
+agents + 3 plan agents):
+
+1. **Fixed broken link + strict build**
+   - Removed broken `./ecs-autoscaling-patterns.md` reference in
+     `ecs-autoscaling-deep-dive.md` (3B cross-reference leaked through sync)
+   - Changed `handleHttpError: "warn"` → `"fail"` (broken links now fail build)
+
+2. **Enabled 404 fallback page**
+   - `fallback: undefined` → `'404.html'` in adapter-static config
+   - `+error.svelte` already existed with terminal-themed ASCII art
+   - Cloudflare Pages now serves it for unmatched routes
+
+3. **Extracted `formatDate` utility**
+   - Created `src/lib/utils/date.ts` with `formatDateShort()` + `formatDateLong()`
+   - Replaced local `formatDate` in 5 files (was copy-pasted everywhere)
+   - Both variants use `getLocale()` internally for Korean `YYYY.MM.DD` format
+
+4. **Added `aria-label` to terminal hidden input**
+   - `CommandLine.svelte` hidden input now has `aria-label="Terminal command input"`
+   - Screen readers no longer announce unlabeled text field
+
+5. **Fixed sync script word-boundary truncation**
+   - `sync-from-3b.ts` now uses `lastIndexOf(' ', 157)` instead of hard cut at 157
+   - Prevents SEO descriptions from cutting words mid-syllable
+
+**Files Modified:**
+
+| File                                                    | Change                                            |
+| ------------------------------------------------------- | ------------------------------------------------- |
+| `src/content/posts/en/aws/ecs-autoscaling-deep-dive.md` | Removed broken link                               |
+| `svelte.config.js`                                      | `handleHttpError: "fail"`, `fallback: '404.html'` |
+| `src/lib/utils/date.ts`                                 | Created shared date formatting utility            |
+| `src/lib/components/BlogHome.svelte`                    | Import `formatDateShort`                          |
+| `src/routes/posts/+page.svelte`                         | Import `formatDateShort`                          |
+| `src/routes/ko/posts/+page.svelte`                      | Import `formatDateShort`                          |
+| `src/routes/posts/[slug]/+page.svelte`                  | Import `formatDateLong`                           |
+| `src/routes/ko/posts/[slug]/+page.svelte`               | Import `formatDateLong`                           |
+| `src/lib/components/terminal/CommandLine.svelte`        | Added `aria-label`                                |
+| `scripts/sync-from-3b.ts`                               | Word-boundary truncation                          |
+
+**Next:** OG image for social sharing, ESLint + Prettier, GitHub Actions CI

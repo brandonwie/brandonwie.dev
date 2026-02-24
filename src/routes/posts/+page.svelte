@@ -16,12 +16,12 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { m } from '$lib/paraglide/messages';
-	import { getLocale } from '$lib/paraglide/runtime';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 	import ViewToggle from '$lib/components/ViewToggle.svelte';
 	import CategorySidebar from '$lib/components/CategorySidebar.svelte';
 	import { viewMode } from '$lib/stores/viewMode';
 	import { getCategoriesWithCounts } from '$lib/stores/posts';
+	import { formatDateShort } from '$lib/utils/date';
 
 	let { data }: { data: PageData } = $props();
 
@@ -36,18 +36,6 @@
 
 	function handleCategorySelect(category: string | null) {
 		activeCategory = category;
-	}
-
-	// Locale-aware date formatting
-	function formatDate(dateStr: string): string {
-		const d = new Date(dateStr);
-		if (getLocale() === 'ko') {
-			const y = d.getFullYear();
-			const mo = String(d.getMonth() + 1).padStart(2, '0');
-			const day = String(d.getDate()).padStart(2, '0');
-			return `${y}.${mo}.${day}`;
-		}
-		return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 </script>
 
@@ -107,7 +95,7 @@
 										{post.category}
 									</span>
 									<span class="text-sm text-terminal-text-dim">
-										{formatDate(post.date)}
+										{formatDateShort(post.date)}
 									</span>
 								</div>
 								<h2 class="mb-2 text-xl font-semibold text-terminal-text-primary">

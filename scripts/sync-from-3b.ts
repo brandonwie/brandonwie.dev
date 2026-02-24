@@ -112,9 +112,11 @@ function extractDescription(content: string): string {
     }
   }
 
-  // Truncate to 160 chars for SEO
+  // Truncate to 160 chars for SEO (word-boundary aware)
   if (description.length > 160) {
-    description = description.substring(0, 157) + "...";
+    const boundary = description.lastIndexOf(" ", 157);
+    description =
+      description.substring(0, boundary > 0 ? boundary : 157) + "...";
   }
 
   return description || "No description available";

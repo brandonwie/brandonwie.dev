@@ -433,4 +433,3 @@ aws application-autoscaling describe-scaling-policies \
 
 - [ECS Best Practices Guide](https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/)
 - [Application Auto Scaling](https://docs.aws.amazon.com/autoscaling/application/userguide/)
-- See also: [ecs-autoscaling-patterns.md](./ecs-autoscaling-patterns.md)

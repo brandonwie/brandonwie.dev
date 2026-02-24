@@ -23,11 +23,11 @@
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { m } from '$lib/paraglide/messages';
-	import { getLocale } from '$lib/paraglide/runtime';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 	import ViewToggle from '$lib/components/ViewToggle.svelte';
 	import { viewMode } from '$lib/stores/viewMode';
 	import Giscus from '$lib/components/Giscus.svelte';
+	import { formatDateLong } from '$lib/utils/date';
 
 	let { data }: { data: PageData } = $props();
 
@@ -47,18 +47,6 @@
 				goBack();
 			}
 		}
-	}
-
-	// Locale-aware date formatting
-	function formatDate(dateStr: string): string {
-		const d = new Date(dateStr);
-		if (getLocale() === 'ko') {
-			const y = d.getFullYear();
-			const mo = String(d.getMonth() + 1).padStart(2, '0');
-			const day = String(d.getDate()).padStart(2, '0');
-			return `${y}.${mo}.${day}`;
-		}
-		return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 	}
 </script>
 
@@ -174,11 +162,11 @@
 				  `datetime` attribute must be machine-readable (ISO 8601 format).
 				-->
 				<time datetime={data.meta.date}>
-					{formatDate(data.meta.date)}
+					{formatDateLong(data.meta.date)}
 				</time>
 				{#if data.meta.updated && data.meta.updated !== data.meta.date}
 					<span>•</span>
-					<span>{m.updated()} {formatDate(data.meta.updated)}</span>
+					<span>{m.updated()} {formatDateLong(data.meta.updated)}</span>
 				{/if}
 			</div>
 		</header>
