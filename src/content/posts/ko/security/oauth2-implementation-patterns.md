@@ -2,7 +2,7 @@
 title: OAuth 2.0 구현 패턴
 description: 백엔드 서비스에서 OAuth 2.0 플로우를 구현하기 위한 실용적 패턴
 date: 2026-02-02T00:00:00.000Z
-updated: 2026-02-02T00:00:00.000Z
+updated: 2026-02-23T00:00:00.000Z
 tags:
   - security
   - oauth
@@ -12,8 +12,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: oauth2-implementation-patterns
-source_updated: "2026-02-02"
-translation_date: "2026-02-12"
+source_updated: "2026-02-23"
+translation_date: "2026-02-25"
 references:
   - url: "https://api.slack.com/authentication/oauth-v2"
     title: Slack OAuth v2 Documentation
@@ -21,6 +21,21 @@ references:
   - url: "https://datatracker.ietf.org/doc/html/rfc6749"
     title: RFC 6749 - OAuth 2.0 Authorization Framework
     type: official
+  - url: "https://www.rfc-editor.org/rfc/rfc9207.html"
+    title: RFC 9207 - OAuth 2.0 Authorization Server Issuer Identification
+    type: official
+  - url: "https://developers.google.com/identity/openid-connect/openid-connect"
+    title: Google OpenID Connect Documentation
+    type: official
+  - url: "https://accounts.google.com/.well-known/openid-configuration"
+    title: Google OpenID Configuration Discovery Document
+    type: official
+  - url: "https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/"
+    title: OAuth 2.1 Draft - IETF
+    type: official
+  - url: "https://github.com/panva/openid-client/issues/564"
+    title: "openid-client Issue #564: Passport strategy broken with iss"
+    type: verified
 ---
 
 백엔드 커넥터 서비스에 Slack을 통합해야 했어요. OAuth 2.0 플로우는 이론적으로 간단해 보였어요 -- 리다이렉트하고, 인가하고, 코드를 교환하고, 토큰을 저장하면 되니까요. 실제로는 불투명한 에러 메시지, CSRF 엣지 케이스, redirect URI 불일치를 디버깅하는 데 며칠을 보냈어요. 제가 최종적으로 정리한 패턴과 도중에 만난 함정들을 공유할게요.
@@ -40,6 +55,10 @@ references:
 **Redirect URI가 정확히 일치해야 함.** Provider에 등록된 것과 요청에 보내는 것 사이에 후행 슬래시 하나만 달라도, 어떤 URI를 기대했는지 알려주지 않는 "redirect_uri_mismatch" 에러가 발생해요.
 
 **인메모리 state 저장소가 다중 레플리카에서 실패.** 단순한 `dict` 기반 state 저장소는 개발 환경에서 잘 동작하지만, 다중 서버 레플리카가 있는 프로덕션에서는 조용히 실패해요. Callback이 state를 생성한 것과 다른 인스턴스에 도달할 수 있거든요.
+
+**Google이 RFC 9207 `iss` 파라미터를 문서 없이 추가.** Google이 RFC 9207(Authorization Server Issuer Identification)에 따라 OAuth callback URI에 `iss=https://accounts.google.com`을 추가하기 시작했는데, 공식 문서도, `.well-known/openid-configuration` discovery document도, 공지도 업데이트하지 않았어요. `iss` claim은 ID token 검증에만 문서화되어 있고, callback URL 자체에 대해서는 문서가 없어요. 단계적 롤아웃으로 보이는데 -- 일부 사용자에게는 포함되고 일부에게는 포함되지 않아서, 개발자 입장에서는 비결정적 버그처럼 보여요.
+
+**`forbidNonWhitelisted` ValidationPipe가 알 수 없는 OAuth callback 파라미터를 거부.** NestJS의 `forbidNonWhitelisted: true`는 closed-world 가정(DTO에 명시적으로 선언되지 않은 모든 것을 거부)을 강제해요. 반면 OAuth 2.0은 forward-compatibility를 전제로 설계되었어요 -- 클라이언트는 인식하지 못하는 응답 파라미터를 무시해야 해요(RFC 6749). 엄격한 DTO 검증과 OAuth를 함께 사용하면, upstream provider가 프로토콜을 변경할 때마다 DTO를 업데이트하는 유지보수 비용을 감수해야 해요. Google callback의 `authuser`, `hd`, `prompt` 필드도 같은 패턴의 문서화되지 않은 추가였어요.
 
 ## Authorization Code Flow
 
@@ -179,6 +198,65 @@ Provider 에러를 적절한 HTTP 응답으로 매핑해서 프론트엔드가 �
 5. **토큰 로테이션** -- provider가 지원하면 refresh flow 구현
 6. **안전한 저장소** -- 데이터베이스가 아닌 Vault 등 사용
 7. **감사 추적** -- OAuth 이벤트(연결, 해제, 에러) 로깅
+8. **Callback DTO를 확장 가능하게 유지** -- Provider는 예고 없이 파라미터를 추가해요(RFC 9207 `iss`, `authuser`, `hd`, `prompt`). 엄격한 DTO 검증(`forbidNonWhitelisted`)을 사용한다면, provider가 프로토콜을 변경할 때마다 DTO를 업데이트하는 유지보수 비용을 감수해야 해요
+
+---
+
+## RFC 9207 -- Authorization Server Issuer Identification
+
+RFC 9207(2022년 3월 발행)은 다중 IdP OAuth 시나리오에서의 **mix-up 공격**을 다뤄요. 공격자가 클라이언트를 속여 authorization code를 잘못된 authorization server로 보내게 만들 수 있어요. `iss` 파라미터는 클라이언트가 어떤 서버가 응답을 발행했는지 검증할 수 있게 해줘요.
+
+### 동작 방식
+
+Authorization server가 callback redirect에 `code`와 `state`와 함께 `iss`를 추가해요:
+
+```text
+https://your-app.com/callback?code=abc123&state=xyz&iss=https%3A%2F%2Faccounts.google.com
+```
+
+### Discovery Document 광고
+
+RFC에 따르면, 서버는 `.well-known/openid-configuration`을 통해 지원 여부를 광고해요:
+
+```json
+{
+  "authorization_response_iss_parameter_supported": true
+}
+```
+
+2026-02-23 기준, Google은 일부 사용자에게 `iss` 파라미터를 보내면서도 discovery document에 이 필드를 포함하지 않고 있어요 -- 단계적 롤아웃으로 보여요.
+
+### Closed-World vs Open-World 검증
+
+이것은 두 가지 유효한 보안 철학 사이의 근본적인 긴장을 만들어요:
+
+| 철학                                             | 접근법                   | 트레이드오프                                                 |
+| ------------------------------------------------ | ------------------------ | ------------------------------------------------------------ |
+| **Open-world** (RFC 6749)                        | 알 수 없는 파라미터 무시 | Forward-compatible하지만, 악의적 주입을 놓칠 수 있음         |
+| **Closed-world** (NestJS `forbidNonWhitelisted`) | 알 수 없는 파라미터 거부 | Secure-by-default이지만, provider가 파라미터를 추가하면 깨짐 |
+
+엄격한 DTO 검증과 OAuth를 함께 사용하면, upstream provider가 변경할 때마다 DTO를 업데이트하는 유지보수 비용을 감수해야 해요. Google callback의 `authuser`, `hd`, `prompt`, 그리고 이제 `iss` 필드 모두 스펙 변경이나 공지 없이 추가된 파라미터예요.
+
+### Google의 단계적 롤아웃 패턴
+
+Google 규모의 시스템은 트래픽 분할(계정 해시, 리전, Workspace 조직 단위)을 사용해 변경사항을 점진적으로 롤아웃해요. 이것이 의미하는 바는:
+
+- 같은 엔드포인트가 다른 사용자에게 동시에 다르게 동작해요
+- 개발자가 자신의 계정에서 문제를 재현하지 못할 수 있어요
+- 개발자 관점에서 버그가 비결정적이에요
+- QA가 아니라 모니터링과 에러 로그(예: Sentry)가 첫 번째 신호예요
+
+### 후속 조치: Issuer 검증
+
+RFC 9207에 따르면, `iss` 파라미터를 지원하는 클라이언트는 예상하는 issuer와 일치하는지 검증해야 해요. Google의 경우:
+
+```typescript
+if (dto.iss && dto.iss !== "https://accounts.google.com") {
+  throw new UnauthorizedException("Unexpected OAuth issuer");
+}
+```
+
+이것은 mix-up 공격에 대한 심층 방어를 추가하지만, 핫픽스(검증 통과)와는 별도의 변경사항(동작 로직)으로 다뤄야 해요.
 
 ## 이 방식이 동작하는 이유
 

@@ -5,7 +5,7 @@ description: >-
   새 개발자는 즉시 AI 지시사항을 사용하고 기존 개발자는 개인 확장을
   유지하는 패턴입니다.
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-02-19T00:00:00.000Z
+updated: 2026-02-23T00:00:00.000Z
 tags:
   - devops
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-shared-personal-config
-source_updated: "2026-02-19"
-translation_date: "2026-02-20"
+source_updated: "2026-02-23"
+translation_date: "2026-02-25"
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
     title: Claude Code 공식 문서
@@ -196,6 +196,30 @@ SoT의 가드 코멘트가 개인 내용이 두 단계 중 어디서든 새어 �
 파일에서 결과를 본다는 것입니다. 체인의 어느 부분이라도 끊기면 -- 잘못된 파일
 편집, sync 생략, 가드 코멘트 누락 -- 패턴이 망가집니다. 체인을 명시적으로
 만들어 두면 그런 빈틈을 발견하기 쉬워집니다.
+
+## 레이어 중복 제거 전략
+
+범용 원칙(5W1H, buffer 형식, `.me.md` 규칙, 커뮤니케이션 스타일)이 여러
+프로젝트 CLAUDE.md에 반복되면 drift가 생기고 토큰을 낭비합니다. 해결법은 두
+단계 승격입니다.
+
+1. **중복 식별** -- 모든 project-claude 파일에서 반복되는 지시사항을 grep으로
+   찾습니다(buffer는 7번, 5W1H는 6번, `.me.md`는 4번 중복되어 있었어요).
+2. **전역으로 승격** -- 정본을 `~/.claude/CLAUDE.md`로 옮기고 각 프로젝트
+   사본은 한 줄 참조로 대체합니다:
+   `Universal principles (...) are in ~/.claude/CLAUDE.md.`
+
+Claude Code의 로딩 계층 구조가 `~/.claude/CLAUDE.md`를 모든 세션에서 항상 먼저
+로드하기 때문에 이 방식이 동작해요. 프로젝트 파일은 전역 규칙을 다시 쓸
+필요 없이 상속받습니다.
+
+**2026-02-23 구조 조정 결과:**
+
+- 8개 범용 원칙을 전역으로 승격(YAML Frontmatter, Cross-Referencing, 5W1H,
+  Decision Documentation, Zettelkasten, `.me.md`, Buffer, Communication Style)
+- 7개 프로젝트 파일에서 중복 제거(각각 약 25-35% 토큰 절약)
+- markdownlint 예시를 약 330줄에서 28줄 빠른 참조 테이블로 압축
+- 모든 세션이 동일한 원칙을 적용하면서 로딩하는 줄 수는 줄었습니다
 
 ## 교차 검증 규율
 

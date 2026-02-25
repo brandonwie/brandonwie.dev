@@ -13,61 +13,45 @@ category: devops
 draft: false
 lang: en
 references:
-  - url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html"
+  - url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html'
     title: UsingObjects.html
     type: official
 ---
 
-I spent an hour debugging why an ETL pipeline was uploading files to the wrong
-S3 path. The logs showed no errors. The boto3 calls returned success. But the
-files were landing in a completely wrong location. The culprit was a missing
-trailing slash in an S3 prefix.
-
-## Why This Matters
-
-S3 does not have real directories. What looks like a folder structure
-(`bucket/prefix/file.json`) is just a flat key namespace where `/` is a
-conventional separator. This means S3 does not care whether your prefix ends
-with a slash or not -- it treats both as valid key prefixes. And that is exactly
-the problem.
-
-When you build object keys by concatenating a prefix with a filename using
-f-strings, a missing trailing slash silently produces a wrong key:
+paths. Without normalization, paths like `s3://bucket/prefix` produce malformed
+keys:
 
 ```python
 # User provides: s3://bucket/714756 (no trailing slash)
 prefix = "714756"
 file_key = f"{prefix}714756_2026-01-27_10#0.json.gz"
-# Result: "714756714756_2026-01-27_10#0.json.gz"  -- WRONG
-# Expected: "714756/714756_2026-01-27_10#0.json.gz"
+# Result: "714756714756_2026-01-27_10#0.json.gz" ❌ WRONG
+# Expected: "714756/714756_2026-01-27_10#0.json.gz" ✅
 ```
 
-No exception. No warning. The object uploads successfully to a malformed key.
+---
 
-## The Difficulties
+## Difficulties Encountered
 
-**Silent data corruption** was the worst part. Missing trailing slashes produce
-valid-looking but wrong S3 keys. Objects get uploaded to the wrong path without
-any exception. You only discover the problem when downstream consumers cannot
-find the data.
+- **Silent data corruption** — Missing trailing slashes do not cause errors;
+  they produce valid-looking but wrong S3 keys (e.g., `714756714756_...` instead
+  of `714756/714756_...`). Objects get uploaded to the wrong path without any
+  exception.
+- **Inconsistent user input** — Some callers pass `s3://bucket/prefix`, others
+  pass `s3://bucket/prefix/`. Without normalization, the code must handle both
+  forms everywhere it builds keys, leading to repeated ad-hoc fixes.
+- **`list_objects_v2` false negatives** — When the prefix is wrong, S3 listing
+  returns zero results rather than an error. This looks like "no data exists"
+  rather than "your prefix is malformed," wasting debugging time.
+- **`os.path.join` platform trap** — Using `os.path.join` for S3 paths seems
+  clean but produces backslashes on Windows, which S3 treats as literal
+  characters in the key name, not path separators.
 
-**Inconsistent user input** compounded the issue. Some callers passed
-`s3://bucket/prefix`, others passed `s3://bucket/prefix/`. Without
-normalization, every piece of code that builds keys had to handle both forms,
-leading to repeated ad-hoc fixes scattered across the codebase.
-
-**`list_objects_v2` gave false negatives.** When the prefix was wrong, S3
-listing returned zero results rather than an error. This looked like "no data
-exists" rather than "your prefix is malformed," which wasted debugging time.
-
-**`os.path.join` was a platform trap.** Using `os.path.join` for S3 paths seems
-clean, but it produces backslashes on Windows. S3 treats backslashes as literal
-characters in the key name, not path separators.
+---
 
 ## The Solution
 
-Normalize the prefix once at the parsing boundary. Every function downstream
-can then assume the prefix ends with `/`:
+Add normalization logic to ensure prefixes end with `/` when non-empty:
 
 ```python
 from urllib.parse import urlparse
@@ -93,11 +77,7 @@ def parse_s3_path(s3_path: str) -> tuple[str, str]:
     return bucket, prefix
 ```
 
-The function uses `urlparse` from the standard library. It strips the leading
-slash from the path component (since `urlparse` includes it), then appends a
-trailing slash if the prefix is non-empty and does not already have one.
-
-## Usage in Practice
+## Usage Example
 
 ```python
 # Both forms now work correctly
@@ -109,13 +89,13 @@ bucket, prefix = parse_s3_path("s3://my-bucket/714756/")
 
 # Build file keys correctly
 data_key = f"{prefix}714756_2026-01-27_10#0.json.gz"
-# Result: "714756/714756_2026-01-27_10#0.json.gz"
+# Result: "714756/714756_2026-01-27_10#0.json.gz" ✅
 
 complete_key = f"{prefix}714756_2026-01-27_10_complete"
-# Result: "714756/714756_2026-01-27_10_complete"
+# Result: "714756/714756_2026-01-27_10_complete" ✅
 ```
 
-## Before vs After
+## Why This Matters
 
 ### Before Normalization
 
@@ -125,7 +105,7 @@ prefix = "714756"  # No trailing slash
 
 # list_objects_v2 search
 search_prefix = f"{prefix}714756_2026-01-27"
-# Result: "714756714756_2026-01-27"  -- WRONG
+# Result: "714756714756_2026-01-27" ❌
 # Won't match objects under "714756/"
 
 # File key construction
@@ -133,9 +113,6 @@ file_key = f"{prefix}/{prefix}_2026-01-27_10#0.json.gz"
 # Result: "714756/714756_2026-01-27_10#0.json.gz"
 # But search prefix still wrong!
 ```
-
-Even if you remembered the slash in the file key construction, the search prefix
-was still broken. This inconsistency is what makes the bug so insidious.
 
 ### After Normalization
 
@@ -145,15 +122,12 @@ prefix = "714756/"  # Normalized
 
 # list_objects_v2 search
 search_prefix = f"{prefix}714756_2026-01-27"
-# Result: "714756/714756_2026-01-27"  -- correct
+# Result: "714756/714756_2026-01-27" ✅
 
 # File key construction
 file_key = f"{prefix}{prefix.rstrip('/')}_2026-01-27_10#0.json.gz"
-# Result: "714756/714756_2026-01-27_10#0.json.gz"  -- correct
+# Result: "714756/714756_2026-01-27_10#0.json.gz" ✅
 ```
-
-Both the search and the file key are consistent because the prefix is
-normalized once at the boundary.
 
 ## Common Patterns
 
@@ -165,7 +139,7 @@ bucket, prefix = parse_s3_path(source_path)
 
 # Search for files matching pattern
 search_prefix = f"{prefix}714756_{date_prefix}"
-# Result: "714756/714756_2026-01-27"
+# Result: "714756/714756_2026-01-27" ✅
 
 paginator = s3_client.get_paginator("list_objects_v2")
 for page in paginator.paginate(Bucket=bucket, Prefix=search_prefix):
@@ -182,12 +156,8 @@ bucket, prefix = parse_s3_path(source_path)
 # Strip trailing slash when building file names
 base_name = prefix.rstrip("/")  # "714756"
 file_key = f"{prefix}{base_name}_{date}_{hour}#0.json.gz"
-# Result: "714756/714756_2026-01-27_10#0.json.gz"
+# Result: "714756/714756_2026-01-27_10#0.json.gz" ✅
 ```
-
-When you need the prefix without the slash (for building filenames that include
-the prefix as part of the name), use `rstrip("/")`. The normalized prefix
-gives you both options cleanly.
 
 ## Edge Cases
 
@@ -199,13 +169,9 @@ gives you both options cleanly.
 | `s3://bucket/prefix/` | `"prefix/"`       | Already correct |
 | `s3://bucket/a/b/c`   | `"a/b/c/"`        | Multi-level     |
 
-The empty-prefix case handles root-level operations correctly. When prefix is
-empty, f-string interpolation produces just the filename, which is the right
-behavior.
+## Alternative: Use os.path.join
 
-## Why os.path.join Is Not the Answer
-
-It looks clean, but it is a trap:
+For more complex path building, consider using `os.path.join`:
 
 ```python
 import os
@@ -216,28 +182,33 @@ hour = 10
 
 # Use os.path.join for cleaner path construction
 file_key = os.path.join(prefix, f"{prefix}_{date}_{hour}#0.json.gz")
-# Result: "714756/714756_2026-01-27_10#0.json.gz"  -- works on Unix
+# Result: "714756/714756_2026-01-27_10#0.json.gz" ✅
 ```
 
-This works on macOS and Linux. On Windows, `os.path.join` produces
-`714756\714756_2026-01-27_10#0.json.gz`. S3 treats the backslash as a literal
-character, not a separator. Your CI might run on Linux, but if any developer
-runs tests on Windows, the keys will be wrong.
+**Note**: `os.path.join` uses OS-specific separators. On Windows it uses `\`,
+but S3 always expects `/`. For S3, explicit `/` concatenation is safer.
 
-For S3 paths, always use explicit `/` concatenation or the normalization
-pattern above.
+---
 
-## Practical Takeaway
+## When to Use
 
-**Use this pattern** in any code that accepts user-provided S3 URIs and builds
-object keys from them. ETL pipelines, shared boto3 wrappers, and CLI tools that
-take S3 paths as arguments all benefit from normalizing the prefix once at the
-entry point.
+- Any code that accepts user-provided S3 URIs and builds object keys from them
+- ETL pipelines where S3 paths come from configuration or CLI arguments
+- Shared utility libraries that wrap boto3 `list_objects_v2` or `put_object`
+- Any place where f-string interpolation builds S3 keys from a prefix variable
 
-**Skip it** for hardcoded S3 paths (just include the slash in the constant),
-for non-S3 file systems (GCS has different path semantics), and when using
-language SDKs that already provide S3 URI parsers (like the AWS SDK v3 for
-JavaScript).
+---
 
-The core lesson: normalize at the boundary, assume the invariant everywhere
-else. One `parse_s3_path` call eliminates an entire class of bugs.
+## When NOT to Use
+
+- **Hardcoded S3 paths** — If paths are constants in your code (not user input),
+  just include the trailing slash in the constant and skip runtime normalization
+- **Non-S3 file systems** — This pattern is S3-specific; local file systems and
+  GCS have different path semantics (GCS does not use trailing slashes the same
+  way)
+- **Bucket-only operations** — If you only need the bucket name (e.g., for
+  `create_bucket`), prefix normalization is irrelevant
+- **AWS SDK v3 (JavaScript)** — The JS SDK has its own `S3URI` parser; do not
+  reimplement this pattern when a built-in exists
+
+---

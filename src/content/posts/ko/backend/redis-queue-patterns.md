@@ -2,7 +2,7 @@
 title: "Redis와 BullMQ 큐 패턴"
 description: "Node.js/NestJS에서 Redis 기반 BullMQ 작업 큐를 사용한 백그라운드 작업 처리 가이드"
 date: 2025-01-11T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: 2026-02-24T00:00:00.000Z
 tags:
   - backend
   - redis
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: redis-queue-patterns
-source_updated: "2026-01-27"
-translation_date: "2026-02-12"
+source_updated: "2026-02-24"
+translation_date: "2026-02-25"
 references:
   - url: "https://docs.bullmq.io/"
     title: docs.bullmq.io
@@ -148,6 +148,48 @@ BullMQ는 작업 생명주기를 Redis 프리미티브에 매핑해요:
 추상화를 위한 추상화가 아니에요. 각 데이터 구조는 문제에 자연스럽게 매핑되기
 때문에 선택된 거예요: FIFO 순서에는 Lists, 시간 기반 스케줄링에는 Sorted
 Sets, 구조화된 작업 데이터에는 Hashes, 중복 제거에는 Sets.
+
+### Lists (FIFO 큐)
+
+```text
+waiting jobs: [job3, job2, job1]  // job1 processed first
+BRPOPLPUSH removes from right, ensures FIFO order
+```
+
+Redis `BRPOPLPUSH`(blocking right-pop, left-push)는 대기 목록에서 활성 목록으로 작업을 원자적으로 이동하고, 정확히 하나의 worker에게 반환해요. 이 원자적 연산이 다중 worker 환경에서 중복 처리를 방지해요.
+
+### Sorted Sets (지연/예약 작업)
+
+```text
+delayed jobs: {
+  score: 1703001234567 (timestamp),
+  member: "job-123"
+}
+// Jobs become available when current time > score
+```
+
+BullMQ는 sorted set을 폴링해서, score(예약 타임스탬프)가 현재 시간 이하인 작업을 다시 대기 목록으로 옮겨요.
+
+### Hashes (작업 데이터 저장)
+
+```text
+job:123 {
+  data: "{ blockId: 456, snapshot: {...} }",
+  opts: "{ attempts: 3, delay: 5000 }",
+  timestamp: "1703001234567"
+}
+```
+
+각 작업의 전체 페이로드, 옵션, 메타데이터가 Redis hash로 저장돼요. 전체 작업을 역직렬화하지 않고도 개별 필드만 부분적으로 읽을 수 있어요.
+
+### Sets (작업 중복 제거)
+
+```text
+completed jobs: {job-123, job-124, job-125}
+// Check if job already processed via SISMEMBER
+```
+
+`jobId` 옵션과 함께 사용하면, BullMQ는 set으로 완료된 작업과 실패한 작업을 추적해서, 중복 제출의 재처리를 방지해요.
 
 ## 스레딩 모델의 오해
 
@@ -317,3 +359,11 @@ flowchart LR
 중요한 주의사항 하나: BullMQ는 at-least-once 의미론을 제공해요,
 exactly-once가 아니에요. 중복 처리가 데이터 손상을 일으킬 수 있다면, BullMQ
 위에 멱등성(idempotency) 가드가 필요해요.
+
+## 더 공부할 주제
+
+- **Redis Streams** -- Lists의 대안으로 큐 워크로드에 사용할 수 있어요. Consumer group, 메시지 확인(acknowledgment), 스트림의 임의 지점부터 재생(replay)을 지원해요
+- **Redis Pub/Sub** -- 다수의 구독자에게 실시간 이벤트 브로드캐스팅. 영속성이 없어서 구독자가 없으면 메시지가 유실돼요
+- **Redis Cluster** -- 데이터를 여러 노드에 샤딩해서 수평 확장. 단일 Redis 인스턴스가 처리량이나 메모리 요구사항을 감당할 수 없을 때 필요해요
+- **BullMQ Pro 기능** -- Job group(그룹별 rate limit), 중첩 큐, 고급 흐름 제어
+- **대안 큐 시스템** -- RabbitMQ(AMQP 프로토콜, 복잡한 라우팅), Kafka(대규모 이벤트 스트리밍), AWS SQS(관리형, 인프라 불필요)

@@ -20,43 +20,13 @@ references:
     type: official
 ---
 
-I wanted to add self-review inline comments to a PR using the `gh` CLI. The
-obvious approach -- using `gh api` with `-f` flags and bracket notation for
-arrays -- produced a 422 error. It took me longer than I care to admit to
-realize the `-f` flag silently builds objects instead of arrays.
+## The Problem
 
-## Why This Matters
-
-Inline PR comments pinned to specific lines of code are far more useful than
-wall-of-text PR descriptions. They let reviewers (and your future self)
-understand why a particular line was written that way. If you are automating
-self-reviews, CI lint annotations, or security findings, you need the GitHub
-PR Review API to post them programmatically.
-
----
-
-## The Difficulties I Ran Into
-
-- **Misleading `-f` flag behavior** -- The `gh api -f` flag supports bracket
-  notation for nested objects, so `comments[0][path]` looks correct but
-  silently produces `{"comments": {"0": {"path": ...}}}` instead of a JSON
-  array. No warning is emitted.
-- **Unhelpful 422 error** -- The GitHub API returns "is not an array" but does
-  not show what the malformed payload actually looked like. Without manually
-  inspecting the serialized JSON, the root cause is invisible.
-- **Line number validation** -- Even after fixing the JSON format, comments
-  fail silently if the `line` number is not present in the PR diff. You must
-  cross-reference the diff output to find valid line numbers.
-- **Heredoc quoting subtlety** -- Using unquoted heredoc delimiters causes
-  shell expansion of backticks and `$variables` inside the JSON body,
-  corrupting code snippets in comment text.
-
----
-
-## The Broken Approach
+When using `gh api` with `-f` flag and bracket notation for arrays, the JSON is
+malformed:
 
 ```bash
-# WRONG - causes HTTP 422 error
+# ❌ WRONG - causes HTTP 422 error
 gh api repos/{owner}/{repo}/pulls/{PR}/reviews -X POST \
   -f event="COMMENT" \
   -f body="Review body" \
@@ -68,14 +38,32 @@ gh api repos/{owner}/{repo}/pulls/{PR}/reviews -X POST \
 ```
 
 The `-f "comments[0][path]=..."` syntax does NOT create a proper JSON array.
-It creates `{"comments": {"0": {"path": ...}}}` -- an object with a string
-key `"0"`, not an array. GitHub expects `comments` to be an actual JSON array.
+GitHub API expects `comments` to be an actual array, not an object with numeric
+keys.
 
 ---
 
-## The Solution: Heredoc with `--input -`
+## Difficulties Encountered
 
-Use a heredoc to pipe properly formatted JSON directly:
+- **Misleading `-f` flag behavior** — The `gh api -f` flag supports bracket
+  notation for nested objects, so `comments[0][path]` _looks_ correct but
+  silently produces `{"comments": {"0": {"path": ...}}}` instead of a JSON
+  array. No warning is emitted.
+- **Unhelpful 422 error** — The GitHub API returns "is not an array" but does
+  not show what the malformed payload actually looked like, making it hard to
+  diagnose without manually inspecting the serialized JSON.
+- **Line number validation** — Even after fixing the JSON format, comments fail
+  silently if the `line` number is not present in the PR diff. You must
+  cross-reference the diff output to find valid line numbers.
+- **Heredoc quoting subtlety** — Using unquoted heredoc delimiters causes shell
+  expansion of backticks and `$variables` inside the JSON body, corrupting code
+  snippets in comment text.
+
+---
+
+## The Solution
+
+Use heredoc with `--input -` to pipe properly formatted JSON:
 
 ```bash
 cat << 'REVIEW_JSON' | gh api repos/{owner}/{repo}/pulls/{PR}/reviews -X POST --input -
@@ -87,26 +75,20 @@ cat << 'REVIEW_JSON' | gh api repos/{owner}/{repo}/pulls/{PR}/reviews -X POST --
       "path": "src/utils/calendar.ts",
       "line": 244,
       "side": "RIGHT",
-      "body": "### TZID Normalization\n\nExplanation here..."
+      "body": "### 📌 TZID Normalization\n\nExplanation here..."
     },
     {
       "path": "src/utils/calendar.ts",
       "line": 307,
       "side": "RIGHT",
-      "body": "### DST Gap Detection\n\nExplanation here..."
+      "body": "### 📌 DST Gap Detection\n\nExplanation here..."
     }
   ]
 }
 REVIEW_JSON
 ```
 
-The single-quoted heredoc delimiter (`'REVIEW_JSON'`) prevents shell expansion
-of backticks and `$variables` inside the JSON body. This is critical when your
-comment text contains code snippets.
-
----
-
-## Key Reference
+## Key Points
 
 ### Comment Structure
 
@@ -119,12 +101,11 @@ comment text contains code snippets.
 
 ### Line Number Requirements
 
-The `line` must be a line that appears in the PR diff. This is the most common
-source of silent failures.
+**CRITICAL:** The `line` must be a line that appears in the PR diff.
 
-- Lines with `+` prefix (added lines) use `side: "RIGHT"`
-- Deleted lines (`-` prefix) use `side: "LEFT"`
+- Use lines with `+` prefix (added lines) → `side: "RIGHT"`
 - Context lines (no prefix) may or may not be commentable
+- Deleted lines (`-` prefix) → `side: "LEFT"`
 
 To find valid line numbers:
 
@@ -142,7 +123,20 @@ gh pr diff {PR_NUMBER} -- {file_path}
 | Backslash    | `\\`                     |
 | Tab          | `\t` (avoid, use spaces) |
 
-### Event Types
+### Single-Quoted Heredoc
+
+Use `'REVIEW_JSON'` (single quotes) to prevent shell expansion:
+
+```bash
+# Single quotes prevent $variable and `backtick` expansion
+cat << 'REVIEW_JSON' | gh api ...
+{
+  "body": "Code: `const x = 1;`"  # Backticks preserved
+}
+REVIEW_JSON
+```
+
+## Event Types
 
 | Event             | Description                          |
 | ----------------- | ------------------------------------ |
@@ -150,9 +144,7 @@ gh pr diff {PR_NUMBER} -- {file_path}
 | `APPROVE`         | Approve the PR                       |
 | `REQUEST_CHANGES` | Request changes before merge         |
 
----
-
-## Complete Working Example
+## Complete Example
 
 ```bash
 PR_NUMBER=644
@@ -162,24 +154,26 @@ REPO=backend-v2
 cat << 'REVIEW_JSON' | gh api repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews -X POST --input -
 {
   "event": "COMMENT",
-  "body": "## Self Review\n\nKey implementation points explained below.",
+  "body": "## 셀프 리뷰 (Self Review) 🔍\n\n이 PR의 핵심 구현 포인트를 설명합니다.",
   "comments": [
     {
       "path": "src/common/utils/calendar/calendar-normalization.util.ts",
       "line": 244,
       "side": "RIGHT",
-      "body": "### TZID Normalization\n\n**Why this implementation:**\n\nConverts non-standard TZID to IANA format."
+      "body": "### 📌 TZID 정규화\n\n**왜 이렇게 구현했는가:**\n\n비표준 TZID를 IANA 형식으로 변환합니다."
     },
     {
       "path": "src/common/utils/calendar/calendar-normalization.util.ts",
       "line": 307,
       "side": "RIGHT",
-      "body": "### DST Gap Detection\n\n**Problem:**\n\nDuring DST transition, dayjs adjusts non-existent times."
+      "body": "### 📌 DST Gap 감지\n\n**문제 상황:**\n\nDST 전환 시 존재하지 않는 시간을 dayjs가 조정합니다."
     }
   ]
 }
 REVIEW_JSON
 ```
+
+## Response
 
 On success, the API returns the created review object:
 
@@ -192,43 +186,30 @@ On success, the API returns the created review object:
 }
 ```
 
+## When to Use
+
+- Automating self-review comments on your own PRs (explaining complex logic)
+- CI/CD pipelines that post inline review comments (lint results, test coverage,
+  security findings)
+- Bulk-commenting on multiple files/lines in a single API call rather than
+  clicking through the GitHub UI one by one
+
 ---
 
-## Why This Works
+## When NOT to Use
 
-The heredoc approach bypasses the `gh api -f` flag entirely. You write the
-exact JSON payload you want -- with proper arrays, proper escaping, and no
-surprises from shell serialization. Single-quoted delimiters prevent shell
-expansion, so backticks and dollar signs in your comment body survive intact.
+- **Simple PR descriptions** — If your notes apply to the PR as a whole, use the
+  PR body or a single top-level comment instead of inline comments
+- **Non-diff lines** — The API only accepts lines present in the diff; do not
+  use this for commenting on unchanged code (use a regular issue comment)
+- **High-frequency automation** — GitHub rate-limits API calls; posting reviews
+  on every commit in a busy repo will hit limits quickly
+- **Draft PRs you will rewrite** — Inline comments are tied to specific diff
+  line numbers and become orphaned when you force-push new commits
 
 ---
 
-## Practical Takeaway
-
-Use the heredoc approach for any `gh api` call that requires arrays in the
-request body. The `-f` flag works fine for flat key-value pairs, but it cannot
-construct arrays. Keep these gotchas in mind:
-
-- Always verify line numbers against `gh pr diff` before posting
-- Always use single-quoted heredoc delimiters when your JSON contains code
-- The API rate-limits apply; batch your comments into a single review call
-
-### When to Use
-
-- Automating self-review comments on your own PRs
-- CI/CD pipelines that post inline review comments (lint, coverage, security)
-- Bulk-commenting on multiple files/lines in a single API call
-
-### When NOT to Use
-
-- **Simple PR descriptions** -- Use the PR body or a single top-level comment
-- **Non-diff lines** -- The API only accepts lines present in the diff
-- **High-frequency automation** -- GitHub rate-limits API calls; posting on
-  every commit will hit limits quickly
-- **Draft PRs you will rewrite** -- Inline comments are tied to specific diff
-  line numbers and become orphaned when you force-push
-
-### Common Errors
+## Common Errors
 
 | Error                       | Cause                       | Fix                       |
 | --------------------------- | --------------------------- | ------------------------- |

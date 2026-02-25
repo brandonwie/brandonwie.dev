@@ -11,59 +11,52 @@ category: backend
 draft: false
 lang: en
 references:
-  - url: "https://www.typescriptlang.org/docs/handbook/2/narrowing.html"
+  - url: 'https://www.typescriptlang.org/docs/handbook/2/narrowing.html'
     title: TypeScript Handbook - Narrowing
     type: official
 ---
 
-I had a function with a comment that said "gcalId is guaranteed non-null by DB
-query" and a `!` assertion to match. Then a migration changed the query, the
-guarantee broke, and the function started throwing runtime errors in production.
-The TypeScript compiler never warned me because I told it to trust me with `!`.
-
-Non-null assertions and forced casting (`as Type`) bypass TypeScript's type
-checking. They compile fine but create landmines for future changes. Type
-narrowing does the same job with an actual runtime check, so when assumptions
-break, you get graceful handling instead of a crash.
+(`as Type`) in production code. This provides runtime safety and better
+maintainability.
 
 ## The Problem
 
+Non-null assertions bypass TypeScript's type checking:
+
 ```typescript
-// BAD: Assumes gcalId exists without runtime check
+// ❌ BAD: Assumes gcalId exists without runtime check
 function processBlock(block: Block) {
   console.log(block.gcalId!.length); // Runtime error if null
 }
 ```
 
-The `!` tells TypeScript "trust me, this is not null." But TypeScript cannot
-verify runtime database guarantees, and DB queries change. Migration bugs happen.
-Partial data shows up in edge cases. The `!` hides all of these problems until
-they explode in production.
+---
 
-## The Difficulties
+## Difficulties Encountered
 
-Several factors made this change harder than "just add a null check."
+- **False sense of safety from DB guarantees** — The original code used
+  `block.gcalId!` with a comment "guaranteed non-null by DB query," but DB
+  queries can change and the TypeScript compiler cannot verify runtime database
+  guarantees
+- **Resistance to "unnecessary" guards** — Adding `if (!gcalId) continue` felt
+  redundant when "we know it's never null," but production edge cases (migration
+  bugs, partial data) proved otherwise
+- **Choosing between throw, return, and continue** — Each narrowing guard needs
+  a different response: `continue` in loops, early `return` in functions,
+  `throw` for invariant violations. Picking the wrong one silently drops data or
+  crashes
+- **Type guard function overhead** — Custom type guards
+  (`block is BlockWithCalendar`) are powerful but add boilerplate; had to learn
+  when a simple null check suffices vs when a reusable guard is warranted
 
-The original code used `block.gcalId!` with a comment "guaranteed non-null by DB
-query." Adding `if (!gcalId) continue` felt redundant when "we know it's never
-null." But production edge cases -- migration bugs, partial data -- proved that
-assumption wrong.
-
-Choosing the right guard response matters too. Each narrowing guard needs a
-different action: `continue` in loops, early `return` in functions, `throw` for
-invariant violations. Picking the wrong one silently drops data or crashes the
-process.
-
-Custom type guards (`block is BlockWithCalendar`) are powerful but add
-boilerplate. I had to learn when a simple null check suffices versus when a
-reusable guard is warranted.
+---
 
 ## The Solution
 
-Extract to a local variable and use a guard:
+Extract to local variable and use guard:
 
 ```typescript
-// GOOD: Runtime check with type narrowing
+// ✅ GOOD: Runtime check with type narrowing
 function processBlock(block: Block) {
   const { gcalId } = block;
   if (!gcalId) return; // or throw, or continue
@@ -72,13 +65,11 @@ function processBlock(block: Block) {
 }
 ```
 
-After the guard, TypeScript narrows the type automatically. No assertion needed.
+---
 
-## Three Patterns
+## Patterns
 
-### Early Return / Continue
-
-The most common pattern. Destructure, guard, continue:
+### 1. Early Return / Continue
 
 ```typescript
 for (const block of blocks) {
@@ -90,9 +81,7 @@ for (const block of blocks) {
 }
 ```
 
-### Type Guard Function
-
-For complex type checks that appear in multiple places:
+### 2. Type Guard Function
 
 ```typescript
 type BlockWithCalendar = Block & { calendar: Calendar };
@@ -107,9 +96,7 @@ if (hasCalendar(block)) {
 }
 ```
 
-### Intersection Type After Validation
-
-When you validate at a boundary and want to pass a stronger type downstream:
+### 3. Intersection Type After Validation
 
 ```typescript
 function validateBlock(block: Block): BlockWithCalendar {
@@ -120,17 +107,58 @@ function validateBlock(block: Block): BlockWithCalendar {
 }
 ```
 
-This is one of the few places where `as Type` is acceptable -- immediately after
-an explicit validation in the same scope.
+---
+
+## When to Use
+
+- **Any production code accessing nullable properties** — If a property could be
+  `null` or `undefined`, use a narrowing guard instead of `!`
+- **Loop bodies with optional fields** — Destructure and guard with `continue`
+  to keep the rest of the loop body clean
+- **Validation boundaries** — At the entry point of a function that receives
+  external data (API responses, DB results, user input), narrow types before
+  passing them deeper
+- **Shared utility functions** — Functions used across modules cannot assume
+  callers have pre-validated data
+
+---
+
+## When NOT to Use
+
+- **Test files** — Non-null assertions (`!`) in tests are acceptable because
+  test failures are the safety net, and narrowing guards add noise to assertions
+  like `expect(result!.id).toBe(1)`
+- **After explicit validation in the same scope** — If you just validated with
+  `if (!x) throw`, using `as Type` on the next line is safe and avoids redundant
+  checks
+- **Trivially guaranteed contexts** — Inside a `.filter(Boolean)` callback or
+  after `.find()` with a subsequent truthiness check, the narrowing is already
+  done by the language
+- **Performance-critical inner loops** — In rare cases where a guard check runs
+  millions of times and the invariant is truly guaranteed by construction, the
+  `!` assertion may be justified with a comment explaining why
+
+---
+
+## When Assertions ARE Allowed
+
+| Scenario                           | Allowed | Example                                              |
+| ---------------------------------- | ------- | ---------------------------------------------------- |
+| After explicit validation          | ✅      | `return block as BlockWithCalendar` after null check |
+| In test files                      | ✅      | `expect(result!.id).toBe(1)`                         |
+| Type narrowing helpers             | ✅      | With proper type guards                              |
+| Production code without validation | ❌      | `block.gcalId!`                                      |
+
+---
 
 ## Real-World Example
 
-Here is the actual code change that prompted this pattern. Before:
+Before (risky):
 
 ```typescript
 export function identifyStaleBlockIds(
   existingBlocks: StaleBlockCandidate[],
-  googleEventGcalIds: Set<string>,
+  googleEventGcalIds: Set<string>
 ): number[] {
   const staleBlockIds: number[] = [];
   for (const block of existingBlocks) {
@@ -143,12 +171,12 @@ export function identifyStaleBlockIds(
 }
 ```
 
-After:
+After (safe):
 
 ```typescript
 export function identifyStaleBlockIds(
   existingBlocks: StaleBlockCandidate[],
-  googleEventGcalIds: Set<string>,
+  googleEventGcalIds: Set<string>
 ): number[] {
   const staleBlockIds: number[] = [];
   for (const block of existingBlocks) {
@@ -163,33 +191,11 @@ export function identifyStaleBlockIds(
 }
 ```
 
-The change is small -- two extra lines. But those two lines mean the function
-handles unexpected nulls gracefully instead of crashing.
+---
 
-## When Assertions ARE Acceptable
+## Why This Matters
 
-| Scenario                           | Allowed | Example                                              |
-| ---------------------------------- | ------- | ---------------------------------------------------- |
-| After explicit validation          | Yes     | `return block as BlockWithCalendar` after null check |
-| In test files                      | Yes     | `expect(result!.id).toBe(1)`                         |
-| Type narrowing helpers             | Yes     | With proper type guards                              |
-| Production code without validation | No      | `block.gcalId!`                                      |
-
-Test files are the main exception. Non-null assertions in tests are fine because
-test failures are the safety net, and narrowing guards add noise to assertions
-like `expect(result!.id).toBe(1)`.
-
-## Practical Takeaway
-
-Use type narrowing in any production code accessing nullable properties. Use it
-at validation boundaries where functions receive external data (API responses, DB
-results, user input). Use it in loop bodies with optional fields --
-destructure and guard with `continue` to keep the rest of the loop body clean.
-
-Do not bother with narrowing guards in test files, after explicit validation in
-the same scope (where `as Type` is safe), or inside `.filter(Boolean)` callbacks
-where the language already narrows for you.
-
-The pattern costs two lines of code. It buys you runtime safety, self-documenting
-constraints, easier debugging, and protection against future changes that break
-assumptions you forgot you made.
+1. **Runtime Safety**: Guards against edge cases and bugs
+2. **Self-Documenting**: Code shows what conditions are expected
+3. **Maintainability**: Future developers understand constraints
+4. **Debugging**: Clearer error location when issues occur

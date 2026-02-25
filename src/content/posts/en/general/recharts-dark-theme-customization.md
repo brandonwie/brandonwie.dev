@@ -17,10 +17,10 @@ references:
   - url: null
     title: Recharts dark theme implementation in Crucio dashboard
     type: experience
-  - url: "https://recharts.org/en-US/api"
+  - url: 'https://recharts.org/en-US/api'
     title: Recharts API Documentation
     type: official
-  - url: "https://developer.mozilla.org/en-US/docs/Web/SVG/Element/linearGradient"
+  - url: 'https://developer.mozilla.org/en-US/docs/Web/SVG/Element/linearGradient'
     title: MDN SVG linearGradient Element
     type: authoritative
 ---
@@ -44,19 +44,19 @@ const COLORS = {
   tooltip: {
     bg: "#2d2d2d", // --bg-secondary
     border: "#404040", // --border
-    text: "#e5e5e5", // --text-primary
+    text: "#e5e5e5" // --text-primary
   },
   series: {
     primary: "#6b9eff", // --accent-blue
     secondary: "#da7756", // --accent-orange
-    success: "#7ec699", // --accent-green
-  },
+    success: "#7ec699" // --accent-green
+  }
 };
 ```
 
 ## Custom Tooltip Component
 
-```typescript
+```tsx
 function DarkTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
 
@@ -83,7 +83,7 @@ function DarkTooltip({ active, payload, label }) {
 
 ## Area Chart with Gradient Fill
 
-```typescript
+```tsx
 <ResponsiveContainer width="100%" height={200}>
   <AreaChart data={data}>
     <defs>
@@ -131,7 +131,7 @@ function DarkTooltip({ active, payload, label }) {
 
 For compact widgets, remove axes entirely:
 
-```typescript
+```tsx
 <ResponsiveContainer width="100%" height={160}>
   <BarChart data={data} layout="vertical" barSize={16}>
     <XAxis type="number" hide />

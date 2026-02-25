@@ -14,27 +14,44 @@ category: frontend
 draft: false
 lang: en
 references:
-  - url: "https://svelte.dev/docs/svelte/$effect"
+  - url: 'https://svelte.dev/docs/svelte/$effect'
     title: Svelte 5 $effect Rune
     type: official
-  - url: "https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView"
+  - url: 'https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView'
     title: Element.scrollIntoView() - MDN
     type: official
 ---
 
-I was building a FuzzyFinder component for my terminal-style blog. The user
-presses arrow keys to navigate search results, and the selected item needs to
-auto-scroll into view. In Svelte 4, I would have used `$: { }` reactive
-statements. In Svelte 5, that syntax is gone, replaced by runes. I needed to
-figure out `$effect` -- how it tracks dependencies, when it runs, and how
-cleanup works.
+by runes. When building a FuzzyFinder component that needed to auto-scroll to
+the selected item whenever the selection index changed, I needed to understand
+how `$effect` works -- specifically how it tracks dependencies automatically and
+how to handle cleanup.
 
-## Coming from React's useEffect
+---
 
-If you are used to React, the biggest mental shift is that Svelte's `$effect`
-has no dependency array. There is no second argument. You do not tell Svelte what
-to watch. It figures it out automatically by tracking which reactive values you
-read inside the effect body.
+## Difficulties Encountered
+
+- **Mental model shift from React** -- Coming from React's `useEffect` with
+  explicit dependency arrays, it was initially unclear how Svelte's automatic
+  dependency tracking decides what to re-run. Reading a reactive variable
+  anywhere inside the effect body registers it as a dependency, which is
+  powerful but can cause unexpected re-runs if you access state you did not
+  intend to track.
+- **Distinguishing `$effect` from `$derived`** -- Both react to state changes,
+  but choosing the wrong one leads to subtle bugs. Using `$effect` for computed
+  values (instead of `$derived`) causes unnecessary DOM updates; using
+  `$derived` for side effects does not work at all.
+- **Cleanup timing** -- The cleanup function runs before the next execution of
+  the effect AND on component unmount, which differs from React where cleanup
+  only runs on unmount or before re-run depending on deps. Getting
+  interval/timer cleanup right required testing the exact timing.
+- **Svelte 4 migration confusion** -- Existing Svelte 4 examples online still
+  use `$: { }` syntax; distinguishing which patterns translate to `$effect` vs
+  `$derived` vs staying as `$:` (for non-rune mode) was not immediately obvious.
+
+---
+
+## Syntax
 
 ```svelte
 <script>
@@ -47,9 +64,11 @@ read inside the effect body.
 </script>
 ```
 
-Any `$state`, `$derived`, or `$props` value read inside the function becomes a
-dependency. This is powerful but can cause unexpected re-runs if you access state
-you did not intend to track.
+## Automatic Dependency Tracking
+
+Unlike React's `useEffect`, you don't specify dependencies manually. Svelte
+automatically tracks any reactive state (`$state`, `$derived`, `$props`) read
+inside the effect:
 
 ```svelte
 <script>
@@ -63,11 +82,7 @@ you did not intend to track.
 </script>
 ```
 
-If you only wanted to react to `a` but accidentally read `b` inside the effect,
-it re-runs for both. There is no way to opt out of a dependency once it is read.
-Structure your effects carefully.
-
-## How It Compares to Svelte 4
+## Comparison with Svelte 4
 
 | Svelte 4               | Svelte 5                          |
 | ---------------------- | --------------------------------- |
@@ -75,15 +90,9 @@ Structure your effects carefully.
 | Implicit, less control | Explicit, clearer intent          |
 | No cleanup support     | Return cleanup function           |
 
-The Svelte 5 version is more explicit. You see exactly where effects start and
-end. And cleanup is built in, which Svelte 4 reactive statements never
-supported.
+## Real Example: Auto-Scroll
 
-## Real Example: Auto-Scroll in FuzzyFinder
-
-Here is the actual use case that made me learn `$effect`. The FuzzyFinder shows
-search results in a scrollable list. When the user presses the up or down arrow,
-`selectedIndex` changes, and the selected item needs to scroll into view:
+Used in FuzzyFinder to scroll selected item into view:
 
 ```svelte
 <script>
@@ -106,26 +115,19 @@ search results in a scrollable list. When the user presses the up or down arrow,
 </script>
 ```
 
-The effect reads `results.length` and `selectedIndex`, so it re-runs when either
-changes. If the user types a new query (changing results) or presses an arrow
-key (changing the index), the selected item scrolls into view.
+## scrollIntoView Options
 
-The `block: 'nearest'` option is important here. It means "only scroll if the
-element is outside the visible area." Without it, every keystroke would jump the
-scroll position even when the selected item is already visible.
-
-| Option                | Value                                           | Behavior |
-| --------------------- | ----------------------------------------------- | -------- |
-| `block: 'nearest'`    | Only scrolls if element is outside visible area |          |
-| `block: 'start'`      | Aligns element to top of container              |          |
-| `block: 'end'`        | Aligns element to bottom of container           |          |
-| `behavior: 'smooth'`  | Animates the scroll                             |          |
-| `behavior: 'instant'` | Jumps immediately                               |          |
+| Option                | Behavior                                        |
+| --------------------- | ----------------------------------------------- |
+| `block: 'nearest'`    | Only scrolls if element is outside visible area |
+| `block: 'start'`      | Aligns element to top of container              |
+| `block: 'end'`        | Aligns element to bottom of container           |
+| `behavior: 'smooth'`  | Animates the scroll                             |
+| `behavior: 'instant'` | Jumps immediately                               |
 
 ## Cleanup
 
-Return a function from `$effect` to run cleanup when the effect re-runs or when
-the component unmounts:
+Return a function to run cleanup when effect re-runs or component unmounts:
 
 ```svelte
 $effect(() => {
@@ -138,14 +140,7 @@ $effect(() => {
 });
 ```
 
-The cleanup function runs in two situations: before the next execution of the
-effect (when a dependency changes), and when the component is destroyed. This
-differs slightly from React where cleanup behavior depends on the dependency
-array.
-
-## Choosing the Right Tool
-
-Not everything should be an `$effect`. Here is the decision framework:
+## When to Use
 
 | Use Case                         | Tool         |
 | -------------------------------- | ------------ |
@@ -153,32 +148,28 @@ Not everything should be an `$effect`. Here is the decision framework:
 | Side effects (DOM, logging, API) | `$effect()`  |
 | One-time setup                   | `onMount()`  |
 
-The most common mistake is using `$effect` to compute a derived value. If you
-find yourself writing `$effect(() => { someVar = transform(otherVar) })`, stop.
-Use `const someVar = $derived(transform(otherVar))` instead. The `$effect`
-version creates an unnecessary re-render cycle.
+## When NOT to Use
 
-## When NOT to Use $effect
-
-- **Computing derived values** -- Use `$derived()` instead. Using `$effect` to
-  set another state variable creates unnecessary re-render cycles.
-- **One-time initialization** -- Use `onMount()` for setup that runs once (event
-  listeners on `window`, fetching initial data). `$effect` runs after every
-  relevant state change, not just once.
+- **Computing derived values** -- If the result is a pure transformation of
+  state (no side effects), use `$derived()` instead. Using `$effect` to set
+  another state variable creates unnecessary re-render cycles.
+- **One-time initialization** -- For setup that runs once on mount (event
+  listeners on `window`, fetching initial data), use `onMount()`. `$effect` runs
+  after every relevant state change, not just once.
 - **Synchronous state updates in response to other state** -- This creates
   cascading reactivity. If `$effect` updates state A which triggers another
   `$effect` that updates state B, you get hard-to-debug update chains.
   Restructure with `$derived` or consolidate logic.
 - **Heavy computations on every state change** -- `$effect` runs synchronously
-  after render. Expensive operations (network requests, large DOM mutations)
-  should be debounced or moved to `$effect` with explicit guards.
+  after render; expensive operations (network requests, large DOM mutations)
+  should be debounced or moved to `$effect` with explicit guards to avoid
+  performance issues.
 
-## Practical Takeaway
+---
 
-`$effect` replaces Svelte 4 reactive statements with a clearer, more powerful
-API. The key insight is automatic dependency tracking: every reactive value read
-inside the effect becomes a dependency, so structure your effects to read only
-what they need. Use `$derived` for computed values, `onMount` for one-time
-setup, and `$effect` for genuine side effects that need to re-run when state
-changes. The auto-scroll pattern shown here is a textbook `$effect` use case:
-DOM manipulation that responds to state changes.
+## Key Points
+
+- **Automatic tracking**: No dependency array needed
+- **Runs after render**: DOM is available inside effect
+- **Cleanup support**: Return function for teardown
+- **Replaces reactive statements**: `$: { }` → `$effect(() => { })`

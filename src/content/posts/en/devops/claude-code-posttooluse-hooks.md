@@ -2,9 +2,9 @@
 title: Claude Code PostToolUse Hooks
 description: >-
   PostToolUse hooks fire after a tool completes. They receive JSON via stdin
-  with
+  with session, tool name, input, result, and working directory.
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-02-09T00:00:00.000Z
+updated: 2026-02-25T00:00:00.000Z
 tags:
   - devops
   - claude-code
@@ -18,28 +18,7 @@ references:
     type: official
 ---
 
-I wanted to know which Claude Code skills I actually use. Not a guess, not a
-feeling -- real data. Claude Code's hook system lets you run arbitrary code after
-any tool completes, so I built a lightweight tracker that counts skill
-invocations and writes the results to a JSON file.
-
-## Why This Matters
-
-Claude Code supports user-defined hooks that fire at specific lifecycle events.
-PostToolUse hooks run after a tool completes, receiving a JSON payload via stdin
-that contains the session ID, tool name, input, result, and working directory.
-This opens up automation possibilities: formatting code after edits, running
-linters after file writes, or tracking usage patterns.
-
-The hook system is powerful but underdocumented in terms of practical patterns.
-Understanding the stdin schema and matcher behavior unlocks real productivity
-gains.
-
-## How PostToolUse Hooks Work
-
-When Claude Code finishes executing a tool, it fires the PostToolUse event. Any
-hook whose matcher regex matches the `tool_name` will run. The hook receives
-this JSON payload via stdin:
+## Hook Stdin Schema
 
 ```json
 {
@@ -52,23 +31,23 @@ this JSON payload via stdin:
 }
 ```
 
-The matcher is a regex tested against `tool_name`. Using `^Skill$` matches only
-the Skill tool, which handles skill and command invocations. Multiple
-PostToolUse entries can coexist in your configuration -- all matching entries
-fire for each event.
+## Key Points
 
-Hook commands run in the user's shell (zsh on macOS, bash on Linux). Always
-append `|| true` to the command to prevent hook failures from blocking Claude
-Code's execution.
+- Matcher is a regex tested against `tool_name`
+- `^Skill$` matches only the Skill tool (skill/command invocations)
+- Multiple PostToolUse entries can coexist; all matching entries fire
+- Hook commands run in the user's shell (zsh on macOS)
+- Always append `|| true` to prevent hook failures from blocking Claude
 
-## Building a Skill Usage Tracker
+## Skill Usage Tracking Pattern
 
-Here is the pattern I use. A PostToolUse hook with matcher `^Skill$` triggers a
-Python script that reads the stdin JSON, extracts the skill name from
-`tool_input.skill`, and increments a counter in a persistent JSON file.
+A lightweight counter-based approach for tracking which skills are used and how
+often:
 
-The script tracks three fields per skill: `count`, `first_used`, and
-`last_used`:
+1. PostToolUse hook with matcher `^Skill$`
+2. Python script reads stdin JSON, extracts skill name from `tool_input.skill`
+3. Increments counter in a persistent JSON file
+4. Tracks `count`, `first_used`, `last_used` per skill
 
 ```python
 # ~/.claude/scripts/track-skill-usage.py
@@ -78,7 +57,7 @@ usage[skill]["count"] += 1
 usage[skill]["last_used"] = today
 ```
 
-The output file at `~/.claude/skill-usage.json` looks like this:
+Output file (`~/.claude/skill-usage.json`):
 
 ```json
 {
@@ -90,37 +69,27 @@ The output file at `~/.claude/skill-usage.json` looks like this:
 }
 ```
 
-After a few days of normal usage, this file tells you exactly which skills you
-rely on, which ones you never touch, and when you started using each one. It is
-a lightweight alternative to full event logging.
+## Gotchas
+
+- **Hook merging, not replacing:** Claude Code **merges** hooks from all config
+  layers (global `~/.claude/settings.json` + project `settings.local.json`). If
+  the same matcher + script appears in both, it fires **twice** per tool call.
+  This is different from permissions, where project-level can override global.
+  For hooks, both always fire.
+- **Double-counting footgun:** A `^Skill$` → `track-skill-usage.py` hook in both
+  global and project configs causes every skill invocation to increment the
+  counter twice. Existing counts become ~2x inflated. Fix: keep the hook in
+  global config only; remove from project `settings.local.json`.
+- **Execute permissions optional:** Hook scripts invoked as
+  `python3 ~/.claude/scripts/script.py` don't need execute permission. The
+  shebang is decorative. But set `chmod +x` for consistency and direct
+  invocation.
 
 ## Design Decisions
 
-I chose a counter-based approach instead of an event log. The file stays O(1) in
-size regardless of how many times you invoke skills. For frequency analysis,
-counts are sufficient. You do not need timestamps for every individual
-invocation.
-
-Safety is doubled up: `|| true` in the hook command ensures the shell never
-reports a failure, and a bare `except: pass` in the Python script ensures the
-script itself never crashes. Hooks must never block Claude Code. A broken hook
-that hangs or errors out would interrupt your entire workflow.
-
-The script uses Python stdlib only (json, sys, os). No external dependencies to
-install. It lives in both `~/.claude/scripts/` (the live location) and
-`global-claude-setup/scripts/` (the bootstrap repo) so it is portable across
-machines.
-
-## Practical Takeaway
-
-PostToolUse hooks are the extension point for automating anything that should
-happen after Claude Code performs an action. The pattern is always the same:
-define a matcher regex, write a script that reads stdin JSON, do your work, and
-fail silently.
-
-Use this for skill usage tracking, auto-formatting, linting, notifications, or
-any other post-action automation. The key constraint is that hooks must be fast
-and must never fail loudly. Append `|| true` and handle exceptions broadly.
-
-If you find yourself manually doing something after every Claude Code action,
-that is a hook waiting to be written.
+- **Counter, not log:** O(1) file size, sufficient for frequency analysis
+- **Double safety:** `|| true` in hook command + bare `except: pass` in Python =
+  hooks never block Claude
+- **No dependencies:** Python stdlib only (json, sys, os)
+- **Portable:** Script lives in both `~/.claude/scripts/` (live) and
+  `global-claude-setup/scripts/` (bootstrap)

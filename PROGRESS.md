@@ -454,3 +454,32 @@ agents + 3 plan agents):
 | `scripts/sync-from-3b.ts`                               | Word-boundary truncation                          |
 
 **Next:** OG image for social sharing, ESLint + Prettier, GitHub Actions CI
+
+---
+
+### 2026-02-25 (Session 2)
+
+**Blog Resync — 8 Enriched Posts**
+
+Resynced 8 posts flagged `needs_resync: true` in 3B (enriched since last
+publish). Updated both EN and KO versions. Fixed pre-existing build errors.
+
+1. **Synced 8 enriched posts** (EN)
+   - `npm run sync` pulled all 52 posts; 8 had enriched content from 3B
+   - Fixed dangling description fragments in 6 EN frontmatter blocks
+   - `needs_resync` flags cleared by sync script
+
+2. **Updated 8 Korean translations**
+   - 4 parallel agents translated new/changed sections
+   - Posts: posttooluse-hooks, shared-personal-config, oauth2-implementation,
+     redis-queue, agent-teams, ecr-ecs-deployment, vpc-networking, ecs-autoscaling
+
+3. **Fixed pre-existing build errors**
+   - Added `tsx`/`jsx` to Shiki language list (`svelte.config.js`)
+   - Escaped bare `<` as `&lt;` in 4 posts (mdsvex parses as Svelte tags)
+   - Wrapped `{PROJECT_ID}` in backticks (mdsvex evaluates as expression)
+   - Replaced 3 broken relative `.md` links with "coming soon" text
+
+**Stats:** 52 EN posts, 52 KO translations. Build passes.
+
+**Next:** OG image for social sharing, ESLint + Prettier, GitHub Actions CI

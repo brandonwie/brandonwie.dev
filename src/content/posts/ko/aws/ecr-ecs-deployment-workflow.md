@@ -2,7 +2,7 @@
 title: "ECR/ECS 배포 워크플로우"
 description: "Amazon ECR과 ECS를 사용한 컨테이너 배포 전체 과정 — 인증부터 롤링 업데이트, 트러블슈팅까지 정리했어요."
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: 2026-02-24T00:00:00.000Z
 tags:
   - aws
   - ecs
@@ -14,14 +14,20 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ecr-ecs-deployment-workflow
-source_updated: "2026-01-27"
-translation_date: "2026-02-12"
+source_updated: "2026-02-24"
+translation_date: "2026-02-25"
 references:
   - url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-types.html"
     title: ECS 배포 유형
     type: official
   - url: "https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html"
     title: ECR 수명 주기 정책
+    type: official
+  - url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html"
+    title: ECS Service Auto Scaling
+    type: official
+  - url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html"
+    title: ECS Deployment Circuit Breaker
     type: official
 ---
 
@@ -174,6 +180,63 @@ Time     | Old v1.0 | New v2.0 | Total | Status
 
 업데이트 중에 총 task 수가 `desired_count`를 초과하는 게 보이시죠. 이게 `maximum_percent` 설정이 하는 일이에요.
 
+### 롤링 업데이트 프로세스 (3 Task)
+
+Task가 3개인 경우 교체 과정을 시각화하면 이렇게 돼요:
+
+<Mermaid code={`graph TB
+    subgraph "Rolling Deployment with 3 Tasks"
+        A["Start: 3 Tasks v1.0"] -->|"New Deployment"| B["Launch Task #1 v2.0"]
+        B -->|"Health Check Pass"| C["Drain Task #1 v1.0"]
+        C -->|"Terminate Old"| D["Running: 2x v1.0, 1x v2.0"]
+        D -->|"Continue"| E["Launch Task #2 v2.0"]
+        E -->|"Health Check Pass"| F["Drain Task #2 v1.0"]
+        F -->|"Terminate Old"| G["Running: 1x v1.0, 2x v2.0"]
+        G -->|"Continue"| H["Launch Task #3 v2.0"]
+        H -->|"Health Check Pass"| I["Drain Task #3 v1.0"]
+        I -->|"Complete"| J["End: 3 Tasks v2.0"]
+    end`} />
+
+### 롤링 업데이트 타임라인
+
+각 task가 시작, health check, 드레인, 종료를 거치는 시간 흐름이에요:
+
+<Mermaid code={`gantt
+    title ECS Rolling Update Timeline (3 Tasks)
+    dateFormat mm:ss
+    axisFormat %M:%S
+    section Task 1 v1.0
+    Running            :done, t1old, 00:00, 02:30
+    Draining          :active, t1drain, 02:30, 30s
+    Terminated        :crit, t1term, 03:00, 1s
+    section Task 1 v2.0
+    Starting          :active, t1new, 01:00, 60s
+    Health Checks     :t1health, 02:00, 30s
+    Running           :done, t1run, 02:30, 03:30
+    section Task 2 v1.0
+    Running            :done, t2old, 00:00, 04:00
+    Draining          :active, t2drain, 04:00, 30s
+    Terminated        :crit, t2term, 04:30, 1s
+    section Task 2 v2.0
+    Starting          :active, t2new, 03:00, 60s
+    Health Checks     :t2health, 04:00, 30s
+    Running           :done, t2run, 04:30, 01:30
+    section Task 3 v1.0
+    Running            :done, t3old, 00:00, 05:30
+    Draining          :active, t3drain, 05:30, 30s
+    Terminated        :crit, t3term, 06:00, 1s
+    section Task 3 v2.0
+    Starting          :active, t3new, 04:30, 60s
+    Health Checks     :t3health, 05:30, 30s
+    Running           :done, t3run, 06:00, 1s`} />
+
+### 각 Task 교체의 핵심 단계
+
+1. **Starting** (60-90초) -- ECR에서 새 Docker 이미지 풀, 컨테이너 시작, 애플리케이션 초기화
+2. **Health Checks** (30-60초) -- ALB health check 통과 필요, 설정된 포트에서 응답해야 하고, 여러 번 성공해야 함
+3. **Draining** (30-300초) -- 이전 task에 새 요청 전송 중단, 기존 요청 완료 대기, graceful shutdown 기간
+4. **Termination** -- 이전 task 완전 종료, 리소스 해제, 새 task 완전 가동
+
 ### 배포 설정
 
 ```hcl
@@ -210,6 +273,29 @@ resource "aws_ecs_service" "app" {
 
 프로덕션에는 균형 전략을 추천해요. 배포 전체에 걸쳐 풀 용량을 유지하면서 이전 task가 드레인되기 전에 새 task가 시작될 충분한 여유를 줘요.
 
+### Circuit Breaker와 자동 롤백
+
+Circuit breaker를 활성화하면 ECS가 실패한 배포를 감지해서 자동으로 마지막 안정 버전으로 롤백해요:
+
+<Mermaid code={`flowchart LR
+    A["2 Tasks v1.0"] -->|"Deploy v2.0"| B["Launch v2.0 Task"]
+    B -->|"Health Check"| C{"Healthy?"}
+    C -->|"NO"| D["Health Check Fails"]
+    D -->|"Circuit Breaker"| E["Stop Deployment"]
+    E -->|"Rollback"| F["Remove Failed v2.0"]
+    F --> G["Stay on v1.0"]
+    C -->|"YES"| H["Continue Deploy"]
+    H --> I["Complete to v2.0"]`} />
+
+`deployment_circuit_breaker` 없이는 잘못된 이미지가 ECS가 실패하는 task를 끝없이 재시도하게 만들어요. 직접 개입할 때까지 Fargate 비용이 계속 나가요. 프로덕션 서비스에는 반드시 활성화하세요:
+
+```hcl
+deployment_circuit_breaker {
+  enable   = true
+  rollback = true
+}
+```
+
 ## Auto-Scaling과 배포
 
 Auto-scaling은 배포 중에도 멈추지 않아요. 계속 동작하고, 그 상호작용을 이해해 두면 좋아요:
@@ -234,6 +320,51 @@ Auto-scaling은 배포 중에도 멈추지 않아요. 계속 동작하고, 그 �
 - Auto-scaling이 배포 중 task를 추가하면 새 task는 최신 버전을 받아요
 - Auto-scaling이 task를 제거하면 ECS가 이전 버전 task를 우선 제거해요
 - 배포 완료 후에도 scale 상태가 유지돼요
+
+### Auto-Scaling 상호작용 시나리오
+
+| 시나리오             | 발생하는 일              | 결과                                       |
+| -------------------- | ------------------------ | ------------------------------------------ |
+| 배포 중 CPU 스파이크 | Auto-scaling이 task 추가 | 새로 추가된 task 포함 모두 배포 업데이트됨 |
+| 배포 중 CPU 하락     | Auto-scaling이 task 제거 | 더 적은 task로 배포 계속 진행              |
+| 배포 중 메모리 이슈  | Auto-scaling 트리거      | 신구 task 모두 스케일링 가능               |
+| 배포 실패            | Task가 현재 버전에 유지  | Auto-scaling 정상 동작 계속                |
+
+### 배포 중 CPU 스파이크 (2에서 3으로 확장)
+
+```text
+Time     | Old v1.0 | New v2.0 | Total | Event
+---------|----------|----------|-------|------------------
+00:00    | 2        | 0        | 2     | Deployment starts
+00:30    | 2        | 1        | 3     | New task starting
+01:00    | 2        | 1        | 3     | CPU SPIKE -- auto-scale triggered
+01:30    | 2        | 2        | 4     | Scale-out adds v2.0 task
+02:00    | 1        | 2        | 3     | Remove one old task
+02:30    | 1        | 3        | 4     | Add final new task
+03:00    | 0        | 3        | 3     | All tasks now v2.0
+```
+
+### Auto-Scaling 충돌 해결
+
+Auto-scaling이 배포와 충돌하면 배포 중 일시적으로 스케일링을 중지할 수 있어요:
+
+```bash
+# 배포 중 auto-scaling 일시 중지
+aws application-autoscaling register-scalable-target \
+  --service-namespace ecs \
+  --resource-id service/my-cluster/my-service \
+  --scalable-dimension ecs:service:DesiredCount \
+  --suspended-state \
+    '{"DynamicScalingInSuspended": true, "DynamicScalingOutSuspended": true}'
+
+# 배포 완료 후 다시 활성화
+aws application-autoscaling register-scalable-target \
+  --service-namespace ecs \
+  --resource-id service/my-cluster/my-service \
+  --scalable-dimension ecs:service:DesiredCount \
+  --suspended-state \
+    '{"DynamicScalingInSuspended": false, "DynamicScalingOutSuspended": false}'
+```
 
 ## GitHub Actions 워크플로우
 
@@ -350,6 +481,71 @@ resource "aws_lb_target_group" "app" {
 
 시작이 느린 애플리케이션에는 health check grace period를 넉넉하게 잡으세요. 부팅에 30초 걸리는 NestJS 앱은 최소 60초의 grace period가 필요해요. 그렇지 않으면 ECS가 시작이 끝나기 전에 task를 종료해요.
 
+### Graceful Shutdown
+
+롤링 업데이트 중 task를 종료하기 전에 ECS가 `SIGTERM`을 보내요. 애플리케이션이 이 시그널을 처리해야 진행 중인 요청을 드롭하지 않아요:
+
+```javascript
+// Graceful shutdown 처리 (Node.js)
+process.on("SIGTERM", async () => {
+  console.log("SIGTERM received, starting graceful shutdown");
+
+  // 새 요청 수신 중단
+  server.close(() => {
+    console.log("HTTP server closed");
+  });
+
+  // 데이터베이스 연결 종료
+  await database.close();
+
+  // 진행 중인 요청 완료 대기 (최대 30초)
+  setTimeout(() => {
+    process.exit(0);
+  }, 30000);
+});
+
+// Health check 엔드포인트 (배포 추적을 위해 버전 포함)
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    version: process.env.APP_VERSION,
+  });
+});
+```
+
+### 배포 모니터링
+
+롤링 업데이트 중에 이상 징후를 조기에 감지하려면 이 시그널들을 모니터링하세요:
+
+<Mermaid code={`flowchart TB
+    A["Deployment Triggered"]
+    A --> B["Monitor: Task Count"]
+    A --> C["Monitor: CPU/Memory"]
+    A --> D["Monitor: Error Rate"]
+    A --> E["Monitor: Response Time"]
+    B --> F{"Anomaly?"}
+    C --> F
+    D --> F
+    E --> F
+    F -->|"Yes"| G["Alert Team"]
+    F -->|"No"| H["Continue"]
+    G --> I["Manual Rollback if Needed"]
+    H --> J["Deployment Success"]`} />
+
+```bash
+# 배포 진행 상황 실시간 확인
+watch -n 5 'aws ecs describe-services \
+  --cluster my-cluster \
+  --services my-service \
+  --query "services[0].deployments"'
+
+# 최근 배포 이벤트 확인
+aws ecs describe-services \
+  --cluster my-cluster \
+  --services my-service \
+  --query 'services[0].events[0:5]'
+```
+
 ## 트러블슈팅
 
 ### 배포가 멈췄을 때
@@ -372,12 +568,27 @@ aws ecs describe-services \
 
 ### 자주 발생하는 문제
 
-| 문제                   | 원인                   | 해결 방법                        |
-| ---------------------- | ---------------------- | -------------------------------- |
-| Task health check 실패 | 앱이 아직 준비 안 됨   | Health check grace period 늘리기 |
-| 메모리 부족            | 컨테이너에 더 많은 RAM | Task 메모리 늘리기               |
-| IP 없음                | 서브넷 가득 참         | 더 큰 서브넷이나 멀티 AZ 사용    |
-| 이미지 풀 실패         | ECR 인증 만료          | ECR 토큰 갱신                    |
+| 문제                   | 원인                   | 해결 방법                           |
+| ---------------------- | ---------------------- | ----------------------------------- |
+| Task health check 실패 | 앱이 아직 준비 안 됨   | Health check grace period 늘리기    |
+| 메모리 부족            | 컨테이너에 더 많은 RAM | Task 메모리 늘리기                  |
+| IP 없음                | 서브넷 가득 참         | 더 큰 서브넷이나 멀티 AZ 사용       |
+| 이미지 풀 실패         | ECR 인증 만료          | ECR 토큰 갱신                       |
+| 느린 배포              | 보수적인 min/max %     | max % 올리거나 min % 내리기         |
+| 자동 롤백 없음         | Circuit breaker 미설정 | `deployment_circuit_breaker` 활성화 |
+| Auto-scaling 충돌      | 스케일링이 배포와 충돌 | 배포 중 auto-scaling 일시 중지      |
+
+### 배포 멈춤 의사결정 트리
+
+배포가 멈췄을 때 빠르게 원인을 파악하는 흐름이에요:
+
+<Mermaid code={`flowchart LR
+    A["Deployment Stuck"] --> B{"Check Health Checks"}
+    B -->|"Failing"| C["Fix Application/Port"]
+    B -->|"Passing"| D{"Check Resources"}
+    D -->|"Insufficient"| E["Increase CPU/Memory"]
+    D -->|"Sufficient"| F{"Check Subnet"}
+    F -->|"No IP"| G["Check Subnet Capacity"]`} />
 
 ## 실전 정리
 
@@ -389,3 +600,5 @@ Circuit breaker는 첫날부터 활성화하세요. 비용이 들지 않고 실�
 
 - [ECS 배포 유형](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-types.html)
 - [ECR 수명 주기 정책](https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html)
+- [ECS Service Auto Scaling](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html)
+- [ECS Deployment Circuit Breaker](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html)

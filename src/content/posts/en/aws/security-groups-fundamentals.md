@@ -1,6 +1,6 @@
 ---
 title: AWS Security Groups Fundamentals
-description: "Security Groups are virtual firewalls for AWS resources, controlling inbound"
+description: 'Security Groups are virtual firewalls for AWS resources, controlling inbound'
 date: 2025-04-29T00:00:00.000Z
 updated: 2026-02-19T00:00:00.000Z
 tags:
@@ -11,7 +11,7 @@ category: aws
 draft: false
 lang: en
 references:
-  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html"
+  - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html'
     title: vpc security groups.html
     type: official
   - url: >-
@@ -20,123 +20,91 @@ references:
     type: official
 ---
 
-I deployed an ECS service, configured the task definition, verified the
-container was healthy -- and nothing could reach it. No error, no timeout
-message, just silence. After an hour of checking code, environment variables,
-and DNS, I realized the security group had no ingress rule for the application
-port. One missing rule, zero helpful error messages.
+(ingress) and outbound (egress) traffic at the instance level.
 
-Security groups are the most common cause of "it works locally but not on AWS"
-issues, and they produce no logs when they block traffic.
+---
 
-## Why This Matters
+## The Problem
 
-Every AWS resource in a VPC needs network-level access control. EC2 instances,
-RDS databases, ECS tasks, Lambda functions running inside a VPC -- all of them
-are governed by security groups. Without properly configured rules, resources
-are either exposed to the entire internet (a security risk) or completely
-unreachable (a broken service).
+Every AWS resource in a VPC needs network-level access control. Without properly
+configured security groups, resources are either exposed to the entire internet
+(security risk) or completely unreachable (broken connectivity). Understanding
+security groups is essential because misconfigured rules are the most common
+cause of "it works locally but not on AWS" issues, and overly permissive rules
+are a top finding in AWS security audits.
 
-Misconfigured security group rules are one of the top findings in AWS security
-audits. Overly permissive ingress rules -- especially 0.0.0.0/0 on sensitive
-ports -- and forgotten wide-open egress are the usual culprits. Getting
-comfortable with security groups early saves real pain later.
+---
 
-## What Tripped Me Up
+## Difficulties Encountered
 
-The five things that confused me most when learning security groups:
+- **Stateful behavior is confusing at first** -- if you allow inbound on port
+  443, the response traffic is automatically allowed outbound without an
+  explicit egress rule; this is unintuitive coming from traditional firewall
+  experience where you configure both directions
+- **Default deny vs default allow asymmetry** -- inbound defaults to deny-all
+  while outbound defaults to allow-all; forgetting this leads to either
+  wondering why nothing connects (missing ingress) or assuming you have egress
+  restrictions when you do not
+- **Security group references vs CIDR blocks** -- using CIDR blocks for
+  inter-service communication (e.g., app-to-database) breaks when IPs change;
+  security group references auto-update but the syntax is different and easy to
+  confuse in Terraform
+- **Debugging connectivity is opaque** -- security group denials produce no logs
+  by default (unlike NACLs); VPC Flow Logs must be explicitly enabled to see
+  rejected traffic, and even then the logs do not tell you which security group
+  rule caused the rejection
+- **Rule limits are easy to hit** -- the default limit is 60 rules per security
+  group and 5 security groups per ENI; consolidating rules requires
+  understanding port ranges and CIDR aggregation
 
-**Stateful behavior is unintuitive.** If you allow inbound traffic on port 443,
-the response traffic is automatically allowed outbound -- no explicit egress
-rule needed. Coming from traditional firewall experience where you configure
-both directions, this feels wrong at first. It's actually a feature.
-
-**Default deny vs. default allow are asymmetric.** Inbound defaults to deny-all.
-Outbound defaults to allow-all. Forgetting this leads to wondering why nothing
-connects (missing ingress rule) or assuming you have egress restrictions when
-you do not.
-
-**Security group references vs. CIDR blocks behave differently.** Using CIDR
-blocks for inter-service communication (e.g., app-to-database) breaks when IPs
-change. Security group references auto-update, but the Terraform syntax is
-different enough to cause confusion when you're writing rules quickly.
-
-**Debugging connectivity is opaque.** Security group denials produce no logs by
-default, unlike NACLs. VPC Flow Logs must be explicitly enabled to see rejected
-traffic, and even then the logs do not tell you which specific security group
-rule caused the rejection. The silence is intentional -- but it's brutal when
-you're troubleshooting.
-
-**Rule limits are easy to hit.** The default limit is 60 rules per security
-group and 5 security groups per ENI. When a service accumulates many ingress
-rules over time, you hit this ceiling and need to consolidate using port ranges
-or CIDR aggregation.
+---
 
 ## When to Use
 
-Use security groups whenever you need to control network access to a VPC
-resource. Restricting database access so only application servers can connect,
-limiting SSH access to a bastion host, controlling which services can reach an
-internal API -- these are all security group problems.
+- Controlling access to any VPC resource (EC2, RDS, ECS, Lambda in VPC, etc.)
+- Implementing least-privilege network access between service tiers
+- Restricting database access to only application servers
+- Limiting SSH/RDP access to specific IP ranges or bastion hosts
 
-The mental model is per-resource virtual firewall. Each ENI (network interface)
-gets one or more security groups attached, and only traffic matching an allow
-rule gets through.
+---
 
 ## When NOT to Use
 
-Security groups are not the right tool for everything.
+- **Subnet-level traffic control** -- security groups operate per-ENI (instance
+  level); use Network ACLs (NACLs) for subnet-wide rules that apply to all
+  resources in a subnet
+- **Blocking specific IP addresses** -- security groups only allow (no deny
+  rules); use NACLs for explicit deny rules to block known bad actors
+- **Rate limiting or DDoS protection** -- security groups have no concept of
+  request rate; use AWS WAF or Shield for rate-based rules
+- **Application-layer filtering** -- security groups work at L3/L4 (IP and
+  port); use ALB rules or WAF for HTTP path/header-based access control
+- **Cross-VPC or cross-account rules** -- security group references only work
+  within the same VPC (or peered VPCs with specific configuration); use VPC
+  endpoints or Transit Gateway for cross-boundary access
 
-For subnet-level traffic control, use Network ACLs (NACLs). Security groups
-operate per-ENI; NACLs apply to all resources within a subnet regardless of
-what's attached to them.
-
-For blocking specific IP addresses, use NACLs as well. Security groups only
-have allow rules -- there is no deny rule. If you need to explicitly block a
-known bad actor's IP range, NACLs are the right layer.
-
-For rate limiting or DDoS protection, use AWS WAF or Shield. Security groups
-have no concept of request rate or connection frequency.
-
-For application-layer filtering based on HTTP paths or headers, use ALB
-listener rules or WAF. Security groups work at L3/L4 (IP and port) only.
-
-For cross-VPC or cross-account rules, security group references only work
-within the same VPC (or peered VPCs with specific configuration). Use VPC
-endpoints or Transit Gateway for cross-boundary access control.
+---
 
 ## Core Concepts
 
 ### Stateful Firewall
 
-This is the single most important thing to understand about security groups:
-they are stateful. When inbound traffic is allowed, the return traffic for that
-connection is automatically permitted outbound. You do not need to write a
-matching egress rule for responses.
+Security Groups are **stateful**:
 
-If an application server on port 8080 receives a request from a client, the
-response packets are allowed back through automatically -- regardless of what
-your egress rules say. Terraform's `ingress` and `egress` blocks control what
-can initiate connections, not what can respond.
+- If inbound traffic is allowed, response traffic is automatically allowed
+- No need to create matching egress rules for responses
+- Simplifies rule management
 
 ### Default Behavior
 
-Two defaults that catch people off guard.
+- **Inbound**: All traffic denied by default
+- **Outbound**: All traffic allowed by default
 
-All inbound traffic is denied by default. A freshly created security group with
-no ingress rules will silently drop everything trying to connect to it. This
-is why my ECS service was unreachable -- I forgot to add an ingress rule.
-
-All outbound traffic is allowed by default. Unless you remove or restrict the
-default egress rule, resources can make outbound connections to anywhere. Most
-teams leave this alone, but tightening egress is part of a defense-in-depth
-posture.
+---
 
 ## Ingress Rules (Inbound)
 
-Ingress rules control what traffic can enter the resource. Each rule specifies
-a port range, protocol, and source -- either a CIDR block or another security
-group.
+Control traffic **entering** the resource:
 
 ```hcl
 ingress {
@@ -148,18 +116,18 @@ ingress {
 }
 ```
 
-The key parameters:
+**Parameters:**
 
-- `from_port` / `to_port`: Port range. Use the same value for a single port.
-- `protocol`: `tcp`, `udp`, `icmp`, or `-1` for all protocols.
-- `cidr_blocks`: Source IP ranges in CIDR notation.
-- `security_groups`: Source security group IDs (preferred over CIDR for
-  inter-service rules).
+- `from_port` / `to_port`: Port range (same for single port)
+- `protocol`: `tcp`, `udp`, `icmp`, or `-1` (all)
+- `cidr_blocks`: Source IP ranges
+- `security_groups`: Source security groups (preferred)
+
+---
 
 ## Egress Rules (Outbound)
 
-Egress rules control what traffic can leave the resource. The most common
-pattern is allowing all outbound traffic, which is the default behavior.
+Control traffic **leaving** the resource:
 
 ```hcl
 # Allow all outbound (common default)
@@ -172,26 +140,17 @@ egress {
 }
 ```
 
-The special values:
+**Special values:**
 
-- `from_port = 0, to_port = 0, protocol = "-1"`: Matches all traffic.
-- `cidr_blocks = ["0.0.0.0/0"]`: All IPv4 destinations.
-- `ipv6_cidr_blocks = ["::/0"]`: All IPv6 destinations.
+- `from_port = 0, to_port = 0, protocol = "-1"`: All traffic
+- `cidr_blocks = ["0.0.0.0/0"]`: All IPv4 destinations
+- `ipv6_cidr_blocks = ["::/0"]`: All IPv6 destinations
 
-Remember that because security groups are stateful, restricting egress does
-not block response traffic -- it only blocks new outbound connections initiated
-by the resource.
+---
 
 ## Security Best Practices
 
-The difference between a security audit pass and fail often comes down to a
-handful of security group decisions made early in a project. These four
-practices cover the most common gaps.
-
-### Least Privilege
-
-Grant only the access required, nothing more. A wide-open ingress rule is a
-liability -- both a security risk and an audit finding.
+### 1. Principle of Least Privilege
 
 ```hcl
 # BAD: Too permissive
@@ -211,12 +170,9 @@ ingress {
 }
 ```
 
-### Security Group References
+### 2. Use Security Group References
 
-When two services in the same VPC need to talk to each other, reference the
-source security group instead of its IP range. This auto-updates when source
-IPs change and makes the intent clear -- "app servers can connect to the
-database" reads directly from the rule.
+Prefer referencing other security groups over CIDR blocks:
 
 ```hcl
 # Database only accepts traffic from app servers
@@ -228,15 +184,13 @@ ingress {
 }
 ```
 
-CIDR-based rules for inter-service traffic break silently when IPs shift during
-redeployments or scaling events. Security group references stay correct
-automatically.
+**Benefits:**
 
-### Restrict SSH/RDP
+- Auto-updates when source IPs change
+- Clearer intent (app → db)
+- Easier to audit
 
-Never open SSH to 0.0.0.0/0. This is the single most common finding in AWS
-security audits, and it's also actively scanned and exploited. Restrict SSH
-to your office IP range, a bastion host security group, or a VPN CIDR.
+### 3. Restrict SSH/RDP Access
 
 ```hcl
 # Allow SSH only from company IP range
@@ -249,12 +203,7 @@ ingress {
 }
 ```
 
-### Limit Egress
-
-Most teams leave egress wide open and move on. That's understandable during
-initial development, but for production services handling sensitive data, it's
-worth locking down. A compromised instance with unrestricted egress can
-exfiltrate data to anywhere. Constrained egress limits the blast radius.
+### 4. Limit Egress When Possible
 
 ```hcl
 # Only allow HTTPS outbound to specific service
@@ -266,12 +215,11 @@ egress {
 }
 ```
 
+---
+
 ## Common Patterns
 
-### Web Server SG
-
-A typical web server needs to accept HTTP and HTTPS from the internet, SSH from
-a bastion only, and unrestricted outbound for package updates and API calls.
+### Web Server Security Group
 
 ```hcl
 resource "aws_security_group" "web" {
@@ -313,11 +261,7 @@ resource "aws_security_group" "web" {
 }
 ```
 
-### Database SG
-
-Databases should only accept connections from application servers, never from
-the internet. This pattern makes the intent explicit: the database SG references
-the app SG, so the rule reads as "app servers can reach the database."
+### Database Security Group
 
 ```hcl
 resource "aws_security_group" "database" {
@@ -343,11 +287,7 @@ resource "aws_security_group" "database" {
 }
 ```
 
-### ALB SG
-
-The ALB accepts HTTPS from the internet and forwards to the application tier.
-The egress rule scopes outbound traffic to the app security group on the
-application port, rather than allowing all outbound.
+### ALB Security Group
 
 ```hcl
 resource "aws_security_group" "alb" {
@@ -373,13 +313,12 @@ resource "aws_security_group" "alb" {
 }
 ```
 
-## Inline vs. Standalone Rules in Terraform
+---
 
-Terraform offers two ways to manage security group rules, and the choice has
-critical drift implications. I learned this the hard way when a `terraform plan`
-tried to remove manually-added developer IPs that had been added directly in the
-AWS console -- because the security group had at least one inline ingress block,
-Terraform decided it owned all ingress rules.
+## Inline vs Standalone Rules in Terraform
+
+Terraform offers two ways to manage SG rules. The choice has critical
+implications for how Terraform handles drift.
 
 ### Inline Rules (inside `aws_security_group`)
 
@@ -394,10 +333,9 @@ resource "aws_security_group" "app" {
 }
 ```
 
-If ANY inline `ingress` block exists, Terraform manages ALL ingress rules on
-this security group. During `terraform plan`, it refreshes state from AWS and
-plans to remove any rule not represented in code. The same applies independently
-to egress.
+**Behavior:** If ANY inline `ingress` block exists, Terraform manages ALL
+ingress rules on this SG. During `terraform plan`, it refreshes from AWS and
+removes any rule not in code.
 
 ### Standalone Rules (`aws_security_group_rule`)
 
@@ -412,52 +350,39 @@ resource "aws_security_group_rule" "app_ssh" {
 }
 ```
 
-Each rule is an independent resource. The parent security group does not know
-about standalone rules -- they are not visible in its state. Other rules (manual
-or from other standalone resources) are unaffected when a standalone rule is
-added or removed.
+**Behavior:** Each rule is an independent resource. The parent SG doesn't know
+about them. Other rules (manual or from other standalone resources) are not
+affected.
 
 ### The Critical Rule
 
-| Inline ingress blocks | Terraform behavior                                         |
-| --------------------- | ---------------------------------------------------------- |
-| 1 or more             | Manages ALL ingress -- removes unrecognized rules          |
-| Zero                  | Does NOT manage ingress -- ignores manual/standalone rules |
+| Inline ingress blocks | Terraform behavior                                        |
+| --------------------- | --------------------------------------------------------- |
+| 1 or more             | Manages ALL ingress — removes unrecognized rules          |
+| Zero                  | Does NOT manage ingress — ignores manual/standalone rules |
 
-The same logic applies independently for egress blocks.
+Same applies independently for `egress`.
 
-### When to Use Standalone Rules
+### When to Use Standalone
 
-**Circular dependencies:** SG A references SG B for one rule, and SG B
-references SG A for another. Inline blocks in both resources create a Terraform
-dependency cycle. Extract one direction as a standalone rule to break the cycle.
-
-**Mixed ownership:** Some rules are Terraform-managed, others are manually
-managed (developer IPs, ops team additions). Use zero inline blocks combined
-with standalone resources for Terraform rules. Add
-`lifecycle { ignore_changes = [ingress] }` to the SG resource if manual rules
-must coexist and survive plan/apply cycles.
-
-**Cross-module references:** When a rule needs to reference a security group
-defined in a different module, standalone rules avoid tight coupling between
-modules and eliminate the need to pass SG IDs through module outputs just to
-write inline rules.
+- **Circular dependencies:** SG A references SG B and vice versa. Inline blocks
+  create a cycle. Extract one direction to standalone.
+- **Mixed ownership:** Some rules are Terraform-managed, others are
+  manually-managed (e.g., developer IPs). Use zero inline blocks + standalone
+  for Terraform rules + `lifecycle { ignore_changes = [ingress] }` for manual
+  rules.
+- **Cross-module references:** When a rule needs to reference a SG from another
+  module, standalone rules avoid tight coupling.
 
 ### Import ID Format
 
-If you need to import an existing standalone rule into Terraform state, the
-import ID format is:
-
-```text
-{sg_id}_{type}_{protocol}_{from_port}_{to_port}_{source}
-```
+`{sg_id}_{type}_{protocol}_{from_port}_{to_port}_{source}`
 
 Example: `sg-abc123_ingress_tcp_22_22_sg-def456`
 
-## Debugging Tips
+---
 
-When something cannot connect and you suspect security groups, start by pulling
-the current rules for the target resource's security group.
+## Debugging Tips
 
 ```bash
 # Check security group rules
@@ -473,32 +398,7 @@ nc -zv <ip> <port>  # From source
 telnet <ip> <port>  # Alternative
 ```
 
-If `nc` returns nothing or immediately closes, the connection is being blocked
-somewhere. Enable VPC Flow Logs on the VPC or specific ENI to confirm. Flow
-Logs record accepted and rejected traffic with source/destination IP, port, and
-action. They do not tell you which specific rule rejected the packet, but they
-confirm that rejection is happening and from which source.
-
-Check both the source resource's egress rules and the destination resource's
-ingress rules. Either side can block the connection.
-
-## Practical Takeaway
-
-Security groups are stateful -- responses to allowed connections pass through
-automatically, so you only need to think about what initiates connections, not
-responses.
-
-The defaults are: deny all inbound, allow all outbound. Every new security group
-starts there. Every service you deploy needs explicit ingress rules for the
-ports it listens on.
-
-Always use security group references instead of CIDR blocks for inter-service
-rules within a VPC. The rules self-maintain as IPs change and the intent is
-immediately readable.
-
-When something cannot connect on AWS, check security groups before anything
-else. The answer is almost always a missing ingress rule, a rule pointing at
-the wrong CIDR, or a rule referencing the wrong security group ID.
+---
 
 ## References
 

@@ -26,6 +26,8 @@ async function getHighlighter() {
       "css",
       "html",
       "svelte",
+      "jsx",
+      "tsx",
       "dockerfile",
       "hcl",
       "terraform",

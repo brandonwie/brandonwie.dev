@@ -3,7 +3,7 @@ title: "Claude Code Agent Teams"
 description: >-
   여러 Claude Code 인스턴스를 팀으로 조율하는 실험적 기능의 설정, 패턴, 주의사항을 알아봅니다.
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-02-09T00:00:00.000Z
+updated: 2026-02-25T00:00:00.000Z
 tags:
   - ai-ml
   - claude-code
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: "2026-02-09"
-translation_date: "2026-02-12"
+source_updated: "2026-02-25"
+translation_date: "2026-02-25"
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Claude Code 세션 팀 조율하기
@@ -76,17 +76,17 @@ Agent teams에 가장 적합한 경우는: 병렬 코드 리뷰(관심사별 리
 }
 ```
 
-표시 모드를 선택합니다:
+표시 모드를 선택합니다(`"in-process"`, `"tmux"`, `"auto"`):
 
 ```json
 {
-  "teammateMode": "in-process"
+  "teammateMode": "auto"
 }
 ```
 
-두 가지 모드가 있어요: `"in-process"` (팀원이 같은 터미널에서 실행, 출력 인터리빙)
-와 `"tmux"` (각 팀원이 자체 패널). tmux 설정이 필요 없어서 `"in-process"`를
-사용하지만, 여러 팀원을 동시에 모니터링하려면 `"tmux"`가 더 좋습니다.
+**참고:** `"auto"` 모드를 추천해요. `$TMUX` 환경 변수를 감지해서 자동으로 분할
+패널을 사용해요. 명시적으로 `"tmux"`를 설정하면 config parsing 버그(#24292)가
+있어서 v2.1.52 기준으로 제대로 읽히지 않아요.
 
 ## 효과적인 패턴들
 
@@ -120,6 +120,32 @@ Agent teams에 가장 적합한 경우는: 병렬 코드 리뷰(관심사별 리
 위임(리드가 서브 리드를 생성하고 서브 리드가 팀원을 생성)이 필요하면 수동
 멀티 세션 조율을 사용해야 합니다.
 
+**Git worktree에서 gitignored symlink가 사라져요.** 팀원이 git worktree에서
+작업하면 tracked 파일만 보여요. Gitignored symlink(`CLAUDE.local.md`,
+`.claude/settings.local.json`, `.claude/skills`)가 없어서 개인 설정과 지침이
+worktree 팀원에게 로드되지 않아요. 중요한 환경 변수는 user-level
+`~/.claude/settings.local.json`에 넣고, spawn 프롬프트에 컨텍스트를
+미리 포함시켜서 우회했어요.
+
+**`teammateMode: "tmux"` config parsing 버그(#24292)가 있어요.**
+`settings.json`에 명시적으로 `"tmux"` 값을 넣으면 제대로 읽히지 않아요.
+`"auto"` 모드(`$TMUX` 환경 변수를 감지)를 사용하거나 `--teammate-mode tmux`
+CLI 플래그를 전달하면 돼요.
+
+**TeamDelete가 고아 tmux 패널을 정리하지 않아요.** 에이전트가 종료되면 tmux
+패널이 새 zsh 셸로 살아 있어요. `TeamDelete`는 팀 메타데이터만 정리하고 패널은
+안 건드려요. 각 고아 패널에 `tmux kill-pane -t %<id>`를 수동으로 실행해야 해요.
+팀 작업 후 `tmux list-panes -a`로 확인하세요.
+
+**동시에 3명 이상 spawn하면 tmux race condition이 생겨요.** 팀원을 동시에
+3명 이상 생성하면 tmux `send-keys`에서 "not in a mode" 에러가 나요. 패널은
+만들어지지만 에이전트가 시작되지 않아요. 개별적으로 다시 시도하면 보통
+해결돼요.
+
+**Settings.json 재구성 부작용에 주의하세요.** Claude Code UI에서 설정을 저장하면
+`settings.json`을 재구성하면서 `defaultMode` 같은 값을 조용히 바꿀 수 있어요.
+UI에서 변경한 뒤에는 항상 설정 값을 확인하세요.
+
 ## 제한 사항
 
 - in-process 팀원에 세션 복구 없음
@@ -127,6 +153,10 @@ Agent teams에 가장 적합한 경우는: 병렬 코드 리뷰(관심사별 리
 - 고정 리드 (리더십 이전 불가)
 - 모든 팀원이 생성 시 리드의 권한 모드 상속
 - 분할 패널에 tmux 또는 iTerm2 필요
+- `teammateMode: "tmux"`에 config parsing 버그가 있으니 `"auto"`를 대신 사용
+- TeamDelete가 고아 tmux 패널을 정리하지 않음 (수동 정리 필요)
+- 팀원 3명 이상 동시 spawn 시 race condition 발생 (개별 재시도로 해결)
+- Worktree에서 gitignored 파일 누락 (팀원이 개인 설정을 못 읽음)
 
 ## 예시 프롬프트
 

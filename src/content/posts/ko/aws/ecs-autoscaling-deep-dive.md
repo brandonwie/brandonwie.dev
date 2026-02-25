@@ -2,7 +2,7 @@
 title: "ECS Auto-Scaling 심층 분석"
 description: "ECS auto-scaling의 알고리즘, 쿨다운, 비용 최적화 — 비례 제어를 이해하면 flapping과 과금 폭탄을 피할 수 있어요."
 date: 2025-08-23T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: 2026-02-24T00:00:00.000Z
 tags:
   - aws
   - ecs
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ecs-autoscaling-deep-dive
-source_updated: "2026-01-27"
-translation_date: "2026-02-12"
+source_updated: "2026-02-24"
+translation_date: "2026-02-25"
 references:
   - url: "https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/"
     title: ECS 모범 사례 가이드
@@ -80,6 +80,26 @@ COMPUTE ENGINES:
 
 이렇게 생각하면 돼요: 오케스트레이터(ECS/EKS)는 무엇을 할지 결정하는 두뇌이고, 컴퓨팅 엔진(Fargate/EC2)은 실제로 일하는 근육이에요. Fargate는 ECS와 EKS 어느 쪽이든 사용할 수 있어요.
 
+### ECS + Fargate 책임 모델
+
+ECS + Fargate 조합에서는 AWS가 기반 인프라를 관리해요:
+
+```text
+직접 관리하는 것:
+├── 애플리케이션 코드
+├── Docker 컨테이너
+├── ECS 서비스 설정
+└── 실행 중인 Task
+
+AWS가 관리하는 것:
+├── 서버
+├── OS 업데이트
+├── Docker 데몬
+└── 인프라
+```
+
+애플리케이션 코드 -> Docker 컨테이너 -> ECS 서비스 설정 -> 실행 중인 Task 순으로 흐르고, Task는 AWS가 관리하는 서버 위에서 실행돼요.
+
 ## Auto-Scaling 유형
 
 ### 수평 스케일링 (권장)
@@ -107,7 +127,19 @@ Normal:                High Load (Vertical):
 
 ## Target Tracking 스케일링 알고리즘
 
-Target tracking은 서비스의 크루즈 컨트롤 같은 거예요. 지정된 값에서 메트릭을 유지하기 위해 비례적으로 task를 추가하거나 제거해요:
+Target tracking은 서비스의 크루즈 컨트롤 같은 거예요. 지정된 값에서 메트릭을 유지하기 위해 비례적으로 task를 추가하거나 제거해요. 모니터링 루프가 60초마다 평가하고, 상태 전환은 이런 흐름이에요:
+
+```text
+[시작] --> 모니터링
+모니터링 --> CPU 확인 (60초마다)
+
+CPU 확인:
+├── 목표 초과 -> Scale Out -> Task 추가 -> 쿨다운 60초 -> 모니터링
+├── 목표 근처 -> 안정 -> 모니터링
+└── 목표 미만 -> Scale In -> Task 제거 -> 쿨다운 300초 -> 모니터링
+```
+
+알고리즘은 비례적으로 task 수를 계산해요(+1/-1이 아니에요):
 
 ```python
 # Simplified algorithm
@@ -170,6 +202,74 @@ if current_cpu > target_cpu:
 
 왜 임계값이 달라야 할까요? 70% 목표는 auto-scaling을 통해 서비스를 최적으로 유지해요. 85% alarm은 auto-scaling이 따라가지 못할 때 발동해서 사람에게 조사하라고 경고해요. 둘 다 70%면 정상적인 스케일링 이벤트마다 알림이 와서 노이즈가 돼요.
 
+## 실제 시나리오
+
+### 시나리오 1: 오전 트래픽 급증
+
+사용자가 오전 8시에 접속하기 시작해요. CPU가 점진적으로 올라가 8:45에 70% 임계값을 넘고, auto-scaling이 task를 추가해요. 쿨다운 후 부하가 분산되어 안정화돼요:
+
+| 시간 | Task 수 | 평균 CPU | 동작                  |
+| ---- | ------- | -------- | --------------------- |
+| 8:00 | 1       | 45%      | 정상 오전 트래픽      |
+| 8:30 | 1       | 68%      | 임계값 접근 중        |
+| 8:45 | 1       | 75%      | 70% 초과 -- scale out |
+| 8:46 | 2       | 40%      | 2개에 부하 분산       |
+| 9:00 | 2       | 72%      | 다시 임계값 초과      |
+| 9:01 | 3       | 50%      | 세 번째 task 추가     |
+| 9:30 | 3       | 48%      | 오전 피크에서 안정    |
+
+### 시나리오 2: 점심 피크
+
+지속적인 트래픽 증가로 최대 용량까지 스케일링되는 경우예요:
+
+```text
+11:30 AM: 2 Task, 60% CPU
+    |-- 트래픽 증가 -->
+12:00 PM: 2 Task, 78% CPU
+    |-- Scale out -->
+12:01 PM: 3 Task, 55% CPU
+    |-- 추가 트래픽 -->
+12:15 PM: 3 Task, 74% CPU
+    |-- Scale out -->
+12:16 PM: 4 Task, 45% CPU
+    |-- 안정 -->
+12:30 PM: 4 Task, 65% CPU
+```
+
+핵심 관찰: 최대 용량(4 task)에서 CPU 65%로 서비스를 처리해요. 4개 task로 감당 못 하는 트래픽이 들어오면 85% CloudWatch alarm이 발동해서 팀에 알려요.
+
+### 시나리오 3: 저녁 축소
+
+Scale-in은 제거 사이에 300초 쿨다운을 두고 보수적으로 진행돼요:
+
+| 시간    | Task 수 | 평균 CPU | 동작                 |
+| ------- | ------- | -------- | -------------------- |
+| 7:00 PM | 4       | 40%      | 목표 미만            |
+| 7:05 PM | 3       | 52%      | 1개 감소             |
+| 7:10 PM | 3       | 50%      | 안정, 쿨다운 진행 중 |
+| 7:15 PM | 3       | 48%      | 여전히 목표 미만     |
+| 7:20 PM | 2       | 65%      | 5분 후 다시 감소     |
+| 8:00 PM | 2       | 45%      | 저녁 안정 상태       |
+
+300초 scale-in 쿨다운이 한꺼번에 너무 많이 제거하는 걸 막아요. 쿨다운이 없으면 추가된 3개 task가 순식간에 모두 제거되어 스파이크가 생겨요.
+
+### 시나리오 4: 메모리 누수 감지
+
+메모리 기반 스케일링은 CPU 전용 정책이 완전히 놓치는 누수를 잡아내요. 메모리가 몇 시간에 걸쳐 선형적으로 증가하면 auto-scaling이 시간을 벌어주지만, alarm이 코드 수준 문제를 알려줘요:
+
+```text
+10:00: 2 Task, 60% Mem
+  --> 11:00: 2 Task, 70% Mem
+  --> 12:00: 2 Task, 82% Mem
+  --> [Auto-scale] 12:01: 3 Task, 55% Mem
+  --> 12:30: 3 Task, 65% Mem
+  --> 13:00: 3 Task, 75% Mem
+  --> 13:30: 3 Task, 85% Mem
+  --> [90% ALARM] 팀에 알림 -> 누수 조사
+```
+
+Auto-scaling이 메모리를 더 많은 task에 분산해서 누수를 일시적으로 가려주지만, 각 task의 메모리는 계속 증가해요. 결국 90% alarm이 발동해서 더 많은 용량이 아니라 코드 수정이 필요하다는 신호를 줘요.
+
 ## 업계 표준 설정
 
 ### 설정값 비교
@@ -209,35 +309,59 @@ Fargate는 vCPU와 메모리 기준으로 초당 과금돼요:
 - Monthly (1 task 24/7): ~$42
 ```
 
+### Auto-Scaling을 적용한 월별 비용 추정
+
+2 vCPU / 4 GB task 기준(시간당 ~$0.058):
+
+| 시나리오            | 평균 Task 수 | 월 비용 |
+| ------------------- | ------------ | ------- |
+| 최소(1 task 24/7)   | 1            | ~$42    |
+| 일반(평균 2)        | 2            | ~$84    |
+| 피크 시간대(평균 3) | 3            | ~$126   |
+| 최대(4 task 24/7)   | 4            | ~$168   |
+
+실제 비용은 보통 최소와 일반 사이예요. Auto-scaling이 피크 시간대에만 추가 task를 실행하지, 24/7 실행하는 게 아니기 때문이에요.
+
 ### 비용 전략
 
-Auto-scaling 비용을 줄이는 네 가지 방법:
+1. **Right-sizing**: 실제 사용량을 모니터링하고, CPU가 50% 미만이면 task 크기를 줄이세요 -- vCPU/메모리를 반으로 줄이면 비용도 ~50% 감소해요.
+2. **스케일링 임계값 조정**: 65% 목표 = 컨테이너 더 많이(비용 높음), 75% 목표 = 컨테이너 적게(비용 낮음). 70%가 균형 잡힌 기준이에요.
+3. **스케줄 스케일링**: 중요하지 않은 서비스는 야간에 최소 용량을 0으로 줄이세요. 일일 패턴은 이런 식이에요:
 
-1. **Right-sizing**: 실제 사용량을 모니터링하고, CPU가 50% 미만이면 task 크기를 줄이세요.
-2. **높은 임계값**: 75% 목표가 65%보다 컨테이너를 적게 실행해요.
-3. **스케줄 스케일링**: 트래픽이 줄어드는 야간에 최소 용량을 줄이세요.
-4. **Fargate Spot**: 인터럽션을 감당할 수 있는 워크로드에 최대 70% 절약.
+```text
+시간대별 Task 스케일링 패턴:
+00:00-06:00  야간 - min 0       [........]
+06:00-08:00  오전 증가          [====]
+08:00-18:00  업무 시간          [============]
+18:00-20:00  저녁 감소          [====]
+20:00-24:00  야간 - min 0       [........]
+```
+
+4. **Fargate Spot**: 2분 인터럽션 알림을 감당할 수 있는 내결함성 워크로드에 최대 70% 절약.
 
 ## 스케일링 중 모니터링
 
 ### 주요 메트릭
 
-세 가지 카테고리를 추적하세요:
+네 가지 카테고리의 메트릭을 CloudWatch 대시보드로 추적하세요:
 
-**성능:**
+```text
+CloudWatch 대시보드:
+├── 성능 메트릭
+│   ├── CPU Utilization (목표: 70%)
+│   └── Memory Usage (목표: 80%)
+├── 스케일링 메트릭
+│   ├── Task Count (1-4 범위)
+│   └── Scaling Events (이력)
+├── 상태 메트릭
+│   ├── HTTP 5xx Rate
+│   └── Response Time (P50/P95/P99)
+└── 트래픽 메트릭
+    ├── Request Count (초당)
+    └── Active Connections
+```
 
-- CPU Utilization (목표: 70%)
-- Memory Usage (목표: 80%)
-
-**스케일링:**
-
-- Task Count (min-max 범위 안에 있어야 함)
-- Scaling Events (빈번한 진동 확인)
-
-**상태:**
-
-- HTTP 5xx Rate (스케일링 중 스파이크는 health check 문제)
-- Response Time (P50/P95/P99)
+CPU Utilization과 Memory Usage가 auto-scaling 결정을 주도하고, 상태 메트릭이 알림을 트리거해요.
 
 ### CloudWatch 대시보드 설정
 
@@ -252,6 +376,22 @@ aws ecs describe-services \
 aws application-autoscaling describe-scaling-activities \
   --service-namespace ecs \
   --resource-id service/my-cluster/my-service
+
+# 실시간 CPU 메트릭 (최근 1시간, 5분 간격)
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/ECS \
+  --metric-name CPUUtilization \
+  --dimensions Name=ServiceName,Value=my-service \
+  --start-time "$(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ)" \
+  --end-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --period 300 \
+  --statistics Average
+
+# desired vs running 확인 (배포 멈춤 감지)
+aws ecs describe-services \
+  --cluster my-cluster \
+  --services my-service \
+  --query 'services[0].{desired:desiredCount,running:runningCount}'
 ```
 
 ## 흔한 실수
@@ -304,6 +444,98 @@ resource "aws_appautoscaling_policy" "memory" { ... }
 
 메모리 누수가 있는 Node.js 앱은 CPU auto-scaling이 30%에서 가만히 있는 동안 OOM-kill될 수 있어요.
 
+### 5. 프로덕션 전에 스케일링 테스트 안 하기
+
+Auto-scaling에 의존하기 전에 반드시 부하 테스트를 해야 해요:
+
+```bash
+# 부하를 발생시켜 스케일링 트리거
+ab -n 10000 -c 100 http://your-alb-url/
+
+# 확인: task가 스케일됐나? 다시 줄어들었나?
+aws application-autoscaling describe-scaling-activities \
+  --service-namespace ecs --max-results 10
+```
+
+테스트 없이는 실제 장애 상황에서야 잘못된 설정을 발견하게 돼요.
+
+### 6. Alarm과 Auto-Scaling 혼동하기
+
+Auto-scaling policy와 CloudWatch alarm 모두 CPU 임계값을 참조하지만 하는 일이 완전히 달라요:
+
+- Auto-scaling policy = 자동으로 컨테이너 추가/제거
+- CloudWatch alarm = 사람에게 알림 전송(SNS, PagerDuty)
+
+같은 임계값(예: 둘 다 70%)으로 설정하면 스케일링이 일어날 때마다 alarm이 발동해서 노이즈가 돼요. Alarm은 스케일링 목표보다 10-15% 높게 설정해서 "스케일링이 따라가지 못할 수 있다"는 경고로 활용하세요.
+
+## Terraform 구현
+
+### 리소스 구조
+
+ECS auto-scaling의 Terraform 설정은 세 가지 리소스 타입을 사용해요:
+
+```hcl
+# Step 1: 스케일링 한도 정의 (타겟)
+resource "aws_appautoscaling_target" "ecs_target" {
+  max_capacity       = 4  # 최대 컨테이너 수
+  min_capacity       = 1  # 최소 컨테이너 수
+  resource_id        = "service/cluster-name/service-name"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+# Step 2: 스케일링 정책 정의 (규칙)
+resource "aws_appautoscaling_policy" "cpu_scaling" {
+  name               = "cpu-target-tracking"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value       = 70.0  # CPU 70% 유지
+    scale_in_cooldown  = 300   # 5분
+    scale_out_cooldown = 60    # 1분
+
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+  }
+}
+
+# Step 3: 모니터링용 alarm 정의 (스케일링과 별도)
+resource "aws_cloudwatch_metric_alarm" "high_cpu" {
+  alarm_name          = "ecs-high-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2           # 연속 2회
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = 60          # 60초 간격
+  statistic           = "Average"
+  threshold           = 85          # 85%에서 알림
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  # 스케일링하지 않아요 - 알림만!
+}
+```
+
+### Terraform 상태 관리 방식
+
+Terraform은 인프라 상태를 추적하고 차이점만 적용해요:
+
+```text
+코드에서 desired_count = 2 설정
+  -> Terraform이 상태 확인: 현재 0 task
+  -> AWS에 2 task 생성 요청
+  -> 상태 업데이트: 2 task
+
+나중에 desired_count = 3으로 변경
+  -> Terraform이 상태 확인: 현재 2 task
+  -> AWS에 1 task 추가 요청
+  -> 상태 업데이트: 3 task
+```
+
+Terraform 설정에 마이그레이션 task 분리와 커넥션 풀 계산까지 포함된 전체 구성은 ECS 오토스케일링 패턴 포스트(준비 중)를 참고하세요.
+
 ## 트러블슈팅
 
 ### Auto-Scaling 동작 안 함
@@ -331,6 +563,18 @@ aws application-autoscaling describe-scaling-activities \
 scale_in_cooldown  = 600  # 10분
 scale_out_cooldown = 120  # 2분
 ```
+
+### 예상보다 많은 컨테이너 (높은 비용)
+
+```bash
+# 실제 vs 원하는 task 수 확인
+aws ecs describe-services \
+  --cluster your-cluster \
+  --services your-service \
+  --query 'services[0].{desired:desiredCount,running:runningCount}'
+```
+
+실행 중인 task 수가 예상보다 많으면, 스케일링 목표가 너무 낮은지(70% 대신 40%) 또는 메모리 누수가 메모리 기반 스케일링을 트리거하고 있는지 확인하세요.
 
 ### 의사 결정 트리
 

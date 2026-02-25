@@ -4,7 +4,7 @@ description: >-
   PostToolUse hook은 도구 실행 완료 후 발생하며, stdin으로 세션 정보, 도구
   이름, 입력, 결과, 작업 디렉토리가 포함된 JSON을 받습니다.
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-02-09T00:00:00.000Z
+updated: 2026-02-25T00:00:00.000Z
 tags:
   - devops
   - claude-code
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-posttooluse-hooks
-source_updated: 2026-02-09T00:00:00.000Z
-translation_date: "2026-02-12"
+source_updated: "2026-02-25"
+translation_date: "2026-02-25"
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code/hooks"
     title: Claude Code Hooks 공식 문서
@@ -94,6 +94,21 @@ usage[skill]["last_used"] = today
 며칠간 평소처럼 사용하면, 이 파일이 실제로 어떤 skill에 의존하고 있는지, 어떤
 것은 전혀 쓰지 않는지, 각 skill을 언제 처음 사용했는지 정확히 알려줍니다.
 전체 이벤트 로깅의 경량 대안입니다.
+
+## 주의사항
+
+- **Hook은 병합이지 대체가 아닙니다:** Claude Code는 모든 설정 레이어(전역
+  `~/.claude/settings.json` + 프로젝트 `settings.local.json`)의 hook을
+  **병합**합니다. 같은 matcher + 스크립트가 양쪽에 있으면 도구 호출 한 번에
+  **두 번** 실행돼요. 프로젝트 레벨이 전역을 덮어쓸 수 있는 permission과는
+  다릅니다. hook은 양쪽 모두 항상 실행됩니다.
+- **이중 카운팅 함정:** `^Skill$` → `track-skill-usage.py` hook이 전역과 프로젝트
+  설정 양쪽에 있으면 skill 호출마다 카운터가 두 번 증가합니다. 기존 카운트가
+  약 2배로 부풀어요. 해결법은 hook을 전역 설정에만 두고 프로젝트
+  `settings.local.json`에서는 제거하는 것입니다.
+- **실행 권한은 선택사항입니다:** `python3 ~/.claude/scripts/script.py`로 호출하는
+  hook 스크립트는 실행 권한이 필요 없어요. shebang은 장식입니다. 다만 일관성과
+  직접 실행을 위해 `chmod +x`를 설정해 두는 게 좋습니다.
 
 ## 설계 결정
 

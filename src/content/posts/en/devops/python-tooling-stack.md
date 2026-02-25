@@ -11,76 +11,62 @@ category: devops
 draft: false
 lang: en
 references:
-  - url: "https://astral.sh/uv/install.sh"
+  - url: 'https://astral.sh/uv/install.sh'
     title: install.sh
     type: verified
-  - url: "https://github.com/astral-sh/ruff-pre-commit"
+  - url: 'https://github.com/astral-sh/ruff-pre-commit'
     title: ruff pre commit
     type: official
-  - url: "https://github.com/pre-commit/mirrors-mypy"
+  - url: 'https://github.com/pre-commit/mirrors-mypy'
     title: mirrors mypy
     type: official
-  - url: "https://docs.astral.sh/uv/"
+  - url: 'https://docs.astral.sh/uv/'
     title: uv
     type: official
-  - url: "https://docs.astral.sh/ruff/"
+  - url: 'https://docs.astral.sh/ruff/'
     title: ruff
     type: official
-  - url: "https://docs.astral.sh/ty/"
+  - url: 'https://docs.astral.sh/ty/'
     title: ty
     type: official
-  - url: "https://astral.sh/blog/ty"
+  - url: 'https://astral.sh/blog/ty'
     title: ty
     type: verified
-  - url: "https://asdf-vm.com/"
+  - url: 'https://asdf-vm.com/'
     title: asdf-vm.com
     type: verified
 ---
 
-I was spending more time configuring Python tools than writing Python code.
-Every new project meant re-fighting the same battles: pyenv vs asdf, pip vs
-Poetry, flake8 vs pylint, black vs autopep8. Across multiple MOBA repositories
-(ETL, Airflow, services), nothing was consistent, and onboarding new developers
-meant walking them through a different setup every time.
+## The Problem
 
-I needed a single, opinionated stack that worked everywhere.
+Python's tooling ecosystem is fragmented. A typical project needs separate tools
+for version management (pyenv), package management (pip/poetry), linting
+(flake8), formatting (black), import sorting (isort), and type checking (mypy).
+Each has its own config format, update cycle, and quirks. The combined startup
+overhead for new projects was high, and inconsistency across MOBA repositories
+(ETL, Airflow, services) made onboarding and maintenance painful.
 
-## Why This Matters
+---
 
-Python's tooling ecosystem is famously fragmented. A typical project needs
-separate tools for version management (pyenv), package management (pip/Poetry),
-linting (flake8), formatting (black), import sorting (isort), and type checking
-(mypy). Each has its own configuration format, update cycle, and quirks.
+## Difficulties Encountered
 
-The combined startup overhead for new projects was high. Worse, inconsistency
-across repositories made maintenance painful. A lint rule that passed in one
-repo would fail in another. Dependency resolution took forever in CI. And every
-developer had a slightly different local setup that "worked on my machine."
+- **Poetry + asdf conflicts** — Poetry manages its own virtual environments,
+  which clashed with asdf-managed Python versions. Activating the wrong venv
+  silently used the wrong Python binary, causing import errors.
+- **Ruff rule selection overload** — Ruff implements 800+ lint rules from dozens
+  of plugins. Choosing the right `select` set without drowning in false
+  positives required iterating through several rounds of `--fix` and
+  suppression.
+- **ty beta gaps** — ty is beta software and occasionally disagrees with mypy on
+  edge cases (e.g., `structlog` typing stubs). Had to decide whether to add
+  `type: ignore` comments or wait for upstream fixes.
+- **Pre-commit hook ordering** — Running ruff-format before ruff-check matters;
+  reversing the order causes format-then-lint loops where fixing lint issues
+  re-introduces formatting violations.
 
-## The Difficulties
-
-Before landing on this stack, I hit several walls.
-
-**Poetry and asdf did not play well together.** Poetry manages its own virtual
-environments, which clashed with asdf-managed Python versions. Activating the
-wrong venv silently used the wrong Python binary, causing import errors that
-were maddening to debug.
-
-**Ruff rule selection was overwhelming.** Ruff implements 800+ lint rules from
-dozens of plugins. Choosing the right `select` set without drowning in false
-positives required iterating through several rounds of `--fix` and suppression.
-
-**ty had beta gaps.** ty is beta software and occasionally disagrees with mypy
-on edge cases (e.g., `structlog` typing stubs). I had to decide whether to add
-`type: ignore` comments or wait for upstream fixes.
-
-**Pre-commit hook ordering matters.** Running ruff-format before ruff-check is
-required. Reversing the order causes format-then-lint loops where fixing lint
-issues re-introduces formatting violations.
+---
 
 ## The Stack
-
-Here is the full tooling stack I settled on:
 
 | Tool           | Purpose                     | Replaces               |
 | -------------- | --------------------------- | ---------------------- |
@@ -90,9 +76,7 @@ Here is the full tooling stack I settled on:
 | **ty**         | Static type checking (fast) | mypy, Pyright          |
 | **pre-commit** | Git hook management         | manual hooks           |
 
-All tools except asdf are from **Astral** (Rust-based, fast, consistent). That
-consistency is the key selling point: one ecosystem, one philosophy, one place
-to report issues.
+All tools except asdf are from **Astral** (Rust-based, fast, consistent).
 
 ## Why This Combination
 
@@ -101,28 +85,27 @@ to report issues.
 | Aspect      | uv                    | Poetry                   |
 | ----------- | --------------------- | ------------------------ |
 | Speed       | 10-100x faster (Rust) | Slower (Python)          |
-| Made by     | Astral (same as Ruff) | Sebastien Eustace        |
+| Made by     | Astral (same as Ruff) | Sébastien Eustace        |
 | Complexity  | Simple, pip-like      | More complex, all-in-one |
 | asdf compat | Excellent             | Can conflict with venv   |
 
-uv is simpler and faster. Poetry is overkill for ETL scripts and data
-pipelines. Because uv comes from the same ecosystem as Ruff (Astral), the
-tooling philosophy is consistent across the board.
+**Decision:** uv is simpler and faster. Poetry is overkill for ETL scripts. Same
+ecosystem as Ruff (Astral) = consistent tooling philosophy.
 
 ### Ruff (Not Black + Flake8 + isort)
 
-A single tool replaces three separate ones. It is 10-100x faster because it is
-written in Rust, provides consistent configuration in `pyproject.toml`, and
-has auto-fix capabilities built in. No more coordinating versions between
-three different linters.
+- Single tool replaces three
+- 10-100x faster (Rust)
+- Consistent configuration in `pyproject.toml`
+- Auto-fix capabilities
 
 ### ty (Not mypy)
 
-ty is 10-60x faster than mypy (also Rust-based) and lives in the same Astral
-ecosystem as uv and Ruff. It is beta but production-ready: Astral uses it
-internally. The IDE integration via LSP is a bonus.
-
-Install it with: `uv tool install ty@latest`
+- 10-60x faster than mypy (Rust-based)
+- Same ecosystem as uv and ruff (Astral)
+- Beta status but production-ready (Astral uses it internally)
+- Better IDE integration via LSP
+- Install: `uv tool install ty@latest`
 
 ## Setup
 
@@ -179,9 +162,6 @@ uv run ruff check --fix .
 ty check common/ jobs/
 ```
 
-The key pattern is `uv run` for everything. It ensures you are always in the
-correct virtual environment without manual activation.
-
 ## Configuration Files
 
 ### pyproject.toml
@@ -198,13 +178,6 @@ select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "DTZ", "SIM"]
 [tool.ty]
 python-version = "3.11"
 ```
-
-The `select` list is curated from experience. `E` and `W` cover pycodestyle
-errors and warnings, `F` is pyflakes, `I` is isort, `N` is naming conventions,
-`UP` catches Python upgrade opportunities, `B` is bugbear for common pitfalls,
-`C4` simplifies comprehensions, `DTZ` enforces timezone-aware datetimes, and
-`SIM` suggests simplifications. This set catches real bugs without drowning you
-in noise.
 
 ### .pre-commit-config.yaml
 
@@ -234,24 +207,15 @@ repos:
   #     - id: mypy
 ```
 
-Notice that `ruff-format` runs before `ruff` (lint). This ordering is
-important. If you reverse it, lint fixes can break formatting, and the next
-commit triggers the same cycle again.
-
 ### .tool-versions
 
 ```text
 python 3.11.7
 ```
 
-This file lives at the project root. When any developer enters the directory,
-asdf automatically switches to the correct Python version. No more "works on my
-machine" issues.
-
 ## Type Checking Patterns
 
-These patterns work with both ty and mypy, so they are safe regardless of which
-checker you use.
+These patterns work with both ty and mypy.
 
 ### Assertions for None Checks
 
@@ -266,10 +230,6 @@ def run(self) -> int:
     self.logger.info("Starting", dag_run_id=self.args.dag_run_id)
 ```
 
-Assertions are the cleanest way to narrow optional types. The type checker
-understands `assert x is not None` as proof that `x` is not `None` from that
-point forward.
-
 ### structlog Type Casting
 
 ```python
@@ -283,10 +243,6 @@ def get_logger(name: str, **context: Any) -> structlog.BoundLogger:
     return cast(structlog.BoundLogger, logger)
 ```
 
-structlog's typing stubs are incomplete, so `cast` is needed to avoid false
-positives. This is one of those pragmatic choices: you know the runtime type is
-correct, the stubs just do not express it.
-
 ### boto3 Client kwargs
 
 ```python
@@ -297,46 +253,36 @@ if endpoint_url:
     client_kwargs["config"] = BotoConfig(s3={"addressing_style": "path"})
 ```
 
-boto3's types are notoriously loose. Using `dict[str, Any]` for kwargs is the
-practical choice until the boto3-stubs package matures.
+## Migration: mypy → ty
 
-## Migration: mypy to ty
-
-If you are migrating from mypy, the process is straightforward:
+If migrating from mypy:
 
 1. Install ty: `uv tool install ty@latest`
 2. Run: `ty check .` (no config needed initially)
-3. Update the pre-commit hook
+3. Update pre-commit hook
 4. Remove mypy from requirements-dev.txt (optional, keep as fallback)
 
-ty and mypy will disagree on some edge cases. When they do, check if the
-disagreement is a ty bug or a mypy false positive. In most cases, ty is
-stricter in ways that catch real issues.
+## When to Use
 
-## Why This Works
+- Any new Python project in the MOBA ecosystem (ETL, Airflow, services)
+- Greenfield Python projects where you can choose tooling from scratch
+- Migrating existing projects off fragmented tooling (pip + black + flake8 +
+  isort + mypy) to a unified Astral-based stack
 
-The entire stack reduces to five tools, four of which share the same Rust-based
-ecosystem. Configuration lives in two files (`pyproject.toml` and
-`.pre-commit-config.yaml`). New projects take minutes to set up, not hours.
+---
 
-More importantly, every MOBA repository now has the same tooling. A developer
-who works on the ETL pipeline in the morning and the Airflow DAGs in the
-afternoon uses the same commands, the same lint rules, and the same type checker
-in both.
+## When NOT to Use
 
-## Practical Takeaway
-
-**Use this stack when** starting any new Python project, especially if you
-manage multiple repositories. The Astral ecosystem (uv + Ruff + ty) eliminates
-the fragmentation that makes Python tooling painful.
-
-**Skip it when** your team is deeply invested in Poetry and has no appetite for
-migration, or when you are writing throwaway scripts that do not need lint/type
-discipline. Also hold off on ty for compliance-critical codebases until it
-reaches 1.0 -- stick with mypy there.
-
-The biggest win is not speed (though 10-100x is nice). It is consistency. One
-stack, one config pattern, one set of rules across every project.
+- **Existing projects locked to Poetry** — If a large team already depends on
+  Poetry workflows and `poetry.lock`, migrating mid-sprint adds risk for little
+  immediate benefit
+- **Non-Python projects** — This stack is Python-specific; do not try to force
+  ruff or ty on polyglot repos that are primarily another language
+- **Projects requiring stable type checking** — ty is still beta; for
+  compliance-critical codebases where type-check results must be reproducible
+  and stable, stick with mypy until ty reaches 1.0
+- **Single-file scripts** — For throwaway scripts or notebooks, the full
+  pre-commit + ruff + ty setup is overkill; just run `ruff check` manually
 
 ---
 

@@ -2,7 +2,7 @@
 title: "AWS VPC 네트워킹 기초"
 description: "CIDR 계산, NAT Gateway 배치, Route Table — 왜 다들 처음에 헤매는지, 어떻게 제대로 잡는지 정리했어요."
 date: 2025-04-29T00:00:00.000Z
-updated: "2026-02-12"
+updated: 2026-02-24T00:00:00.000Z
 tags:
   - aws
   - networking
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: vpc-networking-fundamentals
-source_updated: "2026-02-12"
-translation_date: "2026-02-12"
+source_updated: "2026-02-24"
+translation_date: "2026-02-25"
 references:
   - url: "https://docs.aws.amazon.com/vpc/latest/userguide/"
     title: AWS VPC 사용자 가이드
@@ -206,16 +206,59 @@ resource "aws_nat_gateway" "main" {
 
 **비용을 주의하세요.** NAT Gateway 하나에 월 ~$32, 여기에 데이터 처리 비용이 추가돼요. 프로덕션 멀티 AZ 구성에서 AZ마다 하나씩 두면 데이터 비용 전에 월 ~$96이에요. 개발 환경이라면 private 서브넷에서 인터넷 접근이 정말 필요한지 먼저 생각해 보세요.
 
+### IGW-to-EIP 의존성 순서
+
+EIP와 NAT Gateway 리소스의 `depends_on`은 IP 할당과 관련 없어요. **생성 순서**에 관한 거예요. Internet Gateway가 VPC에 먼저 존재하고 연결되어야 EIP와 NAT Gateway를 만들 수 있어요. NAT Gateway가 동작하려면 인터넷 경로가 확보되어 있어야 하기 때문이에요.
+
+**IGW와 EIP 핵심 사항:**
+
+- IGW는 IP 주소를 소비하거나 할당하지 **않아요** -- VPC와 인터넷 사이의 논리적 연결 지점이에요
+- VPC 하나에 IGW는 최대 하나(AWS 하드 리밋)
+- EIP는 IGW에 연결되는 게 **아니에요** -- NAT Gateway(또는 EC2 인스턴스)에 연결돼요
+- `depends_on`은 단일 의존성이라도 배열 문법을 사용해요
+
+```hcl
+resource "aws_eip" "nat" {
+  domain     = "vpc"
+  # 순서 보장: EIP 생성 전에 IGW가 존재해야 해요
+  depends_on = [aws_internet_gateway.main]
+}
+
+resource "aws_nat_gateway" "main" {
+  subnet_id     = aws_subnet.public_a.id
+  allocation_id = aws_eip.nat.id
+  # 같은 순서 보장: NAT GW 생성 전에 IGW가 존재해야 해요
+  depends_on = [aws_internet_gateway.main]
+}
+```
+
+`depends_on` 없이는 Terraform이 EIP와 NAT Gateway를 IGW와 병렬로 만들 수 있어요. AWS API가 비동기적이라서 간헐적 실패가 발생할 수 있어요 -- NAT Gateway 생성은 성공하지만 IGW가 완전히 연결되기 전까지 트래픽을 라우팅하지 못해요.
+
 ### Elastic IP (EIP)
 
 Elastic IP는 인스턴스를 중지/시작해도 유지되는 고정 public IP예요. 실행 중인 인스턴스에 연결돼 있으면 무료지만, 연결 안 된 EIP는 월 ~$3.6이 과금돼요 -- Terraform으로 만들어 놓고 나중에 분리하면 슬며시 비용이 나가요.
 
-| 옵션           | 비용          | 사용 사례          |
-| -------------- | ------------- | ------------------ |
-| 기본 public IP | 무료          | 개발/테스트, LB 뒤 |
-| EIP            | 무료(연결 시) | 고정 IP 필요       |
-| Load Balancer  | 월 ~$16       | 프로덕션 서비스    |
-| Route 53       | 월 ~$0.50     | DNS 기반 라우팅    |
+### IP 설정 옵션 비교
+
+AWS 리소스에 public IP를 부여하는 다섯 가지 방법이 있고, 비용과 유연성이 각각 달라요:
+
+| 옵션                      | 비용                          | 고정 IP  | 중지/시작 유지 | 적합한 용도                |
+| ------------------------- | ----------------------------- | -------- | -------------- | -------------------------- |
+| 기본 Public IP            | 무료(EC2에 포함)              | 아니오   | 아니오         | 개발/테스트, LB 뒤         |
+| Load Balancer + Public IP | LB 비용만(월 ~$16)            | DNS 이름 | 해당 없음      | 프로덕션 HA 클러스터       |
+| Route 53 + 기본 Public IP | 월 ~$0.50 + 쿼리 비용         | DNS 이름 | 짧은 TTL 필요  | 저비용 도메인 라우팅       |
+| Private IP + NAT Gateway  | NAT GW 공유(월 ~$32 + 데이터) | 아니오   | 해당 없음      | 백엔드 서비스, 직접 노출 X |
+| Elastic IP(연결 시)       | 실행 중인 EC2에 연결하면 무료 | 예       | 예             | 고정 IP 필요(NAT GW, EC2)  |
+
+**비용 기준 의사 결정 가이드:**
+
+1. **고정 IP 불필요** -- 기본 public IP 사용(무료)
+2. **서버 여러 대, 단일 엔드포인트** -- Load Balancer + 기본 public IP
+3. **고정 이름 필요, IP 무관** -- Route 53 + 기본 public IP
+4. **고정 IP 필요** -- Elastic IP(제대로 연결하면 무료)
+5. **외부 노출 불필요** -- Private 서브넷 + 공유 NAT Gateway
+
+**NAT Gateway EIP 참고:** Terraform 코드에서 NAT Gateway에 EIP를 사용하는데, 이건 필수예요. NAT Gateway가 private 서브넷의 아웃바운드 트래픽을 처리하려면 안정적인 public IP가 필요하기 때문이에요. NAT Gateway에 연결된 상태라면 이 EIP는 무료예요.
 
 ## Route Table
 

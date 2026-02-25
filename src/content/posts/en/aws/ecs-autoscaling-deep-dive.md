@@ -1,8 +1,10 @@
 ---
 title: ECS Auto-Scaling Deep Dive
-description: "Comprehensive guide to ECS auto-scaling concepts, algorithms, and container"
+description: >-
+  Comprehensive guide to ECS auto-scaling concepts, algorithms, and container
+  orchestration.
 date: 2025-08-23T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: 2026-02-24T00:00:00.000Z
 tags:
   - aws
   - ecs
@@ -18,10 +20,6 @@ references:
   - url: "https://docs.aws.amazon.com/autoscaling/application/userguide/"
     title: userguide
     type: official
----
-
-orchestration.
-
 ---
 
 ## The Problem
@@ -100,14 +98,20 @@ services that fail to scale when needed.
 
 ### ECS vs EKS vs Fargate
 
-```text
-ORCHESTRATORS:
-├── ECS (AWS Native)     ← Simpler, AWS-integrated
-└── EKS (Kubernetes)     ← Industry standard, portable
-
-COMPUTE ENGINES:
-├── Fargate (Serverless) ← No server management
-└── EC2 (Virtual Machines) ← Full control
+```mermaid
+flowchart TB
+    subgraph Orchestrators["Orchestrators (The Brain)"]
+        ECS["ECS\nAWS Native\nSimpler, AWS-integrated"]
+        EKS["EKS\nKubernetes on AWS\nIndustry standard, portable"]
+    end
+    subgraph Compute["Compute Engines (The Muscles)"]
+        Fargate["Fargate\nServerless\nNo server management"]
+        EC2["EC2\nVirtual Machines\nFull control"]
+    end
+    ECS --> Fargate
+    ECS --> EC2
+    EKS --> Fargate
+    EKS --> EC2
 ```
 
 **Clarification**: Fargate is NOT Kubernetes. Fargate is serverless compute that
@@ -115,6 +119,28 @@ works with EITHER ECS or EKS.
 
 - **Orchestrator** (ECS/EKS) = The brain deciding what to do
 - **Compute** (Fargate/EC2) = The muscles doing the work
+
+### ECS + Fargate Responsibility Model
+
+With ECS + Fargate, AWS manages the underlying infrastructure:
+
+```mermaid
+flowchart TB
+    subgraph You["What You Manage"]
+        A["Application Code"]
+        B["Docker Container"]
+        C["ECS Service Config"]
+        E["Running Tasks"]
+    end
+    subgraph AWS["What AWS Manages"]
+        F["Servers"]
+        G["OS Updates"]
+        H["Docker Daemon"]
+        I["Infrastructure"]
+    end
+    A --> B --> C --> E
+    E -.->|"runs on"| F
+```
 
 ---
 
@@ -149,7 +175,29 @@ Normal:                High Load (Vertical):
 
 ## Target Tracking Scaling Algorithm
 
-Target tracking maintains a metric value (like cruise control):
+Target tracking maintains a metric value (like cruise control). The monitoring
+loop evaluates every 60 seconds and transitions through distinct states:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Monitoring: Start
+    Monitoring --> CheckCPU: Every 60s
+
+    CheckCPU --> ScaleOut: CPU above target
+    CheckCPU --> Stable: CPU at target
+    CheckCPU --> ScaleIn: CPU below target
+
+    ScaleOut --> AddTask: Add container(s)
+    ScaleIn --> RemoveTask: Remove container
+    Stable --> Monitoring: No change
+
+    AddTask --> CooldownOut: 60s wait
+    RemoveTask --> CooldownIn: 300s wait
+    CooldownOut --> Monitoring: Resume
+    CooldownIn --> Monitoring: Resume
+```
+
+The algorithm calculates the proportional number of tasks, not just +1/-1:
 
 ```python
 # Simplified algorithm
@@ -158,14 +206,16 @@ target_cpu = 70
 current_tasks = get_task_count()
 
 if current_cpu > target_cpu:
-    # Calculate needed tasks
+    # Calculate needed tasks proportionally
     desired_tasks = current_tasks * (current_cpu / target_cpu)
     desired_tasks = min(desired_tasks, max_capacity)
     if not in_cooldown_period():
         scale_to(desired_tasks)
 ```
 
-**Important**: It's NOT a simple "if CPU > 70% add one container".
+**Important**: It's NOT a simple "if CPU > 70% add one container". If 1 task is
+at 140% effective load, the algorithm calculates `1 * (140 / 70) = 2` tasks
+needed, scaling directly to 2 in one action.
 
 ---
 
@@ -242,6 +292,84 @@ Airbnb:     CPU 65%,    Scale-Out 90s, Scale-In 600s
 
 ---
 
+## Real-World Scenarios
+
+### Scenario 1: Morning Traffic Surge
+
+Users arrive at 8:00 AM. CPU climbs gradually, crosses the 70% threshold at
+8:45, and auto-scaling adds a task. After the cooldown, load distributes and
+stabilizes:
+
+| Time | Tasks | Avg CPU | Action                       |
+| ---- | ----- | ------- | ---------------------------- |
+| 8:00 | 1     | 45%     | Normal morning traffic       |
+| 8:30 | 1     | 68%     | Approaching threshold        |
+| 8:45 | 1     | 75%     | Above 70% -- scale out       |
+| 8:46 | 2     | 40%     | Load distributed across 2    |
+| 9:00 | 2     | 72%     | Above threshold again        |
+| 9:01 | 3     | 50%     | Third task added             |
+| 9:30 | 3     | 48%     | Stable at morning peak level |
+
+### Scenario 2: Lunch Peak
+
+A sustained traffic increase that pushes scaling to max capacity:
+
+```mermaid
+flowchart TB
+    A["11:30 AM\n2 Tasks, 60% CPU"] -->|"Traffic increases"| B["12:00 PM\n2 Tasks, 78% CPU"]
+    B -->|"Scale out"| C["12:01 PM\n3 Tasks, 55% CPU"]
+    C -->|"More traffic"| D["12:15 PM\n3 Tasks, 74% CPU"]
+    D -->|"Scale out"| E["12:16 PM\n4 Tasks, 45% CPU"]
+    E -->|"Stable"| F["12:30 PM\n4 Tasks, 65% CPU"]
+    A -.- G["Normal load"]
+    B -.- H["Above 70% threshold"]
+    E -.- K["At max capacity"]
+    F -.- L["Handling peak well"]
+```
+
+Key observation: at max capacity (4 tasks) the service handles 65% CPU. If
+traffic exceeds what 4 tasks can handle, the CloudWatch alarm at 85% fires to
+notify the team.
+
+### Scenario 3: Evening Wind-Down
+
+Scale-in happens conservatively with 300s cooldowns between removals:
+
+| Time    | Tasks | Avg CPU | Action                   |
+| ------- | ----- | ------- | ------------------------ |
+| 7:00 PM | 4     | 40%     | Below target             |
+| 7:05 PM | 3     | 52%     | Scaled in by 1           |
+| 7:10 PM | 3     | 50%     | Stable, cooldown active  |
+| 7:15 PM | 3     | 48%     | Still below target       |
+| 7:20 PM | 2     | 65%     | Scaled in again after 5m |
+| 8:00 PM | 2     | 45%     | Evening stable state     |
+
+The 300s scale-in cooldown prevents removing too many tasks at once. Without it,
+all 3 extra tasks could be removed in seconds, causing a spike.
+
+### Scenario 4: Memory Leak Detection
+
+Memory-based scaling catches leaks that CPU-only policies miss entirely. As
+memory grows linearly over hours, auto-scaling buys time, but the alarm signals
+a code-level problem:
+
+```mermaid
+flowchart LR
+    A["10:00\n2 Tasks\n60% Mem"] --> B["11:00\n2 Tasks\n70% Mem"]
+    B --> C["12:00\n2 Tasks\n82% Mem"]
+    C -->|"Auto-scale"| D["12:01\n3 Tasks\n55% Mem"]
+    D --> E["12:30\n3 Tasks\n65% Mem"]
+    E --> F["13:00\n3 Tasks\n75% Mem"]
+    F --> G["13:30\n3 Tasks\n85% Mem"]
+    G -->|"90% ALARM"| H["Alert team\nInvestigate leak"]
+```
+
+Auto-scaling masks the leak temporarily by spreading memory across more tasks,
+but each task's memory still grows. The 90% alarm eventually fires, signaling
+that the application needs a code fix, not more capacity.
+
+---
+
 ## Cost Optimization
 
 ### Fargate Pricing
@@ -256,12 +384,45 @@ Example: 2 vCPU, 4 GB Memory
 - Monthly (1 task 24/7): ~$42
 ```
 
+### Monthly Cost Estimates with Auto-Scaling
+
+Based on 2 vCPU / 4 GB tasks at ~$0.058/hour each:
+
+| Scenario           | Avg Tasks | Monthly Cost |
+| ------------------ | --------- | ------------ |
+| Min (1 task 24/7)  | 1         | ~$42         |
+| Typical (2 avg)    | 2         | ~$84         |
+| Peak hours (3 avg) | 3         | ~$126        |
+| Max (4 tasks 24/7) | 4         | ~$168        |
+
+Real-world cost is usually between the min and typical range because
+auto-scaling only runs extra tasks during peak hours, not 24/7.
+
 ### Cost Strategies
 
-1. **Right-sizing**: Monitor actual usage, reduce if CPU is below 50%
-2. **Higher thresholds**: 75% target = fewer containers
-3. **Scheduled scaling**: Reduce min at night
-4. **Fargate Spot**: Up to 70% savings for fault-tolerant workloads
+1. **Right-sizing**: Monitor actual usage, reduce if CPU &lt; 50% consistently --
+   halving vCPU/memory cuts cost by ~50%
+2. **Scaling threshold tuning**: 65% target = more containers (higher cost), 75%
+   target = fewer containers (lower cost); 70% is the balanced middle ground
+3. **Scheduled scaling**: Reduce min capacity to 0 at night for non-critical
+   services, or use a Gantt-like pattern:
+
+```mermaid
+gantt
+    title Daily Task Scaling Pattern
+    dateFormat HH:mm
+    axisFormat %H:%M
+
+    section Tasks
+    Night - min 0      :done, night, 00:00, 6h
+    Morning ramp       :active, ramp1, 06:00, 2h
+    Business hours     :crit, business, 08:00, 10h
+    Evening ramp down  :active, ramp2, 18:00, 2h
+    Night - min 0      :done, night2, 20:00, 4h
+```
+
+1. **Fargate Spot**: Up to 70% savings for fault-tolerant workloads that can
+   handle 2-minute interruption notices
 
 ---
 
@@ -269,20 +430,32 @@ Example: 2 vCPU, 4 GB Memory
 
 ### Key Metrics to Watch
 
-**Performance:**
-
-- CPU Utilization (target: 70%)
-- Memory Usage (target: 80%)
-
-**Scaling:**
-
-- Task Count (within min-max range)
-- Scaling Events (history)
-
-**Health:**
-
-- HTTP 5xx Rate
-- Response Time (P50/P95/P99)
+```mermaid
+flowchart TB
+    subgraph Dashboard["CloudWatch Dashboard"]
+        subgraph Perf["Performance Metrics"]
+            A["CPU Utilization\ntarget: 70%"]
+            B["Memory Usage\ntarget: 80%"]
+        end
+        subgraph Scale["Scaling Metrics"]
+            C["Task Count\n1-4 range"]
+            D["Scaling Events\nhistory"]
+        end
+        subgraph Health["Health Metrics"]
+            E["HTTP 5xx Rate"]
+            F["Response Time\nP50/P95/P99"]
+        end
+        subgraph Traffic["Traffic Metrics"]
+            G["Request Count\nper second"]
+            H["Active Connections"]
+        end
+    end
+    A --> I["Auto-Scaling\nDecisions"]
+    B --> I
+    C --> I
+    E --> J["Alerts"]
+    F --> J
+```
 
 ### CloudWatch Dashboard Setup
 
@@ -297,6 +470,22 @@ aws ecs describe-services \
 aws application-autoscaling describe-scaling-activities \
   --service-namespace ecs \
   --resource-id service/my-cluster/my-service
+
+# Real-time CPU metrics (last hour, 5-min intervals)
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/ECS \
+  --metric-name CPUUtilization \
+  --dimensions Name=ServiceName,Value=my-service \
+  --start-time "$(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ)" \
+  --end-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --period 300 \
+  --statistics Average
+
+# Check desired vs running (detect stuck deployments)
+aws ecs describe-services \
+  --cluster my-cluster \
+  --services my-service \
+  --query 'services[0].{desired:desiredCount,running:runningCount}'
 ```
 
 ---
@@ -345,6 +534,116 @@ resource "aws_appautoscaling_policy" "cpu" { ... }
 resource "aws_appautoscaling_policy" "memory" { ... }
 ```
 
+### 5. Not Testing Scaling Before Production
+
+Always load-test auto-scaling before relying on it:
+
+```bash
+# Generate load to trigger scaling
+ab -n 10000 -c 100 http://your-alb-url/
+
+# Then monitor: did tasks scale? Did they scale back?
+aws application-autoscaling describe-scaling-activities \
+  --service-namespace ecs --max-results 10
+```
+
+Without testing, you only discover misconfigurations during real incidents.
+
+### 6. Confusing Alarms with Auto-Scaling
+
+Auto-scaling policies and CloudWatch alarms both reference CPU thresholds but do
+completely different things:
+
+- Auto-scaling policies = automatically add/remove containers
+- CloudWatch alarms = send notifications to humans (SNS, PagerDuty)
+
+Setting them to the same threshold (e.g., both at 70%) means the alarm fires
+every time scaling happens, creating noise. Keep alarms 10-15% above the scaling
+target as a "scaling might not be enough" warning.
+
+---
+
+## Terraform Implementation
+
+### Resource Structure
+
+ECS auto-scaling in Terraform uses three resource types:
+
+```hcl
+# Step 1: Define scaling limits (the target)
+resource "aws_appautoscaling_target" "ecs_target" {
+  max_capacity       = 4  # Maximum containers
+  min_capacity       = 1  # Minimum containers
+  resource_id        = "service/cluster-name/service-name"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+# Step 2: Define scaling policy (the rules)
+resource "aws_appautoscaling_policy" "cpu_scaling" {
+  name               = "cpu-target-tracking"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value       = 70.0  # Maintain 70% CPU
+    scale_in_cooldown  = 300   # 5 minutes
+    scale_out_cooldown = 60    # 1 minute
+
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+  }
+}
+
+# Step 3: Define alarms for monitoring (separate from scaling)
+resource "aws_cloudwatch_metric_alarm" "high_cpu" {
+  alarm_name          = "ecs-high-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2           # 2 consecutive periods
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = 60          # 60-second periods
+  statistic           = "Average"
+  threshold           = 85          # Alert at 85%
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  # This DOESN'T scale - just alerts!
+}
+```
+
+### How Terraform Manages State
+
+Terraform tracks infrastructure state and only applies the delta:
+
+```mermaid
+sequenceDiagram
+    participant Code as Your Code
+    participant TF as Terraform
+    participant State as TF State
+    participant AWS as AWS
+
+    Code->>TF: desired_count = 2
+    TF->>State: Check current state
+    State-->>TF: Current: 0 tasks
+    TF->>AWS: Create 2 tasks
+    AWS-->>TF: Tasks created
+    TF->>State: Update: 2 tasks
+
+    Note over Code,AWS: Later...
+
+    Code->>TF: desired_count = 3
+    TF->>State: Check current state
+    State-->>TF: Current: 2 tasks
+    TF->>AWS: Create 1 more task
+    AWS-->>TF: Task created
+    TF->>State: Update: 3 tasks
+```
+
+For full Terraform configuration with migration task separation and connection
+pool math, see the ECS autoscaling patterns post (coming soon).
+
 ---
 
 ## Troubleshooting
@@ -377,16 +676,38 @@ scale_in_cooldown  = 600  # 10 minutes
 scale_out_cooldown = 120  # 2 minutes
 ```
 
-### Decision Tree
+### High Costs (More Containers Than Expected)
 
-```text
-High CPU Alert?
-├── YES → Check Task Count
-│   ├── At Max → Increase max_capacity
-│   └── Not at Max → Check IAM permissions
-└── NO → Check Memory
-    ├── High (>80%) → Check for memory leaks
-    └── Normal → System operating correctly
+```bash
+# Check actual vs desired task count
+aws ecs describe-services \
+  --cluster your-cluster \
+  --services your-service \
+  --query 'services[0].{desired:desiredCount,running:runningCount}'
+```
+
+If running count exceeds what you expect, check whether the scaling target is
+too low (40% instead of 70%) or whether a memory leak is causing memory-based
+scaling.
+
+### Decision Tree for Scaling Issues
+
+```mermaid
+flowchart TD
+    A["High CPU Alert?"] -->|"Yes"| B["Check Task Count"]
+    A -->|"No"| C["Check Memory"]
+
+    B -->|"At Max 4"| D["Increase max_capacity\nor right-size tasks"]
+    B -->|"Not at Max"| E["Check IAM Permissions"]
+
+    C -->|"High >80%"| F["Check for Memory Leaks"]
+    C -->|"Normal <80%"| G["System Operating Correctly"]
+
+    E -->|"Missing"| H["Add IAM Policy"]
+    E -->|"Present"| I["Check Subnet Capacity\nor Fargate Quota"]
+
+    F -->|"Found"| J["Fix Application Code"]
+    F -->|"Not Found"| K["Increase Memory Allocation"]
 ```
 
 ---
@@ -433,3 +754,4 @@ aws application-autoscaling describe-scaling-policies \
 
 - [ECS Best Practices Guide](https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/)
 - [Application Auto Scaling](https://docs.aws.amazon.com/autoscaling/application/userguide/)
+- See also: ECS autoscaling patterns (coming soon)

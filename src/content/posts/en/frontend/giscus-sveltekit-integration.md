@@ -11,26 +11,39 @@ category: frontend
 draft: false
 lang: en
 references:
-  - url: "https://giscus.app"
+  - url: 'https://giscus.app'
     title: giscus - A comment system powered by GitHub Discussions
     type: official
-  - url: "https://github.com/giscus/giscus"
+  - url: 'https://github.com/giscus/giscus'
     title: giscus GitHub repository
     type: official
 ---
 
-I wanted comments on my blog. Not a database, not an auth backend, not a monthly
-bill from some SaaS. My readers are developers who already have GitHub accounts,
-so the answer was sitting right there: GitHub Discussions as a comment backend.
+introducing a database, authentication backend, or paid service. Blog readers
+are developers who already have GitHub accounts, so a solution leveraging GitHub
+infrastructure was ideal.
 
-That is exactly what Giscus does. It turns GitHub Discussions into a comment
-widget you embed with a script tag. No server, no database, no tracking. But
-wiring it into a multilingual SvelteKit static site had a few sharp edges that
-the docs did not warn me about.
+---
 
-## Why Giscus Over the Alternatives
+## Difficulties Encountered
 
-I evaluated four options before settling on Giscus.
+- **Mapping strategy confusion** -- Giscus offers multiple mapping modes
+  (pathname, URL, title, specific term) and the docs don't clarify which works
+  best for multilingual sites where EN/KO paths differ but should share one
+  comment thread.
+- **Localhost comments leaking to production** -- Discovered that comments made
+  during local development appear on the live site because Giscus maps by slug,
+  not by domain. This was not obvious from the docs.
+- **Svelte curly brace parsing** -- Svelte interprets `{anything}` in HTML
+  comments as reactive expressions, causing cryptic build errors when
+  documenting giscus config values in code comments.
+- **Theme synchronization** -- Getting the giscus iframe theme to match the
+  site's dark mode required trial and error with theme name strings
+  (`dark_dimmed` vs `dark` vs `transparent_dark`).
+
+---
+
+## Options Considered
 
 | Option                       | Pros                                                   | Cons                                                  |
 | ---------------------------- | ------------------------------------------------------ | ----------------------------------------------------- |
@@ -39,14 +52,16 @@ I evaluated four options before settling on Giscus.
 | Utterances (GitHub Issues)   | Similar to Giscus, simple                              | Uses Issues (not designed for comments), no reactions |
 | Self-hosted (e.g., Commento) | Full control, no third-party                           | Requires server, database, maintenance                |
 
-Disqus was out immediately. I am not injecting ads and tracking scripts into a
-personal blog. Utterances was close, but it hijacks GitHub Issues for something
-they were not designed for, and it lacks reaction support. Self-hosted meant
-maintaining infrastructure I did not want.
+## Why This Approach
 
-Giscus won because the audience is developers (already have GitHub accounts), it
-requires zero infrastructure, respects user privacy (no tracking, GDPR
-compliant), and uses Discussions, which are purpose-built for conversations.
+Chose Giscus because the audience is developers (already have GitHub accounts),
+it requires zero infrastructure, respects user privacy (no tracking/GDPR
+concerns), and uses Discussions (purpose-built for conversations) rather than
+Issues. The compile-time integration with SvelteKit is straightforward.
+
+---
+
+## Why Giscus
 
 | Feature         | Benefit                               |
 | --------------- | ------------------------------------- |
@@ -56,11 +71,11 @@ compliant), and uses Discussions, which are purpose-built for conversations.
 | Free            | Open source, no cost                  |
 | Theming         | Customizable to match site theme      |
 
-## Setting It Up
+## Setup Steps
 
 ### 1. Enable GitHub Discussions
 
-1. Go to repository Settings, then Features
+1. Go to repository Settings → Features
 2. Check "Discussions"
 3. Create a category (e.g., "Blog Comments") with Announcements type
 
@@ -76,10 +91,7 @@ Visit [giscus.app](https://giscus.app) and configure:
 
 Copy the generated `data-repo-id` and `data-category-id`.
 
-### 3. Create the Svelte Component
-
-Here is the component I built. It dynamically injects the Giscus script on
-mount:
+### 3. Create Svelte Component
 
 ```svelte
 <script lang="ts">
@@ -124,47 +136,36 @@ mount:
 </section>
 ```
 
-The key line is `script.dataset.term = slug`. This is what makes multilingual
-comment sharing work, which I will explain next.
+## Key Design Decisions
 
-## The Multilingual Problem (and the Fix)
+### Shared Comments Between Languages
 
-My blog has English and Korean versions of each post at different paths:
-`/posts/my-post` and `/ko/posts/my-post`. Without careful configuration, Giscus
-would create two separate Discussion threads for the same content.
-
-The fix is to use the post slug (not the full pathname) as the discussion term:
+Use the post slug (not full pathname) as the discussion term:
 
 ```javascript
 script.dataset.term = slug; // "my-post" not "/ko/posts/my-post"
 ```
 
-This way `/posts/my-post` and `/ko/posts/my-post` share the same comment
-thread. English and Korean readers see the same conversation.
+This way `/posts/my-post` and `/ko/posts/my-post` share the same comment thread.
 
-## Localhost Comments Leak to Production
+### Localhost Comments Appear in Production
 
-This one surprised me. Comments I made during local development showed up on the
-live site. Giscus maps by slug, not by domain. So `localhost:5173/posts/my-post`
-and `brandonwie.dev/posts/my-post` hit the same Discussion thread.
+Giscus uses the same GitHub Discussion regardless of domain. Comments made on
+localhost will appear in production because they use the same slug.
 
-If this is a problem, you have two options:
+Options if this is unwanted:
 
-1. Delete test comments from GitHub Discussions manually
-2. Use an environment-specific term prefix:
+1. Delete test comments from GitHub Discussions
+2. Use environment-specific term prefix:
 
-```javascript
-const isDev = import.meta.env.DEV;
-script.dataset.term = isDev ? `dev-${slug}` : slug;
-```
+   ```javascript
+   const isDev = import.meta.env.DEV;
+   script.dataset.term = isDev ? `dev-${slug}` : slug;
+   ```
 
-I went with option 1 because I rarely test comments locally, but option 2 is
-cleaner if you test frequently.
+## Common Gotcha: Svelte Curly Braces
 
-## Watch Out: Svelte Curly Braces
-
-Svelte interprets `{anything}` as an expression, even inside HTML comments. If
-you write something like this in a `.svelte` file:
+Svelte interprets `{anything}` as an expression, even in HTML comments.
 
 ```svelte
 <!-- BAD: Causes "variable is not defined" error -->
@@ -174,19 +175,11 @@ you write something like this in a `.svelte` file:
 <!-- Note: curly braces will be interpreted -->
 ```
 
-This caused a cryptic build error when I was documenting Giscus config values in
-code comments. The fix is to avoid curly braces in Svelte HTML comments
-entirely. Use backtick code blocks or move the documentation outside the
-template.
+This can cause mysterious build errors if you have example code in comments.
 
-## Theme Synchronization
+---
 
-Getting the Giscus iframe to match my dark terminal theme took some trial and
-error. The theme name strings are not intuitive: `dark_dimmed` is different from
-`dark` and `transparent_dark`. I ended up with `dark_dimmed` because it blends
-best with the `#1a1a1a` background of this site.
-
-## When to Use Giscus
+## When to Use
 
 - Developer-audience blog or documentation site where readers have GitHub
   accounts
@@ -194,7 +187,7 @@ best with the `#1a1a1a` background of this site.
 - Projects that want zero-cost, zero-maintenance comments
 - Sites where privacy and no-tracking are priorities
 
-## When NOT to Use Giscus
+## When NOT to Use
 
 - **Non-developer audiences** -- Requiring a GitHub account to comment excludes
   most general-audience readers
@@ -206,11 +199,3 @@ best with the `#1a1a1a` background of this site.
   compared to Disqus or custom solutions (no spam filters, no keyword blocks)
 - **Private repositories** -- Giscus requires a public repo for the Discussions
   backend
-
-## Practical Takeaway
-
-Giscus is the path of least resistance for adding comments to a developer blog.
-Setup takes about 15 minutes: enable Discussions, configure at giscus.app, drop
-in a Svelte component. The two gotchas to remember are: use the slug (not the
-full path) for multilingual comment sharing, and be aware that localhost comments
-leak to production unless you prefix the term.
