@@ -18,5 +18,8 @@
   "see_all_posts": "전체 {count}개 글 보기",
   "back_to_home": "홈으로 돌아가기",
   "all_categories": "전체",
-  "category_filter": "카테고리"
+  "category_filter": "카테고리",
+  "featured_project": "주요 프로젝트",
+  "portfolio_subtitle": "AISecOps 지식 플랫폼",
+  "portfolio_description": "온프레미스 인프라에서 생성형 AI를 위한 Zero Trust 보안 시스템."
 }

@@ -483,3 +483,34 @@ publish). Updated both EN and KO versions. Fixed pre-existing build errors.
 **Stats:** 52 EN posts, 52 KO translations. Build passes.
 
 **Next:** OG image for social sharing, ESLint + Prettier, GitHub Actions CI
+
+---
+
+### 2026-02-27
+
+**Portfolio Link — Featured Project + Footer**
+
+Added a link to Project Crucio (crucio.brandonwie.dev) in two locations:
+
+1. **Featured Project section** on BlogHome
+   - Between tagline and "Recent Posts"
+   - Same hover pattern as post rows (`group hover:bg-terminal-bg-hover`)
+   - i18n subtitle + description (EN + KO)
+
+2. **Footer link**
+   - "Portfolio" text link between LinkedIn and RSS
+   - Same style as existing footer links
+
+3. **i18n keys added**
+   - `featured_project`, `portfolio_subtitle`, `portfolio_description`
+   - Both `messages/en.json` and `messages/ko.json`
+
+**Files Modified:**
+
+| File                                 | Change                         |
+| ------------------------------------ | ------------------------------ |
+| `messages/en.json`                   | Added 3 i18n keys              |
+| `messages/ko.json`                   | Added 3 Korean translations    |
+| `src/lib/components/BlogHome.svelte` | Featured section + footer link |
+
+**Next:** OG image for social sharing, ESLint + Prettier, GitHub Actions CI

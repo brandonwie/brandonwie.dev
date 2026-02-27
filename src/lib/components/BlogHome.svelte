@@ -51,6 +51,29 @@
 			{m.blog_tagline()}
 		</p>
 
+		<!-- Featured Project -->
+		<section class="mb-10">
+			<h2 class="text-xs font-semibold uppercase tracking-wider text-terminal-text-dim mb-4">
+				{m.featured_project()}
+			</h2>
+			<a
+				href="https://crucio.brandonwie.dev"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="group block py-3 px-2 -mx-2 rounded no-underline transition-colors hover:bg-terminal-bg-hover"
+			>
+				<span class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">
+					Project Crucio
+				</span>
+				<span class="text-xs text-terminal-text-dim ml-2">
+					— {m.portfolio_subtitle()}
+				</span>
+				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
+					{m.portfolio_description()}
+				</p>
+			</a>
+		</section>
+
 		<!-- Recent Posts -->
 		<section>
 			<h2 class="text-xs font-semibold uppercase tracking-wider text-terminal-text-dim mb-6">
@@ -121,6 +144,14 @@
 					rel="noopener noreferrer"
 				>
 					LinkedIn
+				</a>
+				<a
+					href="https://crucio.brandonwie.dev"
+					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					Portfolio
 				</a>
 				<a
 					href={rssHref}

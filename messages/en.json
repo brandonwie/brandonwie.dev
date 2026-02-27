@@ -18,5 +18,8 @@
   "see_all_posts": "See all {count} posts",
   "back_to_home": "Back to home",
   "all_categories": "All",
-  "category_filter": "Categories"
+  "category_filter": "Categories",
+  "featured_project": "Featured Project",
+  "portfolio_subtitle": "AISecOps Knowledge Platform",
+  "portfolio_description": "Zero Trust security for generative AI on on-premise infrastructure."
 }
