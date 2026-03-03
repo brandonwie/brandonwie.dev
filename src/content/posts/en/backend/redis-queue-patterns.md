@@ -1,8 +1,6 @@
 ---
 title: Redis and BullMQ Queue Patterns
-description: >-
-  Comprehensive guide to Redis-backed job queues with BullMQ in Node.js/NestJS
-  applications.
+description: Comprehensive guide to Redis-backed job queues with BullMQ in Node.js/NestJS
 date: 2025-01-11T00:00:00.000Z
 updated: 2026-02-24T00:00:00.000Z
 tags:
@@ -15,15 +13,19 @@ category: backend
 draft: false
 lang: en
 references:
-  - url: "https://docs.bullmq.io/"
+  - url: 'https://docs.bullmq.io/'
     title: docs.bullmq.io
     type: official
-  - url: "https://docs.nestjs.com/techniques/queues"
+  - url: 'https://docs.nestjs.com/techniques/queues'
     title: queues
     type: official
-  - url: "https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/"
+  - url: 'https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/'
     title: event loop timers and nexttick
     type: official
+---
+
+applications.
+
 ---
 
 ## The Problem
@@ -87,14 +89,14 @@ await queue.add(
   {
     blockId: block.id,
     snapshot: extractSnapshot(block),
-    intent: "update",
+    intent: "update"
   },
   {
     jobId: `block-${block.id}-update`, // Deduplication
     attempts: 3, // Auto-retry
     backoff: { type: "exponential" }, // Smart delays
-    priority: urgent ? 1 : 10, // Priority queue
-  },
+    priority: urgent ? 1 : 10 // Priority queue
+  }
 );
 ```
 
@@ -140,8 +142,8 @@ await queue.add(
 new Worker("calendar-queue", processor, {
   limiter: {
     max: 100, // Max 100 jobs
-    duration: 60000, // Per minute
-  },
+    duration: 60000 // Per minute
+  }
 });
 ```
 
@@ -278,7 +280,7 @@ return { success: true };
 
 ```typescript
 @Processor("google-calendar-event", {
-  concurrency: 5, // Process up to 5 jobs simultaneously
+  concurrency: 5 // Process up to 5 jobs simultaneously
 })
 export class QueueProcessor extends WorkerHost {
   async process(job: Job): Promise<void> {
@@ -359,7 +361,7 @@ Use BullMQ when you need:
 
 await this.queue.add("create-channel", data, {
   attempts: 3,
-  backoff: { type: "exponential", delay: 1000 },
+  backoff: { type: "exponential", delay: 1000 }
 });
 ```
 

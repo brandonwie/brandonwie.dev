@@ -1,9 +1,6 @@
 ---
-title: "Claude Code: Shared + Personal AI Config Pattern"
-description: >-
-  Split AI instructions into committed (shared) and gitignored (personal)
-  layers so new developers get working AI instructions out of the box while
-  existing developers keep personal extensions.
+title: 'Claude Code: Shared + Personal AI Config Pattern'
+description: Split AI instructions into committed (shared) and gitignored (personal) layers
 date: 2026-02-04T00:00:00.000Z
 updated: 2026-02-23T00:00:00.000Z
 tags:
@@ -15,10 +12,13 @@ category: devops
 draft: false
 lang: en
 references:
-  - url: "https://docs.anthropic.com/en/docs/claude-code"
+  - url: 'https://docs.anthropic.com/en/docs/claude-code'
     title: Claude Code Documentation
     type: official
 ---
+
+so new developers get working AI instructions out of the box while existing
+developers keep personal extensions.
 
 ## The Problem
 

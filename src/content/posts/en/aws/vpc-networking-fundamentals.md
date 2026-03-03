@@ -1,8 +1,6 @@
 ---
 title: AWS VPC Networking Fundamentals
-description: >-
-  Comprehensive guide to AWS VPC networking concepts, CIDR notation, and
-  network architecture patterns.
+description: 'Comprehensive guide to AWS VPC networking concepts, CIDR notation, and network'
 date: 2025-04-29T00:00:00.000Z
 updated: 2026-02-24T00:00:00.000Z
 tags:
@@ -14,12 +12,16 @@ category: aws
 draft: false
 lang: en
 references:
-  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/"
+  - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/'
     title: userguide
     type: official
-  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html"
+  - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html'
     title: vpc nat gateway.html
     type: official
+---
+
+architecture patterns.
+
 ---
 
 ## The Problem

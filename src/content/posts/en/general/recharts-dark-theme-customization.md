@@ -56,7 +56,7 @@ const COLORS = {
 
 ## Custom Tooltip Component
 
-```tsx
+```text
 function DarkTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
 
@@ -83,7 +83,7 @@ function DarkTooltip({ active, payload, label }) {
 
 ## Area Chart with Gradient Fill
 
-```tsx
+```text
 <ResponsiveContainer width="100%" height={200}>
   <AreaChart data={data}>
     <defs>
@@ -131,7 +131,7 @@ function DarkTooltip({ active, payload, label }) {
 
 For compact widgets, remove axes entirely:
 
-```tsx
+```text
 <ResponsiveContainer width="100%" height={160}>
   <BarChart data={data} layout="vertical" barSize={16}>
     <XAxis type="number" hide />

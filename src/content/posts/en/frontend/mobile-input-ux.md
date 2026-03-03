@@ -61,7 +61,7 @@ On mobile, touch events may not reach the hidden input even with
   `pointer-events: none` which should let touches pass through, but without an
   explicit `z-index` on the input, mobile Safari ignored it entirely.
 - **iOS zoom trigger was non-obvious** -- The auto-zoom on focus seemed like a
-  viewport or meta-tag problem, but the actual trigger was `font-size < 16px` on
+  viewport or meta-tag problem, but the actual trigger was `font-size` under `16px` on
   the input element (even when the text was transparent and invisible).
 - **WebKit-specific transparency** -- `color: transparent` alone did not hide
   the text cursor/selection on all WebKit browsers; discovering that

@@ -1,8 +1,6 @@
 ---
 title: Claude Code Agent Teams
-description: >-
-  Experimental feature for orchestrating multiple Claude Code instances as a
-  coordinated team with shared task lists and inter-agent messaging.
+description: Experimental feature for orchestrating multiple Claude Code instances as a
 date: 2026-02-09T00:00:00.000Z
 updated: 2026-02-25T00:00:00.000Z
 tags:
@@ -14,9 +12,14 @@ category: ai-ml
 draft: false
 lang: en
 references:
-  - url: "https://code.claude.com/docs/en/agent-teams"
+  - url: 'https://code.claude.com/docs/en/agent-teams'
     title: Orchestrate teams of Claude Code sessions
     type: official
+---
+
+coordinated team. One session acts as lead, spawning teammates that work
+independently in their own context windows with a shared task list.
+
 ---
 
 ## The Problem

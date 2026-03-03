@@ -1,8 +1,6 @@
 ---
 title: ECS Auto-Scaling Deep Dive
-description: >-
-  Comprehensive guide to ECS auto-scaling concepts, algorithms, and container
-  orchestration.
+description: "Comprehensive guide to ECS auto-scaling concepts, algorithms, and container"
 date: 2025-08-23T00:00:00.000Z
 updated: 2026-02-24T00:00:00.000Z
 tags:
@@ -20,6 +18,10 @@ references:
   - url: "https://docs.aws.amazon.com/autoscaling/application/userguide/"
     title: userguide
     type: official
+---
+
+orchestration.
+
 ---
 
 ## The Problem
@@ -400,7 +402,7 @@ auto-scaling only runs extra tasks during peak hours, not 24/7.
 
 ### Cost Strategies
 
-1. **Right-sizing**: Monitor actual usage, reduce if CPU &lt; 50% consistently --
+1. **Right-sizing**: Monitor actual usage, reduce if CPU is under 50% consistently --
    halving vCPU/memory cuts cost by ~50%
 2. **Scaling threshold tuning**: 65% target = more containers (higher cost), 75%
    target = fewer containers (lower cost); 70% is the balanced middle ground
@@ -642,7 +644,7 @@ sequenceDiagram
 ```
 
 For full Terraform configuration with migration task separation and connection
-pool math, see the ECS autoscaling patterns post (coming soon).
+pool math, see [ECS Autoscaling Patterns](/posts/ecs-autoscaling-patterns).
 
 ---
 
@@ -754,4 +756,4 @@ aws application-autoscaling describe-scaling-policies \
 
 - [ECS Best Practices Guide](https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/)
 - [Application Auto Scaling](https://docs.aws.amazon.com/autoscaling/application/userguide/)
-- See also: ECS autoscaling patterns (coming soon)
+- See also: [ECS Autoscaling Patterns](/posts/ecs-autoscaling-patterns)

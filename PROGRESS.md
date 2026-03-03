@@ -7,6 +7,7 @@
 - [x] First deployment to Cloudflare Pages
 - [x] 8 posts published (EN + KO)
 - [x] 52 posts published (EN + KO) with full blog narratives
+- [x] 94 EN posts published (42 new from 3B reference unblocking)
 - [x] Custom domain live
 
 ## Session Log
@@ -514,3 +515,50 @@ Added a link to Project Crucio (crucio.brandonwie.dev) in two locations:
 | `src/lib/components/BlogHome.svelte` | Featured section + footer link |
 
 **Next:** OG image for social sharing, ESLint + Prettier, GitHub Actions CI
+
+---
+
+### 2026-03-04
+
+**Mass Publish — 52 to 94 EN Posts + Shiki Singleton Fix**
+
+Unblocked 43 3B knowledge entries, scaled blog from 52 to 94 EN posts, and
+fixed a critical Shiki async race condition:
+
+1. **Resynced claude-code-multi-profile-hud**
+   - Expanded EN post from raw 3B reference to narrative blog post
+   - Delta-translated KO with 6 new difficulty paragraphs + HUD config section
+   - Updated frontmatter dates and references
+
+2. **Unblocked 43 posts in 3B**
+   - 37 "needs-references": added official/authoritative URLs via 4 parallel
+     research agents
+   - 4 "needs-external-reference": added missing external references
+   - 2 "needs-review": flipped publishable flags after quality check
+   - All updated with `publishable: true`, `ready: true`
+
+3. **Fixed Shiki singleton race condition** (critical)
+   - Root cause: `svelte.config.js` cached resolved value, not the promise
+   - Concurrent mdsvex calls all saw `undefined` → 880+ instances created
+   - Fix: cache the promise (`_highlighterPromise`), not the resolved value
+   - Result: 0 Shiki warnings, build time 8.5s
+
+4. **Fixed build errors at 94 posts**
+   - Bare `<` in prose: datasource-vs-repo, airflow-dag, amplitude-export
+   - `{PROJECT_ID}` Svelte expression: wrapped in inline code
+   - 4 relative `.md` links: converted to `/posts/slug` format
+   - Fixed both blog AND 3B sources to prevent sync re-introduction
+
+**Stats:** 94 EN posts, 52 KO posts. Build passes cleanly in 8.5s.
+
+**Key Files Modified:**
+
+| File                                                            | Change                          |
+| --------------------------------------------------------------- | ------------------------------- |
+| `svelte.config.js`                                              | Shiki promise caching singleton |
+| `src/content/posts/en/` (94 files)                              | 42 new + content fixes          |
+| `src/content/posts/en/general/claude-code-multi-profile-hud.md` | Expanded narrative              |
+| `src/content/posts/ko/general/claude-code-multi-profile-hud.md` | Delta-translated                |
+
+**Next:** KO translations for 42 new posts, sync script link transformation,
+OG image, ESLint + Prettier, GitHub Actions CI

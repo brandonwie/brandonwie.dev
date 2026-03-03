@@ -2,7 +2,7 @@
 title: Claude Code PostToolUse Hooks
 description: >-
   PostToolUse hooks fire after a tool completes. They receive JSON via stdin
-  with session, tool name, input, result, and working directory.
+  with
 date: 2026-02-09T00:00:00.000Z
 updated: 2026-02-25T00:00:00.000Z
 tags:
@@ -13,10 +13,12 @@ category: devops
 draft: false
 lang: en
 references:
-  - url: "https://docs.anthropic.com/en/docs/claude-code/hooks"
+  - url: 'https://docs.anthropic.com/en/docs/claude-code/hooks'
     title: Claude Code Hooks Documentation
     type: official
 ---
+
+session, tool name, input, result, and working directory.
 
 ## Hook Stdin Schema
 

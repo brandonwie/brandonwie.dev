@@ -59,7 +59,7 @@ The Amplitude Export API documentation does not make the timezone behavior of
 **Question:** "ETL runs at 01:00 KST (16:00 UTC) fetching yesterday's data.
 Shouldn't we fetch KST-based hours since our users are in Korea?"
 
-**Answer:** NO. Amplitude project `{PROJECT_ID}` uses **UTC timezone**, not KST.
+**Answer:** NO. Amplitude project `PROJECT_ID` uses **UTC timezone**, not KST.
 
 ## Key Facts
 

@@ -4,40 +4,44 @@ import { mdsvex } from "mdsvex"; // markdown processor for Svelte
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 
-// Cache Shiki highlighter as singleton to avoid creating hundreds of instances
-let _highlighter;
+// Cache Shiki highlighter as singleton — store the PROMISE to prevent
+// async race conditions where concurrent calls each create a new instance
+let _highlighterPromise;
 
-async function getHighlighter() {
-  if (_highlighter) return _highlighter;
-  const { createHighlighter } = await import("shiki");
-  _highlighter = await createHighlighter({
-    themes: ["github-dark"],
-    langs: [
-      "javascript",
-      "typescript",
-      "python",
-      "bash",
-      "json",
-      "yaml",
-      "markdown",
-      "sql",
-      "go",
-      "rust",
-      "css",
-      "html",
-      "svelte",
-      "jsx",
-      "tsx",
-      "dockerfile",
-      "hcl",
-      "terraform",
-      "toml",
-      "ini",
-      "mermaid",
-      "text",
-    ],
-  });
-  return _highlighter;
+function getHighlighter() {
+  if (!_highlighterPromise) {
+    _highlighterPromise = (async () => {
+      const { createHighlighter } = await import("shiki");
+      return createHighlighter({
+        themes: ["github-dark"],
+        langs: [
+          "javascript",
+          "typescript",
+          "python",
+          "bash",
+          "json",
+          "yaml",
+          "markdown",
+          "sql",
+          "go",
+          "rust",
+          "css",
+          "html",
+          "svelte",
+          "jsx",
+          "tsx",
+          "dockerfile",
+          "hcl",
+          "terraform",
+          "toml",
+          "ini",
+          "mermaid",
+          "text",
+        ],
+      });
+    })();
+  }
+  return _highlighterPromise;
 }
 
 /** @type {import('mdsvex').MdsvexOptions} */
