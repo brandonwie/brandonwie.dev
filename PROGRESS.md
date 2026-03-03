@@ -8,6 +8,7 @@
 - [x] 8 posts published (EN + KO)
 - [x] 52 posts published (EN + KO) with full blog narratives
 - [x] 94 EN posts published (42 new from 3B reference unblocking)
+- [x] Full EN/KO parity — 94 EN + 94 KO posts
 - [x] Custom domain live
 
 ## Session Log
@@ -562,3 +563,38 @@ fixed a critical Shiki async race condition:
 
 **Next:** KO translations for 42 new posts, sync script link transformation,
 OG image, ESLint + Prettier, GitHub Actions CI
+
+---
+
+### 2026-03-04 (Session 2)
+
+**Full EN/KO Parity — 42 Korean Translations**
+
+Translated all 42 remaining EN posts to Korean using 3 parallel agent
+teammates, achieving full EN/KO parity:
+
+1. **Parallel translation (3 agents)**
+   - translator-1: ai-ml(1), aws(7), backend(6) — 14 posts
+   - translator-2: backend(6), devops(8) — 14 posts
+   - translator-3: devops(4), general(2), google(4), icalendar(2),
+     payments(1), security(1) — 14 posts
+   - All followed 해요체 register, voice calibration, Toss.tech style
+
+2. **New KO category directories created**
+   - `ko/google/` (4 posts)
+   - `ko/payments/` (1 post)
+
+3. **Build verification**
+   - 94 EN + 94 KO posts, 0 untranslated
+   - Build passes in 9.78s with zero errors
+
+**Stats:** 94 EN posts, 94 KO posts. Full parity. Build 9.78s.
+
+**Commits:**
+
+| Hash    | Description                                                       |
+| ------- | ----------------------------------------------------------------- |
+| c511e3f | feat(i18n): add KO translations for 42 posts, achieve full parity |
+
+**Next:** Sync script link transformation, OG image, ESLint + Prettier,
+GitHub Actions CI
