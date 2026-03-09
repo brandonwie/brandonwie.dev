@@ -122,6 +122,11 @@ registerCommand("whoami", () => {
       content: "    email      → brandon@brandonwie.dev",
       link: "mailto:brandon@brandonwie.dev",
     },
+    {
+      type: "link",
+      content: "    portfolio  → crucio.brandonwie.dev",
+      link: "https://crucio.brandonwie.dev",
+    },
     { type: "text", content: "" },
   ];
 
