@@ -136,13 +136,13 @@ async handleFindEventsWithResync(calendar: Calendar) {
 
 ## Decision Matrix
 
-| accessRole | Strategy | Reason |
-| ---------- | -------- | ------ |
-| `owner` | Merge | User can customize |
-| `writer` | Merge | User can customize |
-| `reader` | Clean-slate | Read-only, no customizations |
-| `freeBusyReader` | Clean-slate | Only sees free/busy |
-| `null` | Clean-slate | Unexpected, log to Sentry |
+| accessRole       | Strategy    | Reason                       |
+| ---------------- | ----------- | ---------------------------- |
+| `owner`          | Merge       | User can customize           |
+| `writer`         | Merge       | User can customize           |
+| `reader`         | Clean-slate | Read-only, no customizations |
+| `freeBusyReader` | Clean-slate | Only sees free/busy          |
+| `null`           | Clean-slate | Unexpected, log to Sentry    |
 
 ## Key Lessons
 

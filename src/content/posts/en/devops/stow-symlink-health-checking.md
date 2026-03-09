@@ -1,6 +1,6 @@
 ---
 title: Stow Symlink Health Checking
-description: GNU Stow creates symlinks from system config paths back to a
+description: 'GNU Stow creates symlinks from system config paths back to a dotfiles repo,'
 date: 2026-02-09T00:00:00.000Z
 updated: 2026-02-09T00:00:00.000Z
 tags:
@@ -20,10 +20,9 @@ references:
     type: experience
 ---
 
-dotfiles repo, making the repo the source of truth. However,
-apps like `gh` and Karabiner-Elements silently overwrite these
-symlinks with regular files during updates, breaking the SoT
-model without any warning.
+making the repo the source of truth. However, apps like `gh` and
+Karabiner-Elements silently overwrite these symlinks with regular files during
+updates, breaking the SoT model without any warning.
 
 ## The Problem
 
@@ -33,8 +32,8 @@ When an app updates, it often:
 2. Writes a new regular file in its place
 3. The dotfiles repo no longer controls that config
 
-This is invisible — the config file still exists and works,
-but edits in the repo no longer propagate to the system.
+This is invisible — the config file still exists and works, but edits in the
+repo no longer propagate to the system.
 
 ## Detection Pattern
 
@@ -65,20 +64,19 @@ stow --adopt -R -t "$HOME" -d "$STOW_DIR" "$package"
 
 This does two things:
 
-1. **Adopt:** Moves the system file into the repo (overwriting
-   the repo version)
+1. **Adopt:** Moves the system file into the repo (overwriting the repo version)
 2. **Restow (`-R`):** Re-creates the symlink from system to repo
 
-After repair, always check `git diff` — the adopted file may
-differ from the repo version. Either commit the new version or
-`git checkout` to restore the repo version (symlink stays).
+After repair, always check `git diff` — the adopted file may differ from the
+repo version. Either commit the new version or `git checkout` to restore the
+repo version (symlink stays).
 
 ## `.stow-local-ignore` Handling
 
-Stow packages may contain non-config files (docs, scripts).
-The `.stow-local-ignore` file lists Perl regex patterns for
-files that stow should skip. When checking symlink health,
-these files must also be excluded from the check.
+Stow packages may contain non-config files (docs, scripts). The
+`.stow-local-ignore` file lists Perl regex patterns for files that stow should
+skip. When checking symlink health, these files must also be excluded from the
+check.
 
 ## Key Points
 

@@ -102,12 +102,12 @@ User Request → Service Layer (soft-delete) → Queue Job
 
 ## When to Use
 
-| Scenario | Use Two-Phase? |
-| -------- | -------------- |
-| External API required | ✅ Yes |
-| Database-only delete | ❌ No (direct delete) |
-| No rollback mechanism | ✅ Yes |
-| Critical user data | ✅ Yes |
+| Scenario              | Use Two-Phase?        |
+| --------------------- | --------------------- |
+| External API required | ✅ Yes                |
+| Database-only delete  | ❌ No (direct delete) |
+| No rollback mechanism | ✅ Yes                |
+| Critical user data    | ✅ Yes                |
 
 ## Key Implementation Details
 

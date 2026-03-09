@@ -169,9 +169,9 @@ python cli.py amplitude-backfill \
 - **Real-time streaming** — If you use Amplitude's real-time event streaming
   (e.g., via webhook or Kafka), events arrive individually with timestamps
   already attached; file-level partitioning logic does not apply
-- **Small-scale analytics** — If your Amplitude data fits in a single query (under
-  1M events/day), exporting to CSV or using the Dashboard API is simpler than
-  building an ETL pipeline
+- **Small-scale analytics** — If your Amplitude data fits in a single query
+  (under 1M events/day), exporting to CSV or using the Dashboard API is simpler
+  than building an ETL pipeline
 - **Non-Amplitude sources** — The nested ZIP+GZIP format and file naming
   conventions are Amplitude-specific; other event platforms have different
   export formats

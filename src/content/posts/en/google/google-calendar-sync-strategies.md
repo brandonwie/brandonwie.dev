@@ -20,9 +20,11 @@ references:
 
 ## Sync Parity Principle
 
-> **App must show EXACTLY what Google Calendar web app shows - no more, no less.**
+> **App must show EXACTLY what Google Calendar web app shows - no more, no
+> less.**
 
-Users only understand: "Google shows X" → "App should show X". Any difference = bug.
+Users only understand: "Google shows X" → "App should show X". Any difference =
+bug.
 
 ## Sync Modes
 
@@ -32,9 +34,9 @@ Users only understand: "Google shows X" → "App should show X". Any difference 
 
 ```typescript
 const params = {
-  showDeleted: true,   // See deleted calendars
-  showHidden: true,    // Catch hidden primary calendars
-  maxResults: 250,
+  showDeleted: true, // See deleted calendars
+  showHidden: true, // Catch hidden primary calendars
+  maxResults: 250
 };
 ```
 
@@ -50,8 +52,8 @@ const params = {
 
 ```typescript
 const params = {
-  syncToken: '<stored_token>',
-  maxResults: 250,
+  syncToken: "<stored_token>",
+  maxResults: 250
 };
 ```
 
@@ -67,20 +69,20 @@ const params = {
 
 ### Calendar List API
 
-| Parameter     | Full Sync | Incremental   | Description                |
-| ------------- | --------- | ------------- | -------------------------- |
-| `syncToken`   | Omit      | Required      | Token from previous sync   |
-| `showDeleted` | true      | Auto-included | Include deleted calendars  |
-| `showHidden`  | true      | Auto-included | Include hidden calendars   |
-| `maxResults`  | 250       | 250           | Page size (max 250)        |
+| Parameter     | Full Sync | Incremental   | Description               |
+| ------------- | --------- | ------------- | ------------------------- |
+| `syncToken`   | Omit      | Required      | Token from previous sync  |
+| `showDeleted` | true      | Auto-included | Include deleted calendars |
+| `showHidden`  | true      | Auto-included | Include hidden calendars  |
+| `maxResults`  | 250       | 250           | Page size (max 250)       |
 
 ### Events API
 
-| Parameter               | Value     | Description                   |
-| ----------------------- | --------- | ----------------------------- |
-| `showHiddenInvitations` | **false** | Declined events - don't show  |
-| `showDeleted`           | true      | Include deleted for sync      |
-| `singleEvents`          | false     | Keep recurring structure      |
+| Parameter               | Value     | Description                  |
+| ----------------------- | --------- | ---------------------------- |
+| `showHiddenInvitations` | **false** | Declined events - don't show |
+| `showDeleted`           | true      | Include deleted for sync     |
+| `singleEvents`          | false     | Keep recurring structure     |
 
 ## 410 GONE Error Handling
 
@@ -95,11 +97,11 @@ if (error.code === 410) {
 
 ## Calendar Segregation Logic (CASE)
 
-| CASE | Trigger                    | Full Sync              | Incremental            |
-| ---- | -------------------------- | ---------------------- | ---------------------- |
-| #1   | `deleted=true` in response | Delete                 | Delete                 |
-| #2   | Calendar in response       | Create/Update          | Create/Update          |
-| #3   | NOT in response            | Mark orphan → Delete   | **SKIP** (unchanged)   |
+| CASE | Trigger                    | Full Sync            | Incremental          |
+| ---- | -------------------------- | -------------------- | -------------------- |
+| #1   | `deleted=true` in response | Delete               | Delete               |
+| #2   | Calendar in response       | Create/Update        | Create/Update        |
+| #3   | NOT in response            | Mark orphan → Delete | **SKIP** (unchanged) |
 
 ### CASE #1 Safeguard
 
@@ -119,10 +121,10 @@ If Google primary not in full sync response but exists in DB:
 
 ## App Primary vs Google Primary
 
-| Concept        | Field                      | Description                    |
-| -------------- | -------------------------- | ------------------------------ |
-| App Primary    | `calendar.primary`         | User-settable, any calendar    |
-| Google Primary | `calendar.isGooglePrimary` | Always user's email calendar   |
+| Concept        | Field                      | Description                  |
+| -------------- | -------------------------- | ---------------------------- |
+| App Primary    | `calendar.primary`         | User-settable, any calendar  |
+| Google Primary | `calendar.isGooglePrimary` | Always user's email calendar |
 
 ### Primary Reassignment
 

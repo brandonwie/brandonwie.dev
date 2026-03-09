@@ -22,22 +22,23 @@ references:
 
 ## Quick Summary
 
-| Storage | Type                 | Shared?                  | Purpose                              |
-| ------- | -------------------- | ------------------------ | ------------------------------------ |
-| **EBS** | Block (like HDD/SSD) | No (1 instance only)     | OS, Docker, PostgreSQL, Redis, logs  |
-| **EFS** | Network (NFS)        | Yes (multiple instances) | DAG files shared between master      |
+| Storage | Type                 | Shared?                  | Purpose                             |
+| ------- | -------------------- | ------------------------ | ----------------------------------- |
+| **EBS** | Block (like HDD/SSD) | No (1 instance only)     | OS, Docker, PostgreSQL, Redis, logs |
+| **EFS** | Network (NFS)        | Yes (multiple instances) | DAG files shared between master     |
 
 ## EBS (Elastic Block Storage)
 
-Block storage attached to each EC2 instance. Like the hard drive inside your computer - only that specific computer can access it.
+Block storage attached to each EC2 instance. Like the hard drive inside your
+computer - only that specific computer can access it.
 
 ### Typical Sizes
 
-| Instance | EBS Size | Contents                                      |
-| -------- | -------- | --------------------------------------------- |
-| Master   | 100 GB   | PostgreSQL, Redis, Docker images, logs, OS    |
-| Worker   | 50 GB    | Docker images, task artifacts, OS             |
-| Bastion  | 8 GB     | OS only (minimal)                             |
+| Instance | EBS Size | Contents                                   |
+| -------- | -------- | ------------------------------------------ |
+| Master   | 100 GB   | PostgreSQL, Redis, Docker images, logs, OS |
+| Worker   | 50 GB    | Docker images, task artifacts, OS          |
+| Bastion  | 8 GB     | OS only (minimal)                          |
 
 ### What's On EBS
 
@@ -70,7 +71,8 @@ You lose **everything**:
 
 ## EFS (Elastic File System)
 
-Network filesystem (NFS) that **multiple EC2 instances can mount simultaneously**.
+Network filesystem (NFS) that **multiple EC2 instances can mount
+simultaneously**.
 
 ### Why EFS For Shared Files?
 
@@ -158,7 +160,8 @@ Less critical than EBS:
 
 ## Key Takeaways
 
-1. **EBS = Instance-specific storage** - each instance has its own, used for databases
+1. **EBS = Instance-specific storage** - each instance has its own, used for
+   databases
 2. **EFS = Shared storage** - multiple instances access same files
 3. **Critical data protection** - enable EBS snapshots for Master
 4. **DAG code should be in Git** - ultimate backup

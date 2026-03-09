@@ -120,14 +120,14 @@ resource "aws_appautoscaling_policy" "memory" {
 
 ### Why These Values
 
-| Parameter | Value | Reasoning |
-| --------- | ----- | --------- |
-| CPU Target | 70% | Leaves headroom for spikes |
-| Memory Target | 80% | Memory is less spiky than CPU |
-| Scale-out Cooldown | 60s | Respond quickly to load |
-| Scale-in Cooldown | 300s | Prevent flapping |
-| Min Capacity | 1 | Cost optimization |
-| Max Capacity | 4 | Stay within connection limits |
+| Parameter          | Value | Reasoning                     |
+| ------------------ | ----- | ----------------------------- |
+| CPU Target         | 70%   | Leaves headroom for spikes    |
+| Memory Target      | 80%   | Memory is less spiky than CPU |
+| Scale-out Cooldown | 60s   | Respond quickly to load       |
+| Scale-in Cooldown  | 300s  | Prevent flapping              |
+| Min Capacity       | 1     | Cost optimization             |
+| Max Capacity       | 4     | Stay within connection limits |
 
 ## Connection Pool Math
 

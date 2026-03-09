@@ -20,12 +20,12 @@ references:
 ## Basic Gateway
 
 ```typescript
-@WebSocketGateway(80, { namespace: 'events' })
+@WebSocketGateway(80, { namespace: "events" })
 export class EventsGateway {
   @WebSocketServer()
   server: Server;
 
-  @SubscribeMessage('events')
+  @SubscribeMessage("events")
   handleEvent(@MessageBody() data: string): string {
     return data;
   }
@@ -69,9 +69,9 @@ npm i --save redis socket.io @socket.io/redis-adapter
 ```
 
 ```typescript
-import { IoAdapter } from '@nestjs/platform-socket.io';
-import { createAdapter } from '@socket.io/redis-adapter';
-import { createClient } from 'redis';
+import { IoAdapter } from "@nestjs/platform-socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { createClient } from "redis";
 
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
@@ -106,10 +106,11 @@ app.useWebSocketAdapter(redisIoAdapter);
 export class WsAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const client = context.switchToWs().getClient();
-    const token = client.handshake?.auth?.token || client.handshake?.query?.token;
+    const token =
+      client.handshake?.auth?.token || client.handshake?.query?.token;
 
     if (!token) {
-      throw new WsException('MISSING_TOKEN');
+      throw new WsException("MISSING_TOKEN");
     }
 
     try {
@@ -117,10 +118,10 @@ export class WsAuthGuard implements CanActivate {
       client.data.userId = decoded.userId;
       return true;
     } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        throw new WsException('EXPIRED_TOKEN');
+      if (error.name === "TokenExpiredError") {
+        throw new WsException("EXPIRED_TOKEN");
       }
-      throw new WsException('INVALID_TOKEN');
+      throw new WsException("INVALID_TOKEN");
     }
   }
 }
@@ -130,16 +131,19 @@ export class WsAuthGuard implements CanActivate {
 
 ```typescript
 // Throwing exceptions
-throw new WsException('Invalid credentials.');
+throw new WsException("Invalid credentials.");
 
 // Custom filter
 @Catch(WsException)
 export class WsExceptionFilter {
   catch(exception: WsException, host: ArgumentsHost) {
     const client = host.switchToWs().getClient();
-    client.emit('error', {
-      code: typeof exception.getError() === 'string' ? exception.getError() : 'INTERNAL_ERROR',
-      message: exception.message,
+    client.emit("error", {
+      code:
+        typeof exception.getError() === "string"
+          ? exception.getError()
+          : "INTERNAL_ERROR",
+      message: exception.message
     });
   }
 }
@@ -175,13 +179,13 @@ notifyUser(userId: number, data: any) {
 ### Broadcast to Namespace
 
 ```typescript
-@WebSocketGateway({ namespace: 'chat' })
+@WebSocketGateway({ namespace: "chat" })
 export class ChatGateway {
   @WebSocketServer()
   server: Server;
 
   broadcastMessage(message: string) {
-    this.server.emit('message', message);
+    this.server.emit("message", message);
   }
 }
 ```

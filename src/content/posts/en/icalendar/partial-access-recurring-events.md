@@ -31,8 +31,7 @@ handled properly.
 ### Google API Behavior
 
 > "When a user who has free/busy permissions queries events.list(), it behaves
-> as if singleEvent is true."
-> — Google Calendar API Documentation
+> as if singleEvent is true." — Google Calendar API Documentation
 
 For User B:
 
@@ -62,8 +61,8 @@ if (!parentBlock && !skipOrphanDetection) {
   } else {
     // Active block, no parent = likely partial access
     // Preserve as standalone event
-    Sentry.captureMessage('Partial access detected', {
-      extra: { blockId: block.id },
+    Sentry.captureMessage("Partial access detected", {
+      extra: { blockId: block.id }
     });
   }
 }
@@ -86,25 +85,25 @@ access scope.
 
 ### Operations That Work
 
-| Operation | Status | Why |
-| --------- | ------ | --- |
+| Operation                | Status   | Why                               |
+| ------------------------ | -------- | --------------------------------- |
 | "This" (single instance) | ✅ Works | Creates T with originalId = TA.id |
-| "All" (all occurrences) | ✅ Works | Updates TA + T children |
-| Remove recurrence | ✅ Works | Converts TA to single event |
-| Delete | ✅ Works | Cleans up T children |
+| "All" (all occurrences)  | ✅ Works | Updates TA + T children           |
+| Remove recurrence        | ✅ Works | Converts TA to single event       |
+| Delete                   | ✅ Works | Cleans up T children              |
 
 ### Operations That Need Blocking
 
-| Operation | Status | Why |
-| --------- | ------ | --- |
+| Operation      | Status    | Why                       |
+| -------------- | --------- | ------------------------- |
 | "ThisAndAfter" | ❌ Broken | Needs true root's DTSTART |
 
 ```typescript
 // Block ThisAndAfter for partial access
 if (isPartialAccessBlock(requestedBlock)) {
   throw new ConflictException(
-    'ThisAndAfter not supported for limited access events. ' +
-    'Use "This occurrence" or "All occurrences" instead.'
+    "ThisAndAfter not supported for limited access events. " +
+      'Use "This occurrence" or "All occurrences" instead.'
   );
 }
 ```

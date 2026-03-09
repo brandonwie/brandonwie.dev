@@ -1,8 +1,6 @@
 ---
 title: Docker Compose CI/CD Patterns
-description: >-
-  Patterns for using Docker Compose in CI/CD pipelines, particularly separating
-  dev and prod configurations.
+description: 'Patterns for using Docker Compose in CI/CD pipelines, particularly separating'
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -19,17 +17,20 @@ references:
     type: official
 ---
 
+dev and prod configurations.
+
 ## The Build vs Image Problem
 
 ### The Issue
 
-When docker-compose.yml uses `build:` directive, `docker-compose pull` does nothing:
+When docker-compose.yml uses `build:` directive, `docker-compose pull` does
+nothing:
 
 ```yaml
 # docker-compose.yml
 services:
   webserver:
-    build:                    # ← "Build locally"
+    build: # ← "Build locally"
       context: ..
       dockerfile: master/Dockerfile
 ```
@@ -39,7 +40,8 @@ docker-compose pull  # ← Does nothing! No image to pull
 docker-compose up -d # ← Builds locally instead
 ```
 
-**Analogy:** Like telling someone "follow this recipe" (build) when you already cooked the meal and put it in the fridge (ECR).
+**Analogy:** Like telling someone "follow this recipe" (build) when you already
+cooked the meal and put it in the fridge (ECR).
 
 ### The Solution: Separate Files
 
@@ -66,7 +68,7 @@ services:
 # docker-compose.prod.yml
 services:
   webserver:
-    image: ${ECR_REGISTRY}/airflow-master:latest  # ← Pull from ECR
+    image: ${ECR_REGISTRY}/airflow-master:latest # ← Pull from ECR
 ```
 
 ## CI/CD Pipeline Flow
@@ -131,9 +133,9 @@ on:
   workflow_dispatch:
     inputs:
       deploy_type:
-        description: 'Deploy type'
+        description: "Deploy type"
         required: true
-        default: 'all'
+        default: "all"
         type: choice
         options:
           - dags

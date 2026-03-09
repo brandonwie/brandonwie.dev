@@ -1,9 +1,6 @@
 ---
 title: Backfill Stats Manifest on Early Exit
-description: >-
-  When a job has an early exit path (e.g., "no work to do"), always save a
-  stats/status manifest so downstream callbacks can display meaningful
-  information.
+description: 'When a job has an early exit path (e.g., "no work to do"), always save a'
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -20,6 +17,9 @@ references:
     type: official
 ---
 
+stats/status manifest so downstream callbacks can display meaningful
+information.
+
 ## The Problem
 
 ```python
@@ -35,7 +35,8 @@ def execute(self):
     self._save_backfill_stats_manifest(stats)  # ← Never reached on early exit
 ```
 
-**Result:** Slack callback tries to read manifest that doesn't exist → shows empty/confusing `0` values.
+**Result:** Slack callback tries to read manifest that doesn't exist → shows
+empty/confusing `0` values.
 
 ## The Fix
 
@@ -64,7 +65,9 @@ def execute(self):
 
 ## Key Principle
 
-**Observability over optimization.** The cost of writing a small JSON manifest to S3 is negligible. The benefit of always having status information for monitoring/alerting is significant.
+**Observability over optimization.** The cost of writing a small JSON manifest
+to S3 is negligible. The benefit of always having status information for
+monitoring/alerting is significant.
 
 ## Applies To
 

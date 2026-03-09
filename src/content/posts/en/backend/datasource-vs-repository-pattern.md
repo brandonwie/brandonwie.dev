@@ -13,10 +13,10 @@ category: backend
 draft: false
 lang: en
 references:
-  - url: "https://docs.nestjs.com/techniques/database"
+  - url: 'https://docs.nestjs.com/techniques/database'
     title: Database — NestJS Documentation
     type: official
-  - url: "https://typeorm.io/#/repository-api"
+  - url: 'https://typeorm.io/#/repository-api'
     title: Repository API — TypeORM
     type: official
 ---
@@ -194,9 +194,9 @@ const mockManager = {
     createQueryBuilder: jest.fn().mockReturnValue({
       where: jest.fn().mockReturnThis(),
       leftJoin: jest.fn().mockReturnThis(),
-      getMany: jest.fn().mockResolvedValue([mockBlock]),
-    }),
-  }),
+      getMany: jest.fn().mockResolvedValue([mockBlock])
+    })
+  })
 };
 ```
 

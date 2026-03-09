@@ -12,10 +12,10 @@ category: data
 draft: false
 lang: en
 references:
-  - url: "https://amplitude.com/docs/apis/analytics/export"
+  - url: 'https://amplitude.com/docs/apis/analytics/export'
     title: export
     type: verified
-  - url: "https://amplitude.com/docs/admin/account-management/manage-orgs-projects"
+  - url: 'https://amplitude.com/docs/admin/account-management/manage-orgs-projects'
     title: Amplitude Manage Organizations and Projects (Timezone Settings)
     type: official
 ---

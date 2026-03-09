@@ -1,8 +1,6 @@
 ---
 title: ECR Token Refresh Cron
-description: >-
-  AWS ECR authentication tokens expire after 12 hours. For long-running Docker
-  hosts, implement automatic token refresh.
+description: AWS ECR authentication tokens expire after 12 hours. For long-running Docker
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -21,11 +19,14 @@ references:
     type: official
 ---
 
+hosts, implement automatic token refresh.
+
 ## The Problem
 
 - ECR tokens expire after 12 hours
 - Docker containers typically login only at startup
-- If a container runs longer than 12 hours, subsequent `docker pull` commands fail
+- If a container runs longer than 12 hours, subsequent `docker pull` commands
+  fail
 - Error: `authorization token has expired`
 
 ## The Solution
@@ -62,7 +63,8 @@ sudo -u ec2-user crontab -e
 ## Implementation Locations
 
 1. **CI/CD Pipeline** (`deploy.yml`): Install during DAG sync job
-2. **Initial Setup Script** (`setup-git-credentials.sh`): Install during EC2 bootstrap
+2. **Initial Setup Script** (`setup-git-credentials.sh`): Install during EC2
+   bootstrap
 
 ## Troubleshooting
 
@@ -82,8 +84,8 @@ cat ~/.docker/config.json
 
 ## Common Pitfalls
 
-| Issue | Solution |
-| ----- | -------- |
-| Cron installed for wrong user | Use `sudo -u ec2-user crontab` |
-| Shell escaping in SSM | Use temp file instead of inline |
-| cronie not installed | `yum install -y cronie` on AL2023 |
+| Issue                         | Solution                          |
+| ----------------------------- | --------------------------------- |
+| Cron installed for wrong user | Use `sudo -u ec2-user crontab`    |
+| Shell escaping in SSM         | Use temp file instead of inline   |
+| cronie not installed          | `yum install -y cronie` on AL2023 |

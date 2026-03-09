@@ -1,8 +1,6 @@
 ---
 title: Bash set -e and Command Substitution
-description: >-
-  When using `set -e` (exit on error), command substitution behaves unexpectedly
-  with custom error messages.
+description: 'When using `set -e` (exit on error), command substitution behaves unexpectedly'
 date: 2026-01-26T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -18,6 +16,8 @@ references:
     type: official
 ---
 
+with custom error messages.
+
 ## The Problem
 
 ```bash
@@ -31,7 +31,8 @@ if [ -z "$AWS_ACCOUNT_ID" ]; then
 fi
 ```
 
-With `set -e`, if the command inside `$(...)` fails, the script exits immediately at that line. Your custom error handling code is never executed.
+With `set -e`, if the command inside `$(...)` fails, the script exits
+immediately at that line. Your custom error handling code is never executed.
 
 ## The Solution
 
@@ -56,12 +57,13 @@ fi
 
 ## Why This Works
 
-| Pattern | set -e Behavior | Custom Message |
-| ------- | --------------- | -------------- |
-| `VAR=$(cmd)` | Exits immediately on failure | Never shown |
-| `if ! VAR=$(cmd)` | Failure captured by if | Shown |
+| Pattern           | set -e Behavior              | Custom Message |
+| ----------------- | ---------------------------- | -------------- |
+| `VAR=$(cmd)`      | Exits immediately on failure | Never shown    |
+| `if ! VAR=$(cmd)` | Failure captured by if       | Shown          |
 
-The `if` statement "consumes" the exit status, preventing `set -e` from triggering.
+The `if` statement "consumes" the exit status, preventing `set -e` from
+triggering.
 
 ## Key Points
 
@@ -72,8 +74,8 @@ The `if` statement "consumes" the exit status, preventing `set -e` from triggeri
 
 ## When to Use
 
-| Scenario | Recommended Pattern |
-| -------- | ------------------- |
-| Quick scripts, no custom errors | `VAR=$(cmd)` is fine |
-| Production scripts with `set -e` | Use `if ! VAR=$(cmd)` |
+| Scenario                          | Recommended Pattern         |
+| --------------------------------- | --------------------------- |
+| Quick scripts, no custom errors   | `VAR=$(cmd)` is fine        |
+| Production scripts with `set -e`  | Use `if ! VAR=$(cmd)`       |
 | Need to distinguish failure types | Use if-pattern + check `-z` |

@@ -48,12 +48,12 @@ export default NestFactory.create(AppModule).then((app) => {
 로컬 마이그레이션용 별도 설정 파일 생성 (`ormconfig.local.ts`):
 
 ```typescript
-import * as dotenv from 'dotenv';
-import { DataSource } from 'typeorm';
-import { getDatabaseDefaultOptions } from './database';
+import * as dotenv from "dotenv";
+import { DataSource } from "typeorm";
+import { getDatabaseDefaultOptions } from "./database";
 
 // .env 파일 로드 (로컬 DB 확인 필수!)
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 const defaultOptions = getDatabaseDefaultOptions();
 
@@ -64,7 +64,7 @@ const dataSource = new DataSource({
   port: Number(process.env.DB_PORT),
   database: process.env.DB_NAME,
   username: process.env.DB_USERNAME,
-  password: process.env.DB_PASSWORD,
+  password: process.env.DB_PASSWORD
 });
 
 export default dataSource;
@@ -72,10 +72,10 @@ export default dataSource;
 
 ## 설정 파일 분리
 
-| 파일 | 사용처 | 특징 |
-| ---- | ------ | ---- |
-| `ormconfig.ts` | Docker/ECS 마이그레이션 | NestJS 부팅 방식, 앱 컨텍스트 필요 시 |
-| `ormconfig.local.ts` | 로컬 마이그레이션 | 독립 DataSource, CLI가 직접 연결 |
+| 파일                 | 사용처                  | 특징                                  |
+| -------------------- | ----------------------- | ------------------------------------- |
+| `ormconfig.ts`       | Docker/ECS 마이그레이션 | NestJS 부팅 방식, 앱 컨텍스트 필요 시 |
+| `ormconfig.local.ts` | 로컬 마이그레이션       | 독립 DataSource, CLI가 직접 연결      |
 
 ## package.json 스크립트
 

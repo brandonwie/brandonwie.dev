@@ -22,10 +22,10 @@ blocklist approach because unknown routes are automatically blocked.
 
 ## Allowlist vs Blocklist
 
-| Approach | Default Action | Security | Maintenance |
-| -------- | -------------- | -------- | ----------- |
-| Allowlist | Block | ✅ Stronger | Must add new routes |
-| Blocklist | Allow | ❌ Weaker | Must block new attacks |
+| Approach  | Default Action | Security    | Maintenance            |
+| --------- | -------------- | ----------- | ---------------------- |
+| Allowlist | Block          | ✅ Stronger | Must add new routes    |
+| Blocklist | Allow          | ❌ Weaker   | Must block new attacks |
 
 **Recommendation**: Use allowlist for APIs with known, stable routes.
 
@@ -75,8 +75,8 @@ resource "aws_wafv2_regex_pattern_set" "allowed_routes" {
 }
 ```
 
-**Pros**: Fewer rules = lower WAF cost
-**Cons**: Harder to maintain, regex can get complex
+**Pros**: Fewer rules = lower WAF cost **Cons**: Harder to maintain, regex can
+get complex
 
 ### Pattern 2: Explicit Rules (Prod/Clarity)
 
@@ -147,8 +147,8 @@ resource "aws_wafv2_web_acl" "prod" {
 }
 ```
 
-**Pros**: Clear, maintainable, easy to add/remove routes
-**Cons**: More rules = higher WAF cost
+**Pros**: Clear, maintainable, easy to add/remove routes **Cons**: More rules =
+higher WAF cost
 
 ## Path Matching Strategies
 
@@ -229,11 +229,11 @@ aws wafv2 get-sampled-requests \
 
 ## Cost Optimization
 
-| Component | Monthly Cost (approx) |
-| --------- | --------------------- |
-| Web ACL | $5 |
-| Rule (first 10) | $1 each |
-| Request (per million) | $0.60 |
+| Component             | Monthly Cost (approx) |
+| --------------------- | --------------------- |
+| Web ACL               | $5                    |
+| Rule (first 10)       | $1 each               |
+| Request (per million) | $0.60                 |
 
 **Strategy**: Use regex consolidation in dev, explicit rules in prod.
 

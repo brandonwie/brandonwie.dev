@@ -1,8 +1,6 @@
 ---
 title: AI PR Review Validation Patterns
-description: >-
-  Common patterns where AI code reviewers (Claude, Copilot, Codex) produce false
-  positives, and how to prevent recurrence.
+description: 'Common patterns where AI code reviewers (Claude, Copilot, Codex) produce false'
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -18,22 +16,26 @@ references:
     type: authoritative
 ---
 
+positives, and how to prevent recurrence.
+
 ## Classification Framework
 
-| Classification | Criteria | Action |
-|----------------|----------|--------|
-| **VALID BUG** | Real bug, security issue, will cause failure | Fix immediately |
-| **VALID IMPROVEMENT** | Correct suggestion, improves code quality | Fix immediately |
-| **OPTIONAL** | Nice-to-have, stylistic, not urgent | Ask user |
-| **INVALID** | Wrong, misunderstood context, doesn't apply | Document + add reinforcing comment |
+| Classification        | Criteria                                     | Action                             |
+| --------------------- | -------------------------------------------- | ---------------------------------- |
+| **VALID BUG**         | Real bug, security issue, will cause failure | Fix immediately                    |
+| **VALID IMPROVEMENT** | Correct suggestion, improves code quality    | Fix immediately                    |
+| **OPTIONAL**          | Nice-to-have, stylistic, not urgent          | Ask user                           |
+| **INVALID**           | Wrong, misunderstood context, doesn't apply  | Document + add reinforcing comment |
 
 ## Common AI Confusion Patterns
 
 ### 1. Stale Diff / Feature Exists
 
-**What it looks like:** Agent claims feature is "missing" but it exists in current code.
+**What it looks like:** Agent claims feature is "missing" but it exists in
+current code.
 
-**Why it happens:** AI reviews PR diff, not current file state. If feature was added in earlier commit, agent may miss it.
+**Why it happens:** AI reviews PR diff, not current file state. If feature was
+added in earlier commit, agent may miss it.
 
 **Example:**
 
@@ -51,9 +53,11 @@ Reality: Service has 1449 lines of full implementation
 
 ### 2. Request Lifecycle Misunderstanding
 
-**What it looks like:** Agent suggests transactions/locking for operations that don't need them.
+**What it looks like:** Agent suggests transactions/locking for operations that
+don't need them.
 
-**Why it happens:** AI doesn't understand framework-specific request lifecycle (NestJS, Express).
+**Why it happens:** AI doesn't understand framework-specific request lifecycle
+(NestJS, Express).
 
 **Example:**
 
@@ -72,9 +76,11 @@ Reality: NestJS HTTP requests execute synchronously in single-threaded event loo
 
 ### 3. Webhook Flow Misunderstanding
 
-**What it looks like:** Agent suggests wrapping webhook handlers in transactions.
+**What it looks like:** Agent suggests wrapping webhook handlers in
+transactions.
 
-**Why it happens:** AI doesn't understand that external service already committed state.
+**Why it happens:** AI doesn't understand that external service already
+committed state.
 
 **Example:**
 
@@ -94,7 +100,8 @@ Reality: LemonSqueezy already committed subscription; our code just syncs state
 
 **What it looks like:** Agent misreads assignment flow after destructuring.
 
-**Why it happens:** AI sees destructuring, assumes all values come from same source.
+**Why it happens:** AI sees destructuring, assumes all values come from same
+source.
 
 **Example:**
 
@@ -124,12 +131,12 @@ resyncOccurred = true;
 
 ## Reinforcing Comment Templates
 
-| Pattern | Template |
-|---------|----------|
-| Feature Exists | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]` |
-| No Race Condition | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
-| Intentional Design | `// NOTE: Intentionally [omitted/designed this way] - [reason]` |
-| Cross-File Reference | `// NOTE: Related logic in [file:line] handles [concern]` |
+| Pattern              | Template                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| Feature Exists       | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]`                    |
+| No Race Condition    | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
+| Intentional Design   | `// NOTE: Intentionally [omitted/designed this way] - [reason]`                                     |
+| Cross-File Reference | `// NOTE: Related logic in [file:line] handles [concern]`                                           |
 
 ## Workflow
 
@@ -148,12 +155,14 @@ resyncOccurred = true;
 **Key INVALID:**
 
 - Feature exists (analytics service fully implemented)
-- Request lifecycle misunderstanding (no race condition in single-threaded event loop)
+- Request lifecycle misunderstanding (no race condition in single-threaded event
+  loop)
 - Webhook flow misunderstanding (external service already committed)
 
 ### Example 2: moba-etl PR #5 (GitHub Copilot)
 
-**Stats:** 10 comments, 0 INVALID, 4 VALID BUG, 3 VALID IMPROVEMENT, 1 ALREADY FIXED, 2 OPTIONAL
+**Stats:** 10 comments, 0 INVALID, 4 VALID BUG, 3 VALID IMPROVEMENT, 1 ALREADY
+FIXED, 2 OPTIONAL
 
 **Key VALID BUG:**
 
@@ -161,4 +170,5 @@ resyncOccurred = true;
 - Manifest key inconsistency - read/write using different keys
 - S3 prefix normalization - paths without trailing slash produce malformed keys
 
-**Outcome:** All bugs fixed, no false positives. Copilot review was highly accurate for infrastructure/data code.
+**Outcome:** All bugs fixed, no false positives. Copilot review was highly
+accurate for infrastructure/data code.

@@ -22,11 +22,11 @@ to handle these edge cases.
 
 ## Common Issues
 
-| Error | Source | Impact |
-| ----- | ------ | ------ |
-| `Invalid time zone: GMT+XX:XX` | Apple Calendar, TripIt, airline apps | Fatal |
-| `unsupported RRULE parm: X-EVOLUTION-ENDDATE` | GNOME Evolution (Linux) | Warning |
-| `Unsupported RFC prop EXDATE` | Google Calendar with deleted occurrences | Fatal |
+| Error                                         | Source                                   | Impact  |
+| --------------------------------------------- | ---------------------------------------- | ------- |
+| `Invalid time zone: GMT+XX:XX`                | Apple Calendar, TripIt, airline apps     | Fatal   |
+| `unsupported RRULE parm: X-EVOLUTION-ENDDATE` | GNOME Evolution (Linux)                  | Warning |
+| `Unsupported RFC prop EXDATE`                 | Google Calendar with deleted occurrences | Fatal   |
 
 ## Normalization Utilities
 
@@ -36,12 +36,12 @@ Convert GMT offsets to IANA timezone names:
 
 ```typescript
 const OFFSET_TO_IANA: Record<string, string> = {
-  '+00:00': 'Etc/UTC',
-  '+01:00': 'Europe/Paris',
-  '+02:00': 'Europe/Helsinki',
-  '+09:00': 'Asia/Tokyo',
-  '-05:00': 'America/New_York',
-  '-08:00': 'America/Los_Angeles',
+  "+00:00": "Etc/UTC",
+  "+01:00": "Europe/Paris",
+  "+02:00": "Europe/Helsinki",
+  "+09:00": "Asia/Tokyo",
+  "-05:00": "America/New_York",
+  "-08:00": "America/Los_Angeles"
   // ... 38 offsets covering all UTC variations
 };
 
@@ -50,7 +50,7 @@ function normalizeTimezone(tz: string): string {
   const gmtMatch = tz.match(/^GMT([+-])(\d{2}):(\d{2})$/);
   if (gmtMatch) {
     const offset = `${gmtMatch[1]}${gmtMatch[2]}:${gmtMatch[3]}`;
-    return OFFSET_TO_IANA[offset] ?? 'Etc/UTC';
+    return OFFSET_TO_IANA[offset] ?? "Etc/UTC";
   }
   return tz;
 }
@@ -63,7 +63,7 @@ Strip proprietary extensions:
 ```typescript
 function sanitizeRRule(rrule: string): string {
   // Remove GNOME Evolution proprietary parameter
-  return rrule.replace(/;X-EVOLUTION-ENDDATE=\d{8}T\d{6}Z/g, '');
+  return rrule.replace(/;X-EVOLUTION-ENDDATE=\d{8}T\d{6}Z/g, "");
 }
 ```
 
@@ -75,25 +75,25 @@ parsing:
 ```typescript
 function extractRRulesOnly(recurrenceArray: string[]): string[] {
   // Filter out EXDATE lines, keep only RRULE lines
-  return recurrenceArray.filter((line) => line.startsWith('RRULE:'));
+  return recurrenceArray.filter((line) => line.startsWith("RRULE:"));
 }
 
 // Usage - 6+ locations in codebase
 const rruleLines = extractRRulesOnly(block.recurrence);
-const rruleSet = rrulestr(rruleLines.join('\n'));
+const rruleSet = rrulestr(rruleLines.join("\n"));
 ```
 
 ## Application Points
 
 Apply normalization at every RRULE parsing location:
 
-| File | Function | Normalization |
-| ---- | -------- | ------------- |
-| `calendar-normalization.util.ts` | Utility functions | All three |
-| `block-recurrence.service.ts` | 6 locations | `extractRRulesOnly` |
-| `block-calendar.service.ts` | 1 location | `extractRRulesOnly` |
-| `functions.ts` | `getUntil()` | `extractRRulesOnly` |
-| `block-query.util.ts` | Uses `rrulestr()` | `sanitizeRRule` only |
+| File                             | Function          | Normalization        |
+| -------------------------------- | ----------------- | -------------------- |
+| `calendar-normalization.util.ts` | Utility functions | All three            |
+| `block-recurrence.service.ts`    | 6 locations       | `extractRRulesOnly`  |
+| `block-calendar.service.ts`      | 1 location        | `extractRRulesOnly`  |
+| `functions.ts`                   | `getUntil()`      | `extractRRulesOnly`  |
+| `block-query.util.ts`            | Uses `rrulestr()` | `sanitizeRRule` only |
 
 ## Library Limitations
 
@@ -106,11 +106,11 @@ Choose based on use case:
 
 ```typescript
 // Simple RRULE parsing
-const rule = RRule.parseString('FREQ=WEEKLY;BYDAY=MO');
+const rule = RRule.parseString("FREQ=WEEKLY;BYDAY=MO");
 
 // Full RFC 5545 with EXDATE, RDATE
 const rruleSet = rrulestr(
-  'RRULE:FREQ=WEEKLY;BYDAY=MO\nEXDATE:20240101T090000Z'
+  "RRULE:FREQ=WEEKLY;BYDAY=MO\nEXDATE:20240101T090000Z"
 );
 ```
 

@@ -106,20 +106,20 @@ async createIfNotExists(integrationId: number, calendarId: string) {
 
 ## Lock Types
 
-| Lock Type | Use Case | Behavior |
-| --------- | -------- | -------- |
-| `pessimistic_read` | Read-only operations | Blocks writers, allows readers |
-| `pessimistic_write` | Modify operations | Blocks all access |
-| `pessimistic_partial_write` | Specific columns | TypeORM-specific |
+| Lock Type                   | Use Case             | Behavior                       |
+| --------------------------- | -------------------- | ------------------------------ |
+| `pessimistic_read`          | Read-only operations | Blocks writers, allows readers |
+| `pessimistic_write`         | Modify operations    | Blocks all access              |
+| `pessimistic_partial_write` | Specific columns     | TypeORM-specific               |
 
 ## Alternatives Considered
 
-| Approach | Pros | Cons |
-| -------- | ---- | ---- |
-| Optimistic locking | No lock contention | Requires retry logic |
-| Redis lock | Works across services | Adds dependency |
-| Unique constraint only | Simple | Causes errors, wastes API calls |
-| **Pessimistic lock** | Standard SQL pattern | Brief lock contention |
+| Approach               | Pros                  | Cons                            |
+| ---------------------- | --------------------- | ------------------------------- |
+| Optimistic locking     | No lock contention    | Requires retry logic            |
+| Redis lock             | Works across services | Adds dependency                 |
+| Unique constraint only | Simple                | Causes errors, wastes API calls |
+| **Pessimistic lock**   | Standard SQL pattern  | Brief lock contention           |
 
 ## When to Use
 
@@ -134,15 +134,15 @@ async createIfNotExists(integrationId: number, calendarId: string) {
 ```typescript
 // Method 1: QueryBuilder
 await manager
-  .createQueryBuilder(Entity, 'e')
-  .setLock('pessimistic_write')
-  .where('e.id = :id', { id })
+  .createQueryBuilder(Entity, "e")
+  .setLock("pessimistic_write")
+  .where("e.id = :id", { id })
   .getOne();
 
 // Method 2: FindOptions (less flexible)
 await manager.findOne(Entity, {
   where: { id },
-  lock: { mode: 'pessimistic_write' }
+  lock: { mode: "pessimistic_write" }
 });
 ```
 

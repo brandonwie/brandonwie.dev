@@ -19,13 +19,13 @@ references:
 
 ## Key Properties
 
-| Property     | Value                                      |
-| ------------ | ------------------------------------------ |
-| Lock ID      | `bigint` (use entity ID like `integrationId`) |
-| Storage      | PostgreSQL shared memory                   |
-| Visibility   | Across all connections (distributed)       |
+| Property     | Value                                            |
+| ------------ | ------------------------------------------------ |
+| Lock ID      | `bigint` (use entity ID like `integrationId`)    |
+| Storage      | PostgreSQL shared memory                         |
+| Visibility   | Across all connections (distributed)             |
 | Scope        | **Session-scoped** (tied to database connection) |
-| Auto-release | Yes, when connection closes                |
+| Auto-release | Yes, when connection closes                      |
 
 ## SQL Commands
 
@@ -66,7 +66,7 @@ Lock Table:
 
 ```typescript
 // ❌ BROKEN for advisory locks
-await this.dataSource.query('SELECT pg_try_advisory_lock($1)', [id]);
+await this.dataSource.query("SELECT pg_try_advisory_lock($1)", [id]);
 // Gets random connection from pool each time!
 ```
 
@@ -101,12 +101,12 @@ export class LockService {
     await qr.connect();
 
     const result = await qr.query(
-      'SELECT pg_try_advisory_lock($1) as acquired',
-      [id],
+      "SELECT pg_try_advisory_lock($1) as acquired",
+      [id]
     );
 
     if (result[0]?.acquired) {
-      this.lockConnections.set(id, qr);  // Store for release
+      this.lockConnections.set(id, qr); // Store for release
       return true;
     }
 
@@ -120,8 +120,8 @@ export class LockService {
 
     try {
       const result = await qr.query(
-        'SELECT pg_advisory_unlock($1) as released',
-        [id],
+        "SELECT pg_advisory_unlock($1) as released",
+        [id]
       );
       return result[0]?.released ?? false;
     } finally {
@@ -147,21 +147,25 @@ export class LockService {
             └─────────────────┘
 ```
 
-| Scenario                        | Behavior                                    |
-| ------------------------------- | ------------------------------------------- |
-| Pod A syncing, Pod B requests   | Pod B's `pg_try_advisory_lock` returns `false` |
-| Pod A crashes mid-operation     | PostgreSQL auto-releases lock (connection closed) |
-| Same pod, concurrent requests   | Map ensures one QueryRunner per ID              |
+| Scenario                      | Behavior                                          |
+| ----------------------------- | ------------------------------------------------- |
+| Pod A syncing, Pod B requests | Pod B's `pg_try_advisory_lock` returns `false`    |
+| Pod A crashes mid-operation   | PostgreSQL auto-releases lock (connection closed) |
+| Same pod, concurrent requests | Map ensures one QueryRunner per ID                |
 
 ## FAQ: Is In-Memory Map Safe?
 
 **Q: Won't using an in-memory Map cause problems when containers scale?**
 
-**A: No.** Acquire and release happen in the **same HTTP request** on the **same container**. The Map is only for tracking within a single request. Cross-container coordination relies on PostgreSQL's session-scoped behavior.
+**A: No.** Acquire and release happen in the **same HTTP request** on the **same
+container**. The Map is only for tracking within a single request.
+Cross-container coordination relies on PostgreSQL's session-scoped behavior.
 
 ## Common Pitfalls
 
 1. **Using `dataSource.query()` for locks** - Gets random connection each time
 2. **Trying to force-release another session's lock** - Impossible by design
-3. **Relying on timeouts for recovery** - Unnecessary; PostgreSQL auto-releases on disconnect
-4. **Connection pool hiding bugs** - Smaller pools may accidentally reuse connections
+3. **Relying on timeouts for recovery** - Unnecessary; PostgreSQL auto-releases
+   on disconnect
+4. **Connection pool hiding bugs** - Smaller pools may accidentally reuse
+   connections

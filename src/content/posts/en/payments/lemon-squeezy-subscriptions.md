@@ -20,15 +20,15 @@ references:
 
 ## Subscription Status Types
 
-| Status      | Description                              |
-| ----------- | ---------------------------------------- |
-| `on_trial`  | In free trial period                     |
-| `active`    | Active and billing normally              |
-| `paused`    | Payment collection paused                |
-| `past_due`  | Renewal failed, 4 retries over 2 weeks   |
-| `unpaid`    | All retries failed, dunning rules apply  |
-| `cancelled` | Cancelled but in grace period            |
-| `expired`   | Subscription ended completely            |
+| Status      | Description                             |
+| ----------- | --------------------------------------- |
+| `on_trial`  | In free trial period                    |
+| `active`    | Active and billing normally             |
+| `paused`    | Payment collection paused               |
+| `past_due`  | Renewal failed, 4 retries over 2 weeks  |
+| `unpaid`    | All retries failed, dunning rules apply |
+| `cancelled` | Cancelled but in grace period           |
+| `expired`   | Subscription ended completely           |
 
 ## Grace Period Behavior
 
@@ -60,7 +60,8 @@ Result: Same subscription reactivated, original payment schedule continues.
 
 ## Expired Subscriptions - Critical
 
-> **Important**: Once `expired`, subscription is **no longer resumable** through API.
+> **Important**: Once `expired`, subscription is **no longer resumable** through
+> API.
 
 After expiration:
 
@@ -71,11 +72,11 @@ After expiration:
 
 ## Pause vs Cancel vs Expire
 
-| Action | Resumable                | Status                    |
-| ------ | ------------------------ | ------------------------- |
-| Pause  | Yes, anytime             | `paused`                  |
-| Cancel | Yes, during grace period | `cancelled` → `expired`   |
-| Expire | **No**                   | `expired`                 |
+| Action | Resumable                | Status                  |
+| ------ | ------------------------ | ----------------------- |
+| Pause  | Yes, anytime             | `paused`                |
+| Cancel | Yes, during grace period | `cancelled` → `expired` |
+| Expire | **No**                   | `expired`               |
 
 ### Pause Modes
 

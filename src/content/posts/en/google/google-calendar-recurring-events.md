@@ -1,5 +1,5 @@
 ---
-title: "Google Calendar API: Recurring Event Updates"
+title: 'Google Calendar API: Recurring Event Updates'
 description: 'Handling "this", "thisAndFollowing", and "all" updates for recurring events.'
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
@@ -7,6 +7,7 @@ tags:
   - backend
   - google-api
   - calendar
+  - work
 category: google
 draft: false
 lang: en

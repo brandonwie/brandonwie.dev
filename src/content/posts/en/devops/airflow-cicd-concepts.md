@@ -46,47 +46,49 @@ ETL (Extract, Transform, Load) is the actual code that does the work:
 - **T = Transform**: Process data (clean, calculate, join)
 - **L = Load**: Save results (to S3, database)
 
-**Key insight:** The DAG doesn't process data. It just says "run this container now."
+**Key insight:** The DAG doesn't process data. It just says "run this container
+now."
 
 ## Hot-Reload vs Restart
 
 ### NO RESTART Needed (90% of cases)
 
-| Change                        | What happens                           |
-| ----------------------------- | -------------------------------------- |
-| `dags/my_dag.py` (new/modify) | Scheduler auto-detects in ~30 sec      |
-| ETL code (arch-etl)           | Next DAG run uses new container        |
+| Change                        | What happens                      |
+| ----------------------------- | --------------------------------- |
+| `dags/my_dag.py` (new/modify) | Scheduler auto-detects in ~30 sec |
+| ETL code (arch-etl)           | Next DAG run uses new container   |
 
 ### RESTART Required (10% of cases)
 
-| Change            | Why restart                                  |
-| ----------------- | -------------------------------------------- |
-| Airflow version   | New image = need to restart                  |
-| requirements.txt  | New Python packages need to be in image      |
-| Dockerfile        | Image changed = rebuild + restart            |
-| .env file         | Environment variables loaded at container start |
+| Change           | Why restart                                     |
+| ---------------- | ----------------------------------------------- |
+| Airflow version  | New image = need to restart                     |
+| requirements.txt | New Python packages need to be in image         |
+| Dockerfile       | Image changed = rebuild + restart               |
+| .env file        | Environment variables loaded at container start |
 
 ## Deployment Scenarios
 
-| Scenario            | Action                   | Restart? | Downtime    |
-| ------------------- | ------------------------ | -------- | ----------- |
-| DAG changes         | git pull on EC2          | No       | None (~30s) |
-| ETL code changes    | ECR push                 | No       | None        |
-| Airflow upgrade     | Image rebuild + restart  | Yes      | ~1-2 min    |
+| Scenario         | Action                  | Restart? | Downtime    |
+| ---------------- | ----------------------- | -------- | ----------- |
+| DAG changes      | git pull on EC2         | No       | None (~30s) |
+| ETL code changes | ECR push                | No       | None        |
+| Airflow upgrade  | Image rebuild + restart | Yes      | ~1-2 min    |
 
 ## The Three Repos Pattern
 
-| Repo             | Contains        | Deploy How                   | Restart?           |
-| ---------------- | --------------- | ---------------------------- | ------------------ |
-| `arch-airflow`   | DAG files       | git pull to EFS              | No                 |
-| `arch-airflow`   | Airflow images  | ECR + docker restart         | Yes (rare)         |
-| `arch-etl`       | ETL job code    | ECR push                     | No (auto-pulls latest) |
-| `backend-infra`  | Infrastructure  | Terraform (one-time)         | N/A                |
+| Repo            | Contains       | Deploy How           | Restart?               |
+| --------------- | -------------- | -------------------- | ---------------------- |
+| `arch-airflow`  | DAG files      | git pull to EFS      | No                     |
+| `arch-airflow`  | Airflow images | ECR + docker restart | Yes (rare)             |
+| `arch-etl`      | ETL job code   | ECR push             | No (auto-pulls latest) |
+| `backend-infra` | Infrastructure | Terraform (one-time) | N/A                    |
 
 ## Key Takeaways
 
 1. **DAG = Recipe** (what/when/order), **ETL = Cooking** (actual work)
-2. **DAG doesn't touch data** - it just tells the worker "run this container now"
+2. **DAG doesn't touch data** - it just tells the worker "run this container
+   now"
 3. **Most deployments don't need restart** - DAGs and ETL are hot-reloaded
 4. **Only restart for Airflow image changes** (version upgrade, new packages)
 5. **arch-etl containers are ephemeral** - they run, do work, exit, get deleted

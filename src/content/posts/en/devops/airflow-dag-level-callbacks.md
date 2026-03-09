@@ -1,8 +1,6 @@
 ---
 title: Airflow DAG-Level Callbacks
-description: >-
-  Airflow 2.x silently ignores `on_success_callback` at the DAG level. Only
-  task-level callbacks work.
+description: Airflow 2.x silently ignores `on_success_callback` at the DAG level. Only
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -19,6 +17,8 @@ references:
     title: Callbacks — Airflow Documentation
     type: official
 ---
+
+task-level callbacks work.
 
 ## The Problem
 
@@ -73,4 +73,5 @@ with DAG('amplitude_etl', default_args=default_args):
 
 ## Why This Matters
 
-Without this knowledge, you might spend time debugging why success alerts never fire, not realizing the DAG-level callback is silently ignored.
+Without this knowledge, you might spend time debugging why success alerts never
+fire, not realizing the DAG-level callback is silently ignored.

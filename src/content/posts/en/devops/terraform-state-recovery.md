@@ -67,11 +67,11 @@ terraform import aws_instance.main i-0123456789abcdef0
 
 Common issues and fixes:
 
-| Issue | Fix |
-| ----- | --- |
-| AMI mismatch | Pin AMI in configuration |
+| Issue               | Fix                                  |
+| ------------------- | ------------------------------------ |
+| AMI mismatch        | Pin AMI in configuration             |
 | Security group type | Use `vpc_security_group_ids` for VPC |
-| ECS task definition | Add lifecycle ignore |
+| ECS task definition | Add lifecycle ignore                 |
 
 ## Common Patterns
 

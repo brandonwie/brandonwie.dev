@@ -78,22 +78,20 @@ RESULT: Important moments PRESERVED
 
 ### When to Write
 
-| Trigger | Write immediately when... |
-| ------- | ------------------------- |
-| Decision made | You chose X over Y with clear rationale |
-| Problem solved | Root cause was non-obvious |
-| Pattern discovered | A technique/approach works well |
-| Useful reference | Found official docs or verified source |
+| Trigger            | Write immediately when...               |
+| ------------------ | --------------------------------------- |
+| Decision made      | You chose X over Y with clear rationale |
+| Problem solved     | Root cause was non-obvious              |
+| Pattern discovered | A technique/approach works well         |
+| Useful reference   | Found official docs or verified source  |
 
 ### Entry Format
 
 ```markdown
 ## YYYY-MM-DD HH:MM - {project}
 
-**What:** {one line summary}
-**Why it matters:** {why this is worth remembering}
-**Details:**
-{code, explanation, reference - include 5W1H context}
+**What:** {one line summary} **Why it matters:** {why this is worth remembering}
+**Details:** {code, explanation, reference - include 5W1H context}
 ```
 
 ### Buffer Location
@@ -113,9 +111,9 @@ Single file: `~/dev/personal/3b/.claude/buffer.md`
 
 ## HISTORY
 
-| Date | Change |
-| ---- | ------ |
-| 2025-01-15 | Initial design as `learning-queue.md` |
+| Date       | Change                                     |
+| ---------- | ------------------------------------------ |
+| 2025-01-15 | Initial design as `learning-queue.md`      |
 | 2026-01-23 | Evolved to per-project `session-buffer.md` |
 | 2026-01-26 | Simplified to single `buffer.md` (current) |
 

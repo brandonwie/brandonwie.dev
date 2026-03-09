@@ -152,9 +152,9 @@ def summarize_note(note_id: str) -> dict:
 - **Monolith applications** — If API and worker share the same codebase and
   dependencies, use `.delay()` or `.apply_async()` for type safety and IDE
   support
-- **Lightweight background tasks** — If tasks are simple and quick (under 1 second),
-  consider `asyncio.create_task()` or FastAPI `BackgroundTasks` instead of
-  adding Celery
+- **Lightweight background tasks** — If tasks are simple and quick (under 1
+  second), consider `asyncio.create_task()` or FastAPI `BackgroundTasks` instead
+  of adding Celery
 - **Event-driven architectures** — If you already have Kafka, RabbitMQ direct,
   or SNS/SQS for inter-service communication, adding a Celery layer is redundant
 - **Single task type** — If the API only dispatches one type of task, the

@@ -42,8 +42,8 @@ Each `.map()` iterates the entire array. For 18 fields over 100 items:
 - **Functional style feels "right"**: `.map()` per field is idiomatic JS/TS and
   passes linting. The imperative `for...of` alternative looks verbose, making it
   easy to dismiss.
-- **Hard to measure at small scale**: With fewer than 100 items the difference is
-  invisible because the array fits in L1 anyway. The problem only surfaces at
+- **Hard to measure at small scale**: With fewer than 100 items the difference
+  is invisible because the array fits in L1 anyway. The problem only surfaces at
   scale (1K+ items with large objects).
 - **V8 optimizations mask the issue**: V8's hidden classes and inline caching
   partially mitigate the cost, so the penalty is less dramatic than in C/C++ but
@@ -143,18 +143,18 @@ supports `break`, and makes the single-pass intent explicit.
 
 ## When It Matters
 
-| Data Size   | Multiple .map() OK?  | Why                              |
-| ----------- | -------------------- | -------------------------------- |
-| Under 100   | Yes                  | Fits entirely in L1 cache anyway |
-| 100-1,000   | Marginal             | Depends on object size           |
-| 1,000+      | No — use single pass | Cache eviction between passes    |
-| 10,000+     | Definitely not       | O(k\*n) becomes measurable       |
+| Data Size | Multiple .map() OK?  | Why                              |
+| --------- | -------------------- | -------------------------------- |
+| Under 100 | Yes                  | Fits entirely in L1 cache anyway |
+| 100-1,000 | Marginal             | Depends on object size           |
+| 1,000+    | No — use single pass | Cache eviction between passes    |
+| 10,000+   | Definitely not       | O(k\*n) becomes measurable       |
 
 ## When NOT to Use
 
-- **Small arrays (under 100 items)**: The entire dataset fits in L1 cache regardless
-  of access pattern. The `.map()` approach is more readable and functionally
-  idiomatic.
+- **Small arrays (under 100 items)**: The entire dataset fits in L1 cache
+  regardless of access pattern. The `.map()` approach is more readable and
+  functionally idiomatic.
 - **Single field extraction**: If you only need one field, a single `.map()` is
   already optimal (one pass, one field).
 - **Readability-critical code paths**: In non-hot code paths where clarity

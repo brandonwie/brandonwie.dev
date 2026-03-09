@@ -22,7 +22,8 @@ references:
 
 **Scenario:** ETL job reporting "missing hours" but data actually exists in S3.
 
-**Root Cause:** ETL schedule was set incorrectly - running before the last hour of data had arrived.
+**Root Cause:** ETL schedule was set incorrectly - running before the last hour
+of data had arrived.
 
 ## Key Principle
 
@@ -30,7 +31,8 @@ references:
 
 1. **Data arrival time** - When does the source system finish writing all data?
 2. **Buffer time** - Add safety margin for network/processing delays
-3. **Timezone consistency** - Ensure source, ETL, and schedule all use same timezone
+3. **Timezone consistency** - Ensure source, ETL, and schedule all use same
+   timezone
 
 ## Amplitude ETL Example
 
@@ -38,14 +40,15 @@ references:
 
 Amplitude S3 Export writes hourly data files with ~1h 48min delay:
 
-| Hour Range | Data Arrives | Delay |
-| ---------- | ------------ | ----- |
-| 00:00-00:59 | ~01:48 | ~1h 48min after hour ends |
-| 01:00-01:59 | ~02:48 | ~1h 48min after hour ends |
-| ... | ... | ... |
+| Hour Range      | Data Arrives        | Delay                     |
+| --------------- | ------------------- | ------------------------- |
+| 00:00-00:59     | ~01:48              | ~1h 48min after hour ends |
+| 01:00-01:59     | ~02:48              | ~1h 48min after hour ends |
+| ...             | ...                 | ...                       |
 | **23:00-23:59** | **~01:48 next day** | ~1h 48min after hour ends |
 
-**Key observation:** Last hour (23h) of day D arrives at **~01:48 UTC on day D+1**.
+**Key observation:** Last hour (23h) of day D arrives at **~01:48 UTC on day
+D+1**.
 
 ### Schedule Calculation
 
