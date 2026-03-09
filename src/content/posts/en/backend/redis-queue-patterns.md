@@ -2,7 +2,7 @@
 title: Redis and BullMQ Queue Patterns
 description: Comprehensive guide to Redis-backed job queues with BullMQ in Node.js/NestJS
 date: 2025-01-11T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: 2026-03-04T00:00:00.000Z
 tags:
   - backend
   - redis
@@ -13,18 +13,21 @@ category: backend
 draft: false
 lang: en
 references:
-  - url: 'https://docs.bullmq.io/'
+  - url: "https://docs.bullmq.io/"
     title: docs.bullmq.io
     type: official
-  - url: 'https://docs.nestjs.com/techniques/queues'
+  - url: "https://docs.nestjs.com/techniques/queues"
     title: queues
     type: official
-  - url: 'https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/'
+  - url: "https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/"
     title: event loop timers and nexttick
     type: official
 ---
 
-applications.
+Background jobs in Node.js applications -- API calls, sync operations,
+notifications -- need reliability guarantees that in-process execution cannot
+provide. This post covers how Redis and BullMQ solve that problem, from data
+structures and threading models to error classification and dead letter queues.
 
 ---
 
@@ -89,14 +92,14 @@ await queue.add(
   {
     blockId: block.id,
     snapshot: extractSnapshot(block),
-    intent: "update"
+    intent: "update",
   },
   {
     jobId: `block-${block.id}-update`, // Deduplication
     attempts: 3, // Auto-retry
     backoff: { type: "exponential" }, // Smart delays
-    priority: urgent ? 1 : 10 // Priority queue
-  }
+    priority: urgent ? 1 : 10, // Priority queue
+  },
 );
 ```
 
@@ -142,8 +145,8 @@ await queue.add(
 new Worker("calendar-queue", processor, {
   limiter: {
     max: 100, // Max 100 jobs
-    duration: 60000 // Per minute
-  }
+    duration: 60000, // Per minute
+  },
 });
 ```
 
@@ -280,7 +283,7 @@ return { success: true };
 
 ```typescript
 @Processor("google-calendar-event", {
-  concurrency: 5 // Process up to 5 jobs simultaneously
+  concurrency: 5, // Process up to 5 jobs simultaneously
 })
 export class QueueProcessor extends WorkerHost {
   async process(job: Job): Promise<void> {
@@ -361,7 +364,7 @@ Use BullMQ when you need:
 
 await this.queue.add("create-channel", data, {
   attempts: 3,
-  backoff: { type: "exponential", delay: 1000 }
+  backoff: { type: "exponential", delay: 1000 },
 });
 ```
 
@@ -469,6 +472,106 @@ console.log(job.failedReason);
 
 ---
 
+## Error Handling and DLQ Patterns
+
+Retry logic and monitoring are only half the story. What happens when all
+retries are exhausted? Without a deliberate failure path, jobs vanish silently --
+and you never know they failed.
+
+### Dead Letter Queue (DLQ)
+
+When all retries are exhausted, failed jobs need a recovery path. A common
+mistake is setting `removeOnFail: true` to keep the failed list clean. The
+problem: failed jobs disappear with no audit trail. You cannot inspect them,
+replay them, or even count them.
+
+```typescript
+// BAD: Silent failure
+await queue.add("sync", data, {
+  attempts: 20,
+  backoff: { type: "fixed", delay: 100 },
+  removeOnFail: true, // Job vanishes after 20 retries — no trace left
+});
+
+// GOOD: DLQ captures failures for investigation
+await queue.add("sync", data, {
+  attempts: 5,
+  backoff: { type: "exponential", delay: 2000 },
+  removeOnFail: false, // Job stays in failed state for inspection
+});
+```
+
+With `removeOnFail: false`, failed jobs remain queryable via
+`queue.getFailed()`. You can build alerting on top of this (e.g., Slack
+notification when failed count exceeds a threshold) and replay jobs after fixing
+the underlying issue.
+
+### Retryable vs Non-Retryable Errors
+
+Not all errors deserve retries. A `400 Bad Request` will fail the same way on
+every attempt -- retrying it wastes your retry budget and delays other jobs. A
+`503 Service Unavailable` or `429 Too Many Requests` is transient and worth
+retrying. Distinguish permanent client errors from transient server errors:
+
+```typescript
+function isRetryableError(error: any): boolean {
+  const status = error?.response?.status;
+  const nonRetryable = [400, 401, 403, 404];
+  return !nonRetryable.includes(status);
+  // 500, 503, 429 → retry (server issue or rate limit)
+  // 400, 401, 403, 404 → don't retry (client error, won't change)
+}
+```
+
+Use this classification in your worker to short-circuit retries on permanent
+failures. Move non-retryable jobs directly to the DLQ with full error context
+instead of burning through the retry budget.
+
+### Layered Retry Strategy
+
+A single retry mechanism is brittle. Network blips resolve in milliseconds; API
+outages last minutes. Combine three layers, each handling a different failure
+duration:
+
+```text
+Layer 1: In-process retry (exponential, 3 attempts, ~15s total)
+  ↓ still failing
+Layer 2: Queue-level retry (exponential, 5 attempts, ~10min total)
+  ↓ still failing
+Layer 3: DLQ (manual inspection + alerting)
+```
+
+**Layer 1** catches transient network blips -- a dropped connection, a brief DNS
+hiccup. These resolve in seconds. **Layer 2** handles longer outages -- an
+external API down for maintenance, a rate limit window. **Layer 3** is for
+failures that need human investigation -- a revoked API key, a schema change in
+the external service, or a bug in your serialization logic.
+
+### Rate Limit Awareness (429)
+
+When an API returns `429 Too Many Requests`, it often includes a `Retry-After`
+header telling you exactly how long to wait. Ignoring this header and using your
+own fixed backoff is wasteful -- you either wait too long or not long enough.
+
+BullMQ's `DelayedError` lets you reschedule the job with the exact delay the API
+requested:
+
+```typescript
+if (error.response?.status === 429) {
+  const retryAfter = parseInt(
+    error.response.headers["retry-after"] ?? "60",
+    10,
+  );
+  throw new DelayedError(retryAfter * 1000);
+}
+```
+
+This is different from a normal retry: `DelayedError` does not decrement the
+attempt counter. The job moves to the delayed set and re-enters the waiting list
+after the specified duration, preserving your retry budget for genuine failures.
+
+---
+
 ## Architecture Summary
 
 ```mermaid
@@ -501,6 +604,8 @@ flowchart LR
 4. **Persistence** = Jobs survive crashes and restarts
 5. **Built-in patterns** = Retry, rate limit, deduplication, priority
 6. **Observability** = Know what's happening in your system
+7. **DLQ is essential** = `removeOnFail: true` silently loses failures
+8. **Classify errors before retrying** = 4xx errors waste retry budget
 
 ---
 

@@ -2,7 +2,7 @@
 title: Claude Code Multi-Profile HUD Setup
 description: "Running Claude Code with multiple accounts requires careful HUD configuration to show correct per-account usage stats. Here's how to fix cross-profile data leaks."
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-03T00:00:00.000Z
+updated: 2026-03-09T00:00:00.000Z
 tags:
   - general
   - claude-code
@@ -92,8 +92,18 @@ Patching must target `src/` files since the wrapper runs `bun src/index.ts`.
 **Piped subprocesses have no terminal width.** I attempted auto-wrap at `|`
 boundaries, but `process.stderr.columns`, `process.stdout.columns`, and
 `$COLUMNS` all return undefined or 0 in the piped statusline subprocess. Claude
-Code's statusline renderer controls final line truncation — the HUD cannot detect
-or work around this.
+Code's statusline renderer controls final line truncation — the HUD cannot
+detect or work around this.
+
+**429 race condition from missing lock mechanism.** This was the nastiest bug.
+With 3+ concurrent CLI sessions sharing one cache file per profile, all sessions
+expired the 60-second cache simultaneously and fired parallel API requests. The
+Anthropic usage API (rate-limited) returned 429 to all of them. Once
+rate-limited, the 3-minute failure cache kicked in — but it created a retry
+loop: cached failure expired, all sessions retried, 429 again, never recovered.
+My emergency fix was raising the failure TTL to 5 minutes, but the real solution
+came from the upstream repo: a file-based lock using `O_EXCL` atomic create so
+only one process fetches while others wait for fresh cache.
 
 **sed `r` with address range inserts on every line.** Using
 `sed "/start/,/end/r file"` inserts the file after every line in the range, not
@@ -143,16 +153,62 @@ which keychain entry and cache path to use.
 
 The HUD source (`usage-api.ts`) needs patches to read env vars:
 
-| Patch                                            | Purpose                                   |
-| ------------------------------------------------ | ----------------------------------------- |
-| `CLAUDE_HUD_KEYCHAIN_SERVICE`                    | Read from profile-specific keychain entry |
-| `CLAUDE_HUD_CONFIG_DIR` (homeDir)                | Custom base directory for cache           |
-| `CLAUDE_HUD_CONFIG_DIR` (getCachePath)           | Correct cache file path                   |
-| `CLAUDE_HUD_CONFIG_DIR` (getKeychainBackoffPath) | Correct backoff path                      |
+| Patch                                  | Purpose                                         |
+| -------------------------------------- | ----------------------------------------------- |
+| `CLAUDE_HUD_KEYCHAIN_SERVICE`          | Read from profile-specific keychain entry       |
+| `CLAUDE_HUD_CONFIG_DIR` (homeDir)      | Custom base directory for cache                 |
+| `CLAUDE_HUD_CONFIG_DIR` (getPluginDir) | Correct cache, lock, and backoff paths          |
+| `CLAUDE_HUD_SKIP_KEYCHAIN`             | Skip keychain for env-var-only auth             |
+| FetchResult discriminated union        | Propagate error type (429, timeout, etc.)       |
+| File-based lock (ported from upstream) | Prevent race when multiple sessions share cache |
 
 Each patch checks the environment variable and falls back to the default if
 unset. The personal profile works without variables, and the work profile works
 when the variables are set in the statusline command.
+
+## Cache Lock Mechanism
+
+The 429 race condition required a lock mechanism to prevent concurrent API
+calls. The upstream repo's solution uses `tryAcquireCacheLock` with `O_EXCL`
+atomic file creation — the operating system guarantees only one process succeeds
+in creating the lock file.
+
+The flow works like this: when cache expires, the first process acquires the
+lock and fetches fresh data. Other processes see the lock, return `busy`, and
+poll every 50ms (up to 2 seconds) waiting for fresh cache to appear. Stale locks
+older than 30 seconds are auto-cleaned to prevent deadlocks from crashed
+processes.
+
+This makes the upstream TTLs safe: 60 seconds for successful responses, 15
+seconds for failures. Without the lock, multiple processes would all fire API
+calls on every cache expiry. With the lock, exactly one process fetches per
+expiry cycle. One important detail: `clearCache()` must also remove
+`.usage-cache.lock` — otherwise an orphaned lock file blocks all processes from
+fetching.
+
+## Midnight Aurora Theme
+
+The HUD supports custom color themes. Midnight Aurora uses 9 semantic color
+roles via ANSI 256-color codes (`\x1b[38;5;{N}m`):
+
+| Role        | Code | Color Name   | Usage                 |
+| ----------- | ---- | ------------ | --------------------- |
+| NEON_VIOLET | 135  | Vivid purple | Hero elements, quotes |
+| VIOLET      | 141  | Soft purple  | Dominant text color   |
+| SOFT_CYAN   | 117  | Light cyan   | Primary informational |
+| WARM_AMBER  | 215  | Gold         | Accent highlights     |
+| SOFT_ROSE   | 211  | Pink         | Secondary emphasis    |
+| MINT        | 85   | Green        | Success indicators    |
+| PEACH       | 216  | Light orange | Warnings              |
+| CORAL       | 203  | Red-orange   | Danger/error          |
+| LAVENDER    | 103  | Muted purple | Muted/disabled text   |
+| GRAY        | 245  | Neutral      | Inactive elements     |
+
+Color functions use semantic names (e.g., `green()` maps to success) rather than
+literal color names. Swapping the entire palette only requires editing
+`colors.ts`. The quote line renders with `BOLD + neonViolet()` (code 135,
+vivid) — separate from general `violet()` (code 141, softer) for visual
+hierarchy.
 
 ## HUD Configuration
 
@@ -220,7 +276,8 @@ to subprocesses (which it doesn't), the correct values are embedded in the
 command string itself.
 
 The HUD binary reads `CLAUDE_CONFIG_DIR` from its own environment, resolves the
-correct keychain entry and cache path, and displays the right usage stats. Each
+correct keychain entry and cache path, and displays the right usage stats. The
+file-based lock prevents concurrent sessions from stampeding the API. Each
 profile is fully independent.
 
 ## Practical Tips

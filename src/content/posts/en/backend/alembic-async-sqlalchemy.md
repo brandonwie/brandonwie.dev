@@ -2,7 +2,7 @@
 title: Alembic with Async SQLAlchemy
 description: Configuring Alembic migrations to work with SQLAlchemy's async engine
 date: 2026-02-03T00:00:00.000Z
-updated: 2026-02-03T00:00:00.000Z
+updated: 2026-03-09T00:00:00.000Z
 tags:
   - backend
   - alembic
@@ -17,51 +17,61 @@ references:
       https://alembic.sqlalchemy.org/en/latest/cookbook.html#using-asyncio-with-alembic
     title: Alembic - Using asyncio with Alembic
     type: official
-  - url: 'https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html'
+  - url: "https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html"
     title: SQLAlchemy Async I/O Extension
     type: official
 ---
 
-(asyncpg/aiosqlite).
-
----
+You run `alembic init`, swap your database URL to use `asyncpg`, run
+`alembic upgrade head`, and get a cryptic error about synchronous engines. The
+default `env.py` that Alembic generates does not work with async drivers. Here is
+the bridging pattern you need, plus every pitfall I hit along the way.
 
 ## The Problem
 
-Setting up Alembic for a project using SQLAlchemy's async engine (asyncpg) is
-not straightforward. Alembic's default `env.py` assumes a synchronous engine, so
-`alembic init` output does not work out of the box with
-`async_engine_from_config()`. Without the correct bridging pattern, migrations
-either fail at runtime or autogenerate produces empty migration files.
+Alembic assumes a synchronous database engine. Its generated `env.py` calls
+`engine_from_config()`, which does not support async drivers like asyncpg or
+aiosqlite. Without the correct bridging pattern, migrations either fail at
+runtime or — worse — autogenerate produces empty migration files with no
+indication of what went wrong.
 
-## Difficulties Encountered
+The fix lives in an Alembic cookbook page, not the main tutorial. If you follow
+the getting-started guide and plug in an async URL, you will hit a wall.
 
-- **Default env.py is sync-only** — Alembic's generated `env.py` uses
-  `engine_from_config()`, which does not support asyncpg. No error at import
-  time; it fails only when you run a migration.
-- **Empty autogenerate migrations** — Forgetting to import model modules before
-  accessing `Base.metadata` silently produces migrations with no operations. The
-  error message gives no hint about missing imports.
-- **run_sync bridging is non-obvious** — The pattern of wrapping a sync callable
-  inside `connection.run_sync()` is documented in a cookbook page, not in the
-  main Alembic tutorial, so it is easy to miss.
-- **Connection pooling confusion** — The default pool class works for
-  long-running apps but causes connection leaks or warnings in short-lived
-  migration scripts, leading to misleading debugging.
+## The Pitfalls
 
----
+Each of these cost me debugging time. None of them produce helpful error
+messages.
 
-## Key Points
+**Default env.py is sync-only.** Alembic's generated `env.py` uses
+`engine_from_config()`, which does not support asyncpg. No error at import
+time — it fails only when you run a migration.
 
-- Alembic's `env.py` needs `async_engine_from_config()` from
-  `sqlalchemy.ext.asyncio`
-- Use `connection.run_sync(do_run_migrations)` to bridge async engine with sync
-  migration runner
-- Import all models before `target_metadata = Base.metadata` to ensure
-  autogenerate finds all tables
-- Use `NullPool` for migration connections (short-lived, no pooling needed)
+**Empty autogenerate migrations.** Forgetting to import model modules before
+accessing `Base.metadata` silently produces migrations with no operations.
+Alembic does not warn you that `Base.metadata.tables` is empty.
+
+**run_sync bridging is non-obvious.** The pattern of wrapping a sync callable
+inside `connection.run_sync()` is the key to making this work, but it is buried
+in a cookbook page rather than the main docs.
+
+**Connection pooling confusion.** The default pool class works for long-running
+apps but causes connection leaks or warnings in short-lived migration scripts.
+This leads to misleading debugging sessions where the pool, not your migration
+logic, is the problem.
+
+**PostgreSQL enum extension is DDL-only.** `ALTER TYPE ... ADD VALUE` cannot run
+inside a transaction block. Alembic wraps migrations in transactions by default,
+so adding a value to an existing enum type fails with a "cannot be executed
+inside a transaction block" error. You must use `op.execute()` with
+`autocommit` isolation or run the statement outside the transaction context. The
+downgrade path is even worse: PostgreSQL does not support removing values from an
+existing enum type. You need to create a new type without the value, migrate all
+columns to the new type, and drop the old one.
 
 ## The Solution
+
+Replace Alembic's default `env.py` with this async-aware version:
 
 ```python
 # alembic/env.py
@@ -101,7 +111,14 @@ def run_migrations_online():
     asyncio.run(run_async_migrations())
 ```
 
-## alembic.ini Configuration
+Three things happen here that differ from the default:
+
+1. `async_engine_from_config()` replaces `engine_from_config()`
+2. `connection.run_sync()` bridges the async connection to Alembic's sync
+   migration runner
+3. `NullPool` replaces the default connection pool
+
+### alembic.ini Configuration
 
 ```ini
 [alembic]
@@ -110,6 +127,33 @@ script_location = alembic
 # Use async driver in URL
 sqlalchemy.url = postgresql+asyncpg://user:pass@host/db
 ```
+
+## Why NullPool
+
+Migrations are short-lived operations. Connection pooling adds overhead with no
+benefit — each migration run creates one connection, runs DDL statements, and
+exits. `NullPool` creates a fresh connection each time and closes it immediately
+after use. No leaked connections, no pool-related warnings.
+
+## Gotcha: Model Imports
+
+This is the most common source of "empty migration" confusion:
+
+```python
+# Models MUST be imported before accessing Base.metadata
+# Otherwise autogenerate won't detect tables
+
+from app.models.user import User    # noqa: F401
+from app.models.note import Note    # noqa: F401
+
+# NOW this contains all table metadata
+target_metadata = Base.metadata
+```
+
+Without the imports, `Base.metadata.tables` is empty and
+`alembic revision --autogenerate` generates an empty migration. The `# noqa`
+comments are intentional — linters flag these as unused imports, but they are
+side-effect imports that register models with SQLAlchemy's metadata registry.
 
 ## Common Commands
 
@@ -126,31 +170,6 @@ alembic downgrade -1
 # Show current revision
 alembic current
 ```
-
-## Why NullPool
-
-Migrations are short-lived operations. Connection pooling adds overhead with no
-benefit — each migration run creates one connection, runs DDL statements, and
-exits. `NullPool` creates a fresh connection each time and closes it immediately
-after use.
-
-## Gotcha: Model Imports
-
-```python
-# Models MUST be imported before accessing Base.metadata
-# Otherwise autogenerate won't detect tables
-
-from app.models.user import User    # noqa: F401
-from app.models.note import Note    # noqa: F401
-
-# NOW this contains all table metadata
-target_metadata = Base.metadata
-```
-
-Without the imports, `Base.metadata.tables` is empty and
-`alembic revision --autogenerate` generates an empty migration.
-
----
 
 ## When to Use
 
@@ -169,3 +188,10 @@ Without the imports, `Base.metadata.tables` is empty and
   use Alembic
 - **One-off scripts or notebooks** — If you only need to create tables once
   (e.g., `Base.metadata.create_all()`), Alembic is overkill
+
+## The Pattern in One Sentence
+
+Replace `engine_from_config` with `async_engine_from_config`, wrap your sync
+migration runner in `connection.run_sync()`, use `NullPool`, and import every
+model before touching `Base.metadata`. That is the entire recipe — everything
+else is debugging the consequences of missing one of those four steps.

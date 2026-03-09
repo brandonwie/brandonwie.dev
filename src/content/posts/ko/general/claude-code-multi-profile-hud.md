@@ -4,7 +4,7 @@ description: >-
   Claude Code를 여러 계정(개인 + 업무)으로 운영할 때 HUD 플러그인이 올바른
   계정별 사용량 통계를 표시하도록 설정하는 방법
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-03T00:00:00.000Z
+updated: 2026-03-09T00:00:00.000Z
 tags:
   - general
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-multi-profile-hud
-source_updated: "2026-03-03"
-translation_date: "2026-03-04"
+source_updated: "2026-03-09"
+translation_date: "2026-03-10"
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository
@@ -104,6 +104,16 @@ statusline 렌더러가 최종 줄 자르기를 제어해서, HUD 쪽에서는 �
 내 모든 줄 뒤에 파일을 삽입해요. 함수 본문 뒤에 정확히 삽입하려면, 대상 아래의
 고유한 앵커 줄에 awk insert-before를 사용하는 게 대안이에요.
 
+**lock 메커니즘 없이 429 race condition이 발생했어요.** 가장 골치 아팠던
+버그예요. 프로필당 하나의 캐시 파일을 공유하는 3개 이상의 CLI 세션이 있을 때,
+모든 세션이 60초 캐시를 동시에 만료시키고 병렬로 API 요청을 쐈어요. Anthropic
+usage API(rate-limited)가 전부에 429를 반환했어요. rate-limit에 걸리면 3분짜리
+실패 캐시가 시작됐는데, 이게 재시도 루프를 만들었어요: 캐시된 실패가 만료되면
+모든 세션이 재시도하고, 또 429, 절대 복구 안 됨. 긴급 수정으로 실패 TTL을
+5분으로 올렸지만, 진짜 해결책은 업스트림 저장소에서 왔어요: `O_EXCL` 원자적
+생성을 사용한 파일 기반 lock으로 하나의 프로세스만 fetch하고 나머지는 새 캐시를
+기다리는 방식이에요.
+
 **`getOutputSpeed` 반환 타입 불일치.** speed-tracker가 `number | null`을 직접
 반환하는데, `{ speed, outputTokens }`를 반환한다고 가정하고 코드를 작성했어요.
 간헐적으로 `undefined is not an object` TypeError가 발생했는데, speed가
@@ -144,19 +154,61 @@ non-null일 때만 트리거돼서(2초 측정 윈도우 때문에 드묾) 발�
 
 ## 필요한 패치
 
-HUD 소스(`usage-api.ts`)에 프로필별 환경 변수를 읽기 위한 네 가지 패치가
-필요해요:
+HUD 소스(`usage-api.ts`)에 환경 변수를 읽기 위한 패치가 필요해요:
 
-| 패치                                             | 용도                            |
-| ------------------------------------------------ | ------------------------------- |
-| `CLAUDE_HUD_KEYCHAIN_SERVICE`                    | 프로필별 keychain 항목에서 읽기 |
-| `CLAUDE_HUD_CONFIG_DIR` (homeDir)                | 캐시용 커스텀 기본 디렉토리     |
-| `CLAUDE_HUD_CONFIG_DIR` (getCachePath)           | 올바른 캐시 파일 경로           |
-| `CLAUDE_HUD_CONFIG_DIR` (getKeychainBackoffPath) | 올바른 backoff 경로             |
+| 패치                                   | 용도                                         |
+| -------------------------------------- | -------------------------------------------- |
+| `CLAUDE_HUD_KEYCHAIN_SERVICE`          | 프로필별 keychain 항목에서 읽기              |
+| `CLAUDE_HUD_CONFIG_DIR` (homeDir)      | 캐시용 커스텀 기본 디렉토리                  |
+| `CLAUDE_HUD_CONFIG_DIR` (getPluginDir) | 올바른 캐시, lock, backoff 경로              |
+| `CLAUDE_HUD_SKIP_KEYCHAIN`             | 환경 변수 전용 인증을 위해 keychain 건너뛰기 |
+| FetchResult discriminated union        | 에러 타입 전파 (429, timeout 등)             |
+| File-based lock (업스트림에서 포팅)    | 여러 세션이 캐시를 공유할 때 race 방지       |
 
 각 패치는 환경 변수를 확인하고 설정되지 않으면 기본값으로 폴백해요.
 개인 프로필은 환경 변수 없이도 동작하고, 업무 프로필은 statusline 명령에
 환경 변수가 설정되면 동작해요.
+
+## 캐시 Lock 메커니즘
+
+429 race condition을 해결하려면 동시 API 호출을 방지하는 lock 메커니즘이
+필요했어요. 업스트림 저장소의 해결책은 `O_EXCL` 원자적 파일 생성을 사용하는
+`tryAcquireCacheLock`이에요 -- 운영체제가 하나의 프로세스만 lock 파일을 성공적으로
+생성하도록 보장해요.
+
+흐름은 이래요: 캐시가 만료되면 첫 번째 프로세스가 lock을 획득하고 새 데이터를
+fetch해요. 다른 프로세스는 lock을 보고 `busy`를 반환하며, 50ms마다(최대 2초)
+새 캐시가 나타나는지 폴링해요. 크래시된 프로세스로 인한 데드락을 방지하기 위해
+30초 이상 된 오래된 lock은 자동 정리돼요.
+
+이 방식 덕에 업스트림 TTL이 안전해져요: 성공 응답은 60초, 실패는 15초. lock
+없이는 캐시 만료 때마다 여러 프로세스가 API 호출을 쐈어요. lock이 있으면
+만료 사이클당 정확히 하나의 프로세스만 fetch해요. 중요한 디테일: `clearCache()`가
+`.usage-cache.lock`도 삭제해야 해요 -- 그렇지 않으면 고아 lock 파일이 모든
+프로세스의 fetch를 차단해요.
+
+## Midnight Aurora 테마
+
+HUD는 커스텀 컬러 테마를 지원해요. Midnight Aurora는 ANSI 256-color 코드
+(`\x1b[38;5;{N}m`)를 사용하는 9개 시맨틱 컬러 역할을 사용해요:
+
+| 역할        | 코드 | 색상 이름     | 용도                |
+| ----------- | ---- | ------------- | ------------------- |
+| NEON_VIOLET | 135  | 비비드 퍼플   | 히어로 요소, 인용문 |
+| VIOLET      | 141  | 소프트 퍼플   | 주요 텍스트 색상    |
+| SOFT_CYAN   | 117  | 라이트 시안   | 기본 정보 표시      |
+| WARM_AMBER  | 215  | 골드          | 악센트 하이라이트   |
+| SOFT_ROSE   | 211  | 핑크          | 보조 강조           |
+| MINT        | 85   | 그린          | 성공 표시           |
+| PEACH       | 216  | 라이트 오렌지 | 경고                |
+| CORAL       | 203  | 레드 오렌지   | 위험/에러           |
+| LAVENDER    | 103  | 뮤트 퍼플     | 비활성 텍스트       |
+| GRAY        | 245  | 뉴트럴        | 비활성 요소         |
+
+컬러 함수는 리터럴 색상 이름 대신 시맨틱 이름을 사용해요(예: `green()`이
+success에 매핑). 전체 팔레트를 바꾸려면 `colors.ts`만 편집하면 돼요. 인용문
+줄은 `BOLD + neonViolet()`(코드 135, 비비드)로 렌더링돼요 -- 일반
+`violet()`(코드 141, 소프트)와 분리해서 시각적 위계를 만들어요.
 
 ## HUD 설정
 
@@ -224,8 +276,8 @@ Claude Code가 서브프로세스에 환경 변수를 전달하는 것(하지 �
 대신, 명령 문자열 자체에 올바른 값을 심어놓는 거예요.
 
 HUD 바이너리가 자신의 환경에서 `CLAUDE_CONFIG_DIR`을 읽고, 올바른 keychain
-항목과 캐시 경로를 해결하고, 올바른 사용량 통계를 표시해요. 각 프로필이
-완전히 독립적이에요.
+항목과 캐시 경로를 해결하고, 올바른 사용량 통계를 표시해요. 파일 기반 lock이
+동시 세션의 API 스탬피드를 방지해요. 각 프로필이 완전히 독립적이에요.
 
 ## 실전 팁
 

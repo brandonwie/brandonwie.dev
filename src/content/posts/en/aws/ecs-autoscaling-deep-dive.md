@@ -402,8 +402,8 @@ auto-scaling only runs extra tasks during peak hours, not 24/7.
 
 ### Cost Strategies
 
-1. **Right-sizing**: Monitor actual usage, reduce if CPU is under 50% consistently --
-   halving vCPU/memory cuts cost by ~50%
+1. **Right-sizing**: Monitor actual usage, reduce if CPU is under 50%
+   consistently -- halving vCPU/memory cuts cost by ~50%
 2. **Scaling threshold tuning**: 65% target = more containers (higher cost), 75%
    target = fewer containers (lower cost); 70% is the balanced middle ground
 3. **Scheduled scaling**: Reduce min capacity to 0 at night for non-critical

@@ -4,7 +4,7 @@ description: >-
   Recharts 차트를 다크 터미널 테마에 맞게 스타일링하는 방법을 CSS 변수와
   커스텀 컴포넌트를 통해 설명합니다.
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-02-04T00:00:00.000Z
+updated: 2026-03-09T00:00:00.000Z
 tags:
   - general
   - react
@@ -17,8 +17,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: recharts-dark-theme-customization
-source_updated: 2026-02-04T00:00:00.000Z
-translation_date: "2026-02-12"
+source_updated: 2026-03-09T00:00:00.000Z
+translation_date: "2026-03-10"
 references:
   - url: null
     title: Recharts dark theme implementation in Crucio dashboard
@@ -31,29 +31,24 @@ references:
     type: authoritative
 ---
 
-다크 테마 대시보드에 Recharts를 넣었더니 모든 차트가 이상하게 보였어요. 어두운
-배경에 흰색 격자선, 보이지 않는 축 텍스트, 눈이 부신 흰색 배경의 툴팁.
-Recharts는 기본적으로 라이트 테마이고 내장 다크 모드 토글이 없어요. 차트의
-모든 요소에 수동으로 색상을 오버라이드해야 합니다.
+다크 테마 대시보드에 Recharts를 넣었더니 모든 차트가 흰색 격자선, 눈부신 툴팁, 보이지 않는 축 라벨로 렌더링됐어요. 기본값이 밝은 배경을 전제로 하거든요. Recharts는 SVG 엘리먼트에 인라인 스타일을 사용하기 때문에 CSS 클래스가 아니라 글로벌 스타일시트로 고칠 수가 없어요. 모든 색상을 prop으로 직접 넘겨야 합니다.
 
-이 글에서는 Recharts를 터미널 스타일의 다크 테마에 맞추기 위해 사용한 구체적인
-기법들을 다뤄요: 커스텀 색상 맵, 툴팁 컴포넌트, SVG 그래디언트 채우기, 그리고
-그 과정에서 겪은 함정들입니다.
+이 글에서는 Recharts를 다크 UI에 자연스럽게 맞추기 위해 필요한 오버라이드들을 다뤄요 -- 커스텀 툴팁, 그래디언트 채우기, 축 스타일링, 그리고 디버깅에 시간을 잡아먹은 함정들입니다.
 
-## Recharts에 수동 다크 테마가 필요한 이유
+## 핵심 문제
 
-Recharts는 CSS 클래스가 아닌 인라인 스타일을 사용해요. 부모 엘리먼트에 `dark`
-클래스를 토글해서 모든 것이 캐스케이드되게 할 수 없습니다. 격자선, 축 텍스트,
-툴팁, 시리즈 색상 모두 명시적인 prop 레벨 오버라이드가 필요해요. 이건 의도된
-설계예요 -- Recharts는 SVG 엘리먼트를 생성하고, SVG 스타일링은 HTML/CSS와
-다르게 동작합니다.
+Recharts는 하드코딩된 라이트 테마 기본값으로 `<svg>` 엘리먼트를 렌더링해요. 격자선은 밝은 회색이고, 툴팁 배경은 흰색이고, 축 눈금 라벨은 브라우저 기본값을 상속해서 어두운 배경에서 사라져요. `theme="dark"` 같은 prop이 없어요. 각 컴포넌트를 prop으로 개별 오버라이드해야 합니다.
 
-장점은 완전한 제어권이에요. 오버라이드 포인트를 이해하면 모든 차트 요소를
-디자인 시스템에 정확히 맞출 수 있습니다.
+네 가지 영역에 주의가 필요해요:
+
+- **격자선** -- 기본 stroke가 너무 밝음
+- **축 라벨** -- 명시적 `fill` 없이는 안 보임
+- **툴팁** -- 흰색 배경을 커스텀 컴포넌트로 교체해야 함
+- **Area 채우기** -- 단색은 밋밋해 보이고, SVG 그래디언트로 해결
 
 ## 다크 테마 색상 맵
 
-디자인 토큰을 미러링하는 중앙 집중식 색상 맵을 정의하는 것부터 시작하세요:
+중앙 집중식 색상 객체부터 시작하세요. 이렇게 하면 매직 hex 문자열이 컴포넌트 여기저기에 흩어지는 걸 방지하고, 테마 변경을 한 번의 수정으로 끝낼 수 있어요.
 
 ```typescript
 const COLORS = {
@@ -72,15 +67,13 @@ const COLORS = {
 };
 ```
 
-이렇게 하면 모든 차트에서 색상이 일관되고 한 곳에서 테마를 쉽게 업데이트할
-수 있어요.
+이 값들은 터미널 스타일 디자인 시스템(CSS custom properties)에서 가져왔지만, 어떤 다크 팔레트든 괜찮아요. 핵심은 각 Recharts 표면을 디자인 토큰에 매핑하는 거예요.
 
 ## 커스텀 툴팁 컴포넌트
 
-기본 Recharts 툴팁은 흰색 배경이라 다크 테마에서 거슬려요. 커스텀 컴포넌트로
-교체하세요:
+기본 툴팁도 `contentStyle`, `labelStyle` prop을 받지만 제한적이에요. 커스텀 컴포넌트를 만들면 레이아웃, 색상, 포맷팅을 완전히 제어할 수 있어요.
 
-```typescript
+```text
 function DarkTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
 
@@ -91,7 +84,7 @@ function DarkTooltip({ active, payload, label }) {
         border: "1px solid #404040",
         borderRadius: "6px",
         padding: "8px 12px",
-        fontSize: "12px",
+        fontSize: "12px"
       }}
     >
       <p style={{ color: "#888888", marginBottom: 4 }}>{label}</p>
@@ -105,17 +98,15 @@ function DarkTooltip({ active, payload, label }) {
 }
 ```
 
-`<Tooltip content={<DarkTooltip />} />`로 어떤 차트에든 전달하면 돼요. 툴팁은
-Recharts에서 자동으로 `active`, `payload`, `label` prop을 받아요.
-`entry.color`는 시리즈 색상을 상속하기 때문에 툴팁의 각 줄이 해당하는 차트
-시리즈와 일치해요.
+`<Tooltip content={<DarkTooltip />} />`로 전달하면 돼요. `payload` 배열이 시리즈 색상을 자동으로 갖고 있어서, 각 줄이 추가 매핑 없이 해당 차트 시리즈와 색이 맞아요.
 
 ## SVG 그래디언트 채우기가 있는 Area 차트
 
-단색 영역 채우기는 저렴해 보여요. SVG 그래디언트는 위에서 보이다가 아래로
-갈수록 투명해지는 세련된 효과를 만들어줘요:
+단색 area 채우기는 색칠한 블록처럼 보여요. SVG `<linearGradient>`를 사용해서 상단 30% 투명도에서 하단 0%로 페이드하면 차트를 압도하지 않으면서 깊이감을 줄 수 있어요.
 
-```typescript
+그래디언트는 차트 안의 `<defs>`에서 정의하고, `<Area>` 컴포넌트의 `fill` prop에서 `id`로 참조해요.
+
+```text
 <ResponsiveContainer width="100%" height={200}>
   <AreaChart data={data}>
     <defs>
@@ -159,20 +150,13 @@ Recharts에서 자동으로 `active`, `payload`, `label` prop을 받아요.
 </ResponsiveContainer>
 ```
 
-`<defs>` 블록이 그래디언트를 정의해요. `id` 속성이 `<Area>` 컴포넌트의
-`fill` prop에서 참조하는 값이에요. 그래디언트는 상단 30% 투명도에서 하단 0%로
-가서 선 아래에 은은한 글로우 효과를 만들어요.
-
-주목할 디테일: `vertical={false}`는 수직 격자선을 제거해서 깔끔한 외관을
-줘요. `tickLine={false}`와 `axisLine={false}`는 눈금 표시와 축 선을 제거하고
-텍스트 라벨만 남겨요. 미니멀하고 현대적인 외관을 만들어줍니다.
+기억할 패턴: `<defs>` 안에 `<linearGradient id="X">`, 그리고 컴포넌트에 `fill="url(#X)"`. 그래디언트가 안 나타나면 `id` 문자열이 안 맞는 거예요 -- 이게 가장 흔한 디버깅 삽질이에요.
 
 ## 축 없는 수평 바 차트
 
-인텐트 분포나 카테고리 분석 같은 컴팩트한 위젯에서는 공간을 절약하기 위해
-축을 완전히 제거하세요:
+컴팩트한 대시보드 위젯에서는 축을 완전히 제거하고 바 길이로 값을 전달할 수 있어요. 왼쪽에 카테고리 라벨이 있는 세로 레이아웃이 좁은 사이드바에서 잘 동작해요.
 
-```typescript
+```text
 <ResponsiveContainer width="100%" height={160}>
   <BarChart data={data} layout="vertical" barSize={16}>
     <XAxis type="number" hide />
@@ -193,14 +177,11 @@ Recharts에서 자동으로 `active`, `payload`, `label` prop을 받아요.
 </ResponsiveContainer>
 ```
 
-`layout="vertical"` prop이 차트를 뒤집어서 바가 수평으로 가게 해요. `radius`
-prop은 각 바의 오른쪽을 둥글게 만들어요. 개별 `Cell` 컴포넌트로 바마다 다른
-색상을 지정할 수 있습니다.
+`radius` prop이 각 바의 오른쪽 끝을 둥글게 만들어요. `XAxis`에 `hide`를 설정하면 렌더링에서 제거하면서 레이아웃 엔진은 계속 동작해요.
 
 ## 번들 사이즈 주의
 
-Recharts는 번들에 약 650KB를 추가해요. 성능에 민감한 애플리케이션에서는 상당한
-양이에요. 코드 스플리팅이나 선택적 import로 완화하세요:
+Recharts는 번들에 약 650KB를 추가해요. 차트가 여러 탭 중 하나인 대시보드에서는 lazy loading으로 초기 페이지 로드 비용을 줄일 수 있어요.
 
 ```typescript
 // Lazy import for code splitting
@@ -210,36 +191,25 @@ const MetricsWidget = lazy(() => import("./MetricsWidget"));
 import { AreaChart, Area, XAxis, YAxis } from "recharts";
 ```
 
-area 차트만 사용한다면 특정 컴포넌트만 import해서 전체 라이브러리를 끌어오는
-걸 피할 수 있어요.
+named import를 사용하면 지원하는 번들러(Vite, webpack 5+)에서 tree-shaking이 돼요. destructuring 없이 `recharts`에서 import하면 전부 끌어와요.
 
 ## 자주 겪는 함정
 
-| 문제                        | 해결법                                  |
-| --------------------------- | --------------------------------------- |
-| 다크 배경에 흰색 격자선     | CartesianGrid에 `stroke="#404040"` 설정 |
-| 축 텍스트 안 보임           | `tick={{ fill: '#888888' }}` 설정       |
-| 툴팁 흰색 배경              | 커스텀 툴팁 컴포넌트 사용               |
-| 그래디언트 안 보임          | `id`와 `fill="url(#id)"` 일치 확인      |
-| 차트가 컨테이너 밖으로 넘침 | 항상 `ResponsiveContainer`로 감싸기     |
+실제 디버깅 시간을 잡아먹은 문제들이에요. 원인을 알면 각각 빠르게 해결할 수 있어요.
 
-## 왜 이 방법이 효과적인가
+| 문제                           | 해결법                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------- |
+| 다크 배경에 흰색 격자선        | CartesianGrid에 `stroke="#404040"` 설정                                             |
+| 축 텍스트 안 보임              | `tick={{ fill: '#888888' }}` 설정                                                   |
+| 툴팁 흰색 배경                 | 커스텀 툴팁 컴포넌트 사용                                                           |
+| 그래디언트 안 보임             | `id`와 `fill="url(#id)"` 일치 확인                                                  |
+| 차트가 컨테이너 밖으로 넘침    | 항상 `ResponsiveContainer`로 감싸기                                                 |
+| v3 Tooltip formatter 타입 에러 | `(value: number) =>`가 아니라 `(value) =>`로 -- v3에서 `number \| undefined`로 변경 |
 
-이 접근법이 효과적인 이유는 근본 원인을 해결하기 때문이에요: Recharts는 SVG
-엘리먼트에 인라인 스타일을 사용하므로 CSS 클래스 기반 테마가 적용되지 않아요.
-중앙 집중식 색상 맵을 정의하고 prop을 통해 적용하면 모든 차트에서 일관된
-스타일을 얻을 수 있어요. 커스텀 툴팁은 기본 렌더링을 완전히 대체해요. SVG
-그래디언트는 네이티브 브라우저 기능을 사용해 세련된 채우기 효과를 만들어요.
-그리고 `ResponsiveContainer`로 모든 걸 감싸면 차트가 부모 레이아웃에 맞게
-적응합니다.
+v3 formatter 문제는 특히 교활해요. `formatter` prop에 `(value: number) =>`로 타입을 지정하면 TypeScript 컴파일은 통과하지만, 특정 tick에서 런타임에 `undefined`가 들어와요. Recharts v3에서 tooltip 값의 타입이 `number | undefined`로 바뀌었기 때문에 콜백 시그니처가 이에 맞아야 해요.
 
-## 실전 팁
+## 정리
 
-다크 테마에 Recharts를 추가할 때는 색상 맵부터 시작하세요. 격자, 축, 툴팁,
-시리즈 색상을 한 곳에 정의하세요. 커스텀 툴팁 컴포넌트를 일찍 만드세요 --
-모든 차트에서 재사용하게 됩니다. Area 차트에는 SVG 그래디언트를 사용하세요.
-컴팩트한 위젯에서는 축을 제거하세요. 그리고 항상 차트를
-`ResponsiveContainer`로 감싸세요.
+Recharts 다크 테마 적용은 어렵지 않아요 -- 귀찮을 뿐이에요. 라이브러리에 테마 시스템이 없기 때문에 모든 표면에 명시적인 색상 prop이 필요해요. 확장성 있는 접근법은 중앙 집중식 색상 맵(또는 CSS custom property 참조), 커스텀 툴팁 컴포넌트, 그리고 area 채우기용 SVG 그래디언트 세 가지예요.
 
-번들 사이즈를 주의하세요. 차트 위젯을 lazy-load하거나 필요한 컴포넌트만
-import하세요. Recharts는 강력하지만 무겁고, 650KB는 느린 연결에서 체감됩니다.
+이 세 가지 빌딩 블록이 있으면 새로운 차트 타입을 추가할 때도 같은 패턴을 따르면 돼요: `stroke`, `fill`, `tick` prop을 다크 토큰으로 오버라이드하면 끝이에요. 위의 함정 테이블이 "왜 이게 안 보이지" 하는 순간들을 줄여줄 거예요.

@@ -598,3 +598,45 @@ teammates, achieving full EN/KO parity:
 
 **Next:** Sync script link transformation, OG image, ESLint + Prettier,
 GitHub Actions CI
+
+---
+
+### 2026-03-10
+
+**Blog Resync — 8 Enriched Posts (Round 2)**
+
+Resynced 8 posts flagged `needs_resync: true` in 3B (enriched since last
+publish on 2026-03-03). Re-expanded EN narratives and delta-translated KO.
+
+1. **Synced 94 posts** (EN)
+   - `npm run sync` pulled all 94 posts; 8 had enriched content
+   - `needs_resync` flags cleared by sync script
+
+2. **Re-expanded 8 posts** (EN) — 4 parallel agents
+   - `devops/claude-code-shared-personal-config` — +2 sections (settings
+     consolidation, per-profile settings.json)
+   - `general/recharts-dark-theme-customization` — full narrative expansion +
+     v3 gotcha
+   - `general/claude-code-multi-profile-hud` — +429 race condition, lock
+     mechanism, Midnight Aurora theme
+   - `google/google-meet-link-creation` — +Clearing Meet Links section
+     (conferenceData = null, three-state semantics)
+   - `backend/alembic-async-sqlalchemy` — +PostgreSQL enum DDL-only pitfall
+   - `backend/redis-queue-patterns` — +Error Handling & DLQ Patterns section
+   - `ai-ml/claude-code-agent-teams` — +TeamCreate deferred tool difficulty
+   - `ai-ml/ai-code-review-patterns` — +2 new patterns (Intentional Design,
+     YAGNI Suggestion)
+
+3. **Delta-translated 8 Korean posts** — 4 parallel agents
+   - Translated only new/changed sections, preserved existing translations
+   - Updated `translation_date` and `source_updated` in all 8 KO frontmatters
+
+4. **Fixed pre-existing build errors**
+   - 4 broken cross-post `.md` links → `/posts/slug` URLs
+   - Files: batch-processing-trade-offs, ecs-autoscaling-deep-dive (×2),
+     infrastructure-hardening-checklist
+
+**Stats:** 94 EN posts, 94 KO posts. Full parity. Build passes.
+
+**Next:** Sync script link transformation, OG image, ESLint + Prettier,
+GitHub Actions CI

@@ -5,7 +5,7 @@ description: >-
   새 개발자는 즉시 AI 지시사항을 사용하고 기존 개발자는 개인 확장을
   유지하는 패턴입니다.
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-02-23T00:00:00.000Z
+updated: 2026-03-09T00:00:00.000Z
 tags:
   - devops
   - claude-code
@@ -16,38 +16,36 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-shared-personal-config
-source_updated: "2026-02-23"
-translation_date: "2026-02-25"
+source_updated: "2026-03-09"
+translation_date: "2026-03-10"
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
     title: Claude Code 공식 문서
     type: official
 ---
 
-새 개발자가 팀에 합류해서 백엔드 저장소를 clone했습니다. Claude Code를
-실행했는데 프로젝트에 대한 컨텍스트가 전혀 없었어요. 제가 공들여 작성한 AI
-지시사항은 개인 지식 베이스에 symlink되어 있었고 전부 gitignore 처리되어
-있었습니다. 새 개발자에게는 기본적인 AI 지시사항이 바로 동작하면서도 제 개인
-확장은 그대로 유지할 방법이 필요했습니다.
+몇 주에 걸쳐 프로젝트에 맞는 Claude Code 지시사항을 튜닝했어요 -- 커스텀
+명령, 도메인별 프롬프트, 코딩 컨벤션까지. 그런데 새 개발자가 팀에 합류해서
+저장소를 clone하니 AI 지원이 전혀 없었어요. 설정 전체가 gitignore 처리되어
+있었거든요. 개인 지식 관리 시스템으로의 symlink가 포함되어 있었기 때문이에요.
 
-## 이게 왜 중요한가요
+해결책은 두 레이어 아키텍처예요: 새 개발자가 clone하자마자 AI가 동작하도록
+공유 지시사항을 저장소에 커밋하고, 기존 개발자의 커스텀 설정은 gitignore된
+개인 확장으로 유지하는 방식이에요.
 
-AI 어시스턴트는 처음에 어떤 컨텍스트를 받느냐에 따라 유용함이 달라집니다.
-CLAUDE.md가 gitignore되어 로컬 환경에만 존재한다면 새 개발자는 빈 슬레이트로
-시작합니다 -- 프로젝트 컨벤션도, 스택 정보도, 팀 코딩 규칙도 없이요.
+## 문제
 
-동시에, AI 설정의 모든 내용이 팀 전체에 속하는 건 아닙니다. 개인 단축키,
-로컬 지식 베이스 참조, 본인만 설치한 MCP 서버 -- 이런 것들은 다른 사람에게는
-노이즈입니다. 커밋하면 다른 개발자의 경험을 망가뜨리거나, 본인 머신 밖에서는
-의미 없는 경로를 노출시킵니다.
+Claude Code는 프로젝트 루트의 `CLAUDE.md`와 `.claude/`에서 지시사항을 읽어요.
+한 개발자의 설정이 개인 경로나 symlink, 외부 시스템을 참조하면 전체를
+gitignore하는 게 당연한 선택이에요. 하지만 그러면 다른 모든 개발자가 빈
+슬레이트로 시작하게 돼요.
 
-해결책은 두 레이어 설정입니다: 저장소를 clone한 누구에게나 동작하는 공유
-레이어, 그리고 gitignore되어 개인이 확장할 수 있는 개인 레이어입니다.
+핵심 과제는 공유 레이어(커밋됨, 모두에게 동작)와 개인 레이어(gitignore됨,
+개발자별 커스터마이징)로 분리하되 중복이나 drift 없이 유지하는 거예요.
 
 ## 아키텍처
 
-Claude Code는 `CLAUDE.md`를 먼저 읽고, 존재하면 `CLAUDE.local.md`를 자동으로
-이어 붙입니다. 이 동작이 전체 패턴의 기반입니다.
+분리 구조는 이렇게 생겼어요:
 
 ```text
 Committed (shared)                   Gitignored (personal)
@@ -60,56 +58,41 @@ AGENTS.md          ← synced copy     .claude/settings.local.json
 .github/copilot-instructions.md
 ```
 
-왼쪽은 새 개발자에게 필요한 모든 것입니다: 프로젝트 스택, 핵심 규칙, 도메인
-프롬프트, AI 도구 설정. 오른쪽은 개인적인 모든 것입니다: 제 3B 지식 베이스
-symlink, 한국어 프롬프트, 로컬 MCP 연결.
+공유 파일에는 새 개발자에게 필요한 모든 게 들어가요: 프로젝트 아키텍처, 코딩
+컨벤션, 명령어 레퍼런스, 배포 지시사항. 개인 파일에는 개발자별 선호 설정,
+프라이빗 도구 설정, 외부 시스템으로의 symlink가 들어가요.
 
 ## 핵심 결정 사항
 
-### CLAUDE.md를 단일 진실 소스로
+### CLAUDE.md가 단일 진실 소스
 
-AGENTS.md나 Cursor 규칙을 직접 관리하지 않습니다. `npm run ai:sync`로
-`CLAUDE.md`에서 생성해요. 프로젝트 컨벤션이 바뀔 때 수정할 파일이 하나뿐이고,
-세 AI 도구가 자동으로 동기화됩니다.
+모든 AI 지시사항 파일은 `CLAUDE.md`에서 `npm run ai:sync`로 생성돼요. Claude
+Code, Cursor, GitHub Copilot 간의 drift를 방지해요. 하나의 파일만 편집하면
+세 도구가 동기화 상태를 유지해요.
 
-이 없으면 drift가 생깁니다. CLAUDE.md는 업데이트하고 AGENTS.md는 잊어버리거나,
-Cursor 규칙을 직접 편집해서 Claude가 보는 것과 달라지는 식으로요. sync
-스크립트가 이런 오류 유형 자체를 없애줍니다.
+### 공유 설정에서 MCP 규칙 완화
 
-### 공유 설정에서는 MCP 규칙을 완화
-
-제 개인 설정에는 "라이브러리 문서 조회에 Context7를 반드시 사용하라"고 되어
-있습니다. 공유 설정에는 "설정되어 있으면 Context7를 사용하라"라고 써요. 이
-조건이 중요합니다 -- 새 개발자는 아직 Context7나 Postgres MCP를 설정하지 않았을
-수 있거든요. 공유 설정에 "반드시 사용하라"를 하드코딩하면 그 개발자에게
-혼란스러운 오류가 생깁니다.
-
-원칙은 이렇습니다: 공유 설정은 도구가 사용 가능할 때 무엇을 할지 설명하고,
-개인 설정은 도구가 있다고 가정합니다.
+개인 설정에는 Context7와 Postgres MCP 서버에 "반드시 사용"이라고 되어 있어요.
+공유 설정에는 "설정되어 있으면"으로 대체했어요. 새 개발자가 아직 MCP 서버를
+설정하지 않았을 수 있으니까요. 지시사항은 여전히 도구가 뭘 하고 언제 쓰는지
+설명하지만, 요구사항을 유보해요.
 
 ### 개인 전용 콘텐츠는 symlink 유지
 
-`.claude/skills/`는 제 3B 지식 베이스로의 symlink입니다. gitignore 상태를
-유지합니다. 개인 Claude skill, 한국어 프롬프트, 로컬 도구 참조는
-`CLAUDE.local.md`나 gitignore된 폴더에 남겨둡니다. 공유 설정을 건드리지 않고
-확장합니다.
+`.claude/skills/`는 제 지식 관리 시스템으로의 symlink(gitignore됨)로 남겨요.
+팀에 영향 주지 않는 개인 확장은 symlink나 `CLAUDE.local.md`에 유지해요. 기준은
+명확해요: 모두에게 도움이 되면 커밋하고, 본인 환경에 특화된 거면 gitignore해요.
 
 ## Sync 스크립트
 
-소스 파일 하나, 소비자 셋, drift 제로입니다.
+`npm run ai:sync`는 `CLAUDE.md`를 읽어서 세 대상에 써요:
 
-`npm run ai:sync`는 `CLAUDE.md`를 읽어서 씁니다:
+- `AGENTS.md` (정확한 복사본)
+- `.github/copilot-instructions.md` (정확한 복사본)
+- `.cursor/rules/index.mdc` (Cursor YAML frontmatter + 내용)
 
-- `AGENTS.md` -- 정확한 복사본 (Codex 및 OpenAI 호환 도구용)
-- `.github/copilot-instructions.md` -- 정확한 복사본 (GitHub Copilot용)
-- `.cursor/rules/index.mdc` -- Cursor YAML frontmatter를 앞에 붙인 버전
-
-스크립트는 의도적으로 단순합니다. Cursor frontmatter 추가 외에는 내용을
-변환하지 않아요. CLAUDE.md는 세 도구 모두에서 수정 없이 동작하도록 작성합니다.
-
-컨벤션이 바뀔 때 -- 예를 들어 새 커밋 형식 규칙 -- CLAUDE.md를 업데이트하고,
-sync를 실행하고, 네 파일을 함께 커밋합니다. 수동 복사 없이, 어떤 파일이
-업데이트됐는지 고민할 필요 없이요.
+`CLAUDE.md`를 편집한 후 스크립트를 실행하면 세 파일이 동기화돼요. 수동 복사도,
+어떤 파일을 업데이트해야 하는지 잊을 일도 없어요.
 
 ## Gitignore 패턴
 
@@ -127,59 +110,51 @@ CLAUDE.local.md
 .claudeignore
 ```
 
-공유 섹션의 코멘트 블록이 중요합니다. `.gitignore`를 읽는 누구에게나 이 파일들이
-존재하고 의도적으로 커밋되어 있다는 걸 알려줍니다 -- 실수나 잊혀진 항목이
-아니라요. gitignore 섹션은 개인 레이어가 어떻게 생겼는지 보여줍니다.
+새 개발자가 저장소를 clone하면 공유 설정이 바로 제공돼요. 개인 파일은 저장소에
+절대 들어가지 않아요.
 
-## SoT 디렉토리 패턴
+## SoT 디렉토리 패턴 (project-claude/)
 
-여러 프로젝트 저장소를 한 곳에서 관리할 때, 두 레이어 분리를 유지하기가
-어려워집니다. 특정 저장소의 CLAUDE.md에서 진실 소스는 어떤 파일인가요? 어디서
-편집하나요?
-
-제 해결책은 3B 지식 베이스 안에 `project-claude/` 디렉토리를 두는 것입니다:
+여러 프로젝트에 걸쳐 공유/개인 분리를 관리하는 건 금방 복잡해져요. 해결책은
+중앙 진실 소스 디렉토리를 두고 각 프로젝트 저장소에 symlink를 거는 거예요:
 
 ```text
 3b/.claude/project-claude/
 ├── moba-nestjs.md          # Shared SoT → backend-v2/CLAUDE.md (symlink)
 ├── moba-nestjs.local.md    # Personal SoT → backend-v2/CLAUDE.local.md (symlink)
+├── moba-nestjs.mcp.json    # MCP SoT → backend-v2/.mcp.json (symlink)
 ├── moba-terraform.md       # Combined (personal-only repo)
+├── moba-terraform.mcp.json # MCP SoT → backend-infra/.mcp.json (symlink)
 ├── moba-airflow.md         # Combined (personal-only repo)
-└── moba-etl.md             # Combined (personal-only repo)
+├── moba-etl.md             # Combined (personal-only repo)
+├── crucio.mcp.json         # MCP SoT → crucio/.mcp.json (symlink)
+└── ...
 ```
 
-`project-claude/`의 각 파일이 실제 진실 소스입니다. 프로젝트 저장소의 파일은
-그것을 가리키는 symlink예요. 한 곳에서 편집하면 두 위치 모두 업데이트됩니다.
-
-다른 팀원이 있는 저장소만 분리를 적용합니다. Terraform, Airflow, ETL 저장소는
-개인용이라 팀원도 없고 공유/로컬 구분도 필요 없어요. 하나의 통합 파일로
-충분합니다.
+다른 팀원이 있는 저장소만 공유/로컬 분리를 적용해요. 개인 전용 저장소는 하나의
+통합 파일로 충분해요. `.mcp.json`도 같은 패턴을 따라요 -- 지식 베이스가 정본을
+보관하고 프로젝트 저장소는 symlink를 받아요. Sentry와 Notion MCP 서버는
+`.mcp.json`에서 제거했는데, 설정이 필요 없고 OAuth를 네이티브로 처리하는
+Anthropic 호스팅 통합으로 대체했기 때문이에요.
 
 ## 공유 파일 가드 코멘트
 
-symlink는 편집을 편리하게 만들지만, 동시에 공유 파일에 실수로 개인 내용을
-쓰기 쉽게 만들기도 합니다. `moba-nestjs.md`를 열어서 규칙을 추가하다가, 그
-파일이 팀 전체가 보는 곳에 바로 sync된다는 걸 잊을 수 있어요.
-
-해결책은 모든 공유 SoT 파일 상단에 가드 코멘트를 다는 것입니다:
+이 패턴에서 가장 흔한 실수는 공유 파일에 개인 내용을 넣는 거예요. 각 공유
+SoT 파일 상단에 HTML 코멘트를 달면 이를 방지할 수 있어요:
 
 ```html
-<!-- SHARED FILE — This file syncs to backend-v2/CLAUDE.md (team-visible).
+<!-- SHARED FILE — This file syncs to {repo}/CLAUDE.md (team-visible).
      DO NOT add personal content (3B paths, buffer, symlink, user profile).
-     Personal overrides go in moba-nestjs.local.md → backend-v2/CLAUDE.local.md -->
+     Personal overrides go in {name}.local.md → {repo}/CLAUDE.local.md -->
 ```
 
-어떤 내용보다 먼저 나오기 때문에 효과가 있습니다. Claude가 파일을 열든 사람이
-열든, 제약이 즉시 눈에 들어옵니다. 별도 설정 파일에 묻혀 있는 규칙은 편집자가
-이미 그 파일을 열었을 때만 도움이 됩니다. 파일 자체에 있는 코멘트는 의존성이
-없습니다.
-
-공유 파일에 3B buffer 경로를 추가하고 나중에 교차 검증 중에야 발견한 경험에서
-배웠습니다.
+작성 시점의 가드레일로 작동해요. Claude(또는 사람)가 편집 전에 제약을 바로
+확인해요. 별도 파일에 있는 규칙보다 효과적인데, 편집자가 그 규칙을 미리
+로드했을 필요가 없기 때문이에요.
 
 ## Symlink 배포 체인
 
-공유 저장소에서 변경사항은 팀이 보기까지 두 단계를 거칩니다:
+공유 저장소에서 배포는 두 단계를 거쳐요:
 
 ```text
 project-claude/{name}.md (3B SoT)
@@ -189,67 +164,134 @@ project-claude/{name}.md (3B SoT)
 AGENTS.md + copilot-instructions.md + cursor rules (team sees)
 ```
 
-symlink는 모든 도구에 투명합니다. 어느 쪽을 편집해도 같은 파일이 수정됩니다.
-SoT의 가드 코멘트가 개인 내용이 두 단계 중 어디서든 새어 나오는 걸 막습니다.
-
-이 체인의 의미는 3B에서 편집하고, 프로젝트 저장소에서 sync하고, 팀이 네
-파일에서 결과를 본다는 것입니다. 체인의 어느 부분이라도 끊기면 -- 잘못된 파일
-편집, sync 생략, 가드 코멘트 누락 -- 패턴이 망가집니다. 체인을 명시적으로
-만들어 두면 그런 빈틈을 발견하기 쉬워집니다.
+SoT의 가드 코멘트가 개인 내용이 두 단계 중 어디서든 새어 나오는 걸 막아요.
+symlink는 모든 도구에 투명해서, 어느 쪽을 편집해도 같은 파일이 수정돼요.
 
 ## 레이어 중복 제거 전략
 
-범용 원칙(5W1H, buffer 형식, `.me.md` 규칙, 커뮤니케이션 스타일)이 여러
-프로젝트 CLAUDE.md에 반복되면 drift가 생기고 토큰을 낭비합니다. 해결법은 두
-단계 승격입니다.
+여러 프로젝트에 공유 설정을 세팅하고 나니 새로운 문제가 생겼어요: 동일한 범용
+원칙(5W1H 문서화, buffer 형식, `.me.md` 규칙, 커뮤니케이션 스타일)이 모든
+프로젝트 `CLAUDE.md`에 복사-붙여넣기 되어 있었어요. 시간이 지나면서 drift가
+생기고 중복 지시사항으로 토큰을 낭비했어요.
+
+해결책은 두 단계 승격이에요:
 
 1. **중복 식별** -- 모든 project-claude 파일에서 반복되는 지시사항을 grep으로
-   찾습니다(buffer는 7번, 5W1H는 6번, `.me.md`는 4번 중복되어 있었어요).
+   찾아요(buffer는 7번, 5W1H는 6번, `.me.md`는 4번 중복되어 있었어요)
 2. **전역으로 승격** -- 정본을 `~/.claude/CLAUDE.md`로 옮기고 각 프로젝트
-   사본은 한 줄 참조로 대체합니다:
+   사본은 한 줄 참조로 대체해요:
    `Universal principles (...) are in ~/.claude/CLAUDE.md.`
 
 Claude Code의 로딩 계층 구조가 `~/.claude/CLAUDE.md`를 모든 세션에서 항상 먼저
 로드하기 때문에 이 방식이 동작해요. 프로젝트 파일은 전역 규칙을 다시 쓸
-필요 없이 상속받습니다.
+필요 없이 상속받아요.
 
 **2026-02-23 구조 조정 결과:**
 
 - 8개 범용 원칙을 전역으로 승격(YAML Frontmatter, Cross-Referencing, 5W1H,
   Decision Documentation, Zettelkasten, `.me.md`, Buffer, Communication Style)
 - 7개 프로젝트 파일에서 중복 제거(각각 약 25-35% 토큰 절약)
-- markdownlint 예시를 약 330줄에서 28줄 빠른 참조 테이블로 압축
-- 모든 세션이 동일한 원칙을 적용하면서 로딩하는 줄 수는 줄었습니다
+
+**추가 축소 (2026-03-09):**
+
+- markdownlint 빠른 참조 테이블 완전 제거 -- `.markdownlint-cli2.jsonc`와 husky
+  pre-commit 훅이 있어서 중복이었어요. 원래 약 330줄에서 28줄로 압축했다가
+  (2026-02-23), 도구 기반 백스톱이 충분하다는 게 증명되어 완전히 없앴어요
+- Mermaid 섹션을 약 89줄에서 6줄로 압축(동작 규칙만 남기고 예시/테이블/체크리스트
+  제거 -- Mermaid 선호를 강제하는 도구가 없으므로)
+- 3개 섹션을 `.claude/rules/` 파일로 추출(change-discipline,
+  yaml-frontmatter-schema, personal-folder-governance)
+- 순수 결과: 전역 `CLAUDE.md` 491줄에서 371줄로 (~24.4% 절약)
+- 프로젝트 `CLAUDE.md`: 541 → 478(Tier 1) → 328(Tier 2) = 총 -39.4%
+- 항상 로딩되는 컨텍스트 합계: 912줄에서 720줄로 (-21%)
+- 모든 세션이 동일한 원칙을 적용하면서 로딩하는 줄 수는 줄었어요
+
+## Settings.local.json 통합
+
+프로젝트별 `settings.local.json` 파일이 다음 중복 제거 대상이었어요. 14개
+파일(그 중 8개는 중앙 소스에서의 symlink)이 대부분 같은 bash 명령어 허용
+목록을 반복하고 있었어요. 핵심 인사이트는 Claude Code의 권한 우선순위 --
+`deny > ask > allow` -- 가 `Bash(*)` catch-all을 안전하게 만든다는 거였어요.
+
+### 이전 (14개 파일, 8개 symlink)
+
+```text
+3b/.claude/settings.local.json  ← 소스 파일
+  ↑ 8개 프로젝트에서 symlink (brandonwie, crucio, backend-v2 등)
++ 5개 독립 파일 (dev/, personal/, dotfiles/, frontend/, mobile/)
+```
+
+대부분의 항목이 전역 `settings.json`과 중복이었어요. 전역 설정이 같은 명령어를
+커버하도록 진화했거든요. 모든 파일을 통틀어 고유한 항목은 6개뿐이었어요.
+
+### 이후 (전역 settings.json만)
+
+```text
+permissions.allow: ["Bash(*)"]     ← 비파괴적 명령어 전체 catch-all
+permissions.deny:  [dangerous]     ← terraform destroy, git push --force, sudo
+permissions.ask:   [risky]         ← git push, rm, kill (확인 필요)
+defaultMode: "default"             ← Bash(*) catch-all로 사실상 자동 승인
+```
+
+정리하면서 8개 symlink와 3개 불필요한 일반 파일을 제거했어요. `outputStyle`,
+`enableAllProjectMcpServers`, `prefersReducedMotion` 같은 설정은 전역으로
+옮겼어요. 새 프로젝트는 자동으로 전역 설정에서 올바른 권한을 받아요 --
+프로젝트별 설정이 필요 없어요.
+
+### Bash(\*)가 안전한 이유
+
+`deny > ask > allow` 우선순위 덕분에 `Bash(*)`는 deny나 ask 패턴에 매칭되지
+않는 명령어만 자동 승인해요. `terraform destroy`나 `git push --force` 같은
+위험한 명령어는 deny에 있고, `git push`나 `rm` 같은 리스크 있는 명령어는
+ask에 있어요. 나머지가 catch-all로 통과해요.
+
+## 프로필별 settings.json
+
+통합이 안 되는 파일이 하나 있어요. `settings.json` 자체예요.
+`statusLine.command`가 달라야 하기 때문에 프로필 간 symlink가 안 돼요 -- 업무
+프로필은 Claude Code가 statusline 서브프로세스에 환경 변수를 전달하지 않으므로
+`CLAUDE_CONFIG_DIR=~/.claude-work`를 포함해야 해요.
+
+아키텍처는 세 개 복사본이에요:
+
+- **지식 베이스 SoT** (`global-claude-setup/settings.json`) -- 정본 레퍼런스
+- **개인 프로필** (`~/.claude/settings.json`) -- SoT의 직접 복사본
+- **업무 프로필** (`~/.claude-work/settings.json`) -- 2가지 차이가 있는 복사본:
+  1. `statusLine.command`에 `CLAUDE_CONFIG_DIR` 접두사 포함
+  2. `enabledMcpjsonServers`에 업무 전용 데이터베이스 연결 포함
+
+나머지 설정(env, permissions, hooks, plugins)은 동일해요. 편집할 때는 SoT를
+먼저 업데이트하고 두 프로필에 동기화하세요.
+
+**쓰레기 축적에 주의하세요.** 인터랙티브 권한 승인("항상 허용")이 정확한 명령
+문자열을 권한 항목으로 저장해요 -- 여러 줄 bash 스크립트, 전체 코드 블록, 인증
+토큰까지 포함해서요. 제 업무 프로필은 정리 전에 약 160개 항목(32KB)이
+쌓여있었어요. `Bash(*)` catch-all이 인터랙티브 프롬프트가 뜨기 전에 자동
+승인해서 이런 축적을 방지해요.
 
 ## 교차 검증 규율
 
-공유 지시사항을 커밋하기 전에 모든 프롬프트 파일과 공유 CLAUDE.md에서 개인
-참조를 검색합니다. 다른 개발자에게 문제를 일으키는 항목은 생각보다 많습니다:
+공유 지시사항을 만들 때, 다른 개발자에게 동작하지 않을 개인 참조가 없는지 모든
+프롬프트 파일을 교차 검증하세요:
 
 - 하드코딩된 절대 경로 (`/Users/username/...`)
 - assignee 필드의 개인 사용자명
 - gitignore된 스크립트나 폴더 참조
 - "if configured" 가드 없는 MCP 도구 참조
 - buffer 경로 (`~/dev/personal/3b/.claude/buffer.md`)
-- 3B 경로를 가리키는 symlink 문서
+- 개인 경로를 가리키는 symlink 문서 (`docs/`)
 - 사용자 컨텍스트 섹션 (레벨, 경력, 역할)
 
-마지막 세 항목은 처음엔 몰랐어요. buffer 경로는 개인 설정에서 복사할 때
-몰래 따라옵니다. symlink 문서는 설정을 설명하다 보면 공유 파일에 들어갑니다.
-사용자 컨텍스트 섹션 -- "시니어 엔지니어를 돕고 있습니다" -- 은 개인 선호이지
-프로젝트 컨벤션이 아니에요.
+이 체크리스트가 가드 코멘트만으로는 놓칠 수 있는 누수를 잡아줘요. AI 설정
+파일을 변경하는 모든 PR 전에 검토하세요.
 
-교차 검증에는 5분이 걸리는데, 팀원을 혼란스럽게 했을 누수를 최소 세 번은
-잡았습니다.
+## 결과
 
-## 실전 팁
+새 개발자가 저장소를 clone하면 Claude Code 지시사항이 바로 동작해요. 개인
+커스터마이징은 비공개로 유지돼요. sync 스크립트가 AI 도구 간 drift를 방지해요.
+그리고 레이어 중복 제거가 공유 원칙을 전역 설정으로 승격시켜서 토큰 사용을
+낮게 유지해요.
 
-CLAUDE.md는 프로젝트를 설명해야지 개발자를 설명하면 안 됩니다.
-
-프로젝트 컨벤션, 스택 정보, 핵심 규칙, 도메인 프롬프트 -- 이 모든 건 공유
-파일에 속합니다. 개인 단축키, 로컬 경로, MCP 가정 -- 이것들은 CLAUDE.local.md에
-들어가고, Claude가 자동으로 이어 붙이고, git은 완전히 무시합니다.
-
-Sync 스크립트가 drift를 처리하고, 가드 코멘트가 실수를 처리하고, SoT
-디렉토리가 멀티 레포 관리를 처리해요. 이 세 가지가 합쳐져서 새 개발자에게
-첫날부터 동작하는 AI 지시사항을 제공하고, 개인 확장을 방해하지 않아요.
+이 패턴은 프로젝트와 개발자 수에 관계없이 확장돼요. 중앙 SoT 디렉토리가 공유
+vs 개인을 한눈에 감사할 수 있게 해주고, 가드 코멘트가 작성 시점에서 실수로
+인한 누수를 방지해요.

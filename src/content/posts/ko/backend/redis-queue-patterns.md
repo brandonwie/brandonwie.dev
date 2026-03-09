@@ -2,7 +2,7 @@
 title: "Redis와 BullMQ 큐 패턴"
 description: "Node.js/NestJS에서 Redis 기반 BullMQ 작업 큐를 사용한 백그라운드 작업 처리 가이드"
 date: 2025-01-11T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: 2026-03-04T00:00:00.000Z
 tags:
   - backend
   - redis
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: redis-queue-patterns
-source_updated: "2026-02-24"
-translation_date: "2026-02-25"
+source_updated: "2026-03-04"
+translation_date: "2026-03-10"
 references:
   - url: "https://docs.bullmq.io/"
     title: docs.bullmq.io
@@ -332,6 +332,80 @@ console.log(job.failedReason);
 "뭔가 고장났는데 뭔지 모르겠다"와 "job-456이 Google의 429 rate limit 에러로
 2번째 시도에서 실패했다" 사이의 차이예요.
 
+## 에러 처리와 DLQ 패턴
+
+재시도 로직과 모니터링은 절반의 이야기예요. 모든 재시도가 소진되면 어떻게 되나요? 의도적인 실패 경로가 없으면 작업이 조용히 사라지고 -- 실패했다는 사실조차 알 수 없어요.
+
+### Dead Letter Queue (DLQ)
+
+모든 재시도가 소진되면, 실패한 작업에는 복구 경로가 필요해요. 흔한 실수는 실패 목록을 깔끔하게 유지하려고 `removeOnFail: true`를 설정하는 거예요. 문제는 실패한 작업이 감사 추적(audit trail) 없이 사라진다는 거예요. 확인할 수도, 재실행할 수도, 심지어 개수를 셀 수도 없어요.
+
+```typescript
+// BAD: Silent failure
+await queue.add("sync", data, {
+  attempts: 20,
+  backoff: { type: "fixed", delay: 100 },
+  removeOnFail: true, // Job vanishes after 20 retries — no trace left
+});
+
+// GOOD: DLQ captures failures for investigation
+await queue.add("sync", data, {
+  attempts: 5,
+  backoff: { type: "exponential", delay: 2000 },
+  removeOnFail: false, // Job stays in failed state for inspection
+});
+```
+
+`removeOnFail: false`로 설정하면 실패한 작업이 `queue.getFailed()`로 조회 가능한 상태로 남아요. 이 위에 알림을 구축할 수 있고 (예: 실패 수가 임계치를 초과하면 Slack 알림), 근본 원인을 수정한 후 작업을 재실행할 수 있어요.
+
+### 재시도 가능 vs 재시도 불가능 에러
+
+모든 에러가 재시도할 가치가 있는 건 아니에요. `400 Bad Request`는 매번 같은 방식으로 실패해요 -- 재시도하면 재시도 예산만 낭비하고 다른 작업을 지연시켜요. `503 Service Unavailable`이나 `429 Too Many Requests`는 일시적이니 재시도할 가치가 있어요. 영구적인 클라이언트 에러와 일시적인 서버 에러를 구별하세요:
+
+```typescript
+function isRetryableError(error: any): boolean {
+  const status = error?.response?.status;
+  const nonRetryable = [400, 401, 403, 404];
+  return !nonRetryable.includes(status);
+  // 500, 503, 429 → retry (server issue or rate limit)
+  // 400, 401, 403, 404 → don't retry (client error, won't change)
+}
+```
+
+이 분류를 worker에서 사용해서 영구적인 실패에 대한 재시도를 단축하세요. 재시도 불가능한 작업은 재시도 예산을 소진하지 말고, 전체 에러 컨텍스트와 함께 DLQ로 직접 이동시키세요.
+
+### 계층적 재시도 전략
+
+단일 재시도 메커니즘은 취약해요. 네트워크 순간 장애는 밀리초 내에 해결되지만, API 장애는 몇 분 동안 지속돼요. 서로 다른 실패 지속 시간을 처리하는 세 가지 계층을 결합하세요:
+
+```text
+Layer 1: In-process retry (exponential, 3 attempts, ~15s total)
+  ↓ still failing
+Layer 2: Queue-level retry (exponential, 5 attempts, ~10min total)
+  ↓ still failing
+Layer 3: DLQ (manual inspection + alerting)
+```
+
+**Layer 1**은 일시적인 네트워크 순간 장애를 잡아요 -- 끊어진 연결, 짧은 DNS 문제. 몇 초 안에 해결돼요. **Layer 2**는 더 긴 장애를 처리해요 -- 유지보수 중인 외부 API, rate limit 윈도우. **Layer 3**는 사람의 조사가 필요한 실패예요 -- 만료된 API 키, 외부 서비스의 스키마 변경, 직렬화 로직의 버그 등.
+
+### Rate Limit 인식 (429)
+
+API가 `429 Too Many Requests`를 반환할 때, 보통 `Retry-After` 헤더로 정확히 얼마나 기다려야 하는지 알려줘요. 이 헤더를 무시하고 자체 고정 백오프를 사용하면 비효율적이에요 -- 너무 오래 기다리거나 충분히 기다리지 않거나.
+
+BullMQ의 `DelayedError`를 사용하면 API가 요청한 정확한 지연 시간으로 작업을 다시 스케줄링할 수 있어요:
+
+```typescript
+if (error.response?.status === 429) {
+  const retryAfter = parseInt(
+    error.response.headers["retry-after"] ?? "60",
+    10,
+  );
+  throw new DelayedError(retryAfter * 1000);
+}
+```
+
+이건 일반적인 재시도와 달라요: `DelayedError`는 시도 횟수를 차감하지 않아요. 작업이 delayed set으로 이동하고 지정된 시간 후에 대기 목록으로 다시 들어가서, 진짜 실패를 위한 재시도 예산을 보존해요.
+
 ## 아키텍처 요약
 
 ```mermaid
@@ -359,6 +433,17 @@ flowchart LR
 중요한 주의사항 하나: BullMQ는 at-least-once 의미론을 제공해요,
 exactly-once가 아니에요. 중복 처리가 데이터 손상을 일으킬 수 있다면, BullMQ
 위에 멱등성(idempotency) 가드가 필요해요.
+
+## 핵심 정리
+
+1. **Redis는 캐시가 아니에요** - 조정 시스템(coordination system)이에요
+2. **단일 스레드 Redis** = 원자적 연산 = Race condition 없음
+3. **멀티 프로세스 worker** = 안전한 병렬 처리
+4. **영속성** = 작업이 크래시와 재시작에서 살아남아요
+5. **내장 패턴** = 재시도, rate limit, 중복 제거, 우선순위
+6. **관찰 가능성** = 시스템에서 무슨 일이 일어나는지 알 수 있어요
+7. **DLQ는 필수** = `removeOnFail: true`는 실패를 조용히 잃어버려요
+8. **재시도 전에 에러를 분류하세요** = 4xx 에러는 재시도 예산을 낭비해요
 
 ## 더 공부할 주제
 
