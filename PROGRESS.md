@@ -640,3 +640,44 @@ publish on 2026-03-03). Re-expanded EN narratives and delta-translated KO.
 
 **Next:** Sync script link transformation, OG image, ESLint + Prettier,
 GitHub Actions CI
+
+---
+
+### 2026-03-10 (Session 2)
+
+**Reading Time & Share Link**
+
+Added reading time display and "Copy link" button to all blog post detail pages:
+
+1. **Remark plugin** (`src/lib/plugins/remark-reading-time.js`)
+   - Extracts text from MDAST via `mdast-util-to-string`
+   - Computes `Math.ceil(words / 200)` minutes, injected into `vFile.data.fm`
+   - Auto-applied to all 188 posts at build time — no manual frontmatter needed
+
+2. **UI changes** (EN + KO post detail pages)
+   - Reading time shown after date: "5 min read" / "4분 읽기"
+   - "Copy link" button with 2s "Copied!" feedback via `$page.url.href`
+   - `flex-wrap` added for mobile responsiveness
+
+3. **i18n** — 3 new keys: `reading_time`, `copy_link`, `copied`
+
+4. **Documentation** — CLAUDE.md (repo structure, tech stack, frontmatter note),
+   blog-publish SKILL.md (auto-computed note)
+
+**Files Modified:**
+
+| File                                      | Change                         |
+| ----------------------------------------- | ------------------------------ |
+| `src/lib/plugins/remark-reading-time.js`  | Created — remark plugin        |
+| `svelte.config.js`                        | Registered plugin              |
+| `package.json`                            | Added mdast-util-to-string     |
+| `messages/en.json`                        | 3 i18n keys                    |
+| `messages/ko.json`                        | 3 i18n keys                    |
+| `src/routes/posts/[slug]/+page.ts`        | readingTime in PostModule type |
+| `src/routes/ko/posts/[slug]/+page.ts`     | readingTime in PostModule type |
+| `src/routes/posts/[slug]/+page.svelte`    | Reading time + copy link UI    |
+| `src/routes/ko/posts/[slug]/+page.svelte` | Reading time + copy link UI    |
+| `CLAUDE.md`                               | Plugin docs                    |
+
+**Next:** Sync script link transformation, OG image, ESLint + Prettier,
+GitHub Actions CI

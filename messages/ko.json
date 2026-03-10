@@ -21,5 +21,8 @@
   "category_filter": "카테고리",
   "featured_project": "주요 프로젝트",
   "portfolio_subtitle": "AISecOps 지식 플랫폼",
-  "portfolio_description": "온프레미스 인프라에서 생성형 AI를 위한 Zero Trust 보안 시스템."
+  "portfolio_description": "온프레미스 인프라에서 생성형 AI를 위한 Zero Trust 보안 시스템.",
+  "reading_time": "{minutes}분 읽기",
+  "copy_link": "링크 복사",
+  "copied": "복사됨!"
 }

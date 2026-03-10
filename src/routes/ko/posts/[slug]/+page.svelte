@@ -6,6 +6,7 @@
 	 * Shows fallback notice when displaying English content.
 	 */
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import type { PageData } from './$types';
 	import { m } from '$lib/paraglide/messages';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
@@ -17,6 +18,14 @@
 	let { data }: { data: PageData } = $props();
 
 	const backLabel = $derived($viewMode === 'terminal' ? m.back_to_terminal() : m.back_to_home());
+
+	let copied = $state(false);
+
+	async function copyLink() {
+		await navigator.clipboard.writeText($page.url.href);
+		copied = true;
+		setTimeout(() => (copied = false), 2000);
+	}
 
 	function goBack() {
 		goto('/ko');
@@ -119,7 +128,7 @@
 				{data.meta.description}
 			</p>
 
-			<div class="flex items-center gap-4 text-sm text-terminal-text-dim">
+			<div class="flex flex-wrap items-center gap-4 text-sm text-terminal-text-dim">
 				<time datetime={data.meta.date}>
 					{formatDateLong(data.meta.date)}
 				</time>
@@ -127,6 +136,16 @@
 					<span>•</span>
 					<span>{m.updated()} {formatDateLong(data.meta.updated)}</span>
 				{/if}
+				{#if data.meta.readingTime}
+					<span>•</span>
+					<span>{m.reading_time({ minutes: data.meta.readingTime })}</span>
+				{/if}
+				<button
+					onclick={copyLink}
+					class="ml-auto text-terminal-text-dim transition-colors hover:text-terminal-accent-orange"
+				>
+					{copied ? m.copied() : m.copy_link()}
+				</button>
 			</div>
 		</header>
 

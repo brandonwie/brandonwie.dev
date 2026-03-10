@@ -3,6 +3,7 @@ import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import { mdsvex } from "mdsvex"; // markdown processor for Svelte
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
+import { remarkReadingTime } from "./src/lib/plugins/remark-reading-time.js";
 
 // Cache Shiki highlighter as singleton — store the PROMISE to prevent
 // async race conditions where concurrent calls each create a new instance
@@ -47,7 +48,7 @@ function getHighlighter() {
 /** @type {import('mdsvex').MdsvexOptions} */
 const mdsvexOptions = {
   extensions: [".md", ".svx"],
-  remarkPlugins: [remarkGfm],
+  remarkPlugins: [remarkGfm, remarkReadingTime],
   rehypePlugins: [rehypeSlug],
   highlight: {
     highlighter: async (code, lang = "text") => {

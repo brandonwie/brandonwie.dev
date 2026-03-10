@@ -21,6 +21,7 @@
     "@types/node": "^22.10.7",
     "autoprefixer": "^10.4.20",
     "gray-matter": "^4.0.3",
+    "mdast-util-to-string": "^4.0.0",
     "mdsvex": "^0.12.3",
     "postcss": "^8.5.1",
     "rehype-slug": "^6.0.0",

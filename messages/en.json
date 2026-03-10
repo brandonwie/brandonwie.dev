@@ -21,5 +21,8 @@
   "category_filter": "Categories",
   "featured_project": "Featured Project",
   "portfolio_subtitle": "AISecOps Knowledge Platform",
-  "portfolio_description": "Zero Trust security for generative AI on on-premise infrastructure."
+  "portfolio_description": "Zero Trust security for generative AI on on-premise infrastructure.",
+  "reading_time": "{minutes} min read",
+  "copy_link": "Copy link",
+  "copied": "Copied!"
 }
