@@ -681,3 +681,28 @@ Added reading time display and "Copy link" button to all blog post detail pages:
 
 **Next:** Sync script link transformation, OG image, ESLint + Prettier,
 GitHub Actions CI
+
+---
+
+### Session: 2026-03-10 — validate-pr-reviews taxonomy refinement (3B skill)
+
+**Goal:** Split OPTIONAL classification into GOOD-TO-HAVE and CONTROVERSIAL
+
+**Summary:** Refined validate-pr-reviews skill taxonomy. OPTIONAL was too vague
+— it conflated priority decisions (clearly correct but minor) with correctness
+decisions (uncertain/debatable). Split into GOOD-TO-HAVE (Fix/Skip/Defer) and
+CONTROVERSIAL (discuss For/Against/Context/Confidence → re-classify). Updated
+5 files across validate-pr-reviews and review-pr skills.
+
+**Files changed (3B repo):**
+
+| File                                          | Change                              |
+| --------------------------------------------- | ----------------------------------- |
+| `validate-pr-reviews/SKILL.md`                | v1.4.0→1.5.0, full taxonomy rewrite |
+| `validate-pr-reviews/references/templates.md` | Discussion Log section, metrics     |
+| `validate-pr-reviews/references/examples.md`  | 3 CONTROVERSIAL flow examples       |
+| `review-pr/references/output-format.md`       | Severity mapping update             |
+| `review-pr/SKILL.md`                          | Quick ref severity mapping          |
+
+**Next:** Sync script link transformation, OG image, ESLint + Prettier,
+GitHub Actions CI
