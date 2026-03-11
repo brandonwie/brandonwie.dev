@@ -706,3 +706,56 @@ CONTROVERSIAL (discuss For/Against/Context/Confidence → re-classify). Updated
 
 **Next:** Sync script link transformation, OG image, ESLint + Prettier,
 GitHub Actions CI
+
+---
+
+### 2026-03-11
+
+**Arch Calendar — Work Section + Terminal Commands**
+
+Added Arch Calendar as the primary entry in a new "Work" section (replacing
+"Featured Project") and updated terminal commands with accurate role/scale info:
+
+1. **Blog "Work" section** (`BlogHome.svelte`)
+   - Renamed "Featured Project" → "Work" (leerob.io-style)
+   - Arch Calendar first (Lead Backend), Crucio second (Creator)
+   - Each entry has role tag (subtle, 60% opacity)
+   - Footer: two project links (Arch Calendar + Crucio)
+
+2. **i18n** (`messages/en.json`, `messages/ko.json`)
+   - `work_section`, `archcalendar_subtitle`, `archcalendar_description`,
+     `archcalendar_role`, `crucio_role`
+
+3. **Terminal `whoami` fixes** (`whoami.ts`)
+   - Fixed typo: "Archi Calendar" → "Arch Calendar"
+   - Role: "Co-Lead Backend" → "Lead Backend"
+   - Scale: "6M+" → "10M+"
+   - Career line simplified
+   - Added `arch → archcalendar.com` link
+
+4. **Terminal `open` command** (`open.ts`)
+   - Added aliases: `archcalendar`, `arch`, `moba`
+   - Updated help text and error fallback
+
+5. **Terminal `help` command** (`help.ts`)
+   - Updated `open` description and examples
+
+**Files Modified:**
+
+| File                                 | Change                              |
+| ------------------------------------ | ----------------------------------- |
+| `messages/en.json`                   | 5 new i18n keys, renamed 1          |
+| `messages/ko.json`                   | 5 new i18n keys, renamed 1          |
+| `src/lib/components/BlogHome.svelte` | Work section + footer links         |
+| `src/lib/commands/open.ts`           | 3 new aliases + help text           |
+| `src/lib/commands/whoami.ts`         | Typo fix, role/scale update, link   |
+| `src/lib/commands/help.ts`           | Updated open description + examples |
+
+**Commits:**
+
+| Hash    | Description                                                   |
+| ------- | ------------------------------------------------------------- |
+| fe151e2 | feat: add Arch Calendar to Work section and terminal commands |
+
+**Next:** Sync script link transformation, OG image, ESLint + Prettier,
+GitHub Actions CI
