@@ -9,6 +9,9 @@ const socialLinks: Record<string, { url: string; name: string }> = {
   x: { url: "https://twitter.com/brandonwie", name: "Twitter/X" },
   email: { url: "mailto:brandon@brandonwie.dev", name: "Email" },
   mail: { url: "mailto:brandon@brandonwie.dev", name: "Email" },
+  archcalendar: { url: "https://www.archcalendar.com", name: "Arch Calendar" },
+  arch: { url: "https://www.archcalendar.com", name: "Arch Calendar" },
+  moba: { url: "https://www.archcalendar.com", name: "Arch Calendar (Moba)" },
   portfolio: {
     url: "https://crucio.brandonwie.dev",
     name: "Portfolio (Crucio)",
@@ -27,6 +30,10 @@ registerCommand("open", (args) => {
         { type: "text", content: "  linkedin, li     - LinkedIn profile" },
         { type: "text", content: "  twitter, x       - Twitter/X profile" },
         { type: "text", content: "  email, mail      - Email me" },
+        {
+          type: "text",
+          content: "  archcalendar, arch - Arch Calendar (Moba)",
+        },
         { type: "text", content: "  portfolio, crucio - AISecOps portfolio" },
       ],
     };
@@ -45,7 +52,7 @@ registerCommand("open", (args) => {
         {
           type: "text",
           content:
-            "Available: github, linkedin, twitter, email, portfolio (or run 'open' for help)",
+            "Available: github, linkedin, twitter, email, archcalendar, portfolio (or run 'open' for help)",
         },
       ],
     };

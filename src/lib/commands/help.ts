@@ -73,8 +73,8 @@ const commandHelp: Record<
   },
   open: {
     usage: "open <link>",
-    description: "Open a social link",
-    examples: ["open github", "open linkedin", "open portfolio"],
+    description: "Open a social or project link",
+    examples: ["open github", "open linkedin", "open arch", "open portfolio"],
   },
   echo: {
     usage: "echo <text>",
@@ -143,7 +143,7 @@ registerCommand("help", (args) => {
     { type: "text", content: "" },
     { type: "text", content: "INFO:" },
     { type: "text", content: "  whoami           About me" },
-    { type: "text", content: "  open <link>      Open social link" },
+    { type: "text", content: "  open <link>      Open social/project link" },
     { type: "text", content: "" },
     { type: "text", content: "UTILITY:" },
     { type: "text", content: "  clear            Clear screen" },

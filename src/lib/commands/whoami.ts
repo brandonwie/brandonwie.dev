@@ -38,7 +38,7 @@ registerCommand("whoami", () => {
     { type: "text", content: "  Brandon (Seokhyun) Wie | 위석현" },
     {
       type: "text",
-      content: "  Product Engineer (Co-Lead Backend) @ Moba | Seoul",
+      content: "  Product Engineer (Lead Backend) @ Moba | Seoul",
     },
     { type: "text", content: "" },
     { type: "text", content: "  Film school grad turned backend engineer." },
@@ -48,14 +48,14 @@ registerCommand("whoami", () => {
     },
     {
       type: "text",
-      content: "  infrastructure processing 6M+ events at scale.",
+      content: "  infrastructure processing 10M+ events at scale.",
     },
     { type: "text", content: "  Bilingual in Korean and English." },
     { type: "text", content: "" },
     { type: "text", content: "  Currently:" },
     {
       type: "text",
-      content: "    • Co-leading backend for Archi Calendar (Moba)",
+      content: "    • Leading backend for Arch Calendar (Moba)",
     },
     {
       type: "text",
@@ -98,7 +98,7 @@ registerCommand("whoami", () => {
     },
     {
       type: "text",
-      content: "    2025  Moba — Lead Backend → Co-Lead Backend",
+      content: "    2025  Moba — Lead Backend",
     },
     { type: "text", content: "" },
     { type: "text", content: "  Certifications:" },
@@ -121,6 +121,11 @@ registerCommand("whoami", () => {
       type: "link",
       content: "    email      → brandon@brandonwie.dev",
       link: "mailto:brandon@brandonwie.dev",
+    },
+    {
+      type: "link",
+      content: "    arch       → archcalendar.com",
+      link: "https://www.archcalendar.com",
     },
     {
       type: "link",

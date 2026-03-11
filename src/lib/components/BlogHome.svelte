@@ -51,11 +51,30 @@
 			{m.blog_tagline()}
 		</p>
 
-		<!-- Featured Project -->
+		<!-- Work Section -->
 		<section class="mb-10">
 			<h2 class="text-xs font-semibold uppercase tracking-wider text-terminal-text-dim mb-4">
-				{m.featured_project()}
+				{m.work_section()}
 			</h2>
+
+			<!-- Arch Calendar -->
+			<a
+				href="https://www.archcalendar.com"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="group block py-3 px-2 -mx-2 rounded no-underline transition-colors hover:bg-terminal-bg-hover"
+			>
+				<span class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">
+					Arch Calendar
+				</span>
+				<span class="text-xs text-terminal-text-dim ml-2">— {m.archcalendar_subtitle()}</span>
+				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· {m.archcalendar_role()}</span>
+				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
+					{m.archcalendar_description()}
+				</p>
+			</a>
+
+			<!-- Crucio -->
 			<a
 				href="https://crucio.brandonwie.dev"
 				target="_blank"
@@ -65,9 +84,8 @@
 				<span class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">
 					Project Crucio
 				</span>
-				<span class="text-xs text-terminal-text-dim ml-2">
-					— {m.portfolio_subtitle()}
-				</span>
+				<span class="text-xs text-terminal-text-dim ml-2">— {m.portfolio_subtitle()}</span>
+				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· {m.crucio_role()}</span>
 				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
 					{m.portfolio_description()}
 				</p>
@@ -146,12 +164,20 @@
 					LinkedIn
 				</a>
 				<a
+					href="https://www.archcalendar.com"
+					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					Arch Calendar
+				</a>
+				<a
 					href="https://crucio.brandonwie.dev"
 					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors"
 					target="_blank"
 					rel="noopener noreferrer"
 				>
-					Portfolio
+					Crucio
 				</a>
 				<a
 					href={rssHref}
