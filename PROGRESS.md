@@ -684,6 +684,38 @@ GitHub Actions CI
 
 ---
 
+### 2026-03-12
+
+**Hash Guard Verification + Agent Teams Split-Pane Testing**
+
+Verified the hash guard implementation and tested iTerm2 agent teams:
+
+1. **Hash guard verification** — All 8 steps of the Hash Guard + Wrap-Time
+   Detection plan confirmed already implemented in `sync-from-3b.ts`:
+   `expanded` field, `source_content_hash`, `computeContentHash()`, absolute
+   paths, `--check` mode, `--diff` mode, npm scripts, blog-publish skill
+   integration.
+
+2. **iTerm2 split-pane testing** — 5 rounds of testing agent teams with
+   `teammateMode: "auto"` and `"tmux"`. Discovered `captureTeammateModeSnapshot()`
+   reads settings once at session start (mid-session changes have no effect).
+   Confirmed ITermBackend is broken (GitHub #24301) — never activates despite
+   `it2` CLI being available.
+
+3. **Configured `tmux -CC` workaround** — Set iTerm2 "Send text at start" to
+   `tmux -CC a || tmux -CC\n`. Agent teams' `tmux split-window` works
+   transparently through iTerm2 control mode.
+
+4. **Corrected 2 knowledge entries** — Fixed incorrect ITermBackend claims in
+   `claude-code-agent-teams.md` and `tmux-iterm2-control-mode.md`.
+
+**No brandonwie.dev code changes** — all updates were to 3B knowledge and
+settings.
+
+**Next:** Blog resync (6 entries), OG image, ESLint + Prettier, GitHub Actions CI
+
+---
+
 ### Session: 2026-03-10 — validate-pr-reviews taxonomy refinement (3B skill)
 
 **Goal:** Split OPTIONAL classification into GOOD-TO-HAVE and CONTROVERSIAL
