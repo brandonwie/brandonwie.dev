@@ -8,6 +8,14 @@ function formatKoreanDate(dateStr: string): string {
   return `${y}.${mo}.${day}`;
 }
 
+/** Returns updated date if available and different from date, otherwise date */
+export function effectiveDate(date: string, updated?: string): string {
+  if (!updated) return date;
+  return new Date(updated).getTime() !== new Date(date).getTime()
+    ? updated
+    : date;
+}
+
 /** Format date for list pages (short month: "Jan 15, 2026") */
 export function formatDateShort(dateStr: string): string {
   if (getLocale() === "ko") return formatKoreanDate(dateStr);

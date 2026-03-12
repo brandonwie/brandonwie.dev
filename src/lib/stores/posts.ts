@@ -1,4 +1,5 @@
 import { writable, derived } from "svelte/store";
+import { effectiveDate } from "$lib/utils/date";
 
 export interface PostMetadata {
   slug: string;
@@ -29,10 +30,12 @@ export const postsByCategory = derived(posts, ($posts) => {
     grouped[post.category].push(post);
   }
 
-  // Sort posts within each category by date (newest first)
+  // Sort posts within each category by most recent activity (newest first)
   for (const category of Object.keys(grouped)) {
     grouped[category].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      (a, b) =>
+        new Date(effectiveDate(b.date, b.updated)).getTime() -
+        new Date(effectiveDate(a.date, a.updated)).getTime(),
     );
   }
 

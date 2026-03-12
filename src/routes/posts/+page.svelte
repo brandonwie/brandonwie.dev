@@ -21,7 +21,7 @@
 	import CategorySidebar from '$lib/components/CategorySidebar.svelte';
 	import { viewMode } from '$lib/stores/viewMode';
 	import { getCategoriesWithCounts } from '$lib/stores/posts';
-	import { formatDateShort } from '$lib/utils/date';
+	import { formatDateShort, effectiveDate } from '$lib/utils/date';
 
 	let { data }: { data: PageData } = $props();
 
@@ -95,7 +95,10 @@
 										{post.category}
 									</span>
 									<span class="text-sm text-terminal-text-dim">
-										{formatDateShort(post.date)}
+										{formatDateShort(effectiveDate(post.date, post.updated))}
+										{#if post.updated && post.updated !== post.date}
+											<span class="text-terminal-accent-green text-xs ml-1">({m.updated()})</span>
+										{/if}
 									</span>
 								</div>
 								<h2 class="mb-2 text-xl font-semibold text-terminal-text-primary">

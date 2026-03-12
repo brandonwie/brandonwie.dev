@@ -6,6 +6,7 @@
  */
 import type { PageLoad } from "./$types";
 import type { PostMetadata } from "$lib/stores/posts";
+import { effectiveDate } from "$lib/utils/date";
 
 // eager: true — resolves all imports at build time (no async waterfall)
 // import: 'metadata' — imports only frontmatter, skips heavy compiled Svelte components
@@ -24,7 +25,11 @@ export const load: PageLoad = () => {
     posts.push({ slug, ...metadata });
   }
 
-  posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  posts.sort(
+    (a, b) =>
+      new Date(effectiveDate(b.date, b.updated)).getTime() -
+      new Date(effectiveDate(a.date, a.updated)).getTime(),
+  );
 
   return { posts };
 };

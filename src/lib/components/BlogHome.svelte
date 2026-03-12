@@ -3,7 +3,7 @@
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 	import ViewToggle from '$lib/components/ViewToggle.svelte';
 	import type { PostMetadata } from '$lib/stores/posts';
-	import { formatDateShort } from '$lib/utils/date';
+	import { formatDateShort, effectiveDate } from '$lib/utils/date';
 
 	let { posts, basePath = '/' }: { posts: PostMetadata[]; basePath?: string } = $props();
 
@@ -108,11 +108,14 @@
 							class="group flex items-baseline gap-4 py-2.5 px-2 -mx-2 rounded no-underline transition-colors hover:bg-terminal-bg-hover"
 						>
 							<time
-								datetime={post.date}
+								datetime={effectiveDate(post.date, post.updated)}
 								class="text-xs text-terminal-text-dim shrink-0 w-[5.5rem] tabular-nums"
 							>
-								{formatDateShort(post.date)}
+								{formatDateShort(effectiveDate(post.date, post.updated))}
 							</time>
+							{#if post.updated && post.updated !== post.date}
+								<span class="text-terminal-accent-green text-xs shrink-0" title="{m.updated()} {formatDateShort(post.updated)}">↻</span>
+							{/if}
 							<div class="min-w-0">
 								<span class="text-sm text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">
 									{post.title}

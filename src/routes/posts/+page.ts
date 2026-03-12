@@ -1,5 +1,6 @@
 import type { PageLoad } from "./$types";
 import type { PostMetadata } from "$lib/stores/posts";
+import { effectiveDate } from "$lib/utils/date";
 
 const modules = import.meta.glob("../../content/posts/en/**/*.md", {
   import: "metadata",
@@ -16,7 +17,11 @@ export const load: PageLoad = () => {
     posts.push({ slug, ...metadata });
   }
 
-  posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  posts.sort(
+    (a, b) =>
+      new Date(effectiveDate(b.date, b.updated)).getTime() -
+      new Date(effectiveDate(a.date, a.updated)).getTime(),
+  );
 
   return { posts };
 };
