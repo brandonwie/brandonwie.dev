@@ -12,6 +12,8 @@ tags:
 category: ai-ml
 draft: false
 lang: en
+expanded: true
+source_content_hash: e071fc3424ffabf85e5e7b960ccb646fafa3e6689a23b8e47dc1b09ecc7a8cd9
 references:
   - url: >-
       https://docs.github.com/copilot/using-github-copilot/code-review/using-copilot-code-review

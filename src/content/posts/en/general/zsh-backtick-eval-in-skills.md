@@ -21,6 +21,7 @@ references:
   - url: 'https://docs.anthropic.com/en/docs/claude-code/skills'
     title: Claude Code Skills Documentation
     type: official
+source_content_hash: 617b6ed7341f43addd508d419fa10da811baa14f7854c142e38be19ba0817946
 ---
 
 backtick-formatted markdown text is processed through shell evaluation.

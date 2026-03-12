@@ -14,6 +14,7 @@ references:
   - url: 'https://www.typescriptlang.org/docs/handbook/2/narrowing.html'
     title: TypeScript Handbook - Narrowing
     type: official
+source_content_hash: 5fce5f85ff152d1975ef8ed1d86500e0ff70659faaf99b5a351f662ae33376d5
 ---
 
 (`as Type`) in production code. This provides runtime safety and better

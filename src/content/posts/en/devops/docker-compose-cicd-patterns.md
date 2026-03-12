@@ -15,6 +15,7 @@ references:
   - url: 'https://docs.docker.com/compose/how-tos/production/'
     title: Use Compose in production — Docker Docs
     type: official
+source_content_hash: 19f34c82926f431710a23a36398203540637fc22bbe71103353aaa0df28b563b
 ---
 
 dev and prod configurations.

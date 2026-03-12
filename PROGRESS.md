@@ -9,6 +9,7 @@
 - [x] 52 posts published (EN + KO) with full blog narratives
 - [x] 94 EN posts published (42 new from 3B reference unblocking)
 - [x] Full EN/KO parity — 94 EN + 94 KO posts
+- [x] Sort-by-updated across all views + 79 posts resynced with latest 3B content
 - [x] Custom domain live
 
 ## Session Log
@@ -789,5 +790,48 @@ Added Arch Calendar as the primary entry in a new "Work" section (replacing
 | ------- | ------------------------------------------------------------- |
 | fe151e2 | feat: add Arch Calendar to Work section and terminal commands |
 
-**Next:** Sync script link transformation, OG image, ESLint + Prettier,
+**Next:** Sort-by-updated, blog resync, OG image, ESLint + Prettier,
 GitHub Actions CI
+
+---
+
+### 2026-03-13
+
+**Sort-by-Updated + 79 Post Resync + Hash Mismatch Resolution**
+
+Implemented sort-by-updated across all views and resynced 79 posts with latest
+3B content. Resolved 2 hash-mismatch expanded posts.
+
+1. **Sort by updated date** (Part 1 — completed in prior session)
+   - `effectiveDate()` helper in `src/lib/utils/date.ts`
+   - All 6 sort locations updated (4 page loaders + posts store + RSS)
+   - "(updated)" badge on `/posts` and `/ko/posts` list pages
+   - "↻" icon with tooltip on `BlogHome.svelte`
+   - RSS `<pubDate>` uses effective date
+   - `m.updated()` i18n key already existed in both locales
+
+2. **79 posts synced from 3B** (Part 2)
+   - `npm run sync` pulled latest content for all blog-ready entries
+   - 79 non-expanded posts updated with current 3B source + hashes
+   - All 94 EN posts `draft: false`, build passes
+
+3. **2 hash-mismatch expanded posts resolved**
+   - `general/claude-code-multi-profile-hud`:
+     - Added 4 new difficulties (marketplace paths, statusline height,
+       stale cache after upgrade, API failure cache overwrite)
+     - Updated patch table to v0.0.9 (9 patches, down from 30 at v0.0.6)
+     - Added "clear caches after patching" pitfall
+     - Hash updated to `e7568f59...`
+   - `ai-ml/claude-code-agent-teams`:
+     - Added iTerm2 `ITermBackend` broken bug (#24301)
+     - Updated setup to `teammateMode: "tmux"` with `tmux -CC` workaround
+     - Updated limitations (replaced old #24292 config parsing bug)
+     - Hash updated to `9ea3366f...`
+
+4. **Hash guard report**: 15/15 expanded posts match (0 mismatches)
+
+**Stats:** 94 EN posts, 94 KO posts. Build passes in 9.28s.
+
+**Next:** Expand 5-8 high-value posts to narrative format (top candidates:
+traefik-keycloak-forwardauth, ecr-ecs-deployment, vpc-networking, oauth2,
+websocket-architecture). Then: OG image, ESLint + Prettier, GitHub Actions CI

@@ -20,6 +20,7 @@ references:
       https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.iterrows.html
     title: pandas.DataFrame.iterrows
     type: official
+source_content_hash: 5eef4d4388b121d0f74db581300d1d1facfe9e2b62705e597f983d2638d22809
 ---
 
 creates a `pd.Series` object for every single row. Series construction involves

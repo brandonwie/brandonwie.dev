@@ -13,6 +13,8 @@ tags:
 category: devops
 draft: false
 lang: en
+expanded: true
+source_content_hash: 4012a99e03586a05c548e2e028eba2329c104b501cab8d4bcf497138e2409d54
 references:
   - url: >-
       https://docs.github.com/en/rest/pulls/reviews#create-a-review-for-a-pull-request

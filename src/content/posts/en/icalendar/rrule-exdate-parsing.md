@@ -21,6 +21,7 @@ references:
   - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
     title: RFC 5545 - iCalendar Specification
     type: official
+source_content_hash: 231c4dc48765ac80c8d33ebb615777605e1d6571b2127f050af0d90e7ebcb115
 ---
 
 1. EXDATE comes before RRULE in the recurrence array

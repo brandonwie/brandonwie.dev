@@ -17,6 +17,7 @@ references:
   - url: 'https://docs.nestjs.com/techniques/database'
     title: Database — NestJS Documentation
     type: official
+source_content_hash: ffe262dea596ac4575b310b58643fe633b0efb56a4052ce3d36fe35d9d39499a
 ---
 
 ## 문제 상황

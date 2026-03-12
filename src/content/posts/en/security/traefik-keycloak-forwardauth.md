@@ -22,6 +22,7 @@ references:
   - url: 'https://oauth2-proxy.github.io/oauth2-proxy/'
     title: OAuth2 Proxy Documentation
     type: official
+source_content_hash: 6ec4d533461e2bca09cf54e64d0ea833b46a1ba0c0442546a9ecbf51d5879aca
 ---
 
 who knew the URL (e.g., `/grafana`, `/admin`) could access internal dashboards

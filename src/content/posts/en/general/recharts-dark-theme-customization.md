@@ -13,6 +13,8 @@ tags:
 category: general
 draft: false
 lang: en
+expanded: true
+source_content_hash: 33512f7eba08b3693d826f830dd5a1f8aba697cbfba63ffeed950e445f71825c
 references:
   - url: null
     title: Recharts dark theme implementation in Crucio dashboard

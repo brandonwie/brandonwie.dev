@@ -15,6 +15,7 @@ references:
       https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/
     title: OWASP API Security - Broken Object Level Authorization (BOLA/IDOR)
     type: official
+source_content_hash: cdf1d5b698dffc5e997c32b293c333a38a3c26f5b07acf4dd9ff185426871f26
 ---
 
 access resources belonging to other users by manipulating IDs.

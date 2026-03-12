@@ -15,6 +15,7 @@ references:
   - url: 'https://www.postgresql.org/docs/current/protocol-message-formats.html'
     title: PostgreSQL Protocol Message Formats - Bind Message
     type: official
+source_content_hash: a7279cbb0b2d57d3237cfc9a9dddaac8cde6b8b53ff82a18f7e214905f2b1efa
 ---
 
 generated SQL creates one bind parameter per ID. Beyond a few thousand IDs,

@@ -10,6 +10,8 @@ tags:
 category: google
 draft: false
 lang: en
+expanded: true
+source_content_hash: 39c807b499b88dcace77fec5c8d77fc40211dfbf8f05bacca9f9effcca0bddfc
 references:
   - url: "https://developers.google.com/workspace/calendar/api/guides/create-events"
     title: Create events — Google Calendar

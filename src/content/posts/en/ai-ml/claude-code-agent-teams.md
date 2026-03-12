@@ -11,6 +11,8 @@ tags:
 category: ai-ml
 draft: false
 lang: en
+expanded: true
+source_content_hash: 9ea3366f7947ab7b755380317fc054ed8af36ba0ee932a73f27df255eefedb2c
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
@@ -71,11 +73,11 @@ Then set the display mode. Options are `"in-process"`, `"tmux"`, or `"auto"`:
 
 ```json
 {
-  "teammateMode": "auto"
+  "teammateMode": "tmux"
 }
 ```
 
-Use `"auto"`. It detects the `$TMUX` environment variable and uses split panes automatically. The explicit `"tmux"` value has a config parsing bug (#24292 as of v2.1.52) -- more on that below.
+Both `"tmux"` and `"auto"` should auto-detect iTerm2 via the `it2` CLI, but the iTerm2 backend is broken as of v2.1.74 (issue #24301 -- details below). In practice, split panes only work inside a tmux session. Without tmux, teammates silently fall back to in-process mode -- no error, no warning. **Workaround:** Launch `tmux -CC` in iTerm2 (control mode) to get native iTerm2 panes via the tmux backend.
 
 ## Key Patterns
 
@@ -100,7 +102,7 @@ This section is the reason this post exists. The official docs cover the happy p
 
 **Gitignored symlinks missing in worktrees.** When teammates work in git worktrees, only tracked files appear. Gitignored symlinks (`CLAUDE.local.md`, `.claude/settings.local.json`, `.claude/skills`) are missing. Personal instructions and settings do not load for worktree teammates. The mitigation is putting critical environment variables in user-level `~/.claude/settings.local.json` and front-loading context in spawn prompts.
 
-**`teammateMode: "tmux"` config parsing bug (#24292).** The explicit `"tmux"` value in `settings.json` is not read correctly. The workaround is using `"auto"` mode (which detects `$TMUX` at runtime) or passing `--teammate-mode tmux` as a CLI flag.
+**iTerm2 `ITermBackend` NOT functional (known bug #24301).** The binary contains an `ITermBackend` with full `it2 session split` support, but the backend selection logic never activates it. With `teammateMode: "auto"` or `"tmux"`, Claude Code silently falls back to `in-process` when not inside a tmux session -- even with `it2` installed, Python API enabled, and all iTerm2 env vars present. Confirmed in v2.1.74 across multiple test cycles. The `teammateMode` setting is snapshotted at session start, so mid-session changes to `settings.json` have no effect. **Workaround:** Use `tmux -CC` (iTerm2 control mode) to get native iTerm2 panes with the tmux backend.
 
 **TeamDelete doesn't kill orphaned tmux panes.** When agents shut down, the tmux pane stays alive as a fresh zsh shell. `TeamDelete` cleans team metadata but not panes. You must manually run `tmux kill-pane -t %<id>` for each orphan. Check with `tmux list-panes -a` after team work to avoid accumulating zombie shells.
 
@@ -118,8 +120,9 @@ For quick reference, here is the full constraint set:
 - One team per session, no nested teams
 - Fixed lead (cannot transfer leadership)
 - All teammates inherit lead's permission mode at spawn
-- Split panes require tmux or iTerm2
-- `teammateMode: "tmux"` has config parsing bug; use `"auto"` instead
+- Split panes require tmux (iTerm2 ITermBackend exists but is broken -- #24301)
+- Without tmux, teammates run in-process silently (no error, no split panes)
+- Workaround for iTerm2: tmux -CC control mode gives native panes via tmux backend
 - TeamDelete does not clean up orphaned tmux panes (manual cleanup needed)
 - Parallel spawn race condition with 3+ teammates (retry individually)
 - Gitignored files missing in worktrees (teammates lack personal config)

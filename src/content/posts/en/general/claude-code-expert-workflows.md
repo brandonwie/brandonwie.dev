@@ -25,6 +25,7 @@ references:
   - url: 'https://github.com/ykdojo/claude-code-tips'
     title: '45 Claude Code Tips: From Basics to Advanced'
     type: authoritative
+source_content_hash: c49dd2f52a1c7a375ea01d7a4f0cc25489910a634fd4598ecac0080c04d45caf
 ---
 
 configuration), Mia Heidenstedt (process discipline), and YK Dojo (practitioner

@@ -19,6 +19,7 @@ references:
   - url: 'https://iterm2.com/documentation-tmux-integration.html'
     title: iTerm2 tmux Integration
     type: official
+source_content_hash: 6f10f8b3d4b809d7e04d1a6cc8dc574f74ed92c1ce44eb8b62a8ca9582159d58
 ---
 
 window (`Cmd+N` in iTerm2) gets its own tmux session, while reusing detached

@@ -18,6 +18,7 @@ references:
   - url: 'https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html'
     title: What is Amazon Elastic File System?
     type: official
+source_content_hash: b21e4b0c5f5b18ca96f4ccb62a23f0956dc2508b704014c5c84f7112e2324019
 ---
 
 ## Quick Summary

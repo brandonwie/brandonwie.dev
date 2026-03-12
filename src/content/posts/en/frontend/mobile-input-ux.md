@@ -21,6 +21,7 @@ references:
       https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#attr-inputmode
     title: MDN HTML Input Element - inputmode Attribute
     type: authoritative
+source_content_hash: c8fca86de98d7330be026752eb5f41d66f32b9ca6ee5e79507aa2c71694481f0
 ---
 
 ## Key Points

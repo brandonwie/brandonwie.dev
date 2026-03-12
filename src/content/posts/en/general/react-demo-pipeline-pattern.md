@@ -24,6 +24,7 @@ references:
   - url: 'https://react.dev/learn/reusing-logic-with-custom-hooks'
     title: React Custom Hooks Documentation
     type: official
+source_content_hash: 0385a66578913f81ac112368c867fc137058dde02e570f4be5e4bf1db9c8b76a
 ---
 
 backend is unavailable. Users interact with the UI normally, and all processing

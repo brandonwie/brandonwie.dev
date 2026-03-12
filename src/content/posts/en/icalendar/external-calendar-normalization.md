@@ -15,6 +15,7 @@ references:
   - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
     title: RFC 5545 — iCalendar Specification
     type: official
+source_content_hash: a239f197e4691e733102981cb29473efa10b3ed1fc86b1082e1162068f224f26
 ---
 
 contains non-standard formats that break parsing. Implement normalization layers

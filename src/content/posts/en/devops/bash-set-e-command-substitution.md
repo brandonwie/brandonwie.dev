@@ -14,6 +14,7 @@ references:
   - url: 'https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html'
     title: The Set Builtin — Bash Reference Manual
     type: official
+source_content_hash: c8c5c88d1d49da888c5b390dd02454791072c9b2c487f9765c17e79b51427b25
 ---
 
 with custom error messages.

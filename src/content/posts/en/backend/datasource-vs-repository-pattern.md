@@ -19,6 +19,7 @@ references:
   - url: 'https://typeorm.io/#/repository-api'
     title: Repository API — TypeORM
     type: official
+source_content_hash: 142c29d2d3f82314c045c9b94b22dc73310566fdf7339f399bdc136109d39f88
 ---
 
 the Repository pattern in NestJS/TypeORM applications.

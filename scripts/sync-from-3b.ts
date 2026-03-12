@@ -1,14 +1,25 @@
 /**
  * Sync content from 3B knowledge base to blog
  *
- * Usage: deno run --allow-read --allow-write scripts/sync-from-3b.ts
+ * Usage:
+ *   deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts
+ *   deno run --allow-read --allow-env scripts/sync-from-3b.ts --check
+ *   deno run --allow-read --allow-write --allow-env --allow-run scripts/sync-from-3b.ts --diff --slug=<slug>
+ *
+ * Modes:
+ *   (default)  Sync new + unexpanded posts. Never overwrites expanded posts.
+ *   --check    Report hash mismatches for expanded posts (read-only).
+ *   --diff     Show unified diff for a specific post (requires --slug=<slug>).
+ *   --dry-run  Preview what would sync without writing.
+ *   --verbose  Show skip reasons for each file.
  *
  * This script:
  * 1. Reads markdown files from 3B knowledge directory
  * 2. Filters for blog-ready entries (publishable: true, ready: true)
  * 3. Transforms frontmatter to blog format
- * 4. Copies to src/content/posts/
- * 5. Updates source file with sync timestamps
+ * 4. Protects expanded posts from overwrite (hash guard)
+ * 5. Copies to src/content/posts/
+ * 6. Updates source file with sync timestamps
  */
 
 import { walk } from "https://deno.land/std@0.220.0/fs/walk.ts";
@@ -23,9 +34,12 @@ import {
   join,
 } from "https://deno.land/std@0.220.0/path/mod.ts";
 
-// Configuration
-const SOURCE_DIR = Deno.env.get("HOME") + "/dev/personal/3b/knowledge";
-const TARGET_DIR = "./src/content/posts/en";
+// Configuration — all paths absolute so script works from any directory
+const HOME = Deno.env.get("HOME")!;
+const SOURCE_DIR = join(HOME, "dev", "personal", "3b", "knowledge");
+const BLOG_ROOT =
+  Deno.env.get("BLOG_ROOT") || join(HOME, "dev", "personal", "brandonwie.dev");
+const TARGET_DIR = join(BLOG_ROOT, "src", "content", "posts", "en");
 const EXCLUDED_CATEGORIES = ["moba"]; // Company-specific content (backup filter)
 
 // ============================================================================
@@ -73,6 +87,9 @@ interface TargetFrontmatter {
   draft: boolean;
   lang: string;
   references?: { url: string; title: string; type: string }[];
+  // Hash guard fields — protect expanded posts from sync overwrite
+  expanded?: boolean; // true after blog narrative expansion
+  source_content_hash?: string; // SHA-256 of cleaned 3B body at last sync
 }
 
 // ============================================================================
@@ -295,6 +312,43 @@ function cleanBody(body: string): string {
 }
 
 /**
+ * Compute SHA-256 hash of the cleaned 3B body content.
+ *
+ * Hashes the CLEANED body (after cleanBody() processing), not the raw source.
+ * Changes to sections stripped by cleanBody() (Related, When This Came Up)
+ * won't produce false-positive mismatches.
+ *
+ * NOTE: If cleanBody() logic changes, all stored hashes become invalid.
+ * Re-run `npm run sync` to refresh hashes for non-expanded posts.
+ */
+async function computeContentHash(cleanedBody: string): Promise<string> {
+  const data = new TextEncoder().encode(cleanedBody);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Read existing blog post and parse its frontmatter.
+ * Returns null if the file doesn't exist.
+ */
+async function readExistingPost(targetPath: string): Promise<{
+  frontmatter: TargetFrontmatter | null;
+  body: string;
+} | null> {
+  try {
+    const raw = await Deno.readTextFile(targetPath);
+    const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+    if (!match) return { frontmatter: null, body: raw };
+    const frontmatter = parseYaml(match[1]) as TargetFrontmatter;
+    return { frontmatter, body: match[2] };
+  } catch {
+    return null; // File doesn't exist
+  }
+}
+
+/**
  * Update source file with sync timestamps
  */
 async function updateSourceFile(
@@ -327,18 +381,130 @@ async function updateSourceFile(
 // Main
 // ============================================================================
 
+/**
+ * --diff mode: show unified diff for a specific post
+ */
+async function diffPost(slug: string, verbose: boolean) {
+  console.log(`🔍 Finding source for: ${slug}`);
+  console.log("");
+
+  let found = false;
+
+  for await (const entry of walk(SOURCE_DIR, {
+    exts: [".md"],
+    includeDirs: false,
+  })) {
+    if (basename(entry.path, ".md") !== slug) continue;
+    found = true;
+
+    const relativePath = entry.path.replace(SOURCE_DIR + "/", "");
+    const category = dirname(relativePath).split("/")[0];
+    const content = await Deno.readTextFile(entry.path);
+    const { frontmatter, body } = parseFrontmatter(content);
+
+    if (!frontmatter) {
+      console.error(`Error: No frontmatter in ${entry.path}`);
+      Deno.exit(1);
+    }
+
+    const cleanedBody = cleanBody(body);
+    const targetPath = join(TARGET_DIR, category, `${slug}.md`);
+    const existing = await readExistingPost(targetPath);
+
+    if (!existing) {
+      console.log(`Post not found in blog: ${targetPath}`);
+      console.log("This post hasn't been synced yet.");
+      Deno.exit(0);
+    }
+
+    const currentHash = existing.frontmatter?.source_content_hash || "(none)";
+    const incomingHash = await computeContentHash(cleanedBody);
+
+    console.log(`📄 Diff for: ${slug}`);
+    console.log(`   Source:   ${entry.path}`);
+    console.log(`   Target:   ${targetPath}`);
+    console.log(`   Expanded: ${existing.frontmatter?.expanded || false}`);
+    console.log(
+      `   Hash:     ${currentHash === incomingHash ? "✅ match" : "⚠️  mismatch"}`,
+    );
+    console.log("");
+
+    // Use system diff via temp files
+    const tempOld = await Deno.makeTempFile({ suffix: "-current.md" });
+    const tempNew = await Deno.makeTempFile({ suffix: "-incoming.md" });
+    await Deno.writeTextFile(tempOld, existing.body.trim());
+    await Deno.writeTextFile(tempNew, cleanedBody.trim());
+
+    try {
+      const diffCmd = new Deno.Command("diff", {
+        args: [
+          "--unified=3",
+          "--label=current (blog)",
+          "--label=incoming (3B)",
+          tempOld,
+          tempNew,
+        ],
+        stdout: "piped",
+        stderr: "piped",
+      });
+      const diffOutput = await diffCmd.output();
+      const diffText = new TextDecoder().decode(diffOutput.stdout);
+
+      if (diffText) {
+        console.log(diffText);
+      } else {
+        console.log("No content differences found.");
+      }
+    } finally {
+      await Deno.remove(tempOld);
+      await Deno.remove(tempNew);
+    }
+
+    break;
+  }
+
+  if (!found) {
+    console.error(`Source file not found for slug: ${slug}`);
+    Deno.exit(1);
+  }
+}
+
 async function syncPosts() {
   const args = Deno.args;
   const dryRun = args.includes("--dry-run");
   const verbose = args.includes("--verbose");
+  const checkOnly = args.includes("--check");
+  const diffMode = args.includes("--diff");
+  const slugArg = args.find((a) => a.startsWith("--slug="))?.split("=")[1];
+
+  // --diff mode: early exit to dedicated function
+  if (diffMode) {
+    if (!slugArg) {
+      console.error("Error: --diff requires --slug=<slug>");
+      console.error("Usage: npm run sync:diff -- --slug=redis-queue-patterns");
+      Deno.exit(1);
+    }
+    await diffPost(slugArg, verbose);
+    return;
+  }
+
+  // Determine mode label
+  const modeLabel = checkOnly ? "HASH CHECK" : dryRun ? "DRY RUN" : "APPLY";
 
   console.log("🔄 Syncing posts from 3B knowledge base...");
-  console.log(`   Mode: ${dryRun ? "DRY RUN" : "APPLY"}`);
+  console.log(`   Mode: ${modeLabel}`);
   console.log("");
 
   let synced = 0;
   let skipped = 0;
+  let expandedChecked = 0;
   const skipReasons: Record<string, number> = {};
+  const hashMismatches: {
+    path: string;
+    slug: string;
+    oldHash: string;
+    newHash: string;
+  }[] = [];
 
   for await (const entry of walk(SOURCE_DIR, {
     exts: [".md"],
@@ -373,17 +539,77 @@ async function syncPosts() {
       continue;
     }
 
-    // Transform and write
+    // Transform and compute hash
     const targetFrontmatter = transformFrontmatter(frontmatter, body, category);
     const cleanedBody = cleanBody(body);
+    const contentHash = await computeContentHash(cleanedBody);
+    const targetPath = join(TARGET_DIR, category, basename(entry.path));
+    const slug = basename(entry.path, ".md");
+
+    // Check if target already exists
+    const existing = await readExistingPost(targetPath);
+
+    // --- EXPANDED POST PROTECTION ---
+    if (existing?.frontmatter?.expanded === true) {
+      expandedChecked++;
+      const oldHash = existing.frontmatter.source_content_hash;
+      const hashChanged = oldHash !== contentHash;
+
+      if (checkOnly) {
+        // --check mode: report status, never write
+        if (hashChanged) {
+          hashMismatches.push({
+            path: relativePath,
+            slug,
+            oldHash: oldHash || "(none)",
+            newHash: contentHash,
+          });
+          console.log(
+            `⚠️  HASH MISMATCH: ${relativePath} (expanded, upstream changed)`,
+          );
+        } else if (verbose) {
+          console.log(`✅ Hash match: ${relativePath} (expanded, no changes)`);
+        }
+      } else if (dryRun) {
+        if (hashChanged) {
+          console.log(
+            `🔒 Would skip (expanded, upstream changed): ${relativePath}`,
+          );
+        } else if (verbose) {
+          console.log(`🔒 Would skip (expanded): ${relativePath}`);
+        }
+      } else {
+        // Normal sync: skip expanded posts, always
+        if (hashChanged) {
+          console.log(
+            `🔒 Skipping (expanded, upstream changed): ${relativePath}`,
+          );
+          console.log(`   Run: npm run sync:diff -- --slug=${slug}`);
+        } else if (verbose) {
+          console.log(`🔒 Skipping (expanded): ${relativePath}`);
+        }
+      }
+
+      skipReasons["expanded post (protected)"] =
+        (skipReasons["expanded post (protected)"] || 0) + 1;
+      skipped++;
+      continue; // Never overwrite expanded posts
+    }
+    // --- END EXPANDED POST PROTECTION ---
+
+    // In --check mode, only expanded posts matter — skip the rest
+    if (checkOnly) {
+      continue;
+    }
+
+    // For non-expanded posts: include hash in frontmatter
+    targetFrontmatter.source_content_hash = contentHash;
 
     const targetContent = `---
 ${stringifyYaml(targetFrontmatter)}---
 
 ${cleanedBody}
 `;
-
-    const targetPath = join(TARGET_DIR, category, basename(entry.path));
 
     if (dryRun) {
       console.log(`✅ Would sync: ${relativePath} → ${targetPath}`);
@@ -400,7 +626,30 @@ ${cleanedBody}
     synced++;
   }
 
+  // --- SUMMARY ---
   console.log("");
+
+  if (checkOnly) {
+    // Hash Guard Report
+    console.log("📋 Hash Guard Report");
+    console.log(`   Expanded posts checked: ${expandedChecked}`);
+    console.log(`   Hash matches: ${expandedChecked - hashMismatches.length}`);
+    console.log(`   Hash mismatches: ${hashMismatches.length}`);
+
+    if (hashMismatches.length > 0) {
+      console.log("");
+      console.log("⚠️  Posts with upstream changes:");
+      for (const m of hashMismatches) {
+        console.log(`   - ${m.path}`);
+        console.log(`     Old: ${m.oldHash.substring(0, 16)}...`);
+        console.log(`     New: ${m.newHash.substring(0, 16)}...`);
+        console.log(`     Run: npm run sync:diff -- --slug=${m.slug}`);
+      }
+    }
+
+    Deno.exit(hashMismatches.length > 0 ? 1 : 0);
+  }
+
   console.log("📊 Summary");
   console.log(`   Synced: ${synced}`);
   console.log(`   Skipped: ${skipped}`);

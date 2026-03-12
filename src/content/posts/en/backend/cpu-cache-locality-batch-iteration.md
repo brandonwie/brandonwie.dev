@@ -16,6 +16,7 @@ references:
   - url: 'https://en.wikipedia.org/wiki/Locality_of_reference'
     title: Locality of reference - Wikipedia
     type: official
+source_content_hash: dc5b4c35ab431529fae21853f19505fd37f9f2cdb79e619ca26952eb18d39799
 ---
 
 from memory on every pass. When extracting 18+ fields from 100+ items, this

@@ -10,6 +10,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "sync": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts",
+    "sync:check": "deno run --allow-read --allow-env scripts/sync-from-3b.ts --check",
+    "sync:diff": "deno run --allow-read --allow-write --allow-env --allow-run scripts/sync-from-3b.ts --diff",
     "translation:status": "npx tsx scripts/translation-status.ts",
     "translation:create": "npx tsx scripts/translation-create.ts"
   },

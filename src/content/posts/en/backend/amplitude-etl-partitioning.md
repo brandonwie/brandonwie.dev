@@ -21,6 +21,7 @@ references:
   - url: 'https://spark.apache.org/docs/latest/sql-data-sources-parquet.html'
     title: Apache Spark Parquet Data Source
     type: official
+source_content_hash: d6051c1d7d661d7654825e4061d6189443673c85e42fa80cd23b4d72e18dfde4
 ---
 
 ## The Problem

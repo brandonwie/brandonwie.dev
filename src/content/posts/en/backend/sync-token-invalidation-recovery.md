@@ -15,6 +15,7 @@ references:
   - url: 'https://developers.google.com/workspace/calendar/api/guides/sync'
     title: Synchronize resources efficiently — Google Calendar
     type: official
+source_content_hash: ef31da3a3448bd4df39b7561780c057579fcaf2358b545829f2bf3067fda87ec
 ---
 
 full resync is required. Proper handling prevents data loss.

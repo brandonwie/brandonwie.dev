@@ -17,6 +17,7 @@ references:
   - url: 'https://webhooks.fyi/best-practices/webhook-providers'
     title: Best Practices for Webhook Providers
     type: authoritative
+source_content_hash: 5a4bb09eac50732041220835207a76349e7b343b2772161840e829899df09fc9
 ---
 
 activity. This distinction is critical for resource management.

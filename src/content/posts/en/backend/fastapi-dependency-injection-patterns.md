@@ -20,6 +20,7 @@ references:
       https://fastapi.tiangolo.com/python-types/#type-hints-with-metadata-annotations
     title: FastAPI Type Hints with Metadata Annotations
     type: official
+source_content_hash: aa72f8cae19baa43392565cf81ff068fa987362a17c7a97e3af2ce872092dc62
 ---
 
 and makes it easy to introduce inconsistencies (e.g., one router converting

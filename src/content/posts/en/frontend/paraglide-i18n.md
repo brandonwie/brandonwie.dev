@@ -18,6 +18,7 @@ references:
   - url: 'https://svelte.dev/docs/kit/routing'
     title: SvelteKit Routing
     type: official
+source_content_hash: 36af3ef4879870da14ba427898acdb989db4d535b8a68392477efd021f331968
 ---
 
 bloating the bundle or introducing runtime overhead. The site uses SSG (static

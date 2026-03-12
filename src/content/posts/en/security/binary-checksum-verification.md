@@ -15,6 +15,7 @@ references:
       https://www.gnu.org/software/coreutils/manual/html_node/sha2-utilities.html
     title: GNU sha256sum utility
     type: official
+source_content_hash: eaf170a839345794a5672ee7bd3b460251db6d7a81495a8aa80a88794d9e494e
 ---
 
 ## The Problem

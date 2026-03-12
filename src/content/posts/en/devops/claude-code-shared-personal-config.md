@@ -11,6 +11,8 @@ tags:
 category: devops
 draft: false
 lang: en
+expanded: true
+source_content_hash: 9f3e301fb75260d49c4d294b4e80bc030cc7d8d5752b9ba5190aa06765512cfd
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
     title: Claude Code Documentation

@@ -25,6 +25,7 @@ references:
   - url: 'https://redis.io/docs/interact/pubsub/'
     title: pubsub
     type: official
+source_content_hash: e438c936065918f3e9eeb50c17c00d7302df6bb1b0d785e3b48220a4b6dd8d84
 ---
 
 notifications.

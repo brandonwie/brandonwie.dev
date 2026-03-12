@@ -18,6 +18,7 @@ references:
   - url: null
     title: stow-doctor.sh implementation
     type: experience
+source_content_hash: 845bfd1e764f2e5451d3ad740717177f9dbd6e3c6615a334f512299ccd73ea6d
 ---
 
 making the repo the source of truth. However, apps like `gh` and

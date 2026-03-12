@@ -17,6 +17,7 @@ references:
   - url: 'https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html'
     title: Private registry authentication in Amazon ECR
     type: official
+source_content_hash: 84d0b984fef4c50318431f8b0d99ac3f824e4c01b1c2f7253b2847b9c160f516
 ---
 
 hosts, implement automatic token refresh.

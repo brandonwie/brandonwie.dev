@@ -14,6 +14,7 @@ references:
   - url: 'https://developer.hashicorp.com/terraform/intro'
     title: What is Terraform
     type: official
+source_content_hash: f6b78fc490cd6fb3273ddea4a90cb61e88221aa72eb351cd6ffe70a3bc83a551
 ---
 
 ## Key Terraform Files

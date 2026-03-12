@@ -17,6 +17,7 @@ references:
   - url: 'https://github.com/astral-sh/uv/issues/9797'
     title: '9797'
     type: official
+source_content_hash: 062d2fa28d3fded6e7f158f6dad8607ba18293a99f15f28b64554d901aacb274
 ---
 
 ## The Problem

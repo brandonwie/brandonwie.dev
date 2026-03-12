@@ -20,6 +20,7 @@ references:
   - url: 'https://docs.celeryq.dev/en/stable/userguide/routing.html'
     title: Celery - Routing Tasks
     type: official
+source_content_hash: b1135b17ad35c3a9b9e281bf1381ed6d707897700b0d993dad581edfc9f260a7
 ---
 
 separate worker service, without importing the worker's task modules.

@@ -16,6 +16,7 @@ references:
       https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html
     title: Automatically scale your Amazon ECS service
     type: official
+source_content_hash: db41bfacfa5669e916016e70a26fd6da92b9b9ce60b26850dc0df4db64b45664
 ---
 
 separation to prevent race conditions.

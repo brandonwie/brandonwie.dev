@@ -20,6 +20,7 @@ references:
   - url: 'https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView'
     title: Element.scrollIntoView() - MDN
     type: official
+source_content_hash: 1966a0485b6ee33502b78a417a2f7029d6ffa7215e0ddf360d9af5446778cbff
 ---
 
 by runes. When building a FuzzyFinder component that needed to auto-scroll to

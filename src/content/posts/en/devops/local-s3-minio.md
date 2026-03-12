@@ -16,6 +16,7 @@ references:
   - url: 'https://min.io/docs/minio/linux/index.html'
     title: MinIO Documentation
     type: official
+source_content_hash: 45b7531c3808a1d56cd96a487927a56e2eda12e41a3c267cd323050d94b9e812
 ---
 
 ## The Problem

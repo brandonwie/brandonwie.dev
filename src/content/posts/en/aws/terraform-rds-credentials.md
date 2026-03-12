@@ -17,6 +17,7 @@ references:
       https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html
     title: Password management with Amazon RDS and AWS Secrets Manager
     type: official
+source_content_hash: 4eb3bcd5d3ac64a954c14f427420dbbf47aeb372113fa67fe5648097249dd5ad
 ---
 
 ## Methods

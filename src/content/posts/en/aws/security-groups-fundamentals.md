@@ -18,6 +18,7 @@ references:
       https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules-reference.html
     title: security group rules reference.html
     type: official
+source_content_hash: 71afc8514c0fdc1378452e2f5fa10a527736d3f7baf936ebd4ec7bfdd741ff3d
 ---
 
 (ingress) and outbound (egress) traffic at the instance level.

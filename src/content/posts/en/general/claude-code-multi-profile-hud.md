@@ -12,6 +12,8 @@ tags:
 category: general
 draft: false
 lang: en
+expanded: true
+source_content_hash: e7568f590cbefe4b1598fb956e9dc36523cd24a00ae96c8ef00147e4872ec2d3
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository
@@ -116,6 +118,14 @@ insert-before on a unique anchor line below the target instead.
 TypeErrors — triggered only when speed was non-null, which is rare due to the
 2-second measurement window.
 
+**Stale marketplace paths after profile rename.** `~/.claude/plugins/known_marketplaces.json` stores absolute paths to marketplace clones. After renaming `~/.claude-personal/` to `~/.claude/`, the old paths persisted and `claude plugin install` failed with "Source path does not exist" — no obvious error pointing to the marketplace file.
+
+**Statusline height is fixed by Claude Code.** The HUD plugin outputs lines via `console.log()` but Claude Code controls the vertical area allocated to the statusline. The plugin has no API to request more space. Line ordering in render output directly controls degradation: first lines survive, last lines clip.
+
+**Stale usage cache after plugin upgrade.** During a plugin upgrade, there's a window where the old (unpatched) HUD binary runs and populates the cache with wrong-profile data. After patches are applied, the patched HUD serves the stale cache indefinitely (60s TTL resets on reads). Fix: the post-patches script must clear both profiles' usage caches after applying patches.
+
+**API failure overwrites good cache with error.** When the usage API returns 423 (Locked) or any non-200 status, the original code overwrites the stale cache entry (which had valid usage data) with `{apiUnavailable: true}`. This causes `Usage ⚠ (423)` to flash for 15 seconds even though the stale data was only seconds old. The fix uses a stale-while-revalidate pattern: check if stale cache exists and is non-failure before overwriting.
+
 ## The Solution
 
 Embed `CLAUDE_CONFIG_DIR` directly in each profile's `settings.json` statusline
@@ -151,20 +161,19 @@ which keychain entry and cache path to use.
 
 ## Required Patches
 
-The HUD source (`usage-api.ts`) needs patches to read env vars:
+9 custom patches applied by `claude-hud-post-patches.sh` (down from 30 at v0.0.6 — 22 absorbed upstream):
 
-| Patch                                  | Purpose                                         |
-| -------------------------------------- | ----------------------------------------------- |
-| `CLAUDE_HUD_KEYCHAIN_SERVICE`          | Read from profile-specific keychain entry       |
-| `CLAUDE_HUD_CONFIG_DIR` (homeDir)      | Custom base directory for cache                 |
-| `CLAUDE_HUD_CONFIG_DIR` (getPluginDir) | Correct cache, lock, and backoff paths          |
-| `CLAUDE_HUD_SKIP_KEYCHAIN`             | Skip keychain for env-var-only auth             |
-| FetchResult discriminated union        | Propagate error type (429, timeout, etc.)       |
-| File-based lock (ported from upstream) | Prevent race when multiple sessions share cache |
-
-Each patch checks the environment variable and falls back to the default if
-unset. The personal profile works without variables, and the work profile works
-when the variables are set in the statusline command.
+| #   | Type | Target File          | Purpose                                           |
+| --- | ---- | -------------------- | ------------------------------------------------- |
+| 1   | sed  | claude-config-dir.ts | `CLAUDE_HUD_CONFIG_DIR` priority over defaults    |
+| 2   | sed  | usage-api.ts         | `CLAUDE_HUD_KEYCHAIN_SERVICE` prepend             |
+| 3   | sed  | config.ts            | Quote config field (interface + defaults + merge) |
+| 4   | copy | colors.ts            | Midnight Aurora 9-role semantic palette           |
+| 5   | copy | project.ts           | Email, env label/version, model display           |
+| 6   | copy | usage.ts             | formatResetHours + provider guard                 |
+| 7   | copy | quote.ts             | Quote line renderer                               |
+| 8   | copy | render/index.ts      | Quote integration + NBSP replacement              |
+| 9   | sed  | usage-api.ts         | Stale cache fallback on API failure               |
 
 ## Cache Lock Mechanism
 
@@ -219,9 +228,9 @@ terminals) and `"expanded"` (multiline with identity, project, environment, and
 usage on separate lines). Use `"expanded"` to avoid losing information to
 truncation.
 
-**Patch durability.** Plugin updates overwrite source files. Maintain an
-`apply-patches.sh` script to reapply patches after updates — as of March 2026,
-this covers 22 patches across 14 groups.
+**Patch durability.** Plugin updates overwrite source files. Maintain
+`claude-hud-post-patches.sh` to reapply patches after updates — as of March
+2026, this covers 9 patches.
 
 **Always show the 7-day usage window.** Set `sevenDayThreshold: 0` in config.
 The default (`80`) hides the 7-day window until usage exceeds 80%.
@@ -233,7 +242,10 @@ via the `speed-tracker.ts` module.
 between `'percent'` and `'tokens'` in both compact and expanded layouts.
 
 **Expanded layout order.** Customizable via `render/index.ts` template — project
-(with model badge) → combined context+usage → activity → environment.
+(with model badge) → combined context+usage → activity → environment. The quote
+renders LAST in both compact and expanded modes — on narrow terminals, essential
+info (project, context, usage) survives and the decorative quote is clipped
+first.
 
 **Speed tracker return type.** `getOutputSpeed()` returns `number | null`
 directly, not an object. Check the return type carefully when integrating speed
@@ -267,6 +279,8 @@ These are the mistakes I made (and you should avoid):
    New settings only apply in new terminal sessions.
 5. **Check for duplicate keychain entries.** Duplicates cause unpredictable reads.
    List entries with `security find-generic-password -a` and remove duplicates.
+6. **Clear usage caches after patching.** Stale cache from the pre-patch window
+   shows wrong plan/account data.
 
 ## Why This Works
 

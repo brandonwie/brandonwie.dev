@@ -15,6 +15,7 @@ references:
   - url: 'https://docs.nestjs.com/websockets/gateways'
     title: Gateways — NestJS WebSockets Documentation
     type: official
+source_content_hash: 18a439f407bbf02edfefc7d739b63432a62ecc2c496e0a6635c6f0581290c596
 ---
 
 ## Basic Gateway

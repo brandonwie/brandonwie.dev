@@ -29,6 +29,7 @@ references:
       https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html
     title: ECS Deployment Circuit Breaker
     type: official
+source_content_hash: 4f24fda7155c07b74d03bd9f2585027984de96d3dcabbb894c207257e52ff753
 ---
 
 ## The Problem

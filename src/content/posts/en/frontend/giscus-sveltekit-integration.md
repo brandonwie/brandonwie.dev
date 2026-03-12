@@ -17,6 +17,7 @@ references:
   - url: 'https://github.com/giscus/giscus'
     title: giscus GitHub repository
     type: official
+source_content_hash: c8d25b6c33a3729b99b71a66b9aab57cc8d87debf0592f46f03418007d987ef5
 ---
 
 introducing a database, authentication backend, or paid service. Blog readers

@@ -18,6 +18,7 @@ references:
   - url: 'https://amplitude.com/docs/admin/account-management/manage-orgs-projects'
     title: Amplitude Manage Organizations and Projects (Timezone Settings)
     type: official
+source_content_hash: eb50c2b64160c8af77b018c3e6ab37d96b70a03cb8dd615bfd57a5212cc9b2ea
 ---
 
 exports.

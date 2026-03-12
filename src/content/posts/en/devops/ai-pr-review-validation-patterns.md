@@ -1,6 +1,6 @@
 ---
 title: AI PR Review Validation Patterns
-description: 'Common patterns where AI code reviewers (Claude, Copilot, Codex) produce false'
+description: "Common patterns where AI code reviewers (Claude, Copilot, Codex) produce false"
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -10,8 +10,10 @@ tags:
 category: devops
 draft: false
 lang: en
+expanded: true
+source_content_hash: c2a16501d967f1b9ce8c130c9f2cdcc72412cff4a87a6c90b015bf7a377a8c02
 references:
-  - url: 'https://docs.github.com/en/rest/pulls/reviews'
+  - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
     type: authoritative
 ---

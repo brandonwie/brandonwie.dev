@@ -27,6 +27,7 @@ references:
   - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
     title: rfc5545
     type: verified
+source_content_hash: cbec364d2baf3f3558869473982694597e7c7bbd1f243c5eaa9bf0178ca12557
 ---
 
 block's timezone. This causes incorrect event expansion for events that cross

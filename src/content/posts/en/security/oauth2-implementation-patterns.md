@@ -32,6 +32,7 @@ references:
   - url: 'https://github.com/panva/openid-client/issues/564'
     title: 'openid-client Issue #564: Passport strategy broken with iss'
     type: verified
+source_content_hash: 96847b05828b3334cb0f5139080991323971e43a4dabce1211c30da016569c07
 ---
 
 ## The Problem

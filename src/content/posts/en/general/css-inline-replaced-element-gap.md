@@ -17,6 +17,7 @@ references:
   - url: 'https://developer.mozilla.org/en-US/docs/Glossary/Replaced_elements'
     title: Replaced elements — MDN Glossary
     type: authoritative
+source_content_hash: f17fde525577028546db63a19f8732c8a13d24b23e66ebe4ac351b20d697b92a
 ---
 
 "inline-replaced" elements in CSS. By default, they sit on the text baseline,

@@ -12,8 +12,10 @@ tags:
 category: google
 draft: false
 lang: en
+expanded: true
+source_content_hash: aae51856c7826bd048c7f5a214fee986c1f5db5cc51add80d24e6e41e497a1f2
 references:
-  - url: 'https://developers.google.com/workspace/calendar/api/guides/sync'
+  - url: "https://developers.google.com/workspace/calendar/api/guides/sync"
     title: Synchronize resources efficiently — Google Calendar
     type: official
 ---
@@ -36,7 +38,7 @@ bug.
 const params = {
   showDeleted: true, // See deleted calendars
   showHidden: true, // Catch hidden primary calendars
-  maxResults: 250
+  maxResults: 250,
 };
 ```
 
@@ -53,7 +55,7 @@ const params = {
 ```typescript
 const params = {
   syncToken: "<stored_token>",
-  maxResults: 250
+  maxResults: 250,
 };
 ```
 

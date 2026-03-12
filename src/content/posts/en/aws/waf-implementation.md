@@ -15,6 +15,7 @@ references:
   - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/getting-started.html'
     title: Get started with AWS WAF
     type: official
+source_content_hash: 1edb4cc346e40636ff07804f907058368f7ffb919151a1fd7fc51954e58a8348
 ---
 
 ## Architecture

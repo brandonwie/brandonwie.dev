@@ -16,6 +16,7 @@ references:
       https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
     title: Creating and managing an IP set in AWS WAF
     type: official
+source_content_hash: bcd75e1d0315d6f4e19407e083afd37c4fdda9c7d4069ba5e45cb18378c90499
 ---
 
 blocklist approach because unknown routes are automatically blocked.

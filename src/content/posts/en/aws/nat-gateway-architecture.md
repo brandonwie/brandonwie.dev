@@ -17,6 +17,7 @@ references:
   - url: 'https://aws.amazon.com/vpc/pricing/'
     title: Amazon VPC Pricing
     type: official
+source_content_hash: 3e2632286e64f5ef2b59445ed8dbcb4c5b0ecd2bc62dff57c0521fe2a057532f
 ---
 
 ## Architecture Overview

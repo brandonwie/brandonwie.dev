@@ -25,6 +25,7 @@ references:
   - url: 'https://tailwindcss.com/docs/installation'
     title: Tailwind CSS Installation Documentation
     type: official
+source_content_hash: c4e3e79e0daa5f25230e203a63275166c268a8813f98b6d814dfc4b6aed364c2
 ---
 
 Tailwind CSS project without using the shadcn CLI.

@@ -35,6 +35,7 @@ references:
   - url: 'https://asdf-vm.com/'
     title: asdf-vm.com
     type: verified
+source_content_hash: 269a8ae05596c621827bbc69511f9e34aff95874d9b756beb997a9bdfa62f2a4
 ---
 
 ## The Problem

@@ -16,6 +16,7 @@ references:
       https://developers.google.com/workspace/calendar/api/guides/recurringevents
     title: Recurring events — Google Calendar
     type: official
+source_content_hash: 245d8e85802530ec07297b47cf9ea0175cffdf68065e6d2a9261e81a55148d58
 ---
 
 ## Update Types

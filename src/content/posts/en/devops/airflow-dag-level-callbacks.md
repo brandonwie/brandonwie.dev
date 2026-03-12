@@ -16,6 +16,7 @@ references:
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/callbacks.html
     title: Callbacks — Airflow Documentation
     type: official
+source_content_hash: 443bf4ed1625c867bfaef42b18ecd29008b2b99709e5ea5817d13720fa3ef464
 ---
 
 task-level callbacks work.

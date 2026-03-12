@@ -15,6 +15,7 @@ references:
   - url: 'https://developers.google.com/workspace/calendar/api/concepts/sharing'
     title: Calendar sharing — Google Calendar
     type: official
+source_content_hash: d29f7528c60d87b01e6396a20820f74dea224ea589c5bde97ca544457ebbd37f
 ---
 
 Calendar API behaves unexpectedly. This causes data integrity issues if not

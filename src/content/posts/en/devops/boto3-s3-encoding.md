@@ -17,6 +17,7 @@ references:
       https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/put_object.html
     title: boto3 S3 Client put_object() Documentation
     type: official
+source_content_hash: 921453854cb04593c03757accb74c386eff31c0a3f7c0720e4912fa975ee3bfc
 ---
 
 cryptic parameter validation error. The `json.dumps()` call returned a Python

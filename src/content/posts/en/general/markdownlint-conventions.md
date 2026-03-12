@@ -24,6 +24,7 @@ references:
       https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint
     title: items
     type: verified
+source_content_hash: b18ff06056726d7eda3e61e5da1b3acf04c546bb252db8add1fb61c5bc51d2a2
 ---
 
 blank lines around lists, code blocks without language specifiers, duplicate

@@ -22,6 +22,7 @@ references:
       https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/executor/celery.html
     title: Airflow Celery Executor
     type: official
+source_content_hash: ef44cc9df6b0d169083f872bc12bc6475f60b103dc0a4eb2eae54d0221ea21d0
 ---
 
 to fetch logs from workers via HTTP. If the worker's hostname isn't configured

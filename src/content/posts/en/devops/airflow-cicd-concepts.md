@@ -17,6 +17,7 @@ references:
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/production-deployment.html
     title: Production Deployment — Airflow Documentation
     type: official
+source_content_hash: ad74aab52b375b8874aa84207167a49b72adbe190576d2b6fcc0635fd55480b8
 ---
 
 ## DAG vs ETL

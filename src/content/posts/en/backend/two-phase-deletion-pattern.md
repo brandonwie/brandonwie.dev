@@ -11,8 +11,10 @@ tags:
 category: backend
 draft: false
 lang: en
+expanded: true
+source_content_hash: 1924e9fc14f6ea8335276d2531eb9c70251aa4371993924a58ea7df1e9704808
 references:
-  - url: 'https://www.postgresql.org/docs/current/sql-update.html'
+  - url: "https://www.postgresql.org/docs/current/sql-update.html"
     title: UPDATE — PostgreSQL Documentation
     type: official
 ---
@@ -137,7 +139,7 @@ await this.blockRepo.delete({ originalId: deletedBlockId });
 
 // Gap 2: Divergence chain (recurringEventId in JSON)
 await this.blockRepo.delete({
-  googleEventData: { recurringEventId: deletedGcalId }
+  googleEventData: { recurringEventId: deletedGcalId },
 });
 ```
 

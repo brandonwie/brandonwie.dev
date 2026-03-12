@@ -12,6 +12,8 @@ tags:
 category: backend
 draft: false
 lang: en
+expanded: true
+source_content_hash: 49ff1df39279cfaba17da53fb9bdd66dc6991b236a3f10e998cd0e05952be0f5
 references:
   - url: "https://docs.bullmq.io/"
     title: docs.bullmq.io

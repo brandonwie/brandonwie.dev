@@ -18,6 +18,7 @@ references:
   - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html'
     title: vpc nat gateway.html
     type: official
+source_content_hash: f356f5f3f31c8a7a103be2e364d03e568570373463b263de8c67f5347f67297c
 ---
 
 architecture patterns.

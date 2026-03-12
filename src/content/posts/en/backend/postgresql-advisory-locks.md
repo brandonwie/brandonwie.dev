@@ -15,6 +15,7 @@ references:
   - url: 'https://www.postgresql.org/docs/current/explicit-locking.html'
     title: Explicit Locking — PostgreSQL Documentation
     type: official
+source_content_hash: e56aef5750df9a314e2ffd92a4c5f67d592341fb92e6be63c788bddb2a342979
 ---
 
 ## Key Properties
