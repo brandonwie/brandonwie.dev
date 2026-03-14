@@ -1,1 +1,7 @@
-/Users/brandonwie/dev/personal/3b/.claude/settings.local.json
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_context7_context7__query-docs"
+    ]
+  }
+}
