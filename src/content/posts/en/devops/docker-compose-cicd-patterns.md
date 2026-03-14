@@ -1,8 +1,9 @@
 ---
 title: Docker Compose CI/CD Patterns
-description: 'Patterns for using Docker Compose in CI/CD pipelines, particularly separating'
+description: 'Patterns for using Docker Compose in CI/CD pipelines: separating dev and prod configurations, ECR integration, and deployment strategies.'
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: 2026-03-15T00:00:00.000Z
+expanded: true
 tags:
   - devops
   - docker
@@ -18,14 +19,17 @@ references:
 source_content_hash: 19f34c82926f431710a23a36398203540637fc22bbe71103353aaa0df28b563b
 ---
 
-dev and prod configurations.
+Our CI/CD pipeline ran `docker-compose pull` and then `docker-compose up -d` on the production server. The logs showed success, but the container was running an old image built locally — not the fresh one we'd just pushed to ECR. The culprit? Our `docker-compose.yml` used `build:` instead of `image:`, so `pull` silently did nothing.
+
+This is one of those mistakes that wastes hours because everything _looks_ correct. This post covers the pattern that prevents it: separating your Docker Compose files into development (`build:`) and production (`image:`) configurations, along with CI/CD pipeline strategies for Airflow deployments on EC2.
+
+---
 
 ## The Build vs Image Problem
 
 ### The Issue
 
-When docker-compose.yml uses `build:` directive, `docker-compose pull` does
-nothing:
+The root cause is a fundamental difference in what `build:` and `image:` mean to Docker Compose. When a service uses `build:`, Compose ignores `pull` entirely — there's nothing to pull, because the configuration says "build this locally." When a service uses `image:`, Compose knows to fetch the specified image from a registry.
 
 ```yaml
 # docker-compose.yml
@@ -46,13 +50,15 @@ cooked the meal and put it in the fridge (ECR).
 
 ### The Solution: Separate Files
 
+The fix is straightforward: maintain two separate Compose files. One for local development that builds from source, one for production that pulls pre-built images from ECR.
+
 ```text
 project/
 ├── docker-compose.yml       # Local development (build:)
 └── docker-compose.prod.yml  # Production (image:)
 ```
 
-**Local Development:**
+**Local Development** uses `build:` so you can iterate on Dockerfile changes without pushing to a registry:
 
 ```yaml
 # docker-compose.yml
@@ -63,7 +69,7 @@ services:
       dockerfile: master/Dockerfile
 ```
 
-**Production:**
+**Production** uses `image:` with an ECR registry URL. The `${ECR_REGISTRY}` variable is injected by CI/CD at deploy time:
 
 ```yaml
 # docker-compose.prod.yml
@@ -71,6 +77,8 @@ services:
   webserver:
     image: ${ECR_REGISTRY}/airflow-master:latest # ← Pull from ECR
 ```
+
+With the Compose files separated, the CI/CD pipeline can use the right file for each environment. Here's the full flow for an Airflow deployment that supports both DAG-only changes (fast, no restart) and image changes (full rebuild and deploy).
 
 ## CI/CD Pipeline Flow
 
@@ -101,7 +109,7 @@ services:
 
 ## ECR_REGISTRY Environment Variable
 
-CI/CD injects ECR registry URL into `.env`:
+The `${ECR_REGISTRY}` variable in the production Compose file needs to resolve to the actual ECR URL. CI/CD handles this by appending the registry URL to the `.env` file on the target server:
 
 ```bash
 # In deploy.yml
@@ -117,6 +125,8 @@ services:
 ```
 
 ## Trigger Strategy
+
+An important decision for production deployments: should they run automatically on every push, or require manual approval? We started with automatic triggers and learned the hard way why manual is safer.
 
 ### Before: Auto + Manual
 
@@ -152,7 +162,7 @@ on:
 
 ## Secrets Manager Integration
 
-CI/CD fetches environment variables from Secrets Manager:
+The production server needs environment variables (database credentials, API keys, etc.) that should never live in the repository. The CI/CD pipeline fetches them from AWS Secrets Manager and writes them to `.env` on the target server at deploy time:
 
 ```bash
 # In deploy.yml
@@ -180,7 +190,11 @@ prod/airflow/master:
 
 ## Deployment Scenarios
 
+Let's walk through the two most common deployment scenarios and how they differ in speed and impact.
+
 ### Scenario 1: DAG Only Changes
+
+DAG-only changes are the fastest deployment path — a `git pull` on the EC2 instance, and Airflow picks up the changes within ~30 seconds. No container restart needed.
 
 ```bash
 # 1. Push code
@@ -198,6 +212,8 @@ git push origin main
 ```
 
 ### Scenario 2: Dockerfile/Requirements Changes
+
+Image changes require the full pipeline: build a new Docker image, push it to ECR, pull it on the server, and restart containers. This takes 1-2 minutes with a brief downtime window.
 
 ```bash
 # 1. Push code
@@ -217,7 +233,11 @@ git push origin main
 
 ## Rollback Methods
 
+When a deployment goes wrong, you need to get back to a known-good state fast. The rollback approach depends on what changed.
+
 ### ECR Image Rollback
+
+For image-related issues, pin the Compose file to a specific image tag (git SHA) instead of `:latest`:
 
 ```bash
 ssh airflow-master
@@ -247,3 +267,19 @@ git reset --hard <commit-sha>
 | ------------------------- | --------------------- | ------------------ |
 | `docker-compose.yml`      | Local development     | `build:` directive |
 | `docker-compose.prod.yml` | Production deployment | `image:` directive |
+
+---
+
+## Practical Takeaways
+
+The `build:` vs `image:` distinction is the single most important thing to get right in Docker Compose CI/CD. Everything else follows from this separation:
+
+1. **Always use separate Compose files for dev and prod.** `docker-compose.yml` with `build:` for local development, `docker-compose.prod.yml` with `image:` for production. Mixing them leads to the silent failure where `pull` does nothing because the file says "build locally."
+
+2. **Inject the ECR registry URL via environment variable.** The `ECR_REGISTRY` pattern keeps your Compose file portable — the same file works for any AWS account or region. CI/CD writes it to `.env`, and Docker Compose interpolates it automatically.
+
+3. **Use manual triggers for production deployments.** `workflow_dispatch` with deployment type selection (`dags`, `images`, `all`) prevents accidental deployments from pushes to main. For a system like Airflow, this also lets you deploy DAG changes without rebuilding containers — a 30-second operation instead of a 2-minute one.
+
+4. **Store secrets in AWS Secrets Manager, not in the repository.** The CI/CD pipeline fetches secrets at deploy time and writes them to `.env` on the target server. This keeps credentials out of git history and makes rotation straightforward.
+
+The pattern in this post scales from a single EC2 instance to multi-node deployments. The key insight remains the same: development builds locally, production pulls pre-built images.

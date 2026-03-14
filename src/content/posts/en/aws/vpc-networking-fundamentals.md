@@ -1,8 +1,9 @@
 ---
 title: AWS VPC Networking Fundamentals
-description: 'Comprehensive guide to AWS VPC networking concepts, CIDR notation, and network'
+description: 'Comprehensive guide to AWS VPC networking: CIDR notation, subnet design, NAT Gateway placement, route tables, and complete Terraform examples.'
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: 2026-03-15T00:00:00.000Z
+expanded: true
 tags:
   - aws
   - networking
@@ -21,19 +22,15 @@ references:
 source_content_hash: f356f5f3f31c8a7a103be2e364d03e568570373463b263de8c67f5347f67297c
 ---
 
-architecture patterns.
+I spent my first week on AWS wondering why my EC2 instance in a "private subnet" was reachable from the internet, and why the NAT Gateway I placed next to my application wasn't doing anything — except costing me $32/month. VPC networking is one of those topics where a small misunderstanding cascades into hours of debugging and unexpected bills.
+
+This post is the guide I wish I'd had: a ground-up walkthrough of AWS VPC networking, from CIDR math to NAT Gateway placement to Terraform configuration. If you've ever stared at a route table wondering why your traffic isn't flowing, this is for you.
 
 ---
 
 ## The Problem
 
-AWS resources need an isolated network to communicate securely. Without
-understanding VPC fundamentals -- CIDR notation, subnet design, route tables,
-and gateway placement -- you end up with resources that cannot reach the
-internet, private subnets that are accidentally public, NAT Gateways in the
-wrong subnet burning money without working, or address spaces too small to
-accommodate growth. VPC is the foundation that every other AWS service builds
-on, and mistakes here cascade into every layer above.
+AWS resources need an isolated network to communicate securely. Without understanding VPC fundamentals — CIDR notation, subnet design, route tables, and gateway placement — you end up with resources that cannot reach the internet, private subnets that are accidentally public, NAT Gateways in the wrong subnet burning money without working, or address spaces too small to accommodate growth. VPC is the foundation that every other AWS service builds on, and mistakes here cascade into every layer above.
 
 ---
 
@@ -89,6 +86,8 @@ on, and mistakes here cascade into every layer above.
   multi-region architectures, you need VPC Peering or Transit Gateway, which are
   separate concepts with their own design patterns
 
+With those constraints in mind, let's start with the foundation of VPC design: IP addressing.
+
 ---
 
 ## IP Addressing and CIDR
@@ -138,6 +137,8 @@ In each subnet, AWS reserves 5 IP addresses:
 Usable: 10.0.1.4 to 10.0.1.254 (251 addresses)
 ```
 
+One common misconception about these numbers deserves its own section.
+
 ---
 
 ## Subnet IP vs Connection Capacity
@@ -159,11 +160,15 @@ Example architecture:
 - Total capacity: ~10,000 concurrent connections
 ```
 
+Now that we understand IP addressing and subnet sizing, let's put it together into a VPC architecture.
+
 ---
 
 ## VPC Architecture
 
 ### Standard VPC Design
+
+A VPC is your isolated network within AWS. The CIDR block you choose determines the total address space available for all subnets within it.
 
 ```terraform
 resource "aws_vpc" "main" {
@@ -198,11 +203,15 @@ Private Subnets (internal):
 - Room for expansion
 - Clear security boundaries
 
+With subnets defined, we need components that control how traffic flows in and out of the VPC.
+
 ---
 
 ## Network Components
 
 ### Internet Gateway (IGW)
+
+The Internet Gateway is the VPC's connection point to the public internet. Think of it as the building's front door — without it, nothing inside the VPC can reach the outside world.
 
 - Connects VPC to the internet
 - One IGW per VPC (hard limit)
@@ -325,13 +334,15 @@ This is required because the NAT Gateway needs a stable public IP for outbound
 traffic from private subnets. This EIP is free as long as it remains attached to
 the NAT Gateway.
 
+Gateways and EIPs provide the _ability_ to reach the internet, but route tables determine _which subnets_ actually use them.
+
 ---
 
 ## Route Tables
 
 ### Public Route Table
 
-Routes internet traffic through IGW:
+The public route table sends all non-local traffic (`0.0.0.0/0`) through the Internet Gateway, making any associated subnet "public":
 
 ```terraform
 resource "aws_route_table" "public" {
@@ -351,7 +362,7 @@ resource "aws_route_table_association" "public_a" {
 
 ### Private Route Table
 
-Routes internet traffic through NAT Gateway:
+The private route table sends outbound traffic through the NAT Gateway instead, keeping resources hidden from direct internet access while still allowing them to reach external services:
 
 ```terraform
 resource "aws_route_table" "private" {
@@ -368,6 +379,8 @@ resource "aws_route_table_association" "private_a" {
   route_table_id = aws_route_table.private.id
 }
 ```
+
+With route tables configured, here's how traffic actually flows through the VPC for different scenarios.
 
 ---
 
@@ -412,9 +425,15 @@ Internet → IGW → ALB (public) → EC2 (private)
 - VPN connections
 - Transit Gateway
 
+Understanding the cost model helps you make informed decisions about which components to include — especially for non-production environments where a NAT Gateway might not be worth the $32/month.
+
+Now let's put everything together into a complete, production-ready Terraform configuration.
+
 ---
 
 ## Complete VPC Example
+
+The following Terraform code creates a VPC with one public subnet, one private subnet, an Internet Gateway, and a NAT Gateway — the minimal production setup for a single availability zone:
 
 ```terraform
 # VPC
@@ -491,6 +510,20 @@ resource "aws_route_table_association" "private_a" {
   route_table_id = aws_route_table.private.id
 }
 ```
+
+---
+
+## Practical Takeaways
+
+VPC networking is the invisible foundation of every AWS deployment. Get it right once, and every service you build on top inherits a secure, predictable network. Get it wrong, and you'll spend hours debugging connectivity issues that could have been prevented by understanding three things:
+
+1. **CIDR math determines your growth ceiling.** A `/16` VPC gives you room for 65,536 addresses — start there unless you have a reason not to. Remember that AWS reserves 5 IPs per subnet, so a `/28` only gives you 11 usable addresses.
+
+2. **NAT Gateway placement is counterintuitive by design.** The NAT Gateway lives in the _public_ subnet to give _private_ subnet resources internet access. If you place it in the private subnet (where the resources are), routing breaks entirely. At ~$32/month, a NAT Gateway in a dev environment is an expensive mistake — skip it unless private subnets genuinely need outbound internet access.
+
+3. **Explicit route table associations prevent accidental exposure.** Never rely on the default main route table. If someone adds an IGW route to it, every unassociated subnet becomes public. Always explicitly associate every subnet with its intended route table.
+
+Start with the complete Terraform example above, adapt the CIDR ranges and AZs to your region, and build from there. For dev environments, a single-AZ setup without redundant NAT Gateways saves ~$64/month with no impact on development workflows.
 
 ---
 

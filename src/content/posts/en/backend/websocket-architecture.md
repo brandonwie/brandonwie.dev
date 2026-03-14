@@ -1,8 +1,9 @@
 ---
 title: WebSocket Architecture in AWS ECS/ALB
-description: 'How WebSocket connections work with ALB, ECS, and Redis Pub/Sub for real-time'
+description: 'How WebSocket connections work with ALB, ECS, and Redis Pub/Sub for real-time notifications in containerized environments.'
 date: 2025-11-25T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: 2026-03-15T00:00:00.000Z
+expanded: true
 tags:
   - backend
   - websocket
@@ -28,19 +29,15 @@ references:
 source_content_hash: e438c936065918f3e9eeb50c17c00d7302df6bb1b0d785e3b48220a4b6dd8d84
 ---
 
-notifications.
+Our users kept refreshing the page to check if their calendar sync was done. We needed the server to push a "sync complete" notification in real time — but our NestJS backend ran on multiple ECS containers behind an ALB. That raised a fundamental question: if a background job finishes on Container 2, how does User A (connected to Container 1) find out?
+
+This post traces the full architecture of WebSocket connections in a containerized AWS environment: how ALB handles the HTTP upgrade, how Redis Pub/Sub bridges multiple containers, and what happens when connections inevitably drop.
 
 ---
 
 ## The Problem
 
-A NestJS backend running on AWS ECS needs to push real-time notifications to
-browser clients (e.g., "sync complete" after a background job finishes). HTTP
-polling wastes resources and adds latency. WebSockets solve this, but
-introducing them in a containerized, load-balanced environment raises questions:
-How does ALB handle the HTTP-to-WebSocket upgrade? How do multiple containers
-broadcast to clients connected to different instances? What happens when
-connections drop?
+A NestJS backend running on AWS ECS needs to push real-time notifications to browser clients (e.g., "sync complete" after a background job finishes). HTTP polling wastes resources and adds latency. WebSockets solve this, but introducing them in a containerized, load-balanced environment raises questions: How does ALB handle the HTTP-to-WebSocket upgrade? How do multiple containers broadcast to clients connected to different instances? What happens when connections drop?
 
 ---
 
@@ -82,6 +79,8 @@ flowchart LR
 4. **ALB** keeps TCP tunnel open (passes through data)
 5. **Socket.io** manages the connection from here
 
+Let's break down what each component in this architecture is actually responsible for.
+
 ---
 
 ## Component Responsibilities
@@ -95,11 +94,11 @@ flowchart LR
 
 **Key insight:** ALB is just a tunnel - Socket.io manages the actual connection.
 
+A natural question arises: if Socket.io manages the connection, why do we need an ALB at all? The answer is about network topology, not protocol handling.
+
 ---
 
 ## Why We Need ALB
-
-Even though Socket.io manages state, ALB serves a different purpose:
 
 ### Initial Connection Routing
 
@@ -115,14 +114,15 @@ With ALB:
   Client → api.example.com → ALB (public) → picks container → WebSocket established
 ```
 
+ALB solves the "how do clients reach containers" problem. But there's a second, subtler problem: how do containers talk to each other?
+
 ---
 
 ## Redis for Multi-Container Broadcasting
 
 ### The Problem
 
-With multiple ECS containers, User A might connect to Container 1, but the sync
-job runs on Container 2.
+With multiple ECS containers, User A might connect to Container 1, but the sync job runs on Container 2.
 
 ```text
 Without Redis:
@@ -145,8 +145,7 @@ flowchart LR
 
 ### How Pub/Sub Actually Works
 
-**Key insight:** Redis doesn't "call" your app. Your app maintains persistent
-TCP connections to Redis.
+A common misconception is that Redis sends HTTP requests to your application when a message is published. In reality, it works the other way around — your app maintains persistent TCP connections to Redis, and Redis writes data to those already-open connections:
 
 ```text
 Step 1: STARTUP
@@ -167,6 +166,8 @@ Step 4: RECEIVE
 
 ### Code Reference
 
+In the Socket.io Redis adapter setup, notice the two separate Redis clients — one for publishing messages, one for subscribing to receive them. The subscriber maintains a persistent TCP connection that Redis writes to whenever a message is published on the channel:
+
 ```typescript
 // pubClient: for PUBLISHING messages
 // subClient: for SUBSCRIBING (maintains open TCP connection)
@@ -179,6 +180,8 @@ this.adapterConstructor = createAdapter(pubClient, subClient, {
   key: `${redisConfig.prefix}:socket.io`
 });
 ```
+
+With the broadcasting mechanism understood, the next important topic is what happens when connections end — either normally or unexpectedly.
 
 ---
 
@@ -288,17 +291,6 @@ Ensures reconnections go to the same container:
 - Less Redis overhead
 - Required for Socket.io HTTP polling fallback
 
-### Configuration
-
-```text
-When you click "Merge pull request" dropdown ▼:
-┌─────────────────────────────────────┐
-│ Create a merge commit               │ ← feature→develop
-│ Squash and merge                    │ ← develop→main
-│ Rebase and merge                    │
-└─────────────────────────────────────┘
-```
-
 ---
 
 ## When to Use
@@ -361,6 +353,22 @@ namespaces, and room-scoped broadcasting out of the box.
 4. **Pub/Sub pattern** - Subscribe once, receive messages as they're published
 5. **Single container simplifies** - No sticky sessions needed; Redis useful for
    future scaling
+
+---
+
+## Practical Takeaways
+
+WebSocket architecture in a containerized environment looks complex on paper, but the mental model is straightforward once you understand each component's role:
+
+1. **ALB is just a tunnel.** After the initial HTTP upgrade handshake, ALB does nothing but pass TCP bytes through. Socket.io manages the actual connection lifecycle — heartbeats, timeouts, rooms, cleanup. Don't over-configure the ALB; the defaults work because Socket.io's 25-second heartbeat keeps connections alive well within ALB's 60-second idle timeout.
+
+2. **Redis Pub/Sub solves the multi-container broadcast problem.** Each container maintains a persistent TCP connection to Redis. When Container 2 publishes a message, Redis writes it to Container 1's already-open connection — no HTTP callbacks, no polling. The Socket.io Redis adapter handles serialization and room-scoped delivery out of the box.
+
+3. **Start with the Redis adapter even on a single container.** It adds negligible overhead and means you can scale to multiple containers without changing your WebSocket code. Going from one container to three becomes a Terraform change, not an application architecture change.
+
+4. **Know the three disconnect scenarios.** Normal tab close sends a TCP FIN (instant detection). Network drops send nothing (detected by ping/pong timeout in ~25 seconds). ALB idle timeout (60 seconds) rarely triggers thanks to heartbeats. Each scenario is handled automatically by Socket.io, but understanding them helps you debug connection issues in production.
+
+If you're adding real-time features to a containerized backend, the Socket.io + Redis Adapter + ALB combination is battle-tested and avoids reinventing the wheel of connection management, reconnection, and cross-container messaging.
 
 ---
 

@@ -2,7 +2,8 @@
 title: ECR/ECS Deployment Workflow
 description: Complete guide to container deployment using Amazon ECR and ECS.
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: 2026-03-15T00:00:00.000Z
+expanded: true
 tags:
   - aws
   - ecs
@@ -32,15 +33,15 @@ references:
 source_content_hash: 4f24fda7155c07b74d03bd9f2585027984de96d3dcabbb894c207257e52ff753
 ---
 
+Our first ECS deployment looked perfect in the GitHub Actions logs — green checkmarks everywhere. Then we checked the running service: it was still serving the old image. The task definition had been registered, but nobody told the ECS service to actually use it. That was the first of many "it works but not really" moments on our path to reliable container deployments.
+
+If you're deploying Docker containers to AWS and want to understand the full pipeline — from `docker build` to zero-downtime rolling updates with automatic rollback — this guide walks through every step, including the gotchas that docs don't warn you about.
+
+---
+
 ## The Problem
 
-Deploying containerized applications to AWS requires coordinating multiple
-services (ECR for image storage, ECS for orchestration, Fargate for compute)
-with specific authentication flows, image tagging strategies, and deployment
-configurations. Without a clear end-to-end workflow, deployments are
-error-prone: images get pushed to wrong repos, task definitions reference stale
-images, rolling updates cause downtime, and failed deployments have no automatic
-rollback.
+Deploying containerized applications to AWS requires coordinating multiple services (ECR for image storage, ECS for orchestration, Fargate for compute) with specific authentication flows, image tagging strategies, and deployment configurations. Without a clear end-to-end workflow, deployments are error-prone: images get pushed to wrong repos, task definitions reference stale images, rolling updates cause downtime, and failed deployments have no automatic rollback.
 
 ---
 
@@ -88,9 +89,13 @@ rollback.
 - **Budget-constrained hobby projects** -- Fargate costs add up quickly; a
   single t3.micro EC2 with Docker is cheaper for low-traffic services
 
+With those pitfalls in mind, let's walk through the architecture and each step of the deployment pipeline.
+
 ---
 
 ## Architecture Overview
+
+At a high level, the deployment pipeline moves code from your local machine through three AWS services:
 
 ```mermaid
 flowchart LR
@@ -114,7 +119,7 @@ flowchart LR
 
 ## ECR (Elastic Container Registry)
 
-ECR is AWS's managed Docker container registry.
+The first stop in the pipeline is ECR — AWS's managed Docker container registry. This is where your built images live before ECS pulls them down to run as containers.
 
 ### Creating ECR Repository
 
@@ -155,11 +160,15 @@ docker push \
   ${ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/my-app:latest
 ```
 
+Once your image is in ECR, ECS takes over to orchestrate the deployment. The flow involves registering a new task definition and then telling the ECS service to use it.
+
 ---
 
 ## ECS Deployment Flow
 
 ### Complete Deployment Pipeline
+
+Here's the full sequence from code push to running containers:
 
 ```mermaid
 sequenceDiagram
@@ -204,13 +213,15 @@ aws ecs update-service \
   --force-new-deployment
 ```
 
+The manual steps above show the mechanics, but in production you want zero-downtime deployments. That's where rolling updates come in.
+
 ---
 
 ## Rolling Updates
 
 ### How Rolling Updates Work
 
-ECS replaces tasks one by one to ensure zero downtime:
+ECS replaces tasks one by one to ensure zero downtime. The key idea: new tasks start and pass health checks _before_ old tasks are drained and terminated:
 
 ```text
 Time     | Old v1.0 | New v2.0 | Total | Status
@@ -351,6 +362,8 @@ deployment_circuit_breaker {
 }
 ```
 
+One question that comes up frequently: what happens if auto-scaling kicks in during a deployment? The good news is ECS handles this gracefully.
+
 ---
 
 ## Deployment with Auto-Scaling
@@ -426,9 +439,13 @@ aws application-autoscaling register-scalable-target \
     '{"DynamicScalingInSuspended": false, "DynamicScalingOutSuspended": false}'
 ```
 
+With the deployment mechanics understood, let's automate the entire pipeline with GitHub Actions.
+
 ---
 
 ## GitHub Actions Workflow
+
+The following workflow builds a Docker image, pushes it to ECR, updates the task definition, and deploys to ECS — all triggered by a push to `main`:
 
 ```yaml
 name: Deploy to ECS
@@ -482,11 +499,15 @@ jobs:
           wait-for-service-stability: true
 ```
 
+With the pipeline automated, here are the practices that keep deployments reliable over time.
+
 ---
 
 ## Best Practices
 
 ### Image Tagging
+
+Consistent tagging makes it possible to trace a running container back to its source code and roll back to any previous version:
 
 ```text
 Recommended tags:
@@ -497,7 +518,7 @@ Recommended tags:
 
 ### ECR Lifecycle Policy
 
-Clean up old images automatically:
+Without cleanup, ECR accumulates images indefinitely — each push adds a new one. Lifecycle policies automatically expire old images to keep storage costs under control:
 
 ```json
 {
@@ -520,7 +541,7 @@ Clean up old images automatically:
 
 ### Health Checks
 
-Ensure new tasks are healthy before receiving traffic:
+Health checks are the mechanism that prevents bad deployments from receiving traffic. The ALB checks each task's health endpoint before routing requests to it:
 
 ```hcl
 resource "aws_lb_target_group" "app" {
@@ -650,6 +671,22 @@ flowchart LR
     D -->|"Sufficient"| F{"Check Subnet"}
     F -->|"No IP"| G["Check Subnet Capacity"]
 ```
+
+---
+
+## Practical Takeaways
+
+ECR/ECS deployment is a coordination problem more than a technical one. Each piece (image registry, task definitions, service updates, health checks) works fine individually — the challenge is making them work together reliably. Here's what matters most:
+
+1. **Always enable the circuit breaker.** Without `deployment_circuit_breaker`, a bad image causes ECS to endlessly retry launching failing tasks, burning Fargate costs until you manually intervene. This is a one-line Terraform addition that saves you from 3 AM pages.
+
+2. **Tag images with git SHAs, not just `latest`.** The `:latest` tag is convenient but makes rollbacks painful because you can't tell which version is running. Git SHA tags (`my-app:abc123def`) give you instant traceability from running task to source commit.
+
+3. **Set health check grace periods generously.** If your application takes 30 seconds to start (common for JVM or NestJS apps), a 10-second grace period creates an infinite deployment loop: ECS launches a task, kills it before it's ready, launches another, kills it again. Set the grace period to at least 2x your worst-case startup time.
+
+4. **Handle SIGTERM in your application.** ECS sends SIGTERM before terminating tasks during rolling updates. If your app doesn't handle this signal, in-flight requests get dropped. The Node.js graceful shutdown pattern above takes 10 lines and prevents data loss during deployments.
+
+The GitHub Actions workflow in this post is a production-ready starting point. Clone it, update the cluster/service names, and you have zero-downtime deployments with automatic rollback on failure.
 
 ---
 
