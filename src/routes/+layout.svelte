@@ -36,6 +36,21 @@
 	import { page } from '$app/state';
 	import { locales, localizeHref } from '$lib/paraglide/runtime';
 
+	// View Transitions API - smooth crossfade between pages
+	// Progressive enhancement: unsupported browsers get instant navigation
+	import { onNavigate } from '$app/navigation';
+
+	onNavigate((navigation) => {
+		if (!document.startViewTransition) return;
+
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
+
 	// SVELTE 5 RUNES: $props()
 	// ------------------------
 	// `$props()` replaces Svelte 4's `export let` for declaring component props.
