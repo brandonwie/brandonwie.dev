@@ -45,13 +45,13 @@ export function executeCommand(input: string, context: CommandContext): CommandR
 			output: [
 				{
 					type: 'error',
-					content: `command not found: ${commandName}`
+					content: `command not found: ${commandName}`,
 				},
 				{
 					type: 'text',
-					content: `Type 'help' for available commands`
-				}
-			]
+					content: `Type 'help' for available commands`,
+				},
+			],
 		};
 	}
 
@@ -62,9 +62,9 @@ export function executeCommand(input: string, context: CommandContext): CommandR
 			output: [
 				{
 					type: 'error',
-					content: `Error executing ${commandName}: ${error instanceof Error ? error.message : 'Unknown error'}`
-				}
-			]
+					content: `Error executing ${commandName}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				},
+			],
 		};
 	}
 }

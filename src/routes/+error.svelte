@@ -22,7 +22,7 @@
   │   cat: /page: No such file      │
   │                                 │
   └─────────────────────────────────┘`,
-			hint: 'The page you are looking for does not exist.'
+			hint: 'The page you are looking for does not exist.',
 		},
 		500: {
 			title: 'Server Error',
@@ -36,8 +36,8 @@
   │   dumped)                       │
   │                                 │
   └─────────────────────────────────┘`,
-			hint: 'Something went wrong on our end.'
-		}
+			hint: 'Something went wrong on our end.',
+		},
 	};
 
 	const errorInfo = $derived(
@@ -52,8 +52,8 @@
   │   ${status}                            │
   │                                 │
   └─────────────────────────────────┘`,
-			hint: message
-		}
+			hint: message,
+		},
 	);
 </script>
 
@@ -61,7 +61,9 @@
 	<title>{errorInfo.title} | Brandon Wie</title>
 </svelte:head>
 
-<div class="flex min-h-screen flex-col items-center justify-center bg-terminal-bg-primary p-4 font-mono">
+<div
+	class="flex min-h-screen flex-col items-center justify-center bg-terminal-bg-primary p-4 font-mono"
+>
 	<!-- ASCII art error box -->
 	<pre class="text-terminal-accent-red text-sm md:text-base">{errorInfo.ascii}</pre>
 
@@ -86,7 +88,9 @@
 
 	<!-- Terminal prompt hint -->
 	<p class="mt-8 text-xs text-terminal-text-dim">
-		<span class="text-terminal-accent-green">visitor@brandonwie.dev</span>:<span class="text-terminal-accent-blue">~</span>$
+		<span class="text-terminal-accent-green">visitor@brandonwie.dev</span>:<span
+			class="text-terminal-accent-blue">~</span
+		>$
 		<span class="animate-pulse">_</span>
 	</p>
 </div>

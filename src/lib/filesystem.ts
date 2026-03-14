@@ -14,27 +14,27 @@ export function buildFileSystem(posts: PostMetadata[]): FSNode {
 	const root: FSNode = {
 		name: '~',
 		type: 'directory',
-		children: new Map()
+		children: new Map(),
 	};
 
 	// Add static directories
 	root.children!.set('about', {
 		name: 'about',
 		type: 'directory',
-		children: new Map()
+		children: new Map(),
 	});
 
 	root.children!.set('projects', {
 		name: 'projects',
 		type: 'directory',
-		children: new Map()
+		children: new Map(),
 	});
 
 	// Add posts directory
 	const postsDir: FSNode = {
 		name: 'posts',
 		type: 'directory',
-		children: new Map()
+		children: new Map(),
 	};
 	root.children!.set('posts', postsDir);
 
@@ -45,7 +45,7 @@ export function buildFileSystem(posts: PostMetadata[]): FSNode {
 			postsDir.children!.set(post.category, {
 				name: post.category,
 				type: 'directory',
-				children: new Map()
+				children: new Map(),
 			});
 		}
 
@@ -55,7 +55,7 @@ export function buildFileSystem(posts: PostMetadata[]): FSNode {
 		categoryDir.children!.set(`${post.slug}.md`, {
 			name: `${post.slug}.md`,
 			type: 'file',
-			metadata: post
+			metadata: post,
 		});
 	}
 

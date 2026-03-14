@@ -1,5 +1,5 @@
 import { registerCommand } from './index';
-import { resolvePath, getAbsolutePath } from '../filesystem';
+import { resolvePath } from '../filesystem';
 
 registerCommand('cat', (args, context) => {
 	if (args.length === 0) {
@@ -7,9 +7,9 @@ registerCommand('cat', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: 'cat: missing file operand'
-				}
-			]
+					content: 'cat: missing file operand',
+				},
+			],
 		};
 	}
 
@@ -21,9 +21,9 @@ registerCommand('cat', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: `cat: ${path}: No such file or directory`
-				}
-			]
+					content: `cat: ${path}: No such file or directory`,
+				},
+			],
 		};
 	}
 
@@ -32,9 +32,9 @@ registerCommand('cat', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: `cat: ${path}: Is a directory`
-				}
-			]
+					content: `cat: ${path}: Is a directory`,
+				},
+			],
 		};
 	}
 
@@ -45,9 +45,9 @@ registerCommand('cat', (args, context) => {
 			output: [
 				{
 					type: 'success',
-					content: `Opening ${node.metadata.title}...`
-				}
-			]
+					content: `Opening ${node.metadata.title}...`,
+				},
+			],
 		};
 	}
 
@@ -55,9 +55,9 @@ registerCommand('cat', (args, context) => {
 		output: [
 			{
 				type: 'text',
-				content: `(file content for ${node.name})`
-			}
-		]
+				content: `(file content for ${node.name})`,
+			},
+		],
 	};
 });
 
@@ -68,9 +68,9 @@ registerCommand('read', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: 'read: missing file operand'
-				}
-			]
+					content: 'read: missing file operand',
+				},
+			],
 		};
 	}
 
@@ -82,9 +82,9 @@ registerCommand('read', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: `read: ${path}: No such file or directory`
-				}
-			]
+					content: `read: ${path}: No such file or directory`,
+				},
+			],
 		};
 	}
 
@@ -93,9 +93,9 @@ registerCommand('read', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: `read: ${path}: Is a directory`
-				}
-			]
+					content: `read: ${path}: Is a directory`,
+				},
+			],
 		};
 	}
 
@@ -105,9 +105,9 @@ registerCommand('read', (args, context) => {
 			output: [
 				{
 					type: 'success',
-					content: `Opening ${node.metadata.title}...`
-				}
-			]
+					content: `Opening ${node.metadata.title}...`,
+				},
+			],
 		};
 	}
 

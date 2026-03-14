@@ -11,15 +11,15 @@ registerCommand('history', () => {
 			output: [
 				{
 					type: 'text',
-					content: '(no commands in history)'
-				}
-			]
+					content: '(no commands in history)',
+				},
+			],
 		};
 	}
 
 	const output: OutputLine[] = history.map((entry, index) => ({
 		type: 'text',
-		content: `  ${String(index + 1).padStart(4)}  ${entry.command}`
+		content: `  ${String(index + 1).padStart(4)}  ${entry.command}`,
 	}));
 
 	return { output };

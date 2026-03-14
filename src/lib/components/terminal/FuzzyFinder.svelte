@@ -41,9 +41,9 @@
 	// PROPS INTERFACE
 	// ---------------
 	interface Props {
-		posts: PostMetadata[];          // Posts to search through
+		posts: PostMetadata[]; // Posts to search through
 		onSelect: (slug: string) => void; // Called when user selects a post
-		onClose: () => void;            // Called when user closes modal
+		onClose: () => void; // Called when user closes modal
 	}
 
 	let { posts, onSelect, onClose }: Props = $props();
@@ -51,10 +51,10 @@
 	// COMPONENT STATE
 	// ---------------
 	let inputRef: HTMLInputElement;
-	let query = $state('');                     // Search query
-	let results: FuzzyResult[] = $state([]);    // Search results
-	let selectedIndex = $state(0);              // Currently selected result
-	let fuse: Fuse<PostMetadata>;               // Fuse.js instance (not reactive)
+	let query = $state(''); // Search query
+	let results: FuzzyResult[] = $state([]); // Search results
+	let selectedIndex = $state(0); // Currently selected result
+	let fuse: Fuse<PostMetadata>; // Fuse.js instance (not reactive)
 
 	// RESULTS CONTAINER REF
 	// ---------------------
@@ -106,7 +106,7 @@
 		// Initial results - show recent posts when no search query
 		// PATTERN: Default to showing useful content (recent posts) vs empty state
 		results = posts
-			.slice()                    // Copy array to avoid mutating original
+			.slice() // Copy array to avoid mutating original
 			.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 			.map((post) => ({ item: post, score: 0 }));
 
@@ -143,7 +143,7 @@
 	function handleKeyDown(event: KeyboardEvent) {
 		switch (event.key) {
 			case 'ArrowUp':
-				event.preventDefault();  // Prevent cursor moving in input
+				event.preventDefault(); // Prevent cursor moving in input
 				selectedIndex = Math.max(0, selectedIndex - 1);
 				break;
 
@@ -229,7 +229,9 @@
 	tabindex="-1"
 >
 	<!-- DIALOG CONTAINER -->
-	<div class="w-full max-w-2xl rounded-lg border border-terminal-border bg-terminal-bg-secondary shadow-2xl">
+	<div
+		class="w-full max-w-2xl rounded-lg border border-terminal-border bg-terminal-bg-secondary shadow-2xl"
+	>
 		<!--
 		  SEARCH INPUT HEADER
 		  -------------------
@@ -258,7 +260,9 @@
 				spellcheck="false"
 			/>
 			<!-- Keyboard hint -->
-			<kbd class="rounded-sm bg-terminal-bg-primary px-2 py-1 text-xs text-terminal-text-muted">esc</kbd>
+			<kbd class="rounded-sm bg-terminal-bg-primary px-2 py-1 text-xs text-terminal-text-muted"
+				>esc</kbd
+			>
 		</div>
 
 		<!--
@@ -280,9 +284,7 @@
 		-->
 		<div bind:this={resultsContainerRef} class="max-h-96 overflow-y-auto">
 			{#if results.length === 0}
-				<div class="p-4 text-center text-terminal-text-muted">
-					No posts found
-				</div>
+				<div class="p-4 text-center text-terminal-text-muted">No posts found</div>
 			{:else}
 				<!--
 				  KEYED EACH - Using slug as key
@@ -307,7 +309,8 @@
 					  Svelte allows JS expressions in class attribute.
 					-->
 					<div
-						class="cursor-pointer border-b border-terminal-border/50 py-3 last:border-b-0 {i === selectedIndex
+						class="cursor-pointer border-b border-terminal-border/50 py-3 last:border-b-0 {i ===
+						selectedIndex
 							? 'border-l-2 border-l-terminal-accent-orange bg-terminal-accent-orange/10 pl-3.5 pr-4'
 							: 'px-4'}"
 						onclick={() => onSelect(result.item.slug)}
@@ -340,7 +343,9 @@
 								</div>
 								<!-- Tags and category -->
 								<div class="mt-2 flex flex-wrap gap-2">
-									<span class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-accent-yellow">
+									<span
+										class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-accent-yellow"
+									>
 										{result.item.category}
 									</span>
 									<!--
@@ -350,7 +355,9 @@
 									  This runs every render, but is cheap (array.slice).
 									-->
 									{#each result.item.tags.slice(0, 3) as tag}
-										<span class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted">
+										<span
+											class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted"
+										>
 											{tag}
 										</span>
 									{/each}
@@ -372,7 +379,9 @@
 		  Helps users discover keyboard shortcuts.
 		  Result count updates reactively as results change.
 		-->
-		<div class="flex items-center justify-between border-t border-terminal-border px-4 py-2 text-xs text-terminal-text-muted">
+		<div
+			class="flex items-center justify-between border-t border-terminal-border px-4 py-2 text-xs text-terminal-text-muted"
+		>
 			<div class="flex gap-4">
 				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↑↓</kbd> navigate</span>
 				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↵</kbd> select</span>

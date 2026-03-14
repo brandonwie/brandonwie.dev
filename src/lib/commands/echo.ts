@@ -5,8 +5,8 @@ registerCommand('echo', (args) => {
 		output: [
 			{
 				type: 'text',
-				content: args.join(' ')
-			}
-		]
+				content: args.join(' '),
+			},
+		],
 	};
 });

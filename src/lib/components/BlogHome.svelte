@@ -64,11 +64,14 @@
 				rel="noopener noreferrer"
 				class="group block py-3 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
 			>
-				<span class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">
+				<span
+					class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors"
+				>
 					Arch Calendar
 				</span>
 				<span class="text-xs text-terminal-text-dim ml-2">— {m.archcalendar_subtitle()}</span>
-				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· {m.archcalendar_role()}</span>
+				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· {m.archcalendar_role()}</span
+				>
 				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
 					{m.archcalendar_description()}
 				</p>
@@ -81,7 +84,9 @@
 				rel="noopener noreferrer"
 				class="group block py-3 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
 			>
-				<span class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">
+				<span
+					class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors"
+				>
 					Project Crucio
 				</span>
 				<span class="text-xs text-terminal-text-dim ml-2">— {m.portfolio_subtitle()}</span>
@@ -114,10 +119,15 @@
 								{formatDateShort(effectiveDate(post.date, post.updated))}
 							</time>
 							{#if post.updated && post.updated !== post.date}
-								<span class="text-terminal-accent-green text-xs shrink-0" title="{m.updated()} {formatDateShort(post.updated)}">↻</span>
+								<span
+									class="text-terminal-accent-green text-xs shrink-0"
+									title="{m.updated()} {formatDateShort(post.updated)}">↻</span
+								>
 							{/if}
 							<div class="min-w-0">
-								<span class="text-sm text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">
+								<span
+									class="text-sm text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors"
+								>
 									{post.title}
 								</span>
 								{#if post.description}
@@ -147,7 +157,9 @@
 
 	<!-- Footer -->
 	<footer class="border-t border-terminal-border mt-auto">
-		<div class="mx-auto max-w-2xl px-4 py-6 sm:px-6 flex items-center justify-between text-xs text-terminal-text-dim">
+		<div
+			class="mx-auto max-w-2xl px-4 py-6 sm:px-6 flex items-center justify-between text-xs text-terminal-text-dim"
+		>
 			<span>&copy; Brandon (Seokhyun) Wie</span>
 			<div class="flex items-center gap-4">
 				<a
@@ -188,7 +200,22 @@
 					target="_blank"
 					rel="noopener noreferrer"
 				>
-					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="12"
+						height="12"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						><path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle
+							cx="5"
+							cy="19"
+							r="1"
+						/></svg
+					>
 					RSS
 				</a>
 			</div>

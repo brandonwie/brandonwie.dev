@@ -1,0 +1,7 @@
+build/
+.svelte-kit/
+src/lib/paraglide/
+static/og/
+static/fonts/
+node_modules/
+src/content/posts/

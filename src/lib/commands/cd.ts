@@ -1,5 +1,5 @@
 import { registerCommand } from './index';
-import { resolvePath, getAbsolutePath } from '../filesystem';
+import { resolvePath } from '../filesystem';
 
 registerCommand('cd', (args, context) => {
 	const path = args[0] || '~';
@@ -7,11 +7,10 @@ registerCommand('cd', (args, context) => {
 	if (path === '~') {
 		return {
 			output: [],
-			newCwd: '~'
+			newCwd: '~',
 		};
 	}
 
-	const targetPath = getAbsolutePath(context.cwd, path);
 	const node = resolvePath(context.fs, context.cwd, path);
 
 	if (!node) {
@@ -19,9 +18,9 @@ registerCommand('cd', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: `cd: no such file or directory: ${path}`
-				}
-			]
+					content: `cd: no such file or directory: ${path}`,
+				},
+			],
 		};
 	}
 
@@ -30,9 +29,9 @@ registerCommand('cd', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: `cd: not a directory: ${path}`
-				}
-			]
+					content: `cd: not a directory: ${path}`,
+				},
+			],
 		};
 	}
 
@@ -58,6 +57,6 @@ registerCommand('cd', (args, context) => {
 
 	return {
 		output: [],
-		newCwd
+		newCwd,
 	};
 });

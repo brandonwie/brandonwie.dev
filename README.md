@@ -12,14 +12,14 @@ Personal blog with a terminal-style interface, built with SvelteKit.
 
 ## Tech Stack
 
-| Component | Choice |
-| --------- | ------ |
+| Component | Choice                     |
+| --------- | -------------------------- |
 | Framework | SvelteKit + adapter-static |
-| Styling | Tailwind CSS |
-| i18n | Paraglide-JS |
-| Markdown | mdsvex + Shiki |
-| Search | Fuse.js |
-| Hosting | Cloudflare Pages |
+| Styling   | Tailwind CSS               |
+| i18n      | Paraglide-JS               |
+| Markdown  | mdsvex + Shiki             |
+| Search    | Fuse.js                    |
+| Hosting   | Cloudflare Pages           |
 
 ## Development
 
@@ -64,16 +64,16 @@ See [docs/TRANSLATION.md](docs/TRANSLATION.md) for translation guidelines.
 
 ## URL Structure
 
-| Route | Description |
-| ----- | ----------- |
-| `/` | English home (terminal) |
-| `/posts` | English posts list |
-| `/posts/{slug}` | English post |
-| `/ko` | Korean home |
-| `/ko/posts` | Korean posts list |
+| Route              | Description                                           |
+| ------------------ | ----------------------------------------------------- |
+| `/`                | English home (terminal)                               |
+| `/posts`           | English posts list                                    |
+| `/posts/{slug}`    | English post                                          |
+| `/ko`              | Korean home                                           |
+| `/ko/posts`        | Korean posts list                                     |
 | `/ko/posts/{slug}` | Korean post (falls back to English if not translated) |
-| `/rss.xml` | English RSS feed |
-| `/ko/rss.xml` | Korean RSS feed |
+| `/rss.xml`         | English RSS feed                                      |
+| `/ko/rss.xml`      | Korean RSS feed                                       |
 
 ## Project Structure
 

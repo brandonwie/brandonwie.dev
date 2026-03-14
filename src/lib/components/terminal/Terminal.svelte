@@ -39,7 +39,7 @@
 		addOutput,
 		addToHistory,
 		fuzzyFinderOpen,
-		clearOutput
+		clearOutput,
 	} from '$lib/stores/terminal';
 	import { posts } from '$lib/stores/posts';
 
@@ -127,7 +127,7 @@
 			{ type: 'text', content: "  Type 'help' for available commands" },
 			{ type: 'text', content: "  Type 'whoami' to learn about me" },
 			{ type: 'text', content: '  Press Ctrl+P (or Cmd+P) for fuzzy search' },
-			{ type: 'text', content: '' }
+			{ type: 'text', content: '' },
 		]);
 	}
 
@@ -142,7 +142,7 @@
 		// Echo command to output (like a real terminal)
 		addOutput({
 			type: 'text',
-			content: `${formatPrompt($cwd)} ${command}`
+			content: `${formatPrompt($cwd)} ${command}`,
 		});
 
 		// COMMAND CONTEXT PATTERN
@@ -151,16 +151,17 @@
 		// PATTERN: Dependency injection - pass everything commands need.
 		// BENEFIT: Commands are pure functions, easy to test.
 		const context: CommandContext = {
-			cwd: $cwd,                                    // Current working directory
-			setCwd: (path: string) => cwd.set(path),      // Function to change directory
-			fs,                                           // Virtual filesystem
-			posts: $posts,                                // Blog posts data
-			navigateToPost: (slug: string) => {           // Navigation callback
+			cwd: $cwd, // Current working directory
+			setCwd: (path: string) => cwd.set(path), // Function to change directory
+			fs, // Virtual filesystem
+			posts: $posts, // Blog posts data
+			navigateToPost: (slug: string) => {
+				// Navigation callback
 				if (onNavigateToPost) {
 					onNavigateToPost(slug);
 				}
 			},
-			openFuzzyFinder: () => fuzzyFinderOpen.set(true)  // Open search modal
+			openFuzzyFinder: () => fuzzyFinderOpen.set(true), // Open search modal
 		};
 
 		const result = executeCommand(command, context);
@@ -204,7 +205,7 @@
 	function handleKeyDown(event: KeyboardEvent) {
 		// Ctrl+P or Ctrl+K (or Cmd on Mac) to open fuzzy finder
 		if ((event.ctrlKey || event.metaKey) && (event.key === 'p' || event.key === 'k')) {
-			event.preventDefault();  // Prevent browser's default (print dialog)
+			event.preventDefault(); // Prevent browser's default (print dialog)
 			fuzzyFinderOpen.set(true);
 		}
 
@@ -218,9 +219,9 @@
 
 	// Handle post selection from FuzzyFinder
 	function handleFuzzySelect(slug: string) {
-		fuzzyFinderOpen.set(false);  // Close the modal
+		fuzzyFinderOpen.set(false); // Close the modal
 		if (onNavigateToPost) {
-			onNavigateToPost(slug);   // Navigate to selected post
+			onNavigateToPost(slug); // Navigate to selected post
 		}
 	}
 </script>
@@ -240,7 +241,9 @@
 	  Classic macOS-style window decoration with traffic light buttons.
 	  Pure decoration - buttons don't do anything.
 	-->
-	<div class="flex items-center justify-between gap-2 border-b border-terminal-border bg-terminal-bg-secondary px-4 py-2">
+	<div
+		class="flex items-center justify-between gap-2 border-b border-terminal-border bg-terminal-bg-secondary px-4 py-2"
+	>
 		<div class="flex items-center gap-2 min-w-0">
 			<div class="flex gap-1.5 shrink-0">
 				<!-- Traffic light buttons (close, minimize, maximize) -->
@@ -300,11 +303,7 @@
 		  - cwd: Current directory for prompt display
 		  - onSubmit: Callback when user presses Enter
 		-->
-		<CommandLine
-			bind:this={commandLineRef}
-			cwd={$cwd}
-			onSubmit={handleCommand}
-		/>
+		<CommandLine bind:this={commandLineRef} cwd={$cwd} onSubmit={handleCommand} />
 	</div>
 
 	<!--

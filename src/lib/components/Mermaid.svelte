@@ -1,43 +1,3 @@
-<!--
-	Mermaid.svelte - Client-side Mermaid diagram renderer
-	======================================================
-
-	WHY A SVELTE COMPONENT INSTEAD OF REMARK/REHYPE PLUGIN?
-
-	Standard ```mermaid code blocks don't render as diagrams in mdsvex because:
-
-	1. rehype-mermaid won't work with mdsvex + Shiki
-		 - Shiki (syntax highlighter) processes code blocks BEFORE rehype plugins
-		 - By the time rehype-mermaid runs, mermaid blocks are already transformed
-		   into highlighted <pre><code> elements that the plugin can't recognize
-		 - Reference: https://github.com/pngwn/MDsveX/issues/737
-
-	2. mdsvex processes slot content as markdown
-		 - Using <Mermaid>{code}</Mermaid> with slot children fails because
-		   blank lines in mermaid code become paragraph breaks
-		 - That's why we use a `code` prop instead: <Mermaid code={`...`} />
-
-	USAGE IN MARKDOWN FILES:
-
-	```svelte
-	<script>
-	import Mermaid from '$lib/components/Mermaid.svelte';
-	</script>
-
-	<Mermaid code={`
-	flowchart LR
-	    A[Source] --> B[Process] --> C[Output]
-	`} />
-	```
-
-	NOTE: Curly braces in mermaid code will be interpreted as Svelte expressions.
-	Either escape them or avoid using braces in labels.
-
-	REFERENCES:
-	- MDsveX + Mermaid issue: https://github.com/pngwn/MDsveX/issues/737
-	- MDsveX plugin discussion: https://github.com/pngwn/MDsveX/discussions/354
-	- Svelte Mermaid approach: https://jamesjoy.site/posts/2023-06-26-svelte-mermaidjs
--->
 <script lang="ts">
 	import { onMount } from 'svelte';
 
@@ -84,13 +44,13 @@
 
 				// Fonts
 				fontFamily: 'JetBrains Mono, monospace',
-				fontSize: '14px'
+				fontSize: '14px',
 			},
 			flowchart: {
 				htmlLabels: true,
-				curve: 'basis'
+				curve: 'basis',
 			},
-			securityLevel: 'loose'
+			securityLevel: 'loose',
 		});
 
 		try {
@@ -119,6 +79,40 @@
 		}
 	});
 </script>
+
+<!--
+	Mermaid.svelte - Client-side Mermaid diagram renderer
+	======================================================
+
+	WHY A SVELTE COMPONENT INSTEAD OF REMARK/REHYPE PLUGIN?
+
+	Standard ```mermaid code blocks don't render as diagrams in mdsvex because:
+
+	1. rehype-mermaid won't work with mdsvex + Shiki
+		 - Shiki (syntax highlighter) processes code blocks BEFORE rehype plugins
+		 - By the time rehype-mermaid runs, mermaid blocks are already transformed
+		   into highlighted <pre><code> elements that the plugin can't recognize
+		 - Reference: https://github.com/pngwn/MDsveX/issues/737
+
+	2. mdsvex processes slot content as markdown
+		 - Using <Mermaid>{code}</Mermaid> with slot children fails because
+		   blank lines in mermaid code become paragraph breaks
+		 - That's why we use a `code` prop instead: <Mermaid code={`...`} />
+
+	USAGE IN MARKDOWN FILES:
+
+	```svelte
+	<script>
+	import Mermaid from '$lib/components/Mermaid.svelte';
+	</script>
+
+	<Mermaid code={`
+	flowchart LR
+	    A[Source] -->
+B[Process] --> C[Output] `} /> ``` NOTE: Curly braces in mermaid code will be interpreted as Svelte expressions.
+Either escape them or avoid using braces in labels. REFERENCES: - MDsveX + Mermaid issue: https://github.com/pngwn/MDsveX/issues/737
+- MDsveX plugin discussion: https://github.com/pngwn/MDsveX/discussions/354 - Svelte Mermaid approach:
+https://jamesjoy.site/posts/2023-06-26-svelte-mermaidjs -->
 
 <div class="mermaid-wrapper" class:rendered class:error={!!error}>
 	{#if error}

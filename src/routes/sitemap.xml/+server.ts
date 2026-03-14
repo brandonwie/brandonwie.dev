@@ -41,14 +41,14 @@ export const GET: RequestHandler = async () => {
 		posts.push({
 			slug,
 			metadata: post.metadata,
-			hasKorean: koSlugs.has(slug)
+			hasKorean: koSlugs.has(slug),
 		});
 	}
 
 	// Static pages (both languages)
 	const staticPages = [
 		{ en: '', ko: '/ko', priority: '1.0' },
-		{ en: '/posts', ko: '/ko/posts', priority: '0.8' }
+		{ en: '/posts', ko: '/ko/posts', priority: '0.8' },
 	];
 
 	const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -72,7 +72,7 @@ export const GET: RequestHandler = async () => {
     <xhtml:link rel="alternate" hreflang="x-default" href="${siteUrl}${page.en}"/>
     <changefreq>weekly</changefreq>
     <priority>${page.priority}</priority>
-  </url>`
+  </url>`,
 		)
 		.join('')}
   ${posts
@@ -95,7 +95,7 @@ export const GET: RequestHandler = async () => {
     <lastmod>${post.metadata.updated || post.metadata.date}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
-  </url>`
+  </url>`,
 		)
 		.join('')}
 </urlset>`;
@@ -103,7 +103,7 @@ export const GET: RequestHandler = async () => {
 	return new Response(sitemap, {
 		headers: {
 			'Content-Type': 'application/xml',
-			'Cache-Control': 'max-age=3600'
-		}
+			'Cache-Control': 'max-age=3600',
+		},
 	});
 };

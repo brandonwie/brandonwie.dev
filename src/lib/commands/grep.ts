@@ -7,13 +7,13 @@ registerCommand('grep', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: 'grep: missing pattern'
+					content: 'grep: missing pattern',
 				},
 				{
 					type: 'text',
-					content: 'Usage: grep <pattern>'
-				}
-			]
+					content: 'Usage: grep <pattern>',
+				},
+			],
 		};
 	}
 
@@ -46,28 +46,28 @@ registerCommand('grep', (args, context) => {
 			output: [
 				{
 					type: 'text',
-					content: `No matches found for "${pattern}"`
-				}
-			]
+					content: `No matches found for "${pattern}"`,
+				},
+			],
 		};
 	}
 
 	const output: OutputLine[] = [
 		{
 			type: 'success',
-			content: `Found ${matches.length} match${matches.length === 1 ? '' : 'es'}:`
-		}
+			content: `Found ${matches.length} match${matches.length === 1 ? '' : 'es'}:`,
+		},
 	];
 
 	for (const match of matches) {
 		output.push({
 			type: 'file',
 			content: `  posts/${match.post.category}/${match.post.slug}.md`,
-			link: `/posts/${match.post.slug}`
+			link: `/posts/${match.post.slug}`,
 		});
 		output.push({
 			type: 'text',
-			content: `    └─ ${match.matchedIn.join(', ')}: ${match.post.title}`
+			content: `    └─ ${match.matchedIn.join(', ')}: ${match.post.title}`,
 		});
 	}
 
@@ -82,9 +82,9 @@ registerCommand('search', (args, context) => {
 			output: [
 				{
 					type: 'text',
-					content: 'Opening fuzzy finder...'
-				}
-			]
+					content: 'Opening fuzzy finder...',
+				},
+			],
 		};
 	}
 
@@ -94,7 +94,7 @@ registerCommand('search', (args, context) => {
 		(post) =>
 			post.title.toLowerCase().includes(pattern) ||
 			post.description.toLowerCase().includes(pattern) ||
-			post.tags.some((tag) => tag.toLowerCase().includes(pattern))
+			post.tags.some((tag) => tag.toLowerCase().includes(pattern)),
 	);
 
 	if (matches.length === 0) {
@@ -102,24 +102,24 @@ registerCommand('search', (args, context) => {
 			output: [
 				{
 					type: 'text',
-					content: `No posts found matching "${pattern}"`
-				}
-			]
+					content: `No posts found matching "${pattern}"`,
+				},
+			],
 		};
 	}
 
 	const output: OutputLine[] = [
 		{
 			type: 'success',
-			content: `Found ${matches.length} post${matches.length === 1 ? '' : 's'}:`
-		}
+			content: `Found ${matches.length} post${matches.length === 1 ? '' : 's'}:`,
+		},
 	];
 
 	for (const post of matches) {
 		output.push({
 			type: 'file',
 			content: `  ${post.slug}.md - ${post.title}`,
-			link: `/posts/${post.slug}`
+			link: `/posts/${post.slug}`,
 		});
 	}
 
@@ -132,13 +132,13 @@ registerCommand('find', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: 'find: missing filename pattern'
+					content: 'find: missing filename pattern',
 				},
 				{
 					type: 'text',
-					content: 'Usage: find <pattern>'
-				}
-			]
+					content: 'Usage: find <pattern>',
+				},
+			],
 		};
 	}
 
@@ -150,9 +150,9 @@ registerCommand('find', (args, context) => {
 			output: [
 				{
 					type: 'text',
-					content: `No files found matching "${pattern}"`
-				}
-			]
+					content: `No files found matching "${pattern}"`,
+				},
+			],
 		};
 	}
 
@@ -160,7 +160,7 @@ registerCommand('find', (args, context) => {
 	for (const post of matches) {
 		output.push({
 			type: 'file',
-			content: `./posts/${post.category}/${post.slug}.md`
+			content: `./posts/${post.category}/${post.slug}.md`,
 		});
 	}
 

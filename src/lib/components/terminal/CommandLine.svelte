@@ -27,7 +27,7 @@
 	// PROPS INTERFACE
 	// ---------------
 	interface Props {
-		cwd: string;                         // Current directory for prompt
+		cwd: string; // Current directory for prompt
 		onSubmit: (command: string) => void; // Callback when Enter pressed
 	}
 
@@ -135,7 +135,7 @@
 				break;
 
 			case 'Tab':
-				event.preventDefault();  // Prevent focus change
+				event.preventDefault(); // Prevent focus change
 				handleTab();
 				break;
 
@@ -250,7 +250,10 @@
 				bind:this={inputRef}
 				bind:value={$currentInput}
 				onkeydown={handleKeyDown}
-				oninput={() => { handleInput(); updateCursorPosition(); }}
+				oninput={() => {
+					handleInput();
+					updateCursorPosition();
+				}}
 				onblur={handleBlur}
 				onclick={updateCursorPosition}
 				onkeyup={updateCursorPosition}
@@ -277,7 +280,11 @@
 			  break-all: Allows text to wrap within container.
 			  whitespace-pre-wrap: Preserves spaces, allows wrapping.
 			-->
-			<div class="pointer-events-none relative z-20 break-all text-terminal-text-primary"><span class="whitespace-pre-wrap">{$currentInput.slice(0, cursorPosition)}</span><span class="cursor-block">{$currentInput[cursorPosition] || ' '}</span><span class="whitespace-pre-wrap">{$currentInput.slice(cursorPosition + 1)}</span></div>
+			<div class="pointer-events-none relative z-20 break-all text-terminal-text-primary">
+				<span class="whitespace-pre-wrap">{$currentInput.slice(0, cursorPosition)}</span><span
+					class="cursor-block">{$currentInput[cursorPosition] || ' '}</span
+				><span class="whitespace-pre-wrap">{$currentInput.slice(cursorPosition + 1)}</span>
+			</div>
 		</div>
 	</div>
 
@@ -295,7 +302,10 @@
 	  - aria-selected: Indicates current selection
 	-->
 	{#if showCompletions && completions.length > 0}
-		<div class="absolute bottom-full left-0 mb-1 rounded-sm border border-terminal-border bg-terminal-bg-secondary p-1" role="listbox">
+		<div
+			class="absolute bottom-full left-0 mb-1 rounded-sm border border-terminal-border bg-terminal-bg-secondary p-1"
+			role="listbox"
+		>
 			{#each completions as completion, i}
 				<button
 					type="button"

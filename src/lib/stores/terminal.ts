@@ -7,7 +7,16 @@ export interface CommandHistoryEntry {
 }
 
 export interface OutputLine {
-	type: 'text' | 'error' | 'success' | 'directory' | 'file' | 'link' | 'markdown' | 'html' | 'purple';
+	type:
+		| 'text'
+		| 'error'
+		| 'success'
+		| 'directory'
+		| 'file'
+		| 'link'
+		| 'markdown'
+		| 'html'
+		| 'purple';
 	content: string;
 	link?: string;
 }
@@ -50,8 +59,8 @@ export function addToHistory(command: string, output: OutputLine[]) {
 		{
 			command,
 			output,
-			timestamp: new Date()
-		}
+			timestamp: new Date(),
+		},
 	]);
 	historyIndex.set(-1);
 }
@@ -90,5 +99,5 @@ export function historyDown() {
 
 // Get just the command strings from history
 export const commandStrings = derived(commandHistory, ($history) =>
-	$history.map((entry) => entry.command)
+	$history.map((entry) => entry.command),
 );

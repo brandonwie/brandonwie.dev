@@ -1,10 +1,9 @@
 import { registerCommand } from './index';
-import { resolvePath, listDirectory, getAbsolutePath } from '../filesystem';
+import { resolvePath, listDirectory } from '../filesystem';
 import type { OutputLine } from '../stores/terminal';
 
 registerCommand('ls', (args, context) => {
 	const path = args[0] || '.';
-	const targetPath = getAbsolutePath(context.cwd, path);
 	const node = resolvePath(context.fs, context.cwd, path);
 
 	if (!node) {
@@ -12,9 +11,9 @@ registerCommand('ls', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: `ls: cannot access '${path}': No such file or directory`
-				}
-			]
+					content: `ls: cannot access '${path}': No such file or directory`,
+				},
+			],
 		};
 	}
 
@@ -24,9 +23,9 @@ registerCommand('ls', (args, context) => {
 			output: [
 				{
 					type: 'file',
-					content: node.name
-				}
-			]
+					content: node.name,
+				},
+			],
 		};
 	}
 
@@ -37,15 +36,15 @@ registerCommand('ls', (args, context) => {
 			output: [
 				{
 					type: 'text',
-					content: '(empty directory)'
-				}
-			]
+					content: '(empty directory)',
+				},
+			],
 		};
 	}
 
 	const output: OutputLine[] = entries.map((entry) => ({
 		type: entry.type === 'directory' ? 'directory' : 'file',
-		content: entry.type === 'directory' ? `${entry.name}/` : entry.name
+		content: entry.type === 'directory' ? `${entry.name}/` : entry.name,
 	}));
 
 	return { output };
@@ -61,9 +60,9 @@ registerCommand('ll', (args, context) => {
 			output: [
 				{
 					type: 'error',
-					content: `ll: cannot access '${path}': No such file or directory`
-				}
-			]
+					content: `ll: cannot access '${path}': No such file or directory`,
+				},
+			],
 		};
 	}
 
@@ -73,9 +72,9 @@ registerCommand('ll', (args, context) => {
 			output: [
 				{
 					type: 'file',
-					content: `${node.name}  ${meta?.date || ''}`
-				}
-			]
+					content: `${node.name}  ${meta?.date || ''}`,
+				},
+			],
 		};
 	}
 
@@ -86,9 +85,9 @@ registerCommand('ll', (args, context) => {
 			output: [
 				{
 					type: 'text',
-					content: '(empty directory)'
-				}
-			]
+					content: '(empty directory)',
+				},
+			],
 		};
 	}
 
@@ -96,7 +95,7 @@ registerCommand('ll', (args, context) => {
 		if (entry.type === 'directory') {
 			return {
 				type: 'directory',
-				content: `drwxr-xr-x  ${entry.name}/`
+				content: `drwxr-xr-x  ${entry.name}/`,
 			};
 		}
 
@@ -105,7 +104,7 @@ registerCommand('ll', (args, context) => {
 		const date = fileNode?.metadata?.date || '';
 		return {
 			type: 'file',
-			content: `-rw-r--r--  ${date}  ${entry.name}`
+			content: `-rw-r--r--  ${date}  ${entry.name}`,
 		};
 	});
 

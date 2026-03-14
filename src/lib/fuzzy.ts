@@ -19,12 +19,12 @@ export function createPostsFuse(posts: PostMetadata[]): Fuse<PostMetadata> {
 			{ name: 'description', weight: 0.2 },
 			{ name: 'tags', weight: 0.2 },
 			{ name: 'category', weight: 0.1 },
-			{ name: 'slug', weight: 0.1 }
+			{ name: 'slug', weight: 0.1 },
 		],
 		threshold: 0.4,
 		includeScore: true,
 		includeMatches: true,
-		minMatchCharLength: 2
+		minMatchCharLength: 2,
 	});
 }
 
@@ -38,14 +38,14 @@ export function fuzzySearch(fuse: Fuse<PostMetadata>, query: string): FuzzyResul
 	return results.map((result) => ({
 		item: result.item,
 		score: result.score ?? 1,
-		matches: result.matches
+		matches: result.matches,
 	}));
 }
 
 // Highlight matched characters in text
 export function highlightMatches(
 	text: string,
-	indices: ReadonlyArray<readonly [number, number]>
+	indices: ReadonlyArray<readonly [number, number]>,
 ): { text: string; highlighted: boolean }[] {
 	if (!indices || indices.length === 0) {
 		return [{ text, highlighted: false }];

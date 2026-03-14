@@ -1,40 +1,40 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 
 @theme {
-  /* Terminal theme colors */
-  --color-terminal-bg-primary: #1a1a1a;
-  --color-terminal-bg-secondary: #2d2d2d;
-  --color-terminal-bg-hover: #353535;
-  --color-terminal-text-primary: #e5e5e5;
-  --color-terminal-text-muted: #888888;
-  --color-terminal-text-dim: #666666;
-  --color-terminal-accent-orange: #da7756;
-  --color-terminal-accent-blue: #6b9eff;
-  --color-terminal-accent-green: #7ec699;
-  --color-terminal-accent-yellow: #e5c07b;
-  --color-terminal-accent-purple: #c678dd;
-  --color-terminal-accent-cyan: #56b6c2;
-  --color-terminal-accent-red: #e06c75;
-  --color-terminal-border: #404040;
+	/* Terminal theme colors */
+	--color-terminal-bg-primary: #1a1a1a;
+	--color-terminal-bg-secondary: #2d2d2d;
+	--color-terminal-bg-hover: #353535;
+	--color-terminal-text-primary: #e5e5e5;
+	--color-terminal-text-muted: #888888;
+	--color-terminal-text-dim: #666666;
+	--color-terminal-accent-orange: #da7756;
+	--color-terminal-accent-blue: #6b9eff;
+	--color-terminal-accent-green: #7ec699;
+	--color-terminal-accent-yellow: #e5c07b;
+	--color-terminal-accent-purple: #c678dd;
+	--color-terminal-accent-cyan: #56b6c2;
+	--color-terminal-accent-red: #e06c75;
+	--color-terminal-border: #404040;
 
-  /* Font family - overrides default mono stack */
-  --font-mono:
-    "JetBrains Mono", "Fira Code", "SF Mono", "Monaco", "Inconsolata",
-    "Roboto Mono", "Source Code Pro", monospace;
+	/* Font family - overrides default mono stack */
+	--font-mono:
+		'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono',
+		'Source Code Pro', monospace;
 
-  /* Blink animation for terminal cursor */
-  --animate-blink: blink 1s step-end infinite;
+	/* Blink animation for terminal cursor */
+	--animate-blink: blink 1s step-end infinite;
 
-  @keyframes blink {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0;
-    }
-  }
+	@keyframes blink {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0;
+		}
+	}
 }
 
 /*
@@ -42,215 +42,215 @@
   These compatibility styles preserve the v3 behavior.
 */
 @layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentcolor);
+	}
 }
 
 @layer base {
-  :root {
-    /* Custom CSS Variables used by terminal-themed utilities below */
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #2d2d2d;
-    --bg-hover: #353535;
-    --text-primary: #e5e5e5;
-    --text-muted: #888888;
-    --text-dim: #666666;
-    --accent-orange: #da7756;
-    --accent-blue: #6b9eff;
-    --accent-green: #7ec699;
-    --accent-yellow: #e5c07b;
-    --accent-purple: #c678dd;
-    --accent-cyan: #56b6c2;
-    --accent-red: #e06c75;
-    --border: #404040;
-  }
+	:root {
+		/* Custom CSS Variables used by terminal-themed utilities below */
+		--bg-primary: #1a1a1a;
+		--bg-secondary: #2d2d2d;
+		--bg-hover: #353535;
+		--text-primary: #e5e5e5;
+		--text-muted: #888888;
+		--text-dim: #666666;
+		--accent-orange: #da7756;
+		--accent-blue: #6b9eff;
+		--accent-green: #7ec699;
+		--accent-yellow: #e5c07b;
+		--accent-purple: #c678dd;
+		--accent-cyan: #56b6c2;
+		--accent-red: #e06c75;
+		--border: #404040;
+	}
 
-  html {
-    font-family: "JetBrains Mono", monospace;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-  }
+	html {
+		font-family: 'JetBrains Mono', monospace;
+		background-color: var(--bg-primary);
+		color: var(--text-primary);
+	}
 
-  body {
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    background-color: var(--bg-primary);
-  }
+	body {
+		margin: 0;
+		padding: 0;
+		min-height: 100vh;
+		background-color: var(--bg-primary);
+	}
 
-  /* Custom scrollbar for terminal aesthetic */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
+	/* Custom scrollbar for terminal aesthetic */
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
 
-  ::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-  }
+	::-webkit-scrollbar-track {
+		background: var(--bg-secondary);
+	}
 
-  ::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 4px;
-  }
+	::-webkit-scrollbar-thumb {
+		background: var(--border);
+		border-radius: 4px;
+	}
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-dim);
-  }
+	::-webkit-scrollbar-thumb:hover {
+		background: var(--text-dim);
+	}
 
-  /* Selection colors */
-  ::selection {
-    background-color: var(--accent-orange);
-    color: var(--bg-primary);
-  }
+	/* Selection colors */
+	::selection {
+		background-color: var(--accent-orange);
+		color: var(--bg-primary);
+	}
 
-  /* Code block enhancements */
-  pre {
-    border: 1px solid var(--border);
-    border-radius: 0.375rem;
-  }
+	/* Code block enhancements */
+	pre {
+		border: 1px solid var(--border);
+		border-radius: 0.375rem;
+	}
 
-  /* Remove background from code inside pre blocks (Shiki) */
-  pre code {
-    background-color: transparent !important;
-    padding: 0 !important;
-  }
+	/* Remove background from code inside pre blocks (Shiki) */
+	pre code {
+		background-color: transparent !important;
+		padding: 0 !important;
+	}
 
-  /* Remove Shiki token background colors */
-  pre code span {
-    background-color: transparent !important;
-  }
+	/* Remove Shiki token background colors */
+	pre code span {
+		background-color: transparent !important;
+	}
 
-  code {
-    font-family: "JetBrains Mono", monospace;
-  }
+	code {
+		font-family: 'JetBrains Mono', monospace;
+	}
 }
 
 /* Terminal prompt styling */
 @utility prompt-user {
-  color: var(--accent-green);
+	color: var(--accent-green);
 }
 
 @utility prompt-at {
-  color: var(--text-muted);
+	color: var(--text-muted);
 }
 
 @utility prompt-host {
-  color: var(--accent-blue);
+	color: var(--accent-blue);
 }
 
 @utility prompt-path {
-  color: var(--accent-yellow);
+	color: var(--accent-yellow);
 }
 
 @utility prompt-symbol {
-  color: var(--accent-orange);
+	color: var(--accent-orange);
 }
 
 /* Command output colors */
 @utility output-directory {
-  color: var(--accent-yellow);
+	color: var(--accent-yellow);
 }
 
 @utility output-file {
-  color: var(--accent-green);
+	color: var(--accent-green);
 }
 
 @utility output-link {
-  color: var(--accent-cyan);
+	color: var(--accent-cyan);
 }
 
 @utility output-error {
-  color: var(--accent-red);
+	color: var(--accent-red);
 }
 
 @utility output-success {
-  color: var(--accent-green);
+	color: var(--accent-green);
 }
 
 /* Terminal block cursor */
 @utility cursor-block {
-  display: inline-block;
-  min-width: 1ch;
-  height: 1.2em;
-  vertical-align: text-bottom;
-  background-color: var(--accent-orange);
-  color: var(--bg-primary);
-  animation: blink 1s step-end infinite;
+	display: inline-block;
+	min-width: 1ch;
+	height: 1.2em;
+	vertical-align: text-bottom;
+	background-color: var(--accent-orange);
+	color: var(--bg-primary);
+	animation: blink 1s step-end infinite;
 }
 
 /* Fuzzy finder styling */
 @utility fuzzy-overlay {
-  background-color: rgba(26, 26, 26, 0.95);
-  backdrop-filter: blur(4px);
+	background-color: rgba(26, 26, 26, 0.95);
+	backdrop-filter: blur(4px);
 }
 
 @utility fuzzy-match {
-  color: var(--accent-orange);
-  font-weight: 600;
+	color: var(--accent-orange);
+	font-weight: 600;
 }
 
 /* Terminal text effects */
 @utility text-glow {
-  text-shadow: 0 0 10px currentColor;
+	text-shadow: 0 0 10px currentColor;
 }
 
 /* Focus visible for accessibility */
 @utility focus-terminal {
-  &:focus-visible {
-    outline: 2px solid var(--accent-orange);
-    outline-offset: 2px;
-  }
+	&:focus-visible {
+		outline: 2px solid var(--accent-orange);
+		outline-offset: 2px;
+	}
 }
 
 /* Hide scrollbar for horizontal filter bars */
 @utility scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
 }
 
 /* Prose terminal theme — sets typography plugin color variables */
 @utility prose-terminal {
-  --tw-prose-body: #e5e5e5;
-  --tw-prose-headings: #e5e5e5;
-  --tw-prose-lead: #888888;
-  --tw-prose-links: #6b9eff;
-  --tw-prose-bold: #e5e5e5;
-  --tw-prose-counters: #888888;
-  --tw-prose-bullets: #888888;
-  --tw-prose-hr: #404040;
-  --tw-prose-quotes: #888888;
-  --tw-prose-quote-borders: #da7756;
-  --tw-prose-captions: #888888;
-  --tw-prose-code: #da7756;
-  --tw-prose-pre-code: #e5e5e5;
-  --tw-prose-pre-bg: #2d2d2d;
-  --tw-prose-th-borders: #404040;
-  --tw-prose-td-borders: #404040;
-  max-width: none;
+	--tw-prose-body: #e5e5e5;
+	--tw-prose-headings: #e5e5e5;
+	--tw-prose-lead: #888888;
+	--tw-prose-links: #6b9eff;
+	--tw-prose-bold: #e5e5e5;
+	--tw-prose-counters: #888888;
+	--tw-prose-bullets: #888888;
+	--tw-prose-hr: #404040;
+	--tw-prose-quotes: #888888;
+	--tw-prose-quote-borders: #da7756;
+	--tw-prose-captions: #888888;
+	--tw-prose-code: #da7756;
+	--tw-prose-pre-code: #e5e5e5;
+	--tw-prose-pre-bg: #2d2d2d;
+	--tw-prose-th-borders: #404040;
+	--tw-prose-td-borders: #404040;
+	max-width: none;
 }
 
 /* Prose terminal element-level overrides (can't go in @utility) */
 .prose-terminal code:not(pre code) {
-  background-color: #2d2d2d;
-  padding: 0.2em 0.4em;
-  border-radius: 0.25rem;
-  font-weight: 400;
+	background-color: #2d2d2d;
+	padding: 0.2em 0.4em;
+	border-radius: 0.25rem;
+	font-weight: 400;
 }
 
 .prose-terminal code::before,
 .prose-terminal code::after {
-  content: "";
+	content: '';
 }
 
 .prose-terminal pre {
-  background-color: #2d2d2d;
-  border: 1px solid #404040;
+	background-color: #2d2d2d;
+	border: 1px solid #404040;
 }

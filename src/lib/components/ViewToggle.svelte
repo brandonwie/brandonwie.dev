@@ -9,5 +9,7 @@
 >
 	<span class={$viewMode === 'blog' ? 'text-terminal-accent-orange font-semibold' : ''}>Blog</span>
 	<span class="mx-0.5 opacity-50">/</span>
-	<span class={$viewMode === 'terminal' ? 'text-terminal-accent-orange font-semibold' : ''}>CLI</span>
+	<span class={$viewMode === 'terminal' ? 'text-terminal-accent-orange font-semibold' : ''}
+		>CLI</span
+	>
 </button>

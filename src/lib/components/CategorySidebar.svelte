@@ -4,7 +4,7 @@
 	let {
 		categories,
 		activeCategory,
-		onSelect
+		onSelect,
 	}: {
 		categories: Array<{ name: string; count: number }>;
 		activeCategory: string | null;
@@ -23,7 +23,8 @@
 		<li>
 			<button
 				onclick={() => onSelect(null)}
-				class="w-full text-left px-2 py-1.5 rounded text-sm transition-colors {activeCategory === null
+				class="w-full text-left px-2 py-1.5 rounded text-sm transition-colors {activeCategory ===
+				null
 					? 'text-terminal-accent-orange bg-terminal-bg-hover'
 					: 'text-terminal-text-muted hover:text-terminal-text-primary hover:bg-terminal-bg-hover'}"
 			>
@@ -35,7 +36,8 @@
 			<li>
 				<button
 					onclick={() => onSelect(cat.name)}
-					class="w-full text-left px-2 py-1.5 rounded text-sm transition-colors {activeCategory === cat.name
+					class="w-full text-left px-2 py-1.5 rounded text-sm transition-colors {activeCategory ===
+					cat.name
 						? 'text-terminal-accent-orange bg-terminal-bg-hover'
 						: 'text-terminal-text-muted hover:text-terminal-text-primary hover:bg-terminal-bg-hover'}"
 				>
@@ -57,7 +59,8 @@
 		onclick={() => onSelect(null)}
 		role="tab"
 		aria-selected={activeCategory === null}
-		class="shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors {activeCategory === null
+		class="shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors {activeCategory ===
+		null
 			? 'border-terminal-accent-orange text-terminal-accent-orange bg-terminal-accent-orange/10'
 			: 'border-terminal-border text-terminal-text-muted hover:border-terminal-text-dim'}"
 	>
@@ -68,7 +71,8 @@
 			onclick={() => onSelect(cat.name)}
 			role="tab"
 			aria-selected={activeCategory === cat.name}
-			class="shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors {activeCategory === cat.name
+			class="shrink-0 px-3 py-1.5 rounded-full text-xs border transition-colors {activeCategory ===
+			cat.name
 				? 'border-terminal-accent-orange text-terminal-accent-orange bg-terminal-accent-orange/10'
 				: 'border-terminal-border text-terminal-text-muted hover:border-terminal-text-dim'}"
 		>

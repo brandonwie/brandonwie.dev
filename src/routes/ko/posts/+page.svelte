@@ -22,7 +22,7 @@
 	let activeCategory: string | null = $state(null);
 	const categoriesWithCounts = $derived(getCategoriesWithCounts(data.posts));
 	const filteredPosts = $derived(
-		activeCategory ? data.posts.filter((p) => p.category === activeCategory) : data.posts
+		activeCategory ? data.posts.filter((p) => p.category === activeCategory) : data.posts,
 	);
 
 	function handleCategorySelect(category: string | null) {
@@ -37,7 +37,9 @@
 
 <div class="min-h-screen bg-terminal-bg-primary">
 	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
-		<div class="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
+		<div
+			class="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6"
+		>
 			<a
 				href="/ko"
 				class="flex items-center gap-1 text-xs text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0 sm:gap-2 sm:text-sm"
@@ -45,7 +47,9 @@
 				<span>←</span>
 				<span>{backLabel}</span>
 			</a>
-			<a href="/ko" class="text-terminal-accent-orange text-xs truncate sm:text-base">brandonwie.dev</a>
+			<a href="/ko" class="text-terminal-accent-orange text-xs truncate sm:text-base"
+				>brandonwie.dev</a
+			>
 			<div class="flex items-center gap-2">
 				<ViewToggle />
 				<LanguageToggle />
@@ -74,7 +78,9 @@
 								class="block rounded-lg border border-terminal-border bg-terminal-bg-secondary p-6 transition-colors hover:border-terminal-accent-orange"
 							>
 								<div class="mb-2 flex flex-wrap items-center gap-2">
-									<span class="rounded-sm bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow">
+									<span
+										class="rounded-sm bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow"
+									>
 										{post.category}
 									</span>
 									<span class="text-sm text-terminal-text-dim">
@@ -92,7 +98,9 @@
 								</p>
 								<div class="flex flex-wrap gap-2">
 									{#each post.tags as tag}
-										<span class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted">
+										<span
+											class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted"
+										>
 											{tag}
 										</span>
 									{/each}

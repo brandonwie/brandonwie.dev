@@ -1,14 +1,14 @@
 {
-  "tasks": {
-    "dev": "npm run dev",
-    "build": "npm run build",
-    "preview": "npm run preview",
-    "check": "npm run check",
-    "sync": "deno run --allow-read --allow-write scripts/sync-from-3b.ts"
-  },
-  "compilerOptions": {
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "strict": true
-  },
-  "nodeModulesDir": "auto"
+	"tasks": {
+		"dev": "npm run dev",
+		"build": "npm run build",
+		"preview": "npm run preview",
+		"check": "npm run check",
+		"sync": "deno run --allow-read --allow-write scripts/sync-from-3b.ts"
+	},
+	"compilerOptions": {
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"strict": true
+	},
+	"nodeModulesDir": "auto"
 }

@@ -74,10 +74,16 @@
 -->
 <svelte:head>
 	<title>Brandon Wie | Software Engineer</title>
-	<meta name="description" content="Brandon Wie's personal blog - Software engineering insights, tutorials, and learnings" />
+	<meta
+		name="description"
+		content="Brandon Wie's personal blog - Software engineering insights, tutorials, and learnings"
+	/>
 	<!-- Open Graph tags for social media previews (Facebook, LinkedIn) -->
 	<meta property="og:title" content="Brandon Wie | Software Engineer" />
-	<meta property="og:description" content="Software engineering insights, tutorials, and learnings" />
+	<meta
+		property="og:description"
+		content="Software engineering insights, tutorials, and learnings"
+	/>
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://brandonwie.dev" />
 	<meta property="og:image" content="https://brandonwie.dev/og/default.png" />
@@ -86,11 +92,24 @@
 	<!-- Twitter Card tags for Twitter previews -->
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content="Brandon Wie | Software Engineer" />
-	<meta name="twitter:description" content="Software engineering insights, tutorials, and learnings" />
+	<meta
+		name="twitter:description"
+		content="Software engineering insights, tutorials, and learnings"
+	/>
 	<meta name="twitter:image" content="https://brandonwie.dev/og/default.png" />
 	<!-- RSS Feeds -->
-	<link rel="alternate" type="application/rss+xml" title="Brandon Wie (English)" href="https://brandonwie.dev/rss.xml" />
-	<link rel="alternate" type="application/rss+xml" title="Brandon Wie (한국어)" href="https://brandonwie.dev/ko/rss.xml" />
+	<link
+		rel="alternate"
+		type="application/rss+xml"
+		title="Brandon Wie (English)"
+		href="https://brandonwie.dev/rss.xml"
+	/>
+	<link
+		rel="alternate"
+		type="application/rss+xml"
+		title="Brandon Wie (한국어)"
+		href="https://brandonwie.dev/ko/rss.xml"
+	/>
 </svelte:head>
 
 <!--

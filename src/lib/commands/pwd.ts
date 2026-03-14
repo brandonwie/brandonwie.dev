@@ -5,8 +5,8 @@ registerCommand('pwd', (_, context) => {
 		output: [
 			{
 				type: 'text',
-				content: context.cwd
-			}
-		]
+				content: context.cwd,
+			},
+		],
 	};
 });
