@@ -13,8 +13,54 @@
 - [x] Custom domain live
 - [x] Tailwind CSS v3 → v4 migration + PostDetail extraction + View Transitions
 - [x] Shiki v1 → v4 + OG image generation for all posts
+- [x] ESLint v9 + Prettier + GitHub Actions CI + Table of Contents + 8 posts expanded
 
 ## Session Log
+
+### 2026-03-15 (Session 3)
+
+**4 Parallel Tasks: ESLint, CI, ToC, Blog Expansion**
+
+Executed 4 high-priority backlog items simultaneously using TeamCreate (4 agents
+in tmux split panes):
+
+1. **ESLint v9 + Prettier**
+   - Flat config with typescript-eslint, eslint-plugin-svelte, eslint-config-prettier
+   - Prettier with svelte plugin (tabs, single quotes, 100 printWidth)
+   - Formatted entire codebase, fixed unused import warnings
+   - 0 errors, 13 warnings (all intentional)
+
+2. **GitHub Actions CI**
+   - `.github/workflows/ci.yml` — lint, format:check, build, svelte-check
+   - Un-ignored `package-lock.json` for `npm ci`
+   - Post-push fix: build before check (Paraglide Vite plugin ordering)
+
+3. **Table of Contents sidebar**
+   - `remark-toc-extract.js` — custom remark plugin for h2/h3 headings
+   - `TableOfContents.svelte` — sticky sidebar (xl+), collapsible (mobile)
+   - IntersectionObserver active heading tracking, orange highlight
+   - Only shown for posts with 3+ headings
+
+4. **Blog expansion (8 posts)**
+   - vpc-networking, ecr-ecs-deployment, websocket-architecture, fastapi-di,
+     traefik-keycloak, oauth2, docker-compose-cicd, pessimistic-locking
+   - Added hooks, transitions, code explanations, practical conclusions
+
+**Build:** 942 files, 0 errors, 0 warnings. 192 post pages prerendered.
+
+**Commits:**
+
+| Hash    | Description                                                |
+| ------- | ---------------------------------------------------------- |
+| e347e5c | chore(lint): add ESLint + Prettier with Svelte 5 support   |
+| c8ebc8d | ci: add GitHub Actions workflow for build and lint checks  |
+| a201010 | feat(blog): add table of contents sidebar for post pages   |
+| 3d96037 | content: expand 8 reference posts to narrative blog format |
+| 10eb4ff | fix(ci): run build before check for Paraglide generation   |
+
+**Next:** Newsletter signup, analytics, static search, auto-sync
+
+---
 
 ### 2026-03-15 (Session 2)
 
