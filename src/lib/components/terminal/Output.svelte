@@ -166,9 +166,9 @@
 				  WHY pre: Preserves whitespace and uses monospace font.
 				  m-0: Removes default pre margin.
 				  whitespace-pre-wrap: Preserves spaces but allows wrapping.
-				  break-words: Breaks long words to prevent overflow.
+				  wrap-break-word: Breaks long words to prevent overflow.
 				-->
-				<pre class="m-0 whitespace-pre-wrap break-words font-mono">{line.content}</pre>
+				<pre class="m-0 whitespace-pre-wrap wrap-break-word font-mono">{line.content}</pre>
 			</a>
 		{:else}
 			<!--
@@ -177,7 +177,7 @@
 			  Regular terminal output with type-based coloring.
 			-->
 			<div class={getLineClass(line.type)}>
-				<pre class="m-0 whitespace-pre-wrap break-words font-mono">{line.content}</pre>
+				<pre class="m-0 whitespace-pre-wrap wrap-break-word font-mono">{line.content}</pre>
 			</div>
 		{/if}
 	{/each}

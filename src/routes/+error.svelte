@@ -72,13 +72,13 @@
 	<div class="mt-8 flex gap-4">
 		<a
 			href="/"
-			class="rounded border border-terminal-border bg-terminal-bg-secondary px-4 py-2 text-terminal-text-primary transition-colors hover:border-terminal-accent-green hover:text-terminal-accent-green"
+			class="rounded-sm border border-terminal-border bg-terminal-bg-secondary px-4 py-2 text-terminal-text-primary transition-colors hover:border-terminal-accent-green hover:text-terminal-accent-green"
 		>
 			cd ~
 		</a>
 		<button
 			onclick={() => history.back()}
-			class="rounded border border-terminal-border bg-terminal-bg-secondary px-4 py-2 text-terminal-text-primary transition-colors hover:border-terminal-accent-orange hover:text-terminal-accent-orange"
+			class="rounded-sm border border-terminal-border bg-terminal-bg-secondary px-4 py-2 text-terminal-text-primary transition-colors hover:border-terminal-accent-orange hover:text-terminal-accent-orange"
 		>
 			cd -
 		</button>

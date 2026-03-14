@@ -254,11 +254,11 @@
 				onkeydown={handleKeyDown}
 				type="text"
 				placeholder="Search posts..."
-				class="flex-1 border-none bg-transparent text-terminal-text-primary placeholder-terminal-text-dim outline-none"
+				class="flex-1 border-none bg-transparent text-terminal-text-primary placeholder-terminal-text-dim outline-hidden"
 				spellcheck="false"
 			/>
 			<!-- Keyboard hint -->
-			<kbd class="rounded bg-terminal-bg-primary px-2 py-1 text-xs text-terminal-text-muted">esc</kbd>
+			<kbd class="rounded-sm bg-terminal-bg-primary px-2 py-1 text-xs text-terminal-text-muted">esc</kbd>
 		</div>
 
 		<!--
@@ -340,7 +340,7 @@
 								</div>
 								<!-- Tags and category -->
 								<div class="mt-2 flex flex-wrap gap-2">
-									<span class="rounded bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-accent-yellow">
+									<span class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-accent-yellow">
 										{result.item.category}
 									</span>
 									<!--
@@ -350,7 +350,7 @@
 									  This runs every render, but is cheap (array.slice).
 									-->
 									{#each result.item.tags.slice(0, 3) as tag}
-										<span class="rounded bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted">
+										<span class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted">
 											{tag}
 										</span>
 									{/each}
@@ -374,8 +374,8 @@
 		-->
 		<div class="flex items-center justify-between border-t border-terminal-border px-4 py-2 text-xs text-terminal-text-muted">
 			<div class="flex gap-4">
-				<span><kbd class="rounded bg-terminal-bg-primary px-1">↑↓</kbd> navigate</span>
-				<span><kbd class="rounded bg-terminal-bg-primary px-1">↵</kbd> select</span>
+				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↑↓</kbd> navigate</span>
+				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↵</kbd> select</span>
 			</div>
 			<!--
 			  PLURALIZATION

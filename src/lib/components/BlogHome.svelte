@@ -62,7 +62,7 @@
 				href="https://www.archcalendar.com"
 				target="_blank"
 				rel="noopener noreferrer"
-				class="group block py-3 px-2 -mx-2 rounded no-underline transition-colors hover:bg-terminal-bg-hover"
+				class="group block py-3 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
 			>
 				<span class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">
 					Arch Calendar
@@ -79,7 +79,7 @@
 				href="https://crucio.brandonwie.dev"
 				target="_blank"
 				rel="noopener noreferrer"
-				class="group block py-3 px-2 -mx-2 rounded no-underline transition-colors hover:bg-terminal-bg-hover"
+				class="group block py-3 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
 			>
 				<span class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors">
 					Project Crucio
@@ -105,11 +105,11 @@
 					{#each recentPosts as post (post.slug)}
 						<a
 							href={postHref(post.slug)}
-							class="group flex items-baseline gap-4 py-2.5 px-2 -mx-2 rounded no-underline transition-colors hover:bg-terminal-bg-hover"
+							class="group flex items-baseline gap-4 py-2.5 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
 						>
 							<time
 								datetime={effectiveDate(post.date, post.updated)}
-								class="text-xs text-terminal-text-dim shrink-0 w-[5.5rem] tabular-nums"
+								class="text-xs text-terminal-text-dim shrink-0 w-22 tabular-nums"
 							>
 								{formatDateShort(effectiveDate(post.date, post.updated))}
 							</time>

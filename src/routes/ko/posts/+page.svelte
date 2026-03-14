@@ -74,7 +74,7 @@
 								class="block rounded-lg border border-terminal-border bg-terminal-bg-secondary p-6 transition-colors hover:border-terminal-accent-orange"
 							>
 								<div class="mb-2 flex flex-wrap items-center gap-2">
-									<span class="rounded bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow">
+									<span class="rounded-sm bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow">
 										{post.category}
 									</span>
 									<span class="text-sm text-terminal-text-dim">
@@ -92,7 +92,7 @@
 								</p>
 								<div class="flex flex-wrap gap-2">
 									{#each post.tags as tag}
-										<span class="rounded bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted">
+										<span class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted">
 											{tag}
 										</span>
 									{/each}

@@ -257,7 +257,7 @@
 				onselect={updateCursorPosition}
 				type="text"
 				aria-label="Terminal command input"
-				class="absolute inset-0 z-10 h-full w-full border-none bg-transparent caret-transparent outline-none"
+				class="absolute inset-0 z-10 h-full w-full border-none bg-transparent caret-transparent outline-hidden"
 				style="color: transparent; -webkit-text-fill-color: transparent; font-size: 16px;"
 				spellcheck="false"
 				autocomplete="off"
@@ -295,7 +295,7 @@
 	  - aria-selected: Indicates current selection
 	-->
 	{#if showCompletions && completions.length > 0}
-		<div class="absolute bottom-full left-0 mb-1 rounded border border-terminal-border bg-terminal-bg-secondary p-1" role="listbox">
+		<div class="absolute bottom-full left-0 mb-1 rounded-sm border border-terminal-border bg-terminal-bg-secondary p-1" role="listbox">
 			{#each completions as completion, i}
 				<button
 					type="button"

@@ -27,7 +27,7 @@
 
 <a
 	href={toggleUrl}
-	class="font-mono text-xs px-2 py-1 bg-terminal-bg-primary border border-terminal-border rounded text-terminal-text-muted no-underline transition-all duration-200 hover:border-terminal-accent-orange shrink-0"
+	class="font-mono text-xs px-2 py-1 bg-terminal-bg-primary border border-terminal-border rounded-sm text-terminal-text-muted no-underline transition-all duration-200 hover:border-terminal-accent-orange shrink-0"
 	aria-label={isKorean ? 'Switch to English' : '한국어로 전환'}
 >
 	<span class={!isKorean ? 'text-terminal-accent-orange font-semibold' : ''}>EN</span>

@@ -1,10 +1,59 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  /* Terminal theme colors */
+  --color-terminal-bg-primary: #1a1a1a;
+  --color-terminal-bg-secondary: #2d2d2d;
+  --color-terminal-bg-hover: #353535;
+  --color-terminal-text-primary: #e5e5e5;
+  --color-terminal-text-muted: #888888;
+  --color-terminal-text-dim: #666666;
+  --color-terminal-accent-orange: #da7756;
+  --color-terminal-accent-blue: #6b9eff;
+  --color-terminal-accent-green: #7ec699;
+  --color-terminal-accent-yellow: #e5c07b;
+  --color-terminal-accent-purple: #c678dd;
+  --color-terminal-accent-cyan: #56b6c2;
+  --color-terminal-accent-red: #e06c75;
+  --color-terminal-border: #404040;
+
+  /* Font family - overrides default mono stack */
+  --font-mono:
+    "JetBrains Mono", "Fira Code", "SF Mono", "Monaco", "Inconsolata",
+    "Roboto Mono", "Source Code Pro", monospace;
+
+  /* Blink animation for terminal cursor */
+  --animate-blink: blink 1s step-end infinite;
+
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+}
+
+/*
+  The default border color changed to `currentcolor` in Tailwind CSS v4.
+  These compatibility styles preserve the v3 behavior.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 @layer base {
   :root {
-    /* Claude Code Theme CSS Variables */
+    /* Custom CSS Variables used by terminal-themed utilities below */
     --bg-primary: #1a1a1a;
     --bg-secondary: #2d2d2d;
     --bg-hover: #353535;
@@ -58,82 +107,6 @@
     background-color: var(--accent-orange);
     color: var(--bg-primary);
   }
-}
-
-@layer components {
-  /* Terminal prompt styling */
-  .prompt-user {
-    color: var(--accent-green);
-  }
-
-  .prompt-at {
-    color: var(--text-muted);
-  }
-
-  .prompt-host {
-    color: var(--accent-blue);
-  }
-
-  .prompt-path {
-    color: var(--accent-yellow);
-  }
-
-  .prompt-symbol {
-    color: var(--accent-orange);
-  }
-
-  /* Command output colors */
-  .output-directory {
-    color: var(--accent-yellow);
-  }
-
-  .output-file {
-    color: var(--accent-green);
-  }
-
-  .output-link {
-    color: var(--accent-cyan);
-  }
-
-  .output-error {
-    color: var(--accent-red);
-  }
-
-  .output-success {
-    color: var(--accent-green);
-  }
-
-  /* Terminal block cursor */
-  .cursor-block {
-    display: inline-block;
-    min-width: 1ch;
-    height: 1.2em;
-    vertical-align: text-bottom;
-    background-color: var(--accent-orange);
-    color: var(--bg-primary);
-    animation: blink 1s step-end infinite;
-  }
-
-  @keyframes blink {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0;
-    }
-  }
-
-  /* Fuzzy finder styling */
-  .fuzzy-overlay {
-    background-color: rgba(26, 26, 26, 0.95);
-    backdrop-filter: blur(4px);
-  }
-
-  .fuzzy-match {
-    color: var(--accent-orange);
-    font-weight: 600;
-  }
 
   /* Code block enhancements */
   pre {
@@ -157,24 +130,127 @@
   }
 }
 
-@layer utilities {
-  /* Terminal text effects */
-  .text-glow {
-    text-shadow: 0 0 10px currentColor;
-  }
+/* Terminal prompt styling */
+@utility prompt-user {
+  color: var(--accent-green);
+}
 
-  /* Focus visible for accessibility */
-  .focus-terminal:focus-visible {
+@utility prompt-at {
+  color: var(--text-muted);
+}
+
+@utility prompt-host {
+  color: var(--accent-blue);
+}
+
+@utility prompt-path {
+  color: var(--accent-yellow);
+}
+
+@utility prompt-symbol {
+  color: var(--accent-orange);
+}
+
+/* Command output colors */
+@utility output-directory {
+  color: var(--accent-yellow);
+}
+
+@utility output-file {
+  color: var(--accent-green);
+}
+
+@utility output-link {
+  color: var(--accent-cyan);
+}
+
+@utility output-error {
+  color: var(--accent-red);
+}
+
+@utility output-success {
+  color: var(--accent-green);
+}
+
+/* Terminal block cursor */
+@utility cursor-block {
+  display: inline-block;
+  min-width: 1ch;
+  height: 1.2em;
+  vertical-align: text-bottom;
+  background-color: var(--accent-orange);
+  color: var(--bg-primary);
+  animation: blink 1s step-end infinite;
+}
+
+/* Fuzzy finder styling */
+@utility fuzzy-overlay {
+  background-color: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(4px);
+}
+
+@utility fuzzy-match {
+  color: var(--accent-orange);
+  font-weight: 600;
+}
+
+/* Terminal text effects */
+@utility text-glow {
+  text-shadow: 0 0 10px currentColor;
+}
+
+/* Focus visible for accessibility */
+@utility focus-terminal {
+  &:focus-visible {
     outline: 2px solid var(--accent-orange);
     outline-offset: 2px;
   }
+}
 
-  /* Hide scrollbar for horizontal filter bars */
-  .scrollbar-none {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-none::-webkit-scrollbar {
+/* Hide scrollbar for horizontal filter bars */
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* Prose terminal theme — sets typography plugin color variables */
+@utility prose-terminal {
+  --tw-prose-body: #e5e5e5;
+  --tw-prose-headings: #e5e5e5;
+  --tw-prose-lead: #888888;
+  --tw-prose-links: #6b9eff;
+  --tw-prose-bold: #e5e5e5;
+  --tw-prose-counters: #888888;
+  --tw-prose-bullets: #888888;
+  --tw-prose-hr: #404040;
+  --tw-prose-quotes: #888888;
+  --tw-prose-quote-borders: #da7756;
+  --tw-prose-captions: #888888;
+  --tw-prose-code: #da7756;
+  --tw-prose-pre-code: #e5e5e5;
+  --tw-prose-pre-bg: #2d2d2d;
+  --tw-prose-th-borders: #404040;
+  --tw-prose-td-borders: #404040;
+  max-width: none;
+}
+
+/* Prose terminal element-level overrides (can't go in @utility) */
+.prose-terminal code:not(pre code) {
+  background-color: #2d2d2d;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-weight: 400;
+}
+
+.prose-terminal code::before,
+.prose-terminal code::after {
+  content: "";
+}
+
+.prose-terminal pre {
+  background-color: #2d2d2d;
+  border: 1px solid #404040;
 }
