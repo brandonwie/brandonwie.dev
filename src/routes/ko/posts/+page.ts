@@ -27,7 +27,7 @@ export const load: PageLoad = () => {
 
     const slug = path.split("/").pop()?.replace(".md", "") ?? "";
     koSlugs.add(slug);
-    posts.push({ slug, ...metadata, lang: "ko" });
+    posts.push({ ...metadata, slug, lang: "ko" });
   }
 
   // Then, load English posts that don't have Korean translations
@@ -37,7 +37,7 @@ export const load: PageLoad = () => {
     const slug = path.split("/").pop()?.replace(".md", "") ?? "";
     if (koSlugs.has(slug)) continue;
 
-    posts.push({ slug, ...metadata, lang: "en" });
+    posts.push({ ...metadata, slug, lang: "en" });
   }
 
   posts.sort(

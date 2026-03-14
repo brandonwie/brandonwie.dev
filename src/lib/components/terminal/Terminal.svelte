@@ -268,12 +268,14 @@
 	  - WHY ignored: clicking body to focus input is intentional UX
 	  - role="log" indicates this is a log/output region
 	-->
-	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-	<!-- Terminal Body - clicking focuses input for better UX -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- Terminal Body - clicking/pressing a key focuses the command input for better UX -->
 	<div
 		bind:this={terminalRef}
 		class="flex-1 overflow-y-auto p-4 font-mono text-sm leading-relaxed"
 		onclick={() => commandLineRef?.focus()}
+		onkeydown={() => commandLineRef?.focus()}
+		tabindex="-1"
 		role="log"
 	>
 		<!--

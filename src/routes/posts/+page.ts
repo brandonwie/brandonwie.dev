@@ -14,7 +14,7 @@ export const load: PageLoad = () => {
     if (metadata.draft) continue;
 
     const slug = path.split("/").pop()?.replace(".md", "") ?? "";
-    posts.push({ slug, ...metadata });
+    posts.push({ ...metadata, slug });
   }
 
   posts.sort(
