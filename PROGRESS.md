@@ -11,8 +11,46 @@
 - [x] Full EN/KO parity — 94 EN + 94 KO posts
 - [x] Sort-by-updated across all views + 79 posts resynced with latest 3B content
 - [x] Custom domain live
+- [x] Tailwind CSS v3 → v4 migration + PostDetail extraction + View Transitions
 
 ## Session Log
+
+### 2026-03-15
+
+**Site-Wide Improvement Plan — P0 through P4**
+
+Executed a comprehensive improvement plan across all layers:
+
+1. **P0 — Quick Wins**
+   - Enabled `precompress: true` for .br/.gz at build time (svelte.config.js)
+   - Fixed KO RSS date sorting to use `effectiveDate` (was sorting by raw `date`)
+   - Added JSDoc types to `remark-reading-time.js` plugin
+   - Fixed slug property ordering in 4 page loaders (`{ ...metadata, slug }`)
+   - Improved Terminal a11y: `tabindex="-1"` + `onkeydown` handler
+
+2. **P1 — Dependency Updates** (semver-compatible)
+   - SvelteKit 2.55.0, Svelte 5.53.12, svelte-check 4.4.5
+   - Paraglide 2.15.0, @types/node 22.19.15
+
+3. **P2.1 — Tailwind CSS v3 → v4 Migration**
+   - Deleted `tailwind.config.ts`, `postcss.config.js`
+   - Rewrote `app.css` with `@import "tailwindcss"`, `@plugin`, `@theme`, `@utility`
+   - Added `@tailwindcss/vite` plugin to `vite.config.ts`
+   - Removed `autoprefixer`, `postcss`, `@tailwindcss/postcss`
+   - `prose-terminal` now `@utility` + plain CSS for element selectors
+
+4. **P3.1 — JSON-LD + PostDetail Extraction**
+   - Created `PostDetail.svelte` — shared component for EN/KO post pages
+   - EN + KO detail pages reduced to thin wrappers (~8 lines each)
+   - JSON-LD Article schema on all 188 post pages
+
+5. **P4.1 — View Transitions API**
+   - Added `onNavigate` hook in root layout (progressive enhancement)
+
+6. **P4.3 — Reading Progress Indicator**
+   - Created `ReadingProgress.svelte` — thin orange bar at top of post pages
+
+**Build:** 921 files, 0 errors, 0 warnings. Precompressed output (~473 .br + .gz files).
 
 ### 2026-01-26
 
