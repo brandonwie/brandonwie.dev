@@ -72,11 +72,11 @@ async processDelete(job: Job) {
 
 ### Phase 3: Safety Net (동기화 레이어)
 
-큐 프로세서가 놓친 고아 레코드를 정리해요.
+큐 프로세서가 놓친 참조가 끊긴 레코드를 정리해요.
 
 ```typescript
 async sync() {
-  // 고아 레코드 감지 및 정리
+  // 참조가 끊긴 레코드 감지 및 정리
   const orphans = await this.findOrphans();
   for (const orphan of orphans) {
     this.logger.warn('Orphan detected', { id: orphan.id });
@@ -127,7 +127,7 @@ if (isTBlock(block)) {
 }
 ```
 
-### 고아 감지
+### 참조가 끊긴 레코드 감지
 
 부모 관계와 원본 관계를 모두 추적해야 해요.
 
@@ -145,6 +145,6 @@ await this.blockRepo.delete({
 
 1. **관심사 분리** - 서비스 레이어가 표시, 큐가 확인, 동기화가 정리
 2. **다층 방어** - 큐 프로세서 + 동기화 레이어 = 이중 안전장치
-3. **고아 레코드 로깅** - 놓친 정리 작업에 대한 가시성 확보
+3. **참조가 끊긴 레코드 로깅** - 놓친 정리 작업에 대한 가시성 확보
 4. **Status vs 삭제** - 용도에 따라 다른 의미론 적용
 5. **하위 호환성** - 기존 잘못된 데이터를 점진적으로 처리

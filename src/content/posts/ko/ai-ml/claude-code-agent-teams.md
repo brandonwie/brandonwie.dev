@@ -107,7 +107,7 @@ Teams가 빛나는 경우: 병렬 코드 리뷰, 경쟁적 가설 디버깅, 크
 
 **`teammateMode: "tmux"` config parsing 버그(#24292).** `settings.json`에 명시적으로 `"tmux"` 값을 넣으면 제대로 읽히지 않아요. `"auto"` 모드(`$TMUX` 환경 변수를 런타임에 감지)를 사용하거나 `--teammate-mode tmux` CLI 플래그를 전달하면 돼요.
 
-**TeamDelete가 고아 tmux 패널을 정리하지 않아요.** 에이전트가 종료되면 tmux 패널이 새 zsh 셸로 살아 있어요. `TeamDelete`는 팀 메타데이터만 정리하고 패널은 안 건드려요. 각 고아 패널에 `tmux kill-pane -t %<id>`를 수동으로 실행해야 해요. 팀 작업 후 `tmux list-panes -a`로 좀비 셸이 쌓이지 않게 확인하세요.
+**TeamDelete가 참조가 끊긴 tmux 패널을 정리하지 않아요.** 에이전트가 종료되면 tmux 패널이 새 zsh 셸로 살아 있어요. `TeamDelete`는 팀 메타데이터만 정리하고 패널은 안 건드려요. 참조가 끊긴 각 패널에 `tmux kill-pane -t %<id>`를 수동으로 실행해야 해요. 팀 작업 후 `tmux list-panes -a`로 좀비 셸이 쌓이지 않게 확인하세요.
 
 **동시에 3명 이상 spawn하면 tmux race condition이 생겨요.** 팀원을 동시에 3명 이상 생성하면 tmux `send-keys`에서 "not in a mode" 에러가 나요. 패널은 만들어지지만 에이전트가 시작되지 않아요. 개별적으로 다시 시도하면 보통 해결돼요. 팀원을 순차적으로(잠깐의 간격을 두고) 생성하면 문제를 아예 피할 수 있어요.
 
@@ -125,7 +125,7 @@ Teams가 빛나는 경우: 병렬 코드 리뷰, 경쟁적 가설 디버깅, 크
 - 모든 팀원이 생성 시 리드의 권한 모드 상속
 - 분할 패널에 tmux 또는 iTerm2 필요
 - `teammateMode: "tmux"`에 config parsing 버그가 있으니 `"auto"`를 대신 사용
-- TeamDelete가 고아 tmux 패널을 정리하지 않음 (수동 정리 필요)
+- TeamDelete가 참조가 끊긴 tmux 패널을 정리하지 않음 (수동 정리 필요)
 - 팀원 3명 이상 동시 spawn 시 race condition 발생 (개별 재시도로 해결)
 - Worktree에서 gitignored 파일 누락 (팀원이 개인 설정을 못 읽음)
 - Deferred tool(TeamCreate 등)은 ToolSearch로 로드하기 전까지 안 보임

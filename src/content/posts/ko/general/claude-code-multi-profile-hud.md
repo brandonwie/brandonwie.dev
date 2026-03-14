@@ -184,7 +184,7 @@ fetch해요. 다른 프로세스는 lock을 보고 `busy`를 반환하며, 50ms�
 이 방식 덕에 업스트림 TTL이 안전해져요: 성공 응답은 60초, 실패는 15초. lock
 없이는 캐시 만료 때마다 여러 프로세스가 API 호출을 쐈어요. lock이 있으면
 만료 사이클당 정확히 하나의 프로세스만 fetch해요. 중요한 디테일: `clearCache()`가
-`.usage-cache.lock`도 삭제해야 해요 -- 그렇지 않으면 고아 lock 파일이 모든
+`.usage-cache.lock`도 삭제해야 해요 -- 그렇지 않으면 참조가 끊긴 lock 파일이 모든
 프로세스의 fetch를 차단해요.
 
 ## Midnight Aurora 테마
