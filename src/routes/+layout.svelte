@@ -80,10 +80,14 @@
 	<meta property="og:description" content="Software engineering insights, tutorials, and learnings" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://brandonwie.dev" />
+	<meta property="og:image" content="https://brandonwie.dev/og/default.png" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
 	<!-- Twitter Card tags for Twitter previews -->
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content="Brandon Wie | Software Engineer" />
 	<meta name="twitter:description" content="Software engineering insights, tutorials, and learnings" />
+	<meta name="twitter:image" content="https://brandonwie.dev/og/default.png" />
 	<!-- RSS Feeds -->
 	<link rel="alternate" type="application/rss+xml" title="Brandon Wie (English)" href="https://brandonwie.dev/rss.xml" />
 	<link rel="alternate" type="application/rss+xml" title="Brandon Wie (한국어)" href="https://brandonwie.dev/ko/rss.xml" />

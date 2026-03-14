@@ -34,6 +34,7 @@
 	const siteUrl = 'https://brandonwie.dev';
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
 	const postUrl = $derived(`${siteUrl}${basePath}/posts/${meta.slug}`);
+	const ogImageUrl = $derived(`${siteUrl}/og/${meta.slug}.png`);
 	const backLabel = $derived($viewMode === 'terminal' ? m.back_to_terminal() : m.back_to_home());
 
 	let copied = $state(false);
@@ -100,6 +101,9 @@
 	<meta property="og:description" content={meta.description} />
 	<meta property="og:type" content="article" />
 	<meta property="og:url" content={postUrl} />
+	<meta property="og:image" content={ogImageUrl} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
 	<meta property="article:published_time" content={meta.date} />
 	{#if meta.updated}
 		<meta property="article:modified_time" content={meta.updated} />
@@ -111,6 +115,7 @@
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={meta.title} />
 	<meta name="twitter:description" content={meta.description} />
+	<meta name="twitter:image" content={ogImageUrl} />
 	<!-- SEO -->
 	<link rel="canonical" href={postUrl} />
 	<link rel="alternate" hreflang="en" href="{siteUrl}/posts/{meta.slug}" />
