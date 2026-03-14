@@ -32,8 +32,7 @@ npm-debug.log*
 .cache/
 .turbo/
 
-# Lock files (using deno.lock)
-package-lock.json
+# Lock files
 yarn.lock
 pnpm-lock.yaml
 .playwright-mcp/
