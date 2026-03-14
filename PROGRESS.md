@@ -12,8 +12,40 @@
 - [x] Sort-by-updated across all views + 79 posts resynced with latest 3B content
 - [x] Custom domain live
 - [x] Tailwind CSS v3 → v4 migration + PostDetail extraction + View Transitions
+- [x] Shiki v1 → v4 + OG image generation for all posts
 
 ## Session Log
+
+### 2026-03-15 (Session 2)
+
+**Shiki v4 Migration + OG Image Generation**
+
+Completed two high-priority backlog items:
+
+1. **Shiki v1 → v4 Migration**
+   - Zero-code migration — `createHighlighter` API is backward compatible
+   - Build and type check pass without changes to `svelte.config.js`
+
+2. **OG Image Generation**
+   - Created `scripts/generate-og-images.ts` using Satori + @resvg/resvg-js
+   - Terminal-themed design: dark bg, traffic light dots, category badge, title,
+     prompt line with block cursor
+   - 95 PNGs generated (94 posts + 1 default), ~2.7MB total
+   - Added `og:image` + `twitter:image` meta tags to PostDetail + root layout
+   - JetBrains Mono font bundled in `static/fonts/` for Satori rendering
+
+**Build:** 921 files, 0 errors, 0 warnings.
+
+**Commits:**
+
+| Hash    | Description                                           |
+| ------- | ----------------------------------------------------- |
+| 1337413 | chore(deps): upgrade shiki v1 to v4                   |
+| 0bed5b8 | feat(seo): add OG image generation for all blog posts |
+
+**Next:** ESLint + Prettier, GitHub Actions CI, Table of Contents, blog expansion
+
+---
 
 ### 2026-03-15
 
