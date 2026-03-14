@@ -8,7 +8,14 @@
 	import { viewMode } from '$lib/stores/viewMode';
 	import Giscus from '$lib/components/Giscus.svelte';
 	import ReadingProgress from '$lib/components/ReadingProgress.svelte';
+	import TableOfContents from '$lib/components/TableOfContents.svelte';
 	import { formatDateLong } from '$lib/utils/date';
+
+	interface TocHeading {
+		text: string;
+		depth: number;
+		id: string;
+	}
 
 	interface PostMeta {
 		title: string;
@@ -27,9 +34,12 @@
 		content: Component | null;
 		locale: 'en' | 'ko';
 		isFallback?: boolean;
+		headings?: TocHeading[];
 	}
 
-	let { meta, content, locale, isFallback = false }: Props = $props();
+	let { meta, content, locale, isFallback = false, headings = [] }: Props = $props();
+
+	const showToc = $derived(headings.length >= 3);
 
 	const siteUrl = 'https://brandonwie.dev';
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
@@ -73,19 +83,19 @@
 			author: {
 				'@type': 'Person',
 				name: 'Brandon Wie',
-				url: siteUrl
+				url: siteUrl,
 			},
 			mainEntityOfPage: {
 				'@type': 'WebPage',
-				'@id': postUrl
+				'@id': postUrl,
 			},
 			publisher: {
 				'@type': 'Person',
-				name: 'Brandon Wie'
+				name: 'Brandon Wie',
 			},
 			inLanguage: locale === 'ko' ? 'ko-KR' : 'en-US',
-			keywords: meta.tags.join(', ')
-		})
+			keywords: meta.tags.join(', '),
+		}),
 	);
 </script>
 
@@ -122,13 +132,15 @@
 	<link rel="alternate" hreflang="ko" href="{siteUrl}/ko/posts/{meta.slug}" />
 	<link rel="alternate" hreflang="x-default" href="{siteUrl}/posts/{meta.slug}" />
 	<!-- JSON-LD structured data -->
-	{@html `<script type="application/ld+json">${jsonLd}</script>`}
+	{@html `<script type="application/ld+json">${jsonLd}\x3C/script>`}
 </svelte:head>
 
 <div class="min-h-screen bg-terminal-bg-primary">
 	<!-- Header -->
 	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
-		<div class="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
+		<div
+			class="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6"
+		>
 			<button
 				onclick={goBack}
 				class="flex items-center gap-1 text-xs text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0 sm:gap-2 sm:text-sm"
@@ -136,7 +148,9 @@
 				<span>←</span>
 				<span>{backLabel}</span>
 			</button>
-			<a href={basePath || '/'} class="text-terminal-accent-orange text-xs truncate sm:text-base">brandonwie.dev</a>
+			<a href={basePath || '/'} class="text-terminal-accent-orange text-xs truncate sm:text-base"
+				>brandonwie.dev</a
+			>
 			<div class="flex items-center gap-2">
 				<ViewToggle />
 				<LanguageToggle />
@@ -145,10 +159,17 @@
 	</header>
 
 	<!-- Article -->
-	<article class="mx-auto max-w-4xl px-6 py-12">
+	<article class="relative mx-auto max-w-4xl px-6 py-12">
+		<!-- Desktop ToC: positioned in right margin -->
+		{#if showToc}
+			<TableOfContents {headings} />
+		{/if}
+
 		<!-- Fallback Notice (Korean page showing English content) -->
 		{#if isFallback}
-			<div class="mb-8 rounded-lg border border-terminal-accent-yellow/30 bg-terminal-accent-yellow/10 p-4">
+			<div
+				class="mb-8 rounded-lg border border-terminal-accent-yellow/30 bg-terminal-accent-yellow/10 p-4"
+			>
 				<p class="text-terminal-accent-yellow">
 					{m.translation_notice()}
 				</p>
@@ -164,11 +185,15 @@
 		<!-- Meta Header -->
 		<header class="mb-8">
 			<div class="mb-4 flex flex-wrap items-center gap-3">
-				<span class="rounded-sm bg-terminal-accent-yellow/20 px-2 py-1 text-sm text-terminal-accent-yellow">
+				<span
+					class="rounded-sm bg-terminal-accent-yellow/20 px-2 py-1 text-sm text-terminal-accent-yellow"
+				>
 					{meta.category}
 				</span>
 				{#each meta.tags as tag}
-					<span class="rounded-sm bg-terminal-bg-secondary px-2 py-1 text-sm text-terminal-text-muted">
+					<span
+						class="rounded-sm bg-terminal-bg-secondary px-2 py-1 text-sm text-terminal-text-muted"
+					>
 						{tag}
 					</span>
 				{/each}

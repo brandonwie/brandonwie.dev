@@ -5,4 +5,10 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<PostDetail meta={data.meta} content={data.content} locale="ko" isFallback={data.isFallback} />
+<PostDetail
+	meta={data.meta}
+	content={data.content}
+	locale="ko"
+	isFallback={data.isFallback}
+	headings={data.headings}
+/>
