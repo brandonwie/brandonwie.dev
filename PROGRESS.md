@@ -19,6 +19,39 @@
 
 ## Session Log
 
+### 2026-03-15 (Session 5b)
+
+**Blog Resync — 3 Posts + Korean Translations**
+
+Resynced 3 posts flagged `needs_resync: true` in 3B and updated their Korean
+translations. Resync backlog is now 0.
+
+1. **3 EN posts resynced**
+   - `claude-code-multi-profile-hud`: +2 gotchas, cache lock expansion,
+     stale-while-revalidate, reinstall workflow, +2 common pitfalls
+   - `ai-pr-review-validation-patterns`: +2 classification tiers (GOOD-TO-HAVE,
+     CONTROVERSIAL), +7 AI confusion patterns (#5-#11), +3 real-world examples
+   - `claude-code-agent-teams`: updated date only (content already current)
+
+2. **3 KO translations updated**
+   - Multi-profile HUD: +6 gotchas, rewritten patches table, cache lock,
+     stale-while-revalidate, reinstall workflow, +3 pitfalls
+   - AI PR review: +2 tiers, +7 confusion patterns, +3 examples
+   - Agent teams: iTerm2 bug refs, limitations expanded, transliterations fixed
+
+**Stats:** 94 EN posts, 94 KO posts. Build passes.
+
+**Commits:**
+
+| Hash    | Description                                               |
+| ------- | --------------------------------------------------------- |
+| d944dcd | docs(blog): resync 3 posts with updated knowledge entries |
+| f815d88 | feat(i18n): update KO translations for 3 resynced posts   |
+
+**Next:** Newsletter signup, auto-sync
+
+---
+
 ### 2026-03-15 (Session 5)
 
 **Public Stats Page with Umami Cloud Analytics**
