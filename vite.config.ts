@@ -41,6 +41,13 @@ export default defineConfig({
 						['ko', '/ko/search'],
 					],
 				},
+				{
+					pattern: '/stats',
+					localized: [
+						['en', '/stats'],
+						['ko', '/ko/stats'],
+					],
+				},
 				// Catch-all for other routes
 				{
 					pattern: '/:path(.*)?',

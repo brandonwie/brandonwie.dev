@@ -35,5 +35,19 @@
 	"search_results_count": "{count}개 결과",
 	"search_no_results": "\"{query}\"에 대한 결과가 없습니다",
 	"search_dev_notice": "검색은 프로덕션 빌드에서만 사용 가능합니다. `npm run build && npm run preview`로 테스트하세요.",
-	"search_loading": "검색 중..."
+	"search_loading": "검색 중...",
+	"stats_title": "통계",
+	"stats_subtitle": "사이트 통계",
+	"stats_loading": "분석 데이터 로딩 중...",
+	"stats_error": "분석 데이터를 불러올 수 없습니다",
+	"stats_active_now": "현재 접속 중",
+	"stats_last_30_days": "최근 30일",
+	"stats_pageviews": "페이지뷰",
+	"stats_visitors": "방문자",
+	"stats_visits": "방문",
+	"stats_bounce_rate": "이탈률",
+	"stats_avg_time": "평균 체류시간",
+	"stats_top_pages": "인기 페이지",
+	"stats_referrers": "유입 경로",
+	"stats_views": "조회"
 }
