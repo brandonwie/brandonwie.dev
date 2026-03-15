@@ -29,5 +29,11 @@
 	"reading_time": "{minutes} min read",
 	"copy_link": "Copy link",
 	"copied": "Copied!",
-	"on_this_page": "On this page"
+	"on_this_page": "On this page",
+	"search_title": "Search",
+	"search_placeholder": "Search posts...",
+	"search_results_count": "{count} results",
+	"search_no_results": "No results found for \"{query}\"",
+	"search_dev_notice": "Search is only available in production builds. Run `npm run build && npm run preview` to test.",
+	"search_loading": "Searching..."
 }

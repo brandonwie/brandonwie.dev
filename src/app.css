@@ -254,3 +254,10 @@
 	background-color: #2d2d2d;
 	border: 1px solid #404040;
 }
+
+/* Search result highlight (Pagefind <mark> tags) */
+.search-excerpt mark {
+	color: var(--accent-orange);
+	font-weight: 600;
+	background-color: transparent;
+}

@@ -159,15 +159,19 @@
 	</header>
 
 	<!-- Article -->
-	<article class="relative mx-auto max-w-4xl px-6 py-12">
+	<article data-pagefind-body class="relative mx-auto max-w-4xl px-6 py-12">
+		<span data-pagefind-filter="lang" class="hidden">{isFallback ? 'en' : locale}</span>
 		<!-- Desktop ToC: positioned in right margin -->
 		{#if showToc}
-			<TableOfContents {headings} />
+			<div data-pagefind-ignore>
+				<TableOfContents {headings} />
+			</div>
 		{/if}
 
 		<!-- Fallback Notice (Korean page showing English content) -->
 		{#if isFallback}
 			<div
+				data-pagefind-ignore
 				class="mb-8 rounded-lg border border-terminal-accent-yellow/30 bg-terminal-accent-yellow/10 p-4"
 			>
 				<p class="text-terminal-accent-yellow">
@@ -186,6 +190,7 @@
 		<header class="mb-8">
 			<div class="mb-4 flex flex-wrap items-center gap-3">
 				<span
+					data-pagefind-filter="category"
 					class="rounded-sm bg-terminal-accent-yellow/20 px-2 py-1 text-sm text-terminal-accent-yellow"
 				>
 					{meta.category}
@@ -208,7 +213,7 @@
 			</p>
 
 			<div class="flex flex-wrap items-center gap-4 text-sm text-terminal-text-dim">
-				<time datetime={meta.date}>
+				<time data-pagefind-sort="date[datetime]" datetime={meta.date}>
 					{formatDateLong(meta.date)}
 				</time>
 				{#if meta.updated && meta.updated !== meta.date}
@@ -237,7 +242,9 @@
 		</div>
 
 		<!-- Comments -->
-		<Giscus slug={meta.slug} lang={locale} />
+		<div data-pagefind-ignore>
+			<Giscus slug={meta.slug} lang={locale} />
+		</div>
 	</article>
 
 	<!-- Footer -->

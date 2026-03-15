@@ -5,8 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build",
+		"build": "vite build && npx pagefind --site build",
 		"preview": "vite preview",
+		"search:preview": "npm run build && vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"sync": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts",
@@ -37,6 +38,7 @@
 		"gray-matter": "^4.0.3",
 		"mdast-util-to-string": "^4.0.0",
 		"mdsvex": "^0.12.3",
+		"pagefind": "^1.4.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.1",
 		"rehype-slug": "^6.0.0",

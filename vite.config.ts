@@ -34,6 +34,13 @@ export default defineConfig({
 						['ko', '/ko/posts/:slug'],
 					],
 				},
+				{
+					pattern: '/search',
+					localized: [
+						['en', '/search'],
+						['ko', '/ko/search'],
+					],
+				},
 				// Catch-all for other routes
 				{
 					pattern: '/:path(.*)?',
