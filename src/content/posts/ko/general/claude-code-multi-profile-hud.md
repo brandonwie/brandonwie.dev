@@ -4,7 +4,7 @@ description: >-
   Claude Code를 여러 계정(개인 + 업무)으로 운영할 때 HUD 플러그인이 올바른
   계정별 사용량 통계를 표시하도록 설정하는 방법
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: 2026-03-15T00:00:00.000Z
 tags:
   - general
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-multi-profile-hud
-source_updated: "2026-03-09"
-translation_date: "2026-03-10"
+source_updated: "2026-03-15"
+translation_date: "2026-03-15"
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository
@@ -99,11 +99,6 @@ dist에만 있고 source에는 하드코딩된 값과 누락된 함수가 남아
 statusline 렌더러가 최종 줄 자르기를 제어해서, HUD 쪽에서는 감지하거나 우회할
 방법이 없어요.
 
-**sed `r`이 주소 범위에서 매 줄마다 삽입해요.**
-`sed "/start/,/end/r file"`을 쓰면 범위의 마지막 줄에만 삽입하는 게 아니라 범위
-내 모든 줄 뒤에 파일을 삽입해요. 함수 본문 뒤에 정확히 삽입하려면, 대상 아래의
-고유한 앵커 줄에 awk insert-before를 사용하는 게 대안이에요.
-
 **lock 메커니즘 없이 429 race condition이 발생했어요.** 가장 골치 아팠던
 버그예요. 프로필당 하나의 캐시 파일을 공유하는 3개 이상의 CLI 세션이 있을 때,
 모든 세션이 60초 캐시를 동시에 만료시키고 병렬로 API 요청을 쐈어요. Anthropic
@@ -114,10 +109,43 @@ usage API(rate-limited)가 전부에 429를 반환했어요. rate-limit에 걸�
 생성을 사용한 파일 기반 lock으로 하나의 프로세스만 fetch하고 나머지는 새 캐시를
 기다리는 방식이에요.
 
+**sed `r`이 주소 범위에서 매 줄마다 삽입해요.**
+`sed "/start/,/end/r file"`을 쓰면 범위의 마지막 줄에만 삽입하는 게 아니라 범위
+내 모든 줄 뒤에 파일을 삽입해요. 함수 본문 뒤에 정확히 삽입하려면, 대상 아래의
+고유한 앵커 줄에 awk insert-before를 사용하는 게 대안이에요.
+
 **`getOutputSpeed` 반환 타입 불일치.** speed-tracker가 `number | null`을 직접
 반환하는데, `{ speed, outputTokens }`를 반환한다고 가정하고 코드를 작성했어요.
 간헐적으로 `undefined is not an object` TypeError가 발생했는데, speed가
 non-null일 때만 트리거돼서(2초 측정 윈도우 때문에 드묾) 발견이 어려웠어요.
+
+**프로필 이름 변경 후 marketplace 경로가 오래된 채로 남아요.** `~/.claude/plugins/known_marketplaces.json`이 marketplace clone의 절대 경로를 저장해요. `~/.claude-personal/`을 `~/.claude/`로 이름을 변경한 뒤에도 이전 경로가 그대로 남아서 `claude plugin install`이 "Source path does not exist"로 실패했어요 -- marketplace 파일을 가리키는 명확한 에러 메시지가 없었죠.
+
+**Statusline 높이는 Claude Code가 고정해요.** HUD 플러그인이 `console.log()`로 줄을 출력하지만, Claude Code가 statusline에 할당하는 세로 영역을 제어해요. 더 많은 공간을 요청하는 API는 없어요. render 출력의 줄 순서가 곧 열화 순서를 결정해요: 첫 번째 줄이 살아남고, 마지막 줄이 잘려요.
+
+**플러그인 업그레이드 후 오래된 usage 캐시가 남아요.** 플러그인 업그레이드 중에 이전(패치 안 된) HUD 바이너리가 실행되면서 캐시에 잘못된 프로필 데이터를 채우는 구간이 있어요. 패치 적용 후에도 패치된 HUD가 이 오래된 캐시를 무기한(60초 TTL이 읽을 때마다 갱신됨) 제공해요. 해결 방법은 패치 적용 스크립트가 두 프로필의 usage 캐시를 삭제하는 거예요.
+
+**API 실패가 정상 캐시를 에러로 덮어써요.** usage API가 423(Locked)이나 non-200 상태를 반환하면, 원래 코드는 유효한 사용량 데이터가 들어있던 오래된 캐시 항목을 `{apiUnavailable: true}`로 덮어써요. 오래된 데이터가 불과 몇 초 전 것이어도 15초간 `Usage ⚠ (423)`이 깜빡이게 돼요. 해결 방법은 stale-while-revalidate 패턴이에요: 덮어쓰기 전에 오래된 캐시가 존재하고 실패 상태가 아닌지 확인해요.
+
+**0-byte lock 파일이 영구적 "busy" 상태를 만들어요.** HUD 프로세스가
+`fs.openSync(lockPath, 'wx')`와 `fs.writeFileSync(fd, timestamp)` 사이에서
+크래시하면, lock 파일은 생성되지만 내용이 비어있어요(0 byte).
+`readLockTimestamp()`가 빈 파일에 대해 `null`을 반환하는데, 오래된 lock 정리
+로직이 `if (lockTimestamp != null && ...)`으로 체크해서 `null`인 경우를 절대
+정리하지 않아요. lock이 영구적으로 "busy" 상태로 남고, HUD가 오래된 캐시
+데이터를 계속 반환해요. 업스트림에 수정 PR(#203)을 보냈는데,
+`lockTimestamp === null` 가드를 추가해서 `statSync().mtimeMs`로 크래시
+잔여물(오래된 mtime -- 삭제)과 활성 writer(최근 mtime -- busy 반환)를 구분하는
+방식이에요.
+
+**Stale-while-revalidate에서 TTL 갱신 없이 429 재시도 폭풍이 발생해요.**
+stale 캐시 fallback(Patch 9)이 API 실패 시 정상 데이터를 반환하지만, 원래는
+캐시 타임스탬프를 갱신하지 않았어요. 매 render 사이클(1-2초)마다 만료된 캐시를
+보고, API를 재시도하고, 429를 받고, stale을 반환하는 과정을 반복했어요. tmux
+세션이 하나뿐이어도 API를 계속 두들기고 있었죠.
+해결 방법은 `writeCache(homeDir, cacheState.data, now)`를 호출해서 stale
+데이터에 새 60초 TTL을 주는 거예요. 재시도가 매 render가 아니라 분당 한 번으로
+제한돼요.
 
 ## 해결책
 
@@ -140,12 +168,12 @@ non-null일 때만 트리거돼서(2초 측정 윈도우 때문에 드묾) 발�
 
 ```text
 ~/.claude/              (개인, 기본값)
-  plugins/cache/claude-hud/   (독립 바이너리, 패치됨)
-  settings.json               (statusline -> 래퍼)
+├── plugins/cache/claude-hud/   (독립 바이너리, 패치됨)
+└── settings.json               (statusline → 래퍼)
 
 ~/.claude-work/         (업무)
-  plugins/cache/claude-hud/   (독립 바이너리, 패치됨)
-  settings.json               (statusline -> CLAUDE_CONFIG_DIR=... 래퍼)
+├── plugins/cache/claude-hud/   (독립 바이너리, 패치됨)
+└── settings.json               (statusline → CLAUDE_CONFIG_DIR=... 래퍼)
 ```
 
 각 프로필은 자체 독립 HUD 바이너리를 가져요. symlink되지 않으며 각각 별도로
@@ -154,20 +182,19 @@ non-null일 때만 트리거돼서(2초 측정 윈도우 때문에 드묾) 발�
 
 ## 필요한 패치
 
-HUD 소스(`usage-api.ts`)에 환경 변수를 읽기 위한 패치가 필요해요:
+`claude-hud-post-patches.sh`로 적용하는 커스텀 패치 9개예요(v0.0.6 기준 30개에서 22개가 업스트림에 흡수됨):
 
-| 패치                                   | 용도                                         |
-| -------------------------------------- | -------------------------------------------- |
-| `CLAUDE_HUD_KEYCHAIN_SERVICE`          | 프로필별 keychain 항목에서 읽기              |
-| `CLAUDE_HUD_CONFIG_DIR` (homeDir)      | 캐시용 커스텀 기본 디렉토리                  |
-| `CLAUDE_HUD_CONFIG_DIR` (getPluginDir) | 올바른 캐시, lock, backoff 경로              |
-| `CLAUDE_HUD_SKIP_KEYCHAIN`             | 환경 변수 전용 인증을 위해 keychain 건너뛰기 |
-| FetchResult discriminated union        | 에러 타입 전파 (429, timeout 등)             |
-| File-based lock (업스트림에서 포팅)    | 여러 세션이 캐시를 공유할 때 race 방지       |
-
-각 패치는 환경 변수를 확인하고 설정되지 않으면 기본값으로 폴백해요.
-개인 프로필은 환경 변수 없이도 동작하고, 업무 프로필은 statusline 명령에
-환경 변수가 설정되면 동작해요.
+| #   | 타입 | 대상 파일            | 용도                                              |
+| --- | ---- | -------------------- | ------------------------------------------------- |
+| 1   | sed  | claude-config-dir.ts | `CLAUDE_HUD_CONFIG_DIR` 기본값 우선순위 설정      |
+| 2   | sed  | usage-api.ts         | `CLAUDE_HUD_KEYCHAIN_SERVICE` 앞에 추가           |
+| 3   | sed  | config.ts            | Quote config 필드(interface + defaults + merge)   |
+| 4   | copy | colors.ts            | Midnight Aurora 9역할 시맨틱 팔레트               |
+| 5   | copy | project.ts           | 이메일, 환경 라벨/버전, 모델 표시                 |
+| 6   | copy | usage.ts             | formatResetHours + provider guard                 |
+| 7   | copy | quote.ts             | 인용문 줄 렌더러                                  |
+| 8   | copy | render/index.ts      | 인용문 통합 + NBSP 치환                           |
+| 9   | sed  | usage-api.ts         | API 실패 시 stale 캐시 fallback                   |
 
 ## 캐시 Lock 메커니즘
 
@@ -183,9 +210,16 @@ fetch해요. 다른 프로세스는 lock을 보고 `busy`를 반환하며, 50ms�
 
 이 방식 덕에 업스트림 TTL이 안전해져요: 성공 응답은 60초, 실패는 15초. lock
 없이는 캐시 만료 때마다 여러 프로세스가 API 호출을 쐈어요. lock이 있으면
-만료 사이클당 정확히 하나의 프로세스만 fetch해요. 중요한 디테일: `clearCache()`가
-`.usage-cache.lock`도 삭제해야 해요 -- 그렇지 않으면 참조가 끊긴 lock 파일이 모든
-프로세스의 fetch를 차단해요.
+만료 사이클당 정확히 하나의 프로세스만 fetch해요. 중요한 디테일 두 가지가
+있어요: `clearCache()`가 `.usage-cache.lock`도 삭제해야 해요 -- 그렇지 않으면
+참조가 끊긴 lock 파일이 모든 프로세스의 fetch를 차단해요. 그리고 0-byte lock
+edge case를 주의하세요: 프로세스가 lock 파일 생성과 타임스탬프 쓰기 사이에서
+크래시하면, 파일은 존재하지만 내용이 비어있어요. 오래된 lock 정리 로직이
+non-null 타임스탬프만 체크하기 때문에 이 경우를 건너뛰어요. 업스트림
+수정(PR #203)에서 `lockTimestamp === null` 가드를 추가했어요.
+`statSync().mtimeMs`로 fallback해서 파일의 mtime이 오래됐으면 크래시
+잔여물로 보고 삭제하고, 최근이면 활성 writer가 아직 진행 중일 수 있으니 busy를
+반환해요.
 
 ## Midnight Aurora 테마
 
@@ -219,8 +253,8 @@ HUD 플러그인에는 알아두면 좋은 설정 옵션이 여러 가지 있어
 정보 손실을 피하려면 `"expanded"`를 사용하세요.
 
 **패치 내구성.** 플러그인 업데이트가 소스 파일을 덮어써요.
-`apply-patches.sh` 스크립트를 유지해서 업데이트 후 패치를 재적용하세요 --
-2026년 3월 기준으로 14개 그룹에 걸쳐 22개 패치가 있어요.
+`claude-hud-post-patches.sh`를 유지해서 업데이트 후 패치를 재적용하세요 --
+2026년 3월 기준으로 9개 패치예요.
 
 **7일 사용량 윈도우 항상 표시.** config에서 `sevenDayThreshold: 0`으로 설정하세요.
 기본값(`80`)은 사용량이 80%를 넘어야만 7일 윈도우를 보여줘요.
@@ -232,11 +266,29 @@ HUD 플러그인에는 알아두면 좋은 설정 옵션이 여러 가지 있어
 모두에서 `'percent'`와 `'tokens'` 간 컨텍스트 표시를 전환할 수 있어요.
 
 **expanded 레이아웃 순서.** `render/index.ts` 템플릿에서 커스터마이징 가능해요
--- project(모델 배지 포함) → 통합 context+usage → activity → environment 순이에요.
+-- project(모델 배지 포함) → 통합 context+usage → activity → environment
+순이에요. 인용문은 compact와 expanded 모드 모두에서 마지막에 렌더링돼요 -- 좁은
+터미널에서 필수 정보(project, context, usage)가 살아남고 장식적인 인용문이 먼저
+잘려요.
 
 **속도 트래커 반환 타입.** `getOutputSpeed()`는 객체가 아니라 `number | null`을
 직접 반환해요. 커스텀 렌더러에 속도를 통합할 때 반환 타입을 주의해서
 확인하세요.
+
+**API 실패 시 stale-while-revalidate.** usage API가 실패(423, timeout, 네트워크
+에러)하면, HUD가 만료된 캐시에 유효한 데이터(`apiUnavailable`이 아닌)가 있는지
+확인해요. 있으면 stale 데이터를 반환하면서 `writeCache`로 캐시 타임스탬프를
+갱신해요. stale 데이터에 새 60초 TTL이 부여되기 때문에 재시도가 매 render
+사이클이 아니라 분당 한 번으로 제한돼요. 타임스탬프 갱신이 없으면 1-2초마다
+만료된 캐시를 보고, API를 재시도하고, 429를 받고, stale을 반환하는 연속 재시도
+폭풍이 세션 하나에서도 발생해요. 이전에 정상 데이터가 전혀 없을 때만 실패
+캐싱으로 넘어가요.
+
+**재설치 워크플로우.** 상황이 꼬이면, 전체 재설치 순서는 이래요:
+`claude plugin uninstall claude-hud@claude-hud` → `claude plugin install claude-hud@claude-hud` → 두 프로필에 대해 `claude-hud-post-patches.sh`를 실행.
+플러그인 설치가 소스를 깨끗한 업스트림으로 덮어쓰고, 스크립트가 커스텀 패치를
+재적용해요. `known_marketplaces.json`이 marketplace clone의 절대 경로를
+저장하므로, 프로필 디렉토리 이름 변경 후에는 이 파일도 갱신해야 해요.
 
 ## 토큰 관리
 
@@ -244,10 +296,7 @@ Claude Code는 프로필별로 OAuth 토큰을 네이티브하게 관리해요:
 
 - 로그인 시 프로필별 keychain 항목을 자동 생성
 - 만료 전 토큰을 자동 갱신
-- 수동 동기화 불필요
-
-keychain 항목 간 토큰 동기화는 적극적으로 해로워요. 다른 프로필의 오래된
-토큰으로 유효한 토큰을 덮어써서 인증 실패를 유발해요.
+- 수동 동기화 불필요 -- 항목 간 동기화는 해로워요
 
 **`/login`이 필요한 경우:** refresh 토큰이 폐기된 후, 새 머신 설정, 수동
 keychain 삭제 후, 또는 프로필별 토큰과 기본 토큰이 동시에 만료됐을 때예요.
@@ -268,6 +317,14 @@ keychain 삭제 후, 또는 프로필별 토큰과 기본 토큰이 동시에 �
    새 설정은 새 터미널을 열어야 적용돼요.
 5. **중복 keychain 항목을 확인하세요.** 중복은 예측 불가능한 읽기를 유발해요.
    `security find-generic-password -a`로 항목을 나열하고 중복을 삭제하세요.
+6. **패치 후 usage 캐시를 삭제하세요.** 패치 적용 전 구간에서 남은 오래된
+   캐시가 잘못된 plan/계정 데이터를 보여줘요.
+7. **0-byte lock 파일을 주의하세요.** HUD가 lock 생성 도중 크래시하면, 빈 lock
+   파일이 모든 프로세스의 fetch를 차단해요. 사용량이 멈춰있으면
+   `.usage-cache.lock` 파일이 0 byte인지 확인하고 수동으로 삭제하세요.
+8. **디렉토리 이름 변경 후 `known_marketplaces.json`을 갱신하세요.** 이 파일이
+   marketplace clone의 절대 경로를 저장해요. 프로필 디렉토리 이름을 바꾸면
+   플러그인 설치 명령이 조용히 실패해요.
 
 ## 왜 이 방식이 효과적인가
 
