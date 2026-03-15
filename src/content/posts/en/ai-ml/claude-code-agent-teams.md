@@ -2,7 +2,7 @@
 title: Claude Code Agent Teams
 description: Experimental feature for orchestrating multiple Claude Code instances as a coordinated team with shared task lists and inter-agent messaging
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: 2026-03-15T00:00:00.000Z
 tags:
   - ai-ml
   - claude-code

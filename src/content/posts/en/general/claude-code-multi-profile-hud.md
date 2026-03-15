@@ -2,7 +2,7 @@
 title: Claude Code Multi-Profile HUD Setup
 description: "Running Claude Code with multiple accounts requires careful HUD configuration to show correct per-account usage stats. Here's how to fix cross-profile data leaks."
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: 2026-03-15T00:00:00.000Z
 tags:
   - general
   - claude-code
@@ -126,6 +126,24 @@ TypeErrors — triggered only when speed was non-null, which is rare due to the
 
 **API failure overwrites good cache with error.** When the usage API returns 423 (Locked) or any non-200 status, the original code overwrites the stale cache entry (which had valid usage data) with `{apiUnavailable: true}`. This causes `Usage ⚠ (423)` to flash for 15 seconds even though the stale data was only seconds old. The fix uses a stale-while-revalidate pattern: check if stale cache exists and is non-failure before overwriting.
 
+**0-byte lock file creates a permanent "busy" state.** If the HUD process
+crashes between `fs.openSync(lockPath, 'wx')` and
+`fs.writeFileSync(fd, timestamp)`, the lock file is created but empty (0 bytes).
+`readLockTimestamp()` returns `null` for empty files, and the stale-lock cleanup
+checks `if (lockTimestamp != null && ...)` — so the `null` case is never cleaned
+up. The lock stays permanently "busy," and the HUD returns stale cache data
+forever. I submitted an upstream fix (PR #203) that adds a
+`lockTimestamp === null` guard using `statSync().mtimeMs` to distinguish crash
+leftovers (old mtime — remove) from active writers (recent mtime — return busy).
+
+**Stale-while-revalidate without TTL refresh causes a 429 retry storm.** The
+stale cache fallback (Patch 9) returns good stale data when the API fails, but
+originally it did not update the cache timestamp. Every render cycle (1–2s) saw
+expired cache, retried the API, got 429, returned stale, and repeated. Even with
+a single tmux session, this hammered the API continuously. The fix: call
+`writeCache(homeDir, cacheState.data, now)` to give the stale data a fresh 60s
+TTL, limiting retries to once per minute instead of every render.
+
 ## The Solution
 
 Embed `CLAUDE_CONFIG_DIR` directly in each profile's `settings.json` statusline
@@ -191,9 +209,14 @@ processes.
 This makes the upstream TTLs safe: 60 seconds for successful responses, 15
 seconds for failures. Without the lock, multiple processes would all fire API
 calls on every cache expiry. With the lock, exactly one process fetches per
-expiry cycle. One important detail: `clearCache()` must also remove
+expiry cycle. Two important details: `clearCache()` must also remove
 `.usage-cache.lock` — otherwise an orphaned lock file blocks all processes from
-fetching.
+fetching. And watch out for the 0-byte lock edge case: if the process crashes
+between creating the lock file and writing the timestamp, the file exists but is
+empty. The stale-lock cleanup skips it because it checks for a non-null
+timestamp. The upstream fix (PR #203) adds a `lockTimestamp === null` guard that
+falls back to `statSync().mtimeMs` — if the file's mtime is old, it's a crash
+leftover and gets removed; if recent, an active writer might still be going.
 
 ## Midnight Aurora Theme
 
@@ -251,6 +274,23 @@ first.
 directly, not an object. Check the return type carefully when integrating speed
 into custom renderers.
 
+**Stale-while-revalidate on API failure.** When the usage API fails (423,
+timeout, network error), the HUD checks if the expired cache holds valid data
+(not `apiUnavailable`). If so, it returns the stale data AND refreshes the cache
+timestamp with `writeCache`. This gives the stale data a fresh 60s TTL so
+retries happen once per minute, not every render cycle. Without the timestamp
+refresh, every 1–2 second render sees expired cache, retries the API, hits 429,
+and returns stale — a continuous retry storm even from a single session. Only
+when no previous good data exists does the HUD fall through to failure-caching.
+
+**Reinstall workflow.** When things go sideways, the full reinstall sequence is:
+`claude plugin uninstall claude-hud@claude-hud`, then
+`claude plugin install claude-hud@claude-hud`, then run
+`claude-hud-post-patches.sh` for both profiles. The plugin install overwrites
+source with clean upstream; the script re-applies custom patches. Remember that
+`known_marketplaces.json` stores absolute paths to marketplace clones — these
+must be updated after any profile directory renames.
+
 ## Token Management
 
 Claude Code manages OAuth tokens natively per profile:
@@ -281,6 +321,13 @@ These are the mistakes I made (and you should avoid):
    List entries with `security find-generic-password -a` and remove duplicates.
 6. **Clear usage caches after patching.** Stale cache from the pre-patch window
    shows wrong plan/account data.
+7. **Watch for 0-byte lock files.** If the HUD crashes mid-lock-creation, the
+   empty lock file blocks all processes from fetching fresh data. Check for a
+   `.usage-cache.lock` file with 0 bytes and delete it manually if usage is
+   stuck.
+8. **Update `known_marketplaces.json` after directory renames.** This file
+   stores absolute paths to marketplace clones. After renaming a profile
+   directory, plugin install commands will fail silently.
 
 ## Why This Works
 
