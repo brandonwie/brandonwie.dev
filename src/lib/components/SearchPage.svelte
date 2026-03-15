@@ -127,7 +127,7 @@
 		{:else}
 			<!-- Search Input -->
 			<div class="mb-8 flex items-center gap-2 border-b border-terminal-border pb-2">
-				<span class="text-terminal-accent-orange font-bold">{'>'}</span>
+				<span class="text-terminal-accent-orange font-bold">&gt;</span>
 				<input
 					type="text"
 					bind:value={query}
