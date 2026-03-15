@@ -14,8 +14,52 @@
 - [x] Tailwind CSS v3 → v4 migration + PostDetail extraction + View Transitions
 - [x] Shiki v1 → v4 + OG image generation for all posts
 - [x] ESLint v9 + Prettier + GitHub Actions CI + Table of Contents + 8 posts expanded
+- [x] Pagefind static search — full-text content search across 188 pages
 
 ## Session Log
+
+### 2026-03-15 (Session 4)
+
+**Pagefind Static Search Integration**
+
+Added full-text content search to the blog using Pagefind. Users can now search
+inside post body content, not just metadata (title, description, tags).
+
+1. **Build pipeline**
+   - Installed `pagefind` as devDependency
+   - Chained `npx pagefind --site build` after `vite build`
+   - 188 pages indexed, 2 filters (lang, category), 1 sort (date)
+
+2. **Content indexing** (`PostDetail.svelte`)
+   - `data-pagefind-body` on `<article>` (opt-in mode)
+   - Hidden `<span data-pagefind-filter="lang">` for multi-language filtering
+   - `data-pagefind-filter="category"` on category badge
+   - `data-pagefind-sort="date[datetime]"` on `<time>` element
+   - `data-pagefind-ignore` on ToC, fallback notice, Giscus comments
+   - Fallback pages (KO showing EN content) correctly set lang to `"en"`
+
+3. **Search page** (`SearchPage.svelte`)
+   - Lazy-loads Pagefind WASM via indirected dynamic import
+   - `debouncedSearch()` with 200ms debounce, lang filter
+   - Dev mode fallback notice (Pagefind only exists after build)
+   - Terminal-styled input with orange `>` prefix
+   - Result cards with category badge, title, highlighted excerpt
+
+4. **Routes & i18n**
+   - `/search` (EN) and `/ko/search` (KO) routes
+   - 6 i18n keys added to `messages/en.json` and `messages/ko.json`
+   - Paraglide URL pattern added to `vite.config.ts`
+   - Search icon links on BlogHome, `/posts`, `/ko/posts` headers
+
+5. **Rollup build fix**
+   - `import('/pagefind/pagefind.js')` fails: Rollup statically resolves it
+   - Fix: indirected string variable makes path opaque to static analysis
+
+**Build:** 0 errors, 0 warnings. 188 pages indexed by Pagefind.
+
+**Next:** Newsletter signup, analytics, auto-sync
+
+---
 
 ### 2026-03-15 (Session 3)
 
