@@ -29,6 +29,10 @@ references:
 source_content_hash: e438c936065918f3e9eeb50c17c00d7302df6bb1b0d785e3b48220a4b6dd8d84
 ---
 
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
+
 Our users kept refreshing the page to check if their calendar sync was done. We needed the server to push a "sync complete" notification in real time — but our NestJS backend ran on multiple ECS containers behind an ALB. That raised a fundamental question: if a background job finishes on Container 2, how does User A (connected to Container 1) find out?
 
 This post traces the full architecture of WebSocket connections in a containerized AWS environment: how ALB handles the HTTP upgrade, how Redis Pub/Sub bridges multiple containers, and what happens when connections inevitably drop.
@@ -64,12 +68,12 @@ A NestJS backend running on AWS ECS needs to push real-time notifications to bro
 
 ## Architecture Overview
 
-```mermaid
+<Mermaid code={`
 flowchart LR
-    Client["Client<br/>(Browser)"] --> ALB["ALB<br/>(Layer 7)"]
-    ALB --> Container["ECS Container<br/>(NestJS + Socket.io)"]
+    Client["Client(Browser)"] --> ALB["ALB(Layer 7)"]
+    ALB --> Container["ECS Container(NestJS + Socket.io)"]
     Container --> Redis["Redis"]
-```
+`} />
 
 ### Connection Flow
 
@@ -133,15 +137,14 @@ Without Redis:
 
 ### The Solution: Redis Pub/Sub
 
-```mermaid
+<Mermaid code={`
 flowchart LR
-    C1["Container 1<br/>(User A here)"] <--> Redis["Redis<br/>Pub/Sub"]
-    Redis <--> C2["Container 2<br/>(Sync runs here)"]
-
+    C1["Container 1(User A here)"] <--> Redis["Redis Pub/Sub"]
+    Redis <--> C2["Container 2(Sync runs here)"]
     C2 -->|PUBLISH| Redis
     Redis -->|message| C1
     C1 -->|emit| UA["User A"]
-```
+`} />
 
 ### How Pub/Sub Actually Works
 

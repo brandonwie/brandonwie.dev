@@ -31,6 +31,10 @@ references:
     type: official
 ---
 
+<script>
+import Mermaid from '$lib/components/Mermaid.svelte';
+</script>
+
 브라우저 클라이언트에 실시간 알림을 푸시해야 했어요 -- 백그라운드 작업이
 완료된 후 "동기화 완료" 메시지를 보내는 거죠. HTTP 폴링도 동작했지만 리소스를
 낭비하고 눈에 보이는 지연을 추가했어요. WebSocket이 명확한 해결책이었지만,
@@ -64,12 +68,12 @@ HTTP 폴링 폴백에만 필요해요. WebSocket 전송만 사용하면, 초기 
 
 ## 아키텍처 개요
 
-```mermaid
+<Mermaid code={`
 flowchart LR
-    Client["Client<br/>(Browser)"] --> ALB["ALB<br/>(Layer 7)"]
-    ALB --> Container["ECS Container<br/>(NestJS + Socket.io)"]
+    Client["Client(Browser)"] --> ALB["ALB(Layer 7)"]
+    ALB --> Container["ECS Container(NestJS + Socket.io)"]
     Container --> Redis["Redis"]
-```
+`} />
 
 연결 흐름은 이렇게 동작해요:
 
@@ -116,15 +120,14 @@ With ALB:
 작업은 Container 2에서 실행될 수 있어요. Container 2는 사용자 A에게 직접
 알릴 수 없어요.
 
-```mermaid
+<Mermaid code={`
 flowchart LR
-    C1["Container 1<br/>(User A here)"] <--> Redis["Redis<br/>Pub/Sub"]
-    Redis <--> C2["Container 2<br/>(Sync runs here)"]
-
+    C1["Container 1(User A here)"] <--> Redis["Redis Pub/Sub"]
+    Redis <--> C2["Container 2(Sync runs here)"]
     C2 -->|PUBLISH| Redis
     Redis -->|message| C1
     C1 -->|emit| UA["User A"]
-```
+`} />
 
 ### Pub/Sub의 실제 동작 방식
 
