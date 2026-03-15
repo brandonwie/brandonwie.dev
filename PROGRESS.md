@@ -15,8 +15,42 @@
 - [x] Shiki v1 → v4 + OG image generation for all posts
 - [x] ESLint v9 + Prettier + GitHub Actions CI + Table of Contents + 8 posts expanded
 - [x] Pagefind static search — full-text content search across 188 pages
+- [x] Public /stats page with Umami Cloud analytics
 
 ## Session Log
+
+### 2026-03-15 (Session 5)
+
+**Public Stats Page with Umami Cloud Analytics**
+
+Added a public `/stats` page displaying site analytics from Umami Cloud API.
+Client-side fetching with sessionStorage caching (10-minute TTL).
+
+1. **StatsPage component** (`src/lib/components/StatsPage.svelte`)
+   - 4 parallel Umami API calls: active visitors, stats, top pages, top referrers
+   - `x-umami-api-key` header for authentication
+   - sessionStorage cache with 10-minute TTL prevents API hammering
+   - Terminal-aesthetic: green dot for active visitors, tabular-nums, card layout
+   - Loading/error/data states with helper functions (formatDuration, formatBounceRate, formatNumber)
+
+2. **Routes & i18n**
+   - `/stats` (EN) and `/ko/stats` (KO) route files
+   - 14 i18n keys added to `messages/en.json` and `messages/ko.json`
+   - Paraglide URL pattern added to `vite.config.ts`
+   - Bar-chart icon link in BlogHome header nav
+
+3. **Key decisions**
+   - API key in client bundle: acceptable (read-only, intentionally public data)
+   - Client-side fetching: SSG site has no server at runtime
+   - sessionStorage (not localStorage): fresh data across browser sessions
+
+**Build:** 0 errors, 0 warnings. `stats.html` and `ko/stats.html` generated.
+
+**Commit:** `6401e83` feat(stats): add public /stats page with Umami Cloud analytics
+
+**Next:** Newsletter signup, auto-sync
+
+---
 
 ### 2026-03-15 (Session 4)
 
