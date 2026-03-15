@@ -24,10 +24,6 @@ references:
     type: official
 ---
 
-<script>
-import Mermaid from '$lib/components/Mermaid.svelte';
-</script>
-
 AWS를 처음 쓸 때 Terraform으로 VPC, 서브넷 4개, NAT Gateway, Internet Gateway를 만들었는데 -- 어떤 리소스가 인터넷이 필요한 건지 전혀 감이 안 왔어요. "Private" 서브넷의 EC2가 외부와 통신되고(나쁨), "public" 서브넷의 EC2는 인터넷이 안 되더라고요(역시 나쁨). VPC 네트워킹은 쉬워 보이다가 갑자기 안 돼요.
 
 핵심 문제는 VPC가 모든 AWS 서비스의 기반이라는 거예요. CIDR 블록을 너무 작게 잡으면 팀이 커질 때 IP가 부족해지고, NAT Gateway를 private 서브넷에 놓으면(논리적으로 맞아 보이지만) 라우팅이 전혀 안 돼요. Route table을 명시적으로 연결하지 않으면 "private" 서브넷이 main route table의 IGW 라우트를 상속받아서 -- 아무도 모르게 public이 되어버려요.
@@ -176,7 +172,8 @@ NAT Gateway는 private 서브넷 리소스가 아웃바운드 트래픽(Docker �
 
 여기서 다들 헤매는 부분이에요: **NAT Gateway는 public 서브넷에 있어야 해요**, 리소스가 있는 private 서브넷이 아니라요. 거꾸로 같지만, NAT Gateway가 private 리소스의 트래픽을 프록시하려면 자기 자신이 먼저 인터넷에 접근(IGW를 통해)할 수 있어야 해요.
 
-<Mermaid code={`flowchart LR
+```mermaid
+flowchart LR
     subgraph Private["Private 서브넷"]
         EC2["EC2 인스턴스"]
     end
@@ -187,7 +184,8 @@ NAT Gateway는 private 서브넷 리소스가 아웃바운드 트래픽(Docker �
     Internet["인터넷"]
     EC2 --> NAT
     NAT --> IGW
-    IGW --> Internet`} />
+    IGW --> Internet
+```
 
 ```terraform
 # NAT Gateway용 EIP

@@ -3,6 +3,7 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { mdsvex } from 'mdsvex'; // markdown processor for Svelte
 import rehypeSlug from 'rehype-slug';
 import remarkGfm from 'remark-gfm';
+import { remarkMermaidComponent } from './src/lib/plugins/remark-mermaid-component.js';
 import { remarkReadingTime } from './src/lib/plugins/remark-reading-time.js';
 import { remarkTocExtract } from './src/lib/plugins/remark-toc-extract.js';
 
@@ -37,7 +38,6 @@ function getHighlighter() {
 					'terraform',
 					'toml',
 					'ini',
-					'mermaid',
 					'text',
 				],
 			});
@@ -49,7 +49,7 @@ function getHighlighter() {
 /** @type {import('mdsvex').MdsvexOptions} */
 const mdsvexOptions = {
 	extensions: ['.md', '.svx'],
-	remarkPlugins: [remarkGfm, remarkReadingTime, remarkTocExtract],
+	remarkPlugins: [remarkMermaidComponent, remarkGfm, remarkReadingTime, remarkTocExtract],
 	rehypePlugins: [rehypeSlug],
 	highlight: {
 		highlighter: async (code, lang = 'text') => {

@@ -31,10 +31,6 @@ references:
     type: official
 ---
 
-<script>
-import Mermaid from '$lib/components/Mermaid.svelte';
-</script>
-
 첫 ECS 배포에서 세 시간을 날렸어요. ECR에 이미지를 푸시하고, task definition을 업데이트했는데 서비스가 아무것도 안 하고 가만히 있더라고요. 알고 보니 ECS가 새 task definition revision을 만들긴 했는데, 서비스는 여전히 이전 revision을 가리키고 있었어요. `register-task-definition`과 `update-service`가 순서대로 실행해야 하는 별개의 단계라는 걸 아무도 안 알려줬어요. ECR/ECS 배포를 제대로 하기까지 겪은 많은 교훈 중 첫 번째였어요.
 
 ## 왜 중요한가
@@ -61,7 +57,8 @@ Docker 컨테이너를 AWS에서 관리형 오케스트레이션으로 배포하
 
 배포 파이프라인은 로컬 코드에서 Docker 빌드를 거쳐 AWS 서비스로 흘러가요:
 
-<Mermaid code={`flowchart LR
+```mermaid
+flowchart LR
     subgraph Development
         Code["애플리케이션 코드"]
         Docker["Docker 빌드"]
@@ -74,7 +71,8 @@ Docker 컨테이너를 AWS에서 관리형 오케스트레이션으로 배포하
     Code --> Docker
     Docker --> ECR
     ECR --> ECS
-    ECS --> Fargate`} />
+    ECS --> Fargate
+```
 
 ## ECR: 이미지 저장소
 
@@ -121,7 +119,8 @@ docker push \
 
 코드 푸시부터 실행 중인 task까지의 전체 배포 순서예요:
 
-<Mermaid code={`sequenceDiagram
+```mermaid
+sequenceDiagram
     participant Dev as 개발자
     participant CI as CI/CD
     participant ECR as ECR
@@ -139,7 +138,8 @@ docker push \
         ECS->>Tasks: 이전 Task 드레인
         ECS->>Tasks: 이전 Task 종료
     end
-    ECS->>CI: 배포 완료`} />
+    ECS->>CI: 배포 완료
+```
 
 ### 수동 배포 단계
 
@@ -184,7 +184,8 @@ Time     | Old v1.0 | New v2.0 | Total | Status
 
 Task가 3개인 경우 교체 과정을 시각화하면 이렇게 돼요:
 
-<Mermaid code={`graph TB
+```mermaid
+graph TB
     subgraph "Rolling Deployment with 3 Tasks"
         A["Start: 3 Tasks v1.0"] -->|"New Deployment"| B["Launch Task #1 v2.0"]
         B -->|"Health Check Pass"| C["Drain Task #1 v1.0"]
@@ -195,13 +196,15 @@ Task가 3개인 경우 교체 과정을 시각화하면 이렇게 돼요:
         G -->|"Continue"| H["Launch Task #3 v2.0"]
         H -->|"Health Check Pass"| I["Drain Task #3 v1.0"]
         I -->|"Complete"| J["End: 3 Tasks v2.0"]
-    end`} />
+    end
+```
 
 ### 롤링 업데이트 타임라인
 
 각 task가 시작, health check, 드레인, 종료를 거치는 시간 흐름이에요:
 
-<Mermaid code={`gantt
+```mermaid
+gantt
     title ECS Rolling Update Timeline (3 Tasks)
     dateFormat mm:ss
     axisFormat %M:%S
@@ -228,7 +231,8 @@ Task가 3개인 경우 교체 과정을 시각화하면 이렇게 돼요:
     section Task 3 v2.0
     Starting          :active, t3new, 04:30, 60s
     Health Checks     :t3health, 05:30, 30s
-    Running           :done, t3run, 06:00, 1s`} />
+    Running           :done, t3run, 06:00, 1s
+```
 
 ### 각 Task 교체의 핵심 단계
 
@@ -277,7 +281,8 @@ resource "aws_ecs_service" "app" {
 
 Circuit breaker를 활성화하면 ECS가 실패한 배포를 감지해서 자동으로 마지막 안정 버전으로 롤백해요:
 
-<Mermaid code={`flowchart LR
+```mermaid
+flowchart LR
     A["2 Tasks v1.0"] -->|"Deploy v2.0"| B["Launch v2.0 Task"]
     B -->|"Health Check"| C{"Healthy?"}
     C -->|"NO"| D["Health Check Fails"]
@@ -285,7 +290,8 @@ Circuit breaker를 활성화하면 ECS가 실패한 배포를 감지해서 자�
     E -->|"Rollback"| F["Remove Failed v2.0"]
     F --> G["Stay on v1.0"]
     C -->|"YES"| H["Continue Deploy"]
-    H --> I["Complete to v2.0"]`} />
+    H --> I["Complete to v2.0"]
+```
 
 `deployment_circuit_breaker` 없이는 잘못된 이미지가 ECS가 실패하는 task를 끝없이 재시도하게 만들어요. 직접 개입할 때까지 Fargate 비용이 계속 나가요. 프로덕션 서비스에는 반드시 활성화하세요:
 
@@ -300,7 +306,8 @@ deployment_circuit_breaker {
 
 Auto-scaling은 배포 중에도 멈추지 않아요. 계속 동작하고, 그 상호작용을 이해해 두면 좋아요:
 
-<Mermaid code={`flowchart LR
+```mermaid
+flowchart LR
     subgraph Deployment
         A[시작: 2 Task v1.0]
         B[롤링: v1.0/v2.0 혼합]
@@ -313,7 +320,8 @@ Auto-scaling은 배포 중에도 멈추지 않아요. 계속 동작하고, 그 �
     A --> B
     B --> C
     D --> E
-    E --> B`} />
+    E --> B
+```
 
 배포 중 auto-scaling이 활성화되어 있을 때의 핵심 동작:
 
@@ -517,7 +525,8 @@ app.get("/health", (req, res) => {
 
 롤링 업데이트 중에 이상 징후를 조기에 감지하려면 이 시그널들을 모니터링하세요:
 
-<Mermaid code={`flowchart TB
+```mermaid
+flowchart TB
     A["Deployment Triggered"]
     A --> B["Monitor: Task Count"]
     A --> C["Monitor: CPU/Memory"]
@@ -530,7 +539,8 @@ app.get("/health", (req, res) => {
     F -->|"Yes"| G["Alert Team"]
     F -->|"No"| H["Continue"]
     G --> I["Manual Rollback if Needed"]
-    H --> J["Deployment Success"]`} />
+    H --> J["Deployment Success"]
+```
 
 ```bash
 # 배포 진행 상황 실시간 확인
@@ -582,13 +592,15 @@ aws ecs describe-services \
 
 배포가 멈췄을 때 빠르게 원인을 파악하는 흐름이에요:
 
-<Mermaid code={`flowchart LR
+```mermaid
+flowchart LR
     A["Deployment Stuck"] --> B{"Check Health Checks"}
     B -->|"Failing"| C["Fix Application/Port"]
     B -->|"Passing"| D{"Check Resources"}
     D -->|"Insufficient"| E["Increase CPU/Memory"]
     D -->|"Sufficient"| F{"Check Subnet"}
-    F -->|"No IP"| G["Check Subnet Capacity"]`} />
+    F -->|"No IP"| G["Check Subnet Capacity"]
+```
 
 ## 실전 정리
 

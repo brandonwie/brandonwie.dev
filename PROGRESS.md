@@ -16,8 +16,33 @@
 - [x] ESLint v9 + Prettier + GitHub Actions CI + Table of Contents + 8 posts expanded
 - [x] Pagefind static search — full-text content search across 188 pages
 - [x] Public /stats page with Umami Cloud analytics
+- [x] Remark plugin for automatic Mermaid diagram rendering
 
 ## Session Log
+
+### 2026-03-16 (Session 6)
+
+**Remark Mermaid Plugin — Auto-transform code fences to Svelte components**
+
+Created `remark-mermaid-component` plugin that intercepts ` ```mermaid ` code
+fences at build time and replaces them with `<Mermaid />` Svelte components.
+This fixes the long-standing issue where mdsvex's Shiki highlighter turned
+mermaid blocks into syntax-highlighted `<pre><code>` instead of rendered
+diagrams.
+
+1. **New remark plugin** (`src/lib/plugins/remark-mermaid-component.js`)
+   - Transforms mermaid code nodes → html nodes with `<Mermaid code={...} />`
+   - Auto-injects `<script>` import (merges with existing or creates new)
+   - Runs first in remark pipeline, before Shiki processes code blocks
+2. **Reverted 5 manually-fixed posts** to standard ` ```mermaid ` fences
+   - EN: `websocket-architecture`
+   - KO: `websocket-architecture`, `vpc-networking-fundamentals`,
+     `ecr-ecs-deployment-workflow` (9 diagrams), `etl-data-separation`
+3. **Removed `mermaid`** from Shiki langs array (no code blocks reach highlighter)
+4. **All 22 mermaid posts** now use one code path (standard markdown → plugin)
+5. **Build verified** — 188 pages, zero errors
+6. **Pipeline validated** — sync script, `/blog-publish`, `/translate-ko` all
+   pass through mermaid fences untouched; plugin handles at build time
 
 ### 2026-03-15 (Session 5b)
 

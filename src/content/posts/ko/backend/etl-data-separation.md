@@ -24,10 +24,6 @@ references:
     type: official
 ---
 
-<script>
-import Mermaid from '$lib/components/Mermaid.svelte';
-</script>
-
 Amplitude ETL 파이프라인에 데이터 공백이 생겼어요. 몇 시간분의 이벤트
 데이터가 S3에서 빠져 있어서 Export API로 수동 백필을 실행했어요. 복구한
 파일들이 자동화 export와 같은 S3 prefix에 저장됐어요. 하루 만에 일일 ETL이
@@ -155,12 +151,14 @@ python cli.py amplitude-etl \
 
 ### 데이터 흐름
 
-<Mermaid code={`flowchart LR
+```mermaid
+flowchart LR
     A[Amplitude Export] -->|자동 저장| B[s3://.../{PROJECT_ID}/]
     B -->|일일 ETL| C[s3://.../event/]
     D[Backfill API] -->|수동 저장| E[s3://.../{PROJECT_ID}-backfill/]
     E -->|수동 ETL| C
-    C --> F[Analytics/BI 도구]`} />
+    C --> F[Analytics/BI 도구]
+```
 
 ## 이게 왜 효과적인가
 
