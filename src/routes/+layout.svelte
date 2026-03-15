@@ -38,7 +38,8 @@
 
 	// View Transitions API - smooth crossfade between pages
 	// Progressive enhancement: unsupported browsers get instant navigation
-	import { onNavigate } from '$app/navigation';
+	import { onNavigate, goto } from '$app/navigation';
+	import { viewMode } from '$lib/stores/viewMode';
 
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
@@ -58,6 +59,26 @@
 	// `children` is a special "snippet" prop that SvelteKit passes to layouts,
 	// containing the page content that should be rendered inside this layout.
 	let { children } = $props();
+
+	function handleSearchShortcut(event: KeyboardEvent) {
+		if (!((event.metaKey || event.ctrlKey) && event.key === 'f')) return;
+
+		const pathname = page.url.pathname;
+
+		// Don't intercept in terminal mode, on search page, or on post detail pages
+		if ($viewMode === 'terminal') return;
+		if (pathname.includes('/search')) return;
+		if (/\/posts\/.+/.test(pathname)) return;
+
+		// Don't intercept when focused on editable elements
+		const target = event.target as HTMLElement;
+		if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+			return;
+
+		event.preventDefault();
+		const isKorean = pathname.startsWith('/ko');
+		goto(isKorean ? '/ko/search' : '/search');
+	}
 </script>
 
 <!--
@@ -72,6 +93,8 @@
 
   REFERENCE: https://svelte.dev/docs/svelte/svelte-head
 -->
+<svelte:window onkeydown={handleSearchShortcut} />
+
 <svelte:head>
 	<title>Brandon Wie | Software Engineer</title>
 	<meta

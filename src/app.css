@@ -74,6 +74,7 @@
 		font-family: 'JetBrains Mono', monospace;
 		background-color: var(--bg-primary);
 		color: var(--text-primary);
+		scrollbar-gutter: stable;
 	}
 
 	body {
