@@ -20,6 +20,24 @@
 
 ## Session Log
 
+### 2026-03-16 (Session 6b)
+
+**Moba Anonymization + Search Fix Verification + Deploy**
+
+Completed anonymization of remaining ~30 internal project references across 15
+files (8 EN + 7 KO pairs). Verified Pagefind search `.html` suffix fix in built
+output. Pushed all commits to main — Cloudflare Pages deployment triggered.
+
+1. **15 files anonymized** — replaced `moba-nestjs`, `moba-terraform`,
+   `moba-airflow`, `moba-etl`, `moba-works`, `moba-prod-waf`,
+   `moba-rds-prod-cluster`, `moba:socket.io`, and Korean equivalents with
+   generic names (`backend-project`, `infra-project`, `app-prod-waf`, etc.)
+2. **Zero remaining references** — `grep -ri "moba" src/content/posts/` returns
+   nothing
+3. **Build verified** — 188 pages, zero errors, Pagefind re-indexed
+4. **Search fix confirmed** — `.html$` regex present in built search chunk
+5. **Pushed to main** — 3 commits deployed (search fix + 2 anonymization rounds)
+
 ### 2026-03-16 (Session 6)
 
 **Remark Mermaid Plugin — Auto-transform code fences to Svelte components**
