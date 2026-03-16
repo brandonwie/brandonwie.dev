@@ -4,6 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"prepare": "husky",
 		"dev": "vite dev",
 		"build": "vite build && npx pagefind --site build",
 		"preview": "vite preview",
@@ -36,6 +37,7 @@
 		"github-slugger": "^2.0.0",
 		"globals": "^17.4.0",
 		"gray-matter": "^4.0.3",
+		"husky": "^9.1.7",
 		"mdast-util-to-string": "^4.0.0",
 		"mdsvex": "^0.12.3",
 		"pagefind": "^1.4.0",

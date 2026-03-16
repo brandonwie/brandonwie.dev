@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# Pre-push hook: runs the same checks as CI (.github/workflows/ci.yml)
+# Blocks push if any check fails.
+
+echo "Running pre-push checks..."
+echo ""
+
+echo "1/4 Linting..."
+npm run lint || exit 1
+
+echo ""
+echo "2/4 Format check..."
+npm run format:check || exit 1
+
+echo ""
+echo "3/4 Building (includes Pagefind)..."
+npm run build || exit 1
+
+echo ""
+echo "4/4 Svelte check..."
+npm run check || exit 1
+
+echo ""
+echo "All pre-push checks passed!"
