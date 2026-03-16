@@ -71,7 +71,7 @@
 					excerpt?: string;
 					filters?: { category?: string[] };
 				}) => ({
-					url: d.url ?? '',
+					url: (d.url ?? '').replace(/\.html$/, ''),
 					title: d.meta?.title ?? 'Untitled',
 					excerpt: d.excerpt ?? '',
 					category: d.filters?.category?.[0],
