@@ -34,7 +34,7 @@ Google 문서에 따르면:
 기존 접근 방식은 모든 block을 삭제하고 Google에서 다시 생성했어요.
 
 ```typescript
-// ❌ 위험: Moba 고유 데이터가 사라짐
+// ❌ 위험: 앱 고유 데이터가 사라짐
 async handleResync(calendarId: string) {
   await this.blockRepo.delete({ calendarId });  // 날아감!
   const events = await this.googleApi.listEvents(calendarId);
@@ -58,7 +58,7 @@ async handleResync(calendar: Calendar) {
   const accessRole = calendar.accessRole;
 
   if (isEditableCalendar(accessRole)) {
-    // MERGE: Moba 고유 필드 보존
+    // MERGE: 앱 고유 필드 보존
     await this.mergeResync(calendar);
   } else {
     // CLEAN-SLATE: 읽기 전용 캘린더에 안전
@@ -87,7 +87,7 @@ async mergeResync(calendar: Calendar) {
     });
 
     if (existing) {
-      // UPDATE: Moba 필드는 유지하고 Google 필드만 갱신
+      // UPDATE: 앱 필드는 유지하고 Google 필드만 갱신
       await this.updateBlockFromEvent(existing, event);
     } else {
       // INSERT: Google에서 온 새 이벤트
@@ -101,7 +101,7 @@ async mergeResync(calendar: Calendar) {
 
 ```typescript
 async cleanSlateResync(calendar: Calendar) {
-  // 안전: 읽기 전용 캘린더에는 Moba 고유 데이터가 없음
+  // 안전: 읽기 전용 캘린더에는 앱 고유 데이터가 없음
   await this.blockRepo.delete({ calendarId: calendar.id });
   const events = await this.googleApi.listEvents(calendar.gcalId);
   await this.createBlocksFromEvents(events);

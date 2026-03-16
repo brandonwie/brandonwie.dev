@@ -35,7 +35,7 @@ changes) also invalidate tokens.
 Original approach deleted all blocks and recreated from Google:
 
 ```typescript
-// ❌ DANGEROUS: Loses Moba-specific data
+// ❌ DANGEROUS: Loses App-specific data
 async handleResync(calendarId: string) {
   await this.blockRepo.delete({ calendarId });  // Gone!
   const events = await this.googleApi.listEvents(calendarId);
@@ -59,7 +59,7 @@ async handleResync(calendar: Calendar) {
   const accessRole = calendar.accessRole;
 
   if (isEditableCalendar(accessRole)) {
-    // MERGE: Preserve Moba-specific fields
+    // MERGE: Preserve App-specific fields
     await this.mergeResync(calendar);
   } else {
     // CLEAN-SLATE: Safe for read-only calendars
@@ -88,7 +88,7 @@ async mergeResync(calendar: Calendar) {
     });
 
     if (existing) {
-      // UPDATE: Keep Moba fields, update Google fields
+      // UPDATE: Keep App fields, update Google fields
       await this.updateBlockFromEvent(existing, event);
     } else {
       // INSERT: New event from Google
@@ -102,7 +102,7 @@ async mergeResync(calendar: Calendar) {
 
 ```typescript
 async cleanSlateResync(calendar: Calendar) {
-  // Safe: Read-only calendars have no Moba-specific data
+  // Safe: Read-only calendars have no App-specific data
   await this.blockRepo.delete({ calendarId: calendar.id });
   const events = await this.googleApi.listEvents(calendar.gcalId);
   await this.createBlocksFromEvents(events);

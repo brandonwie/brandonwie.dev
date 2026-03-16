@@ -149,11 +149,11 @@ A common misconception is that Redis sends HTTP requests to your application whe
 ```text
 Step 1: STARTUP
   Container opens TCP connection to Redis (stays open!)
-  → "SUBSCRIBE moba:socket.io"
+  → "SUBSCRIBE app:socket.io"
 
 Step 2: PUBLISH
   Container 2 sends message to Redis
-  → "PUBLISH moba:socket.io {user:123, data:...}"
+  → "PUBLISH app:socket.io {user:123, data:...}"
 
 Step 3: PUSH
   Redis writes to the ALREADY OPEN TCP connection

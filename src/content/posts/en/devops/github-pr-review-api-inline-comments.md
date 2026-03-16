@@ -150,7 +150,7 @@ REVIEW_JSON
 
 ```bash
 PR_NUMBER=644
-OWNER=moba-works
+OWNER=example-org
 REPO=backend-v2
 
 cat << 'REVIEW_JSON' | gh api repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews -X POST --input -

@@ -56,10 +56,10 @@ AWS에 존재하지만 state에 없는 리소스:
 
 ```bash
 # RDS Cluster
-terraform import aws_rds_cluster.main moba-rds-prod-cluster
+terraform import aws_rds_cluster.main app-rds-prod-cluster
 
 # RDS Instance
-terraform import aws_rds_cluster_instance.main moba-rds-prod
+terraform import aws_rds_cluster_instance.main app-rds-prod
 
 # EC2 Instance
 terraform import aws_instance.main i-0123456789abcdef0

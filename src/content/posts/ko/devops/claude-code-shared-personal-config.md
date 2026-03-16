@@ -120,13 +120,13 @@ CLAUDE.local.md
 
 ```text
 3b/.claude/project-claude/
-├── moba-nestjs.md          # Shared SoT → backend-v2/CLAUDE.md (symlink)
-├── moba-nestjs.local.md    # Personal SoT → backend-v2/CLAUDE.local.md (symlink)
-├── moba-nestjs.mcp.json    # MCP SoT → backend-v2/.mcp.json (symlink)
-├── moba-terraform.md       # Combined (personal-only repo)
-├── moba-terraform.mcp.json # MCP SoT → backend-infra/.mcp.json (symlink)
-├── moba-airflow.md         # Combined (personal-only repo)
-├── moba-etl.md             # Combined (personal-only repo)
+├── backend-project.md          # Shared SoT → backend-v2/CLAUDE.md (symlink)
+├── backend-project.local.md    # Personal SoT → backend-v2/CLAUDE.local.md (symlink)
+├── backend-project.mcp.json    # MCP SoT → backend-v2/.mcp.json (symlink)
+├── infra-project.md            # Combined (personal-only repo)
+├── infra-project.mcp.json      # MCP SoT → backend-infra/.mcp.json (symlink)
+├── orchestration-project.md    # Combined (personal-only repo)
+├── etl-project.md              # Combined (personal-only repo)
 ├── crucio.mcp.json         # MCP SoT → crucio/.mcp.json (symlink)
 └── ...
 ```
