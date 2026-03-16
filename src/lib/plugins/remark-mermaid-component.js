@@ -16,7 +16,7 @@ export function remarkMermaidComponent() {
 
 		// Transform mermaid code blocks → Mermaid Svelte component
 		visit(tree, 'code', (node, index, parent) => {
-			if (node.lang !== 'mermaid') return;
+			if (node.lang !== 'mermaid' || parent == null || index == null) return;
 			hasMermaid = true;
 
 			// Escape backticks and template literal syntax for Svelte template string

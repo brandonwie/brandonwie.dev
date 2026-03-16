@@ -128,6 +128,7 @@
 			<!-- Search Input -->
 			<div class="mb-8 flex items-center gap-2 border-b border-terminal-border pb-2">
 				<span class="text-terminal-accent-orange font-bold">&gt;</span>
+				<!-- svelte-ignore a11y_autofocus -->
 				<input
 					type="text"
 					bind:value={query}
