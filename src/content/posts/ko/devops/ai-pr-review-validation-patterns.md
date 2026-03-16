@@ -245,7 +245,7 @@ git log origin/main..HEAD -- {file} --format="%h %ae %s"
 
 ## 실제 사례
 
-### 사례 1: moba-nestjs PR #629 (claude[bot])
+### 사례 1: NestJS Backend PR #629 (claude[bot])
 
 **통계:** 12개 코멘트, 3개 INVALID, 5개 OPTIONAL, 4개 VALID IMPROVEMENT
 
@@ -255,7 +255,7 @@ git log origin/main..HEAD -- {file} --format="%h %ae %s"
 - request 라이프사이클 오해(단일 스레드 event loop에서 race condition 없음)
 - webhook 흐름 오해(외부 서비스가 이미 commit)
 
-### 사례 2: moba-etl PR #5 (GitHub Copilot)
+### 사례 2: ETL Pipeline PR #5 (GitHub Copilot)
 
 **통계:** 10개 코멘트, 0개 INVALID, 4개 VALID BUG, 3개 VALID IMPROVEMENT, 1개 ALREADY FIXED, 2개 OPTIONAL
 
@@ -286,7 +286,7 @@ git log origin/main..HEAD -- {file} --format="%h %ae %s"
 
 **결과:** 6개 수정, 6개 INVALID 근거와 함께 기각. 정확도가 혼재 — CodeRabbit 4/6 INVALID, Claude Bot 1 VALID BUG + 2 INVALID.
 
-### 사례 4: moba-nestjs PR #710 Round 1+2 (Copilot + Claude)
+### 사례 4: NestJS Backend PR #710 Round 1+2 (Copilot + Claude)
 
 **통계:** 19개 raw 지적 → dedup 후 15개 고유. 1 VALID BUG, 2 GTH→FIX, 3 CONTROVERSIAL→SKIP, 1 INVALID, 3 DEFER, 7 N/A(authorship)
 
@@ -294,7 +294,7 @@ GitHub API 406 이슈(#10)를 유발한 release PR이에요. 로컬에서 diff�
 
 **주요 VALID BUG:**
 
-- `moveCrossIntegration`에서 `blockRepo.count()`에 `withDeleted: true` 누락 — soft-deleted T block(취소된 반복 인스턴스)이 count되지 않아서 parent가 `moveCrossIntegrationSingle`로 잘못 라우팅
+- `moveAcrossIntegrations`에서 `entityRepo.count()`에 `withDeleted: true` 누락 — soft-deleted T block(취소된 반복 인스턴스)이 count되지 않아서 parent가 `moveAcrossIntegrationsSingle`로 잘못 라우팅
 
 **주요 INVALID:**
 
@@ -308,7 +308,7 @@ GitHub API 406 이슈(#10)를 유발한 release PR이에요. 로컬에서 diff�
 
 **프로세스 학습:** Claude의 구조화된 review는 finding별로 개별 파싱(STEP 1C)이 필요하고, 하나로 합치면 안 돼요. Round 1에서 이걸 놓쳤고, Round 2에서 수정했어요.
 
-### 사례 5: moba-nestjs PR #712 Round 1+2 (Claude)
+### 사례 5: NestJS Backend PR #712 Round 1+2 (Claude)
 
 **통계:** Round 1: 8개(5 INVALID, 2 CONTROVERSIAL→FIX, 1 GTH→FIX). Round 2: 2개(1 INVALID, 1 GTH→FIX)
 

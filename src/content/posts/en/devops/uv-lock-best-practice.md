@@ -88,7 +88,7 @@ Per
 | **Applications** | ✅ Always commit                             |
 | **Libraries**    | Debatable - consumers generate own lockfiles |
 
-For MOBA projects (applications), always commit `uv.lock`.
+For application projects, always commit `uv.lock`.
 
 ## Common Misconception
 

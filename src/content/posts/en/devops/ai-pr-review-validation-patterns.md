@@ -252,7 +252,7 @@ Mark non-your-author findings as N/A in the finding registry. Only escalate CRIT
 
 ## Real-World Examples
 
-### Example 1: moba-nestjs PR #629 (claude[bot])
+### Example 1: NestJS Backend PR #629 (claude[bot])
 
 **Stats:** 12 comments, 3 INVALID, 5 OPTIONAL, 4 VALID IMPROVEMENT
 
@@ -263,7 +263,7 @@ Mark non-your-author findings as N/A in the finding registry. Only escalate CRIT
   loop)
 - Webhook flow misunderstanding (external service already committed)
 
-### Example 2: moba-etl PR #5 (GitHub Copilot)
+### Example 2: ETL Pipeline PR #5 (GitHub Copilot)
 
 **Stats:** 10 comments, 0 INVALID, 4 VALID BUG, 3 VALID IMPROVEMENT, 1 ALREADY
 FIXED, 2 OPTIONAL
@@ -296,7 +296,7 @@ This was the PR where three new confusion patterns emerged at once. The Python p
 
 **Outcome:** 6 fixes applied, 6 INVALID items dismissed with evidence. Mixed accuracy — CodeRabbit had 4/6 INVALID, Claude Bot had 1 VALID BUG + 2 INVALID.
 
-### Example 4: moba-nestjs PR #710 Round 1+2 (Copilot + Claude)
+### Example 4: NestJS Backend PR #710 Round 1+2 (Copilot + Claude)
 
 **Stats:** 19 raw findings → 15 unique after dedup. 1 VALID BUG, 2 GTH→FIX, 3 CONTROVERSIAL→SKIP, 1 INVALID, 3 DEFER, 7 N/A (authorship)
 
@@ -304,7 +304,7 @@ This was a release PR (develop to main) with a large diff that triggered the Git
 
 **Key VALID BUG:**
 
-- `blockRepo.count()` missing `withDeleted: true` in `moveCrossIntegration` — soft-deleted T blocks (cancelled recurring instances) not counted, causing parent to route incorrectly to `moveCrossIntegrationSingle`
+- `entityRepo.count()` missing `withDeleted: true` in `moveAcrossIntegrations` — soft-deleted T blocks (cancelled recurring instances) not counted, causing parent to route incorrectly to `moveAcrossIntegrationsSingle`
 
 **Key INVALID:**
 
@@ -318,7 +318,7 @@ This was a release PR (develop to main) with a large diff that triggered the Git
 
 **Process learning:** Claude's structured review must be parsed per-finding (STEP 1C), not collapsed into one item. Round 1 missed this; corrected in Round 2.
 
-### Example 5: moba-nestjs PR #712 Round 1+2 (Claude)
+### Example 5: NestJS Backend PR #712 Round 1+2 (Claude)
 
 **Stats:** Round 1: 8 items (5 INVALID, 2 CONTROVERSIAL→FIX, 1 GTH→FIX). Round 2: 2 items (1 INVALID, 1 GTH→FIX)
 

@@ -1,6 +1,6 @@
 ---
 title: Python 툴링 스택
-description: 모든 MOBA 프로젝트를 위한 표준 Python 개발 툴링 구성
+description: 애플리케이션 프로젝트를 위한 표준 Python 개발 툴링 구성
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-28T00:00:00.000Z
 tags:
@@ -43,8 +43,8 @@ references:
 
 Python 코드를 작성하는 시간보다 Python 도구를 설정하는 데 더 많은 시간을
 쓰고 있었어요. 새 프로젝트를 시작할 때마다 같은 싸움을 반복했죠. pyenv vs asdf,
-pip vs Poetry, flake8 vs pylint, black vs autopep8. 여러 MOBA 레포지토리(ETL,
-Airflow, 서비스)에 걸쳐 일관성이 없었고, 새 개발자를 온보딩할 때마다 매번
+pip vs Poetry, flake8 vs pylint, black vs autopep8. 여러 Python 레포지토리(ETL,
+오케스트레이션, 서비스)에 걸쳐 일관성이 없었고, 새 개발자를 온보딩할 때마다 매번
 다른 설정을 안내해야 했어요.
 
 어디서든 동작하는 하나의 통일된 스택이 필요했어요.
@@ -319,7 +319,7 @@ ty 버그인지 mypy의 false positive인지 확인하세요. 대부분의 경�
 `.pre-commit-config.yaml`)에 집중돼요. 새 프로젝트 설정이 몇 시간이 아니라
 몇 분이면 끝나요.
 
-더 중요한 건, 모든 MOBA 레포지토리가 이제 같은 툴링을 사용한다는 거예요. 오전에
+더 중요한 건, 모든 Python 레포지토리가 이제 같은 툴링을 사용한다는 거예요. 오전에
 ETL 파이프라인을 작업하고 오후에 Airflow DAG를 작업하는 개발자가 두 곳 모두에서
 같은 명령어, 같은 lint 규칙, 같은 타입 체커를 사용해요.
 
