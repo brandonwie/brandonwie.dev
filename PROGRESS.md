@@ -17,8 +17,27 @@
 - [x] Pagefind static search — full-text content search across 188 pages
 - [x] Public /stats page with Umami Cloud analytics
 - [x] Remark plugin for automatic Mermaid diagram rendering
+- [x] Husky pre-push hook — local CI checks before every push
 
 ## Session Log
+
+### 2026-03-16 (Session 6d)
+
+**CI Fix + Husky Pre-Push Hook — Local CI guardrails**
+
+Diagnosed failing GitHub Actions CI (svelte-check errors), fixed the root cause,
+and added Husky pre-push hook to prevent future CI failures by running checks
+locally before each push.
+
+1. **CI fix** (`1c371cc`) — Added null guard for `parent`/`index` in
+   `remark-mermaid-component.js` AST visitor, suppressed intentional
+   `a11y_autofocus` in `SearchPage.svelte`
+2. **Husky pre-push hook** (`acf0caf`) — Runs full CI pipeline locally:
+   lint → format:check → build → check. Blocks push on failure.
+3. **Research** — Investigated CI failure history across 3b + brandonwie.dev;
+   found 2 incidents in consecutive sessions with zero local guardrails
+4. **Documentation** — Updated CLAUDE.md ("Local CI Checks" section), friction
+   log (2 observations + pattern resolved), Claude memory, task tracker
 
 ### 2026-03-16 (Session 6c)
 
