@@ -20,6 +20,14 @@
 
 ## Session Log
 
+### 2026-03-16 (Session 6c)
+
+**ToC Spacing Fix — Desktop sidebar breathing room**
+
+Fixed "ON THIS PAGE" heading appearing too close to the header bar on desktop
+(xl+). Changed `top-0` → `top-16` (initial position) and `sticky top-24` →
+`sticky top-32` (scroll position) in `TableOfContents.svelte`.
+
 ### 2026-03-16 (Session 6b)
 
 **Moba Anonymization + Search Fix Verification + Deploy**
