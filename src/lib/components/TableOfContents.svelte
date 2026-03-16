@@ -47,8 +47,8 @@
 </script>
 
 <!-- Desktop ToC (xl+): positioned in right margin of relative parent -->
-<nav class="hidden xl:block absolute left-full ml-8 top-0 w-56" aria-label={m.on_this_page()}>
-	<div class="sticky top-24">
+<nav class="hidden xl:block absolute left-full ml-8 top-16 w-56" aria-label={m.on_this_page()}>
+	<div class="sticky top-32">
 		<h2 class="text-xs font-semibold uppercase tracking-wider text-terminal-text-dim mb-3">
 			{m.on_this_page()}
 		</h2>
