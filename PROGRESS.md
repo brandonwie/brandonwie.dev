@@ -18,8 +18,28 @@
 - [x] Public /stats page with Umami Cloud analytics
 - [x] Remark plugin for automatic Mermaid diagram rendering
 - [x] Husky pre-push hook — local CI checks before every push
+- [x] Full content refresh — 71 posts synced + 4 expanded merged + 4 KO updated
 
 ## Session Log
+
+### 2026-03-18 (Session 7)
+
+**Full Sync + Hash Mismatch Merge — 96 EN / 94 KO posts current**
+
+Full content refresh from 3B knowledge base: synced 71 non-expanded posts,
+merged upstream changes into 4 expanded narrative posts, updated 4 Korean
+translations with matching deltas.
+
+1. **71 non-expanded posts synced** — refreshed with latest 3B content
+2. **4 expanded posts merged** — integrated upstream deltas while preserving
+   narrative style:
+   - `ai-pr-review-validation-patterns`: project name updates (moba-nestjs/moba-etl)
+   - `claude-code-multi-profile-hud`: hash-only update (blog already complete)
+   - `alembic-async-sqlalchemy`: added ConfigParser `%` interpolation pitfall
+   - `claude-code-agent-teams`: added deferred tool visibility bias difficulty
+3. **4 Korean translations updated** — matching content deltas + date bumps
+4. **Hash guard** — all 23 expanded posts pass (0 mismatches)
+5. **`needs_resync` cleared** on 2 3B sources (alembic, agent-teams)
 
 ### 2026-03-16 (Session 6d)
 
