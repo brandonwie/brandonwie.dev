@@ -2,7 +2,7 @@
 title: Alembic과 Async SQLAlchemy 설정하기
 description: SQLAlchemy의 async engine과 함께 Alembic migration을 설정하는 방법
 date: 2026-02-03T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: 2026-03-18T00:00:00.000Z
 tags:
   - backend
   - alembic
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: alembic-async-sqlalchemy
-source_updated: "2026-03-09"
-translation_date: "2026-03-10"
+source_updated: "2026-03-18"
+translation_date: "2026-03-18"
 references:
   - url: >-
       https://alembic.sqlalchemy.org/en/latest/cookbook.html#using-asyncio-with-alembic
@@ -59,6 +59,8 @@ Alembic은 `Base.metadata.tables`가 비어 있다고 경고해주지 않아요.
 **run_sync 브릿징이 직관적이지 않아요.** `connection.run_sync()` 안에
 synchronous callable을 감싸는 패턴이 이걸 동작하게 하는 핵심인데, 메인
 문서가 아니라 cookbook 페이지에 묻혀 있어요.
+
+**ConfigParser `%` 보간 충돌.** `config.set_main_option("sqlalchemy.url", url)`은 Python의 `configparser`를 거치는데, `%`를 보간 구문(`%(name)s`)으로 해석해요. Pydantic의 `PostgresDsn.build()`가 비밀번호의 특수 문자를 URL 인코딩하면(`{` → `%7B`, `[` → `%5B`), `%`가 `ValueError: invalid interpolation syntax`를 일으켜요. 해결법: `set_main_option()` 호출 전에 `.replace("%", "%%")`를 적용하세요. 자동 생성된 비밀번호에 특수 문자가 포함된 경우 흔히 발생하는 함정이에요.
 
 **Connection pooling 혼란.** 기본 pool 클래스는 장기 실행
 애플리케이션에는 잘 작동하지만, 수명이 짧은 migration 스크립트에서는

@@ -1,8 +1,10 @@
 ---
 title: tmux Smart Session Auto-Start
-description: Auto-start tmux from `.zshrc` with numeric session naming so each new terminal
+description: >-
+  Auto-start tmux via an iTerm2 Profile Command (`tmux-smart-attach`) with
+  numeric
 date: 2026-02-25T00:00:00.000Z
-updated: 2026-02-25T00:00:00.000Z
+updated: 2026-03-14T00:00:00.000Z
 tags:
   - devops
   - tmux
@@ -19,11 +21,11 @@ references:
   - url: 'https://iterm2.com/documentation-tmux-integration.html'
     title: iTerm2 tmux Integration
     type: official
-source_content_hash: 6f10f8b3d4b809d7e04d1a6cc8dc574f74ed92c1ce44eb8b62a8ca9582159d58
+source_content_hash: a619956038f0deae97cfbe4ca72244f8a8efab2c40459e125db52dbbb0a51d4c
 ---
 
-window (`Cmd+N` in iTerm2) gets its own tmux session, while reusing detached
-sessions from closed windows.
+session naming so each new terminal window (`Cmd+N`) gets its own tmux session,
+while reusing detached sessions from closed windows.
 
 ---
 
@@ -48,53 +50,67 @@ workspaces.
   attached. Tried `kill -0` PID checks and sleep-retry, but iTerm2's close
   pipeline is too slow for any non-blocking approach. Documented as known
   limitation.
-- **Must not break non-terminal contexts**: VS Code integrated terminal, SSH
-  sessions, and non-interactive shells (scripts) should not auto-start tmux.
-  Each has different environment variables to detect.
+- **`.zshrc` approach breaks non-terminal zsh contexts** (discovered
+  2026-03-14): The original `.zshrc` Section 1a approach used guard conditions
+  (`$TERM_PROGRAM`, `[[ -t 0 ]]`) to skip non-iTerm2 contexts, but programs that
+  source the zsh profile (VS Code integrated terminal extensions, shell scripts
+  using `zsh -l`, etc.) could still trigger the tmux block unexpectedly. The
+  fundamental problem: `.zshrc` runs in too many contexts to safely gate. Moving
+  tmux startup to an iTerm2 Profile Command eliminates this entirely — the
+  script only runs when iTerm2 opens a tab.
 
 ---
 
 ## The Solution
 
-Move tmux management from iTerm2 into `.zshrc` Section 1a, placed immediately
-after Homebrew PATH setup (so `tmux` binary is findable):
+Use a standalone script (`~/.local/bin/tmux-smart-attach`) invoked as the iTerm2
+Profile Command, instead of embedding tmux logic in `.zshrc`.
+
+**Script location:** `~/.local/bin/tmux-smart-attach`
 
 ```bash
-if [[ -z "$TMUX" ]] && [[ "$TERM_PROGRAM" != "vscode" ]] \
-   && command -v tmux &>/dev/null && [[ -t 0 ]]; then
-  _detached=$(tmux list-sessions -F '#{session_name} #{session_attached}' \
-    2>/dev/null | awk '$1 ~ /^[0-9]+$/ && $2 == "0" { print $1; exit }')
+#!/bin/zsh -l
+# tmux-smart-attach — iTerm2 profile startup command
+# 1. Attach to first detached session (lowest numbered)
+# 2. Create new session named with lowest unused number
 
-  if [[ -n "$_detached" ]]; then
-    exec tmux attach-session -t "$_detached"
-  else
-    _n=0
-    while tmux has-session -t "$_n" 2>/dev/null; do
-      ((_n++))
-    done
-    exec tmux new-session -s "$_n"
-  fi
+# Ensure tmux is found (login shell via -l loads PATH)
+detached=$(tmux ls -F '#{session_name} #{session_attached}' 2>/dev/null \
+  | awk '$2 == 0 {print $1; exit}')
+
+if [ -n "$detached" ]; then
+  exec tmux attach -t "$detached"
+else
+  # Find lowest unused session number (fills gaps: 0,3 → creates 1)
+  taken=$(tmux ls -F '#{session_name}' 2>/dev/null | sort -n)
+  n=0
+  while echo "$taken" | grep -qx "$n"; do
+    ((n++))
+  done
+  exec tmux new-session -s "$n"
 fi
 ```
 
+**iTerm2 configuration:** Profiles → General → Command → select "Custom Shell" →
+set absolute path: `/Users/brandonwie/.local/bin/tmux-smart-attach`
+
 ## Key Points
 
-- **Numeric names (0, 1, 2, ...)** — matches tmux's default convention. Easy to
-  type: `tmux kill-session -t 2`, `tmux attach -t 0`. No special-casing for the
-  first session.
-- **`exec tmux` replaces the shell process** — no leftover shell after exiting
-  tmux. The terminal window closes cleanly. Without `exec`, exiting tmux drops
-  you into a bare shell.
+- **`#!/bin/zsh -l` (login shell shebang)** — loads `.zprofile` and `.zshrc`, so
+  PATH includes Homebrew, asdf, and all tools. This is why the original concern
+  about "breaks .zshrc loading" was wrong — the `-l` flag ensures the full shell
+  environment is available.
+- **No skip conditions needed** — unlike the `.zshrc` approach, this script only
+  runs when iTerm2 opens a tab. VS Code terminals, SSH sessions, and scripts
+  never invoke it.
+- **Gap-filling session numbering** — if sessions 0 and 3 exist, creates session
+  1 (not 4). The `grep -qx "$n"` check iterates from 0 upward until finding an
+  unused number.
+- **`exec tmux` replaces the script process** — no leftover shell after exiting
+  tmux. The terminal window closes cleanly.
 - **`#{session_attached}`** — tmux format variable that returns `1` if a client
   is attached, `0` if detached. This is how you distinguish "active window" from
   "saved but closed."
-- **awk regex filter `$1 ~ /^[0-9]+$/`** — only manages numeric sessions. Custom
-  named sessions (e.g., `dev`, `work`) are untouched by auto-start.
-- **Placement after Homebrew** — the tmux binary lives in `/opt/homebrew/bin/`.
-  Running this block before PATH setup would fail `command -v tmux`.
-- **Double-source lifecycle** — `.zshrc` runs twice: once outside tmux (triggers
-  `exec`), once inside tmux (`$TMUX` is set, block skips). All plugins, aliases,
-  and tools load on the second pass inside tmux.
 
 ## Session Naming
 
@@ -107,22 +123,34 @@ fi
 Closing a window detaches (not kills) the session. Next `Cmd+N` reattaches to
 the first detached numeric session instead of creating a new one.
 
+Gap-fill example: if you kill session 1 (`tmux kill-session -t 1`), sessions 0
+and 2 remain. Next `Cmd+N` creates session 1 (fills the gap), not session 3.
+
 ---
 
 ## Options Considered
 
-| Option                      | Pros                                                   | Cons                                               |
-| --------------------------- | ------------------------------------------------------ | -------------------------------------------------- |
-| iTerm2 "Send text at start" | Simple, one-line config                                | No conditional logic, same session for all windows |
-| iTerm2 Profile Command      | Runs before shell init                                 | Replaces login shell, breaks .zshrc loading        |
-| .zshrc auto-start (chosen)  | Full shell logic, per-window sessions, skip conditions | Known race condition on fast close/open            |
+| Option                          | Pros                                                   | Cons                                                                |
+| ------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
+| iTerm2 "Send text at start"     | Simple, one-line config                                | No conditional logic, same session for all windows                  |
+| iTerm2 Profile Command (chosen) | Isolated from shell profile, no skip conditions needed | Known race condition on fast close/open                             |
+| .zshrc auto-start (superseded)  | Full shell logic, per-window sessions                  | Breaks non-terminal zsh contexts (VS Code, scripts sourcing .zshrc) |
+
+**Note on the original iTerm2 Profile Command concern:** The v1 of this entry
+listed "Replaces login shell, breaks .zshrc loading" as a con. This was
+incorrect — using `#!/bin/zsh -l` as the shebang makes the script run as a login
+shell, which sources `.zprofile` and `.zshrc` normally. The full shell
+environment (PATH, aliases, functions) is available inside tmux.
 
 ## Why This Approach
 
-`.zshrc` auto-start chosen because it's the only option that allows conditional
-logic (detect attached sessions, skip VS Code, etc.) while still loading the
-full shell environment. The `exec` pattern keeps it clean — no performance
-overhead since it replaces the shell process rather than forking.
+iTerm2 Profile Command chosen because it isolates tmux startup from the shell
+profile entirely. The `.zshrc` approach ran in every zsh context (VS Code
+integrated terminals, shell scripts, non-interactive shells) and required
+fragile guard conditions (`$TERM_PROGRAM`, `[[ -t 0 ]]`). The Profile Command
+only executes when iTerm2 opens a tab — no guards needed, no side effects on
+other zsh consumers. The `#!/bin/zsh -l` shebang ensures the full shell
+environment loads before tmux starts.
 
 ---
 

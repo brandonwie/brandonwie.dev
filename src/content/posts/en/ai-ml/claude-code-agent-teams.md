@@ -2,7 +2,7 @@
 title: Claude Code Agent Teams
 description: Experimental feature for orchestrating multiple Claude Code instances as a coordinated team with shared task lists and inter-agent messaging
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-03-15T00:00:00.000Z
+updated: 2026-03-18T00:00:00.000Z
 tags:
   - ai-ml
   - claude-code
@@ -12,7 +12,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 9ea3366f7947ab7b755380317fc054ed8af36ba0ee932a73f27df255eefedb2c
+source_content_hash: 4e5908c2ace7f6ac0430ab6fec8616ecf3d83ea1f72507fdf2bad61a375785f6
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
@@ -111,6 +111,8 @@ This section is the reason this post exists. The official docs cover the happy p
 **Settings.json reorganization side effects.** The Claude Code UI can reorganize `settings.json` when saving changes, silently altering values like `defaultMode`. Always verify settings after UI-driven changes -- a quick diff against version control catches silent mutations.
 
 **TeamCreate incorrectly removed from instructions.** This one was particularly insidious. A previous session concluded that `TeamCreate` does not exist because it is a deferred tool -- not visible in the tool list until explicitly loaded via `ToolSearch`. The global CLAUDE.md was updated to say "use Agent tool instead," which made all subsequent sessions use background subprocesses instead of split-pane teams. The fix was straightforward: always use `ToolSearch` to check for deferred tools before concluding they do not exist. But the damage was sessions of degraded behavior where I thought teams were working but was getting background subagents instead.
+
+**Deferred tool visibility bias.** Even after documenting TeamCreate correctly, Claude consistently reached for the `Agent` tool without `team_name` -- which always runs in-process with no split panes. The root cause: the `Agent` tool is always visible in the primary tool list, while `TeamCreate` requires `ToolSearch` to load. Claude defaults to the visible tool. The fix was a `SessionStart` hook (`session-start-team-preload.py`) that reminds Claude to preload TeamCreate at session start. The advisory output now includes an explicit 3-step workflow: `ToolSearch` → `TeamCreate` → `Agent(team_name)`. The key insight: `Agent` without `team_name` = in-process subprocess; `Agent` WITH `team_name` = tmux split pane. This distinction is invisible unless you know to look for it.
 
 ## Limitations Summary
 

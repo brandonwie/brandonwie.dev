@@ -1,6 +1,6 @@
 ---
 title: Python Tooling Stack
-description: Standard Python development tooling for application projects.
+description: Standard Python development tooling for all MOBA projects.
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-28T00:00:00.000Z
 tags:
@@ -44,8 +44,8 @@ Python's tooling ecosystem is fragmented. A typical project needs separate tools
 for version management (pyenv), package management (pip/poetry), linting
 (flake8), formatting (black), import sorting (isort), and type checking (mypy).
 Each has its own config format, update cycle, and quirks. The combined startup
-overhead for new projects was high, and inconsistency across Python repositories
-(ETL, orchestration, services) made onboarding and maintenance painful.
+overhead for new projects was high, and inconsistency across MOBA repositories
+(ETL, Airflow, services) made onboarding and maintenance painful.
 
 ---
 
@@ -265,7 +265,7 @@ If migrating from mypy:
 
 ## When to Use
 
-- Any new Python application project (ETL, orchestration, services)
+- Any new Python project in the MOBA ecosystem (ETL, Airflow, services)
 - Greenfield Python projects where you can choose tooling from scratch
 - Migrating existing projects off fragmented tooling (pip + black + flake8 +
   isort + mypy) to a unified Astral-based stack

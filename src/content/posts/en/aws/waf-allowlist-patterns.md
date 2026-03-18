@@ -210,7 +210,7 @@ byte_match_statement {
 
 ```bash
 aws wafv2 get-web-acl \
-  --name app-prod-waf \
+  --name moba-prod-waf \
   --scope REGIONAL \
   --id <webacl-id> \
   --region ap-northeast-2 \

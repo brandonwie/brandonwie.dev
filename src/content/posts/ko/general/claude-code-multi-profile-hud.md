@@ -4,7 +4,7 @@ description: >-
   Claude Code를 여러 계정(개인 + 업무)으로 운영할 때 HUD 플러그인이 올바른
   계정별 사용량 통계를 표시하도록 설정하는 방법
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-15T00:00:00.000Z
+updated: 2026-03-18T00:00:00.000Z
 tags:
   - general
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-multi-profile-hud
-source_updated: "2026-03-15"
-translation_date: "2026-03-15"
+source_updated: "2026-03-18"
+translation_date: "2026-03-18"
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository

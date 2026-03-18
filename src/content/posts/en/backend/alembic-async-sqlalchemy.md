@@ -2,7 +2,7 @@
 title: Alembic with Async SQLAlchemy
 description: Configuring Alembic migrations to work with SQLAlchemy's async engine
 date: 2026-02-03T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: 2026-03-18T00:00:00.000Z
 tags:
   - backend
   - alembic
@@ -13,7 +13,7 @@ category: backend
 draft: false
 lang: en
 expanded: true
-source_content_hash: 0c00c0d49d76b48c48ecc6de60bbcc3a0a38eb2a1d0a5f236a1a9b30e0827153
+source_content_hash: aba3b8549b93dfe1bab71b16e6c10fc0b1312bb7e3f40d78eacbb5404d679010
 references:
   - url: >-
       https://alembic.sqlalchemy.org/en/latest/cookbook.html#using-asyncio-with-alembic
@@ -56,6 +56,8 @@ Alembic does not warn you that `Base.metadata.tables` is empty.
 **run_sync bridging is non-obvious.** The pattern of wrapping a sync callable
 inside `connection.run_sync()` is the key to making this work, but it is buried
 in a cookbook page rather than the main docs.
+
+**ConfigParser `%` interpolation conflict.** `config.set_main_option("sqlalchemy.url", url)` passes through Python's `configparser`, which treats `%` as interpolation syntax (`%(name)s`). When Pydantic's `PostgresDsn.build()` URL-encodes special characters in passwords (`{` → `%7B`, `[` → `%5B`), the `%` triggers `ValueError: invalid interpolation syntax`. The fix: `.replace("%", "%%")` before calling `set_main_option()`. This is a common gotcha with auto-generated passwords containing special characters.
 
 **Connection pooling confusion.** The default pool class works for long-running
 apps but causes connection leaks or warnings in short-lived migration scripts.

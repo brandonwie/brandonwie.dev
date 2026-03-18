@@ -2,7 +2,7 @@
 title: Claude Code Multi-Profile HUD Setup
 description: "Running Claude Code with multiple accounts requires careful HUD configuration to show correct per-account usage stats. Here's how to fix cross-profile data leaks."
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-15T00:00:00.000Z
+updated: 2026-03-18T00:00:00.000Z
 tags:
   - general
   - claude-code
@@ -13,7 +13,7 @@ category: general
 draft: false
 lang: en
 expanded: true
-source_content_hash: e7568f590cbefe4b1598fb956e9dc36523cd24a00ae96c8ef00147e4872ec2d3
+source_content_hash: 1064396b70fddfc286e8ef66adc27afcdb76ae630f3926d19b35b82b62efd03b
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository

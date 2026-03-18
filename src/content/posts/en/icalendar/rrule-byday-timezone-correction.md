@@ -154,4 +154,4 @@ const dayCode = day.replace(/^[+-]?\d+/, ""); // "1MO" → "MO", "-1FR" → "FR"
 
 - [rrule GitHub Repository](https://github.com/jkbrzt/rrule)
 - [RFC 5545 - iCalendar Specification](https://datatracker.ietf.org/doc/html/rfc5545)
-- backend-project timezone-byday-fix-summary.md
+- moba-nestjs timezone-byday-fix-summary.md
