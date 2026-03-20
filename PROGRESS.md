@@ -23,6 +23,18 @@
 
 ## Session Log
 
+### 2026-03-20 (Session 8b)
+
+**Portfolio Description Accuracy Fix**
+
+Fixed inaccurate project descriptions in both EN and KO i18n files:
+
+1. **Arch Calendar** — replaced "Built the entire backend from scratch" with
+   accurate legacy-to-launch narrative (multi-account sync, payments, real-time
+   updates)
+2. **Crucio** — added development status indicator ("In development — demo
+   live")
+
 ### 2026-03-20 (Session 8)
 
 **New Post Sync + Pre-Push Fixes — 72 EN posts synced**
