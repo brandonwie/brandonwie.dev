@@ -1,3 +1,6 @@
+// @ts-nocheck — Deno's npm layout creates duplicate Vite type definitions
+// (.deno/vite@6.4.1 vs node_modules/vite), causing "excessive stack depth" errors.
+// The build validates this config at runtime; type-checking adds no value here.
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
