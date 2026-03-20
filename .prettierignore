@@ -5,3 +5,6 @@ static/og/
 static/fonts/
 node_modules/
 src/content/posts/
+.claude/
+knowledge/
+scripts/CLAUDE.md
