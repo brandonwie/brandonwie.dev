@@ -19,8 +19,27 @@
 - [x] Remark plugin for automatic Mermaid diagram rendering
 - [x] Husky pre-push hook — local CI checks before every push
 - [x] Full content refresh — 71 posts synced + 4 expanded merged + 4 KO updated
+- [x] New post synced — updatedAt-staleness-guard + pre-push fixes
 
 ## Session Log
+
+### 2026-03-20 (Session 8)
+
+**New Post Sync + Pre-Push Fixes — 72 EN posts synced**
+
+Synced 1 new blog post (`updatedAt-staleness-guard`) from 3B and fixed 3
+blocking issues in the pre-push pipeline.
+
+1. **New post synced** — `updatedAt-staleness-guard` (backend category): async
+   update staleness protection using timestamp comparison guards
+2. **Fixed YAML parse failure** — 3B source had duplicate `verified_date` key;
+   Deno's YAML parser rejects duplicate mapping keys per YAML 1.2 spec, causing
+   misleading "no frontmatter" skip
+3. **Fixed Prettier false failures** — added `.claude/`, `knowledge/`,
+   `scripts/CLAUDE.md` to `.prettierignore` (local-only 3B files)
+4. **Fixed svelte-check type conflict** — Deno's `node_modules/.deno/` creates
+   duplicate Vite type definitions causing "excessive stack depth" error;
+   suppressed with `@ts-nocheck` on `vite.config.ts`
 
 ### 2026-03-18 (Session 7)
 
