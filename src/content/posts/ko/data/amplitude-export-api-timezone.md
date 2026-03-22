@@ -2,7 +2,7 @@
 title: Amplitude Export API의 타임존 처리 방식
 description: Amplitude Export API가 이벤트 데이터 내보내기에서 타임존과 시간 경계를 처리하는 방식
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - data
   - amplitude

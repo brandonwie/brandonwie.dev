@@ -4,7 +4,7 @@ description: >-
   Buffer Pattern은 AI 지원 세션에서 중요한 발견을 보존해요. 세션이 끝나거나 연결이 끊겨도 소중한 인사이트를 잃지 않도록
   해주죠.
 date: 2025-01-15T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - documentation

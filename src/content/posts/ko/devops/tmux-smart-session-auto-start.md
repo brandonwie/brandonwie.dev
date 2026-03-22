@@ -2,7 +2,7 @@
 title: tmux 스마트 세션 자동 시작
 description: '숫자 세션 이름으로 .zshrc에서 tmux를 자동 시작해서, 새 터미널 창마다 독립된 tmux 세션을 사용하는 방법이에요.'
 date: 2026-02-25T00:00:00.000Z
-updated: 2026-02-25T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - tmux

@@ -2,7 +2,7 @@
 title: Lemon Squeezy 구독 관리
 description: '구독 라이프사이클, 취소, 만료, 재활성화에 대한 정리예요.'
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - payments

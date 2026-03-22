@@ -2,7 +2,7 @@
 title: ECR 토큰 갱신 Cron
 description: AWS ECR 인증 토큰은 12시간 후 만료돼요. 오래 실행되는 Docker 호스트에서는 자동 토큰 갱신을 구현해야 해요.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - aws

@@ -2,7 +2,7 @@
 title: ECS Autoscaling 패턴
 description: Race condition 방지를 위한 마이그레이션 태스크 분리와 ECS 서비스 autoscaling 구현 가이드.
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - aws
   - ecs

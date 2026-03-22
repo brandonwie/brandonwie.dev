@@ -2,7 +2,7 @@
 title: 'EBS vs EFS: AWS 스토리지 비교'
 description: EBS(블록 스토리지)와 EFS(네트워크 파일 시스템)를 언제 사용해야 하는지 정리.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - aws
   - storage

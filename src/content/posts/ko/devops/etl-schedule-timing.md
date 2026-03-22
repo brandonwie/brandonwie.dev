@@ -2,7 +2,7 @@
 title: ETL 스케줄 타이밍
 description: 데이터 도착 패턴에 맞는 ETL 스케줄을 설정하는 방법을 알아봐요.
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - airflow

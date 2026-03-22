@@ -2,7 +2,7 @@
 title: ETL 데이터 분리 전략
 description: '자동화된 ETL 데이터와 수동 백필 데이터를 같은 S3 경로에 섞어두면 추적, 처리, 디버깅이 어려워집니다'
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-02-06T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - etl

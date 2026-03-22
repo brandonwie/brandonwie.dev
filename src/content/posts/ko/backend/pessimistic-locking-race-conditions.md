@@ -2,7 +2,7 @@
 title: Race Condition 방지를 위한 Pessimistic Locking
 description: INSERT 전 존재 여부를 확인할 때 race condition을 방지하기 위해 SELECT FOR UPDATE를 사용하는 방법.
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-15'
 tags:
   - backend
   - database

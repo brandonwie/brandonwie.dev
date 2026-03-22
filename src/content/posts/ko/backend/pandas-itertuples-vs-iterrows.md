@@ -2,7 +2,7 @@
 title: pandas itertuples() vs iterrows()
 description: '`iterrows()`는 DataFrame 행을 순회하는 가장 흔한 방법이지만, 매 행마다 pd.Series 객체를 생성해서 느립니다'
 date: 2026-02-06T00:00:00.000Z
-updated: 2026-02-06T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - python

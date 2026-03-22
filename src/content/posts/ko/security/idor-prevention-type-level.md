@@ -2,7 +2,7 @@
 title: 타입 수준 필수 파라미터로 IDOR 방지하기
 description: API가 사용자에게 ID를 조작해서 다른 사용자의 리소스에 접근할 수 있게 허용하는 IDOR 취약점을 타입 레벨에서 방지하는 방법
 date: 2026-02-11T00:00:00.000Z
-updated: 2026-02-11T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - security
   - backend

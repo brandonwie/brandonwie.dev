@@ -2,7 +2,7 @@
 title: 바이너리 체크섬 검증
 description: SHA256 체크섬을 사용해 다운로드한 바이너리가 변조되지 않았는지 검증하는 방법
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - security
   - devops

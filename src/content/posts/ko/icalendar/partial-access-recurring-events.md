@@ -4,7 +4,7 @@ description: >-
   반복 시리즈의 중간부터 초대받은 사용자의 경우, Google Calendar API가 예상과 다르게 동작해요. 제대로 처리하지 않으면 데이터
   무결성 문제가 발생해요.
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - google-calendar

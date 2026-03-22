@@ -2,7 +2,7 @@
 title: uv.lock 모범 사례
 description: uv.lock을 버전 관리에 커밋해야 하는지에 대한 가이드
 date: 2026-01-28T00:00:00.000Z
-updated: 2026-02-02T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - python

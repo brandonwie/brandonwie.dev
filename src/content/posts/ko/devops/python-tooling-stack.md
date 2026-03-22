@@ -2,7 +2,7 @@
 title: Python 툴링 스택
 description: 애플리케이션 프로젝트를 위한 표준 Python 개발 툴링 구성
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-28T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - python

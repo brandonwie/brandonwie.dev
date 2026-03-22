@@ -2,7 +2,7 @@
 title: MinIO로 로컬 S3 구축하기
 description: Docker로 실행하는 S3 호환 오브젝트 스토리지 MinIO 설정 가이드
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - docker

@@ -2,7 +2,7 @@
 title: Airflow Task 의존성 구문
 description: Airflow의 >> 연산자는 task 의존성을 설정하고 downstream task를 반환해요.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - airflow

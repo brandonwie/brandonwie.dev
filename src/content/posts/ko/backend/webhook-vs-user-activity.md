@@ -2,7 +2,7 @@
 title: Webhook vs 사용자 활동
 description: '외부 서비스의 webhook은 그쪽의 활동을 나타내는 것이지, 우리 사용자의 활동이 아니에요. 이 구분이 리소스 관리에 중요해요.'
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-02-13T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - webhooks

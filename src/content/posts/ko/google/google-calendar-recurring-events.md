@@ -2,7 +2,7 @@
 title: 'Google Calendar API: 반복 일정 업데이트'
 description: '반복 일정에서 "이 일정만", "이후 모든 일정", "전체 일정" 업데이트를 처리하는 방법이에요.'
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - google-api

@@ -2,7 +2,7 @@
 title: Linux 기초
 description: '컨테이너를 위한 필수 Linux 개념: cgroups, snapshotters, 권한, ACLs'
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - linux

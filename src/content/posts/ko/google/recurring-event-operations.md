@@ -2,7 +2,7 @@
 title: Google Calendar 반복 일정 연산
 description: '반복 일정의 `all`, `this`, `thisAndFollowing` 업데이트 구현 패턴이에요.'
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-02-20T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - google-api
   - calendar

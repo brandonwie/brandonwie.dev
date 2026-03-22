@@ -4,7 +4,7 @@ description: >-
   세 명의 전문가 소스에서 합성한 Claude Code 활용 패턴: Boris Cherny(도구 설정), Mia Heidenstedt(프로세스
   규율), YK Dojo(실무 워크플로우)
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-02-09T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - claude-code

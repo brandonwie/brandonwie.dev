@@ -2,7 +2,7 @@
 title: Claude Code 스킬에서 zsh 백틱 평가 문제
 description: SKILL.md 파일의 백틱 마크다운 포맷이 zsh 명령어 치환 에러를 일으키는 문제와 해결법을 정리했어요.
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-02-09T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - claude-code

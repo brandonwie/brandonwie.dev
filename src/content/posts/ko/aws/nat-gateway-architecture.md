@@ -2,7 +2,7 @@
 title: NAT Gateway 아키텍처
 description: NAT Gateway 배치와 VPC 네트워크 흐름 이해하기.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - aws
   - vpc

@@ -2,7 +2,7 @@
 title: Airflow DAG start_date와 수동 트리거
 description: 'DAG를 수동으로 트리거할 때, 트리거 날짜가 start_date보다 이전이면 Airflow가 task 실행을 건너뛸 수 있어요.'
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - airflow

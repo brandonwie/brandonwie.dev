@@ -4,7 +4,7 @@ description: >-
   `<textarea>`, `<img>`, `<input>`, `<video>` 같은 요소는 CSS에서 inline-replaced 요소예요.
   기본적으로 텍스트 baseline 위에 놓여서 신비한 하단 갭이 생겨요.
 date: 2026-02-13T00:00:00.000Z
-updated: 2026-02-13T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - css

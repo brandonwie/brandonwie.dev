@@ -2,7 +2,7 @@
 title: Giscus SvelteKit 통합하기
 description: 데이터베이스나 인증 백엔드 없이 정적 생성 SvelteKit 블로그에 댓글 시스템을 추가하는 방법을 알아봅니다.
 date: 2026-01-28T00:00:00.000Z
-updated: 2026-01-28T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - frontend
   - svelte

@@ -2,7 +2,7 @@
 title: Stow Symlink 상태 점검
 description: GNU Stow가 만든 symlink이 앱 업데이트로 깨지는 문제를 감지하고 복구하는 방법을 알아봐요.
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-02-09T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - dotfiles

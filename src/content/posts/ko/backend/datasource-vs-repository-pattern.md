@@ -2,7 +2,7 @@
 title: DataSource vs Repository 패턴
 description: NestJS/TypeORM 애플리케이션에서 직접 DataSource 사용과 Repository 패턴 중 선택하기 위한 아키텍처 결정 가이드.
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - architecture

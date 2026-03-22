@@ -6,10 +6,12 @@
  *   1. EN posts: updated >= date
  *   2. KO posts: source_slug must reference an existing EN post
  *   3. KO posts: source_updated must match EN's updated
+ *   4. KO posts: date must match EN's date
+ *   5. KO posts: updated must match EN's updated
  *
  * Usage:
  *   npx tsx scripts/validate-dates.ts          # Report errors, exit 1 if any
- *   npx tsx scripts/validate-dates.ts --fix    # Auto-fix source_updated mismatches (rule 3)
+ *   npx tsx scripts/validate-dates.ts --fix    # Auto-fix date mismatches (rules 3-5)
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
@@ -154,14 +156,39 @@ function validate(
 		}
 
 		// Rule 3: source_updated must match EN updated
-		if (!ko.source_updated) continue;
-		const koSourceNorm = normalizeDate(ko.source_updated);
-		const enUpdatedNorm = normalizeDate(en.updated);
-		if (koSourceNorm !== enUpdatedNorm) {
+		if (ko.source_updated) {
+			const koSourceNorm = normalizeDate(ko.source_updated);
+			const enUpdatedNorm = normalizeDate(en.updated);
+			if (koSourceNorm !== enUpdatedNorm) {
+				errors.push({
+					file: `ko/${ko.category}/${slug}.md`,
+					rule: 'source-updated-mismatch',
+					message: `source_updated (${koSourceNorm}) != EN updated (${enUpdatedNorm})`,
+					fixable: true,
+				});
+			}
+		}
+
+		// Rule 4: KO date must match EN date
+		const koDateNorm = normalizeDate(ko.date);
+		const enDateNorm = normalizeDate(en.date);
+		if (koDateNorm !== enDateNorm) {
 			errors.push({
 				file: `ko/${ko.category}/${slug}.md`,
-				rule: 'source-updated-mismatch',
-				message: `source_updated (${koSourceNorm}) != EN updated (${enUpdatedNorm})`,
+				rule: 'date-mismatch',
+				message: `KO date (${koDateNorm}) != EN date (${enDateNorm})`,
+				fixable: true,
+			});
+		}
+
+		// Rule 5: KO updated must match EN updated
+		const koUpdatedNorm = normalizeDate(ko.updated);
+		const enUpdNorm = normalizeDate(en.updated);
+		if (koUpdatedNorm !== enUpdNorm) {
+			errors.push({
+				file: `ko/${ko.category}/${slug}.md`,
+				rule: 'updated-mismatch',
+				message: `KO updated (${koUpdatedNorm}) != EN updated (${enUpdNorm})`,
 				fixable: true,
 			});
 		}
@@ -176,13 +203,19 @@ function applyFixes(
 	enPosts: Map<string, EnPostMeta>,
 	koPosts: Map<string, KoPostMeta>,
 ): number {
+	// Group fixable errors by file to batch writes
+	const fixesByFile = new Map<string, ValidationError[]>();
+	for (const error of errors) {
+		if (!error.fixable) continue;
+		const list = fixesByFile.get(error.file) || [];
+		list.push(error);
+		fixesByFile.set(error.file, list);
+	}
+
 	let fixed = 0;
 
-	for (const error of errors) {
-		if (!error.fixable || error.rule !== 'source-updated-mismatch') continue;
-
-		// Extract slug from error file path (ko/{category}/{slug}.md)
-		const slug = basename(error.file, '.md');
+	for (const [file, fileErrors] of fixesByFile) {
+		const slug = basename(file, '.md');
 		const ko = koPosts.get(slug);
 		if (!ko) continue;
 
@@ -192,12 +225,26 @@ function applyFixes(
 		const raw = readFileSync(ko.filePath, 'utf-8');
 		const { data, content } = matter(raw);
 
-		// Set source_updated to EN's updated, normalized to YYYY-MM-DD
-		data.source_updated = normalizeDate(en.updated);
+		const changes: string[] = [];
 
-		writeFileSync(ko.filePath, matter.stringify(content, data));
-		fixed++;
-		console.log(`  ✅ Fixed: ${error.file} → source_updated: ${data.source_updated}`);
+		for (const error of fileErrors) {
+			if (error.rule === 'source-updated-mismatch') {
+				data.source_updated = normalizeDate(en.updated);
+				changes.push(`source_updated: ${data.source_updated}`);
+			} else if (error.rule === 'date-mismatch') {
+				data.date = normalizeDate(en.date);
+				changes.push(`date: ${data.date}`);
+			} else if (error.rule === 'updated-mismatch') {
+				data.updated = normalizeDate(en.updated);
+				changes.push(`updated: ${data.updated}`);
+			}
+		}
+
+		if (changes.length > 0) {
+			writeFileSync(ko.filePath, matter.stringify(content, data));
+			fixed++;
+			console.log(`  ✅ Fixed: ${file} → ${changes.join(', ')}`);
+		}
 	}
 
 	return fixed;

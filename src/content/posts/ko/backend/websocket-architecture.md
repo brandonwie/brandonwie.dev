@@ -2,7 +2,7 @@
 title: AWS ECS/ALB에서의 WebSocket 아키텍처
 description: 'ALB, ECS, Redis Pub/Sub를 활용한 실시간 알림용 WebSocket 연결 구조'
 date: 2025-11-25T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-15'
 tags:
   - backend
   - websocket

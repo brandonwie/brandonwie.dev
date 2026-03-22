@@ -4,7 +4,7 @@ description: >-
   macOS Keychain은 같은 서비스 이름에 다른 계정 속성을 가진 여러 항목을 허용합니다. 이로 인한 인증 버그를 디버깅하고 해결하는
   방법을 다룹니다.
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-02-04T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - macos

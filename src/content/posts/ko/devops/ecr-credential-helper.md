@@ -2,7 +2,7 @@
 title: ECR Credential Helper
 description: ECR 인증 토큰 만료 문제를 해결하는 AWS 공식 credential helper 설정 방법
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - aws

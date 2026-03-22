@@ -2,7 +2,7 @@
 title: Terraform 상태 복구
 description: Terraform state 파일이 AWS 실제 상태와 맞지 않을 때 복구하는 절차를 정리했어요.
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - terraform

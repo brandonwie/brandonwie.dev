@@ -2,7 +2,7 @@
 title: TypeScript Type Narrowing을 Assertion보다 우선하기
 description: 프로덕션 코드에서 non-null assertion(!)과 강제 캐스팅(as Type) 대신 type narrowing을 사용해야 하는 이유
 date: 2026-02-05T00:00:00.000Z
-updated: 2026-02-05T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - typescript

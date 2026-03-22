@@ -2,7 +2,7 @@
 title: 'Traefik, Keycloak, ForwardAuth 이해하기'
 description: Traefik을 통해 노출된 Kubernetes 서비스에 인증 레이어가 없는 문제를 해결하는 방법
 date: 2026-01-18T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-15'
 tags:
   - security
   - traefik

@@ -2,7 +2,7 @@
 title: S3 경로 정규화 패턴
 description: S3 key prefix에 일관된 trailing slash를 보장하는 정규화 패턴
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - aws

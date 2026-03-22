@@ -2,7 +2,7 @@
 title: NestJS WebSocket 레퍼런스
 description: NestJS에서 WebSocket 기능을 구현하기 위한 종합 레퍼런스.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - nestjs

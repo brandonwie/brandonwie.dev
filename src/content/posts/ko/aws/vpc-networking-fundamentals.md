@@ -2,7 +2,7 @@
 title: AWS VPC 네트워킹 기초
 description: 'CIDR 계산, NAT Gateway 배치, Route Table — 왜 다들 처음에 헤매는지, 어떻게 제대로 잡는지 정리했어요.'
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: '2026-03-15'
 tags:
   - aws
   - networking

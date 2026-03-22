@@ -2,7 +2,7 @@
 title: ECR/ECS 배포 워크플로우
 description: 'Amazon ECR과 ECS를 사용한 컨테이너 배포 전체 과정 — 인증부터 롤링 업데이트, 트러블슈팅까지 정리했어요.'
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: '2026-03-15'
 tags:
   - aws
   - ecs

@@ -4,7 +4,7 @@ description: >-
   Svelte 5에서 $effect rune의 자동 의존성 추적, cleanup, 그리고 $derived 및 onMount와의 차이를
   알아봅니다.
 date: 2026-01-28T00:00:00.000Z
-updated: 2026-01-28T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - frontend
   - svelte

@@ -2,7 +2,7 @@
 title: 'Calendar EXDATE 동작: Apple vs Google'
 description: Apple Calendar과 Google Calendar이 반복 일정 삭제를 처리하는 방식의 차이
 date: 2026-02-03T00:00:00.000Z
-updated: 2026-02-03T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - calendar

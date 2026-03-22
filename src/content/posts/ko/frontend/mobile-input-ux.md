@@ -2,7 +2,7 @@
 title: 모바일 Input UX
 description: 커스텀 스타일 input이 모바일 브라우저에서 제대로 동작하도록 만드는 기법을 알아봅니다.
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-02-19T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - frontend
   - mobile

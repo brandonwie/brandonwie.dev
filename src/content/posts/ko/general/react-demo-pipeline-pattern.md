@@ -2,7 +2,7 @@
 title: React 데모 파이프라인 패턴
 description: 백엔드 없이 완전히 작동하는 React 대시보드 데모 모드를 구축하는 패턴을 소개합니다.
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-02-04T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - react

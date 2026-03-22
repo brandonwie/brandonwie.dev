@@ -2,7 +2,7 @@
 title: Amplitude ETL 파티셔닝
 description: Amplitude 이벤트 데이터를 raw에서 refined 스토리지로 이동할 때 파티셔닝하는 방법
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - etl

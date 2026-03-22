@@ -4,7 +4,7 @@ description: >-
   ES2022+ TypeScript 타겟에서 plainToInstance()가 클래스 인스턴스를 생성할 때, 모든 optional 클래스
   필드가 undefined 값을 가진 자체 속성이 되는 문제.
 date: 2026-02-23T00:00:00.000Z
-updated: 2026-03-03T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - typescript

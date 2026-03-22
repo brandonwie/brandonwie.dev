@@ -2,7 +2,7 @@
 title: DAG 배포 전략
 description: Airflow DAG를 배포하는 다양한 방법과 트레이드오프 분석
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - airflow

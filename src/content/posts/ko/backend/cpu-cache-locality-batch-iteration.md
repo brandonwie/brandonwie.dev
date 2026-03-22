@@ -2,7 +2,7 @@
 title: CPU Cache Locality를 활용한 배치 필드 추출 최적화
 description: 같은 배열에 대해 여러 번 `.map()`을 호출하면 CPU가 매번 객체를 메모리에서 다시 불러와야 합니다
 date: 2026-02-11T00:00:00.000Z
-updated: 2026-02-20T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - performance

@@ -4,7 +4,7 @@ description: >-
   Worker의 task 모듈을 import하지 않고 API 서비스에서 별도의 worker 서비스로 task를 전달하는 send-only
   Celery 클라이언트 만들기
 date: 2026-02-03T00:00:00.000Z
-updated: 2026-02-03T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - celery

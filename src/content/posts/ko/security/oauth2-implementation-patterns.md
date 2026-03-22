@@ -2,7 +2,7 @@
 title: OAuth 2.0 구현 패턴
 description: 백엔드 서비스에서 OAuth 2.0 플로우를 구현하기 위한 실용적 패턴
 date: 2026-02-02T00:00:00.000Z
-updated: 2026-02-23T00:00:00.000Z
+updated: '2026-03-15'
 tags:
   - security
   - oauth

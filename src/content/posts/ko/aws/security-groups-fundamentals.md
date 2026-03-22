@@ -2,7 +2,7 @@
 title: AWS Security Group 기초
 description: 'Security Group의 stateful 동작, 최소 권한 원칙, 실전 패턴 — 연결 안 되는 원인 1위를 파헤쳐요.'
 date: 2025-04-29T00:00:00.000Z
-updated: '2026-02-19'
+updated: '2026-03-22'
 tags:
   - aws
   - security
