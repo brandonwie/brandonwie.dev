@@ -38,9 +38,10 @@
    to 2026-03-22 (actual modification date). Synced `source_updated` in 80 KO
    posts to match their EN sources via `validate:dates --fix`.
 
-3. **Validation script** — Created `scripts/validate-dates.ts` with 3 rules:
+3. **Validation script** — Created `scripts/validate-dates.ts` with 5 rules:
    EN updated >= date, KO source_slug exists, KO source_updated matches EN
-   updated. Supports `--fix` mode for auto-syncing KO mismatches.
+   updated, KO date matches EN date, KO updated matches EN updated. Supports
+   `--fix` mode for auto-syncing all KO date mismatches.
 
 4. **CI integration** — Added `npm run validate:dates` as step 5/5 in pre-push
    hook and as CI step. Prevents date drift from reaching production.
@@ -49,7 +50,14 @@
    expansion (Step 5), sync `source_updated` during translation (Step 7), run
    validation after sync (Step 4), and added date items to execution checklist.
 
-**Stats:** 73 EN + 80 KO posts fixed. 190 pages indexed. 0 validation errors.
+6. **KO sort order parity** — Synced `updated` in 79 KO posts to match EN so
+   both locales sort identically. Added rules 4-5 to validation script.
+
+7. **Content accuracy fix** — Corrected fabricated "team discussion" in KO
+   uv-lock-best-practice post to match actual context (personal hesitation).
+
+**Stats:** 73 EN + 80 KO `source_updated` + 79 KO `updated` synced. 1 KO
+content corrected. 190 pages indexed. 0 validation errors.
 
 ### 2026-03-22 (Session 9)
 
