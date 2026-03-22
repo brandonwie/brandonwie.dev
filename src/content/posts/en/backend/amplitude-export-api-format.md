@@ -18,40 +18,22 @@ references:
     title: Amplitude Export API Documentation
     type: official
 source_content_hash: bdfb0c62385dd76fd10cc36c74803a568d87b1f0051cf0b8bfa279cdc98bc74b
+expanded: true
 ---
 
-easy to misunderstand.
+I was building an ETL pipeline to backfill Amplitude event data into our data warehouse when `gzip.decompress()` started throwing cryptic errors. The files were named `*.json.gz`, so I assumed they were gzip-compressed JSON. They weren't. I spent an embarrassing amount of time debugging what turned out to be a double-layered compression format that Amplitude's documentation barely explains.
 
----
+If you're pulling data from the Amplitude Export API, this post will save you the hex-dump debugging session I had to do.
 
 ## The Problem
 
-The Amplitude Export API returns files named `*.json.gz`, which strongly implies
-they are simple gzip-compressed JSON. But they are actually ZIP archives
-containing a gzip file inside. Treating them as plain gzip (e.g.,
-`gzip.decompress()`) fails silently or throws a cryptic error, and the
-double-layer nesting is not obvious from the documentation.
+The Amplitude Export API returns files named `*.json.gz`. That extension strongly implies simple gzip-compressed JSON — the kind you'd decompress with a single `gzip.decompress()` call. But the files are actually ZIP archives containing a gzip file inside. The `.json.gz` extension is, for all practical purposes, a lie.
 
-## Difficulties Encountered
-
-- **File extension is a lie** — `.json.gz` implies gzip, but the outer layer is
-  a ZIP file (`PK` magic bytes). Standard gzip tools and libraries reject it
-  with unhelpful error messages.
-- **Documentation does not clarify the nesting** — The Amplitude Export API docs
-  mention "gzipped JSON" without specifying the outer ZIP wrapper, leading to
-  wasted debugging time.
-- **Magic byte inspection required** — The only reliable way to discover the
-  true format was to hex-dump the first bytes of the response and check for `PK`
-  (ZIP) vs `\x1f\x8b` (GZIP).
-- **Empty/corrupt exports** — Some hourly exports return empty ZIP files or
-  files with empty namelists, requiring validation before attempting extraction
-  (BadZipFile errors).
-
----
+When you treat these files as plain gzip, you get either silent failures or unhelpful error messages. The documentation mentions "gzipped JSON" without specifying the outer ZIP wrapper, so there's nothing to tip you off until you inspect the raw bytes.
 
 ## The Misleading Extension
 
-Files are named `*.json.gz` but they're NOT simple gzip files:
+Here's what the actual nesting looks like:
 
 ```text
 {PROJECT_ID}_{DATE}_{HOUR}#0.json.gz
@@ -61,14 +43,16 @@ Files are named `*.json.gz` but they're NOT simple gzip files:
             └── Contains: Newline-delimited JSON events
 ```
 
-## File Magic Bytes
+The only reliable way I found to discover the true format was to hex-dump the first bytes of the response. ZIP files start with `PK` (hex `0x504B`), while GZIP files start with `\x1f\x8b` (hex `0x1F8B`). When you see `PK` at the start of a file that claims to be `.json.gz`, you know the extension is lying.
 
 | Format | Magic Bytes | Hex      |
 | ------ | ----------- | -------- |
 | ZIP    | `PK`        | `0x504B` |
 | GZIP   | `\x1f\x8b`  | `0x1F8B` |
 
-## How to Read
+## How to Read the Data Correctly
+
+Once you know about the double nesting, the code is straightforward. You unzip the outer layer, then decompress the inner gzip, then parse the newline-delimited JSON:
 
 ```python
 import zipfile
@@ -90,9 +74,16 @@ def read_amplitude_export(raw_data: bytes) -> list[dict]:
     return events
 ```
 
+One gotcha to watch for: some hourly exports return empty ZIP files or files with empty namelists. If you don't validate before calling `zf.namelist()[0]`, you'll get `IndexError` or `BadZipFile` exceptions. Add a guard:
+
+```python
+if not zf.namelist():
+    return []  # No events for this hour
+```
+
 ## Event Structure
 
-Each line is a JSON object with these key fields:
+Each line in the decompressed output is a JSON object. Here are the key fields you'll typically work with:
 
 ```json
 {
@@ -110,7 +101,11 @@ Each line is a JSON object with these key fields:
 }
 ```
 
+The `event_time` format is `YYYY-MM-DD HH:MM:SS.ffffff` — note the space separator instead of `T`. Parse accordingly if you're loading into a system that expects ISO 8601.
+
 ## API Endpoint
+
+The Export API uses hourly time ranges with basic auth:
 
 ```bash
 # Export API URL
@@ -123,6 +118,8 @@ curl -u "API_KEY:SECRET_KEY" \
 
 ## Error Codes
 
+When things go wrong, these are the status codes you'll encounter:
+
 | Code | Meaning        | Action                         |
 | ---- | -------------- | ------------------------------ |
 | 200  | Success        | Process data                   |
@@ -131,27 +128,18 @@ curl -u "API_KEY:SECRET_KEY" \
 | 429  | Rate limited   | Retry with exponential backoff |
 | 504  | Server timeout | Log and skip                   |
 
----
+A 404 isn't an error — it's normal for hours with no activity. Don't let your pipeline treat it as a failure. A 400 means the export exceeds 4GB; narrow your time range to get smaller chunks.
 
-## When to Use
+## When to Use This Knowledge
 
-- Building any ETL or data pipeline that consumes Amplitude Export API responses
-- Debugging why `gzip.decompress()` fails on Amplitude export files
-- Writing validation logic for raw Amplitude data before storage (empty ZIP
-  handling, BadZipFile guards)
+This nested format only applies to the **Amplitude Export API** response. If you're using the Batch Event Upload API, it accepts plain JSON — no compression nesting. If you're using Segment, mParticle, or Amplitude's own warehouse sync integrations, the data arrives in the integration's format, not this ZIP+GZIP nesting.
 
-## When NOT to Use
+Other analytics platforms (Mixpanel, Heap, PostHog) have their own export formats. Don't assume they share Amplitude's nesting — check their docs for magic bytes if something looks off.
 
-- **Amplitude Batch Event Upload API** — The upload API accepts plain JSON; this
-  nested format only applies to the Export API response
-- **Amplitude SDKs or integrations** — If using Segment, mParticle, or
-  Amplitude's own warehouse sync, the data arrives in the integration's format,
-  not this ZIP+GZIP nesting
-- **Other analytics platforms** — Mixpanel, Heap, PostHog, etc. have their own
-  export formats; do not assume they share Amplitude's nesting
+## Takeaway
 
----
+When Amplitude says `.json.gz`, they mean ZIP containing GZIP containing newline-delimited JSON. Always inspect magic bytes when a decompression library throws unexpected errors — the file extension might be lying. Build your reader to handle both the double nesting and the edge case of empty exports, and your ETL pipeline will handle Amplitude data without surprises.
 
-## Reference
+## References
 
-- [Amplitude Export API Docs](https://www.docs.developers.amplitude.com/analytics/apis/export-api/)
+- [Amplitude Export API Documentation](https://www.docs.developers.amplitude.com/analytics/apis/export-api/)

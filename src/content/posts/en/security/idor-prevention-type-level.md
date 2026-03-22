@@ -10,6 +10,7 @@ tags:
 category: security
 draft: false
 lang: en
+expanded: true
 references:
   - url: >-
       https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/
@@ -18,7 +19,15 @@ references:
 source_content_hash: cdf1d5b698dffc5e997c32b293c333a38a3c26f5b07acf4dd9ff185426871f26
 ---
 
-access resources belonging to other users by manipulating IDs.
+I shipped an IDOR vulnerability to production because of a question mark. Not a missing auth check, not a broken middleware -- a single `?` character in a TypeScript function signature that made `userId` optional instead of required. The code compiled, the tests passed, and for weeks a service endpoint could return any user's data to any authenticated caller who knew the right IDs.
+
+This is the story of how I fixed it by making the compiler do the security review.
+
+## What IDOR Looks Like in Code
+
+Insecure Direct Object Reference (IDOR) happens when an API lets users access resources belonging to other users by manipulating IDs. OWASP ranks it as the number one API security risk (they call it "Broken Object Level Authorization"). The classic example is changing `/api/orders/123` to `/api/orders/456` and seeing someone else's order.
+
+In my case, the vulnerability was buried inside a repository method:
 
 ```typescript
 // BAD: userId is optional — callers can "forget" to pass it
@@ -28,33 +37,36 @@ async findByIds(ids: number[], includeDeleted = false, userId?: number) {
 }
 ```
 
-An internal service calling `findByIds([1,2,3])` without userId would return
-blocks belonging to ANY user — a data leak.
+The conditional WHERE clause looked intentional -- as if some callers were supposed to query without `userId` for admin operations. But no caller should have ever skipped the filter. An internal service calling `findByIds([1,2,3])` without `userId` would return blocks belonging to ANY user. That is a data leak.
 
----
+## Why Optional Parameters Hide Vulnerabilities
 
-## Difficulties Encountered
+The dangerous thing about this bug is how invisible it is. TypeScript treats optional parameters as valid when omitted. There is no warning, no lint error, no test failure. The code compiles cleanly, and every call site that forgets `userId` silently queries across all users.
 
-- **Optional parameters hide the vulnerability**: The code compiled and passed
-  tests without userId because TypeScript treats optional params as valid when
-  omitted. The IDOR only surfaced during manual API testing when a request
-  returned another user's data.
-- **Existing call sites made refactoring scary**: Multiple services already
-  called `findByIds` without userId. Changing the signature to required
-  immediately broke the build in a dozen places, making it feel like the "fix"
-  was causing more problems than it solved.
-- **Database queries looked correct at a glance**: The conditional WHERE clause
-  (`userId ? {...} : {...}`) appeared intentional — as if some callers were
-  legitimately supposed to query without userId (e.g., admin operations). It
-  took careful audit to confirm no caller should ever skip the userId filter.
-- **Composite index was underutilized**: Even when userId was passed, the
-  conditional WHERE clause sometimes prevented the query planner from using the
-  `(id, userId)` composite index, causing slow queries that masked the real
-  issue.
+I discovered the bug during manual API testing when a request returned another user's data. Not through code review, not through automated testing -- through accident.
 
----
+Making it worse, the conditional WHERE clause sometimes prevented the query planner from using the `(id, userId)` composite index. So on top of the security issue, some queries were slow. The performance problem masked the real issue because the investigation focused on query optimization rather than access control.
 
-## The Solution
+## The Options I Considered
+
+Once I understood the problem, I evaluated four approaches:
+
+| Option                           | Pros                                                                    | Cons                                                 |
+| -------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------- |
+| Required parameter (type-level)  | Compile-time safety, no branching in WHERE, always uses composite index | Breaks existing call sites, requires refactoring     |
+| Runtime guard (throw if missing) | No signature change, backward compatible                                | Still compiles without userId, error only at runtime |
+| Middleware/decorator check       | Centralized enforcement                                                 | Adds indirection, still no compile-time guarantee    |
+| Separate admin vs user methods   | Explicit separation of concerns                                         | Method proliferation, more surface area to audit     |
+
+The runtime guard was tempting because it would not break any existing call sites. But it trades compile-time safety for runtime safety, which is the wrong direction. The whole point is to make the wrong thing impossible to write, not to catch it after it runs.
+
+The middleware approach centralizes the check, but "centralized" also means "easy to bypass if someone adds a new route and forgets the decorator."
+
+Separate methods seemed clean until I imagined auditing a codebase with `findByIds`, `findByIdsAdmin`, `findByIdsAndUserId`, `findByIdsAndUserIdWithCalendar` -- method proliferation makes the surface area harder to review, not easier.
+
+## The Fix: Make the Compiler Enforce It
+
+The answer was the simplest option: make `userId` required.
 
 ```typescript
 // GOOD: Compiler enforces userId — cannot compile without it
@@ -65,80 +77,32 @@ async findByIdsAndUserId(ids: number[], userId: number, includeDeleted = false) 
 }
 ```
 
-## Why Required > Optional
+This change did three things at once. First, every call site that omitted `userId` became a compile error. The TypeScript compiler surfaced a dozen places where the filter was missing -- twelve potential IDOR vulnerabilities that had been invisible. Second, the WHERE clause became unconditional, removing the branching logic that confused the query planner. Every query now hits the `(id, userId)` composite index. Third, the method name itself (`findByIdsAndUserId`) signals that `userId` is required. A new developer reading the codebase does not need to check the signature to understand the contract.
 
 | Aspect              | Optional userId              | Required userId                  |
 | ------------------- | ---------------------------- | -------------------------------- |
-| Compile-time safety | No — compiles without userId | Yes — TS error if missing        |
+| Compile-time safety | No -- compiles without userId | Yes -- TS error if missing        |
 | WHERE clause logic  | Conditional (`if userId`)    | Direct, no branching             |
 | Index utilization   | May miss composite index     | Always hits `(id, userId)` index |
 | Code review burden  | Must verify every call site  | Compiler does it for you         |
 | New developer risk  | May not know to pass userId  | Forced by signature              |
 
-## Design Principle
+The one-time cost was fixing those twelve call sites. Every one of them needed `userId` anyway -- they were getting it from the auth context and passing it through. The refactoring took an afternoon. The permanent guarantee it provides is worth infinitely more.
 
-**Security constraints should be enforced at the type level, not by
-convention.** If a function must always filter by userId, make it a required
-parameter — not optional with a "please remember to pass it" comment.
+## The Refactoring Fear
 
-## Method Naming Convention
+I want to address the hesitation I felt when I first saw the build break in a dozen places. My gut reaction was "the fix is causing more problems than the bug." That reaction is wrong, and recognizing it matters.
 
-Encode the required filter in the method name:
+Those twelve compile errors were not problems caused by the fix. They were twelve existing vulnerabilities that the fix made visible. Every broken call site was a place where user data could leak. The compiler was showing me the blast radius of the original bug.
 
-```typescript
-// Name signals that userId is required
-findByIdsAndUserIdWithCalendar(ids: number[], userId: number, ...)
+## When to Apply This Pattern
 
-// vs ambiguous name that doesn't hint at userId requirement
-findByIdsWithCalendar(ids: number[], ...)
-```
+Use type-level enforcement for any repository method that filters by a user-owned resource -- `userId`, `orgId`, `tenantId` -- where skipping the filter would expose other users' data. This covers multi-tenant systems with row-level access control and any API endpoint that accepts resource IDs from client input.
 
----
+For **admin or system operations** that legitimately need to query across all users (background jobs, reporting), create a separate explicitly-named method like `findByIdsAdmin` with appropriate authorization guards. Do not make `userId` optional to accommodate admin use cases -- that re-introduces the exact vulnerability you are trying to prevent.
 
-## Options Considered
+Skip this pattern for **public resources** where there is no ownership concept (product catalogs, public posts) and for **read-only aggregations** that return statistics rather than individual records.
 
-| Option                           | Pros                                                                    | Cons                                                 |
-| -------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------- |
-| Required parameter (type-level)  | Compile-time safety, no branching in WHERE, always uses composite index | Breaks existing call sites, requires refactoring     |
-| Runtime guard (throw if missing) | No signature change, backward compatible                                | Still compiles without userId, error only at runtime |
-| Middleware/decorator check       | Centralized enforcement                                                 | Adds indirection, still no compile-time guarantee    |
-| Separate admin vs user methods   | Explicit separation of concerns                                         | Method proliferation, more surface area to audit     |
+## Takeaway
 
-## Why This Approach
-
-Required parameter (type-level enforcement) was chosen because it shifts the
-security check to compile time at zero runtime cost. The one-time cost of fixing
-existing call sites is far outweighed by the permanent guarantee that no future
-caller can accidentally skip the userId filter. The compiler becomes an
-always-on security reviewer.
-
----
-
-## When to Use
-
-- Any repository method that filters by a user-owned resource (userId, orgId,
-  tenantId) where skipping the filter would expose other users' data
-- Multi-tenant systems where row-level access control is enforced at the query
-  level
-- API endpoints that accept resource IDs from client input (the OWASP BOLA/IDOR
-  pattern)
-
----
-
-## When NOT to Use
-
-- **Admin/system operations** that legitimately need to query across all users
-  (e.g., background jobs, reporting). Create a separate explicitly-named method
-  like `findByIdsAdmin` with appropriate authorization guards instead.
-- **Public/anonymous resources** where there is no ownership concept (e.g.,
-  product catalog, public posts).
-- **Read-only aggregations** that return statistics rather than individual
-  records — these do not expose specific user data even without a userId filter.
-
----
-
-## Key Insight
-
-Moving from `userId?: number` (optional) to `userId: number` (required) is a
-zero-cost change that converts a runtime security concern into a compile-time
-guarantee. The compiler becomes your security reviewer.
+Security constraints belong at the type level, not in conventions, comments, or code review checklists. Moving from `userId?: number` to `userId: number` is a zero-cost change that converts a runtime security concern into a compile-time guarantee. The compiler becomes your security reviewer -- and unlike human reviewers, it never forgets to check.

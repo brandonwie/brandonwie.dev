@@ -16,9 +16,14 @@ references:
     title: Gateways — NestJS WebSockets Documentation
     type: official
 source_content_hash: 18a439f407bbf02edfefc7d739b63432a62ecc2c496e0a6635c6f0581290c596
+expanded: true
 ---
 
-## Basic Gateway
+I needed to add real-time notifications to a NestJS application — pushing live updates to connected clients when calendar events changed. REST polling wasn't going to cut it for the responsiveness we needed. NestJS has first-class WebSocket support through its gateway system, but the documentation spreads the key patterns across multiple pages. Here's the consolidated reference I wish I'd had when starting.
+
+## Basic Gateway Setup
+
+A WebSocket gateway in NestJS is a class decorated with `@WebSocketGateway`. It handles incoming WebSocket connections and messages. The `@WebSocketServer()` decorator gives you access to the underlying Socket.IO server instance for broadcasting:
 
 ```typescript
 @WebSocketGateway(80, { namespace: "events" })
@@ -33,7 +38,7 @@ export class EventsGateway {
 }
 ```
 
-## Configuration Options
+You can configure the port, namespace, and transport options in the decorator:
 
 ```typescript
 // Port and namespace
@@ -43,9 +48,9 @@ export class EventsGateway {
 @WebSocketGateway(81, { transports: ['websocket'] })
 ```
 
-## Message Handlers
+## Handling Messages
 
-### Recommended: @MessageBody()
+NestJS offers two styles for message handlers. The recommended approach uses `@MessageBody()` for cleaner parameter extraction and easier testing:
 
 ```typescript
 @SubscribeMessage('events')
@@ -54,7 +59,7 @@ handleEvent(@MessageBody() data: string): string {
 }
 ```
 
-### Returning WsResponse
+If you need direct access to the client socket, you can accept it as the first parameter and return a `WsResponse`:
 
 ```typescript
 @SubscribeMessage('events')
@@ -63,7 +68,11 @@ handleEvent(client: Client, data: unknown): WsResponse<unknown> {
 }
 ```
 
-## Redis Adapter (Multi-Instance Support)
+The `@MessageBody()` approach is preferred because it decouples your handler logic from the socket implementation, making unit testing straightforward — you can call the handler directly without mocking a client connection.
+
+## Multi-Instance Support with Redis Adapter
+
+If your NestJS app runs on multiple containers (ECS, Kubernetes), WebSocket messages only reach clients connected to the same instance by default. The Redis adapter solves this by using Redis pub/sub to broadcast across all instances:
 
 ```bash
 npm i --save redis socket.io @socket.io/redis-adapter
@@ -92,7 +101,7 @@ export class RedisIoAdapter extends IoAdapter {
 }
 ```
 
-Apply in main.ts:
+Apply the adapter in `main.ts`:
 
 ```typescript
 const redisIoAdapter = new RedisIoAdapter(app);
@@ -100,7 +109,11 @@ await redisIoAdapter.connectToRedis();
 app.useWebSocketAdapter(redisIoAdapter);
 ```
 
-## Authentication Guard
+The adapter pattern creates a pub client and a sub client — Redis pub/sub requires separate connections for publishing and subscribing. Every `server.emit()` or `server.to(room).emit()` call automatically broadcasts through Redis to all instances.
+
+## Authentication
+
+WebSocket connections don't use the same middleware pipeline as HTTP requests. Authentication happens during the handshake phase. Extract the JWT token from the handshake auth object or query parameters:
 
 ```typescript
 @Injectable()
@@ -128,13 +141,13 @@ export class WsAuthGuard implements CanActivate {
 }
 ```
 
+Note the specific error codes (`MISSING_TOKEN`, `EXPIRED_TOKEN`, `INVALID_TOKEN`) — generic error messages make client-side handling difficult. Structured error codes let the client differentiate between "re-authenticate" and "something went wrong."
+
 ## Exception Handling
 
-```typescript
-// Throwing exceptions
-throw new WsException("Invalid credentials.");
+WebSocket exceptions use `WsException` instead of HTTP exceptions. Create a custom filter to emit structured error events:
 
-// Custom filter
+```typescript
 @Catch(WsException)
 export class WsExceptionFilter {
   catch(exception: WsException, host: ArgumentsHost) {
@@ -150,7 +163,9 @@ export class WsExceptionFilter {
 }
 ```
 
-## Validation with Pipes
+## Validation
+
+Use `ValidationPipe` with a custom exception factory that wraps validation errors in `WsException`:
 
 ```typescript
 @UsePipes(new ValidationPipe({
@@ -166,6 +181,8 @@ handleEvent(@MessageBody() dto: CreateMessageDto): WsResponse<unknown> {
 
 ### User Room Subscription
 
+Join users to their own room on connection, then emit events to specific users by room name:
+
 ```typescript
 handleConnection(client: Socket) {
   const userId = client.data.userId;
@@ -177,7 +194,9 @@ notifyUser(userId: number, data: any) {
 }
 ```
 
-### Broadcast to Namespace
+### Namespace Broadcasting
+
+Broadcast to all connected clients within a namespace:
 
 ```typescript
 @WebSocketGateway({ namespace: "chat" })
@@ -191,9 +210,10 @@ export class ChatGateway {
 }
 ```
 
-## Best Practices
+## Takeaway
 
-1. **Authentication**: Extract JWT from handshake, use specific error codes
-2. **Error Handling**: Always use `WsException`, provide structured responses
-3. **Multi-Instance**: Use Redis adapter for broadcasting across containers
-4. **Testing**: Prefer `@MessageBody()` for easier testing
+NestJS WebSocket gateways give you a clean, decorator-based API for real-time communication. The four things to get right: use `@MessageBody()` for testable handlers, add Redis adapter for multi-instance deployments, authenticate during the handshake with specific error codes, and always throw `WsException` (not HTTP exceptions) in WebSocket context.
+
+## References
+
+- [Gateways — NestJS WebSockets Documentation](https://docs.nestjs.com/websockets/gateways)

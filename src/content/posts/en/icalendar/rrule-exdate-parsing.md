@@ -8,6 +8,7 @@ tags:
 category: icalendar
 draft: false
 lang: en
+expanded: true
 references:
   - url: 'https://github.com/jkbrzt/rrule/issues/556'
     title: '556'
@@ -24,34 +25,15 @@ references:
 source_content_hash: 231c4dc48765ac80c8d33ebb615777605e1d6571b2127f050af0d90e7ebcb115
 ---
 
-1. EXDATE comes before RRULE in the recurrence array
-2. EXDATE has a TZID parameter (timezone-aware exclusion dates)
+I had a recurring event that generated occurrences at the current timestamp instead of the dates it was supposed to. Every occurrence was today, right now, this minute. The rrule library was not throwing an error. It was not returning empty results. It was silently producing garbage, and the output looked plausible enough to pass a casual glance.
 
-**Symptom:** Instead of generating proper RRULE occurrences, it generates
-instances at the **current time**.
+The root cause: the EXDATE line came before the RRULE line in the recurrence array, and it had a TZID parameter. That combination breaks the rrule JavaScript library's `rrulestr()` parser.
 
 ---
 
-## Difficulties Encountered
+## The Root Cause
 
-- **Silent failure mode:** The library does not throw an error when EXDATE
-  parsing fails. Instead, it silently generates occurrences at the current
-  timestamp, which looks like valid output until you inspect the dates closely.
-- **Order sensitivity was not documented:** Nothing in the rrule docs mentions
-  that RRULE must come before EXDATE in the input string. Discovered only by
-  trial and error after the Google Calendar API returned EXDATE first.
-- **`forceset: true` seemed like the answer:** The rrule API provides `forceset`
-  specifically for handling RRULE+EXDATE combinations, but it still cannot parse
-  TZID in EXDATE lines. This dead end consumed significant debugging time.
-- **Multiple EXDATE formats:** Google Calendar uses at least four EXDATE formats
-  (UTC, date-only, TZID with single date, TZID with comma-separated dates). Each
-  required separate parsing logic.
-
----
-
-## Root Cause
-
-Google Calendar stores recurrence as an array with mixed content:
+Google Calendar stores recurrence rules as an array with mixed content. The order of elements in that array is not guaranteed. Here is what came back from the API:
 
 ```javascript
 [
@@ -60,15 +42,33 @@ Google Calendar stores recurrence as an array with mixed content:
 ];
 ```
 
-When `rrulestr()` tries to parse this:
+When `rrulestr()` tries to parse this input:
 
 - It expects RRULE first, EXDATE after
-- It can't properly handle TZID parameter in EXDATE
-- Falls back to generating occurrences at current timestamp
+- It cannot properly handle the TZID parameter in the EXDATE line
+- Instead of failing with an error, it falls back to generating occurrences at the current timestamp
 
-## The Solution
+That silent fallback is the dangerous part. The function returns a valid `RRule` object. Calling `.between()` or `.all()` on it produces dates. Those dates happen to be wrong, but nothing in the API signals that anything went wrong.
 
-Parse RRULE and EXDATE separately, then combine using `RRuleSet`:
+---
+
+## Why Debugging This Was Slow
+
+Four factors conspired to make this bug hard to find.
+
+**Silent failure mode.** The library does not throw an error when EXDATE parsing fails. It generates occurrences at the current timestamp, which looks like valid output until you inspect the dates closely. I spent time looking at downstream code before realizing the rrule output itself was wrong.
+
+**Order sensitivity was not documented.** Nothing in the rrule docs mentions that RRULE must come before EXDATE in the input string. I discovered this only through trial and error after the Google Calendar API returned EXDATE first.
+
+**`forceset: true` seemed like the answer.** The rrule API provides a `forceset` option specifically for handling RRULE+EXDATE combinations. It still cannot parse TZID in EXDATE lines. This dead end consumed significant debugging time because it felt like the "right" solution.
+
+**Multiple EXDATE formats.** Google Calendar uses at least four different EXDATE formats. Each required separate parsing logic, and I did not know the full set until I encountered them in production data.
+
+---
+
+## The Solution: Parse Separately, Combine Manually
+
+Since `rrulestr()` cannot handle EXDATE with TZID, the fix is to split the parsing into parts you control.
 
 ```typescript
 import { RRuleSet, rrulestr } from "rrule";
@@ -94,11 +94,13 @@ for (const exdate of exdates) {
 const occurrences = ruleSet.between(periodStart, periodEnd, true);
 ```
 
-## Key Functions
+The strategy: let `rrulestr()` handle what it is good at (parsing RRULE lines), and handle EXDATE parsing ourselves. Then combine both in an `RRuleSet`, which correctly excludes dates during occurrence generation.
 
-### extractRRulesOnly
+---
 
-Filters recurrence array to only include RRULE lines:
+## The Extraction Function
+
+The first step is isolating RRULE lines from the recurrence array:
 
 ```typescript
 export function extractRRulesOnly(recurrence: string[] | null): string[] {
@@ -110,9 +112,13 @@ export function extractRRulesOnly(recurrence: string[] | null): string[] {
 }
 ```
 
-### parseExdates
+The `sanitizeRRule` call handles another edge case -- proprietary extensions from clients like GNOME Evolution that append non-standard parameters to RRULE lines. Filtering and sanitizing happen together so downstream code never sees a malformed input.
 
-Parses EXDATE lines with proper timezone handling:
+---
+
+## The EXDATE Parser
+
+Parsing EXDATE lines requires handling four distinct formats that Google Calendar produces:
 
 ```typescript
 export function parseExdates(
@@ -128,46 +134,44 @@ export function parseExdates(
 }
 ```
 
-## Why Not Use rrulestr with forceset
+Each format needs different handling:
 
-You might think `rrulestr(fullString, { forceset: true })` would work, but:
+| Format | Example | Parsing Strategy |
+| --- | --- | --- |
+| UTC | `EXDATE:20251219T090000Z` | Parse directly as UTC |
+| Date-only | `EXDATE;VALUE=DATE:20251219` | Treat as midnight in block timezone |
+| TZID single | `EXDATE;TZID=Asia/Seoul:20251219T180000` | Parse in specified timezone, convert to UTC |
+| TZID multiple | `EXDATE;TZID=Asia/Seoul:20251219T180000,20251226T180000` | Split on comma, parse each in timezone |
 
-1. It still fails to parse TZID in EXDATE
-2. Order of lines in the string matters
-3. The library has documented issues with timezone handling
+The TZID formats are what `rrulestr()` chokes on. By parsing them ourselves, we can properly convert the local times to UTC `Date` objects that `RRuleSet.exdate()` expects.
 
 ---
 
-## When to Use
+## Why Not Use rrulestr with forceset?
 
-- Parsing Google Calendar recurring events that include EXDATE with TZID
-  parameters
-- Any scenario where `rrulestr()` produces occurrences at the current timestamp
-  instead of expected dates
-- Building calendar integrations that must handle all four EXDATE formats (UTC,
-  date-only, TZID single, TZID multiple)
+You might think `rrulestr(fullString, { forceset: true })` would solve this. It was designed for exactly this use case -- parsing a combined RRULE+EXDATE string into an `RRuleSet`. Three reasons it does not work here:
 
-## When NOT to Use
+1. It still fails to parse TZID in EXDATE lines
+2. The order of lines in the input string matters (RRULE must come first)
+3. The library has well-documented issues with timezone handling across multiple GitHub issues
 
-- If your recurrence data never includes EXDATE lines: standard `rrulestr()`
-  works fine for RRULE-only input.
-- If EXDATE lines are always in UTC format (no TZID): the library handles
-  `EXDATE:...Z` correctly when RRULE comes first.
-- If using a different rrule library: this workaround is specific to the
-  `jkbrzt/rrule` JavaScript library. Python's `dateutil` and other
-  implementations may handle EXDATE+TZID correctly.
-- For RDATE handling: this solution filters out RDATE lines. If you need RDATE
-  support, additional parsing is required.
+The manual approach -- parse separately, combine in RRuleSet -- is more code, but it works reliably across all four EXDATE formats.
+
+---
+
+## Takeaway
+
+When the rrule JavaScript library produces occurrences at the current timestamp instead of expected dates, the first thing to check is the EXDATE line. If it contains a TZID parameter or appears before the RRULE line in the input, `rrulestr()` will silently fail.
+
+The fix is to never feed EXDATE lines to `rrulestr()`. Extract RRULE lines, parse them alone, parse EXDATE lines with your own timezone-aware code, and combine both in an `RRuleSet`. It is more manual work, but it eliminates an entire category of silent failures.
+
+This workaround is specific to the `jkbrzt/rrule` JavaScript library. Python's `dateutil` and other implementations may handle EXDATE+TZID correctly. If your recurrence data never includes EXDATE lines, or if EXDATE lines are always in UTC format (no TZID), standard `rrulestr()` works fine.
 
 ---
 
 ## References
 
-- [rrule GitHub Issue #556](https://github.com/jkbrzt/rrule/issues/556) - BYDAY
-  returns wrong days
-- [rrule GitHub Issue #523](https://github.com/jkbrzt/rrule/issues/523) -
-  Invalid date with tzid
-- [rrule GitHub Issue #364](https://github.com/jkbrzt/rrule/issues/364) - TZID
-  ignored
-- [RFC 5545](https://datatracker.ietf.org/doc/html/rfc5545) - iCalendar
-  specification
+- [rrule GitHub Issue #556](https://github.com/jkbrzt/rrule/issues/556) - BYDAY returns wrong days
+- [rrule GitHub Issue #523](https://github.com/jkbrzt/rrule/issues/523) - Invalid date with tzid
+- [rrule GitHub Issue #364](https://github.com/jkbrzt/rrule/issues/364) - TZID ignored
+- [RFC 5545](https://datatracker.ietf.org/doc/html/rfc5545) - iCalendar specification

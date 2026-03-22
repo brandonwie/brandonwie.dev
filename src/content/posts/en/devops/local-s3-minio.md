@@ -17,36 +17,16 @@ references:
     title: MinIO Documentation
     type: official
 source_content_hash: 45b7531c3808a1d56cd96a487927a56e2eda12e41a3c267cd323050d94b9e812
+expanded: true
 ---
 
-## The Problem
+I was building an ETL pipeline that pulled data from S3, and every test run against real AWS cost money, required internet, and risked touching production buckets. I needed a way to iterate on S3-dependent code locally — fast, free, and completely isolated from production.
 
-Running ETL jobs against real AWS S3 during development is expensive, slow, and
-risky. Every test run incurs API costs, requires internet access, and risks
-accidentally reading or writing production data. There was no safe, offline way
-to iterate on S3-dependent code.
+MinIO solves this. It's a lightweight, S3-compatible object storage server that runs in a Docker container. Your code talks to MinIO the same way it talks to AWS S3, so you can develop and test locally without changing your application logic.
 
----
+## Why MinIO Over the Alternatives
 
-## Difficulties Encountered
-
-- **boto3 virtual-hosted style** — boto3 defaults to virtual-hosted style URLs
-  (`bucket.s3.amazonaws.com`), which MinIO does not support. Figuring out that
-  `addressing_style: "path"` was needed took trial and error with cryptic
-  connection-refused errors.
-- **PySpark S3A vs S3** — Spark uses the `s3a://` protocol (Hadoop connector),
-  not `s3://`, and requires its own separate configuration keys
-  (`spark.hadoop.fs.s3a.*`). The boto3 config does not carry over.
-- **MinIO startup race condition** — The `minio-init` container that creates
-  buckets would fail if MinIO had not fully started. Required adding
-  `condition: service_healthy` in Docker Compose.
-- **SSL mismatch** — MinIO runs on plain HTTP locally, but S3A defaults to SSL.
-  Forgetting `connection.ssl.enabled=false` produces TLS handshake errors that
-  look like network problems.
-
----
-
-## Options Considered
+Before settling on MinIO, I evaluated three options:
 
 | Option          | Pros                                                                   | Cons                                                              |
 | --------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -54,15 +34,9 @@ to iterate on S3-dependent code.
 | **LocalStack**  | Emulates many AWS services (S3, SQS, Lambda, etc.)                     | Heavier resource usage, free tier has limitations, slower startup |
 | **Real AWS S3** | No emulation gaps, production-identical                                | Costs money, requires internet, risk of touching prod data        |
 
-## Why This Approach
+I chose MinIO because the project only needed S3 — no SQS, Lambda, or DynamoDB. MinIO starts in seconds, uses minimal resources, and provides a web console for visual browsing. If your project needs multiple AWS services, LocalStack is the better choice.
 
-Chose MinIO because the project only needs S3 (not SQS, Lambda, etc.). MinIO is
-lighter, starts faster, and has perfect S3 API compatibility. If other AWS
-services were needed, LocalStack would be the better choice.
-
----
-
-## Why Use MinIO
+## The Benefits
 
 | Benefit            | Description                   |
 | ------------------ | ----------------------------- |
@@ -72,6 +46,8 @@ services were needed, LocalStack would be the better choice.
 | 100% S3 compatible | Same API, drop-in replacement |
 
 ## Docker Compose Setup
+
+Getting MinIO running is straightforward with Docker Compose. The setup includes the MinIO server itself and an init container that creates your buckets automatically on startup:
 
 ```yaml
 services:
@@ -101,7 +77,11 @@ volumes:
   minio-data:
 ```
 
-## Code Configuration
+Notice the `condition: service_healthy` on the init container. Without this, the init container may try to create buckets before MinIO has fully started, causing a race condition where bucket creation silently fails.
+
+## Configuring Your Code
+
+The key to making this work seamlessly is environment-based configuration. When `AWS_ENDPOINT_URL` is set, your code points at MinIO; when it's absent, it uses real AWS S3. No code changes needed between environments.
 
 ### boto3 Factory Function
 
@@ -125,7 +105,11 @@ def get_s3_client(region_name: str | None = None):
     return boto3.client("s3", **client_kwargs)
 ```
 
+The `addressing_style: "path"` setting is critical. By default, boto3 uses virtual-hosted style URLs (`bucket.s3.amazonaws.com`), which MinIO does not support. Without this setting, you'll get cryptic connection-refused errors that don't hint at the actual problem.
+
 ### PySpark S3A Configuration
+
+If you're using PySpark, there's an extra layer of configuration. Spark uses the `s3a://` protocol through the Hadoop connector, not `s3://`, and requires its own configuration keys. The boto3 settings don't carry over:
 
 ```python
 endpoint_url = os.getenv("AWS_ENDPOINT_URL")
@@ -140,6 +124,8 @@ if endpoint_url:
         builder = builder.config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
 ```
 
+That SSL check matters because MinIO runs on plain HTTP locally, but S3A defaults to SSL. Forgetting `connection.ssl.enabled=false` produces TLS handshake errors that look like network problems — not configuration issues.
+
 ## Environment Variables
 
 ```bash
@@ -153,17 +139,22 @@ AWS_S3_USE_PATH_STYLE=true
 # Just don't set AWS_ENDPOINT_URL - uses real S3 by default
 ```
 
-## Path Style vs Virtual Hosted
+The beauty of this approach is that production requires no special configuration. When `AWS_ENDPOINT_URL` is absent, boto3 uses the default AWS endpoints automatically.
+
+## Understanding Path Style vs Virtual Hosted
+
+This distinction tripped me up initially, so it's worth explaining:
 
 | Style          | URL Format                                   | Used By          |
 | -------------- | -------------------------------------------- | ---------------- |
 | Virtual-hosted | `https://bucket.s3.region.amazonaws.com/key` | AWS (default)    |
 | Path           | `http://host:port/bucket/key`                | MinIO (required) |
 
-MinIO doesn't support virtual-hosted style, so `path.style.access=true` is
-required.
+AWS S3 supports both styles but defaults to virtual-hosted. MinIO only supports path-style, so `path.style.access=true` is required in every client that talks to MinIO.
 
 ## Access Methods
+
+Once MinIO is running, you can interact with it in several ways:
 
 | Method      | URL                                              |
 | ----------- | ------------------------------------------------ |
@@ -171,26 +162,26 @@ required.
 | S3 API      | `http://localhost:9000`                          |
 | AWS CLI     | `aws s3 ls --endpoint-url http://localhost:9000` |
 
----
+The web console at port 9001 is handy for visually inspecting bucket contents during development, similar to the AWS S3 console but running entirely on your machine.
 
-## When to Use
+## When to Use This
 
 - Local development of any S3-dependent code (ETL, file uploads, backups)
 - CI/CD pipelines that need S3 for integration tests without AWS credentials
 - Offline development where internet access is unreliable or unavailable
 - Rapid iteration where real S3 latency would slow the feedback loop
 
----
+## When NOT to Use This
 
-## When NOT to Use
+- **Multi-service AWS emulation** — If you need SQS, Lambda, DynamoDB, etc. alongside S3, use LocalStack instead; MinIO only emulates S3
+- **S3 Select or Glacier** — MinIO does not support all S3 features; advanced features like S3 Select, Glacier tiers, or S3 Object Lock may behave differently or be absent
+- **Performance benchmarking** — Local MinIO on Docker has different latency and throughput characteristics than real S3; do not use it for performance testing
+- **Virtual-hosted style URLs** — If your code relies on virtual-hosted bucket URLs and cannot be configured for path-style, MinIO will not work without code changes
 
-- **Multi-service AWS emulation** — If you need SQS, Lambda, DynamoDB, etc.
-  alongside S3, use LocalStack instead; MinIO only emulates S3
-- **S3 Select or Glacier** — MinIO does not support all S3 features; advanced
-  features like S3 Select, Glacier tiers, or S3 Object Lock may behave
-  differently or be absent
-- **Performance benchmarking** — Local MinIO on Docker has different latency and
-  throughput characteristics than real S3; do not use it for performance testing
-- **Virtual-hosted style URLs** — If your code relies on virtual-hosted bucket
-  URLs and cannot be configured for path-style, MinIO will not work without code
-  changes
+## Takeaway
+
+MinIO gives you a free, offline, production-compatible S3 environment in a single Docker container. The setup takes five minutes. The key gotchas are path-style addressing (required for MinIO), separate S3A configuration for PySpark, and the `service_healthy` dependency to avoid startup race conditions. Once configured, the same code runs against MinIO locally and AWS S3 in production — controlled entirely by environment variables.
+
+## References
+
+- [MinIO Documentation](https://min.io/docs/minio/linux/index.html)

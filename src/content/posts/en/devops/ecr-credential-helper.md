@@ -19,11 +19,14 @@ references:
     title: AWS ECR Registry Authentication
     type: official
 source_content_hash: 0ae92be473ea39d9ed99a84e16c51de2033a19f8fe7032339e71c979d5753a4c
+expanded: true
 ---
 
-tokens that expire, it fetches fresh tokens on-demand.
+After dealing with ECR token expiration for weeks — first with manual `docker login`, then with a cron job that still had a race condition — I found the right solution: AWS's ECR Credential Helper. Instead of storing tokens that expire, it fetches fresh tokens on-demand every time Docker needs to authenticate.
 
-## The Problem
+The old approach stored a token at container startup, and that token expired after 12 hours. The credential helper flips this: no token is stored, and a fresh one is fetched at the exact moment Docker needs it.
+
+## The Old Way vs The New Way
 
 ```text
 OLD WAY (One-time login):
@@ -33,34 +36,6 @@ OLD WAY (One-time login):
 │ docker pull: "authorization token has expired"  │
 └─────────────────────────────────────────────────┘
 ```
-
-ECR tokens expire after 12 hours. Storing them means they can expire before the
-next use.
-
----
-
-## Difficulties Encountered
-
-- **Error appeared only after 12+ hours** - The Airflow DockerOperator worked
-  fine on initial deployment. The `ImageNotFound` / "authorization token has
-  expired" error only surfaced the next day, making it hard to connect the
-  failure to authentication rather than a missing image.
-- **Cron-based token refresh is fragile** - The first attempted fix was a cron
-  job running `docker login` every 11 hours. This introduced a race condition:
-  if a pull happened during the brief window between token expiry and cron
-  execution, it still failed.
-- **Credential helper binary must match architecture** - The helper binary is
-  architecture-specific (`linux-amd64` vs `linux-arm64`). Using the wrong binary
-  fails silently -- Docker just reports "credentials not found" without
-  indicating an architecture mismatch.
-- **`config.json` key must be exact registry URL** - The `credHelpers` key in
-  `~/.docker/config.json` must match the exact ECR registry URL including the
-  account ID and region. A typo or wrong region means Docker falls back to no
-  auth with no warning.
-
----
-
-## The Solution
 
 ```text
 NEW WAY (Credential helper):
@@ -74,7 +49,19 @@ NEW WAY (Credential helper):
 └─────────────────────────────────────────────────┘
 ```
 
+## The Gotchas I Hit
+
+**Error appeared only after 12+ hours.** The Airflow DockerOperator worked perfectly on initial deployment. The "authorization token has expired" error only surfaced the next day, making it hard to connect the failure to authentication rather than a missing image.
+
+**Cron-based token refresh has a race condition.** My first fix was a cron job running `docker login` every 11 hours. But if a pull happened during the brief window between token expiry and the next cron execution, it still failed. The credential helper eliminates this window entirely.
+
+**Binary must match your architecture.** The helper binary is architecture-specific (`linux-amd64` vs `linux-arm64`). Using the wrong one fails silently — Docker reports "credentials not found" without indicating an architecture mismatch.
+
+**`config.json` key must be the exact registry URL.** The `credHelpers` key must match the exact ECR registry URL including the account ID and region. A typo or wrong region means Docker falls back to no auth with no warning.
+
 ## How It Works
+
+When Docker needs to pull an image, it checks `~/.docker/config.json` for credential helpers. If one is configured for the registry, Docker calls the helper binary, which fetches a fresh token from AWS STS using the instance's IAM role:
 
 ```mermaid
 sequenceDiagram
@@ -92,7 +79,9 @@ sequenceDiagram
     Docker->>ECR: Pull with fresh credentials
 ```
 
-## Configuration
+The token is used immediately and never stored to disk. Each pull gets a fresh token.
+
+## Setup
 
 ### 1. Install the Helper
 
@@ -114,7 +103,11 @@ RUN curl -sL "https://amazon-ecr-credential-helper-releases.s3.us-east-2.amazona
 }
 ```
 
+The key must be the **exact** registry URL. Docker matches this string literally — `123456789.dkr.ecr.ap-northeast-2.amazonaws.com` must match your actual account ID and region.
+
 ### 3. Required IAM Permissions
+
+The EC2 instance role needs these permissions:
 
 ```text
 - sts:GetCallerIdentity      (account ID lookup)
@@ -124,39 +117,14 @@ RUN curl -sL "https://amazon-ecr-credential-helper-releases.s3.us-east-2.amazona
 - ecr:BatchGetImage
 ```
 
-## Key Points
+## Key Properties
 
 - **On-demand**: Token fetched only when Docker needs it
 - **No storage**: Token used immediately, never written to disk
 - **Auto-refresh**: Each operation gets a fresh token
 - **IAM-based**: Uses EC2 instance role, no credentials to manage
 
-## When to Use
-
-| Scenario                                 | Use Credential Helper?        |
-| ---------------------------------------- | ----------------------------- |
-| Long-running containers pulling from ECR | Yes                           |
-| CI/CD pipelines                          | Maybe (short-lived, login OK) |
-| Local development                        | Yes (convenient)              |
-| Lambda/ECS with ECR                      | No (AWS handles it)           |
-
----
-
-## When NOT to Use
-
-- **Lambda or ECS tasks pulling from ECR** - AWS manages ECR authentication
-  natively for these services. Adding the credential helper is redundant.
-- **Short-lived CI/CD containers** - If the entire pipeline completes in under
-  12 hours, a single `docker login` at the start is simpler and sufficient.
-- **Non-ECR registries** - The credential helper is ECR-specific. For Docker
-  Hub, GHCR, or other registries, use their native auth mechanisms.
-- **Environments without IAM roles** - The helper relies on IAM credentials
-  (instance role, environment variables, or AWS config). If IAM is not
-  available, it cannot function.
-
----
-
-## Options Considered
+## Credential Helper vs docker login
 
 | Aspect           | docker login            | Credential Helper |
 | ---------------- | ----------------------- | ----------------- |
@@ -165,16 +133,29 @@ RUN curl -sL "https://amazon-ecr-credential-helper-releases.s3.us-east-2.amazona
 | Setup complexity | Simple                  | Slightly more     |
 | Maintenance      | High (cron, monitoring) | None              |
 
----
+The credential helper requires slightly more initial setup (install binary, configure `config.json`), but the zero-maintenance aspect is worth it. No cron jobs to monitor, no race conditions, no expired token incidents at 2 AM.
 
-## Why This Approach
+## When to Use This
 
-Chose **ECR Credential Helper** over `docker login` with cron because:
+| Scenario                                 | Use Credential Helper?        |
+| ---------------------------------------- | ----------------------------- |
+| Long-running containers pulling from ECR | Yes                           |
+| CI/CD pipelines                          | Maybe (short-lived, login OK) |
+| Local development                        | Yes (convenient)              |
+| Lambda/ECS with ECR                      | No (AWS handles it)           |
 
-- Airflow DockerOperator pulls images on unpredictable schedules (DAGs run at
-  various times). A cron-based refresh cannot guarantee a valid token at every
-  pull moment.
-- The credential helper eliminates an entire class of production incidents
-  (expired token failures) with zero ongoing maintenance.
-- The one-time setup cost (install binary + configure `config.json`) is trivial
-  compared to the operational cost of monitoring and maintaining a cron job.
+## When NOT to Use This
+
+- **Lambda or ECS tasks pulling from ECR** — AWS manages ECR authentication natively for these services. Adding the credential helper is redundant.
+- **Short-lived CI/CD containers** — If the entire pipeline completes in under 12 hours, a single `docker login` at the start is simpler and sufficient.
+- **Non-ECR registries** — The credential helper is ECR-specific. For Docker Hub, GHCR, or other registries, use their native auth mechanisms.
+- **Environments without IAM roles** — The helper relies on IAM credentials (instance role, environment variables, or AWS config). If IAM is not available, it cannot function.
+
+## Takeaway
+
+The ECR Credential Helper replaces cron-based token refresh with on-demand authentication. Install the binary, configure `~/.docker/config.json` with your exact registry URL, and forget about ECR token expiry. The setup takes five minutes and eliminates an entire class of production incidents — no more "authorization token has expired" failures at 2 AM.
+
+## References
+
+- [Amazon ECR Credential Helper](https://github.com/awslabs/amazon-ecr-credential-helper)
+- [AWS ECR Registry Authentication](https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html)

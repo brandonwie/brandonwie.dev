@@ -16,23 +16,22 @@ references:
     title: Synchronize resources efficiently — Google Calendar
     type: official
 source_content_hash: ef31da3a3448bd4df39b7561780c057579fcaf2358b545829f2bf3067fda87ec
+expanded: true
 ---
 
-full resync is required. Proper handling prevents data loss.
+I was investigating a production bug where users were losing their custom notes and space assignments on calendar events. After a sync cycle, all user-specific data was gone — replaced with a clean copy from Google. The trigger was a `410 GONE` response from the Google Calendar API, which invalidated our sync token and kicked off a full resync. The resync code deleted everything and recreated from scratch, wiping out all application-specific data in the process.
 
 ## Why Sync Tokens Invalidate
 
-From Google's documentation:
+Google's Calendar API uses sync tokens for incremental synchronization — you pass the token from your last sync, and Google returns only the changes since then. But tokens can be invalidated, returning `410 GONE` instead of changes. From Google's documentation:
 
-> "Sync tokens are invalidated by the server for various reasons including
-> **token expiration** or **changes in related ACLs**."
+> "Sync tokens are invalidated by the server for various reasons including **token expiration** or **changes in related ACLs**."
 
-Key insight: 410 GONE isn't just time-based expiration. ACL changes (permission
-changes) also invalidate tokens.
+The key insight: 410 GONE isn't limited to time-based expiration. ACL changes (permission changes on a calendar) also invalidate tokens. A user getting shared access to a calendar, or losing it, can trigger a full resync on a completely unrelated integration.
 
 ## The Data Loss Bug
 
-Original approach deleted all blocks and recreated from Google:
+The original resync handler was brutally simple — delete everything and recreate from Google:
 
 ```typescript
 // ❌ DANGEROUS: Loses Moba-specific data
@@ -43,16 +42,11 @@ async handleResync(calendarId: string) {
 }
 ```
 
-**Lost data:**
+This approach destroyed all application-specific data that doesn't exist in Google: custom notes (`note` field), link data (`linkData`), space assignments (`spaceId`), and any user customizations. Google is the source of truth for calendar event data, but the application owns its own data — and a resync should never throw that away.
 
-- Custom notes (`note` field)
-- Link data (`linkData`)
-- Space assignments (`spaceId`)
-- Any user customizations
+## The Fix: Strategy Selection by Access Role
 
-## The Fix: Strategy Selection
-
-Different strategies based on calendar access level:
+The solution is to use different recovery strategies based on the calendar's access level. Editable calendars (owner/writer) can have user customizations that need preserving. Read-only calendars (reader/freeBusyReader) can't have user customizations, so a clean-slate resync is safe:
 
 ```typescript
 async handleResync(calendar: Calendar) {
@@ -78,6 +72,8 @@ function isEditableCalendar(accessRole: string | null): boolean {
 
 ### Merge Strategy (Editable Calendars)
 
+For calendars where the user can create and modify events, the merge strategy preserves application-specific fields while updating Google-sourced fields:
+
 ```typescript
 async mergeResync(calendar: Calendar) {
   const events = await this.googleApi.listEvents(calendar.gcalId);
@@ -100,6 +96,8 @@ async mergeResync(calendar: Calendar) {
 
 ### Clean-Slate Strategy (Read-Only Calendars)
 
+For read-only calendars, there's no application-specific data to protect. A clean delete-and-recreate is safe and simpler:
+
 ```typescript
 async cleanSlateResync(calendar: Calendar) {
   // Safe: Read-only calendars have no Moba-specific data
@@ -111,8 +109,7 @@ async cleanSlateResync(calendar: Calendar) {
 
 ## ACL-Aware Recovery
 
-When 410 occurs, ACL may have changed. Fetch fresh metadata before selecting
-strategy:
+Since 410 GONE can be triggered by ACL changes, the calendar's access role might have changed since the last sync. Fetch fresh metadata before selecting a recovery strategy:
 
 ```typescript
 async handleFindEventsWithResync(calendar: Calendar) {
@@ -135,6 +132,8 @@ async handleFindEventsWithResync(calendar: Calendar) {
 }
 ```
 
+Without this refresh step, you might run a merge strategy on a calendar that's now read-only (wasted effort) or a clean-slate strategy on a calendar that's now editable (data loss).
+
 ## Decision Matrix
 
 | accessRole       | Strategy    | Reason                       |
@@ -145,10 +144,10 @@ async handleFindEventsWithResync(calendar: Calendar) {
 | `freeBusyReader` | Clean-slate | Only sees free/busy          |
 | `null`           | Clean-slate | Unexpected, log to Sentry    |
 
-## Key Lessons
+## Takeaway
 
-1. **410 ≠ just expiration** - ACL changes also invalidate tokens
-2. **Refresh metadata on 410** - Old accessRole may be stale
-3. **Editable ≠ read-only** - Different recovery strategies
-4. **Log unexpected states** - null accessRole should be investigated
-5. **Google is source of truth** - But preserve YOUR app's data
+When handling `410 GONE` from Google Calendar's sync API, never do a blind delete-and-recreate. Split your recovery into two strategies based on `accessRole`: merge for editable calendars (preserves application-specific data), clean-slate for read-only calendars (safe and fast). Always refresh calendar metadata before choosing a strategy, because the 410 itself might have been triggered by the ACL change that altered the access role.
+
+## References
+
+- [Synchronize resources efficiently — Google Calendar](https://developers.google.com/workspace/calendar/api/guides/sync)

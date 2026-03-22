@@ -18,20 +18,21 @@ references:
     title: Database — NestJS Documentation
     type: official
 source_content_hash: ffe262dea596ac4575b310b58643fe633b0efb56a4052ce3d36fe35d9d39499a
+expanded: true
 ---
 
-## 문제 상황
-
-`migration:generate` 또는 `migration:run` 실행 시 에러 발생:
+I ran `npm run migration:generate` on our NestJS project and got hit with this error:
 
 ```text
 CannotConnectAlreadyConnectedError: Cannot create a "default" connection
 because connection to the database already established.
 ```
 
-## 원인
+The migration had worked fine before. After some digging, I realized the problem was in how our `ormconfig.ts` was set up — it was bootstrapping the entire NestJS application just to get the DataSource, which meant the database connection was already established before the TypeORM CLI could take control.
 
-NestJS 앱 부팅 방식의 `ormconfig.ts`:
+## The Problem
+
+Our `ormconfig.ts` was using NestJS's app factory to get the DataSource:
 
 ```typescript
 export default NestFactory.create(AppModule).then((app) => {
@@ -39,14 +40,19 @@ export default NestFactory.create(AppModule).then((app) => {
 });
 ```
 
-1. `NestFactory.create(AppModule)` 실행
-2. `TypeOrmModule.forRootAsync()` 가 DataSource를 **초기화하고 연결**
-3. TypeORM CLI가 반환된 DataSource로 `initialize()` 호출 시도
-4. 이미 연결된 상태라 에러 발생
+Here's the sequence that causes the collision:
 
-## 해결 방법
+1. `NestFactory.create(AppModule)` executes
+2. `TypeOrmModule.forRootAsync()` initializes and **connects** the DataSource
+3. TypeORM CLI receives the already-connected DataSource
+4. CLI calls `initialize()` on it — but it's already connected
+5. `CannotConnectAlreadyConnectedError`
 
-로컬 마이그레이션용 별도 설정 파일 생성 (`ormconfig.local.ts`):
+The CLI expects to receive an uninitialized DataSource that it can connect on its own terms. But the NestJS bootstrap process connects the DataSource as a side effect.
+
+## The Fix: Separate Config for Local Migrations
+
+The solution is to create a standalone DataSource file that doesn't boot NestJS. This gives the CLI an uninitialized DataSource it can control:
 
 ```typescript
 import * as dotenv from "dotenv";
@@ -71,14 +77,20 @@ const dataSource = new DataSource({
 export default dataSource;
 ```
 
-## 설정 파일 분리
+The key difference: `new DataSource(...)` creates a DataSource object without connecting. The CLI calls `initialize()` itself when it's ready.
 
-| 파일                 | 사용처                  | 특징                                  |
-| -------------------- | ----------------------- | ------------------------------------- |
-| `ormconfig.ts`       | Docker/ECS 마이그레이션 | NestJS 부팅 방식, 앱 컨텍스트 필요 시 |
-| `ormconfig.local.ts` | 로컬 마이그레이션       | 독립 DataSource, CLI가 직접 연결      |
+## Two Config Files, Two Purposes
 
-## package.json 스크립트
+| File                 | Used By                  | How It Works                                  |
+| -------------------- | ------------------------ | --------------------------------------------- |
+| `ormconfig.ts`       | Docker/ECS migrations    | Boots NestJS, gets connected DataSource        |
+| `ormconfig.local.ts` | Local development        | Standalone DataSource, CLI connects it          |
+
+The Docker/ECS version still uses the NestJS bootstrap approach because it needs the full app context (config service, environment resolution). The local version is lightweight and standalone.
+
+## Package Scripts
+
+With two config files, the npm scripts point each command at the right one:
 
 ```json
 {
@@ -90,12 +102,23 @@ export default dataSource;
 }
 ```
 
-## 주의사항
+Local commands use `ormconfig.local.js`. Docker commands use `ormconfig.js`. The separation prevents the connection collision in local development while keeping the NestJS-aware config for containerized environments.
 
-**환경 파일 확인 필수:**
+## Watch Out: Environment File Safety
 
-- `.env` → 로컬 DB (안전)
-- `.env.development` → AWS 개발 DB
-- `.env.production` → AWS 운영 DB
+The local config reads from `.env` by default. Make sure you know which database you're pointing at:
 
-실수로 잘못된 환경 파일 사용 시 실제 DB가 변경될 수 있음.
+- `.env` → local DB (safe)
+- `.env.development` → AWS development DB
+- `.env.production` → AWS production DB
+
+Running `migration:run` against the wrong environment file can modify a real database. Always verify your `.env` contents before running migrations locally.
+
+## Takeaway
+
+When the TypeORM CLI throws `CannotConnectAlreadyConnectedError` in a NestJS project, the fix is to create a standalone DataSource config that doesn't bootstrap the NestJS app. Use `new DataSource(...)` without calling `initialize()` — let the CLI handle the connection lifecycle. Keep your NestJS-aware config for container deployments where you need the full app context.
+
+## References
+
+- [Using CLI — TypeORM](https://typeorm.io/#/using-cli)
+- [Database — NestJS Documentation](https://docs.nestjs.com/techniques/database)

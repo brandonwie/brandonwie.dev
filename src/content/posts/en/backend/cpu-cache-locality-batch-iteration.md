@@ -17,10 +17,14 @@ references:
     title: Locality of reference - Wikipedia
     type: official
 source_content_hash: dc5b4c35ab431529fae21853f19505fd37f9f2cdb79e619ca26952eb18d39799
+expanded: true
 ---
 
-from memory on every pass. When extracting 18+ fields from 100+ items, this
-means thousands of redundant cache misses.
+I was optimizing a bulk insert function that extracted 18 fields from an array of calendar blocks. The code looked clean — one `.map()` per field — but it was iterating the entire array 18 times. For 100 blocks, that meant 1,800 property accesses across 18 separate passes. The functional style was hiding a real performance problem: cache locality.
+
+## The Problem
+
+When you use multiple `.map()` calls to extract fields from the same array, the CPU has to reload each object from memory on every pass:
 
 ```typescript
 // BAD: k separate iterations over n items = O(k*n)
@@ -30,50 +34,27 @@ const starts = blocks.map((b) => b.start); // pass 3: same block re-accessed
 // ... 18 more fields
 ```
 
-Each `.map()` iterates the entire array. For 18 fields over 100 items:
-`18 * 100 = 1,800` property accesses across 18 passes.
-
----
-
-## Difficulties Encountered
-
-- **Not obvious from profiling**: JavaScript profilers show time per function,
-  not cache miss rates. The `.map()` pattern looks clean in flamegraphs, hiding
-  the real bottleneck.
-- **Functional style feels "right"**: `.map()` per field is idiomatic JS/TS and
-  passes linting. The imperative `for...of` alternative looks verbose, making it
-  easy to dismiss.
-- **Hard to measure at small scale**: With fewer than 100 items the difference
-  is invisible because the array fits in L1 anyway. The problem only surfaces at
-  scale (1K+ items with large objects).
-- **V8 optimizations mask the issue**: V8's hidden classes and inline caching
-  partially mitigate the cost, so the penalty is less dramatic than in C/C++ but
-  still measurable at scale.
-
----
+Each `.map()` iterates the entire array. For 18 fields over 100 items: `18 * 100 = 1,800` property accesses across 18 passes. The issue isn't the raw number of accesses — it's that the CPU has to reload the same objects from slower cache levels (or main memory) on every pass.
 
 ## Why Cache Locality Matters
 
-Modern CPUs load data in **cache lines** (64 bytes on x86). When you access a
-Block object, the entire object (or a large portion) gets loaded into L1 cache.
-Subsequent property accesses on the **same object** are essentially free (L1 hit
-= ~1ns vs L3 miss = ~40ns).
+Modern CPUs load data in **cache lines** (64 bytes on x86). When you access a Block object, the entire object (or a large portion) gets loaded into the L1 cache. Subsequent property accesses on the **same object** are essentially free — an L1 cache hit takes ~1 nanosecond, while an L3 cache miss takes ~40 nanoseconds.
 
-With multiple `.map()` calls:
+With multiple `.map()` calls, each pass evicts the objects from cache before the next pass needs them:
 
 1. Pass 1: Block loaded into L1, read `.id`, Block evicted
 2. Pass 2: Block reloaded into L1, read `.title`, Block evicted
 3. Repeat for each field
 
-With single `for...of`:
+With a single `for...of` loop, you access all fields while the object is still hot:
 
 1. Block loaded into L1 once
 2. Read `.id`, `.title`, `.start`, ... (all L1 hits)
 3. Move to next Block
 
----
-
 ## The Solution: Single-Pass Extraction
+
+Replace multiple `.map()` calls with a single loop that extracts all fields in one pass:
 
 ```typescript
 // GOOD: 1 iteration over n items = O(n)
@@ -89,15 +70,9 @@ for (const block of blocks) {
 }
 ```
 
----
-
 ## Why `for...of` Over `forEach`
 
-Both `for...of` and `forEach` are single-pass, so they produce identical cache
-locality behavior. The CPU sees the same sequential memory access pattern either
-way. However, they differ in V8 internals and control flow.
-
-`forEach` achieves the same single-pass benefit:
+Both `for...of` and `forEach` are single-pass with identical cache locality behavior. The CPU sees the same sequential memory access pattern. The difference is in how V8's TurboFan JIT compiler optimizes each construct:
 
 ```typescript
 // Also single-pass — same cache locality as for...of
@@ -108,17 +83,9 @@ blocks.forEach((block) => {
 });
 ```
 
-The difference is in how V8's TurboFan JIT optimizes each construct:
+`for...of` uses the iterator protocol (`Symbol.iterator` + `.next()`). This looks heavier — it allocates an iterator and a `{value, done}` result object per step. But V8's escape analysis eliminates both allocations for arrays since neither object escapes the loop scope.
 
-- **`for...of`** uses the iterator protocol (`Symbol.iterator` + `.next()`).
-  This looks heavier — it allocates an iterator and a `{value, done}` result
-  object per step. But V8's escape analysis eliminates both allocations for
-  arrays, since neither object escapes the loop scope.
-- **`forEach`** invokes a callback per element. TurboFan inlines
-  `Array.prototype.forEach` itself (since V8 v6.1), but the user-supplied
-  callback is inlined _speculatively_. If the callback becomes polymorphic or
-  too large, inlining fails silently and each iteration pays a full function
-  call overhead.
+`forEach` invokes a callback per element. TurboFan inlines `Array.prototype.forEach` itself, but the user-supplied callback is inlined speculatively. If the callback becomes polymorphic or too large, inlining fails silently and each iteration pays full function call overhead — a 20-40% slowdown.
 
 | Aspect           | `for...of`                 | `forEach`                             |
 | ---------------- | -------------------------- | ------------------------------------- |
@@ -127,10 +94,7 @@ The difference is in how V8's TurboFan JIT optimizes each construct:
 | Early exit       | `break` works              | Cannot `break` out of `forEach`       |
 | Degradation risk | Predictable on arrays      | 20-40% slower if callback not inlined |
 
-`for...of` is the safer default for hot paths: more predictable optimization,
-supports `break`, and makes the single-pass intent explicit.
-
----
+`for...of` is the safer default for hot paths: more predictable optimization, supports `break`, and makes the single-pass intent explicit.
 
 ## Real Impact
 
@@ -140,9 +104,7 @@ supports `break`, and makes the single-pass intent explicit.
 | Iterations (100K items) | 1,800,000         | 100,000                 | 18x fewer            |
 | Cache behavior          | Cold on each pass | Hot (temporal locality) | Significant at scale |
 
----
-
-## When It Matters
+## When This Optimization Matters
 
 | Data Size | Multiple .map() OK?  | Why                              |
 | --------- | -------------------- | -------------------------------- |
@@ -151,25 +113,14 @@ supports `break`, and makes the single-pass intent explicit.
 | 1,000+    | No — use single pass | Cache eviction between passes    |
 | 10,000+   | Definitely not       | O(k\*n) becomes measurable       |
 
-## When NOT to Use
+For small arrays (under 100 items), the entire dataset fits in L1 cache regardless of access pattern, so the `.map()` approach is fine and more readable. The optimization only matters at scale — 1K+ items with large objects, where cache eviction between passes becomes measurable.
 
-- **Small arrays (under 100 items)**: The entire dataset fits in L1 cache
-  regardless of access pattern. The `.map()` approach is more readable and
-  functionally idiomatic.
-- **Single field extraction**: If you only need one field, a single `.map()` is
-  already optimal (one pass, one field).
-- **Readability-critical code paths**: In non-hot code paths where clarity
-  matters more than nanoseconds, the functional style is easier to review and
-  maintain.
-- **When using vectorized/bulk APIs**: If the downstream consumer accepts the
-  full object array (not separate field arrays), restructuring into parallel
-  arrays adds complexity for no benefit.
+Also skip this optimization when you only need a single field (one `.map()` is already optimal), in non-hot code paths where readability matters more than nanoseconds, or when the downstream consumer accepts the full object array and doesn't need separate field arrays.
 
----
+## Takeaway
 
-## Key Insight
+When extracting multiple fields from a large array, replace multiple `.map()` calls with a single `for...of` loop. The optimization isn't about reducing iteration count (though it does that too) — the bigger win is **temporal locality**: accessing all fields of an object while it's hot in L1 cache, rather than re-fetching it from slower memory on every pass. Use `for...of` over `forEach` on hot paths for more predictable V8 optimization.
 
-The optimization isn't just about reducing iteration count (O(k\*n) → O(n)). The
-bigger win is **temporal locality**: accessing all fields of an object while
-it's still hot in L1 cache, rather than re-fetching it k times from L2/L3/main
-memory.
+## References
+
+- [Locality of reference — Wikipedia](https://en.wikipedia.org/wiki/Locality_of_reference)

@@ -21,53 +21,27 @@ references:
     title: Celery - Routing Tasks
     type: official
 source_content_hash: b1135b17ad35c3a9b9e281bf1381ed6d707897700b0d993dad581edfc9f260a7
+expanded: true
 ---
 
-separate worker service, without importing the worker's task modules.
+I was setting up a microservices architecture with a FastAPI service handling HTTP requests and a separate Celery worker running ML inference tasks. The natural first attempt was to import the Celery task function and call `.delay()`:
 
----
+```python
+from worker.tasks.llm import summarize_note
+summarize_note.delay(note_id)
+```
+
+The API service crashed at startup. Importing `summarize_note` pulled in `psycopg2`, `transformers`, and a chain of heavy sync dependencies that had no business being in an async FastAPI container. The standard Celery pattern couples the caller to the worker's entire dependency tree.
 
 ## The Problem
 
-In a microservices architecture where the API (FastAPI, async) and the worker
-(Celery, sync) are separate services with different dependencies, the API needs
-to dispatch tasks to the worker without importing worker code. Using the
-standard `.delay()` or `.apply_async()` pattern requires importing the decorated
-task function, which pulls in the worker's sync dependencies (psycopg2, ML
-libraries, etc.) into the async API service — causing import errors and
-dependency bloat.
+In a microservices setup where the API (FastAPI, async) and the worker (Celery, sync) are separate services with different dependencies, the API needs to dispatch tasks without importing worker code. Celery's standard `.delay()` and `.apply_async()` patterns require importing the decorated task function, which transitively imports all worker dependencies into the API service.
 
-## Difficulties Encountered
+This coupling isn't obvious until you hit the import error. The task function itself might be a simple 10-line function, but its module imports the ORM, the ML libraries, the sync database driver — everything the worker needs. Importing one function means installing the worker's entire `requirements.txt` in the API container.
 
-- **Import coupling by default** — Celery's standard `.delay()` pattern requires
-  importing the task function, which transitively imports all worker
-  dependencies. This is not obvious until the API service fails at startup with
-  missing module errors.
-- **Task routing must be duplicated** — The API client needs to know which queue
-  each task routes to, but this configuration lives in the worker. If routing is
-  not mirrored on the API side, tasks land in the default queue and never get
-  picked up by specialized workers.
-- **String-based task names are fragile** — `send_task()` uses string names like
-  `"worker.tasks.llm.summarize_note"`. A typo silently sends the task to a
-  non-existent handler; it sits in the queue forever with no error on the API
-  side.
-- **Async/sync model duplication** — The API uses asyncpg while the worker uses
-  psycopg2. If both need to access the same database models, ORM model files may
-  need duplication or a shared package with no driver-specific imports.
+## The Solution: `send_task()`
 
----
-
-## Key Points
-
-- API and Worker are separate services with different dependencies (async vs
-  sync)
-- API only needs `celery_app.send_task("task.name", args=[...])` — no task
-  import required
-- Task routing configuration should be duplicated between API client and Worker
-  to ensure correct queue assignment
-- `send_task()` uses task name strings, decoupling API from Worker code
-
-## The Solution
+Celery's `send_task()` method dispatches tasks by string name, with no import required:
 
 ```python
 # API side: celery_client.py (send-only, no worker)
@@ -91,8 +65,9 @@ celery_app.conf.update(
 )
 ```
 
+Dispatching a task from the API becomes:
+
 ```python
-# In API service code:
 from app.celery_client import celery_app
 
 celery_app.send_task(
@@ -101,23 +76,11 @@ celery_app.send_task(
 )
 ```
 
-## Options Considered
+The API only needs the Celery library and a broker URL. No worker code, no sync dependencies, no import chain.
 
-| Option                                      | Pros                                                        | Cons                                                                   |
-| ------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `.delay()` / `.apply_async()` (import task) | Type safety, IDE autocomplete, decorated function signature | Requires importing worker code; pulls sync dependencies into async API |
-| `.send_task()` (string name, chosen)        | Fully decoupled; no worker imports needed                   | String-based names (typo-prone); no compile-time validation            |
-| Shared task interface package               | Type safety + decoupling                                    | Extra package to maintain; versioning complexity between services      |
+## The Worker Side
 
-## Why This Approach
-
-Chose `send_task()` because the API and Worker have incompatible dependency
-trees (async vs sync). Importing worker task modules into the API would require
-installing psycopg2, ML libraries, and other heavy sync dependencies in the API
-container. The string-based fragility is mitigated by using constants for task
-names and integration tests that verify task routing.
-
-## Worker Side (Separate Service)
+The worker service has the actual task implementations with the `@task` decorator:
 
 ```python
 # Worker: celery_app.py (has actual task implementations)
@@ -130,33 +93,38 @@ def summarize_note(note_id: str) -> dict:
     ...
 ```
 
-## Sync vs Async Considerations
+The explicit `name=` parameter in the task decorator is important — it ensures the task name matches what the API sends via `send_task()`. Without it, Celery generates a name from the module path, which might not match across services.
 
-- Celery tasks are synchronous — workers need sync DB drivers (psycopg2, not
-  asyncpg)
-- API uses async (asyncpg) for FastAPI compatibility
-- Model duplication may be needed between API and Worker when they can't share
-  async/sync models
+## The Gotchas
 
----
+**Task routing must be duplicated.** The API client needs to know which queue each task routes to. If routing isn't mirrored on the API side, tasks land in the default queue and never get picked up by specialized workers. This is a maintenance burden — routing changes need to be updated in two places.
 
-## When to Use
+**String-based task names are fragile.** A typo in the task name silently sends the task to a non-existent handler. It sits in the queue forever with no error on the API side. Mitigate this by defining task names as constants and verifying routing with integration tests.
 
-- Microservices architecture where API and worker are separate deployables with
-  different dependency trees
-- API service is async (FastAPI/asyncpg) and worker is sync (Celery/psycopg2)
-- You need to dispatch background tasks from the API without importing worker
-  code
+**Async/sync model duplication.** If both the API (asyncpg) and worker (psycopg2) need to access the same database models, ORM model files may need duplication or a shared package with no driver-specific imports. This is the cost of having incompatible dependency trees.
 
-## When NOT to Use
+## Options I Considered
 
-- **Monolith applications** — If API and worker share the same codebase and
-  dependencies, use `.delay()` or `.apply_async()` for type safety and IDE
-  support
-- **Lightweight background tasks** — If tasks are simple and quick (under 1
-  second), consider `asyncio.create_task()` or FastAPI `BackgroundTasks` instead
-  of adding Celery
-- **Event-driven architectures** — If you already have Kafka, RabbitMQ direct,
-  or SNS/SQS for inter-service communication, adding a Celery layer is redundant
-- **Single task type** — If the API only dispatches one type of task, the
-  overhead of Celery client setup and routing configuration may not be justified
+| Option                                      | Pros                                                        | Cons                                                                   |
+| ------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `.delay()` / `.apply_async()` (import task) | Type safety, IDE autocomplete, decorated function signature | Requires importing worker code; pulls sync dependencies into async API |
+| `.send_task()` (string name, chosen)        | Fully decoupled; no worker imports needed                   | String-based names (typo-prone); no compile-time validation            |
+| Shared task interface package               | Type safety + decoupling                                    | Extra package to maintain; versioning complexity between services      |
+
+I chose `send_task()` because the dependency trees are incompatible. The string-based fragility is a real trade-off, but it's manageable with constants and integration tests.
+
+## When NOT to Use This Pattern
+
+- **Monolith applications** — if API and worker share the same codebase and dependencies, use `.delay()` for type safety and IDE support
+- **Lightweight background tasks** — if tasks are under 1 second, consider `asyncio.create_task()` or FastAPI `BackgroundTasks` instead of adding Celery
+- **Existing message infrastructure** — if you already have Kafka, RabbitMQ, or SNS/SQS for inter-service communication, adding a Celery layer is redundant
+- **Single task type** — if the API only dispatches one type of task, the overhead of Celery client setup and routing configuration may not be justified
+
+## Takeaway
+
+When your API and worker services have incompatible dependency trees (async vs sync), use `celery_app.send_task("task.name", args=[...])` instead of importing the task function. The API creates a send-only Celery client with mirrored routing config, and the worker has the actual task implementations. The trade-off is string-based task names instead of type-safe imports — mitigate with constants and integration tests.
+
+## References
+
+- [Celery — Calling Tasks](https://docs.celeryq.dev/en/stable/userguide/calling.html#basics)
+- [Celery — Routing Tasks](https://docs.celeryq.dev/en/stable/userguide/routing.html)

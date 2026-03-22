@@ -11,6 +11,7 @@ tags:
 category: aws
 draft: false
 lang: en
+expanded: true
 references:
   - url: 'https://docs.aws.amazon.com/ebs/latest/userguide/what-is-ebs.html'
     title: What is Amazon Elastic Block Store?
@@ -21,19 +22,32 @@ references:
 source_content_hash: b21e4b0c5f5b18ca96f4ccb62a23f0956dc2508b704014c5c84f7112e2324019
 ---
 
-## Quick Summary
+We had an Airflow cluster with a master node and two worker nodes. A developer updated a DAG file on the master, the scheduler picked up the new version and dispatched a task to a worker -- and the task failed. The worker was still running the old version of the DAG. The file existed on the master's local disk, but the workers had their own separate copies. Nobody synced them.
+
+This is the exact problem that EFS solves: shared storage across multiple EC2 instances. But EFS is not the answer for everything. Databases on EFS perform terribly, and the cost is 4x higher per gigabyte than EBS. Understanding which storage type to use for which workload prevents both outages and wasted money.
+
+---
+
+## The Two Storage Types
+
+At a high level, EBS and EFS serve fundamentally different roles:
 
 | Storage | Type                 | Shared?                  | Purpose                             |
 | ------- | -------------------- | ------------------------ | ----------------------------------- |
 | **EBS** | Block (like HDD/SSD) | No (1 instance only)     | OS, Docker, PostgreSQL, Redis, logs |
 | **EFS** | Network (NFS)        | Yes (multiple instances) | DAG files shared between master     |
 
+Think of EBS as the hard drive inside your computer. It is fast, it is local, and only that one computer can access it. EFS is more like a network drive that everyone in the office mounts -- any machine can read and write to it simultaneously, but there is a performance penalty for going over the network.
+
+---
+
 ## EBS (Elastic Block Storage)
 
-Block storage attached to each EC2 instance. Like the hard drive inside your
-computer - only that specific computer can access it.
+EBS provides block-level storage volumes attached to individual EC2 instances. Each volume belongs to exactly one instance at a time. This is where you put anything that needs fast I/O or is inherently single-instance: operating systems, databases, container runtimes, and logs.
 
 ### Typical Sizes
+
+For our Airflow deployment, here is how we sized the EBS volumes:
 
 | Instance | EBS Size | Contents                                   |
 | -------- | -------- | ------------------------------------------ |
@@ -41,7 +55,11 @@ computer - only that specific computer can access it.
 | Worker   | 50 GB    | Docker images, task artifacts, OS          |
 | Bastion  | 8 GB     | OS only (minimal)                          |
 
-### What's On EBS
+The master gets the largest volume because it runs PostgreSQL (Airflow metadata), Redis (Celery message broker), and accumulates task execution logs over time. Workers need less because they run tasks and discard artifacts. The bastion host needs almost nothing -- it is a jump box.
+
+### What Lives on EBS
+
+Here is the actual disk layout of the master node:
 
 ```text
 100 GB EBS Volume
@@ -59,25 +77,28 @@ computer - only that specific computer can access it.
     └── Operating system
 ```
 
+The Docker volumes section is the most critical. PostgreSQL stores every DAG run, task state, and user account. Redis holds the Celery message queue. Logs grow over time and can consume significant space if you do not set up rotation.
+
 ### If EBS Is Lost
 
-You lose **everything**:
+Losing the master's EBS volume means losing **everything** stored on it:
 
 - All DAG run history
 - Task execution logs
 - User accounts and passwords
 - Airflow Variables and Connections
 
-**Recovery**: Restore from EBS snapshot or rebuild from scratch.
+Recovery requires restoring from an EBS snapshot or rebuilding the entire environment from scratch. This is why automated EBS snapshots are non-negotiable for the master node. We take daily snapshots with a 7-day retention policy.
+
+---
 
 ## EFS (Elastic File System)
 
-Network filesystem (NFS) that **multiple EC2 instances can mount
-simultaneously**.
+EFS is a managed NFS filesystem that multiple EC2 instances can mount simultaneously. Every instance sees the same files at the same time. This is the property that makes EFS valuable -- and the property that EBS fundamentally cannot provide.
 
-### Why EFS For Shared Files?
+### Why EFS for Shared Files?
 
-**The Problem Without Shared Storage:**
+The problem without shared storage is a consistency nightmare:
 
 ```text
 Scenario: You update a DAG file
@@ -93,7 +114,9 @@ Scenario: You update a DAG file
 Result: Task fails or runs wrong logic
 ```
 
-**The Solution With EFS:**
+The scheduler on the master reads version 2 of the DAG, decides it is time to run a task, and sends it to a worker. But the worker still has version 1 of the DAG on its local disk. The task either fails with an import error (if the code structure changed) or, worse, runs silently with the old logic.
+
+With EFS, this problem disappears:
 
 ```text
                     ┌─────────────────┐
@@ -110,7 +133,9 @@ Result: Task fails or runs wrong logic
 Result: Consistency guaranteed
 ```
 
-### What's On EFS
+Both the master and workers mount the same EFS volume at `/opt/airflow/dags/`. When you update a file, every instance sees the update immediately (within NFS cache propagation time, which is typically sub-second).
+
+### What Lives on EFS
 
 ```text
 EFS (~10 GB)
@@ -121,16 +146,19 @@ EFS (~10 GB)
         └── helpers.py
 ```
 
-**Only DAG Python files** - very small.
+Only DAG Python files live on EFS. The volume is small because code is small -- even a complex Airflow deployment with dozens of DAGs rarely exceeds a few hundred megabytes.
 
 ### If EFS Is Lost
 
-Less critical than EBS:
+Losing EFS is much less catastrophic than losing EBS. DAG files can be re-deployed from Git in minutes. No historical data is lost because all the metadata and logs live in PostgreSQL and on EBS.
 
-- DAG files can be re-deployed from Git
-- No historical data lost (that's in PostgreSQL on EBS)
+This asymmetry is important for your backup strategy. EBS needs automated snapshots because losing it means losing data that cannot be reconstructed. EFS stores code that exists in version control -- losing it is inconvenient but recoverable.
+
+---
 
 ## Why Not Use EFS for Everything?
+
+If EFS lets multiple instances share files, why not put the database on EFS too and skip the single-instance limitation of EBS?
 
 | Factor                   | EBS       | EFS             |
 | ------------------------ | --------- | --------------- |
@@ -139,18 +167,15 @@ Less critical than EBS:
 | **Database performance** | Excellent | Poor            |
 | **Shared access**        | No        | Yes             |
 
-**PostgreSQL on EFS would be:**
+PostgreSQL on EFS would be 5-10x slower because every disk operation goes over the network. Database workloads involve constant random reads and writes to data files, WAL logs, and indexes. NFS adds latency to each of these operations, and the cumulative effect on query performance is severe.
 
-- 4x more expensive
-- 5-10x slower (NFS adds latency)
-- Against AWS best practices
+It would also cost 4x more per gigabyte for worse performance. AWS documentation explicitly recommends against running databases on EFS. Use EBS for databases and EFS for shared files -- that is the design boundary.
 
-## Rule of Thumb
-
-- **EBS**: Single-instance data, databases, high I/O
-- **EFS**: Shared files, configuration, code
+---
 
 ## Cost Breakdown
+
+For our Airflow cluster, the total storage cost is modest:
 
 | Storage    | Size   | Rate     | Monthly Cost   |
 | ---------- | ------ | -------- | -------------- |
@@ -159,10 +184,15 @@ Less critical than EBS:
 | EFS        | ~10 GB | $0.30/GB | $3.00          |
 | **Total**  |        |          | **~$15/month** |
 
-## Key Takeaways
+Storage is one of the cheapest parts of an AWS deployment. The real cost of getting storage wrong is not the monthly bill -- it is the outage from a database on EFS that cannot keep up with query load, or the data loss from an EBS volume without snapshots.
 
-1. **EBS = Instance-specific storage** - each instance has its own, used for
-   databases
-2. **EFS = Shared storage** - multiple instances access same files
-3. **Critical data protection** - enable EBS snapshots for Master
-4. **DAG code should be in Git** - ultimate backup
+---
+
+## Practical Takeaway
+
+The rule of thumb is straightforward:
+
+- **EBS** for single-instance data: databases, container runtimes, logs, anything that needs fast I/O
+- **EFS** for shared files: code, configuration, anything that multiple instances need to read simultaneously
+
+Protect EBS with automated snapshots -- it holds data that cannot be reconstructed. Treat EFS as ephemeral -- it holds code that exists in Git. If you find yourself wondering whether a workload belongs on EBS or EFS, ask two questions: Does more than one instance need to access this? Does it need sub-millisecond latency? If the answer to the first question is yes, use EFS. If the answer to the second question is yes, use EBS. If both answers are yes, you need to rethink your architecture.

@@ -21,41 +21,14 @@ references:
     title: Applied in moba-etl deduplication
     type: experience
 source_content_hash: c846fe4436ff26f9647aea9e72d23d9556824a76b96506a0c8e2460fc812655f
+expanded: true
 ---
 
-Copy-paste duplication means bugs get fixed in one but not the other, and the
-implementations drift over time.
+I needed to fix a bug in our ETL pipeline's S3 upload function and realized the exact same bug existed in a second copy of the function in a different module. One was for regular automated exports (`amplitude_common`), the other for manual backfills (`amplitude_backfill`). They were 90% identical — the only differences were the S3 prefix and whether to extract data from a ZIP archive. Classic copy-paste duplication, and fixing the bug twice was the nudge I needed to merge them.
 
-Common pattern in ETL codebases: a "regular" path and a "backfill" path that do
-the same thing with different config.
+## The Problem
 
----
-
-## Difficulties Encountered
-
-- **Spotting the duplication** — The two functions lived in separate modules
-  (`amplitude_common` and `amplitude_backfill`) so the near-identical logic was
-  not obvious until both needed the same bug fix
-- **Identifying the behavioral delta** — Had to diff the two functions
-  line-by-line to confirm the only differences were S3 prefix and zip
-  extraction, not hidden conditional logic
-- **Choosing the right parameterization** — Tempting to use a `mode: str` enum
-  parameter, but that would create a stringly-typed API; keyword-only booleans
-  and strings are more explicit
-- **Preserving caller compatibility** — Existing callers must continue working
-  without changes, which constrains default values to match the original
-  "regular" path behavior
-
----
-
-## The Solution
-
-Unify into one function using Python's `*` separator to add keyword-only
-parameters for the behavioral differences.
-
----
-
-## Pattern
+In ETL codebases, it's common to have a "regular" path and a "backfill" path that do the same thing with slightly different configuration. When these live in separate modules, the duplication is easy to miss — until both need the same fix and you realize you're maintaining two copies of the same logic:
 
 ```python
 # BEFORE: Two separate functions in two files
@@ -74,6 +47,12 @@ def save_data(data, date, hour):
     key = f"backfill/backfill_{date}_{hour}"
     s3.put_object(Body=data, Key=key)
 ```
+
+The behavioral delta was exactly two things: the S3 prefix name and whether to extract from a ZIP before uploading. Everything else — the S3 client calls, error handling, completion marker logic — was identical.
+
+## The Solution: Keyword-Only Parameters
+
+Python's `*` separator lets you add parameters that callers must name explicitly. This is perfect for behavioral flags — it forces clear intent at the call site while keeping the function signature self-documenting:
 
 ```python
 # AFTER: Single function with keyword-only params
@@ -99,9 +78,9 @@ def save_data(
     s3.put_object(Body=upload_data, Key=key)
 ```
 
-## Why Keyword-Only (the `*` separator)
+## Why Keyword-Only (the `*` Separator)
 
-The `*` forces callers to name these parameters explicitly:
+The `*` separator is the key design choice. It forces callers to name the behavioral parameters explicitly:
 
 ```python
 # Existing callers work unchanged (use defaults)
@@ -111,25 +90,17 @@ save_data(data, date, hour)
 save_data(data, date, hour, prefix="backfill", extract_zip=False)
 ```
 
-Without `*`, someone could accidentally pass positional args:
+Without `*`, someone could accidentally pass positional arguments:
 
 ```python
 save_data(data, date, hour, "backfill", False)  # Unclear intent
 ```
 
----
+Reading that call, you'd have no idea what `"backfill"` and `False` control without checking the function signature. Keyword-only parameters make the intent visible at every call site.
 
-## Key Points
+## Choosing the Right Approach
 
-1. **Defaults preserve existing behavior** - existing callers don't change
-2. **Keyword-only prevents positional mistakes** - behavioral flags must be
-   named
-3. **One source of truth** - bug fixes apply to both paths
-4. **Docstring documents both modes** - clear contract for callers
-
----
-
-## When to Use
+The decision of whether to merge functions depends on how much they share:
 
 | Condition                     | Action                                  |
 | ----------------------------- | --------------------------------------- |
@@ -139,25 +110,7 @@ save_data(data, date, hour, "backfill", False)  # Unclear intent
 | Functions are in same module  | Probably already should be one function |
 | Functions are cross-module    | Move to shared module, import from both |
 
----
-
-## When NOT to Use
-
-- **Structural behavioral differences** — If the two functions share less than
-  ~80% of their logic, merging creates a function full of conditional branches
-  that is harder to read than two separate functions
-- **More than 3 behavioral flags** — Too many keyword-only params signal the
-  functions are different abstractions; consider the Strategy pattern or
-  separate classes instead
-- **Performance-critical hot paths** — The extra `if` checks per call are
-  negligible in most code, but in tight loops processing millions of rows, two
-  specialized functions may be warranted
-- **Temporary/throwaway code** — If one path will be deleted soon (e.g.,
-  backfill that runs once), the effort to unify is wasted
-
----
-
-## Options Considered
+## Options I Considered
 
 | Option                    | Pros                                              | Cons                                                     |
 | ------------------------- | ------------------------------------------------- | -------------------------------------------------------- |
@@ -166,11 +119,20 @@ save_data(data, date, hour, "backfill", False)  # Unclear intent
 | Config dict / dataclass   | Groups behavioral config together                 | Over-engineered for 1-3 flags; caller builds object      |
 | Keep separate functions   | No refactoring needed; self-contained             | Bug fixes applied twice; implementations drift           |
 
-## Why This Approach
+I chose keyword-only parameters because the behavioral delta was exactly 2 flags, defaults preserve existing caller compatibility with zero changes, and the `*` separator makes it impossible to pass behavioral flags positionally by accident. The `mode: str` alternative was rejected because it would require internal dispatch logic and provides no type safety.
 
-Chose keyword-only parameters because the behavioral delta was exactly 2 flags
-(prefix and zip extraction), defaults preserve existing caller compatibility
-with zero changes, and the `*` separator makes it impossible to pass behavioral
-flags positionally by accident. The stringly-typed `mode` alternative was
-rejected because it would require internal dispatch logic and provides no type
-safety.
+## When NOT to Merge
+
+Merging isn't always the right call:
+
+- **Structural behavioral differences** — if two functions share less than ~80% of their logic, merging creates a function full of conditional branches that's harder to read than two separate functions
+- **More than 3 behavioral flags** — too many keyword-only params signal the functions are different abstractions; consider the Strategy pattern instead
+- **Temporary/throwaway code** — if one path will be deleted soon (e.g., a one-time backfill), the refactoring effort is wasted
+
+## Takeaway
+
+When you find two near-identical functions with 1-3 behavioral differences, merge them using Python's `*` separator to add keyword-only parameters for the differences. Set defaults to match the original "primary" path so existing callers don't need any changes. The result: one source of truth for bug fixes, explicit intent at every call site, and no risk of the two implementations drifting apart.
+
+## References
+
+- [Python Keyword-Only Arguments](https://docs.python.org/3/tutorial/controlflow.html#keyword-only-arguments)

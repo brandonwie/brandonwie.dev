@@ -11,6 +11,7 @@ tags:
 category: google
 draft: false
 lang: en
+expanded: true
 references:
   - url: >-
       https://developers.google.com/workspace/calendar/api/guides/recurringevents
@@ -19,7 +20,13 @@ references:
 source_content_hash: 245d8e85802530ec07297b47cf9ea0175cffdf68065e6d2a9261e81a55148d58
 ---
 
-## Update Types
+I spent two days debugging a calendar sync feature before I realized the Google Calendar API handles recurring event updates in three completely different ways. The dropdown that says "This event," "All events," or "This and following events" maps to three distinct API flows, and getting any of them wrong corrupts the entire series.
+
+Here is what I wish I had known before I started.
+
+## The Three Update Types
+
+When a user edits a recurring event, Google Calendar shows three options. Each one maps to a different API approach.
 
 | UI Option            | API Approach                    |
 | -------------------- | ------------------------------- |
@@ -27,10 +34,17 @@ source_content_hash: 245d8e85802530ec07297b47cf9ea0175cffdf68065e6d2a9261e81a551
 | "All events"         | Update recurring event resource |
 | "This and following" | Split series (two API calls)    |
 
-## Updating Single Occurrence ("This event only")
+The complexity varies dramatically between them. "This event only" and "All events" each require a single API call. "This and following" requires at least two calls and careful exception handling. Let me walk through each one.
+
+## Updating a Single Occurrence ("This Event Only")
+
+This is the most straightforward case. You retrieve the specific instance from the series, modify it, and save it back. The instance becomes an "exception" to the recurring pattern.
+
+The workflow looks like this:
 
 1. Retrieve the specific instance via `events.instances()`
-2. Update the instance ID (creates an exception)
+2. Modify the fields you need to change
+3. Save the instance back (this creates an exception automatically)
 
 ```typescript
 // Each instance becomes an exception event with:
@@ -38,72 +52,70 @@ source_content_hash: 245d8e85802530ec07297b47cf9ea0175cffdf68065e6d2a9261e81a551
 // - originalStartTime: slot it would have occupied
 ```
 
-**Warning:** Don't modify many instances individually - creates clutter and
-degrades performance.
+The exception keeps a pointer back to the parent series through `recurringEventId`, and it records which time slot it originally occupied via `originalStartTime`. This linkage is how Google knows the exception replaces a specific occurrence rather than being an independent event.
 
-## Updating Entire Series ("All events")
+**A word of caution:** do not modify many instances individually. Each modification creates an exception, and a series with dozens of exceptions creates clutter in the API responses and degrades performance. If you find yourself updating more than a handful of instances, updating the entire series is a better approach.
 
-Update the recurring event resource (parent with RRULE):
+## Updating the Entire Series ("All Events")
+
+To update all occurrences at once, you update the recurring event resource itself -- the parent event that holds the RRULE.
 
 ```typescript
 // Update the recurring event's ID (not an instance ID)
 // Changes propagate to all non-exception occurrences
 ```
 
-**Important:** Using PUT requires including ALL fields (especially recurrence
-rule). Omitting fields resets them.
+The change propagates to every occurrence that has not been individually modified. Existing exceptions keep their special status. If someone changed the location of next Tuesday's meeting, and you then update the series title, next Tuesday's meeting keeps its custom location while getting the new title.
 
-**Exceptions remain:** Existing canceled/modified instances keep their special
-status.
+There is a critical distinction between PUT and PATCH here. Using PUT requires including ALL fields in the request body, especially the recurrence rule. If you omit the recurrence field in a PUT request, the API resets it -- and your recurring event becomes a single event. That is a destructive mistake that is hard to detect in testing because the first occurrence still looks correct.
 
 ## Updating "This and Following" (Split Recurrence)
 
-**No single API call exists.** Must split the series:
+This is where things get genuinely difficult. There is no single API call for "this and following." You have to split the series into two parts manually.
 
-### Step 1: Trim Original Series
+### Step 1: Trim the Original Series
 
-Modify the original RRULE to end BEFORE target instance:
+Modify the original RRULE to end BEFORE the target instance. You do this by setting the `UNTIL` date to the day before the target occurrence, then updating the original recurring event.
 
-- Set `UNTIL` date before target occurrence
-- Update original recurring event
+### Step 2: Create a New Series
 
-### Step 2: Create New Series
+Create a brand-new recurring event that starts at the target occurrence. This new event contains your updated details and follows the same frequency as the original (unless the user is also changing the recurrence pattern).
 
-Create new recurring event:
+### A Concrete Example
 
-- Starts at target occurrence
-- Contains updated details
-- Same frequency as original (unless changing pattern)
+Say you have a weekly Monday meeting and the user wants to change the location starting next week.
 
-### Example
+1. Update the original series: set `UNTIL` to this Monday
+2. Create a new recurring event: starts next Monday with the new location, same weekly frequency
 
-Weekly meeting, change location starting next week:
+The result is two series where there used to be one. The original covers everything up to and including this week. The new one covers next week onward.
 
-1. Update original: set `UNTIL` to this Monday
-2. Create new: starts next Monday with new location
+### The Exception Problem
 
-### Caveat: Lost Exceptions
+Here is the part that burned me: exceptions after the split point are **NOT preserved automatically**. If someone had already modified a specific occurrence three weeks from now, that modification lives on the original series. When you truncate the original to end this week, that exception becomes orphaned.
 
-Exceptions after the split point are **NOT preserved automatically**.
+**To preserve exceptions across a split:**
 
-**To preserve exceptions:**
+1. Before splitting, retrieve all exceptions that fall after the target date
+2. After creating the new series, re-apply those modifications to the corresponding instances in the new series
+3. Transfer canceled and modified occurrences manually
 
-1. Before splitting, retrieve all exceptions after target date
-2. After creating new series, re-apply modifications to new series
-3. Transfer canceled/modified occurrences manually
+This is tedious but necessary. Skipping it means losing user edits silently -- the kind of bug that erodes trust in your product.
 
-## PATCH vs PUT
+## PATCH vs PUT: Choose Carefully
 
 | Method | Behavior                      | Use When              |
 | ------ | ----------------------------- | --------------------- |
 | PUT    | Replaces entire resource      | Comprehensive updates |
 | PATCH  | Updates only specified fields | Small changes (safer) |
 
-**PUT Warning:** Always include recurrence field or series becomes single event.
+PUT is dangerous because omitting any field resets it. Always include the recurrence field when using PUT on recurring events, or you will accidentally destroy the series.
 
-**PATCH Note:** Counts as 3 quota units vs 1 for PUT.
+PATCH is safer for small changes because it leaves unmentioned fields alone. However, PATCH costs 3 quota units compared to 1 for PUT. For high-volume integrations, that difference matters.
 
-### Best Practice for Atomicity
+### The Best Practice for Safe Updates
+
+The Google docs recommend a get-then-update pattern instead of relying on PATCH:
 
 ```text
 // Instead of PATCH:
@@ -112,30 +124,34 @@ Exceptions after the split point are **NOT preserved automatically**.
 // Uses 2 calls but ensures latest data
 ```
 
+This approach uses 2 API calls but guarantees you are working with the latest data. The ETag check prevents overwriting someone else's concurrent changes.
+
 ## Error Handling
+
+Three error codes come up repeatedly when working with recurring events.
 
 ### 404 Not Found
 
-- Wrong eventId or calendarId
-- Event never created or permanently removed
-- No access to calendar
-- **Action:** Verify IDs, don't retry blindly
+This means one of several things: wrong `eventId` or `calendarId`, the event was never created, the event was permanently removed, or your service account does not have access to the calendar.
+
+The fix is to verify your IDs. Do not retry blindly -- a 404 on a calendar event is almost never transient.
 
 ### 410 Gone
 
-- Event was deleted
-- Sync token expired (for list operations)
-- **Action:** Treat as permanently gone, clean up local state
+The event was deleted, or your sync token has expired. Treat this as permanent. Clean up your local state and move on. Retrying a 410 will never succeed.
 
 ### 412 Precondition Failed
 
-- Stale data when using ETag
-- **Action:** Fetch latest event, re-apply changes
+This happens when you use ETag-based optimistic concurrency and your data is stale. Someone else modified the event between your GET and your PUT. The correct response is to fetch the latest event and re-apply your changes.
 
 ## Key Takeaways
 
-1. **Single instance updates** create exceptions - use sparingly
-2. **Series updates** require full resource with PUT (or use PATCH for safety)
-3. **"This and following"** requires splitting - plan for exception handling
-4. **Always preserve RRULE** when using PUT on recurring events
-5. **Handle 404/410** gracefully - events may be deleted by others
+Working with recurring events in the Google Calendar API comes down to five principles:
+
+1. **Single instance updates create exceptions.** Use them sparingly to avoid cluttering the series.
+2. **Series updates require the full resource with PUT.** Use PATCH if you want safety, but watch the quota cost.
+3. **"This and following" requires splitting the series.** Plan for exception handling before you implement it.
+4. **Always preserve the RRULE when using PUT.** Omitting it silently destroys the recurring pattern.
+5. **Handle 404 and 410 gracefully.** Events may be deleted by other users or integrations at any time.
+
+The Google Calendar API documentation covers these concepts, but it does not emphasize how much complexity hides behind that three-option dropdown. The split operation alone took me longer to implement correctly than the other two combined. If you are building a calendar integration, start with "All events" and "This event only" -- get those working and tested before you tackle "This and following."

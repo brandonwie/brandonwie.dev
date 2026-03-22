@@ -24,32 +24,22 @@ references:
     title: '5080'
     type: official
 source_content_hash: adf9b8f36b899c2928c33cbd271977341b7bf722468fc1dbec26a20b529e1829
+expanded: true
 ---
 
-2. [Snapshotters](#snapshotters)
-3. [Filesystem Permissions](#filesystem-permissions)
-4. [ACLs (Access Control Lists)](#acls-access-control-lists)
+I was trying to run k3s (lightweight Kubernetes) on a Synology NAS and immediately hit a wall: "pids cgroup controller not found." That error led me down a rabbit hole through cgroups, container snapshotters, filesystem permissions, and ACLs — all Linux fundamentals that container runtimes depend on but rarely surface until something breaks.
 
----
+This post covers the four Linux concepts I had to understand to diagnose that failure: cgroups for resource isolation, snapshotters for container filesystem layers, filesystem permissions, and ACLs.
 
 ## Cgroups (Control Groups)
 
-### What & Why
+### What They Are
 
-Cgroups are a Linux kernel feature that allows you to allocate, limit, and
-monitor system resources (CPU, memory, disk I/O, network) for groups of
-processes. Think of them as "resource budgets" for containers.
+Cgroups are a Linux kernel feature that allocates, limits, and monitors system resources (CPU, memory, disk I/O, network) for groups of processes. Think of them as "resource budgets" for containers.
 
-When you run a container, the container runtime uses cgroups to ensure that
-container can't hog all the system resources. Without cgroups, a misbehaving
-container could:
+When you run a container, the container runtime uses cgroups to prevent that container from hogging all system resources. Without cgroups, a misbehaving container could use 100% of CPU, consume all available memory, fork-bomb the system with infinite processes, or saturate disk I/O.
 
-- Use 100% of CPU, starving other containers
-- Consume all available memory, causing OOM kills
-- Fork-bomb the system with infinite processes
-- Saturate disk I/O, making the system unresponsive
-
-### How It Works
+### How They Work
 
 Each cgroup controller manages a specific type of resource:
 
@@ -61,7 +51,7 @@ Each cgroup controller manages a specific type of resource:
 | `blkio`    | Disk I/O       | "This container gets 10MB/s read max"        |
 | `freezer`  | Pause/resume   | "Freeze all processes in this container"     |
 
-#### Cgroups Hierarchy
+These controllers are organized in a hierarchy under `/sys/fs/cgroup/`. Each container gets its own directory within this hierarchy, and resource limits are controlled by writing values to special files:
 
 ```text
 /sys/fs/cgroup/               (cgroup filesystem mount)
@@ -86,7 +76,7 @@ Each cgroup controller manages a specific type of resource:
         └── ...
 ```
 
-#### Checking Available Controllers
+You can check which controllers your kernel supports with a quick command:
 
 ```bash
 # View all cgroup controllers and their status
@@ -100,9 +90,9 @@ cat /proc/cgroups
 #pids           0            0              0    ← MISSING on Synology!
 ```
 
-### Alternatives
+### Cgroup Versions
 
-#### Cgroup Versions
+There are two major versions, and the version your system runs matters for Kubernetes compatibility:
 
 | Version       | Features                                    | Compatibility               |
 | ------------- | ------------------------------------------- | --------------------------- |
@@ -110,65 +100,28 @@ cat /proc/cgroups
 | **cgroup v2** | Unified hierarchy, all controllers together | Modern, required by new K8s |
 | **Hybrid**    | Mix of v1 and v2                            | Transitional, problematic   |
 
-### Key Takeaways
+### The "pids cgroup controller not found" Error
 
-- **Cgroups = resource limits** — They prevent containers from hogging CPU,
-  memory, or spawning too many processes
-- **`pids` controller is critical for K8s** — Modern Kubernetes (1.20+) requires
-  it to prevent fork bombs
-- **Check with `cat /proc/cgroups`** — Quick way to see what your kernel
-  supports
-
-### Common Issues
-
-#### "pids cgroup controller not found"
-
-**Cause:** The Linux kernel doesn't have `CONFIG_CGROUP_PIDS` enabled.
-
-**Diagnosis:**
+This is the error that started my investigation. The Linux kernel on Synology NAS doesn't have `CONFIG_CGROUP_PIDS` enabled, which means the `pids` controller is missing. Modern Kubernetes (1.20+) requires it to prevent fork bombs.
 
 ```bash
 cat /proc/cgroups | grep pids
 # No output = pids controller not available
 ```
 
-**Solutions:**
+The options are: use a different kernel (VM or different distro), use an older k3s version (pre-1.20), or use Docker Compose instead of Kubernetes.
 
-- Use a different kernel (VM, different distro)
-- Use older k3s (pre-1.20) that doesn't require it
-- Use Docker Compose instead of Kubernetes
+## Snapshotters
 
-#### Snapshotters
+### What They Are
 
-### What & Why
+Snapshotters are the strategy that container runtimes (like containerd) use to manage container filesystem layers. Containers share a base image (like `ubuntu:22.04`) but each needs its own writable layer for changes.
 
-Snapshotters are the strategy that container runtimes (like containerd) use to
-manage container filesystem layers. Containers share a base image (like
-`ubuntu:22.04`) but each needs its own writable layer for changes.
+Think of it like a library book with transparent sticky notes: the base image is the original book (read-only, shared by everyone), the container layer is your sticky notes (writable, unique to you), and the merged view is both combined seamlessly.
 
-Think of it like a library book with transparent sticky notes:
+Without efficient snapshotters, running 100 nginx containers would require 100 copies of nginx (~50MB each = 5GB). With snapshotters, 100 containers share ONE base image (~50MB), and only unique changes are stored per container.
 
-- **Base image (lower layer):** The original book - read-only, shared by
-  everyone
-- **Container layer (upper layer):** Your sticky notes - writable, unique to you
-- **Merged view:** What you see - both combined seamlessly
-
-Without efficient snapshotters:
-
-- Running 100 nginx containers would require 100 copies of nginx (~50MB each =
-  5GB)
-- Every container start would require copying the entire base image
-- Disk usage would explode
-
-With snapshotters:
-
-- 100 containers share ONE base image (~50MB)
-- Only unique changes are stored per container
-- Container startup is nearly instant (no copy needed)
-
-### How It Works
-
-#### Snapshotter Layering (overlayfs)
+### How Overlayfs Works
 
 ```text
 YOUR CHANGES (Upper Layer - writable)
@@ -199,7 +152,7 @@ WHAT CONTAINER SEES (Merged View)
 └─────────────────────────────────────────┘
 ```
 
-### Alternatives
+### Snapshotter Options
 
 | Snapshotter      | How It Works                     | Performance | Use Case                            |
 | ---------------- | -------------------------------- | ----------- | ----------------------------------- |
@@ -209,42 +162,11 @@ WHAT CONTAINER SEES (Merged View)
 | `zfs`            | ZFS copy-on-write                | Fast        | ZFS systems                         |
 | `btrfs`          | Btrfs snapshots                  | Fast        | Btrfs systems                       |
 
-### Key Takeaways
+If you see "overlayfs: cannot mount," your kernel doesn't support it. Check with `grep overlay /proc/filesystems`. The fallback is `--snapshotter=native`, which works everywhere but copies the entire image on write — slower but functional.
 
-- **Snapshotters = efficient storage** — They let 100 containers share one base
-  image
-- **overlayfs needs kernel support** — If missing, fall back to `native` (slower
-  but works)
+## Filesystem Permissions
 
-### Common Issues
-
-#### "overlayfs: cannot mount"
-
-**Cause:** Kernel doesn't support overlayfs, or nested container issue.
-
-**Diagnosis:**
-
-```bash
-grep overlay /proc/filesystems
-# No output = overlayfs not available
-```
-
-**Solution:** Use `--snapshotter=native` flag when running containerd/k3s.
-
-#### Filesystem Permissions
-
-### What & Why
-
-Unix filesystem permissions control who can read, write, or execute files. Every
-file has:
-
-- **Owner:** The user who created it
-- **Group:** A group of users with shared access
-- **Others:** Everyone else
-
-Permissions are expressed as a 3-digit octal number or symbolic notation.
-
-### How It Works
+Unix filesystem permissions control who can read, write, or execute files. Every file has an owner, a group, and "others" — each with their own permission set:
 
 ```text
 -rw-r--r--  1  user  group  1024  Jan 16 10:00  file.txt
@@ -271,40 +193,24 @@ COMMON PERMISSIONS:
   600  -rw-------  Private file (owner read/write only)
 ```
 
-### Key Takeaways
+The key points to remember: SSH is extremely strict about permissions (keys must be 600, `.ssh/` must be 700), directories need execute permission to enter (not just read), and default permissions come from `umask` (usually 022, meaning new files are 644).
 
-- **SSH is extremely strict about permissions** — Keys must be 600, .ssh/ must
-  be 700
-- **Directories need execute to enter** — A directory with 644 can be listed but
-  not entered
-- **Default permissions come from umask** — Usually 022, meaning new files are
-  644
+## ACLs (Access Control Lists)
 
-#### ACLs (Access Control Lists)
+ACLs provide more granular permission control than traditional Unix permissions. They allow you to grant different permissions to multiple specific users or groups on the same file — something traditional permissions can't do.
 
-### What & Why
+### Detecting ACLs
 
-ACLs provide more granular permission control than traditional Unix permissions.
-They allow you to grant different permissions to multiple users or groups on the
-same file.
-
-Traditional permissions: "Owner can write, everyone else can read" ACLs: "Owner
-can write, user bob can read, group devs can read+write, user alice has no
-access"
-
-### How It Works
-
-#### Detecting ACLs
+The `+` sign in `ls -la` output is your indicator:
 
 ```bash
-# The + sign indicates ACLs are present
 ls -la ~/.ssh/
 drwxrwxrwx+  2 user group 4096 Jan 16 10:00 .ssh/
           ^
           └── This + means ACLs override standard permissions!
 ```
 
-#### Viewing ACLs
+### Viewing and Removing ACLs
 
 ```bash
 # Linux
@@ -314,7 +220,7 @@ getfacl ~/.ssh/
 synoacltool -get ~/.ssh/
 ```
 
-#### Removing ACLs (Synology)
+On Synology, ACLs can override `chmod`. If you `chmod 700 ~/.ssh` but the `+` sign remains, ACLs are still granting wider access:
 
 ```bash
 # Remove ACLs so chmod can take effect
@@ -326,17 +232,11 @@ chmod 700 ~/.ssh
 chmod 600 ~/.ssh/authorized_keys
 ```
 
-### Key Takeaways
+This was the second gotcha I hit on Synology — SSH key authentication kept failing despite correct `chmod` because Synology's ACLs were overriding the permissions.
 
-- **ACLs can override chmod** — If ACLs are present, chmod may appear to do
-  nothing
-- **Look for the + sign** — In `ls -la`, a + after permissions indicates ACLs
-- **Synology uses ACLs extensively** — May need to remove them for SSH to work
+## Synology-Specific Notes
 
-#### Synology-Specific Notes
-
-Synology DSM uses a customized Linux kernel (3.10.x based) that lacks several
-modern features:
+Synology DSM uses a customized Linux kernel (3.10.x based) that lacks several modern features:
 
 | Feature              | Status  | Impact                             |
 | -------------------- | ------- | ---------------------------------- |
@@ -344,26 +244,19 @@ modern features:
 | `CONFIG_SECCOMP`     | Limited | Some security features unavailable |
 | overlayfs (nested)   | Limited | Can't nest overlays in Docker      |
 
-**Available on Synology:**
+Available controllers: `cpuset, cpu, cpuacct, blkio, memory, devices, freezer`
 
-```text
-cpuset, cpu, cpuacct, blkio, memory, devices, freezer
-```
+Missing controllers: `pids, hugetlb, perf_event, net_cls, net_prio`
 
-**Missing:**
+This is why Synology NAS works well for Docker Compose but not for Kubernetes — Docker Compose doesn't require the `pids` controller, but Kubernetes does.
 
-```text
-pids, hugetlb, perf_event, net_cls, net_prio
-```
+## Takeaway
 
-This is why Synology NAS works well for Docker Compose but not for Kubernetes.
-
----
+When container infrastructure fails with kernel-level errors, the problem is usually one of these four fundamentals: cgroups (resource limits missing), snapshotters (filesystem layering unsupported), permissions (wrong mode), or ACLs (overriding permissions silently). On non-standard Linux environments like Synology, check `cat /proc/cgroups` and `grep overlay /proc/filesystems` first — they'll tell you immediately whether your kernel supports what the container runtime needs.
 
 ## References
 
 - [Linux Kernel Cgroups Documentation](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html)
 - [containerd Snapshotters](https://github.com/containerd/containerd/blob/main/docs/snapshotters/README.md)
 - [OverlayFS Documentation](https://www.kernel.org/doc/html/latest/filesystems/overlayfs.html)
-- [k3s GitHub Issue #5080](https://github.com/k3s-io/k3s/issues/5080) - Synology
-  cgroup issues
+- [k3s GitHub Issue #5080](https://github.com/k3s-io/k3s/issues/5080) — Synology cgroup issues

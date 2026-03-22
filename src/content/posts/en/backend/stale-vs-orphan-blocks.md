@@ -15,54 +15,23 @@ references:
     title: Google Calendar API - Sync Events
     type: official
 source_content_hash: 636f491942fa63855e71c52d15dafedd5a7065181825f5c4759626a3c57e8f21
+expanded: true
 ---
 
-scenarios exist that require different handling strategies.
+Our calendar sync was deleting blocks it shouldn't have been keeping, and keeping blocks it should have been deleting. Both problems looked the same on the surface — "extra blocks in the database" — but they had completely different root causes. Conflating them into a single cleanup pass caused cascading bugs: dangling references, ghost events, and data loss on shared calendars.
 
----
+The fix required understanding that there are two distinct types of blocks that need cleanup, each with different detection logic and different handling rules.
 
-## The Problem
+## Two Types of Cleanup
 
-After syncing events from Google Calendar API, the local database can accumulate
-blocks that no longer reflect reality: events deleted from Google still exist
-locally, and recurring event instances may reference parents that no longer
-exist. Without distinguishing these two cleanup scenarios and handling them in
-the correct order, the sync produces dangling references, ghost events, and data
-corruption.
-
----
-
-## Difficulties Encountered
-
-- **Confusing stale with orphan** — Both result in "blocks that should be
-  deleted," but they have fundamentally different detection logic (absence from
-  response vs presence without valid parent). Treating them identically caused
-  missed deletions and false positives
-- **Order-of-operations bug** — Running orphan detection before stale cleanup
-  caused T blocks to be linked to parents that stale cleanup then deleted,
-  creating dangling `originalId` references that broke subsequent syncs
-- **Partial-access edge case** — A cancelled T block without a parent is an
-  orphan, but a non-cancelled T block without a parent might represent partial
-  calendar access (user can see the instance but not the series). Deleting these
-  caused data loss for shared calendars
-- **Performance at scale** — Naive O(n\*m) comparison between existing blocks
-  and Google response was too slow for users with 100k+ blocks; had to switch to
-  Set-based O(1) lookups and batched deletes
-
----
-
-## Definitions
+After syncing events from Google Calendar API, the local database accumulates blocks that no longer reflect reality. These fall into two categories that look similar but require fundamentally different handling:
 
 | Concept          | Definition                                                    | Trigger                   |
 | ---------------- | ------------------------------------------------------------- | ------------------------- |
 | **Stale Block**  | ANY calendar block NOT in Google response                     | Event deleted from Google |
 | **Orphan Block** | T block (recurring instance) IN response without valid parent | Parent deleted/modified   |
 
----
-
-## Key Distinction
-
-The critical difference is **presence in API response**:
+The critical difference is **presence in the API response**:
 
 ```text
 Google API Response
@@ -72,16 +41,22 @@ Google API Response
 └── Does NOT contain event → Stale (needs cleanup)
 ```
 
----
+Stale blocks are absent from the response entirely — the event was deleted from Google, so it shouldn't exist locally. Orphan blocks are present in the response but reference a parent that no longer exists — a recurring event instance whose series was deleted or modified.
+
+## Why Order Matters
+
+This was the bug that made me realize these are two separate problems. We were running orphan detection before stale cleanup, which created a race condition:
+
+1. Orphan detection links T blocks to their parent blocks
+2. Stale cleanup then deletes some of those parent blocks
+3. The T blocks now have dangling `originalId` references to deleted parents
+4. Subsequent syncs fail trying to resolve those broken references
+
+The correct order is stale cleanup first, then orphan detection. Stale cleanup removes blocks that are absent from the response. Only after that's done can orphan detection safely check whether remaining T blocks have valid parents.
 
 ## Stale Block Cleanup
 
-**When**: Full sync only (no syncToken or resync after 410)
-
-**Why**: During full sync, Google returns ALL current events. Absence means the
-event was deleted from Google.
-
-**Implementation**:
+Stale cleanup runs during full sync only — when there's no syncToken or after a 410 resync. During full sync, Google returns ALL current events. If a local block isn't in that response, the event was deleted from Google.
 
 ```typescript
 // O(n) comparison using Set-based lookup
@@ -94,25 +69,15 @@ for (const block of existingBlocks) {
 }
 ```
 
-**Important**: Stale cleanup handles ALL block types (parent, standalone, AND T
-blocks). If a T block is not in the response, it was deleted from Google.
+The Set-based lookup is important. A naive approach comparing each existing block against the full Google response is O(n*m) — too slow for users with 100k+ blocks. Converting to a Set gives O(1) lookups per block.
 
----
+Stale cleanup handles all block types: parent series, standalone events, and T blocks. If any block isn't in the response, it's stale.
 
 ## Orphan Block Detection
 
-**When**: All syncs (incremental and full)
+Orphan detection runs on all syncs — both incremental and full. A T block (recurring instance) may appear in the Google response, but its parent series may no longer exist in the database.
 
-**Why**: A T block (recurring instance) may be returned by Google but its parent
-block may no longer exist or be valid.
-
-**Conditions for orphan**:
-
-1. T block IS in Google response
-2. Parent block NOT found in DB
-3. T block status is CANCELLED
-
-**Implementation**:
+The key nuance: not every parentless T block is an orphan. A cancelled T block without a parent is genuinely orphaned — the instance was cancelled and its series is gone. But a non-cancelled T block without a parent might represent partial calendar access. The user can see the instance (someone shared the specific occurrence) but not the entire series. Deleting these causes data loss for shared calendars.
 
 ```typescript
 // Only CANCELLED instances without parents are true orphans
@@ -120,19 +85,6 @@ if (block.itemStatus === BlockStatus.Deleted && !parentBlock) {
   orphansToDelete.push(block.id);
 }
 ```
-
----
-
-## Order Matters
-
-Stale cleanup MUST run BEFORE orphan detection (POST-PROCESSING):
-
-1. Stale cleanup deletes blocks NOT in Google response
-2. POST-PROCESSING links T blocks IN response to parents
-3. If reversed: POST-PROCESSING would link T blocks to parents that stale
-   cleanup then deletes → dangling originalId references
-
----
 
 ## Decision Table
 
@@ -143,15 +95,13 @@ Stale cleanup MUST run BEFORE orphan detection (POST-PROCESSING):
 | T block IN response, no parent, CANCELLED     | POST-PROCESSING | Hard delete (orphan)  |
 | T block IN response, no parent, NOT cancelled | POST-PROCESSING | Keep (partial access) |
 
----
+## Performance at Scale
 
-## Performance Considerations
+For users with large calendars (100k+ blocks), three optimizations are necessary:
 
-For users with 100k+ blocks:
-
-1. **Minimal SELECT** - Only fetch required fields (id, gcalId)
-2. **Set-based lookup** - O(1) comparison instead of O(n) search
-3. **Batch DELETE** - Respect PostgreSQL parameter limits (~32k)
+1. **Minimal SELECT** — only fetch the fields needed for comparison (id, gcalId), not the full block object
+2. **Set-based lookup** — O(1) comparison instead of O(n) search per block
+3. **Batch DELETE** — respect PostgreSQL parameter limits by deleting in chunks
 
 ```typescript
 const BATCH_SIZE = 100;
@@ -160,27 +110,16 @@ for (let i = 0; i < staleIds.length; i += BATCH_SIZE) {
 }
 ```
 
----
+## When This Applies
 
-## When to Use
+Run stale cleanup during full syncs (initial sync or resync after 410 GONE) where Google returns the complete event set. Run orphan detection on any sync that processes recurring events, since parent series can be modified or deleted independently of their instances.
 
-- **Full sync (re-sync after 410 or initial sync)** — Stale cleanup is essential
-  because Google returns the complete event set; any local block not in that set
-  is definitively deleted
-- **Any sync that processes recurring events** — Orphan detection is needed
-  whenever T blocks are present, since parent series can be modified or deleted
-  independently of their instances
-- **High-volume calendars (100k+ blocks)** — The Set-based lookup and batched
-  delete patterns become critical at scale
+Skip stale cleanup during incremental syncs with a valid syncToken — Google only returns changed events, so absence from the response doesn't mean deletion. Orphan detection is irrelevant if the system doesn't support recurring events.
 
----
+## Takeaway
 
-## When NOT to Use
+"Blocks that need cleanup" is not a single category. Stale blocks are absent from the API response — deleted from the source. Orphan blocks are present in the response but missing their parent — structurally invalid. Handle them separately, in the right order (stale first, orphan second), and respect the partial-access edge case where a non-cancelled T block without a parent is intentional, not broken.
 
-- **Incremental sync with valid syncToken** — Stale cleanup should NOT run
-  during incremental syncs because Google only returns changed events, not all
-  events. Absence from an incremental response does not mean deletion
-- **Read-only calendar views** — If the application only displays calendar data
-  without persisting a local copy, there are no local blocks to clean up
-- **Non-recurring event systems** — Orphan detection is irrelevant if the system
-  does not support recurring events (no T blocks, no parent-child relationships)
+## References
+
+- [Google Calendar API — Sync Events](https://developers.google.com/calendar/api/guides/sync)

@@ -11,6 +11,7 @@ tags:
 category: data
 draft: false
 lang: en
+expanded: true
 references:
   - url: 'https://amplitude.com/docs/apis/analytics/export'
     title: export
@@ -21,48 +22,39 @@ references:
 source_content_hash: eb50c2b64160c8af77b018c3e6ab37d96b70a03cb8dd615bfd57a5212cc9b2ea
 ---
 
-exports.
+I spent an entire afternoon arguing with my team about whether our Amplitude ETL pipeline was fetching the wrong day's data. The pipeline ran at 01:00 KST, our users were in Korea, and someone reasonably asked: "Shouldn't we fetch KST-based hours?" It felt like a valid question. It turned out the answer was hiding in the Amplitude project settings, not the API docs.
 
 ---
 
-## The Problem
+## The Confusion
 
-The ETL pipeline fetching Amplitude event data ran at 01:00 KST (16:00 UTC). The
-team questioned whether the export should fetch KST-based hours since users are
-in Korea. This ambiguity risked fetching the wrong 24-hour window of events --
-either missing data or duplicating it -- if the timezone assumption was wrong.
-The Amplitude Export API documentation does not make the timezone behavior of
-`start`/`end` parameters immediately obvious.
+Our ETL pipeline fetched Amplitude event data daily at 01:00 KST (16:00 UTC). The team questioned whether the export should fetch KST-based hours since users are in Korea. This ambiguity risked fetching the wrong 24-hour window of events -- either missing data or duplicating it -- if the timezone assumption was wrong.
+
+The Amplitude Export API documentation does not make the timezone behavior of `start`/`end` parameters immediately obvious. That gap led to a full team discussion about whether we had been pulling the wrong data all along.
 
 ---
 
-## Difficulties Encountered
+## Why This Was Harder Than It Sounds
 
-- **Documentation ambiguity:** The Amplitude docs do not explicitly state
-  whether `start`/`end` parameters follow the project timezone or are always
-  UTC. Had to verify empirically by checking `server_upload_time` suffixes in
-  exported events.
-- **KST vs UTC confusion in team discussions:** Team members assumed "business
-  day" meant KST calendar day, but the project was configured for UTC. Required
-  checking Amplitude Console settings to confirm.
-- **Hypothetical KST scenario complicated reasoning:** Had to work through what
-  would happen if the project were KST-configured (requiring fetches across two
-  UTC dates) to convince the team that the current UTC setup was simpler and
-  correct.
-- **No test environment for timezone changes:** Could not safely switch the
-  Amplitude project timezone to KST to test behavior. All verification was done
-  by reading existing data patterns.
+Four things made this investigation slow.
+
+**Documentation ambiguity.** The Amplitude docs do not explicitly state whether `start`/`end` parameters follow the project timezone or are always UTC. I had to verify empirically by checking `server_upload_time` suffixes in exported events.
+
+**KST vs UTC confusion in team discussions.** Team members assumed "business day" meant KST calendar day, but the project was configured for UTC. Confirming that required navigating into the Amplitude Console settings.
+
+**Hypothetical KST scenario complicated reasoning.** I had to work through what would happen if the project were KST-configured (requiring fetches across two UTC dates) to convince the team that the current UTC setup was simpler and correct.
+
+**No test environment for timezone changes.** There was no way to safely switch the Amplitude project timezone to KST to test behavior. All verification was done by reading existing data patterns.
 
 ---
 
-## Critical Context
+## The Answer: It Depends on Your Project Timezone
 
-**Question:** "ETL runs at 01:00 KST (16:00 UTC) fetching yesterday's data.
-Shouldn't we fetch KST-based hours since our users are in Korea?"
+The question was: "ETL runs at 01:00 KST (16:00 UTC) fetching yesterday's data. Shouldn't we fetch KST-based hours since our users are in Korea?"
 
-**Answer:** NO. Amplitude project `PROJECT_ID` uses **UTC timezone**, not KST.
+The answer: **No.** Our Amplitude project used UTC timezone, not KST. The Export API always interprets `start`/`end` parameters in UTC. The project timezone setting determines how Amplitude displays data in its dashboard, but the API does not convert for you.
 
-## Key Facts
+Here is what I confirmed:
 
 | Setting                          | Value                            | Impact                                            |
 | -------------------------------- | -------------------------------- | ------------------------------------------------- |
@@ -72,29 +64,28 @@ Shouldn't we fetch KST-based hours since our users are in Korea?"
 | **DAG Execution Time**           | 16:00 UTC = 01:00 KST (next day) | Processes previous UTC day                        |
 | **Hours Fetched**                | 0-23 UTC                         | Complete business day in UTC                      |
 
-## Hour Boundaries
+---
 
-### Export API Request Format
+## How the Export API Request Works
+
+The request format is straightforward:
 
 ```text
 start=YYYYMMDDTHH
 end=YYYYMMDDTHH
 ```
 
-**Timezone:** Always UTC, regardless of project timezone setting.
+The timezone is always UTC, regardless of the project timezone setting.
 
-### Example
+For example, with a UTC-configured project, the request `start=20260126T00&end=20260126T01` returns events from UTC 2026-01-26 00:00:00 to 00:59:59. No surprises.
 
-**Project Timezone:** UTC **Fetch Request:** `start=20260126T00&end=20260126T01`
-**Result:** Events from UTC 2026-01-26 00:00:00 to 00:59:59
+But if the project were configured for KST (hypothetical), that same request would still fetch UTC hour 0. That 9-hour offset between KST and UTC would mean you are not getting what you think you are getting.
 
-**If project were KST (hypothetical):** **Fetch Request:**
-`start=20260126T00&end=20260126T01` **Result:** Would still fetch UTC hour 0,
-causing 9-hour offset issues!
+---
 
-## ETL Pipeline Flow
+## Tracing the Full ETL Pipeline
 
-### Daily ETL Schedule
+Understanding the timeline end-to-end made the logic click.
 
 ```text
 DAG: amplitude_etl_dag
@@ -102,7 +93,7 @@ Schedule: 0 16 * * * (16:00 UTC = 01:00 KST next day)
 Processes: {{ yesterday_ds }} (UTC date)
 ```
 
-### Example Timeline
+Here is a concrete example:
 
 | Time (UTC)       | Time (KST)       | Action                                              |
 | ---------------- | ---------------- | --------------------------------------------------- |
@@ -110,7 +101,7 @@ Processes: {{ yesterday_ds }} (UTC date)
 | 2026-01-26 15:00 | 2026-01-27 00:00 | Events continue (past KST midnight)                 |
 | 2026-01-27 16:00 | 2026-01-28 01:00 | **DAG runs**, fetches 2026-01-26 UTC (all 24 hours) |
 
-### What Gets Fetched
+The fetch covers hours 0 through 23 for the UTC date 2026-01-26:
 
 ```text
 Execution Date: 2026-01-26 (UTC)
@@ -122,21 +113,24 @@ Hour 1:  2026-01-26 01:00-01:59 UTC = 2026-01-26 10:00-10:59 KST
 Hour 23: 2026-01-26 23:00-23:59 UTC = 2026-01-27 08:00-08:59 KST
 ```
 
-**Result:** Covers full UTC day = 24 hours of events, which spans 2 KST calendar
-dates but represents one complete business day in UTC.
+The result covers a full UTC day -- 24 hours of events. That spans two KST calendar dates, but represents one complete business day in UTC. No data missing, no data duplicated.
 
-## Validation: Check Your Project Timezone
+---
 
-### Amplitude Console
+## Validating Your Own Setup
+
+Before trusting any of this for your project, verify what timezone your Amplitude project uses.
+
+### Through the Amplitude Console
 
 1. Login to Amplitude
-2. Navigate to: **Settings → Projects → [Your Project] → General**
-3. Find: **"Timezone"** setting
-4. Verify: Should show **"UTC"** (not "Asia/Seoul")
+2. Navigate to: **Settings > Projects > [Your Project] > General**
+3. Find the **"Timezone"** setting
+4. Verify it shows **"UTC"** (not "Asia/Seoul" or another local timezone)
 
-### Via Export API Response
+### Through the API Response
 
-Check `server_upload_time` field in exported events:
+Check the `server_upload_time` field in any exported event:
 
 ```json
 {
@@ -147,40 +141,34 @@ Check `server_upload_time` field in exported events:
 
 The `.000Z` suffix confirms UTC timezone.
 
-## Common Misconceptions
+---
 
-### ❌ Myth: "Export API uses project timezone"
+## Busting Three Common Misconceptions
 
-**Reality:** Export API `start`/`end` parameters are **always UTC**, regardless
-of project timezone setting.
+**"Export API uses project timezone."** It does not. The `start`/`end` parameters are always UTC, regardless of the project timezone setting.
 
-### ❌ Myth: "Need to convert hours to KST"
+**"We need to convert hours to KST."** If the project timezone is UTC, no conversion is needed. Fetch hours 0-23 UTC and you get a complete day.
 
-**Reality:** If project timezone is UTC, no conversion needed. Fetch hours 0-23
-UTC.
+**"Business day equals KST calendar day."** Business day equals a UTC calendar day when the project timezone is UTC. KST is a display preference in the Amplitude dashboard, not an API contract.
 
-### ❌ Myth: "Business day = KST calendar day"
+---
 
-**Reality:** Business day = UTC calendar day when project timezone is UTC. KST
-is just a display preference.
+## What If the Project Were KST?
 
-## What If Project Were KST?
-
-If Amplitude project were configured to KST timezone:
+If the Amplitude project were configured for KST timezone, the math changes significantly:
 
 | UTC Hour               | KST Hour               | What to Fetch              |
 | ---------------------- | ---------------------- | -------------------------- |
 | 2026-01-25 15:00-23:59 | 2026-01-26 00:00-08:59 | Previous date, hours 15-23 |
 | 2026-01-26 00:00-14:59 | 2026-01-26 09:00-23:59 | Current date, hours 0-14   |
 
-**Total:** Would need to fetch from TWO UTC dates to get one KST business day.
+You would need to fetch from **two** UTC dates to assemble one KST business day. Our UTC-configured project avoids this entirely -- one UTC date equals one business day, a clean 1:1 mapping.
 
-**Our case:** Project is UTC, so simple 1:1 mapping (one UTC date = one business
-day).
+---
 
-## Code Impact
+## Code: No Timezone Conversion Needed
 
-### No Timezone Conversion Needed
+Because the project is UTC, the fetch code stays clean:
 
 ```python
 # amplitude_backfill.py
@@ -196,7 +184,7 @@ def fetch_hour_from_amplitude(date: str, hour: int, ...):
     url = f"{AMPLITUDE_EXPORT_API_URL}?start={start_param}&end={end_param}"
 ```
 
-### Validation Logic
+The validation logic is equally simple:
 
 ```python
 # amplitude_validate.py
@@ -208,34 +196,21 @@ def validate_data_completeness(execution_date: str, ...):
     # Simple check - no timezone math needed
 ```
 
-## Documentation References
-
-- **Amplitude Export API Docs:**
-  <https://amplitude.com/docs/apis/analytics/export>
-- **Amplitude Timezone Settings:** Amplitude Console → Settings → Projects →
-  General
-- **Implementation:** `arch-etl/jobs/amplitude/amplitude_backfill.py`
-- **ETL DAG:** `arch-airflow/dags/amplitude_etl_dag.py`
+No conversion functions, no offset calculations, no edge-case handling for month boundaries. The UTC project timezone keeps everything straightforward.
 
 ---
 
-## When to Use
+## Takeaway
 
-- Building or debugging ETL pipelines that export from Amplitude
-- Verifying whether your Amplitude project uses UTC or a local timezone
-- Onboarding new team members who question the timezone logic of existing
-  Amplitude export code
-- Setting up Airflow DAG schedules that process Amplitude data
+The Export API timezone behavior is not documented clearly, but the answer is predictable once you know where to look. Check your Amplitude project timezone first -- it determines everything. If the project is UTC, your ETL pipeline can fetch hours 0-23 for any UTC date without conversion. If the project is a local timezone like KST, you need cross-date fetching logic that is more fragile and harder to debug.
 
-## When NOT to Use
+This applies specifically to Amplitude's batch Export API. Other analytics platforms (Mixpanel, GA4) each handle timezones differently. And if you are using Amplitude's real-time or Cohort APIs, timestamp handling may differ from the Export API as well.
 
-- Non-Amplitude analytics platforms: each platform (Mixpanel, GA4, etc.) has its
-  own timezone handling. Do not assume this behavior transfers.
-- If your Amplitude project is configured for a local timezone (e.g., KST): the
-  "no conversion needed" conclusion only applies to UTC-configured projects. KST
-  projects require cross-date fetching as described in the "What If Project Were
-  KST" section.
-- For real-time streaming: this knowledge covers the batch Export API, not
-  Amplitude's real-time or Cohort APIs which may handle timestamps differently.
+The lesson that stuck with me: when the team asks "shouldn't we convert to local time?", the answer often starts with "what timezone is the source system configured to use?"
 
 ---
+
+## References
+
+- **Amplitude Export API Docs:** <https://amplitude.com/docs/apis/analytics/export>
+- **Amplitude Timezone Settings:** Amplitude Console > Settings > Projects > General

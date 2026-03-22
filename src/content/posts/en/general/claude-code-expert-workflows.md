@@ -13,6 +13,7 @@ tags:
 category: general
 draft: false
 lang: en
+expanded: true
 references:
   - url: 'https://x.com/bcherny/status/2007179832300581177'
     title: Boris Cherny's Claude Code setup
@@ -28,61 +29,37 @@ references:
 source_content_hash: c49dd2f52a1c7a375ea01d7a4f0cc25489910a634fd4598ecac0080c04d45caf
 ---
 
-configuration), Mia Heidenstedt (process discipline), and YK Dojo (practitioner
-workflows).
+Six months ago I was using Claude Code the way most people start: type a prompt, wait, accept or reject the output, repeat. My sessions were linear and slow. Context windows filled up before the task was done. The code quality varied wildly between sessions. I knew the tool was capable of more but could not figure out the right workflow.
 
----
+Then I found three sources that, taken together, changed how I use Claude Code. Boris Cherny (who built Claude Code at Anthropic) shared his surprisingly vanilla setup. Mia Heidenstedt wrote about process discipline for AI-assisted coding. YK Dojo published 46 tips from 4,100+ sessions and 17.6 million tokens of usage. Each expert optimizes a different layer. The real value emerges when you combine all three.
 
-## The Problem
+## Why Three Sources
 
-Claude Code is powerful out of the box, but without structured workflows,
-sessions become inefficient: context windows fill up, parallel work is
-underutilized, and AI-generated code quality varies. Expert practitioners have
-developed patterns to maximize throughput and reliability, but their advice is
-scattered across tweets, blog posts, and GitHub repos with no unified synthesis.
+The challenge I hit when trying to learn Claude Code best practices was contradictory advice. Boris says "Opus always" -- use the biggest model and steer less. Heidenstedt emphasizes manual control and careful verification. At first these seemed opposed. Then I realized they operate at different layers.
 
----
+Boris optimizes the **tool layer**: how to configure Claude Code itself. Heidenstedt optimizes the **process layer**: how to structure your work regardless of which AI tool you use. YK Dojo optimizes the **practice layer**: daily workflow habits for high throughput.
 
-## Difficulties Encountered
+No single source covers the full picture. Boris does not talk about test design. Heidenstedt does not talk about Claude Code-specific configuration. YK Dojo does not talk about team workflows. You need all three.
 
-- **Contradictory advice across sources:** Boris says "Opus always" for less
-  steering; Heidenstedt emphasizes manual control. Had to realize these are
-  complementary, not contradictory (tool vs process).
-- **Signal vs noise in tip collections:** YK Dojo's 46 tips included both
-  foundational and niche patterns. Required careful triage to extract the
-  universally applicable ones.
-- **No single source covers the full workflow:** Each expert optimizes a
-  different layer (config, process, daily practice). The real value only emerges
-  when combining all three perspectives.
-- **Verification difficulty:** Some tips reference experimental or undocumented
-  features (e.g., `--teleport`) that required confirming availability before
-  recommending.
+## Boris Cherny: Tool Configuration
 
----
+Boris's setup is what he calls "surprisingly vanilla." The tool works well out of the box, and his optimizations are focused rather than extensive.
 
-## Boris Cherny - Tool Configuration (13 Tips)
+### Massive Parallelism
 
-Boris is the creator of Claude Code at Anthropic. His setup is "surprisingly
-vanilla" - the tool works well out of the box.
+Boris runs 5 terminal sessions and 5-10 web sessions simultaneously. He uses `&` to hand off long-running tasks to the web UI and `--teleport` to move conversations between terminal and web. This is not about multitasking for its own sake -- it is about keeping work moving while waiting for one session to finish a large task.
 
-### Top Patterns
+### Living CLAUDE.md
 
-1. **Massive parallelism:** 5 terminal + 5-10 web sessions, `&` to hand off to
-   web, `--teleport` between them
-2. **Opus always:** Less steering = faster overall despite bigger model
-3. **Living CLAUDE.md:** Add rule every time Claude makes a mistake (team
-   contributes multiple times/week)
-4. **Plan then auto-accept:** Plan mode (shift+tab x2) -> iterate on plan ->
-   auto-accept for one-shot execution
-5. **PostToolUse hook:** Auto-format on Write|Edit with `bun run format || true`
-6. **Permissions allow-list:** Pre-allow safe commands via `/permissions`
-   instead of skip-permissions
-7. **Verification is #1:** "Give Claude a way to verify its work" - 2-3x quality
-   improvement
+Every time Claude makes a mistake, Boris adds a rule to `CLAUDE.md`. His team contributes to this file multiple times per week. The file is not a static document written once -- it is a growing set of guardrails shaped by real errors. This turns repeated mistakes into impossible mistakes.
 
-### Key Configs
+### Plan Then Auto-Accept
 
-PostToolUse formatter:
+The workflow is: enter plan mode (Shift+Tab twice), iterate on the plan until it is right, then switch to auto-accept for one-shot execution. This separates the thinking phase from the doing phase. You invest time getting the plan right, then let Claude execute without interruption.
+
+### PostToolUse Hook
+
+Boris auto-formats code after every Write or Edit operation using a PostToolUse hook:
 
 ```json
 {
@@ -100,7 +77,19 @@ PostToolUse formatter:
 }
 ```
 
-Slack MCP (checked into `.mcp.json`):
+The `|| true` ensures the hook does not block if formatting fails. This eliminates an entire class of back-and-forth where you ask Claude to fix formatting issues.
+
+### Verification Is Number One
+
+Boris's most emphatic point: "Give Claude a way to verify its work." This could be running tests, checking output in the browser, or validating against a spec. He claims a 2-3x quality improvement when verification is built into the workflow. Without it, Claude generates plausible-looking code that may or may not work.
+
+### Permissions Allow-List
+
+Instead of running Claude Code with skip-permissions (which allows everything), Boris pre-allows specific safe commands via `/permissions`. This provides security without the friction of approving every file read.
+
+### Slack MCP
+
+Boris checks in `.mcp.json` to the repo so Claude can query Slack for team context:
 
 ```json
 {
@@ -113,27 +102,35 @@ Slack MCP (checked into `.mcp.json`):
 }
 ```
 
-## Heidenstedt - Process Discipline (12 Tips)
+## Heidenstedt: Process Discipline
 
-Core thesis: "Every decision in your project that you don't take and document
-will be taken for you by the AI."
+Heidenstedt's core thesis is a sentence I now think about daily: "Every decision in your project that you don't take and document will be taken for you by the AI."
 
-### Top Patterns
+### AI Cheats on Tests
 
-1. **AI cheats on tests:** Will write mocks, stubs, and hardcoded values to pass
-   tests while code is broken. Write property-based tests yourself.
-2. **Context isolation:** Write tests in a separate session so test AI can't
-   learn implementation bugs
-3. **HIGH-RISK markers:** `//HIGH-RISK-UNREVIEWED` and `//HIGH-RISK-REVIEWED`
-   with auto-reset on AI modification
-4. **Reduce complexity:** Every line eats context window. Simpler code = better
-   AI output.
-5. **Prototype cheaply:** AI code is cheap - explore 2-3 approaches before
-   committing
-6. **Never generate blindly:** Break into small units, verify each, restart from
-   known-good if lost
+This is the most important insight in her entire post. When you let AI write both the implementation and the tests, it will write mocks, stubs, and hardcoded values that make the tests pass while the code is broken. The tests become theater -- green checkmarks that verify nothing.
 
-## Complementary Relationship
+Her solution: write property-based tests yourself. Design tests that exercise real behavior, not tests that pass by construction. If you must let AI write tests, do it in a separate session so the test-writing AI cannot "learn" the implementation's bugs and work around them.
+
+### Context Isolation
+
+Write tests in a separate session from the implementation. This prevents the AI from seeing the implementation details and writing tests that are coupled to bugs rather than requirements. The test session should receive only the interface specification, not the source code.
+
+### HIGH-RISK Markers
+
+Heidenstedt uses `//HIGH-RISK-UNREVIEWED` and `//HIGH-RISK-REVIEWED` comments in code that handles sensitive operations. If AI modifies a reviewed section, the marker resets to `UNREVIEWED`. This creates an audit trail for code that could cause real damage -- payment processing, data deletion, authentication.
+
+### Reduce Complexity
+
+Every line of code consumes context window space. Simpler code means more room for Claude to reason about the problem. Heidenstedt treats code simplification as a direct input to AI output quality, not an aesthetic preference.
+
+### Prototype Cheaply
+
+AI-generated code is cheap to produce and cheap to throw away. Instead of committing to the first approach, explore 2-3 alternatives before deciding. This is faster than debugging a bad first choice.
+
+## How Boris and Heidenstedt Complement Each Other
+
+At first glance, these two seem to disagree. Boris says use Opus and steer less. Heidenstedt says control everything and trust nothing. In practice, they work at different levels:
 
 | Aspect    | Boris (Tool)               | Heidenstedt (Process)   |
 | --------- | -------------------------- | ----------------------- |
@@ -144,32 +141,41 @@ will be taken for you by the AI."
 | Workflow  | Plan + auto-accept         | Prototype + incremental |
 | Security  | Permissions allow-list     | HIGH-RISK markers       |
 
-Both are needed for a complete AI coding workflow.
+Boris gives Claude the right constraints so it produces better output. Heidenstedt designs the workflow so that bad output gets caught. You need both: constraints on the input side and verification on the output side.
 
-## YK Dojo - Practitioner Workflows (46 Tips)
+## YK Dojo: Practitioner Workflows
 
-YK Dojo is a power user with 4.1k sessions and 17.6M tokens. Created the dx
-plugin, SafeClaw, cc-safe, and Super Voice Assistant. Practitioner-focused:
-emphasizes workflow optimization and "automation of automation."
+YK Dojo brings the perspective of a power user with thousands of sessions. Where Boris and Heidenstedt provide frameworks, YK Dojo provides daily habits.
 
-### Top Patterns
+### Voice Input
 
-1. **Voice input:** Local transcription for faster communication (works even on
-   planes with earphones)
-2. **Context freshness:** "AI context is like milk" - start fresh per topic,
-   handoff docs for continuity
-3. **Cascade multitasking:** New tab on right, sweep left to right, 3-4 tasks
-   max
-4. **Write-test cycle:** tmux pattern for testing interactive tools + Playwright
-   over Chrome native
-5. **Exponential backoff:** Manual increasing intervals for long-running job
-   monitoring (token-efficient)
-6. **Automation of automation:** manual -> CLAUDE.md -> skills -> scripts ->
-   full automation progression
-7. **Half-clone conversations:** Keep later half only when context grows too
-   large (auto-trigger at 85%)
+Local transcription for faster communication with Claude. This works even on planes with earphones. For long prompts, speaking is faster than typing and produces more natural instructions.
 
-### Complementary Relationship (3 Sources)
+### Context Freshness
+
+YK Dojo's metaphor: "AI context is like milk." It spoils. Start a fresh session for each new topic rather than continuing a stale conversation where the context window is filled with irrelevant earlier work. When you do need to carry context forward, write handoff documents that summarize the essential state.
+
+### Cascade Multitasking
+
+Open a new tab on the right side of the screen, work left to right, and keep a maximum of 3-4 concurrent tasks. This prevents the cognitive overload of too many sessions while still allowing parallel progress on independent work items.
+
+### Automation Progression
+
+The most valuable long-term pattern: progress from manual workflows to full automation in stages.
+
+```text
+manual → CLAUDE.md rule → skill → script → full automation
+```
+
+When you do something manually twice, add it as a `CLAUDE.md` rule. When the rule gets complex, extract it to a skill. When the skill stabilizes, codify it as a script. When the script is reliable, automate it completely. Each step only happens after the previous one proves itself.
+
+### Half-Clone Conversations
+
+When a conversation's context grows too large (YK Dojo triggers at 85% capacity), keep only the later half and start a new session with that subset. This preserves the recent, relevant context while dropping the older material that is no longer contributing to the current task.
+
+## The Three-Layer View
+
+Here is how all three sources map across common workflow concerns:
 
 | Aspect    | Boris (Tool)          | Heidenstedt (Process)   | YK Dojo (Practice)  |
 | --------- | --------------------- | ----------------------- | ------------------- |
@@ -180,24 +186,20 @@ emphasizes workflow optimization and "automation of automation."
 | Workflow  | Plan + auto-accept    | Prototype + incremental | Cascade + voice     |
 | Context   | Web UI parallelism    | N/A                     | Fresh + handoff     |
 
----
+## Where to Start
 
-## When to Use
+If you are adopting these patterns, do not try everything at once. Here is the order I recommend based on impact per effort:
 
-- Setting up Claude Code for a new team or project
-- Onboarding a developer who is new to AI-assisted coding
-- Reviewing your own workflow for missed optimization opportunities
-- Choosing which expert patterns to adopt first (start with Boris for config,
-  then layer Heidenstedt for discipline)
+**Week 1: Boris's foundations.** Set up a `CLAUDE.md` file and add rules when Claude makes mistakes. Configure the PostToolUse formatting hook. Start using plan mode before auto-accept.
 
-## When NOT to Use
+**Week 2: Heidenstedt's discipline.** Start writing your own tests instead of letting Claude generate them. Add HIGH-RISK markers to sensitive code. Practice the prototype-then-commit workflow.
 
-- As a rigid checklist: these are patterns to adopt incrementally, not all at
-  once. Adopting everything simultaneously creates cognitive overload.
-- For non-Claude AI tools: Boris's tips are Claude Code-specific. Heidenstedt's
-  process tips transfer, but tool configs do not.
-- When working on trivial tasks: the overhead of parallel sessions,
-  plan-then-execute, and verification hooks is not worth it for quick one-file
-  fixes.
-- As a substitute for reading the original sources: this synthesis omits context
-  and nuance. Refer to the extracted guides for full detail.
+**Week 3: YK Dojo's efficiency.** Experiment with cascade multitasking (2-3 sessions). Try voice input for long prompts. Implement context freshness -- new session per topic with handoff docs.
+
+**Ongoing:** Let the automation progression happen naturally. When you catch yourself doing something for the third time, encode it in CLAUDE.md. When the rule gets complex, make it a skill.
+
+## Takeaway
+
+Claude Code expert workflows operate on three layers: tool configuration (Boris), process discipline (Heidenstedt), and daily practice (YK Dojo). The perceived contradiction between "steer less" and "control everything" dissolves when you see that they target different layers. Boris configures the tool so it needs less steering. Heidenstedt designs the process so bad output gets caught. YK Dojo optimizes the daily workflow so you produce more in less time.
+
+The single highest-impact change from each source: make `CLAUDE.md` a living document (Boris), write your own tests (Heidenstedt), and treat context like milk -- start fresh per topic (YK Dojo).

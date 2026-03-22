@@ -11,6 +11,7 @@ tags:
 category: icalendar
 draft: false
 lang: en
+expanded: true
 references:
   - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
     title: RFC 5545 — iCalendar Specification
@@ -18,10 +19,15 @@ references:
 source_content_hash: a239f197e4691e733102981cb29473efa10b3ed1fc86b1082e1162068f224f26
 ---
 
-contains non-standard formats that break parsing. Implement normalization layers
-to handle these edge cases.
+The first time I saw `Invalid time zone: GMT+09:00` crash our calendar sync, I assumed it was a one-off data corruption issue. Then I saw `unsupported RRULE parm: X-EVOLUTION-ENDDATE` from a Linux user. Then `Unsupported RFC prop EXDATE` from a Google Calendar event with deleted occurrences. Three different parsing failures, three different external calendar clients, all hitting the same rrule.js parser that expected clean RFC 5545 input.
 
-## Common Issues
+The real world does not produce clean RFC 5545 input. External calendar clients -- Apple Calendar, GNOME Evolution, TripIt, airline booking apps -- each have their own interpretation of the iCalendar standard. If your backend parses recurrence rules, you need a normalization layer between the raw data and your parser.
+
+---
+
+## The Three Failure Modes
+
+Each failure comes from a different source and has a different severity:
 
 | Error                                         | Source                                   | Impact  |
 | --------------------------------------------- | ---------------------------------------- | ------- |
@@ -29,11 +35,17 @@ to handle these edge cases.
 | `unsupported RRULE parm: X-EVOLUTION-ENDDATE` | GNOME Evolution (Linux)                  | Warning |
 | `Unsupported RFC prop EXDATE`                 | Google Calendar with deleted occurrences | Fatal   |
 
-## Normalization Utilities
+"Fatal" means parsing fails entirely -- no occurrences generated, the event disappears from the user's calendar. "Warning" means the parser complains but might still produce output, depending on the library version and configuration.
 
-### Timezone Normalization
+These are not exotic edge cases. Apple Calendar is the default on every iPhone. GNOME Evolution ships with most Linux distributions. And EXDATE lines come from Google Calendar itself whenever a user deletes a single occurrence from a recurring series.
 
-Convert GMT offsets to IANA timezone names:
+---
+
+## Timezone Normalization
+
+Apple Calendar and travel apps often use `GMT+XX:XX` format instead of IANA timezone names. The rrule library does not recognize this format.
+
+The fix is a lookup table that maps GMT offsets to IANA names:
 
 ```typescript
 const OFFSET_TO_IANA: Record<string, string> = {
@@ -57,9 +69,17 @@ function normalizeTimezone(tz: string): string {
 }
 ```
 
-### RRULE Sanitization
+One subtlety: a single GMT offset can map to multiple IANA timezones. `GMT+09:00` could be `Asia/Tokyo`, `Asia/Seoul`, or `Asia/Jayapura`. The mapping table picks a representative timezone for each offset. For recurrence rule expansion, the offset is what matters -- the city name distinction only affects DST transitions, which GMT offsets do not observe anyway.
 
-Strip proprietary extensions:
+The fallback to `Etc/UTC` when an offset is not in the table prevents a crash. It produces incorrect results for that event, but incorrect is better than a fatal error that blocks the entire sync.
+
+---
+
+## RRULE Sanitization
+
+GNOME Evolution, the calendar app that ships with many Linux distributions, appends a proprietary `X-EVOLUTION-ENDDATE` parameter to RRULE lines. This is not part of RFC 5545, and the rrule library rejects it.
+
+The fix is a regex that strips the extension before parsing:
 
 ```typescript
 function sanitizeRRule(rrule: string): string {
@@ -68,10 +88,15 @@ function sanitizeRRule(rrule: string): string {
 }
 ```
 
-### EXDATE Extraction
+This is safe because `X-EVOLUTION-ENDDATE` is redundant with the standard `UNTIL` parameter that Evolution also includes. Removing it does not change the recurrence semantics.
 
-rrule.js `RRule.parseString()` only handles RRULE lines. Strip EXDATE before
-parsing:
+---
+
+## EXDATE Extraction
+
+The rrule library's `RRule.parseString()` only handles RRULE lines. If you feed it a string that includes EXDATE lines, it either fails or produces incorrect output (as covered in detail in the [EXDATE parsing post](/posts/rrule-exdate-parsing)).
+
+The solution is to filter before parsing:
 
 ```typescript
 function extractRRulesOnly(recurrenceArray: string[]): string[] {
@@ -84,9 +109,13 @@ const rruleLines = extractRRulesOnly(block.recurrence);
 const rruleSet = rrulestr(rruleLines.join("\n"));
 ```
 
-## Application Points
+This function appears in six or more locations across the codebase. Every place that calls `rrulestr()` or `RRule.parseString()` needs this filter. Missing even one location means a user with deleted recurring event occurrences will hit a parsing failure.
 
-Apply normalization at every RRULE parsing location:
+---
+
+## Where to Apply Normalization
+
+The normalization functions need to be applied at every point where RRULE data enters the parsing pipeline:
 
 | File                             | Function          | Normalization        |
 | -------------------------------- | ----------------- | -------------------- |
@@ -96,14 +125,13 @@ Apply normalization at every RRULE parsing location:
 | `functions.ts`                   | `getUntil()`      | `extractRRulesOnly`  |
 | `block-query.util.ts`            | Uses `rrulestr()` | `sanitizeRRule` only |
 
-## Library Limitations
+The key principle: normalize at the boundary, not inside the core logic. The utility functions live in one file (`calendar-normalization.util.ts`), and every call site imports from there. When a new external calendar format surfaces, you update one file.
 
-### rrule.js
+---
 
-- `RRule.parseString()` - Strict RFC 5545 for RRULE lines only
-- `rrulestr()` - Full iCal support but different API
+## Choosing the Right Parser
 
-Choose based on use case:
+The rrule library offers two parsing APIs with different capabilities:
 
 ```typescript
 // Simple RRULE parsing
@@ -115,21 +143,38 @@ const rruleSet = rrulestr(
 );
 ```
 
-## Data Flow
+`RRule.parseString()` is strict and handles only RRULE lines. `rrulestr()` supports the full iCal format including EXDATE and RDATE, but it has the timezone issues described above. Choose based on whether you need EXDATE support -- and if you do, use the separate-parsing approach with `RRuleSet`.
+
+---
+
+## The Data Flow to Keep in Mind
 
 ```text
-Google Calendar API → Our Database → RRULE Parsing
-
-Key insight: EXDATE comes FROM Google API.
-We store what Google provides, not what we generate.
-Google is the source of truth for exception dates.
+Google Calendar API -> Our Database -> RRULE Parsing
 ```
 
-## Key Lessons
+A critical insight: EXDATE comes from Google's API. We store what Google provides, not what we generate. Google is the source of truth for exception dates. Our job is to parse what they give us without breaking, not to regenerate or modify it.
 
-1. **External calendar data is messy** - Apple, GNOME, travel apps all differ
-2. **Normalize at the boundary** - Clean data before it reaches core logic
-3. **Preserve original data** - Store what Google provides, normalize for
-   calculation
-4. **Centralize utilities** - One place for all normalization functions
-5. **Test with real data** - Use actual problematic events in unit tests
+This means the normalization layer must be defensive. New external calendar formats will appear without warning as users subscribe to calendars from apps you have never heard of. The normalization code should handle unknown formats gracefully -- log a warning, fall back to a safe default, but never crash the sync.
+
+---
+
+## Takeaway
+
+External calendar data is messy, and it will always be messy. Apple, GNOME, travel apps, and even Google itself produce data that deviates from what the rrule library expects. The solution is not to find a better parser -- it is to normalize the data before it reaches any parser.
+
+Five principles that held up in production:
+
+1. **External calendar data is messy** -- assume every client has its own quirks
+2. **Normalize at the boundary** -- clean data before it reaches core logic
+3. **Preserve original data** -- store what Google provides, normalize only for calculation
+4. **Centralize utilities** -- one file for all normalization functions, imported everywhere
+5. **Test with real data** -- use actual problematic events from production in unit tests
+
+Every time a new parsing failure appears in your error logs, it is telling you about an external calendar client you had not accounted for. Add its format to your normalization layer, add a test case with the real data that triggered it, and move on. The normalization layer grows over time, and that is by design.
+
+---
+
+## References
+
+- [RFC 5545 - iCalendar Specification](https://datatracker.ietf.org/doc/html/rfc5545)

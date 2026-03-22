@@ -17,50 +17,28 @@ references:
     title: Apache Airflow DAG Runs Documentation
     type: official
 source_content_hash: a4736f4eea2c20413f3aa397416a6e98c18e474b088ea2d5227ca9161ce21d73
+expanded: true
 ---
 
-scheduled runs unchanged.
+I needed to reprocess a specific day's data in production Airflow, but there was no clean way to manually trigger a DAG with a custom date without risking the next scheduled run. Hardcoding the date meant remembering to revert it. Airflow Variables felt like overkill for a one-off override. What I wanted was: trigger with custom parameters when needed, fall back to defaults for scheduled runs, and never persist manual configs across runs.
 
-## The Problem
+Airflow's built-in `dag_run.conf` does exactly this — it's a per-run configuration dictionary that's empty for scheduled runs and populated only when you trigger manually.
 
-When testing or reprocessing data in production Airflow, there was no obvious
-way to manually trigger a DAG with custom parameters (like a specific date)
-without affecting future scheduled runs. Hardcoding values risked polluting the
-schedule, and Airflow Variables felt like overkill for one-off overrides.
+## The Gotchas I Hit First
 
-Specifically, the requirements were:
+Before landing on the right pattern, I ran into several traps:
 
-- Manually trigger with custom dates/parameters
-- Keep scheduled runs using default values
-- Prevent manual configs from persisting across runs
+**Jinja vs Python confusion** — `dag_run.conf` only works inside Jinja templates (double-curly braces). Trying to access it as a plain Python dict at DAG parse time fails silently or returns `None`, with no clear error pointing to the template requirement. This is the most common mistake.
 
----
+**Default value complexity** — Simple defaults like `yesterday_ds` are straightforward, but date-range defaults involving `macros.timedelta()` and `.strftime()` require careful Jinja syntax that's hard to debug when wrong.
 
-## Difficulties Encountered
+**No input validation** — `dag_run.conf` accepts any JSON without schema validation. A typo in the key name (e.g., `exec_date` instead of `execution_date`) silently falls through to the default value, making it look like the override didn't work.
 
-- **Jinja vs Python confusion** - `dag_run.conf` only works inside Jinja
-  templates (double-curly braces). Trying to access it as a plain Python dict at
-  DAG parse time fails silently or returns `None`, with no clear error pointing
-  to the template requirement.
-- **Default value complexity** - Simple defaults like `yesterday_ds` are
-  straightforward, but date-range defaults involving `macros.timedelta()` and
-  `.strftime()` require careful Jinja syntax that is hard to debug when wrong.
-- **Config does not validate input** - `dag_run.conf` accepts any JSON without
-  schema validation. A typo in the key name (e.g., `exec_date` instead of
-  `execution_date`) silently falls through to the default value, making it look
-  like the override did not work.
-- **UI trigger button is not obvious** - The "Trigger DAG w/ config" option is a
-  secondary button (play icon with gear), not the primary trigger. Easy to miss
-  if you have never used it before.
+**Hidden UI button** — The "Trigger DAG w/ config" option is a secondary button (play icon with gear), not the primary trigger. Easy to miss if you've never used it before.
 
----
+## The Pattern
 
-## Solution: `dag_run.conf` Pattern
-
-Use Airflow's built-in `dag_run.conf` dictionary to accept manual parameters
-with fallback to defaults.
-
-## Implementation
+Use Jinja templating with `dag_run.conf.get()` to accept manual parameters with fallback to defaults:
 
 ### Basic Pattern
 
@@ -73,6 +51,8 @@ with DAG(
     # Manual config support with fallback to default
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', yesterday_ds) }}"
 ```
+
+The key insight is that `dag_run.conf` is an empty dict `{}` for scheduled runs, so `.get()` always returns the default. For manual runs, it returns whatever you pass in the trigger config.
 
 ### Real-World Example: ETL DAG
 
@@ -99,6 +79,8 @@ with DAG(
 
 ### Real-World Example: Date Range DAG
 
+For backfill DAGs that process a range of dates, the pattern extends naturally:
+
 ```python
 # amplitude_weekly_backfill_dag.py
 with DAG(
@@ -122,27 +104,15 @@ with DAG(
     )
 ```
 
-## Usage in Airflow UI
+The Jinja syntax for date math is verbose, but it ensures scheduled runs automatically calculate the correct date range while manual triggers can override with exact dates.
 
-### Step 1: Navigate to DAG
+## How to Trigger with Config
 
-1. Open Airflow UI
-2. Click DAG name
+In the Airflow UI:
 
-### Step 2: Trigger with Config
-
-1. Click **"Trigger DAG w/ config"** button (play icon with gear)
-2. Enter JSON:
-
-```json
-{
-  "execution_date": "2026-01-25"
-}
-```
-
-1. Click **"Trigger"**
-
-### Example Configs
+1. Navigate to your DAG
+2. Click **"Trigger DAG w/ config"** (play icon with gear — not the plain play button)
+3. Enter JSON config:
 
 **Single date:**
 
@@ -161,7 +131,11 @@ with DAG(
 }
 ```
 
+4. Click **"Trigger"**
+
 ## Key Behaviors
+
+The isolation model is what makes this pattern safe:
 
 | Aspect             | Behavior                                       |
 | ------------------ | ---------------------------------------------- |
@@ -170,7 +144,7 @@ with DAG(
 | **Scheduled runs** | Always use default values (conf is empty dict) |
 | **Manual runs**    | Use provided config or fall back to default    |
 
-## Example: Multiple Runs
+Here's a concrete example showing three consecutive runs:
 
 ```text
 Run 1 (Scheduled):
@@ -186,30 +160,32 @@ Run 3 (Scheduled):
   EXECUTION_DATE = yesterday_ds  ✓ default again (no persistence)
 ```
 
+Run 2's config doesn't leak into Run 3. Each run starts fresh.
+
 ## Common Pitfalls
 
-### ❌ Don't: Use persistent variables
+### Don't: Hardcode values
 
 ```python
 # BAD - This persists across runs!
 EXECUTION_DATE = "2026-01-25"  # Hardcoded
 ```
 
-### ❌ Don't: Modify DAG schedule based on config
+### Don't: Try to modify the schedule dynamically
 
 ```python
 # BAD - schedule_interval is defined at DAG level, can't be dynamic
 schedule_interval="{{ dag_run.conf.get('schedule', '@daily') }}"
 ```
 
-### ✅ Do: Use Jinja templating
+### Do: Use Jinja templating
 
 ```python
 # GOOD - Evaluated per run
 EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', yesterday_ds) }}"
 ```
 
-### ✅ Do: Provide sensible defaults
+### Do: Provide sensible defaults
 
 ```python
 # GOOD - Scheduled runs work without config
@@ -220,32 +196,23 @@ START_DATE = '{{ dag_run.conf.get("start_date", (execution_date - macros.timedel
 
 | Use Case                     | Appropriate?                      |
 | ---------------------------- | --------------------------------- |
-| Testing with specific dates  | ✅ Yes                            |
-| Reprocessing historical data | ✅ Yes                            |
-| Debugging production issues  | ✅ Yes                            |
-| Changing DAG schedule        | ❌ No - use DAG definition        |
-| Permanent config changes     | ❌ No - use environment variables |
+| Testing with specific dates  | Yes                               |
+| Reprocessing historical data | Yes                               |
+| Debugging production issues  | Yes                               |
+| Changing DAG schedule        | No — use DAG definition           |
+| Permanent config changes     | No — use environment variables    |
 
----
+## When NOT to Use This
 
-## When NOT to Use
+- **Permanent configuration changes** — If you need a value to persist across all runs, use environment variables or Airflow Variables instead
+- **Changing DAG scheduling** — `schedule_interval` is defined at DAG parse time and cannot be overridden via `dag_run.conf`
+- **Cross-DAG parameter sharing** — `dag_run.conf` is scoped to a single DAG run. Use Airflow Variables or XCom for sharing state across DAGs
+- **Automated reprocessing pipelines** — If backfills are routine, use `airflow dags backfill` CLI or a dedicated backfill DAG instead of manually triggering with config each time
 
-- **Permanent configuration changes** - If you need a value to persist across
-  all runs, use environment variables or Airflow Variables instead of
-  `dag_run.conf`.
-- **Changing DAG scheduling** - `schedule_interval` is defined at DAG parse time
-  and cannot be overridden via `dag_run.conf`.
-- **Cross-DAG parameter sharing** - `dag_run.conf` is scoped to a single DAG
-  run. Use Airflow Variables or XCom for sharing state across DAGs or tasks.
-- **Automated reprocessing pipelines** - If backfills are routine and
-  predictable, use `airflow dags backfill` CLI or a dedicated backfill DAG
-  instead of manually triggering with config each time.
+## Takeaway
 
----
+`dag_run.conf` gives you safe, isolated, per-run configuration for Airflow DAGs. The pattern is: Jinja template with `.get()` for the override, a sensible default for scheduled runs, and JSON config passed through the UI trigger button. Manual configs never persist, scheduled runs are never affected, and you get full control over one-off reprocessing without touching code.
 
 ## References
 
-- Airflow Documentation:
-  [DAG Run Configuration](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html)
-- Implementation: `arch-airflow/dags/amplitude_etl_dag.py`
-- Implementation: `arch-airflow/dags/amplitude_weekly_backfill_dag.py`
+- [Airflow DAG Run Configuration](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html)

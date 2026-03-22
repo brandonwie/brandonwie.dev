@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: docker-compose-cicd-patterns
-source_updated: "2026-01-23"
-translation_date: "2026-03-04"
+source_updated: "2026-03-15"
+translation_date: "2026-03-22"
 references:
   - url: "https://docs.docker.com/compose/how-tos/production/"
     title: Use Compose in production — Docker Docs
@@ -239,6 +239,12 @@ git checkout <commit-sha> -- dags/
 # 또는 전체 rollback
 git reset --hard <commit-sha>
 ```
+
+## CI/CD 주의사항
+
+한 가지 뼈아프게 배운 교훈: **플로팅 액션 태그가 빌드를 조용히 깨뜨려요.** GitHub Actions 워크플로우에서 `cloudflare/wrangler-action@v3`를 사용하고 있었는데, 어느 날 갑자기 "bun not found"로 빌드가 실패했어요. 이 액션이 기본 `packageManager`를 npm에서 bun으로 바꿔버린 거예요 — `ubuntu-latest`에는 bun이 없으니까 바로 실패한 거죠.
+
+해결은 간단했어요: `packageManager: npm`을 명시적으로 설정하면 돼요. 더 넓은 원칙은: 항상 액션 버전을 고정하거나 설정 가능한 모든 기본값을 명시적으로 지정하세요. `@v3` 태그는 코드 한 줄 안 바꿔도 발밑에서 바뀔 수 있어요.
 
 ## 요약
 

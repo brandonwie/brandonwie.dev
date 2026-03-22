@@ -13,6 +13,7 @@ tags:
 category: general
 draft: false
 lang: en
+expanded: true
 references:
   - url: 'https://github.com/DavidAnson/markdownlint'
     title: markdownlint
@@ -27,55 +28,36 @@ references:
 source_content_hash: b18ff06056726d7eda3e61e5da1b3acf04c546bb252db8add1fb61c5bc51d2a2
 ---
 
-blank lines around lists, code blocks without language specifiers, duplicate
-headings, and inconsistent table spacing. Over 7,500 markdownlint errors
-accumulated across the repository, making files harder to read, causing
-rendering issues on GitHub, and creating noisy diffs when different contributors
-applied different formatting styles.
+I ran markdownlint on a knowledge base with about 200 markdown files and got back 7,500 errors. Seven thousand five hundred. The repository had accumulated formatting debt over months -- missing blank lines around lists, code blocks without language specifiers, duplicate headings, inconsistent table spacing. Every contributor applied their own conventions, and the result was a codebase where diffs were noisy, GitHub rendering was unpredictable, and no one could tell "correct" formatting from "works on my machine" formatting.
 
----
+This post covers the rules that matter most, the configuration decisions I made, and how to set up markdownlint so the problem stays fixed.
 
-## Difficulties Encountered
+## Why Consistent Markdown Formatting Matters
 
-- **Sheer volume of errors (7,500+):** Could not fix manually. Required
-  understanding which rules were most impactful to prioritize fixes and which
-  could be configured away.
-- **MD060 dominated the error count (3,600+):** Table spacing errors were
-  pervasive but mechanical. Had to decide between auto-fixing and establishing
-  the convention first.
-- **Rule conflicts:** Some rules (e.g., MD013 line length) conflict with table
-  readability. Required per-rule configuration decisions rather than blanket
-  enforcement.
-- **Existing files used varied conventions:** Some files used compact table
-  syntax, others padded. Normalizing required a single canonical style decision
-  before applying fixes.
+Markdown's flexibility is a trap. The spec allows many ways to write the same thing, and renderers handle edge cases differently. A list without a blank line before it renders fine in VS Code's preview but breaks in GitHub's renderer. A code block without a language tag gets no syntax highlighting anywhere. Inconsistent table spacing produces noisy diffs where half the changes are whitespace.
 
----
+These are not aesthetic complaints. They cause real problems: broken rendering on documentation sites, meaningless diffs that hide actual content changes, and cognitive overhead when reading files that follow different conventions on every page.
 
-## Overview
+Markdownlint is a Node.js linter that enforces a configurable set of rules. It catches formatting issues at the source, before they reach version control.
 
-Markdownlint is a Node.js style checker and lint tool for Markdown files.
-Following these conventions ensures consistent, readable, and portable Markdown
-across all documentation.
+## The Rules That Matter Most
 
----
+Out of markdownlint's 50+ rules, six account for the vast majority of real-world issues. Here is what each one catches and how to fix it.
 
-## Key Rules
+### MD032: Blank Lines Around Lists
 
-### MD032 - Blanks Around Lists
+Lists require blank lines before and after them. Without the blank lines, some renderers merge the list with surrounding text.
 
-Lists require blank lines before and after them.
-
-**Bad:**
+**Wrong:**
 
 ```markdown
 Some text before
-
 - Item 1
-- Item 2 More text after
+- Item 2
+More text after
 ```
 
-**Good:**
+**Correct:**
 
 ```markdown
 Some text before
@@ -86,19 +68,13 @@ Some text before
 More text after
 ```
 
-**Also applies to:**
+This also applies to bold text followed by a list (`` **Header:** `` needs a blank line before the list), numbered lists, and nested lists. In my knowledge base, this was the second most common error because it is easy to forget the blank line when you are writing quickly.
 
-- Bold text followed by list: `**Header:**` needs blank line before list
-- Numbered lists (same rule)
-- Nested lists (blank line before parent list)
+### MD040: Code Block Language Specifier
 
----
+Every fenced code block must specify a language. Without it, you get no syntax highlighting and no way for tools to identify the content type.
 
-### MD040 - Fenced Code Block Language
-
-All fenced code blocks must specify a language.
-
-**Bad:**
+**Wrong:**
 
 ````markdown
 ```
@@ -106,7 +82,7 @@ some code here
 ```
 ````
 
-**Good:**
+**Correct:**
 
 ````markdown
 ```bash
@@ -114,53 +90,35 @@ some code here
 ```
 ````
 
-**Common languages:**
+Common language tags: `bash`/`sh` for shell commands, `yaml`/`yml` for configuration, `json` for data, `typescript`/`ts` for TypeScript, `python` for Python, `text` for plain text with no highlighting, `markdown` for markdown examples.
 
-- `bash` / `sh` - Shell commands
-- `yaml` / `yml` - YAML configuration
-- `json` - JSON data
-- `javascript` / `js` - JavaScript code
-- `typescript` / `ts` - TypeScript code
-- `python` - Python code
-- `text` - Plain text (no syntax highlighting)
-- `markdown` - Markdown examples
+When in doubt, use `text`. It signals intent ("I know this has no syntax highlighting") rather than leaving the reader to wonder if you forgot.
 
----
+### MD024: No Duplicate Headings
 
-### MD024 - No Duplicate Headings
+Heading text should be unique within a document. Duplicate headings break anchor links and make navigation confusing.
 
-Heading text should be unique within a document.
-
-**Bad:**
+**Wrong:**
 
 ```markdown
 ## Overview
-
 ...
-
 ## Overview
 ```
 
-**Good:**
+**Correct:**
 
 ```markdown
 ## Overview
-
 ...
-
 ## Session 2 Overview
 ```
 
-**Note:** MD024 can be configured to allow duplicates under different parents
-(e.g., multiple `### What I Did` under different `## Session` headings).
+This rule can be configured with `siblings_only: true` to allow duplicate headings under different parent sections. For example, multiple `### What I Did` headings under different `## Session` headings would be allowed. This is the configuration I recommend for knowledge bases and journals where repeated section structures are common.
 
----
+### MD060: Table Column Spacing
 
-### MD060 - Table Column Style
-
-Tables should have consistent spacing style.
-
-**Styles:**
+Tables should use consistent spacing. The four styles are:
 
 | Style                    | Example                          |
 | ------------------------ | -------------------------------- |
@@ -169,7 +127,7 @@ Tables should have consistent spacing style.
 | `trailing_only`          | `\|text \|`                      |
 | `no_leading_or_trailing` | `\|text\|` (compact)             |
 
-**Recommended:** Use `leading_and_trailing` for readability:
+Use `leading_and_trailing` for readability:
 
 ```markdown
 | Header 1 | Header 2 |
@@ -177,68 +135,19 @@ Tables should have consistent spacing style.
 | Cell 1   | Cell 2   |
 ```
 
----
+In my repository, MD060 accounted for 3,600 of the 7,500 errors -- almost half. The violations were mechanical (inconsistent padding) and auto-fixable, but the sheer volume meant I had to decide on a canonical style before running any automated fixes.
 
-### MD031 - Blanks Around Fences
+### MD031: Blank Lines Around Code Fences
 
-Fenced code blocks need blank lines before and after.
+Fenced code blocks need blank lines before and after them, for the same rendering reasons as lists.
 
-**Bad:**
+### MD009 and MD010: Trailing Spaces and Hard Tabs
 
-````markdown
-Some text
+Lines should not have trailing whitespace (MD009), and indentation should use spaces instead of tabs (MD010). The standard is 2 spaces for markdown and 4 spaces for code blocks. Both of these are best handled by editor configuration rather than manual effort -- set your editor to trim trailing whitespace on save and insert spaces instead of tabs.
 
-```bash
-code
-```
-````
+## Configuring Markdownlint
 
-More text
-
-````text
-
-**Good:**
-
-```markdown
-Some text
-
-```bash
-code
-````
-
-More text
-
-````text
-
----
-
-### MD009 - No Trailing Spaces
-
-Lines should not have trailing whitespace.
-
-**Note:** Configure editor to trim trailing whitespace on save.
-
----
-
-### MD010 - No Hard Tabs
-
-Use spaces instead of tabs for indentation.
-
-**Standard:** 2 spaces for markdown, 4 spaces for code blocks.
-
----
-
-### MD013 - Line Length
-
-Lines should not exceed a maximum length (default: 80 characters).
-
-**Note:** Often disabled for prose. Configure based on project needs.
-
----
-
-## Configuration
-
-Create `.markdownlint.json` or `.markdownlint.yaml` in project root:
+Not every rule makes sense for every project. Create a `.markdownlint.json` in your project root to disable or customize rules:
 
 ```json
 {
@@ -249,24 +158,24 @@ Create `.markdownlint.json` or `.markdownlint.yaml` in project root:
   "MD033": false,
   "MD041": false
 }
-````
+```
 
-**Common configurations:**
+Here is the reasoning behind common configuration choices:
 
 | Rule  | Setting               | Reason                                         |
 | ----- | --------------------- | ---------------------------------------------- |
-| MD013 | `false`               | Allow long prose lines                         |
+| MD013 | `false`               | Allow long prose lines (line length limit hurts readability in prose) |
 | MD024 | `siblings_only: true` | Allow duplicate headings in different sections |
-| MD033 | `false`               | Allow inline HTML (for badges, details)        |
-| MD041 | `false`               | Allow documents without top-level heading      |
+| MD033 | `false`               | Allow inline HTML (needed for badges, details/summary) |
+| MD041 | `false`               | Allow documents without a top-level heading (YAML frontmatter replaces it) |
 
----
+MD013 (line length) deserves special mention. The default 80-character limit makes sense for code but fights against natural prose. When writing documentation, forcing line breaks mid-sentence creates awkward diffs and harder-to-read raw files. I disable it in every project.
 
 ## VS Code Integration
 
-Install "markdownlint" extension (`DavidAnson.vscode-markdownlint`).
+Install the [markdownlint extension](https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint) (`DavidAnson.vscode-markdownlint`) to see violations inline as you type.
 
-**Settings (`settings.json`):**
+Add this to your VS Code `settings.json`:
 
 ```json
 {
@@ -282,39 +191,22 @@ Install "markdownlint" extension (`DavidAnson.vscode-markdownlint`).
 }
 ```
 
----
+The `quickSuggestions: false` setting for markdown files prevents the autocomplete popup from appearing while you write prose, which is distracting. Word wrap keeps long lines visible without horizontal scrolling.
 
 ## Quick Reference
+
+When you encounter a markdownlint error and need to fix it fast, this table maps common issues to their solutions:
 
 | Issue                      | Rule  | Fix                               |
 | -------------------------- | ----- | --------------------------------- |
 | List missing blank line    | MD032 | Add blank line before/after list  |
-| Code block no language     | MD040 | Add language after opening ```    |
+| Code block no language     | MD040 | Add language after opening ``` |
 | Duplicate heading          | MD024 | Make heading text unique          |
-| Inconsistent table spacing | MD060 | Use `\| text \|` consistently     |
+| Inconsistent table spacing | MD060 | Use `\| text \|` consistently    |
 | No blank around code       | MD031 | Add blank line before/after fence |
 | Trailing spaces            | MD009 | Configure editor to trim          |
 | Hard tabs                  | MD010 | Use spaces (2 for md, 4 for code) |
 
----
+## Takeaway
 
-## When to Use
-
-- All documentation files in any repository
-- README files
-- Knowledge base entries
-- Journal entries
-- Technical guides
-
-## When NOT to Use
-
-- Markdown in code comments (different rules may apply)
-- Markdown embedded in other formats (may have constraints)
-
----
-
-## Resources
-
-- [markdownlint GitHub](https://github.com/DavidAnson/markdownlint)
-- [markdownlint Rules](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md)
-- [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint)
+Markdownlint is not about making markdown pretty. It is about making markdown predictable -- consistent rendering across platforms, clean diffs in version control, and formatting conventions that scale across contributors. The initial investment is configuring the rules to match your project's needs and running a one-time cleanup. After that, the VS Code extension and CI integration keep the error count at zero. In my case, going from 7,500 errors to zero took one afternoon of automated fixes and one configuration file. The repository has stayed clean since.

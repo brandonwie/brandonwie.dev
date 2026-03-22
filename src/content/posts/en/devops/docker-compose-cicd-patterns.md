@@ -16,7 +16,7 @@ references:
   - url: 'https://docs.docker.com/compose/how-tos/production/'
     title: Use Compose in production — Docker Docs
     type: official
-source_content_hash: 19f34c82926f431710a23a36398203540637fc22bbe71103353aaa0df28b563b
+source_content_hash: 1475ce04faea09a615a076be2aa16745a34343edbb5aa075df8d4105357ded73
 ---
 
 Our CI/CD pipeline ran `docker-compose pull` and then `docker-compose up -d` on the production server. The logs showed success, but the container was running an old image built locally — not the fresh one we'd just pushed to ECR. The culprit? Our `docker-compose.yml` used `build:` instead of `image:`, so `pull` silently did nothing.
@@ -267,6 +267,12 @@ git reset --hard <commit-sha>
 | ------------------------- | --------------------- | ------------------ |
 | `docker-compose.yml`      | Local development     | `build:` directive |
 | `docker-compose.prod.yml` | Production deployment | `image:` directive |
+
+## CI/CD Gotchas
+
+One lesson learned the hard way: **floating action tags break builds silently.** We used `cloudflare/wrangler-action@v3` in a GitHub Actions workflow, and one day builds started failing with "bun not found." The action had changed its default `packageManager` from npm to bun — and since `ubuntu-latest` doesn't ship with bun, the action failed immediately.
+
+The fix was simple: pin `packageManager: npm` explicitly. The broader rule: always pin action versions or explicitly set all configurable defaults. A `@v3` tag can shift under your feet without a single line of your code changing.
 
 ---
 

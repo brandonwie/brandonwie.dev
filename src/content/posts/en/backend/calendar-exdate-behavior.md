@@ -19,40 +19,18 @@ references:
     title: rrule.js EXDATE with TZID limitation
     type: official
 source_content_hash: ce88c8b526997c5a5e3c8f323a250859fde98716dc5d822168ba47387fbb00f8
+expanded: true
 ---
 
-deletions differently is critical for calendar sync systems.
+I was debugging why single-occurrence deletions from Apple Calendar were silently vanishing from our app. A user deleted "this only" on a recurring weekly event in Apple Calendar. Google Calendar synced the change. Our webhook processed the update. But the deleted occurrence kept showing up in the app as if nothing happened.
 
----
+The root cause: Apple and Google handle recurring event deletions in completely different ways, and our sync system only understood Google's pattern.
 
 ## The Problem
 
-When building a calendar sync system that receives data through Google Calendar
-API, deleting a single occurrence of a recurring event ("this only") produces no
-cancelled exception event if the original deletion happened in Apple Calendar.
-The deletion signal is an EXDATE line on the parent event, not a separate event
-object. If your sync system only looks for cancelled exception events (the
-Google pattern), Apple Calendar deletions silently disappear from your app.
+When you delete a single occurrence of a recurring event ("this only"), Apple Calendar and Google Calendar produce different signals. Google creates a cancelled exception event — a separate event object with `status: "cancelled"`. Apple adds an `EXDATE` line to the parent event — no separate event is created.
 
-## Difficulties Encountered
-
-- **No exception event created** — Apple "delete this only" adds an EXDATE to
-  the parent instead of creating a cancelled exception event. This is valid per
-  RFC 5545 but opposite to Google's behavior, and nothing in the Google Calendar
-  API documentation warns about this.
-- **Google passthrough is undocumented** — Google preserves Apple EXDATE lines
-  when syncing Apple Calendar data through its API but does not convert them to
-  cancelled events. Discovering this required testing with real Apple-to-Google
-  synced calendars.
-- **rrule.js TZID limitation** — The rrule.js library cannot parse
-  `EXDATE;TZID=Asia/Seoul:20250819T090000`. It silently ignores the EXDATE, so
-  excluded dates still appear in the recurrence expansion. The only clue was
-  comparing expected vs actual occurrence counts.
-- **Two deletion models to support** — A robust sync system must handle both
-  Apple-style (EXDATE on parent) and Google-style (cancelled exception event)
-  simultaneously for the same recurring event series.
-
----
+If your sync system only looks for cancelled exception events (the Google pattern), Apple Calendar deletions are invisible. The EXDATE line is the only signal, and it's easy to miss because Google passes it through without converting it to a cancelled event.
 
 ## The Critical Distinction
 
@@ -63,28 +41,22 @@ Google pattern), Apple Calendar deletions silently disappear from your app.
 | Apple MODIFY "this only"  | No                | Yes (`confirmed`)      |
 | Google MODIFY "this only" | No                | Yes (`confirmed`)      |
 
-## Why This Matters
+The asymmetry only applies to deletions. Both Apple and Google create exception events for modifications ("edit this only"). It's specifically the "delete this only" action where they diverge.
 
-### Apple Calendar Deletions
+## How Apple Calendar Deletions Work
 
-When a user deletes "this only" from Apple Calendar:
-
-1. Apple adds `EXDATE` line to parent event
-2. **No exception event is created**
-3. The only signal is the EXDATE line
+When a user deletes "this only" from Apple Calendar, Apple adds an `EXDATE` line to the parent recurring event. No exception event is created:
 
 ```text
 RRULE:FREQ=WEEKLY;BYDAY=TU
 EXDATE;TZID=Asia/Seoul:20250819T090000
 ```
 
-### Google Calendar Deletions
+The EXDATE property (defined in RFC 5545 Section 3.8.5.1) specifies dates to exclude from the recurrence set. It's a perfectly valid approach per the iCalendar specification — but it's the opposite of what Google does.
 
-When a user deletes "this only" from Google Calendar:
+## How Google Calendar Deletions Work
 
-1. Google creates an exception event with `status: "cancelled"`
-2. **No EXDATE is added** to parent
-3. The signal is the cancelled exception event
+Google creates a separate exception event with `status: "cancelled"`:
 
 ```json
 {
@@ -94,17 +66,17 @@ When a user deletes "this only" from Google Calendar:
 }
 ```
 
-## Google Calendar API Passthrough
+No EXDATE is added to the parent event. The deletion signal is entirely in the exception event.
 
-When syncing Apple Calendar -> Google Calendar -> Your App:
+## The Google API Passthrough
 
-- Google **preserves** Apple's EXDATE (passthrough)
-- Google does **NOT** create a cancelled exception event for Apple deletions
-- Your app must parse EXDATE to detect Apple deletions
+When data flows Apple Calendar → Google Calendar → Your App, Google **preserves** Apple's EXDATE lines but does **not** convert them to cancelled exception events. This passthrough behavior is undocumented — I only discovered it by testing with real Apple-to-Google synced calendars and inspecting the raw recurrence data.
 
-## Implementation: rrule.js Limitation
+This means your app must handle both patterns simultaneously for the same recurring event series: EXDATE lines from Apple deletions and cancelled exception events from Google deletions.
 
-The `rrule.js` library cannot parse EXDATE with TZID parameter:
+## The rrule.js Limitation
+
+When I tried to handle EXDATE in our recurrence expansion code, I hit another problem: the `rrule.js` library cannot parse EXDATE with a TZID parameter:
 
 ```text
 // This FAILS in rrule.js:
@@ -114,7 +86,11 @@ EXDATE;TZID=Asia/Seoul:20250819T090000
 EXDATE:20250819T000000Z
 ```
 
-### Solution: Parse EXDATE Separately
+The library silently ignores the EXDATE when TZID is present. The excluded dates still appear in the recurrence expansion. The only clue was comparing expected vs actual occurrence counts — a subtle bug that's easy to miss.
+
+### The Fix: Parse EXDATE Separately
+
+The solution is to extract EXDATE lines before passing recurrence data to rrule.js, parse them with timezone awareness, and add them to the `RRuleSet` manually:
 
 ```typescript
 import { RRuleSet, rrulestr } from "rrule";
@@ -144,42 +120,20 @@ function createRuleSetWithExdates(
 }
 ```
 
-## Key Points
+By separating EXDATE parsing from RRULE parsing, you get correct timezone handling regardless of the format (TZID-qualified or UTC).
 
-1. **Don't assume exception events exist** - Apple deletions have no exception
-2. **Always parse EXDATE** - It's the only signal for Apple deletions
-3. **rrule.js needs help** - Parse EXDATE separately, add to RRuleSet
-4. **Google is a passthrough** - Apple EXDATE preserved, not converted
+## When This Matters
 
----
+This knowledge is essential when building any calendar sync system that ingests data from the Google Calendar API where users may have Apple Calendar as the original source. If you're building a Google-only system where all users are on Google Calendar, deletions always produce cancelled exception events and EXDATE parsing adds no value.
 
-## When to Use
+The Apple-vs-Google distinction also doesn't apply to Outlook/Exchange calendars, which have their own exception handling model (modified/deleted occurrences in the Exchange API).
 
-- Building a calendar sync system that ingests data from Google Calendar API
-  where users may have Apple Calendar as the source
-- Implementing recurrence expansion that must respect single occurrence
-  deletions across calendar providers
-- Debugging "missing occurrences" in a recurring event series that syncs through
-  Google
+## Takeaway
 
-## When NOT to Use
+A robust calendar sync system must handle both deletion patterns: Apple's EXDATE on the parent event and Google's cancelled exception event. Don't assume exception events exist for every deletion — Apple doesn't create them. Parse EXDATE separately from RRULE when using rrule.js, because the library silently ignores EXDATE with TZID parameters. Always test your recurrence expansion with real Apple-to-Google synced calendars, not just Google-native events.
 
-- **Google-only calendar systems** — If all users are on Google Calendar,
-  deletions always produce cancelled exception events; EXDATE parsing adds no
-  value
-- **Non-recurring events** — EXDATE only applies to recurring event series;
-  single events use standard delete
-- **Outlook/Exchange calendars** — Outlook has its own exception handling model
-  (modified/deleted occurrences in the Exchange API); this Apple-vs-Google
-  knowledge does not directly transfer
+## References
 
----
-
-## RFC 5545 Reference
-
-- **EXDATE**:
-  [Section 3.8.5.1](https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.1) -
-  Exception dates
-- **RECURRENCE-ID**:
-  [Section 3.8.4.4](https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.4.4) -
-  Exception instance link
+- [RFC 5545 — EXDATE Property (Section 3.8.5.1)](https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.1)
+- [rrule.js EXDATE with TZID limitation](https://github.com/jkbrzt/rrule/issues/548)
+- [RFC 5545 — RECURRENCE-ID (Section 3.8.4.4)](https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.4.4)

@@ -16,9 +16,14 @@ references:
     title: Explicit Locking — PostgreSQL Documentation
     type: official
 source_content_hash: e56aef5750df9a314e2ffd92a4c5f67d592341fb92e6be63c788bddb2a342979
+expanded: true
 ---
 
-## Key Properties
+I needed to prevent two calendar sync operations from running simultaneously for the same integration. Row-level locks wouldn't work — there was no shared row to lock on, and the operations spanned multiple tables. PostgreSQL advisory locks were the right fit: application-level locks that live in shared memory, visible across all connections, and automatically released when the connection closes. The catch was making them work correctly with TypeORM's connection pool.
+
+## What Are Advisory Locks?
+
+Unlike row or table locks that PostgreSQL manages automatically, advisory locks are entirely application-controlled. You acquire and release them manually using SQL functions, and PostgreSQL stores them in shared memory rather than tying them to any particular table or row.
 
 | Property     | Value                                            |
 | ------------ | ------------------------------------------------ |
@@ -28,7 +33,7 @@ source_content_hash: e56aef5750df9a314e2ffd92a4c5f67d592341fb92e6be63c788bddb2a3
 | Scope        | **Session-scoped** (tied to database connection) |
 | Auto-release | Yes, when connection closes                      |
 
-## SQL Commands
+The SQL interface is straightforward:
 
 ```sql
 -- Acquire (non-blocking, returns true/false immediately)
@@ -48,9 +53,11 @@ JOIN pg_stat_activity p ON l.pid = p.pid
 WHERE l.locktype = 'advisory';
 ```
 
-## Critical Rule: Session Scope
+`pg_try_advisory_lock` is non-blocking — it returns `true` if the lock was acquired, `false` if another session already holds it. This is preferable to `pg_advisory_lock` (blocking variant) in most application code, because you can fail fast and return a meaningful response instead of hanging indefinitely.
 
-**Only the connection that acquired a lock can release it.**
+## The Critical Rule: Session Scope
+
+The most important thing to understand about advisory locks is that they are **session-scoped** — tied to the database connection that acquired them. Only that connection can release the lock:
 
 ```text
 Lock Table:
@@ -61,9 +68,11 @@ Lock Table:
 └─────────┴─────────────┴─────────┘
 ```
 
-## TypeORM: Connection Pool vs QueryRunner
+This session-scoping creates a subtle but critical problem when you're using TypeORM with a connection pool.
 
-### Connection Pool (Default) - BROKEN for locks
+## The TypeORM Connection Pool Trap
+
+TypeORM's default `dataSource.query()` grabs a random connection from the pool for each call. This means your lock acquisition might run on connection A, but your unlock runs on connection B — and connection B can't release connection A's lock:
 
 ```typescript
 // ❌ BROKEN for advisory locks
@@ -71,7 +80,7 @@ await this.dataSource.query("SELECT pg_try_advisory_lock($1)", [id]);
 // Gets random connection from pool each time!
 ```
 
-### QueryRunner (Dedicated Connection) - CORRECT
+The fix is to use a `QueryRunner`, which reserves a dedicated connection from the pool:
 
 ```typescript
 // ✅ CORRECT for advisory locks
@@ -82,15 +91,11 @@ await qr.query(...);    // Still same connection
 await qr.release();     // Return to pool
 ```
 
-**When to use QueryRunner:**
-
-- Transactions (must be same connection)
-- Advisory locks (must be same session)
-- Any operation requiring connection affinity
+Use `QueryRunner` any time you need connection affinity: transactions, advisory locks, or any sequence of SQL statements that must run on the same session.
 
 ## Implementation Pattern
 
-Store dedicated QueryRunner per lock in a Map:
+The key design decision is storing the `QueryRunner` reference so you can release the lock on the same connection that acquired it. A `Map<number, QueryRunner>` does this cleanly:
 
 ```typescript
 @Injectable()
@@ -133,7 +138,11 @@ export class LockService {
 }
 ```
 
-## Multi-Pod (ECS) Considerations
+The `finally` block ensures the connection is always returned to the pool, even if the unlock query fails. Without this, a failed unlock leaks a connection from the pool — and in a production system with limited pool size, that eventually exhausts all available connections.
+
+## Multi-Pod Considerations
+
+In a containerized environment (ECS, Kubernetes), advisory locks work across pods because the lock lives in PostgreSQL, not in application memory:
 
 ```text
 ┌─────────┐      ┌─────────┐      ┌─────────┐
@@ -154,19 +163,23 @@ export class LockService {
 | Pod A crashes mid-operation   | PostgreSQL auto-releases lock (connection closed) |
 | Same pod, concurrent requests | Map ensures one QueryRunner per ID                |
 
-## FAQ: Is In-Memory Map Safe?
+The auto-release on disconnect is a critical safety feature. If a pod crashes mid-sync, you don't need manual intervention to clear the lock — PostgreSQL handles it when the connection drops. This eliminates the need for timeout-based recovery mechanisms.
 
-**Q: Won't using an in-memory Map cause problems when containers scale?**
+## Is the In-Memory Map a Problem at Scale?
 
-**A: No.** Acquire and release happen in the **same HTTP request** on the **same
-container**. The Map is only for tracking within a single request.
-Cross-container coordination relies on PostgreSQL's session-scoped behavior.
+A common concern: "Won't the in-memory `Map` cause problems when containers scale horizontally?" The answer is no, because acquire and release happen within the same HTTP request on the same container. The `Map` tracks which `QueryRunner` holds which lock during a single request lifecycle. Cross-container coordination is handled entirely by PostgreSQL's session-scoped locking mechanism — the `Map` is an implementation detail that never needs to be shared.
 
 ## Common Pitfalls
 
-1. **Using `dataSource.query()` for locks** - Gets random connection each time
-2. **Trying to force-release another session's lock** - Impossible by design
-3. **Relying on timeouts for recovery** - Unnecessary; PostgreSQL auto-releases
-   on disconnect
-4. **Connection pool hiding bugs** - Smaller pools may accidentally reuse
-   connections
+1. **Using `dataSource.query()` for locks** — gets a random connection each time, breaking the session affinity that advisory locks require
+2. **Trying to force-release another session's lock** — impossible by design; only the acquiring connection can release
+3. **Relying on timeouts for recovery** — unnecessary, since PostgreSQL auto-releases locks when the connection closes
+4. **Connection pool hiding bugs** — with a small pool, you might accidentally reuse the same connection for acquire and release, making broken code appear to work until the pool grows
+
+## Takeaway
+
+PostgreSQL advisory locks give you distributed coordination without external infrastructure (Redis, ZooKeeper). The one rule you can't break: acquire and release must happen on the same database connection. In TypeORM, that means `QueryRunner` — never `dataSource.query()`. Store the `QueryRunner` reference, release it in a `finally` block, and let PostgreSQL's auto-release handle crash recovery.
+
+## References
+
+- [Explicit Locking — PostgreSQL Documentation](https://www.postgresql.org/docs/current/explicit-locking.html)

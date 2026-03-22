@@ -16,42 +16,49 @@ references:
     title: Recover state from backup
     type: official
 source_content_hash: 80ce759e6689ff89250d33ba9b8eee691fac1f1bc642f446f6e8a8559f7b0ae5
+expanded: true
 ---
 
-match AWS reality.
+I ran `terraform plan` and it wanted to destroy an actively-used RDS cluster. The state file had drifted from AWS reality — resources existed in AWS that Terraform didn't know about, and Terraform's view of existing resources was outdated. Instead of panicking and running `apply`, I needed a systematic recovery process.
 
-## Symptoms of State Drift
+Terraform state drift happens when the state file doesn't match what actually exists in your cloud provider. This can occur from manual console changes, failed applies, or state file corruption. The recovery process is methodical: backup first, assess the damage, import missing resources, and fix configuration drift.
 
-- `terraform plan` shows changes that shouldn't happen
-- Resources marked for destroy that are actively used
-- Resources marked for create that already exist
-- Unexpected instance replacements
+## Recognizing State Drift
 
-## Recovery Phases
+These symptoms in `terraform plan` output indicate drift:
 
-### Phase 1: Assessment
+- Resources marked for **destroy** that are actively used in production
+- Resources marked for **create** that already exist in AWS
+- Unexpected instance replacements (destroy + recreate)
+- Changes that nobody made appearing in the plan
 
-1. **Backup current state**
+If `terraform plan` shows any of these, do NOT run `terraform apply`. Diagnose first.
 
-   ```bash
-   cp terraform.tfstate terraform.tfstate.backup-$(date +%Y%m%d)
-   ```
+## Recovery: Phase 1 — Assessment
 
-2. **Run refresh to sync with AWS**
+The first rule is: **always backup the current state** before touching anything.
 
-   ```bash
-   terraform refresh
-   ```
+```bash
+cp terraform.tfstate terraform.tfstate.backup-$(date +%Y%m%d)
+```
 
-3. **Analyze drift**
+Next, run a refresh to sync Terraform's view with AWS reality. This updates the state file with the current state of resources Terraform already tracks:
 
-   ```bash
-   terraform plan -out=drift-analysis.tfplan
-   ```
+```bash
+terraform refresh
+```
 
-### Phase 2: Import Missing Resources
+Then analyze what drift remains:
 
-For resources that exist in AWS but not in state:
+```bash
+terraform plan -out=drift-analysis.tfplan
+```
+
+Review this plan carefully. Categorize each change: is Terraform trying to create something that exists? Destroy something that's running? Modify something that was changed manually?
+
+## Recovery: Phase 2 — Import Missing Resources
+
+For resources that exist in AWS but aren't in Terraform state (Terraform wants to create them when they already exist), use `terraform import`:
 
 ```bash
 # RDS Cluster
@@ -64,9 +71,11 @@ terraform import aws_rds_cluster_instance.main moba-rds-prod
 terraform import aws_instance.main i-0123456789abcdef0
 ```
 
-### Phase 3: Fix Configuration Drift
+Each import command tells Terraform "this resource in my configuration corresponds to this existing resource in AWS." After importing, Terraform tracks the resource without trying to recreate it.
 
-Common issues and fixes:
+## Recovery: Phase 3 — Fix Configuration Drift
+
+After importing, `terraform plan` may still show changes because your `.tf` configuration doesn't match the actual resource attributes. Common issues and fixes:
 
 | Issue               | Fix                                  |
 | ------------------- | ------------------------------------ |
@@ -74,9 +83,9 @@ Common issues and fixes:
 | Security group type | Use `vpc_security_group_ids` for VPC |
 | ECS task definition | Add lifecycle ignore                 |
 
-## Common Patterns
-
 ### Pin AMI to Prevent Replacement
+
+If Terraform wants to replace an EC2 instance because the AMI changed:
 
 ```hcl
 resource "aws_instance" "main" {
@@ -89,9 +98,11 @@ resource "aws_instance" "main" {
 }
 ```
 
+The `lifecycle.ignore_changes` block tells Terraform to skip this attribute during planning. Use this for attributes managed outside of Terraform (like AMIs updated by a separate patching process).
+
 ### ECS Task Definition Lifecycle
 
-When task definitions are managed by CI/CD:
+When CI/CD manages task definitions separately from Terraform:
 
 ```hcl
 resource "aws_ecs_service" "main" {
@@ -105,9 +116,11 @@ resource "aws_ecs_service" "main" {
 }
 ```
 
+Without this, every `terraform plan` shows a diff because CI/CD has updated the task definition since Terraform last applied.
+
 ### VPC Security Groups
 
-For VPC-based instances, use `vpc_security_group_ids`:
+A common source of drift is using the wrong security group attribute for VPC instances:
 
 ```hcl
 # ❌ Wrong for VPC instances
@@ -121,11 +134,11 @@ resource "aws_instance" "main" {
 }
 ```
 
-## Prevention
+Using `security_groups` (by name) instead of `vpc_security_group_ids` (by ID) causes Terraform to detect drift on every plan because the API returns IDs, not names.
 
-### Remote State Backend
+## Prevention: Remote State Backend
 
-Prevents drift by centralizing state:
+Most state drift can be prevented by using a remote state backend. This centralizes the state file and adds locking to prevent concurrent modifications:
 
 ```hcl
 terraform {
@@ -139,9 +152,7 @@ terraform {
 }
 ```
 
-### State Locking
-
-DynamoDB table for locking:
+The DynamoDB table provides state locking — preventing two people from running `terraform apply` simultaneously:
 
 ```hcl
 resource "aws_dynamodb_table" "terraform_locks" {
@@ -158,9 +169,17 @@ resource "aws_dynamodb_table" "terraform_locks" {
 
 ## Key Lessons
 
-1. **Always backup state first** - Before any recovery operation
-2. **Import before manage** - Don't recreate existing resources
-3. **Use lifecycle blocks** - For CI/CD-managed resources
-4. **Plan extensively** - Run `terraform plan` multiple times
-5. **Document each step** - For future reference and auditing
-6. **Set up remote state** - Prevents most drift issues
+1. **Always backup state first** — Before any recovery operation, copy the state file
+2. **Import before manage** — Don't recreate existing resources; import them into state
+3. **Use lifecycle blocks** — For resources managed by CI/CD or external processes
+4. **Plan extensively** — Run `terraform plan` multiple times during recovery; never `apply` without reviewing
+5. **Document each step** — For future reference and auditing
+6. **Set up remote state** — Prevents most drift issues by centralizing state management
+
+## Takeaway
+
+Terraform state recovery follows a predictable pattern: backup, refresh, import missing resources, fix configuration drift, and verify with `plan`. The key is to never run `apply` before understanding every change in the plan. Set up remote state with locking from day one to prevent most drift scenarios. When drift does happen, the systematic approach (assess → import → fix → verify) gets you back to a clean state without destroying production resources.
+
+## References
+
+- [Terraform State Recovery Documentation](https://developer.hashicorp.com/terraform/cli/state/recover)

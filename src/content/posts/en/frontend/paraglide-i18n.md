@@ -11,6 +11,7 @@ tags:
 category: frontend
 draft: false
 lang: en
+expanded: true
 references:
   - url: 'https://inlang.com/m/gerre34r/library-inlang-paraglideJs'
     title: Paraglide-JS Documentation
@@ -21,33 +22,21 @@ references:
 source_content_hash: 36af3ef4879870da14ba427898acdb989db4d535b8a68392477efd021f331968
 ---
 
-bloating the bundle or introducing runtime overhead. The site uses SSG (static
-site generation), so the i18n solution must resolve translations at build time,
-not at runtime in the browser.
+I wanted to add Korean translations to my SvelteKit blog. The site is statically generated and deployed to Cloudflare Pages, so the i18n solution needed to resolve translations at build time -- not ship a runtime parser to the browser. I spent a day evaluating options and fighting with SSG compatibility before landing on Paraglide-JS. Here is everything I learned, including the gotchas the docs do not cover.
 
 ---
 
-## Difficulties Encountered
+## Why Most i18n Libraries Did Not Fit
 
-- **SSG compatibility gap** -- Most i18n libraries (i18next, svelte-i18n) are
-  designed for server-rendered or client-rendered apps; getting them to work
-  correctly with SvelteKit's static adapter required workarounds or was not
-  well-documented.
-- **Route-based vs cookie-based locale** -- Paraglide supports multiple locale
-  detection strategies, but figuring out how to wire route-based detection
-  (`/ko/...` prefix) for SSG took trial and error since most examples assumed
-  server-side middleware.
-- **Language toggle URL construction** -- Building the alternate-language URL
-  for EN/KO toggle required careful pathname manipulation (stripping or adding
-  `/ko` prefix) with edge cases for the root path.
-- **Generated runtime is opaque** -- Paraglide generates code into
-  `src/lib/paraglide/` which should not be edited; understanding what it
-  generates and how to use `setLanguageTag` vs `languageTag` required reading
-  the generated source code since docs were sparse.
+The standard recommendation for i18n in JavaScript is i18next or a framework-specific wrapper like svelte-i18n. Both are solid libraries, but they share a fundamental design assumption: translations are resolved at runtime. The library ships a JSON parser to the browser, loads the active locale's messages, and interpolates them on every render.
+
+For a server-rendered or client-rendered app, that tradeoff is fine. For a statically generated site, it means shipping JavaScript that parses and applies translations that could have been baked into the HTML at build time. Every kilobyte matters when your hosting is a CDN edge serving pre-built files.
+
+I needed something that compiles translations away entirely.
 
 ---
 
-## Options Considered
+## Options I Evaluated
 
 | Option                   | Pros                                                                               | Cons                                                                  |
 | ------------------------ | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -56,17 +45,13 @@ not at runtime in the browser.
 | i18next + svelte adapter | Massive ecosystem, plugins for plurals/formatting                                  | Large bundle, not compile-time, manual SvelteKit wiring               |
 | DIY JSON + store         | No dependency, full control                                                        | No type safety, must build tooling from scratch                       |
 
-## Why This Approach
-
-Chose Paraglide-JS because the site is statically generated and bundle size
-matters. Compile-time translation means zero runtime cost, and full TypeScript
-support catches missing or mistyped message keys during development rather than
-at runtime. The native SvelteKit Vite plugin made integration seamless compared
-to manually wiring i18next.
+Paraglide-JS won because compile-time translation means zero runtime cost, full TypeScript support catches missing or mistyped message keys during development, and the native SvelteKit Vite plugin made integration seamless compared to manually wiring i18next.
 
 ---
 
-## Why Paraglide-JS
+## How Paraglide Compares
+
+This table made the decision clear:
 
 | Feature               | Paraglide          | svelte-i18n | i18next |
 | --------------------- | ------------------ | ----------- | ------- |
@@ -75,19 +60,31 @@ to manually wiring i18next.
 | Compile-time          | Yes                | No          | No      |
 | SvelteKit integration | Native             | Manual      | Manual  |
 
-## Setup
+Tree-shaking is the key differentiator. Paraglide compiles each message into a standalone function. If you have 200 messages but a page only uses 5, only those 5 ship to the client. Runtime libraries cannot do this because they load the entire locale file.
+
+---
+
+## Setting Up Paraglide-JS
+
+Initialization takes one command:
 
 ```bash
 npx @inlang/paraglide-js init
 ```
 
-This creates:
+This creates three things:
 
-- `project.inlang/settings.json` - Configuration
-- `messages/en.json` - English messages
-- `src/lib/paraglide/` - Generated runtime (don't edit)
+- `project.inlang/settings.json` -- Configuration (source language, supported locales)
+- `messages/en.json` -- English messages
+- `src/lib/paraglide/` -- Generated runtime (do not edit these files)
 
-## Message Files
+The generated runtime in `src/lib/paraglide/` is opaque and auto-regenerated on every build. Resist the urge to modify it -- any changes will be overwritten.
+
+---
+
+## Writing Message Files
+
+Messages live in JSON files under `messages/`:
 
 ```json
 // messages/en.json
@@ -103,7 +100,13 @@ This creates:
 }
 ```
 
-## Usage in Components
+Each key must exist in both files. If you add a key to `en.json` but forget `ko.json`, TypeScript will catch it at compile time -- one of Paraglide's strongest features.
+
+---
+
+## Using Messages in Components
+
+Import and call messages as functions:
 
 ```svelte
 <script>
@@ -114,7 +117,7 @@ This creates:
 <p>{m.welcome_message()}</p>
 ```
 
-Messages are functions because they can accept parameters:
+Messages are functions (not strings) because they can accept parameters:
 
 ```json
 {
@@ -126,9 +129,15 @@ Messages are functions because they can accept parameters:
 {m.greeting({ name: 'Brandon' })}
 ```
 
-## Route-Based Locale Detection
+This function-call pattern is what enables tree-shaking and type safety. The compiler knows exactly which messages each component uses and strips the rest.
 
-For SSG (static site generation), use route-based locales:
+---
+
+## Route-Based Locale Detection for SSG
+
+For a statically generated site, cookie-based or header-based locale detection does not work -- there is no server to read cookies at request time. The locale must be encoded in the URL.
+
+I chose a prefix strategy:
 
 ```text
 /           → English (default)
@@ -137,7 +146,11 @@ For SSG (static site generation), use route-based locales:
 /ko/posts   → Korean posts
 ```
 
-### Layout for Locale Routes
+English is the default and gets no prefix. Korean routes live under `/ko/`. This keeps English URLs clean while making the locale explicit and crawlable for search engines.
+
+### Setting the Locale in Layouts
+
+The Korean layout sets the language tag when the route mounts:
 
 ```svelte
 <!-- src/routes/ko/+layout.svelte -->
@@ -149,7 +162,13 @@ For SSG (static site generation), use route-based locales:
 <slot />
 ```
 
-## Language Toggle Component
+Every component under `/ko/` inherits this language tag. The English routes use the default, so no explicit `setLanguageTag('en')` is needed.
+
+---
+
+## Building a Language Toggle
+
+The toggle component needs to construct the alternate-language URL from the current path. This sounds simple until you hit edge cases:
 
 ```svelte
 <script lang="ts">
@@ -170,7 +189,13 @@ For SSG (static site generation), use route-based locales:
 </a>
 ```
 
+The `|| '/'` fallback at the end handles the edge case where stripping `/ko` from `/ko` leaves an empty string. Without it, the link would point to an empty href.
+
+---
+
 ## Vite Plugin Configuration
+
+The Paraglide Vite plugin runs at build time, compiling messages into the generated runtime:
 
 ```typescript
 // vite.config.ts
@@ -186,33 +211,40 @@ export default defineConfig({
 });
 ```
 
-## Key Points
-
-- **Compile-time**: Messages are compiled to functions, no runtime parsing
-- **Tree-shakeable**: Unused messages are removed from bundle
-- **Type-safe**: TypeScript knows all available messages and parameters
-- **SSG-friendly**: Route-based locales work with static site generation
-- **No hydration issues**: Messages resolved at build time
+One important build-order detail: the Vite plugin generates TypeScript files in `src/lib/paraglide/` during the build step. If you run `svelte-check` before `build`, it will fail on missing type definitions. Always build first, then type-check.
 
 ---
 
-## When to Use
+## The Difficulties I Hit Along the Way
 
-- SvelteKit projects (especially SSG) needing lightweight i18n
-- Projects where type safety for translation keys is important
-- Small-to-medium translation sets (personal sites, blogs, portfolios)
-- When bundle size is a priority and runtime overhead must be minimal
+Several issues cost me hours that the documentation did not prepare me for:
 
-## When NOT to Use
+**SSG compatibility gap.** Most i18n examples assume server-side middleware for locale detection. Getting route-based detection to work with SvelteKit's static adapter required reading source code rather than docs.
 
-- **Dynamic translations from CMS/database** -- Paraglide compiles messages at
-  build time; if translations are managed in a CMS and change frequently without
-  redeploying, a runtime library like i18next is more appropriate.
-- **Large teams with non-technical translators** -- Paraglide uses JSON message
-  files in the codebase; teams that need a translation management platform
-  (Crowdin, Lokalise) may find i18next's ecosystem better integrated.
-- **Complex ICU message syntax** -- If you need advanced pluralization rules,
-  gender agreement, or nested selects beyond simple interpolation, i18next or
-  FormatJS have more mature ICU support.
-- **Non-SvelteKit frameworks** -- Paraglide's DX is optimized for SvelteKit; for
-  React/Next.js or Vue/Nuxt, use framework-native i18n solutions.
+**Generated runtime is opaque.** Paraglide generates code into `src/lib/paraglide/` that you should not edit. Understanding the difference between `setLanguageTag` (sets the active locale) and `languageTag` (reads the current locale) required reading the generated source since the docs were sparse at the time.
+
+**Language toggle URL construction.** Building the alternate-language URL required careful pathname manipulation -- stripping or adding the `/ko` prefix -- with edge cases for the root path that only surfaced during testing.
+
+---
+
+## When to Use Paraglide-JS
+
+Paraglide fits well when:
+
+- You are building a SvelteKit project (especially SSG) that needs lightweight i18n
+- Type safety for translation keys matters to you
+- You have a small-to-medium translation set (personal sites, blogs, portfolios)
+- Bundle size is a priority and runtime overhead must be minimal
+
+## When to Use Something Else
+
+- **Dynamic translations from a CMS or database** -- Paraglide compiles messages at build time. If translations change frequently without redeploying, a runtime library like i18next fits better.
+- **Large teams with non-technical translators** -- Paraglide uses JSON files in the codebase. Teams that need a translation management platform (Crowdin, Lokalise) will find i18next's ecosystem better integrated.
+- **Complex ICU message syntax** -- Advanced pluralization, gender agreement, or nested selects go beyond Paraglide's interpolation. i18next or FormatJS have more mature ICU support.
+- **Non-SvelteKit frameworks** -- Paraglide's developer experience is optimized for SvelteKit. For React/Next.js or Vue/Nuxt, use framework-native i18n solutions.
+
+---
+
+## Takeaway
+
+Paraglide-JS trades ecosystem maturity for compile-time performance. For a statically generated SvelteKit blog with two languages, that trade was worth it -- zero runtime cost, full type safety, and a bundle that only includes the messages each page uses. The learning curve was steeper than expected (especially around SSG routing), but the result is an i18n setup that adds no JavaScript to the client at all.

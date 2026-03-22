@@ -17,38 +17,27 @@ references:
     title: using folders.html
     type: official
 source_content_hash: b5211dd0d65f8df31e996e66de81e0646205bcee12ff3745315f98039f3c8793
+expanded: true
 ---
 
-path makes it hard to:
+I was running an Amplitude ETL pipeline when I noticed duplicate records showing up in the refined data layer. The daily automated job was picking up files that I'd manually backfilled earlier that week — files that looked identical to regular exports because they shared the same naming convention, the same format, and the same S3 prefix. There was no way to tell automated data from manual backfill data after the fact.
 
-1. **Track data sources** - Can't distinguish automated vs manual data
-2. **Control processing** - Daily ETL may accidentally process backfilled data
-3. **Debug issues** - Hard to trace which data came from where
-4. **Manage lifecycle** - Can't apply different retention policies
+This is a problem any data team hits when they need to recover missing data. The natural instinct is to drop the backfill files in the same bucket path as everything else. But once they're there, your automated pipeline treats them as new data and processes them again.
 
----
+## The Problem
 
-## Difficulties Encountered
+Mixing regular ETL data with manually recovered backfill data in the same S3 path makes it hard to:
 
-- **Backfill looked identical to regular data**: The backfilled files had the
-  same naming convention and format as automated exports, so there was no way to
-  distinguish them after the fact without checking timestamps or logs.
-- **Daily ETL silently reprocessed backfill**: Because both data sources lived
-  in the same prefix, the daily job picked up backfilled files and processed
-  them again, causing duplicate records in the refined layer.
-- **Temptation to "just tag" instead of separate**: S3 object tags seemed
-  simpler at first, but tags are not visible in `ListObjects` responses and
-  require a separate `GetObjectTagging` call per object, making filtering
-  expensive.
-- **Naming convention coordination**: The backfill prefix had to be chosen
-  carefully to avoid colliding with existing automated prefixes and to remain
-  compatible with downstream ETL readers.
+1. **Track data sources** — can't distinguish automated vs manual data
+2. **Control processing** — daily ETL may accidentally process backfilled data
+3. **Debug issues** — hard to trace which data came from where
+4. **Manage lifecycle** — can't apply different retention policies
 
----
+In my case, the backfilled files had the same naming convention and format as automated exports. The daily job silently reprocessed them, causing duplicates downstream. I briefly considered S3 object tags as a lighter-weight solution, but tags are not visible in `ListObjects` responses — you'd need a separate `GetObjectTagging` call per object, making filtering expensive at scale.
 
 ## The Solution: Separate Storage Paths
 
-Use distinct S3 prefixes for different data sources:
+The fix is to use distinct S3 prefixes for different data sources:
 
 ```text
 s3://bucket/
@@ -58,9 +47,13 @@ s3://bucket/
     └── data_2026-01-20.json
 ```
 
-## Amplitude ETL Example
+This is the simplest possible separation — no code changes to the ETL reader, no additional API calls. You point the daily job at one prefix and the backfill job at another.
 
-### Before Separation
+## Real-World Example: Amplitude ETL
+
+Here's what the migration looked like for our Amplitude data pipeline.
+
+**Before separation** — everything in one prefix:
 
 ```text
 s3://amplitude-raw-bucket/
@@ -71,13 +64,7 @@ s3://amplitude-raw-bucket/
     └── {PROJECT_ID}_2026-01-20_19_complete
 ```
 
-**Problems:**
-
-- Can't tell which files were backfilled
-- Daily ETL reads both, may double-process
-- No clear separation of concerns
-
-### After Separation
+**After separation** — backfill in its own prefix:
 
 ```text
 s3://amplitude-raw-bucket/
@@ -89,16 +76,11 @@ s3://amplitude-raw-bucket/
     └── {PROJECT_ID}-backfill_2026-01-20_19_complete
 ```
 
-**Benefits:**
+Now the daily ETL only reads from `{PROJECT_ID}/` and never sees backfill files. Backfill data is processed on-demand with a manual run pointed at the `-backfill/` prefix.
 
-- Clear data lineage tracking
-- Separate ETL runs for each path
-- Easy to apply different retention policies
-- Backfill data doesn't interfere with daily automation
+## Implementation
 
-## Implementation Pattern
-
-### Configuration
+The configuration is minimal — two source paths, one shared target:
 
 ```python
 # Regular ETL reads from automated path
@@ -111,7 +93,7 @@ SOURCE_PATH_BACKFILL = "s3://amplitude-raw-bucket/{PROJECT_ID}-backfill/"
 TARGET_PATH = "s3://amplitude-refined-bucket/event/"
 ```
 
-### Backfill Job
+The backfill job writes to its own prefix:
 
 ```python
 # jobs/amplitude/amplitude_backfill.py
@@ -124,9 +106,7 @@ def save_to_raw_bucket(data: bytes, date: str, hour: int):
     # Saves to: s3://bucket/{PROJECT_ID}-backfill/{PROJECT_ID}-backfill_{date}_{hour}#0.json.gz
 ```
 
-### Processing Backfill Data
-
-To process backfilled data, run ETL with backfill path:
+Processing either source is just a matter of pointing the ETL at the right prefix:
 
 ```bash
 # Regular daily ETL (automated)
@@ -140,58 +120,7 @@ python cli.py amplitude-etl \
   --source-path s3://amplitude-raw-bucket/{PROJECT_ID}-backfill/
 ```
 
-## Data Flow Diagram
-
-```mermaid
-flowchart LR
-    A[Amplitude Export] -->|Auto Save| B[s3://.../{PROJECT_ID}/]
-    B -->|Daily ETL| C[s3://.../event/]
-
-    D[Backfill API] -->|Manual Save| E[s3://.../{PROJECT_ID}-backfill/]
-    E -->|Manual ETL| C
-
-    C --> F[Analytics/BI Tools]
-```
-
-## Benefits
-
-| Aspect           | Benefit                                                               |
-| ---------------- | --------------------------------------------------------------------- |
-| **Traceability** | Know exactly which data was backfilled                                |
-| **Control**      | Process backfill data on-demand, not automatically                    |
-| **Debugging**    | Isolate issues to specific data source                                |
-| **Lifecycle**    | Different retention policies (e.g., delete backfill after processing) |
-| **Auditing**     | Track backfill operations separately                                  |
-| **Safety**       | Backfill can't accidentally corrupt daily pipeline                    |
-
----
-
-## When to Use This Pattern
-
-Use separate paths when:
-
-- Data comes from different sources (automated vs manual)
-- Processing logic may differ between sources
-- Need clear data lineage tracking
-- Want to prevent accidental reprocessing
-- Need different retention/lifecycle policies
-
-## When NOT to Use
-
-- **Identical data sources**: If all data comes from the same automated pipeline
-  with the same format, separation adds unnecessary prefix management overhead.
-- **Identical processing logic**: If regular and backfill data go through the
-  exact same ETL with no distinction needed, separate paths just mean two runs
-  instead of one.
-- **No lineage requirement**: If you never need to trace data origin (e.g.,
-  throwaway analytics), the complexity is not justified.
-- **High-frequency small backfills**: If backfills happen constantly and are
-  tiny, the operational overhead of managing two paths exceeds the benefit.
-  Consider metadata tagging instead.
-
----
-
-## Options Considered
+## Options I Considered
 
 | Option                      | Pros                                                                | Cons                                                    |
 | --------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -199,19 +128,19 @@ Use separate paths when:
 | **S3 object tags**          | Data in one location, simpler prefix structure                      | Not visible in `ListObjects`, extra API call per object |
 | **Database metadata table** | Rich queryable metadata, flexible schema                            | Requires DB, extra write per upload, can drift from S3  |
 
-## Why This Approach
+I chose separate S3 prefixes because the primary need was preventing the daily ETL from accidentally processing backfill data. Prefix-based separation achieves this with zero code changes to the ETL reader — just point it at a different prefix. S3 tags would have required modifying the ETL to filter by tag on every run, adding latency and API cost.
 
-Chose separate S3 prefixes because the primary need was preventing the daily ETL
-from accidentally processing backfill data. Prefix-based separation achieves
-this with zero code changes to the ETL reader — just point it at a different
-prefix. S3 tags would have required modifying the ETL to filter by tag on every
-run, adding latency and API cost.
+## When NOT to Use This
 
----
+Not every situation warrants prefix separation:
+
+- **Identical data sources** — if all data comes from the same automated pipeline with the same format, separation adds unnecessary prefix management overhead
+- **No lineage requirement** — if you never need to trace data origin (e.g., throwaway analytics), the complexity isn't justified
+- **High-frequency small backfills** — if backfills happen constantly and are tiny, the operational overhead of managing two paths exceeds the benefit; consider S3 object tags instead
 
 ## Alternative: Metadata Tagging
 
-If separation isn't needed but tracking is, use S3 object tags:
+If you need tracking but not separation, S3 object tags work as a lighter alternative:
 
 ```python
 s3_client.put_object(
@@ -222,5 +151,12 @@ s3_client.put_object(
 )
 ```
 
-**Trade-off:** Tags require additional API calls to read, but keep data in one
-location.
+The trade-off: tags require an additional API call per object to read (`GetObjectTagging`), but keep all data in one location.
+
+## Takeaway
+
+When your ETL pipeline handles both automated and manual data, separate them at the storage level with distinct S3 prefixes. It's the cheapest possible solution — no code changes to the reader, no extra API calls, no database to maintain. The daily pipeline can't accidentally process backfill data because it never sees it.
+
+## References
+
+- [Organizing objects using prefixes — AWS S3 Documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html)
