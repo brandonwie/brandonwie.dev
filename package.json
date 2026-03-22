@@ -20,6 +20,8 @@
 		"og:generate:force": "tsx scripts/generate-og-images.ts --force",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
+		"validate:dates": "npx tsx scripts/validate-dates.ts",
+		"validate:dates:fix": "npx tsx scripts/validate-dates.ts --fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check ."
 	},
