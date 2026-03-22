@@ -1,6 +1,6 @@
 ---
-title: "TypeORM CLI와 NestJS DataSource 충돌"
-description: "TypeORM CLI를 NestJS 프로젝트에서 사용할 때 발생하는 연결 충돌 문제와 해결 방법."
+title: TypeORM CLI와 NestJS DataSource 충돌
+description: TypeORM CLI를 NestJS 프로젝트에서 사용할 때 발생하는 연결 충돌 문제와 해결 방법.
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -12,13 +12,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: typeorm-cli-nestjs-datasource
-source_updated: "2026-01-27"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://typeorm.io/#/using-cli"
+  - url: 'https://typeorm.io/#/using-cli'
     title: Using CLI — TypeORM
     type: official
-  - url: "https://docs.nestjs.com/techniques/database"
+  - url: 'https://docs.nestjs.com/techniques/database'
     title: Database — NestJS Documentation
     type: official
 ---

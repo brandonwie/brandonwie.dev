@@ -1,8 +1,10 @@
 ---
-title: "updatedAt 기반 Staleness Guard"
-description: "비동기 업데이트(웹훅, 메시지 큐)를 받을 때 소스의 updatedAt과 로컬 타임스탬프를 비교해서 stale 데이터가 최신 변경을 덮어쓰지 않도록 보호하는 패턴."
+title: updatedAt 기반 Staleness Guard
+description: >-
+  비동기 업데이트(웹훅, 메시지 큐)를 받을 때 소스의 updatedAt과 로컬 타임스탬프를 비교해서 stale 데이터가 최신 변경을 덮어쓰지
+  않도록 보호하는 패턴.
 date: 2026-02-13T00:00:00.000Z
-updated: "2026-03-22"
+updated: '2026-03-22'
 tags:
   - backend
   - sync
@@ -13,13 +15,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: updatedAt-staleness-guard
-source_updated: 2026-03-03T00:00:00.000Z
-translation_date: "2026-03-22"
+source_updated: '2026-03-22'
+translation_date: '2026-03-22'
 references:
-  - url: "https://developers.google.com/calendar/api/v3/reference/events"
+  - url: 'https://developers.google.com/calendar/api/v3/reference/events'
     title: Google Calendar Events API Reference
     type: official
-  - url: "https://en.wikipedia.org/wiki/Optimistic_concurrency_control"
+  - url: 'https://en.wikipedia.org/wiki/Optimistic_concurrency_control'
     title: Optimistic Concurrency Control
     type: authoritative
 ---

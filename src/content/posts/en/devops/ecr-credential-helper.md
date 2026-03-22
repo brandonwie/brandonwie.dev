@@ -2,7 +2,7 @@
 title: ECR Credential Helper
 description: AWS's official solution for automatic ECR authentication. Instead of storing
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - aws

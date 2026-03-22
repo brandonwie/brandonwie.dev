@@ -1,6 +1,6 @@
 ---
 title: Linux 기초
-description: "컨테이너를 위한 필수 Linux 개념: cgroups, snapshotters, 권한, ACLs"
+description: '컨테이너를 위한 필수 Linux 개념: cgroups, snapshotters, 권한, ACLs'
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -11,21 +11,21 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: linux
-source_updated: "2026-01-23"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html"
+  - url: 'https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html'
     title: cgroup v2.html
     type: verified
   - url: >-
       https://github.com/containerd/containerd/blob/main/docs/snapshotters/README.md
     title: README.md
     type: official
-  - url: "https://www.kernel.org/doc/html/latest/filesystems/overlayfs.html"
+  - url: 'https://www.kernel.org/doc/html/latest/filesystems/overlayfs.html'
     title: overlayfs.html
     type: verified
-  - url: "https://github.com/k3s-io/k3s/issues/5080"
-    title: "5080"
+  - url: 'https://github.com/k3s-io/k3s/issues/5080'
+    title: '5080'
     type: official
 ---
 

@@ -2,7 +2,7 @@
 title: S3 Path Normalization Pattern
 description: S3 key prefixes need consistent trailing slashes when building hierarchical
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - aws

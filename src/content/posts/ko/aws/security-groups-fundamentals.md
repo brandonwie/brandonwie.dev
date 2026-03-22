@@ -1,8 +1,8 @@
 ---
-title: "AWS Security Group 기초"
-description: "Security Group의 stateful 동작, 최소 권한 원칙, 실전 패턴 — 연결 안 되는 원인 1위를 파헤쳐요."
+title: AWS Security Group 기초
+description: 'Security Group의 stateful 동작, 최소 권한 원칙, 실전 패턴 — 연결 안 되는 원인 1위를 파헤쳐요.'
 date: 2025-04-29T00:00:00.000Z
-updated: "2026-02-19"
+updated: '2026-02-19'
 tags:
   - aws
   - security
@@ -12,13 +12,14 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: security-groups-fundamentals
-source_updated: "2026-02-19"
-translation_date: "2026-02-20"
+source_updated: '2026-03-22'
+translation_date: '2026-02-20'
 references:
-  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html"
+  - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html'
     title: AWS Security Group 공식 문서
     type: official
-  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules-reference.html"
+  - url: >-
+      https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules-reference.html
     title: Security Group 규칙 레퍼런스
     type: official
 ---

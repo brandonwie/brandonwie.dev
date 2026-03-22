@@ -1,6 +1,6 @@
 ---
-title: "Airflow CI/CD 개념"
-description: "주방 비유를 통해 Airflow 배포와 CI/CD 개념을 이해해 봐요."
+title: Airflow CI/CD 개념
+description: 주방 비유를 통해 Airflow 배포와 CI/CD 개념을 이해해 봐요.
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: airflow-cicd-concepts
-source_updated: "2026-01-23"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/production-deployment.html

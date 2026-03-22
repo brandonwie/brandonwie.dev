@@ -1,6 +1,6 @@
 ---
-title: "Stow Symlink 상태 점검"
-description: "GNU Stow가 만든 symlink이 앱 업데이트로 깨지는 문제를 감지하고 복구하는 방법을 알아봐요."
+title: Stow Symlink 상태 점검
+description: GNU Stow가 만든 symlink이 앱 업데이트로 깨지는 문제를 감지하고 복구하는 방법을 알아봐요.
 date: 2026-02-09T00:00:00.000Z
 updated: 2026-02-09T00:00:00.000Z
 tags:
@@ -13,10 +13,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: stow-symlink-health-checking
-source_updated: "2026-02-09"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://www.gnu.org/software/stow/manual/"
+  - url: 'https://www.gnu.org/software/stow/manual/'
     title: GNU Stow Manual
     type: official
   - url: null

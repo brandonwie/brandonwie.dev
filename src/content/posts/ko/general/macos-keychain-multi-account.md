@@ -1,8 +1,8 @@
 ---
 title: macOS Keychain 다중 계정 동작 방식
 description: >-
-  macOS Keychain은 같은 서비스 이름에 다른 계정 속성을 가진 여러 항목을
-  허용합니다. 이로 인한 인증 버그를 디버깅하고 해결하는 방법을 다룹니다.
+  macOS Keychain은 같은 서비스 이름에 다른 계정 속성을 가진 여러 항목을 허용합니다. 이로 인한 인증 버그를 디버깅하고 해결하는
+  방법을 다룹니다.
 date: 2026-02-04T00:00:00.000Z
 updated: 2026-02-04T00:00:00.000Z
 tags:
@@ -16,13 +16,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: macos-keychain-multi-account
-source_updated: 2026-02-04T00:00:00.000Z
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://ss64.com/mac/security.html"
+  - url: 'https://ss64.com/mac/security.html'
     title: macOS security command reference
     type: official
-  - url: "https://developer.apple.com/documentation/security/keychain_services"
+  - url: 'https://developer.apple.com/documentation/security/keychain_services'
     title: Apple Keychain Services Documentation
     type: official
   - url: >-

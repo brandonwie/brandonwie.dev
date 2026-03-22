@@ -2,7 +2,7 @@
 title: 'Calendar EXDATE Behavior: Apple vs Google'
 description: Understanding how Apple Calendar and Google Calendar handle recurring event
 date: 2026-02-03T00:00:00.000Z
-updated: 2026-02-03T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - calendar

@@ -2,7 +2,7 @@
 title: Stow Symlink Health Checking
 description: 'GNU Stow creates symlinks from system config paths back to a dotfiles repo,'
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-02-09T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - dotfiles

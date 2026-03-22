@@ -1,6 +1,6 @@
 ---
-title: "NAT Gateway 아키텍처"
-description: "NAT Gateway 배치와 VPC 네트워크 흐름 이해하기."
+title: NAT Gateway 아키텍처
+description: NAT Gateway 배치와 VPC 네트워크 흐름 이해하기.
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-02-24T00:00:00.000Z
 tags:
@@ -12,13 +12,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: nat-gateway-architecture
-source_updated: "2026-02-24"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html"
+  - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html'
     title: NAT Gateways - Amazon VPC
     type: official
-  - url: "https://aws.amazon.com/vpc/pricing/"
+  - url: 'https://aws.amazon.com/vpc/pricing/'
     title: Amazon VPC Pricing
     type: official
 ---

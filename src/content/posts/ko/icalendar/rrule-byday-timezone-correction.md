@@ -1,7 +1,6 @@
 ---
-title: "rrule BYDAY 타임존 보정"
-description: >-
-  rrule JavaScript 라이브러리가 BYDAY 요일을 이벤트 타임존이 아닌 UTC로 해석하는 문제와 해결 방법을 알아봅니다.
+title: rrule BYDAY 타임존 보정
+description: rrule JavaScript 라이브러리가 BYDAY 요일을 이벤트 타임존이 아닌 UTC로 해석하는 문제와 해결 방법을 알아봅니다.
 date: 2026-01-26T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -14,22 +13,22 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: rrule-byday-timezone-correction
-source_updated: "2026-01-26"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://github.com/jkbrzt/rrule/issues/556"
-    title: "GitHub Issue #556 - BYDAY 관련"
+  - url: 'https://github.com/jkbrzt/rrule/issues/556'
+    title: 'GitHub Issue #556 - BYDAY 관련'
     type: official
-  - url: "https://github.com/jkbrzt/rrule/issues/523"
-    title: "GitHub Issue #523 - TZID 관련"
+  - url: 'https://github.com/jkbrzt/rrule/issues/523'
+    title: 'GitHub Issue #523 - TZID 관련'
     type: official
-  - url: "https://github.com/jkbrzt/rrule/issues/364"
-    title: "GitHub Issue #364 - TZID 무시됨"
+  - url: 'https://github.com/jkbrzt/rrule/issues/364'
+    title: 'GitHub Issue #364 - TZID 무시됨'
     type: official
-  - url: "https://github.com/jkbrzt/rrule"
+  - url: 'https://github.com/jkbrzt/rrule'
     title: rrule
     type: official
-  - url: "https://datatracker.ietf.org/doc/html/rfc5545"
+  - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
     title: RFC 5545 - iCalendar 명세
     type: verified
 ---

@@ -1,6 +1,6 @@
 ---
-title: "DataSource vs Repository 패턴"
-description: "NestJS/TypeORM 애플리케이션에서 직접 DataSource 사용과 Repository 패턴 중 선택하기 위한 아키텍처 결정 가이드."
+title: DataSource vs Repository 패턴
+description: NestJS/TypeORM 애플리케이션에서 직접 DataSource 사용과 Repository 패턴 중 선택하기 위한 아키텍처 결정 가이드.
 date: 2026-01-26T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -14,13 +14,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: datasource-vs-repository-pattern
-source_updated: "2026-01-26"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://docs.nestjs.com/techniques/database"
+  - url: 'https://docs.nestjs.com/techniques/database'
     title: Database — NestJS Documentation
     type: official
-  - url: "https://typeorm.io/#/repository-api"
+  - url: 'https://typeorm.io/#/repository-api'
     title: Repository API — TypeORM
     type: official
 ---

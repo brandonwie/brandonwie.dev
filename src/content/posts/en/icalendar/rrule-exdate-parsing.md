@@ -2,7 +2,7 @@
 title: RRULE EXDATE Parsing with Timezone
 description: 'The `rrule` JavaScript library''s `rrulestr()` function fails when:'
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
 category: icalendar

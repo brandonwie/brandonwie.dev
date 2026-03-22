@@ -2,7 +2,7 @@
 title: CSS Inline-Replaced Element Gap
 description: 'Elements like `<textarea>`, `<img>`, `<input>`, and `<video>` are'
 date: 2026-02-13T00:00:00.000Z
-updated: 2026-02-13T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - css

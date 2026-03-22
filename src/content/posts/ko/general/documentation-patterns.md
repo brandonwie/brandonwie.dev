@@ -1,6 +1,8 @@
 ---
-title: "문서화 패턴"
-description: "Buffer Pattern은 AI 지원 세션에서 중요한 발견을 보존해요. 세션이 끝나거나 연결이 끊겨도 소중한 인사이트를 잃지 않도록 해주죠."
+title: 문서화 패턴
+description: >-
+  Buffer Pattern은 AI 지원 세션에서 중요한 발견을 보존해요. 세션이 끝나거나 연결이 끊겨도 소중한 인사이트를 잃지 않도록
+  해주죠.
 date: 2025-01-15T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -13,10 +15,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: documentation-patterns
-source_updated: "2026-01-26"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://www.writethedocs.org/guide/index.html"
+  - url: 'https://www.writethedocs.org/guide/index.html'
     title: Software documentation guide — Write the Docs
     type: authoritative
 ---

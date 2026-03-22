@@ -2,7 +2,7 @@
 title: updatedAt Staleness Guard
 description: 'When receiving asynchronous updates (webhooks, message queues), compare the'
 date: 2026-02-13T00:00:00.000Z
-updated: 2026-03-03T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - sync

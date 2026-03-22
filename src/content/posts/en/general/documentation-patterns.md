@@ -2,7 +2,7 @@
 title: Documentation Patterns
 description: The **Buffer Pattern** preserves important discoveries during AI-assisted
 date: 2025-01-15T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - documentation

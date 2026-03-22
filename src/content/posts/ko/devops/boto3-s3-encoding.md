@@ -1,8 +1,6 @@
 ---
 title: boto3 S3 put_object() Body 파라미터 인코딩
-description: >-
-  ETL 파이프라인에서 JSON 매니페스트 파일을 S3에 업로드할 때 발생하는 파라미터
-  검증 에러와 해결 방법입니다.
+description: ETL 파이프라인에서 JSON 매니페스트 파일을 S3에 업로드할 때 발생하는 파라미터 검증 에러와 해결 방법입니다.
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -16,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: boto3-s3-encoding
-source_updated: 2026-01-27T00:00:00.000Z
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
   - url: >-
       https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3/client/put_object.html

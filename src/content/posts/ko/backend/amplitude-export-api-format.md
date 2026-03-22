@@ -1,8 +1,6 @@
 ---
 title: Amplitude Export API 응답 형식
-description: >-
-  Amplitude Export API는 오해하기 쉬운 중첩 압축 형식으로 데이터를
-  반환해요
+description: Amplitude Export API는 오해하기 쉬운 중첩 압축 형식으로 데이터를 반환해요
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-02-06T00:00:00.000Z
 tags:
@@ -15,10 +13,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: amplitude-export-api-format
-source_updated: "2026-02-06"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://www.docs.developers.amplitude.com/analytics/apis/export-api/"
+  - url: 'https://www.docs.developers.amplitude.com/analytics/apis/export-api/'
     title: Amplitude Export API Documentation
     type: official
 ---

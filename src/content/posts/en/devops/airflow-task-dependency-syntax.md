@@ -2,7 +2,7 @@
 title: Airflow Task Dependency Syntax
 description: The `>>` operator in Airflow sets task dependencies and returns the downstream
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - airflow

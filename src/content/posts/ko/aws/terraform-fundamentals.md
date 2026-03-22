@@ -1,6 +1,6 @@
 ---
-title: "Terraform 기초"
-description: "AWS 인프라 관리를 위한 핵심 Terraform 개념 정리."
+title: Terraform 기초
+description: AWS 인프라 관리를 위한 핵심 Terraform 개념 정리.
 date: 2025-04-29T00:00:00.000Z
 updated: 2026-02-24T00:00:00.000Z
 tags:
@@ -12,10 +12,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: terraform-fundamentals
-source_updated: "2026-02-24"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://developer.hashicorp.com/terraform/intro"
+  - url: 'https://developer.hashicorp.com/terraform/intro'
     title: What is Terraform
     type: official
 ---

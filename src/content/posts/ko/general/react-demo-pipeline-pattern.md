@@ -1,8 +1,6 @@
 ---
 title: React 데모 파이프라인 패턴
-description: >-
-  백엔드 없이 완전히 작동하는 React 대시보드 데모 모드를 구축하는 패턴을
-  소개합니다.
+description: 백엔드 없이 완전히 작동하는 React 대시보드 데모 모드를 구축하는 패턴을 소개합니다.
 date: 2026-02-04T00:00:00.000Z
 updated: 2026-02-04T00:00:00.000Z
 tags:
@@ -16,16 +14,16 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: react-demo-pipeline-pattern
-source_updated: 2026-02-04T00:00:00.000Z
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
   - url: null
     title: Crucio demo-only dashboard implementation
     type: experience
-  - url: "https://react.dev/reference/react/useContext"
+  - url: 'https://react.dev/reference/react/useContext'
     title: React useContext API Reference
     type: official
-  - url: "https://react.dev/learn/reusing-logic-with-custom-hooks"
+  - url: 'https://react.dev/learn/reusing-logic-with-custom-hooks'
     title: React Custom Hooks Documentation
     type: official
 ---

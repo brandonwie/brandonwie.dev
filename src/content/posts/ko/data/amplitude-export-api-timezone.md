@@ -13,13 +13,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: amplitude-export-api-timezone
-source_updated: "2026-01-27"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://amplitude.com/docs/apis/analytics/export"
+  - url: 'https://amplitude.com/docs/apis/analytics/export'
     title: export
     type: verified
-  - url: "https://amplitude.com/docs/admin/account-management/manage-orgs-projects"
+  - url: 'https://amplitude.com/docs/admin/account-management/manage-orgs-projects'
     title: Amplitude Manage Organizations and Projects (Timezone Settings)
     type: official
 ---

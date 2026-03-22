@@ -2,7 +2,7 @@
 title: External Calendar Data Normalization
 description: 'External calendar data (Apple Calendar, GNOME Evolution, travel apps) often'
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - google-calendar

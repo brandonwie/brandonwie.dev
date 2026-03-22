@@ -2,7 +2,7 @@
 title: Google Calendar Recurring Event Operations
 description: 'Implementation patterns for `all`, `this`, and `thisAndFollowing` recurring'
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-02-20T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - google-api
   - calendar

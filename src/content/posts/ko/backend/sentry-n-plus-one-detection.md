@@ -1,6 +1,6 @@
 ---
-title: "Sentry N+1 쿼리 감지"
-description: "Sentry가 런타임에서 N+1 쿼리를 감지하는 방식, 병렬 실행으로 인한 오탐 사례, 그리고 해결 패턴."
+title: Sentry N+1 쿼리 감지
+description: 'Sentry가 런타임에서 N+1 쿼리를 감지하는 방식, 병렬 실행으로 인한 오탐 사례, 그리고 해결 패턴.'
 date: 2026-03-03T00:00:00.000Z
 updated: 2026-03-03T00:00:00.000Z
 tags:
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: sentry-n-plus-one-detection
-source_updated: "2026-03-03"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://docs.sentry.io/product/issues/issue-details/performance-issues/n-one-queries/

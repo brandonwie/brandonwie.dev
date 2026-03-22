@@ -2,7 +2,7 @@
 title: Paraglide-JS i18n for SvelteKit
 description: Adding Korean/English internationalization to a SvelteKit static blog without
 date: 2026-01-28T00:00:00.000Z
-updated: 2026-01-28T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - frontend
   - i18n

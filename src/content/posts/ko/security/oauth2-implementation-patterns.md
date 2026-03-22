@@ -12,29 +12,29 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: oauth2-implementation-patterns
-source_updated: "2026-02-23"
-translation_date: "2026-02-25"
+source_updated: '2026-03-15'
+translation_date: '2026-02-25'
 references:
-  - url: "https://api.slack.com/authentication/oauth-v2"
+  - url: 'https://api.slack.com/authentication/oauth-v2'
     title: Slack OAuth v2 Documentation
     type: official
-  - url: "https://datatracker.ietf.org/doc/html/rfc6749"
+  - url: 'https://datatracker.ietf.org/doc/html/rfc6749'
     title: RFC 6749 - OAuth 2.0 Authorization Framework
     type: official
-  - url: "https://www.rfc-editor.org/rfc/rfc9207.html"
+  - url: 'https://www.rfc-editor.org/rfc/rfc9207.html'
     title: RFC 9207 - OAuth 2.0 Authorization Server Issuer Identification
     type: official
-  - url: "https://developers.google.com/identity/openid-connect/openid-connect"
+  - url: 'https://developers.google.com/identity/openid-connect/openid-connect'
     title: Google OpenID Connect Documentation
     type: official
-  - url: "https://accounts.google.com/.well-known/openid-configuration"
+  - url: 'https://accounts.google.com/.well-known/openid-configuration'
     title: Google OpenID Configuration Discovery Document
     type: official
-  - url: "https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/"
+  - url: 'https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/'
     title: OAuth 2.1 Draft - IETF
     type: official
-  - url: "https://github.com/panva/openid-client/issues/564"
-    title: "openid-client Issue #564: Passport strategy broken with iss"
+  - url: 'https://github.com/panva/openid-client/issues/564'
+    title: 'openid-client Issue #564: Passport strategy broken with iss'
     type: verified
 ---
 

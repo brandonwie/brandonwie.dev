@@ -1,6 +1,6 @@
 ---
-title: "TypeORM으로 PostgreSQL Advisory Lock 사용하기"
-description: "PostgreSQL이 관리하는 애플리케이션 수준의 lock으로 분산 환경에서 작업을 조율하는 방법."
+title: TypeORM으로 PostgreSQL Advisory Lock 사용하기
+description: PostgreSQL이 관리하는 애플리케이션 수준의 lock으로 분산 환경에서 작업을 조율하는 방법.
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -13,10 +13,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: postgresql-advisory-locks
-source_updated: "2026-01-23"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://www.postgresql.org/docs/current/explicit-locking.html"
+  - url: 'https://www.postgresql.org/docs/current/explicit-locking.html'
     title: Explicit Locking — PostgreSQL Documentation
     type: official
 ---

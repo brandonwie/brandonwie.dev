@@ -1,7 +1,6 @@
 ---
-title: "Giscus SvelteKit 통합하기"
-description: >-
-  데이터베이스나 인증 백엔드 없이 정적 생성 SvelteKit 블로그에 댓글 시스템을 추가하는 방법을 알아봅니다.
+title: Giscus SvelteKit 통합하기
+description: 데이터베이스나 인증 백엔드 없이 정적 생성 SvelteKit 블로그에 댓글 시스템을 추가하는 방법을 알아봅니다.
 date: 2026-01-28T00:00:00.000Z
 updated: 2026-01-28T00:00:00.000Z
 tags:
@@ -13,13 +12,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: giscus-sveltekit-integration
-source_updated: "2026-01-28"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://giscus.app"
+  - url: 'https://giscus.app'
     title: giscus - GitHub Discussions 기반 댓글 시스템
     type: official
-  - url: "https://github.com/giscus/giscus"
+  - url: 'https://github.com/giscus/giscus'
     title: giscus GitHub 저장소
     type: official
 ---

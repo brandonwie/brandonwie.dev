@@ -2,7 +2,7 @@
 title: Mobile Input UX
 description: Techniques for making custom-styled inputs work properly on mobile browsers.
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-02-19T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - frontend
   - mobile

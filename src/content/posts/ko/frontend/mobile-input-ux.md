@@ -1,7 +1,6 @@
 ---
-title: "모바일 Input UX"
-description: >-
-  커스텀 스타일 input이 모바일 브라우저에서 제대로 동작하도록 만드는 기법을 알아봅니다.
+title: 모바일 Input UX
+description: 커스텀 스타일 input이 모바일 브라우저에서 제대로 동작하도록 만드는 기법을 알아봅니다.
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-02-19T00:00:00.000Z
 tags:
@@ -13,13 +12,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: mobile-input-ux
-source_updated: "2026-02-19"
-translation_date: "2026-02-20"
+source_updated: '2026-03-22'
+translation_date: '2026-02-20'
 references:
-  - url: "https://bugs.webkit.org/show_bug.cgi?id=159357"
+  - url: 'https://bugs.webkit.org/show_bug.cgi?id=159357'
     title: WebKit Bug 159357 - 숨겨진 Input의 터치 이벤트
     type: verified
-  - url: "https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action"
+  - url: 'https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action'
     title: MDN touch-action CSS 속성
     type: authoritative
   - url: >-

@@ -12,8 +12,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: idor-prevention-type-level
-source_updated: "2026-02-11"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
   - url: >-
       https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/

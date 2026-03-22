@@ -1,8 +1,10 @@
 ---
 title: Docker Compose CI/CD Patterns
-description: 'Patterns for using Docker Compose in CI/CD pipelines: separating dev and prod configurations, ECR integration, and deployment strategies.'
+description: >-
+  Patterns for using Docker Compose in CI/CD pipelines: separating dev and prod
+  configurations, ECR integration, and deployment strategies.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-03-15T00:00:00.000Z
+updated: '2026-03-22'
 expanded: true
 tags:
   - devops

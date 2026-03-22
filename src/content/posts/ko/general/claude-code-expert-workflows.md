@@ -1,8 +1,8 @@
 ---
 title: Claude Code 전문가 워크플로우
 description: >-
-  세 명의 전문가 소스에서 합성한 Claude Code 활용 패턴: Boris Cherny(도구 설정),
-  Mia Heidenstedt(프로세스 규율), YK Dojo(실무 워크플로우)
+  세 명의 전문가 소스에서 합성한 Claude Code 활용 패턴: Boris Cherny(도구 설정), Mia Heidenstedt(프로세스
+  규율), YK Dojo(실무 워크플로우)
 date: 2026-02-09T00:00:00.000Z
 updated: 2026-02-09T00:00:00.000Z
 tags:
@@ -15,10 +15,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-expert-workflows
-source_updated: "2026-02-09"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://x.com/bcherny/status/2007179832300581177"
+  - url: 'https://x.com/bcherny/status/2007179832300581177'
     title: Boris Cherny's Claude Code setup
     type: authoritative
   - url: >-
@@ -26,8 +26,8 @@ references:
       how-to-effectively-write-quality-code-with-ai/
     title: How to effectively write quality code with AI
     type: authoritative
-  - url: "https://github.com/ykdojo/claude-code-tips"
-    title: "45 Claude Code Tips: From Basics to Advanced"
+  - url: 'https://github.com/ykdojo/claude-code-tips'
+    title: '45 Claude Code Tips: From Basics to Advanced'
     type: authoritative
 ---
 

@@ -2,7 +2,7 @@
 title: Linux Fundamentals
 description: '1. [Cgroups (Control Groups)](#cgroups-control-groups)'
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - linux

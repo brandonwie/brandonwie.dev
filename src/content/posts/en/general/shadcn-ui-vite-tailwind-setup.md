@@ -4,7 +4,7 @@ description: >-
   Manual setup of shadcn/ui component primitives in a Vite + React + TypeScript
   +
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-02-04T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - react

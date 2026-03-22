@@ -1,5 +1,5 @@
 ---
-title: Traefik, Keycloak, ForwardAuth 이해하기
+title: 'Traefik, Keycloak, ForwardAuth 이해하기'
 description: Traefik을 통해 노출된 Kubernetes 서비스에 인증 레이어가 없는 문제를 해결하는 방법
 date: 2026-01-18T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
@@ -14,16 +14,16 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: traefik-keycloak-forwardauth
-source_updated: "2026-01-23"
-translation_date: "2026-02-12"
+source_updated: '2026-03-15'
+translation_date: '2026-02-12'
 references:
-  - url: "https://www.keycloak.org/documentation"
+  - url: 'https://www.keycloak.org/documentation'
     title: Keycloak Documentation
     type: official
-  - url: "https://doc.traefik.io/traefik/middlewares/http/forwardauth/"
+  - url: 'https://doc.traefik.io/traefik/middlewares/http/forwardauth/'
     title: Traefik ForwardAuth Middleware
     type: official
-  - url: "https://oauth2-proxy.github.io/oauth2-proxy/"
+  - url: 'https://oauth2-proxy.github.io/oauth2-proxy/'
     title: OAuth2 Proxy Documentation
     type: official
 ---

@@ -1,6 +1,8 @@
 ---
-title: "조기 종료 시 Backfill 통계 매니페스트"
-description: "조기 종료 경로가 있는 작업에서는 항상 stats/status 매니페스트를 저장해서 다운스트림 콜백이 유의미한 정보를 표시할 수 있게 해야 해요."
+title: 조기 종료 시 Backfill 통계 매니페스트
+description: >-
+  조기 종료 경로가 있는 작업에서는 항상 stats/status 매니페스트를 저장해서 다운스트림 콜백이 유의미한 정보를 표시할 수 있게 해야
+  해요.
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -12,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: backfill-stats-manifest-early-exit
-source_updated: "2026-01-27"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/backfill.html

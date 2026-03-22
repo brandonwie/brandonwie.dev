@@ -2,7 +2,7 @@
 title: Terraform Fundamentals
 description: Core Terraform concepts for AWS infrastructure management.
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - aws
   - terraform

@@ -1,5 +1,5 @@
 ---
-title: "Calendar EXDATE 동작: Apple vs Google"
+title: 'Calendar EXDATE 동작: Apple vs Google'
 description: Apple Calendar과 Google Calendar이 반복 일정 삭제를 처리하는 방식의 차이
 date: 2026-02-03T00:00:00.000Z
 updated: 2026-02-03T00:00:00.000Z
@@ -13,13 +13,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: calendar-exdate-behavior
-source_updated: "2026-02-03"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.1"
+  - url: 'https://datatracker.ietf.org/doc/html/rfc5545#section-3.8.5.1'
     title: RFC 5545 - EXDATE Property
     type: official
-  - url: "https://github.com/jkbrzt/rrule/issues/548"
+  - url: 'https://github.com/jkbrzt/rrule/issues/548'
     title: rrule.js EXDATE with TZID limitation
     type: official
 ---

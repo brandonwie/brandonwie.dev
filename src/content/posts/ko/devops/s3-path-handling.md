@@ -14,10 +14,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: s3-path-handling
-source_updated: "2026-01-27"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html"
+  - url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html'
     title: UsingObjects.html
     type: official
 ---

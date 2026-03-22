@@ -2,7 +2,7 @@
 title: WAF Allowlist Patterns
 description: Block-by-default WAF approach using route allowlisting. Stronger security than
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - aws
   - waf

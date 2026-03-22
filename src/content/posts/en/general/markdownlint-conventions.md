@@ -4,7 +4,7 @@ description: >-
   Markdown files across the 3B knowledge base had inconsistent formatting:
   missing
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - documentation

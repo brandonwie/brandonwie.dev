@@ -12,31 +12,31 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: python-tooling-stack
-source_updated: "2026-01-28"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://astral.sh/uv/install.sh"
+  - url: 'https://astral.sh/uv/install.sh'
     title: install.sh
     type: verified
-  - url: "https://github.com/astral-sh/ruff-pre-commit"
+  - url: 'https://github.com/astral-sh/ruff-pre-commit'
     title: ruff pre commit
     type: official
-  - url: "https://github.com/pre-commit/mirrors-mypy"
+  - url: 'https://github.com/pre-commit/mirrors-mypy'
     title: mirrors mypy
     type: official
-  - url: "https://docs.astral.sh/uv/"
+  - url: 'https://docs.astral.sh/uv/'
     title: uv
     type: official
-  - url: "https://docs.astral.sh/ruff/"
+  - url: 'https://docs.astral.sh/ruff/'
     title: ruff
     type: official
-  - url: "https://docs.astral.sh/ty/"
+  - url: 'https://docs.astral.sh/ty/'
     title: ty
     type: official
-  - url: "https://astral.sh/blog/ty"
+  - url: 'https://astral.sh/blog/ty'
     title: ty
     type: verified
-  - url: "https://asdf-vm.com/"
+  - url: 'https://asdf-vm.com/'
     title: asdf-vm.com
     type: verified
 ---

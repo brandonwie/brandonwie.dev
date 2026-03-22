@@ -1,6 +1,6 @@
 ---
-title: "Airflow DAG 수준 Callback"
-description: "Airflow 2.x는 DAG 수준의 on_success_callback을 무시해요. task 수준 callback만 동작해요."
+title: Airflow DAG 수준 Callback
+description: Airflow 2.x는 DAG 수준의 on_success_callback을 무시해요. task 수준 callback만 동작해요.
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: airflow-dag-level-callbacks
-source_updated: "2026-01-23"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/callbacks.html

@@ -1,6 +1,6 @@
 ---
-title: "Race Condition 방지를 위한 Pessimistic Locking"
-description: "INSERT 전 존재 여부를 확인할 때 race condition을 방지하기 위해 SELECT FOR UPDATE를 사용하는 방법."
+title: Race Condition 방지를 위한 Pessimistic Locking
+description: INSERT 전 존재 여부를 확인할 때 race condition을 방지하기 위해 SELECT FOR UPDATE를 사용하는 방법.
 date: 2026-01-26T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -13,10 +13,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: pessimistic-locking-race-conditions
-source_updated: "2026-01-26"
-translation_date: "2026-03-04"
+source_updated: '2026-03-15'
+translation_date: '2026-03-04'
 references:
-  - url: "https://www.postgresql.org/docs/current/explicit-locking.html"
+  - url: 'https://www.postgresql.org/docs/current/explicit-locking.html'
     title: Explicit Locking — PostgreSQL Documentation
     type: official
 ---

@@ -4,7 +4,7 @@ description: >-
   Creating a send-only Celery client in an API service that dispatches tasks to
   a
 date: 2026-02-03T00:00:00.000Z
-updated: 2026-02-03T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - celery

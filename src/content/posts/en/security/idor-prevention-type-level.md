@@ -2,7 +2,7 @@
 title: IDOR Prevention via Required Parameters (Type-Level Enforcement)
 description: Insecure Direct Object Reference (IDOR) occurs when an API allows users to
 date: 2026-02-11T00:00:00.000Z
-updated: 2026-02-11T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - security
   - backend

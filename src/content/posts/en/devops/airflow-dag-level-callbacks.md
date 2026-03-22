@@ -2,7 +2,7 @@
 title: Airflow DAG-Level Callbacks
 description: Airflow 2.x silently ignores `on_success_callback` at the DAG level. Only
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - airflow

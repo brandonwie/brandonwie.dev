@@ -2,7 +2,7 @@
 title: rrule BYDAY Timezone Correction
 description: 'The rrule JavaScript library interprets `BYDAY` weekday names in UTC, not the'
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - rrule

@@ -2,7 +2,7 @@
 title: Stale vs Orphan Blocks in Calendar Sync
 description: 'When syncing calendar data from Google Calendar API, two distinct cleanup'
 date: 2026-02-05T00:00:00.000Z
-updated: 2026-02-13T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - sync

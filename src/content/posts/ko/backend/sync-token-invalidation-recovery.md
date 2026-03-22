@@ -1,6 +1,8 @@
 ---
-title: "Sync Token 무효화 복구 (410 GONE)"
-description: "Google Calendar API가 410 GONE을 반환하면 sync token이 무효화되고 전체 재동기화가 필요해요. 올바른 처리 방법을 알아봐요."
+title: Sync Token 무효화 복구 (410 GONE)
+description: >-
+  Google Calendar API가 410 GONE을 반환하면 sync token이 무효화되고 전체 재동기화가 필요해요. 올바른 처리
+  방법을 알아봐요.
 date: 2026-01-26T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -13,10 +15,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: sync-token-invalidation-recovery
-source_updated: "2026-01-26"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://developers.google.com/workspace/calendar/api/guides/sync"
+  - url: 'https://developers.google.com/workspace/calendar/api/guides/sync'
     title: Synchronize resources efficiently — Google Calendar
     type: official
 ---

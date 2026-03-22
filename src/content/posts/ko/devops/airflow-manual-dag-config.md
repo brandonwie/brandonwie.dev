@@ -1,8 +1,6 @@
 ---
 title: Airflow Manual DAG Config 패턴
-description: >-
-  수동 DAG 트리거 시 커스텀 파라미터를 전달하면서도 예약 실행은 그대로
-  유지하는 패턴입니다.
+description: 수동 DAG 트리거 시 커스텀 파라미터를 전달하면서도 예약 실행은 그대로 유지하는 패턴입니다.
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -15,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: airflow-manual-dag-config
-source_updated: 2026-01-27T00:00:00.000Z
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html

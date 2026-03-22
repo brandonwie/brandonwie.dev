@@ -4,7 +4,7 @@ description: >-
   Multiple `.map()` calls over the same array force the CPU to reload each
   object
 date: 2026-02-11T00:00:00.000Z
-updated: 2026-02-20T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - performance

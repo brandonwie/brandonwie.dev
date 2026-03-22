@@ -1,7 +1,8 @@
 ---
-title: "RRULE EXDATE 타임존 파싱 문제"
+title: RRULE EXDATE 타임존 파싱 문제
 description: >-
-  rrule JavaScript 라이브러리에서 EXDATE가 RRULE보다 먼저 오거나 TZID 파라미터가 있으면 파싱이 제대로 안 됩니다. 해결 방법을 알아봅니다.
+  rrule JavaScript 라이브러리에서 EXDATE가 RRULE보다 먼저 오거나 TZID 파라미터가 있으면 파싱이 제대로 안 됩니다.
+  해결 방법을 알아봅니다.
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -11,19 +12,19 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: rrule-exdate-parsing
-source_updated: "2026-01-23"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://github.com/jkbrzt/rrule/issues/556"
-    title: "GitHub Issue #556 - BYDAY 관련"
+  - url: 'https://github.com/jkbrzt/rrule/issues/556'
+    title: 'GitHub Issue #556 - BYDAY 관련'
     type: official
-  - url: "https://github.com/jkbrzt/rrule/issues/523"
-    title: "GitHub Issue #523 - TZID 관련"
+  - url: 'https://github.com/jkbrzt/rrule/issues/523'
+    title: 'GitHub Issue #523 - TZID 관련'
     type: official
-  - url: "https://github.com/jkbrzt/rrule/issues/364"
-    title: "GitHub Issue #364 - TZID 무시됨"
+  - url: 'https://github.com/jkbrzt/rrule/issues/364'
+    title: 'GitHub Issue #364 - TZID 무시됨'
     type: official
-  - url: "https://datatracker.ietf.org/doc/html/rfc5545"
+  - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
     title: RFC 5545 - iCalendar 명세
     type: official
 ---

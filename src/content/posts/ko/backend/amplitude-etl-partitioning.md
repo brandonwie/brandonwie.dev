@@ -1,8 +1,6 @@
 ---
 title: Amplitude ETL 파티셔닝
-description: >-
-  Amplitude 이벤트 데이터를 raw에서 refined 스토리지로 이동할 때 파티셔닝하는
-  방법
+description: Amplitude 이벤트 데이터를 raw에서 refined 스토리지로 이동할 때 파티셔닝하는 방법
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -16,13 +14,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: amplitude-etl-partitioning
-source_updated: "2026-01-27"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://amplitude.com/docs/analytics/apis/export-api"
+  - url: 'https://amplitude.com/docs/analytics/apis/export-api'
     title: export api
     type: verified
-  - url: "https://spark.apache.org/docs/latest/sql-data-sources-parquet.html"
+  - url: 'https://spark.apache.org/docs/latest/sql-data-sources-parquet.html'
     title: Apache Spark Parquet Data Source
     type: official
 ---

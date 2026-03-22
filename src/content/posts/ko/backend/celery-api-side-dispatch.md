@@ -1,8 +1,8 @@
 ---
 title: Celery API-Side Dispatch 패턴
 description: >-
-  Worker의 task 모듈을 import하지 않고 API 서비스에서 별도의 worker
-  서비스로 task를 전달하는 send-only Celery 클라이언트 만들기
+  Worker의 task 모듈을 import하지 않고 API 서비스에서 별도의 worker 서비스로 task를 전달하는 send-only
+  Celery 클라이언트 만들기
 date: 2026-02-03T00:00:00.000Z
 updated: 2026-02-03T00:00:00.000Z
 tags:
@@ -15,13 +15,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: celery-api-side-dispatch
-source_updated: "2026-02-03"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://docs.celeryq.dev/en/stable/userguide/calling.html#basics"
+  - url: 'https://docs.celeryq.dev/en/stable/userguide/calling.html#basics'
     title: Celery - Calling Tasks
     type: official
-  - url: "https://docs.celeryq.dev/en/stable/userguide/routing.html"
+  - url: 'https://docs.celeryq.dev/en/stable/userguide/routing.html'
     title: Celery - Routing Tasks
     type: official
 ---

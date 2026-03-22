@@ -1,8 +1,6 @@
 ---
 title: Markdownlint 컨벤션 가이드
-description: >-
-  7,500개 이상의 markdownlint 에러를 수정하며 정립한 Markdown 포맷팅 규칙과
-  설정 방법을 정리합니다.
+description: '7,500개 이상의 markdownlint 에러를 수정하며 정립한 Markdown 포맷팅 규칙과 설정 방법을 정리합니다.'
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -15,13 +13,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: markdownlint-conventions
-source_updated: 2026-01-23T00:00:00.000Z
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://github.com/DavidAnson/markdownlint"
+  - url: 'https://github.com/DavidAnson/markdownlint'
     title: markdownlint
     type: official
-  - url: "https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md"
+  - url: 'https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md'
     title: Rules.md
     type: official
   - url: >-

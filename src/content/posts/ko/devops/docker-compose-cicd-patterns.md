@@ -1,6 +1,6 @@
 ---
-title: "Docker Compose CI/CD 패턴"
-description: "CI/CD 파이프라인에서 Docker Compose를 사용하는 패턴. 특히 개발과 프로덕션 설정을 분리하는 방법."
+title: Docker Compose CI/CD 패턴
+description: CI/CD 파이프라인에서 Docker Compose를 사용하는 패턴. 특히 개발과 프로덕션 설정을 분리하는 방법.
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -13,10 +13,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: docker-compose-cicd-patterns
-source_updated: "2026-03-15"
-translation_date: "2026-03-22"
+source_updated: '2026-03-22'
+translation_date: '2026-03-22'
 references:
-  - url: "https://docs.docker.com/compose/how-tos/production/"
+  - url: 'https://docs.docker.com/compose/how-tos/production/'
     title: Use Compose in production — Docker Docs
     type: official
 ---

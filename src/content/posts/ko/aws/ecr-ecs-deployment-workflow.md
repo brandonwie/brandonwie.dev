@@ -1,6 +1,6 @@
 ---
-title: "ECR/ECS 배포 워크플로우"
-description: "Amazon ECR과 ECS를 사용한 컨테이너 배포 전체 과정 — 인증부터 롤링 업데이트, 트러블슈팅까지 정리했어요."
+title: ECR/ECS 배포 워크플로우
+description: 'Amazon ECR과 ECS를 사용한 컨테이너 배포 전체 과정 — 인증부터 롤링 업데이트, 트러블슈팅까지 정리했어요.'
 date: 2025-04-29T00:00:00.000Z
 updated: 2026-02-24T00:00:00.000Z
 tags:
@@ -14,19 +14,23 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ecr-ecs-deployment-workflow
-source_updated: "2026-02-24"
-translation_date: "2026-02-25"
+source_updated: '2026-03-15'
+translation_date: '2026-02-25'
 references:
-  - url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-types.html"
+  - url: >-
+      https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-types.html
     title: ECS 배포 유형
     type: official
-  - url: "https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html"
+  - url: >-
+      https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html
     title: ECR 수명 주기 정책
     type: official
-  - url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html"
+  - url: >-
+      https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html
     title: ECS Service Auto Scaling
     type: official
-  - url: "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html"
+  - url: >-
+      https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html
     title: ECS Deployment Circuit Breaker
     type: official
 ---

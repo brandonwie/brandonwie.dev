@@ -1,6 +1,6 @@
 ---
-title: "ETL 스케줄 타이밍"
-description: "데이터 도착 패턴에 맞는 ETL 스케줄을 설정하는 방법을 알아봐요."
+title: ETL 스케줄 타이밍
+description: 데이터 도착 패턴에 맞는 ETL 스케줄을 설정하는 방법을 알아봐요.
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: etl-schedule-timing
-source_updated: "2026-01-27"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html

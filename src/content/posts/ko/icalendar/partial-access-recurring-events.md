@@ -1,6 +1,8 @@
 ---
-title: "부분 접근 반복 일정"
-description: "반복 시리즈의 중간부터 초대받은 사용자의 경우, Google Calendar API가 예상과 다르게 동작해요. 제대로 처리하지 않으면 데이터 무결성 문제가 발생해요."
+title: 부분 접근 반복 일정
+description: >-
+  반복 시리즈의 중간부터 초대받은 사용자의 경우, Google Calendar API가 예상과 다르게 동작해요. 제대로 처리하지 않으면 데이터
+  무결성 문제가 발생해요.
 date: 2026-01-26T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -13,10 +15,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: partial-access-recurring-events
-source_updated: "2026-01-26"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://developers.google.com/workspace/calendar/api/concepts/sharing"
+  - url: 'https://developers.google.com/workspace/calendar/api/concepts/sharing'
     title: Calendar sharing — Google Calendar
     type: official
 ---

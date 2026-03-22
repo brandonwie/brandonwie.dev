@@ -2,7 +2,7 @@
 title: pandas itertuples() vs iterrows()
 description: '`iterrows()` is the most common way to iterate over DataFrame rows, but it'
 date: 2026-02-06T00:00:00.000Z
-updated: 2026-02-06T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - python

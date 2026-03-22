@@ -2,7 +2,7 @@
 title: DataSource vs Repository Pattern
 description: Architectural decision guide for choosing between direct DataSource usage and
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - architecture

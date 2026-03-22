@@ -2,7 +2,7 @@
 title: 'EBS vs EFS: AWS Storage Comparison'
 description: Understanding when to use EBS (block storage) vs EFS (network filesystem).
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - aws
   - storage

@@ -1,9 +1,8 @@
 ---
 title: Airflow Celery Worker 로그 서버 설정
 description: >-
-  CeleryExecutor를 사용할 때 워커가 별도 머신에 있으면 웹서버가 HTTP로 로그를
-  가져와야 합니다. hostname 설정이 잘못되면 로그 URL에 호스트가 비어서 에러가
-  납니다.
+  CeleryExecutor를 사용할 때 워커가 별도 머신에 있으면 웹서버가 HTTP로 로그를 가져와야 합니다. hostname 설정이
+  잘못되면 로그 URL에 호스트가 비어서 에러가 납니다.
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -16,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: airflow-celery-worker-log-server
-source_updated: 2026-01-27T00:00:00.000Z
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/logging-tasks.html

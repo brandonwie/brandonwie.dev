@@ -4,7 +4,7 @@ description: >-
   Two modules contain near-identical functions with slight behavioral
   differences.
 date: 2026-02-06T00:00:00.000Z
-updated: 2026-02-06T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - python

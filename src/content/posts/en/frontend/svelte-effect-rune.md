@@ -4,7 +4,7 @@ description: >-
   In Svelte 5, the reactive statement syntax (`$: { }`) from Svelte 4 is
   replaced
 date: 2026-01-28T00:00:00.000Z
-updated: 2026-01-28T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - frontend
   - svelte

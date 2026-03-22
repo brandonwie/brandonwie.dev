@@ -1,8 +1,8 @@
 ---
 title: shadcn/ui 수동 설정 (Vite + Tailwind)
 description: >-
-  Vite + React + TypeScript + Tailwind CSS 프로젝트에서 shadcn CLI 없이
-  shadcn/ui 컴포넌트 프리미티브를 수동으로 설정하는 방법입니다.
+  Vite + React + TypeScript + Tailwind CSS 프로젝트에서 shadcn CLI 없이 shadcn/ui 컴포넌트
+  프리미티브를 수동으로 설정하는 방법입니다.
 date: 2026-02-04T00:00:00.000Z
 updated: 2026-02-04T00:00:00.000Z
 tags:
@@ -17,16 +17,16 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: shadcn-ui-vite-tailwind-setup
-source_updated: 2026-02-04T00:00:00.000Z
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
   - url: null
     title: Manual shadcn/ui setup in Vite + Tailwind project
     type: experience
-  - url: "https://ui.shadcn.com/docs/installation/vite"
+  - url: 'https://ui.shadcn.com/docs/installation/vite'
     title: shadcn/ui Vite Installation Guide
     type: official
-  - url: "https://tailwindcss.com/docs/installation"
+  - url: 'https://tailwindcss.com/docs/installation'
     title: Tailwind CSS Installation Documentation
     type: official
 ---

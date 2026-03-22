@@ -2,7 +2,7 @@
 title: ETL Data Separation Strategy
 description: Mixing regular ETL data with manually recovered backfill data in the same S3
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-02-06T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - etl

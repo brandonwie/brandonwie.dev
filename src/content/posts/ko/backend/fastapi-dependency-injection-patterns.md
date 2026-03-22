@@ -1,8 +1,6 @@
 ---
 title: FastAPI Dependency Injection 패턴
-description: >-
-  모든 라우트 핸들러에서 `Depends(get_current_user)`를 반복하면 보일러플레이트가
-  생기고 불일치가 발생하기 쉽습니다
+description: 모든 라우트 핸들러에서 `Depends(get_current_user)`를 반복하면 보일러플레이트가 생기고 불일치가 발생하기 쉽습니다
 date: 2026-02-03T00:00:00.000Z
 updated: 2026-02-03T00:00:00.000Z
 tags:
@@ -14,10 +12,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: fastapi-dependency-injection-patterns
-source_updated: "2026-02-03"
-translation_date: "2026-02-12"
+source_updated: '2026-03-15'
+translation_date: '2026-02-12'
 references:
-  - url: "https://fastapi.tiangolo.com/tutorial/dependencies/"
+  - url: 'https://fastapi.tiangolo.com/tutorial/dependencies/'
     title: FastAPI Dependencies
     type: official
   - url: >-

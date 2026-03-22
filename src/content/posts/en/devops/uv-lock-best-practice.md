@@ -2,7 +2,7 @@
 title: uv.lock Best Practice
 description: Whether to commit `uv.lock` to version control.
 date: 2026-01-28T00:00:00.000Z
-updated: 2026-02-02T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - python

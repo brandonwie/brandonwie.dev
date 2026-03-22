@@ -1,6 +1,6 @@
 ---
-title: "Terraform RDS 자격증명 관리"
-description: "하드코딩 대신 변수를 사용해서 RDS 자격증명을 안전하게 관리하는 방법."
+title: Terraform RDS 자격증명 관리
+description: 하드코딩 대신 변수를 사용해서 RDS 자격증명을 안전하게 관리하는 방법.
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: terraform-rds-credentials
-source_updated: "2026-01-23"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html

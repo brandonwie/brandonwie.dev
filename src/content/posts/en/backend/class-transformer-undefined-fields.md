@@ -2,7 +2,7 @@
 title: class-transformer Undefined Own-Property Bug
 description: When `plainToInstance()` creates class instances under ES2022+ TypeScript
 date: 2026-02-23T00:00:00.000Z
-updated: 2026-03-03T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - typescript

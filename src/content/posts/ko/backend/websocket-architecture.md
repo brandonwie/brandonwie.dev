@@ -1,6 +1,6 @@
 ---
-title: "AWS ECS/ALB에서의 WebSocket 아키텍처"
-description: "ALB, ECS, Redis Pub/Sub를 활용한 실시간 알림용 WebSocket 연결 구조"
+title: AWS ECS/ALB에서의 WebSocket 아키텍처
+description: 'ALB, ECS, Redis Pub/Sub를 활용한 실시간 알림용 WebSocket 연결 구조'
 date: 2025-11-25T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -16,17 +16,17 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: websocket-architecture
-source_updated: "2026-01-27"
-translation_date: "2026-02-12"
+source_updated: '2026-03-15'
+translation_date: '2026-02-12'
 references:
-  - url: "https://socket.io/docs/v4/"
+  - url: 'https://socket.io/docs/v4/'
     title: v4
     type: verified
   - url: >-
       https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-websockets.html
     title: load balancer websockets.html
     type: official
-  - url: "https://redis.io/docs/interact/pubsub/"
+  - url: 'https://redis.io/docs/interact/pubsub/'
     title: pubsub
     type: official
 ---

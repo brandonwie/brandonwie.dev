@@ -1,8 +1,8 @@
 ---
 title: Claude Code PostToolUse Hooks
 description: >-
-  PostToolUse hook은 도구 실행 완료 후 발생하며, stdin으로 세션 정보, 도구
-  이름, 입력, 결과, 작업 디렉토리가 포함된 JSON을 받습니다.
+  PostToolUse hook은 도구 실행 완료 후 발생하며, stdin으로 세션 정보, 도구 이름, 입력, 결과, 작업 디렉토리가 포함된
+  JSON을 받습니다.
 date: 2026-02-09T00:00:00.000Z
 updated: 2026-02-25T00:00:00.000Z
 tags:
@@ -14,10 +14,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-posttooluse-hooks
-source_updated: "2026-02-25"
-translation_date: "2026-02-25"
+source_updated: '2026-03-22'
+translation_date: '2026-02-25'
 references:
-  - url: "https://docs.anthropic.com/en/docs/claude-code/hooks"
+  - url: 'https://docs.anthropic.com/en/docs/claude-code/hooks'
     title: Claude Code Hooks 공식 문서
     type: official
 ---

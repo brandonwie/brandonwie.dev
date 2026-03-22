@@ -2,7 +2,7 @@
 title: Binary Checksum Verification
 description: Verify downloaded binaries haven't been tampered with using SHA256 checksums.
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - security
   - devops

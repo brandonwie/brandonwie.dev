@@ -14,10 +14,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: local-s3-minio
-source_updated: "2026-01-27"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://min.io/docs/minio/linux/index.html"
+  - url: 'https://min.io/docs/minio/linux/index.html'
     title: MinIO Documentation
     type: official
 ---

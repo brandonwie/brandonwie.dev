@@ -2,7 +2,7 @@
 title: Amplitude Export API Timezone Behavior
 description: How Amplitude Export API handles timezones and hour boundaries for event data
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - data
   - amplitude

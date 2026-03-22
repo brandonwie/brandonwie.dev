@@ -2,7 +2,7 @@
 title: TypeScript Type Narrowing Over Assertions
 description: Prefer type narrowing over non-null assertions (`!`) and forced casting
 date: 2026-02-05T00:00:00.000Z
-updated: 2026-02-05T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - typescript

@@ -2,7 +2,7 @@
 title: AWS Security Groups Fundamentals
 description: 'Security Groups are virtual firewalls for AWS resources, controlling inbound'
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-02-19T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - aws
   - security

@@ -12,14 +12,14 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: uv-lock-best-practice
-source_updated: "2026-02-02"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://docs.astral.sh/uv/concepts/projects/sync/"
+  - url: 'https://docs.astral.sh/uv/concepts/projects/sync/'
     title: sync
     type: official
-  - url: "https://github.com/astral-sh/uv/issues/9797"
-    title: "9797"
+  - url: 'https://github.com/astral-sh/uv/issues/9797'
+    title: '9797'
     type: official
 ---
 

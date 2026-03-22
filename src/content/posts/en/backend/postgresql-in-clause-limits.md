@@ -2,7 +2,7 @@
 title: PostgreSQL IN Clause Parameter Limits
 description: 'When querying by a large set of IDs using TypeORM''s `In([...])` operator, the'
 date: 2026-02-11T00:00:00.000Z
-updated: 2026-02-11T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - postgresql

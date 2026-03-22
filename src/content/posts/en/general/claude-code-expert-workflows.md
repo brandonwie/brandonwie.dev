@@ -4,7 +4,7 @@ description: >-
   Synthesized patterns from three complementary expert sources: Boris Cherny
   (tool
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-02-09T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - claude-code

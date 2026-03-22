@@ -1,6 +1,6 @@
 ---
-title: "Airflow DAG start_date와 수동 트리거"
-description: "DAG를 수동으로 트리거할 때, 트리거 날짜가 start_date보다 이전이면 Airflow가 task 실행을 건너뛸 수 있어요."
+title: Airflow DAG start_date와 수동 트리거
+description: 'DAG를 수동으로 트리거할 때, 트리거 날짜가 start_date보다 이전이면 Airflow가 task 실행을 건너뛸 수 있어요.'
 date: 2026-01-27T00:00:00.000Z
 updated: 2026-01-27T00:00:00.000Z
 tags:
@@ -11,8 +11,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: airflow-dag-start-date
-source_updated: "2026-01-27"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html

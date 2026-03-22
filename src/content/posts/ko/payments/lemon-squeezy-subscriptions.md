@@ -1,6 +1,6 @@
 ---
-title: "Lemon Squeezy 구독 관리"
-description: "구독 라이프사이클, 취소, 만료, 재활성화에 대한 정리예요."
+title: Lemon Squeezy 구독 관리
+description: '구독 라이프사이클, 취소, 만료, 재활성화에 대한 정리예요.'
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: lemon-squeezy-subscriptions
-source_updated: "2026-01-23"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://docs.lemonsqueezy.com/guides/developer-guide/managing-subscriptions

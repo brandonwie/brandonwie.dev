@@ -1,6 +1,6 @@
 ---
-title: "Bash set -e와 명령어 치환"
-description: "set -e(에러 시 종료)를 사용할 때, 명령어 치환이 커스텀 에러 메시지와 함께 예상과 다르게 동작하는 경우."
+title: Bash set -e와 명령어 치환
+description: 'set -e(에러 시 종료)를 사용할 때, 명령어 치환이 커스텀 에러 메시지와 함께 예상과 다르게 동작하는 경우.'
 date: 2026-01-26T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -12,10 +12,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: bash-set-e-command-substitution
-source_updated: "2026-01-26"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html"
+  - url: 'https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html'
     title: The Set Builtin — Bash Reference Manual
     type: official
 ---

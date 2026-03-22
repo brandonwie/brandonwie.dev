@@ -1,6 +1,6 @@
 ---
-title: "캘린더 동기화에서 Stale Block과 Orphan Block의 차이"
-description: "Google Calendar API 동기화 시 발생하는 두 가지 정리 시나리오와 각각의 처리 전략"
+title: 캘린더 동기화에서 Stale Block과 Orphan Block의 차이
+description: Google Calendar API 동기화 시 발생하는 두 가지 정리 시나리오와 각각의 처리 전략
 date: 2026-02-05T00:00:00.000Z
 updated: 2026-02-05T00:00:00.000Z
 tags:
@@ -12,10 +12,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: stale-vs-orphan-blocks
-source_updated: "2026-02-05"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://developers.google.com/calendar/api/guides/sync"
+  - url: 'https://developers.google.com/calendar/api/guides/sync'
     title: Google Calendar API - Sync Events
     type: official
 ---

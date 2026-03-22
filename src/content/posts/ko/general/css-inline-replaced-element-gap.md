@@ -1,6 +1,8 @@
 ---
-title: "CSS Inline-Replaced 요소의 하단 갭"
-description: "`<textarea>`, `<img>`, `<input>`, `<video>` 같은 요소는 CSS에서 inline-replaced 요소예요. 기본적으로 텍스트 baseline 위에 놓여서 신비한 하단 갭이 생겨요."
+title: CSS Inline-Replaced 요소의 하단 갭
+description: >-
+  `<textarea>`, `<img>`, `<input>`, `<video>` 같은 요소는 CSS에서 inline-replaced 요소예요.
+  기본적으로 텍스트 baseline 위에 놓여서 신비한 하단 갭이 생겨요.
 date: 2026-02-13T00:00:00.000Z
 updated: 2026-02-13T00:00:00.000Z
 tags:
@@ -12,13 +14,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: css-inline-replaced-element-gap
-source_updated: "2026-02-13"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://developer.mozilla.org/en-US/docs/Web/CSS/vertical-align"
+  - url: 'https://developer.mozilla.org/en-US/docs/Web/CSS/vertical-align'
     title: vertical-align — MDN Web Docs
     type: authoritative
-  - url: "https://developer.mozilla.org/en-US/docs/Glossary/Replaced_elements"
+  - url: 'https://developer.mozilla.org/en-US/docs/Glossary/Replaced_elements'
     title: Replaced elements — MDN Glossary
     type: authoritative
 ---

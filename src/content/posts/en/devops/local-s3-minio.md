@@ -2,7 +2,7 @@
 title: Local S3 with MinIO
 description: MinIO is an S3-compatible object storage that runs locally via Docker.
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - docker

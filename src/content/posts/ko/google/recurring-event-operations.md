@@ -1,6 +1,6 @@
 ---
-title: "Google Calendar 반복 일정 연산"
-description: "반복 일정의 `all`, `this`, `thisAndFollowing` 업데이트 구현 패턴이에요."
+title: Google Calendar 반복 일정 연산
+description: '반복 일정의 `all`, `this`, `thisAndFollowing` 업데이트 구현 패턴이에요.'
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-02-20T00:00:00.000Z
 tags:
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: recurring-event-operations
-source_updated: "2026-02-20"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://developers.google.com/workspace/calendar/api/guides/recurringevents

@@ -1,7 +1,8 @@
 ---
-title: "Svelte 5 $effect Rune"
+title: Svelte 5 $effect Rune
 description: >-
-  Svelte 5에서 $effect rune의 자동 의존성 추적, cleanup, 그리고 $derived 및 onMount와의 차이를 알아봅니다.
+  Svelte 5에서 $effect rune의 자동 의존성 추적, cleanup, 그리고 $derived 및 onMount와의 차이를
+  알아봅니다.
 date: 2026-01-28T00:00:00.000Z
 updated: 2026-01-28T00:00:00.000Z
 tags:
@@ -14,13 +15,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: svelte-effect-rune
-source_updated: "2026-01-28"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://svelte.dev/docs/svelte/$effect"
+  - url: 'https://svelte.dev/docs/svelte/$effect'
     title: Svelte 5 $effect Rune
     type: official
-  - url: "https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView"
+  - url: 'https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView'
     title: Element.scrollIntoView() - MDN
     type: official
 ---

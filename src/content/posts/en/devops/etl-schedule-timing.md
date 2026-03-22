@@ -2,7 +2,7 @@
 title: ETL Schedule Timing
 description: How to choose the correct ETL schedule based on data arrival patterns.
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - airflow

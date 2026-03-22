@@ -1,6 +1,8 @@
 ---
-title: "class-transformer undefined 자체 속성 버그"
-description: "ES2022+ TypeScript 타겟에서 plainToInstance()가 클래스 인스턴스를 생성할 때, 모든 optional 클래스 필드가 undefined 값을 가진 자체 속성이 되는 문제."
+title: class-transformer undefined 자체 속성 버그
+description: >-
+  ES2022+ TypeScript 타겟에서 plainToInstance()가 클래스 인스턴스를 생성할 때, 모든 optional 클래스
+  필드가 undefined 값을 가진 자체 속성이 되는 문제.
 date: 2026-02-23T00:00:00.000Z
 updated: 2026-03-03T00:00:00.000Z
 tags:
@@ -13,10 +15,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: class-transformer-undefined-fields
-source_updated: "2026-03-03"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://github.com/typestack/class-transformer"
+  - url: 'https://github.com/typestack/class-transformer'
     title: class-transformer GitHub Repository
     type: official
   - url: >-

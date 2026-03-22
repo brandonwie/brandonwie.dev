@@ -1,6 +1,8 @@
 ---
-title: "WAF Allowlist 패턴"
-description: "라우트 allowlist를 사용한 block-by-default WAF 접근 방식. 알 수 없는 라우트가 자동 차단되어 blocklist보다 보안이 강해요."
+title: WAF Allowlist 패턴
+description: >-
+  라우트 allowlist를 사용한 block-by-default WAF 접근 방식. 알 수 없는 라우트가 자동 차단되어 blocklist보다
+  보안이 강해요.
 date: 2026-01-26T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -13,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: waf-allowlist-patterns
-source_updated: "2026-01-26"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html

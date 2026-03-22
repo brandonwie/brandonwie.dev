@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: dag-deployment-strategies
-source_updated: "2026-01-23"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/production-deployment.html

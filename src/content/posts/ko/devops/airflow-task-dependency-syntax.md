@@ -1,6 +1,6 @@
 ---
-title: "Airflow Task 의존성 구문"
-description: "Airflow의 >> 연산자는 task 의존성을 설정하고 downstream task를 반환해요."
+title: Airflow Task 의존성 구문
+description: Airflow의 >> 연산자는 task 의존성을 설정하고 downstream task를 반환해요.
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: airflow-task-dependency-syntax
-source_updated: "2026-01-23"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/tasks.html

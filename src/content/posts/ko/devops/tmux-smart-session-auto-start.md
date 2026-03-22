@@ -1,6 +1,6 @@
 ---
-title: "tmux 스마트 세션 자동 시작"
-description: "숫자 세션 이름으로 .zshrc에서 tmux를 자동 시작해서, 새 터미널 창마다 독립된 tmux 세션을 사용하는 방법이에요."
+title: tmux 스마트 세션 자동 시작
+description: '숫자 세션 이름으로 .zshrc에서 tmux를 자동 시작해서, 새 터미널 창마다 독립된 tmux 세션을 사용하는 방법이에요.'
 date: 2026-02-25T00:00:00.000Z
 updated: 2026-02-25T00:00:00.000Z
 tags:
@@ -14,13 +14,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: tmux-smart-session-auto-start
-source_updated: "2026-02-25"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://man7.org/linux/man-pages/man1/tmux.1.html"
+  - url: 'https://man7.org/linux/man-pages/man1/tmux.1.html'
     title: tmux(1) man page
     type: official
-  - url: "https://iterm2.com/documentation-tmux-integration.html"
+  - url: 'https://iterm2.com/documentation-tmux-integration.html'
     title: iTerm2 tmux Integration
     type: official
 ---

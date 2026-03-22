@@ -2,7 +2,7 @@
 title: Partial Access Recurring Events
 description: 'When users are invited to recurring events from the middle of a series, Google'
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - google-calendar

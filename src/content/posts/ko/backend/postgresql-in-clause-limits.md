@@ -1,8 +1,6 @@
 ---
 title: PostgreSQL IN 절 파라미터 제한
-description: >-
-  TypeORM의 `In([...])` 연산자로 대량 ID를 쿼리하면 생성된 SQL이 ID당
-  하나의 바인드 파라미터를 만들어 성능이 저하됩니다
+description: 'TypeORM의 `In([...])` 연산자로 대량 ID를 쿼리하면 생성된 SQL이 ID당 하나의 바인드 파라미터를 만들어 성능이 저하됩니다'
 date: 2026-02-11T00:00:00.000Z
 updated: 2026-02-11T00:00:00.000Z
 tags:
@@ -15,10 +13,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: postgresql-in-clause-limits
-source_updated: "2026-02-11"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://www.postgresql.org/docs/current/protocol-message-formats.html"
+  - url: 'https://www.postgresql.org/docs/current/protocol-message-formats.html'
     title: PostgreSQL Protocol Message Formats - Bind Message
     type: official
 ---

@@ -2,7 +2,7 @@
 title: boto3 S3 put_object() Body Parameter Encoding
 description: An ETL pipeline that uploaded JSON manifest files to S3 was failing with a
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - aws

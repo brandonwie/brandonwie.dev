@@ -1,8 +1,6 @@
 ---
-title: "Keyword-Only 파라미터로 중복 함수 통합하기"
-description: >-
-  두 모듈에 거의 동일한 함수가 존재할 때, Python의 keyword-only 파라미터로
-  하나로 통합하는 패턴을 소개합니다.
+title: Keyword-Only 파라미터로 중복 함수 통합하기
+description: '두 모듈에 거의 동일한 함수가 존재할 때, Python의 keyword-only 파라미터로 하나로 통합하는 패턴을 소개합니다.'
 date: 2026-02-06T00:00:00.000Z
 updated: 2026-02-06T00:00:00.000Z
 tags:
@@ -15,10 +13,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: python-function-dedup-keyword-params
-source_updated: "2026-02-06"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://docs.python.org/3/tutorial/controlflow.html#keyword-only-arguments"
+  - url: 'https://docs.python.org/3/tutorial/controlflow.html#keyword-only-arguments'
     title: Python Keyword-Only Arguments
     type: official
   - url: null

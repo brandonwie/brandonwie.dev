@@ -12,8 +12,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: binary-checksum-verification
-source_updated: "2026-01-26"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
   - url: >-
       https://www.gnu.org/software/coreutils/manual/html_node/sha2-utilities.html

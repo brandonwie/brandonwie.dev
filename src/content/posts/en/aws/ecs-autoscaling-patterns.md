@@ -2,7 +2,7 @@
 title: ECS Autoscaling Patterns
 description: Best practices for implementing ECS service autoscaling with migration task
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - aws
   - ecs

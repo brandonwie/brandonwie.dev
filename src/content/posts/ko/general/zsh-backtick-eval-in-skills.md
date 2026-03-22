@@ -1,6 +1,6 @@
 ---
-title: "Claude Code 스킬에서 zsh 백틱 평가 문제"
-description: "SKILL.md 파일의 백틱 마크다운 포맷이 zsh 명령어 치환 에러를 일으키는 문제와 해결법을 정리했어요."
+title: Claude Code 스킬에서 zsh 백틱 평가 문제
+description: SKILL.md 파일의 백틱 마크다운 포맷이 zsh 명령어 치환 에러를 일으키는 문제와 해결법을 정리했어요.
 date: 2026-02-09T00:00:00.000Z
 updated: 2026-02-09T00:00:00.000Z
 tags:
@@ -13,16 +13,16 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: zsh-backtick-eval-in-skills
-source_updated: "2026-02-09"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
   - url: null
     title: Backtick eval error in wrap SKILL.md
     type: experience
-  - url: "https://zsh.sourceforge.io/Doc/Release/Expansion.html"
+  - url: 'https://zsh.sourceforge.io/Doc/Release/Expansion.html'
     title: Zsh Command Substitution and Expansion
     type: official
-  - url: "https://docs.anthropic.com/en/docs/claude-code/skills"
+  - url: 'https://docs.anthropic.com/en/docs/claude-code/skills'
     title: Claude Code Skills Documentation
     type: official
 ---

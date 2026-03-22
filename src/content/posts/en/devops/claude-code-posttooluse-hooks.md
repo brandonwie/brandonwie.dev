@@ -4,7 +4,7 @@ description: >-
   PostToolUse hooks fire after a tool completes. They receive JSON via stdin
   with
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-02-25T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - claude-code

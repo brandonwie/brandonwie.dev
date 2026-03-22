@@ -13,13 +13,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ecr-credential-helper
-source_updated: "2026-01-26"
-translation_date: "2026-02-12"
+source_updated: '2026-03-22'
+translation_date: '2026-02-12'
 references:
-  - url: "https://github.com/awslabs/amazon-ecr-credential-helper"
+  - url: 'https://github.com/awslabs/amazon-ecr-credential-helper'
     title: Amazon ECR Credential Helper
     type: official
-  - url: "https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html"
+  - url: 'https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html'
     title: AWS ECR Registry Authentication
     type: official
 ---

@@ -2,7 +2,7 @@
 title: Airflow CI/CD Concepts
 description: Understanding Airflow deployment and CI/CD concepts through a kitchen analogy.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-01-23T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - devops
   - airflow

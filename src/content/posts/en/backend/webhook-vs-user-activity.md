@@ -4,7 +4,7 @@ description: >-
   Webhooks from external services indicate **their** activity, not **your
   user's**
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-02-13T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - webhooks

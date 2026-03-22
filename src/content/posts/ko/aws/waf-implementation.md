@@ -1,6 +1,6 @@
 ---
-title: "AWS WAF 구현"
-description: "Allowlist 방식의 Web Application Firewall 설정 가이드."
+title: AWS WAF 구현
+description: Allowlist 방식의 Web Application Firewall 설정 가이드.
 date: 2026-01-23T00:00:00.000Z
 updated: 2026-01-23T00:00:00.000Z
 tags:
@@ -13,10 +13,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: waf-implementation
-source_updated: "2026-01-23"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://docs.aws.amazon.com/waf/latest/developerguide/getting-started.html"
+  - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/getting-started.html'
     title: Get started with AWS WAF
     type: official
 ---

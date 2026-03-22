@@ -2,7 +2,7 @@
 title: Sync Token Invalidation Recovery (410 GONE)
 description: 'When Google Calendar API returns 410 GONE, the sync token is invalidated and a'
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - google-calendar

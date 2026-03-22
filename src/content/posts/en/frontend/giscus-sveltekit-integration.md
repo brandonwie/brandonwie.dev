@@ -2,7 +2,7 @@
 title: Giscus SvelteKit Integration
 description: Adding a comment system to a statically generated SvelteKit blog without
 date: 2026-01-28T00:00:00.000Z
-updated: 2026-01-28T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - frontend
   - svelte

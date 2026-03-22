@@ -1,6 +1,8 @@
 ---
-title: "외부 캘린더 데이터 정규화"
-description: "Apple Calendar, GNOME Evolution, 여행 앱 등의 외부 캘린더 데이터는 비표준 형식을 포함하는 경우가 많아서 파싱이 깨져요. 정규화 레이어로 이 edge case를 처리하는 방법이에요."
+title: 외부 캘린더 데이터 정규화
+description: >-
+  Apple Calendar, GNOME Evolution, 여행 앱 등의 외부 캘린더 데이터는 비표준 형식을 포함하는 경우가 많아서 파싱이
+  깨져요. 정규화 레이어로 이 edge case를 처리하는 방법이에요.
 date: 2026-01-26T00:00:00.000Z
 updated: 2026-01-26T00:00:00.000Z
 tags:
@@ -13,10 +15,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: external-calendar-normalization
-source_updated: "2026-01-26"
-translation_date: "2026-03-04"
+source_updated: '2026-03-22'
+translation_date: '2026-03-04'
 references:
-  - url: "https://datatracker.ietf.org/doc/html/rfc5545"
+  - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
     title: RFC 5545 — iCalendar Specification
     type: official
 ---

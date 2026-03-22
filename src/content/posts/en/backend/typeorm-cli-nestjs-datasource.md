@@ -2,7 +2,7 @@
 title: TypeORM CLI와 NestJS DataSource 충돌
 description: TypeORM CLI를 NestJS 프로젝트에서 사용할 때 발생하는 연결 충돌 문제와 해결 방법.
 date: 2026-01-27T00:00:00.000Z
-updated: 2026-01-27T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - backend
   - typeorm

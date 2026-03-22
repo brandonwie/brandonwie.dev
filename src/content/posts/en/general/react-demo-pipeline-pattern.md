@@ -4,7 +4,7 @@ description: >-
   Pattern for building a fully functional demo mode in a React dashboard when
   the
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: '2026-03-22'
 tags:
   - general
   - react
