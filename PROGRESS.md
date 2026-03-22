@@ -18,10 +18,29 @@
 - [x] Public /stats page with Umami Cloud analytics
 - [x] Remark plugin for automatic Mermaid diagram rendering
 - [x] Husky pre-push hook — local CI checks before every push
+- [x] All 95 EN posts expanded to narrative format + 95 KO translations complete
+- [x] Vite 8 + Rolldown bundler migration (all deps up to date)
 - [x] Full content refresh — 71 posts synced + 4 expanded merged + 4 KO updated
 - [x] New post synced — updatedAt-staleness-guard + pre-push fixes
 
 ## Session Log
+
+### 2026-03-22 (Session 9)
+
+**72 Posts Expanded + Full Dep Upgrade**
+
+1. **Blog publish pipeline** — synced 72 new posts from 3B, expanded all to
+   narrative blog format using 3 parallel agent teammates (devops 21, backend 21,
+   misc 30). Merged 1 hash mismatch (docker-compose-cicd-patterns CI/CD Gotchas).
+   Translated 1 new KO post + 1 KO section update. All 95 EN + 95 KO posts now
+   expanded and translated.
+
+2. **Dependency bumps** — vite 6→8 (Rolldown), @sveltejs/vite-plugin-svelte 5→7,
+   @types/node 22→24, satori 0.25→0.26, plus 9 minor/patch updates. Added
+   `verbatimModuleSyntax` to tsconfig. Fixed prettierignore gap for
+   project.inlang/.
+
+**Stats:** 95 EN, 95 KO, 190 pages indexed. Build: vite 8 + Rolldown, 0 errors.
 
 ### 2026-03-20 (Session 8b)
 
