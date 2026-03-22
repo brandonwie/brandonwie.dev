@@ -22,8 +22,34 @@
 - [x] Vite 8 + Rolldown bundler migration (all deps up to date)
 - [x] Full content refresh — 71 posts synced + 4 expanded merged + 4 KO updated
 - [x] New post synced — updatedAt-staleness-guard + pre-push fixes
+- [x] Frontmatter date validation — automated EN/KO date consistency checks
 
 ## Session Log
+
+### 2026-03-23 (Session 10)
+
+**EN/KO Date Consistency Fix + Validation Pipeline**
+
+1. **Root cause investigation** — KO `updatedAt-staleness-guard` post sorted
+   higher than EN due to stale EN `updated` dates. Commit 3112993 expanded 73 EN
+   posts without bumping `updated` frontmatter.
+
+2. **Batch date fix** — Created one-time script to bump 73 EN posts' `updated`
+   to 2026-03-22 (actual modification date). Synced `source_updated` in 80 KO
+   posts to match their EN sources via `validate:dates --fix`.
+
+3. **Validation script** — Created `scripts/validate-dates.ts` with 3 rules:
+   EN updated >= date, KO source_slug exists, KO source_updated matches EN
+   updated. Supports `--fix` mode for auto-syncing KO mismatches.
+
+4. **CI integration** — Added `npm run validate:dates` as step 5/5 in pre-push
+   hook and as CI step. Prevents date drift from reaching production.
+
+5. **Skill fix** — Updated `/blog-publish` SKILL.md to bump `updated` during
+   expansion (Step 5), sync `source_updated` during translation (Step 7), run
+   validation after sync (Step 4), and added date items to execution checklist.
+
+**Stats:** 73 EN + 80 KO posts fixed. 190 pages indexed. 0 validation errors.
 
 ### 2026-03-22 (Session 9)
 
