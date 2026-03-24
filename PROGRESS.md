@@ -23,8 +23,30 @@
 - [x] Full content refresh — 71 posts synced + 4 expanded merged + 4 KO updated
 - [x] New post synced — updatedAt-staleness-guard + pre-push fixes
 - [x] Frontmatter date validation — automated EN/KO date consistency checks
+- [x] 98 EN + 98 KO posts — crucio RAG pipeline trio + agent-teams concurrency update
 
 ## Session Log
+
+### 2026-03-24 (Session 11)
+
+**Blog Publish — 3 New Posts + Agent-Teams Update**
+
+1. **Discovery** — /blog-publish found 1 hash mismatch (claude-code-agent-teams
+   with upstream idle agent concurrency hazard) and 3 "needs review" posts from
+   crucio project (pgvector-hnsw, rag-hybrid-search, gemini-asymmetric-embeddings).
+
+2. **Sync + Expand** — Fixed blog metadata blockers, synced 3 posts, expanded
+   all into narrative blog format using parallel agents. Merged agent-teams
+   upstream changes (new concurrency hazard difficulty + hash update).
+
+3. **Translate** — Created Korean translations for all 3 new posts + updated
+   agent-teams KO with new section.
+
+4. **Build fix** — `< 2` in RAG table broke mdsvex/Svelte compilation. Fixed
+   with "fewer than 2" (3rd occurrence of this gotcha across sessions).
+
+**Stats:** 3 new posts (EN+KO), 1 updated (EN+KO). 98 EN + 98 KO total. Build
+passes, pushed to production.
 
 ### 2026-03-23 (Session 10)
 
