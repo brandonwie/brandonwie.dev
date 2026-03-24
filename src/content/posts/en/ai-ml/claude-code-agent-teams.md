@@ -2,7 +2,7 @@
 title: Claude Code Agent Teams
 description: Experimental feature for orchestrating multiple Claude Code instances as a coordinated team with shared task lists and inter-agent messaging
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-03-18T00:00:00.000Z
+updated: 2026-03-24
 tags:
   - ai-ml
   - claude-code
@@ -12,7 +12,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 4e5908c2ace7f6ac0430ab6fec8616ecf3d83ea1f72507fdf2bad61a375785f6
+source_content_hash: fb6897ee9eabbd13e586c40f509f24bbbf4bae3de54759505391f6b01157f53b
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
@@ -108,6 +108,8 @@ This section is the reason this post exists. The official docs cover the happy p
 
 **Tmux pane race condition on parallel spawn.** Spawning three or more teammates simultaneously can trigger "not in a mode" errors from tmux `send-keys`. The pane gets created, but the agent fails to start. Retrying individually usually works. Spawning teammates sequentially (with a brief pause) avoids the issue entirely.
 
+**Idle agent claims another's work (concurrency hazard).** When a teammate finishes its batch early, it can see unfinished tasks in the shared task list and claim them -- even when another teammate is actively working on those files. Two agents writing the same files simultaneously causes data loss or conflicts. I hit this during a 3-agent blog expansion job across 72 posts: the fastest agent finished and claimed another's task, spawning sub-agents against the same files. No data loss only because the original agent had already written first. **Prevention:** Use `TaskUpdate` with `owner` to explicitly claim tasks at spawn time, and instruct agents not to claim tasks already `in_progress` or owned by another agent.
+
 **Settings.json reorganization side effects.** The Claude Code UI can reorganize `settings.json` when saving changes, silently altering values like `defaultMode`. Always verify settings after UI-driven changes -- a quick diff against version control catches silent mutations.
 
 **TeamCreate incorrectly removed from instructions.** This one was particularly insidious. A previous session concluded that `TeamCreate` does not exist because it is a deferred tool -- not visible in the tool list until explicitly loaded via `ToolSearch`. The global CLAUDE.md was updated to say "use Agent tool instead," which made all subsequent sessions use background subprocesses instead of split-pane teams. The fix was straightforward: always use `ToolSearch` to check for deferred tools before concluding they do not exist. But the damage was sessions of degraded behavior where I thought teams were working but was getting background subagents instead.
@@ -127,6 +129,7 @@ For quick reference, here is the full constraint set:
 - Workaround for iTerm2: tmux -CC control mode gives native panes via tmux backend
 - TeamDelete does not clean up orphaned tmux panes (manual cleanup needed)
 - Parallel spawn race condition with 3+ teammates (retry individually)
+- Idle teammates can claim another agent's in-progress tasks (use explicit ownership)
 - Gitignored files missing in worktrees (teammates lack personal config)
 - Deferred tools (like TeamCreate) are invisible until loaded via ToolSearch
 

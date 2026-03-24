@@ -3,7 +3,7 @@ title: "Claude Code Agent Teams"
 description: >-
   여러 Claude Code 인스턴스를 팀으로 조율하는 실험적 기능의 설정, 패턴, 주의사항을 알아봅니다.
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-03-18T00:00:00.000Z
+updated: 2026-03-24
 tags:
   - ai-ml
   - claude-code
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: "2026-03-18"
-translation_date: "2026-03-18"
+source_updated: "2026-03-24"
+translation_date: "2026-03-24"
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Claude Code 세션 팀 조율하기
@@ -111,6 +111,8 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 
 **동시에 3명 이상 spawn하면 tmux race condition이 생겨요.** 팀원을 동시에 3명 이상 생성하면 tmux `send-keys`에서 "not in a mode" error가 나요. Pane은 만들어지지만 에이전트가 시작되지 않아요. 개별적으로 다시 시도하면 보통 해결돼요. 팀원을 순차적으로(잠깐의 간격을 두고) 생성하면 문제를 아예 피할 수 있어요.
 
+**유휴 에이전트가 다른 팀원의 작업을 가져가는 문제(동시성 위험).** 팀원이 자기 배치를 일찍 끝내면, 공유 작업 목록에서 아직 안 끝난 작업을 보고 가져갈 수 있어요 -- 다른 팀원이 이미 그 file로 작업하고 있어도요. 같은 file을 두 에이전트가 동시에 수정하면 데이터 유실이나 충돌이 생겨요. 72개 블로그 글을 3명의 에이전트로 확장하는 작업에서 이걸 겪었어요: 가장 빠른 에이전트가 먼저 끝나고 다른 팀원의 작업을 가져가서 같은 file에 sub-agent를 생성했어요. 원래 에이전트가 먼저 써둔 덕분에 데이터 유실은 없었어요. **예방법:** spawn할 때 `TaskUpdate`의 `owner`로 작업을 명시적으로 배정하고, 이미 `in_progress`이거나 다른 에이전트 소유인 작업은 가져가지 말라고 지시하세요.
+
 **Settings.json 재구성 부작용.** Claude Code UI에서 설정을 저장하면 `settings.json`을 재구성하면서 `defaultMode` 같은 값을 조용히 바꿀 수 있어요. UI에서 변경한 뒤에는 항상 버전 관리와 diff를 확인하세요 -- 조용한 변경을 잡아낼 수 있어요.
 
 **TeamCreate가 instructions에서 잘못 제거됨.** 이건 특히 교활했어요. 이전 세션에서 `TeamCreate`가 deferred tool이라 도구 목록에 안 보이니까 존재하지 않는다고 결론 내렸어요. 글로벌 CLAUDE.md가 "Agent tool을 대신 사용하라"로 업데이트됐고, 이후 모든 세션에서 split pane teams 대신 백그라운드 subprocess가 사용됐어요. 수정은 간단했어요: deferred tool이 존재하지 않는다고 결론 내리기 전에 항상 `ToolSearch`로 확인하는 거예요. 하지만 피해는 이미 발생한 뒤였어요 -- teams가 작동하고 있다고 생각했지만 실제로는 백그라운드 subagent를 받고 있던 세션들이 여러 번 있었어요.
@@ -130,6 +132,7 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 - iTerm2 우회 방법: tmux -CC control mode로 tmux backend를 통해 네이티브 pane 사용
 - TeamDelete가 참조가 끊긴 tmux pane을 정리하지 않음 (수동 정리 필요)
 - 팀원 3명 이상 동시 spawn 시 race condition 발생 (개별 재시도로 해결)
+- 유휴 팀원이 다른 에이전트의 진행 중 작업을 가져갈 수 있음 (명시적 소유권 지정 필요)
 - Worktree에서 gitignored file 누락 (팀원이 개인 설정을 못 읽음)
 - Deferred tool(TeamCreate 등)은 ToolSearch로 로드하기 전까지 안 보임
 
