@@ -24,8 +24,34 @@
 - [x] New post synced — updatedAt-staleness-guard + pre-push fixes
 - [x] Frontmatter date validation — automated EN/KO date consistency checks
 - [x] 98 EN + 98 KO posts — crucio RAG pipeline trio + agent-teams concurrency update
+- [x] 3 hash-mismatch posts merged — Pattern #12, UnrecoverableError, Versioned Route Gotcha
 
 ## Session Log
+
+### 2026-03-26 (Session 12)
+
+**Blog Publish — 3 Hash-Mismatch Merges**
+
+1. **Discovery** — /blog-publish found 3 expanded posts with upstream 3B changes
+   (all also flagged `needs_resync: true`): ai-pr-review-validation-patterns,
+   redis-queue-patterns, waf-allowlist-patterns.
+
+2. **Merge** — Integrated new 3B content into existing blog narratives:
+   - ai-pr-review: Added Pattern #12 (Markdown Formatting Hallucination with
+     crucio PR #40 data), repositioned Reinforcing Comment Templates table.
+   - redis-queue: Added BullMQ `UnrecoverableError` subsection (ArchException
+     boundary pattern + real incident), moved Architecture Summary, added Key
+     Point #9, fixed trailing commas.
+   - waf-allowlist: Added Versioned Route Prefix Gotcha section (dev/prod gap),
+     Key Lesson #6, comparison table emoji.
+
+3. **Translate** — Updated all 3 Korean translations with deltas only
+   (preserving existing translation voice).
+
+4. **Verify** — All hashes match (98/98), dates consistent, build clean,
+   `needs_resync` flags cleared (3→0).
+
+**Stats:** 3 posts updated (EN+KO). 98 EN + 98 KO total. Resync backlog: 0.
 
 ### 2026-03-24 (Session 11)
 

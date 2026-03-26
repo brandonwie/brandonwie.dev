@@ -2,7 +2,7 @@
 title: "Redis와 BullMQ 큐 패턴"
 description: "Node.js/NestJS에서 Redis 기반 BullMQ 작업 큐를 사용한 백그라운드 작업 처리 가이드"
 date: 2025-01-11T00:00:00.000Z
-updated: 2026-03-04T00:00:00.000Z
+updated: '2026-03-26'
 tags:
   - backend
   - redis
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: redis-queue-patterns
-source_updated: "2026-03-04"
-translation_date: "2026-03-10"
+source_updated: "2026-03-26"
+translation_date: "2026-03-26"
 references:
   - url: "https://docs.bullmq.io/"
     title: docs.bullmq.io
@@ -332,6 +332,30 @@ console.log(job.failedReason);
 "뭔가 고장났는데 뭔지 모르겠다"와 "job-456이 Google의 429 rate limit 에러로
 2번째 시도에서 실패했다" 사이의 차이예요.
 
+## 아키텍처 요약
+
+```mermaid
+flowchart LR
+    A["User Action"] --> B["Event"]
+    B --> C["Redis Queue"]
+    C --> D["Worker Process"]
+    D --> E["Google Calendar API"]
+
+    subgraph "Redis Guarantees"
+        C
+    end
+```
+
+**이점:**
+
+- **안정성**: 99.9%+ 작업 완료율
+- **확장성**: worker를 추가해서 더 많은 부하 처리
+- **관찰 가능성**: 모든 작업의 상태 추적
+- **유지보수성**: 관심사의 명확한 분리
+- **성능**: 트래픽 급증 흡수, 부하 분산
+
+---
+
 ## 에러 처리와 DLQ 패턴
 
 재시도 로직과 모니터링은 절반의 이야기예요. 모든 재시도가 소진되면 어떻게 되나요? 의도적인 실패 경로가 없으면 작업이 조용히 사라지고 -- 실패했다는 사실조차 알 수 없어요.
@@ -374,6 +398,33 @@ function isRetryableError(error: any): boolean {
 
 이 분류를 worker에서 사용해서 영구적인 실패에 대한 재시도를 단축하세요. 재시도 불가능한 작업은 재시도 예산을 소진하지 말고, 전체 에러 컨텍스트와 함께 DLQ로 직접 이동시키세요.
 
+### BullMQ UnrecoverableError
+
+위의 `isRetryableError` 분류는 재시도 로직을 직접 제어할 때는 잘 동작해요. 하지만 BullMQ가 자동으로 관리하는 재시도는 어떻게 하나요? 재시도 설정이 한 가지 실패 모드(예: lock contention용 `attempts: 20, delay: 100ms`)를 위해 설계됐는데, processor가 영구적 에러(예: 비즈니스 로직 실패)도 던지면, BullMQ는 절대 성공하지 않을 에러까지 포함해서 전부 재시도해요.
+
+BullMQ의 `UnrecoverableError`가 이 문제를 해결해요. processor에서 던지면 BullMQ에게 남은 모든 재시도를 건너뛰고 작업을 바로 실패 상태로 옮기라고 알려줘요:
+
+```typescript
+import { UnrecoverableError } from 'bullmq';
+
+async process(job: Job): Promise<void> {
+  try {
+    await this.executeJob(job);
+  } catch (error) {
+    // 비즈니스 로직 에러(ArchException 계층)는 영구적
+    if (error instanceof ArchException) {
+      throw new UnrecoverableError(error.message);
+    }
+    // Lock contention, 네트워크 에러 → BullMQ가 재시도
+    throw error;
+  }
+}
+```
+
+핵심 패턴은 **예외 계층 경계**예요. 모든 비즈니스 로직 예외가 공통 기본 클래스(`ArchException`)를 확장하고, 인프라 에러는 일반 `Error`로 남겨요. 이렇게 하면 `instanceof ArchException`이 명시적 에러 타입 목록을 유지하지 않고도 재시도 가능/불가능을 안정적으로 구분하는 분리자가 돼요. 새 비즈니스 예외(예: `ResourceNotFoundException`)를 추가하면 자동으로 `ArchException`을 상속해서 `UnrecoverableError` 처리를 받아요.
+
+실제 사례로 배운 교훈이에요. 오래된 `gcalId` 때문에 `updateEvent()`가 `ServerLogicException`(`ArchException` 하위 클래스)을 10초 안에 20번 던졌어요 -- 재시도 설정(`attempts: 20, delay: 100ms`)이 Redis lock contention용이었는데, 영구적인 비즈니스 로직 실패까지 재시도한 거예요. `UnrecoverableError`를 추가하면서 재시도 폭풍이 완전히 사라졌어요.
+
 ### 계층적 재시도 전략
 
 단일 재시도 메커니즘은 취약해요. 네트워크 순간 장애는 밀리초 내에 해결되지만, API 장애는 몇 분 동안 지속돼요. 서로 다른 실패 지속 시간을 처리하는 세 가지 계층을 결합하세요:
@@ -406,20 +457,6 @@ if (error.response?.status === 429) {
 
 이건 일반적인 재시도와 달라요: `DelayedError`는 시도 횟수를 차감하지 않아요. 작업이 delayed set으로 이동하고 지정된 시간 후에 대기 목록으로 다시 들어가서, 진짜 실패를 위한 재시도 예산을 보존해요.
 
-## 아키텍처 요약
-
-```mermaid
-flowchart LR
-    A["User Action"] --> B["Event"]
-    B --> C["Redis Queue"]
-    C --> D["Worker Process"]
-    D --> E["Google Calendar API"]
-
-    subgraph "Redis Guarantees"
-        C
-    end
-```
-
 ## 실전 가이드
 
 영속성(작업이 크래시에서 살아남아야 할 때), 재시도 로직(외부 API 실패),
@@ -444,6 +481,7 @@ exactly-once가 아니에요. 중복 처리가 데이터 손상을 일으킬 수
 6. **관찰 가능성** = 시스템에서 무슨 일이 일어나는지 알 수 있어요
 7. **DLQ는 필수** = `removeOnFail: true`는 실패를 조용히 잃어버려요
 8. **재시도 전에 에러를 분류하세요** = 4xx 에러는 재시도 예산을 낭비해요
+9. **영구적 실패에는 `UnrecoverableError`를 사용하세요** = processor에서 던지면 BullMQ가 남은 모든 재시도를 건너뛰어요. 예외 계층에 `instanceof`를 사용해서 재시도 가능한 에러(lock contention, 네트워크)와 재시도 불가능한 에러(인증, not-found, 비즈니스 로직)를 깔끔하게 분리하세요
 
 ## 더 공부할 주제
 

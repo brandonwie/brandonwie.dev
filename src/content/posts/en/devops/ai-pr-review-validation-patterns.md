@@ -2,7 +2,7 @@
 title: AI PR Review Validation Patterns
 description: "Common patterns where AI code reviewers (Claude, Copilot, Codex) produce false"
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-03-18T00:00:00.000Z
+updated: '2026-03-26'
 tags:
   - devops
   - ai
@@ -11,7 +11,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 292c7f1a5f3c3b5b4d81efda0666d2959a43f371707dfccb66fa8a687d54c8c2
+source_content_hash: a2278addd40233dfd30978cff869e26b3299d53666b94aeb2de5014133b04736
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -189,6 +189,15 @@ This pattern shows up whenever you have a constructor with sensible defaults pai
 // NOTE: Related logic in sync-blocks.helper.ts:232 handles resyncRequired
 ```
 
+## Reinforcing Comment Templates
+
+| Pattern              | Template                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| Feature Exists       | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]`                    |
+| No Race Condition    | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
+| Intentional Design   | `// NOTE: Intentionally [omitted/designed this way] - [reason]`                                     |
+| Cross-File Reference | `// NOTE: Related logic in [file:line] handles [concern]`                                           |
+
 ### 9. Cross-Branch Confusion
 
 **What it looks like:** Agent claims code contradicts an assertion, citing line numbers that don't match the PR branch.
@@ -233,14 +242,25 @@ git log origin/main..HEAD -- {file} --format="%h %ae %s"
 
 Mark non-your-author findings as N/A in the finding registry. Only escalate CRITICAL findings regardless of author. This saved significant time on PR #710, where 7 out of 15 unique findings were N/A due to authorship scoping.
 
-## Reinforcing Comment Templates
+### 12. Markdown Formatting Hallucination
 
-| Pattern              | Template                                                                                            |
-| -------------------- | --------------------------------------------------------------------------------------------------- |
-| Feature Exists       | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]`                    |
-| No Race Condition    | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
-| Intentional Design   | `// NOTE: Intentionally [omitted/designed this way] - [reason]`                                     |
-| Cross-File Reference | `// NOTE: Related logic in [file:line] handles [concern]`                                           |
+**What it looks like:** Reviewer claims markdown tables have formatting issues (e.g., "leading `||` produces empty first column") when the tables are perfectly valid.
+
+**Why it happens:** Copilot sometimes generates formatting complaints by pattern-matching against common markdown issues without actually parsing the file content. Unlike other confusion patterns where the AI misreads code logic, this one is purely fabricated -- the reviewer invents a syntax problem that does not exist anywhere in the file.
+
+What makes this pattern especially costly is that it scales with the number of similar files. When reviewing documentation-only PRs with many identical file structures (e.g., 11 READMEs generated from the same template), the hallucination repeats across every file, inflating the finding count dramatically.
+
+**Example:**
+
+```text
+Agent: "The tables in this README start each row with `||`, which GitHub
+renders as an empty first column."
+Reality: Tables use standard `| col | col |` format — no double pipes anywhere.
+```
+
+I hit this on crucio PR #40, where 12 of 18 Copilot findings (67%) were this exact hallucination across 11 README files. Not a single table formatting issue existed. The first instinct was to check each file individually, but after confirming the second finding was identical, batch-dismissing the rest saved over an hour of triage time.
+
+**Prevention:** For documentation PRs, spot-check one flagged file before triaging the full list. If the first finding is a false positive, batch-dismiss all similar findings without individual review.
 
 ## Workflow
 

@@ -2,7 +2,7 @@
 title: Redis and BullMQ Queue Patterns
 description: Comprehensive guide to Redis-backed job queues with BullMQ in Node.js/NestJS
 date: 2025-01-11T00:00:00.000Z
-updated: 2026-03-04T00:00:00.000Z
+updated: '2026-03-26'
 tags:
   - backend
   - redis
@@ -13,7 +13,7 @@ category: backend
 draft: false
 lang: en
 expanded: true
-source_content_hash: 49ff1df39279cfaba17da53fb9bdd66dc6991b236a3f10e998cd0e05952be0f5
+source_content_hash: f4754b27075a88ba21bef4456766e23d4b80e58cb6f50389da3075bf136ac0e1
 references:
   - url: "https://docs.bullmq.io/"
     title: docs.bullmq.io
@@ -94,14 +94,14 @@ await queue.add(
   {
     blockId: block.id,
     snapshot: extractSnapshot(block),
-    intent: "update",
+    intent: "update"
   },
   {
     jobId: `block-${block.id}-update`, // Deduplication
     attempts: 3, // Auto-retry
     backoff: { type: "exponential" }, // Smart delays
-    priority: urgent ? 1 : 10, // Priority queue
-  },
+    priority: urgent ? 1 : 10 // Priority queue
+  }
 );
 ```
 
@@ -147,8 +147,8 @@ await queue.add(
 new Worker("calendar-queue", processor, {
   limiter: {
     max: 100, // Max 100 jobs
-    duration: 60000, // Per minute
-  },
+    duration: 60000 // Per minute
+  }
 });
 ```
 
@@ -285,7 +285,7 @@ return { success: true };
 
 ```typescript
 @Processor("google-calendar-event", {
-  concurrency: 5, // Process up to 5 jobs simultaneously
+  concurrency: 5 // Process up to 5 jobs simultaneously
 })
 export class QueueProcessor extends WorkerHost {
   async process(job: Job): Promise<void> {
@@ -366,7 +366,7 @@ Use BullMQ when you need:
 
 await this.queue.add("create-channel", data, {
   attempts: 3,
-  backoff: { type: "exponential", delay: 1000 },
+  backoff: { type: "exponential", delay: 1000 }
 });
 ```
 
@@ -474,6 +474,30 @@ console.log(job.failedReason);
 
 ---
 
+## Architecture Summary
+
+```mermaid
+flowchart LR
+    A["User Action"] --> B["Event"]
+    B --> C["Redis Queue"]
+    C --> D["Worker Process"]
+    D --> E["Google Calendar API"]
+
+    subgraph "Redis Guarantees"
+        C
+    end
+```
+
+**Benefits:**
+
+- **Reliability**: 99.9%+ job completion rate
+- **Scalability**: Add workers to handle more load
+- **Observability**: Track every job's status
+- **Maintainability**: Clear separation of concerns
+- **Performance**: Absorb traffic spikes, smooth out load
+
+---
+
 ## Error Handling and DLQ Patterns
 
 Retry logic and monitoring are only half the story. What happens when all
@@ -529,6 +553,33 @@ Use this classification in your worker to short-circuit retries on permanent
 failures. Move non-retryable jobs directly to the DLQ with full error context
 instead of burning through the retry budget.
 
+### BullMQ UnrecoverableError
+
+The `isRetryableError` classification above works when you control the retry logic yourself. But what about the retries BullMQ manages automatically? If your retry config is designed for one failure mode (e.g., lock contention with `attempts: 20, delay: 100ms`) but your processor also throws permanent errors (e.g., business logic failures), BullMQ retries everything -- including errors that will never succeed.
+
+BullMQ's `UnrecoverableError` solves this. When thrown from a processor, it tells BullMQ to skip all remaining retry attempts and move the job directly to the failed state:
+
+```typescript
+import { UnrecoverableError } from 'bullmq';
+
+async process(job: Job): Promise<void> {
+  try {
+    await this.executeJob(job);
+  } catch (error) {
+    // Business logic errors (ArchException hierarchy) are permanent
+    if (error instanceof ArchException) {
+      throw new UnrecoverableError(error.message);
+    }
+    // Lock contention, network errors → let BullMQ retry
+    throw error;
+  }
+}
+```
+
+The key pattern here is the **exception hierarchy boundary**. All business logic exceptions extend a common base class (`ArchException`), while infrastructure errors are plain `Error`. This makes `instanceof ArchException` a reliable separator between retryable and non-retryable errors without maintaining an explicit error-type list. When you add a new business exception (e.g., `ResourceNotFoundException`), it automatically inherits `ArchException` and gets the `UnrecoverableError` treatment.
+
+I learned this the hard way. A stale `gcalId` caused `updateEvent()` to throw `ServerLogicException` (an `ArchException` subclass) 20 times in 10 seconds -- the retry config (`attempts: 20, delay: 100ms`) was designed for Redis lock contention, but it also retried permanent business logic failures. Adding `UnrecoverableError` eliminated the retry storm entirely.
+
 ### Layered Retry Strategy
 
 A single retry mechanism is brittle. Network blips resolve in milliseconds; API
@@ -562,7 +613,7 @@ requested:
 if (error.response?.status === 429) {
   const retryAfter = parseInt(
     error.response.headers["retry-after"] ?? "60",
-    10,
+    10
   );
   throw new DelayedError(retryAfter * 1000);
 }
@@ -571,30 +622,6 @@ if (error.response?.status === 429) {
 This is different from a normal retry: `DelayedError` does not decrement the
 attempt counter. The job moves to the delayed set and re-enters the waiting list
 after the specified duration, preserving your retry budget for genuine failures.
-
----
-
-## Architecture Summary
-
-```mermaid
-flowchart LR
-    A["User Action"] --> B["Event"]
-    B --> C["Redis Queue"]
-    C --> D["Worker Process"]
-    D --> E["Google Calendar API"]
-
-    subgraph "Redis Guarantees"
-        C
-    end
-```
-
-**Benefits:**
-
-- **Reliability**: 99.9%+ job completion rate
-- **Scalability**: Add workers to handle more load
-- **Observability**: Track every job's status
-- **Maintainability**: Clear separation of concerns
-- **Performance**: Absorb traffic spikes, smooth out load
 
 ---
 
@@ -608,6 +635,7 @@ flowchart LR
 6. **Observability** = Know what's happening in your system
 7. **DLQ is essential** = `removeOnFail: true` silently loses failures
 8. **Classify errors before retrying** = 4xx errors waste retry budget
+9. **Use `UnrecoverableError` for permanent failures** = When thrown from a processor, BullMQ skips all remaining retry attempts. Use `instanceof` on your exception hierarchy to cleanly separate retryable (lock contention, network) from non-retryable (auth, not-found, business logic) errors
 
 ---
 

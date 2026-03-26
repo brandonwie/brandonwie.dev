@@ -2,7 +2,7 @@
 title: WAF Allowlist Patterns
 description: Block-by-default WAF approach using route allowlisting. Stronger security than
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-03-26'
 tags:
   - aws
   - waf
@@ -17,7 +17,7 @@ references:
       https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
     title: Creating and managing an IP set in AWS WAF
     type: official
-source_content_hash: bcd75e1d0315d6f4e19407e083afd37c4fdda9c7d4069ba5e45cb18378c90499
+source_content_hash: be1f0923d004d1ead3be98b1857340524408d9baa1eeb5818c77d66482da5146
 ---
 
 I noticed our production API was receiving thousands of requests to paths like `/wp-admin`, `/phpmyadmin`, and `/.env`. Bots scanning for vulnerabilities, hitting every common exploit path they know. Our API returned 404s for all of them, but each request still consumed compute resources, cluttered logs, and occasionally triggered rate limiting for legitimate users.
@@ -26,10 +26,10 @@ The fix was to flip the default: instead of allowing everything and blocking kno
 
 ## Allowlist vs Blocklist
 
-| Approach  | Default Action | Security   | Maintenance            |
-| --------- | -------------- | ---------- | ---------------------- |
-| Allowlist | Block          | Stronger   | Must add new routes    |
-| Blocklist | Allow          | Weaker     | Must block new attacks |
+| Approach  | Default Action | Security      | Maintenance            |
+| --------- | -------------- | ------------- | ---------------------- |
+| Allowlist | Block          | ✅ Stronger   | Must add new routes    |
+| Blocklist | Allow          | ❌ Weaker     | Must block new attacks |
 
 With a blocklist, you are playing defense. Every new attack vector requires a new rule. Miss one, and the request reaches your application. You are always one step behind.
 
@@ -273,12 +273,32 @@ WAF pricing is predictable but adds up with many rules:
 
 For high-traffic APIs, the per-request cost ($0.60 per million) is the dominant factor regardless of which pattern you choose. At 100 million requests per month, you pay $60 in request charges compared to $5-$15 in rule charges. Optimizing the number of rules matters less at scale than optimizing whether requests should reach your API at all.
 
+## Difficulties Encountered
+
+### Versioned Route Prefix Gotcha
+
+One issue that caught me off guard: `STARTS_WITH "/spaces"` does NOT match `/v2/spaces`. The URI path literally starts with `/v2/`, not `/spaces`. This is obvious in hindsight, but when you are adding a new versioned API route, it is easy to assume that the existing `/spaces` allowlist entry covers all versions.
+
+Each API version prefix needs its own explicit allowlist entry:
+
+```hcl
+# These are THREE separate statements — not one
+statement { byte_match_statement { search_string = "/spaces"    ... } }
+statement { byte_match_statement { search_string = "/v1/spaces" ... } }
+statement { byte_match_statement { search_string = "/v2/spaces" ... } }
+```
+
+Without the explicit `/v2/spaces` entry, requests silently return 403 in production. The tricky part is that dev environments often blanket-allow `/v2/*` via regex, so the route works perfectly in dev and only fails in prod where explicit rules are used.
+
+**Checklist for new v2 routes:** When adding a v2 controller in the backend, always add a corresponding WAF allowlist entry in `waf/prod_waf.tf`. Dev WAF blanket-allows `/v2/*` so it works there automatically -- which is exactly why you will not catch this in development.
+
 ## Key Takeaways
 
-Five principles for WAF allowlist configuration:
+Six principles for WAF allowlist configuration:
 
 1. **Default to block.** Unknown routes should never reach your application. The allowlist approach handles this automatically.
 2. **Use STARTS_WITH for API routes.** Most routes have query parameters or sub-paths. Exact matching is too restrictive for general API paths.
 3. **Do not forget WebSockets.** Socket.IO uses multiple sub-paths with query parameters. A single `STARTS_WITH` rule on `/socket.io` covers all of them.
 4. **Use different patterns for dev and prod.** Regex consolidation saves cost in dev. Explicit rules save debugging time in prod.
 5. **Verify after every deployment.** Use the AWS CLI to confirm rules are active and check sampled requests for false positives.
+6. **Versioned routes need separate entries.** `STARTS_WITH "/spaces"` does not match `/v2/spaces`. Each version prefix requires its own allowlist statement.

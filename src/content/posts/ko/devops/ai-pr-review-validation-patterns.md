@@ -2,7 +2,7 @@
 title: "AI PR 리뷰 검증 패턴"
 description: "AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 흔한 패턴과 재발 방지 방법."
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-03-18T00:00:00.000Z
+updated: '2026-03-26'
 tags:
   - devops
   - ai
@@ -12,8 +12,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
-source_updated: "2026-03-18"
-translation_date: "2026-03-18"
+source_updated: "2026-03-26"
+translation_date: "2026-03-26"
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -182,6 +182,15 @@ constructor에 합리적인 default가 있고 factory가 이를 override하는 �
 // NOTE: Related logic in sync-blocks.helper.ts:232 handles resyncRequired
 ```
 
+## 보강 주석 템플릿
+
+| 패턴                | 템플릿                                                                                              |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| 기능 존재           | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]`                    |
+| Race Condition 없음 | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
+| 의도적 설계         | `// NOTE: Intentionally [omitted/designed this way] - [reason]`                                     |
+| Cross-File 참조     | `// NOTE: Related logic in [file:line] handles [concern]`                                           |
+
 ### 9. Cross-Branch 혼동
 
 **어떻게 보이나:** 에이전트가 코드가 assertion과 모순된다고 주장하면서, PR branch와 일치하지 않는 line 번호를 인용해요.
@@ -226,14 +235,24 @@ git log origin/main..HEAD -- {file} --format="%h %ae %s"
 
 다른 작성자의 지적은 finding registry에서 N/A로 표시해요. 작성자와 관계없이 CRITICAL 지적만 에스컬레이션하면 돼요. PR #710에서는 15개 고유 지적 중 7개가 authorship scoping으로 N/A 처리돼서 상당한 시간을 절약했어요.
 
-## 보강 주석 템플릿
+### 12. 마크다운 포매팅 환각
 
-| 패턴                | 템플릿                                                                                              |
-| ------------------- | --------------------------------------------------------------------------------------------------- |
-| 기능 존재           | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]`                    |
-| Race Condition 없음 | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
-| 의도적 설계         | `// NOTE: Intentionally [omitted/designed this way] - [reason]`                                     |
-| Cross-File 참조     | `// NOTE: Related logic in [file:line] handles [concern]`                                           |
+**어떻게 보이나:** Reviewer가 마크다운 테이블에 포매팅 문제가 있다고 주장해요(예: "앞에 `||`가 와서 빈 첫 번째 열이 생김"). 실제로는 테이블이 완벽하게 유효한데도요.
+
+**왜 이런 일이 생기나:** Copilot이 실제 file 내용을 파싱하지 않고, 흔한 마크다운 문제에 대한 패턴 매칭으로 포매팅 지적을 만들어내는 경우가 있어요. 다른 혼동 패턴이 코드 로직을 잘못 읽는 것과 달리, 이건 순수하게 날조된 거예요 -- file 어디에도 없는 구문 문제를 만들어내는 거죠.
+
+이 패턴이 특히 비용이 큰 이유는 비슷한 file 수에 비례해서 늘어나기 때문이에요. 비슷한 구조의 file이 많은 문서 전용 PR(예: 11개 README)을 review할 때, 환각이 모든 file에서 반복되면서 지적 수가 급증해요.
+
+**예시:**
+
+```text
+에이전트: "이 README의 테이블은 각 행이 `||`로 시작해서 GitHub이 빈 첫 번째 열을 렌더링한다."
+현실: 테이블은 표준 `| col | col |` 형식 — 이중 파이프는 어디에도 없음.
+```
+
+crucio PR #40에서 실제로 겪은 사례예요. 18개 Copilot 지적 중 12개(67%)가 11개 README file에 걸쳐 이 똑같은 환각이었어요. 테이블 포매팅 문제는 단 하나도 없었어요. 처음에는 각 file을 개별적으로 확인하려 했지만, 두 번째 지적이 동일하다는 걸 확인한 후 나머지를 일괄 기각해서 한 시간 넘게 절약했어요.
+
+**예방:** 문서 PR에서는 지적된 file 하나를 먼저 스팟 체크하세요. 첫 번째 지적이 false positive면, 개별 review 없이 비슷한 지적을 일괄 기각하세요.
 
 ## 워크플로
 
