@@ -1284,3 +1284,13 @@ Implemented sort-by-updated across all views and resynced 79 posts with latest
 **Next:** Expand 5-8 high-value posts to narrative format (top candidates:
 traefik-keycloak-forwardauth, ecr-ecs-deployment, vpc-networking, oauth2,
 websocket-architecture). Then: OG image, ESLint + Prettier, GitHub Actions CI
+
+### Session 12 — 2026-03-27: CLI Tool Setup
+
+**What:** Installed OpenAI Codex CLI (`brew install codex`, v0.117.0) and Google
+Gemini CLI (`brew install gemini-cli`, v0.35.2) alongside existing Claude Code.
+Fixed stale asdf ghost shim blocking gemini command. Created `~/.gemini/` config
+directory.
+
+**Stats:** All 3 AI coding CLIs now installed (Claude=binary, Codex=brew cask,
+Gemini=brew formula).
