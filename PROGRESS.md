@@ -25,8 +25,28 @@
 - [x] Frontmatter date validation — automated EN/KO date consistency checks
 - [x] 98 EN + 98 KO posts — crucio RAG pipeline trio + agent-teams concurrency update
 - [x] 3 hash-mismatch posts merged — Pattern #12, UnrecoverableError, Versioned Route Gotcha
+- [x] New original post — social intelligence explosion commentary (EN + KO)
 
 ## Session Log
+
+### 2026-04-01 (Session 13)
+
+**New Post — Social Intelligence Explosion Commentary**
+
+1. **Source** — LinkedIn post (2026-03-30) about Google paper "Agentic AI and the
+   next intelligence explosion" (Evans, Bratton, Agüera y Arcas)
+
+2. **English post** — Expanded LinkedIn content into ~5 min analytical piece with
+   5 sections: paper summary, social reasoning in models, centaurs vs oracles,
+   agent institutions vs alignment, harness design connection
+
+3. **Korean translation** — Full KO version with 해요체 tone, technical terms in
+   English, same structure
+
+4. **Verify** — Build clean (207 HTML, 198 indexed), pre-push hooks passed,
+   pushed to main
+
+**Stats:** 1 new post (EN + KO). 99 EN + 99 KO total.
 
 ### 2026-03-26 (Session 12)
 
