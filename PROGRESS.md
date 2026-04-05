@@ -27,6 +27,7 @@
 - [x] 3 hash-mismatch posts merged — Pattern #12, UnrecoverableError, Versioned Route Gotcha
 - [x] New original post — social intelligence explosion commentary (EN + KO)
 - [x] 106 EN + 106 KO posts — 7 new posts published + 1 hash-mismatch merged
+- [x] 107 EN + 107 KO — Karpathy LLM Knowledge Bases original commentary post
 
 ## Session Log
 
