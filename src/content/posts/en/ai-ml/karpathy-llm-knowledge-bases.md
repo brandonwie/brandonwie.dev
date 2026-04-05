@@ -25,7 +25,7 @@ references:
 
 When Andrej Karpathy published his "LLM Knowledge Bases" pattern in early April 2026, I had a strange experience reading it. Not "this is new and interesting" but "this is my system, described by someone who has never seen it." The three-layer architecture, the incremental compilation, the index files, the LLM doing all the bookkeeping — I had been running exactly this pattern for months. I call it 3B (Brandon's Binary Brain), and it has been the backbone of how I work across six projects.
 
-This post is not a summary of Karpathy's idea. You can read his gist for that. This is a comparison: what happens when you map an abstract pattern against a system that has been in daily production use, and what the divergences reveal about what actually matters.
+This post is not a summary of Karpathy's idea. You can read [his gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) for that. This is a comparison: what happens when you map an abstract pattern against a system that has been in daily production use, and what the divergences reveal about what actually matters.
 
 ## Karpathy's Framework in 30 Seconds
 
@@ -116,4 +116,4 @@ Karpathy described a general pattern. 3B is a specific instance. The pattern wor
 
 The important choice is not whether to build one, but **what your atomic unit is**. Karpathy chose wiki pages. I chose Zettelkasten notes. Both work. Pick the unit that matches how you think about your domain: pages for deep research on one topic, atomic notes for cross-cutting professional knowledge across many projects.
 
-If you want to start, Karpathy's gist is the right starting point. Paste it into your LLM agent, tell it about your domain, and let the system evolve. The schema will change. The conventions will shift. That is how it is supposed to work. My CLAUDE.md has been rewritten twelve times. The knowledge entries are permanent. The scaffolding is disposable.
+If you want to start, [Karpathy's gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) is the right starting point. Paste it into your LLM agent, tell it about your domain, and let the system evolve. The schema will change. The conventions will shift. That is how it is supposed to work. My CLAUDE.md has been rewritten twelve times. The knowledge entries are permanent. The scaffolding is disposable.
