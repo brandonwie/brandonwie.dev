@@ -25,8 +25,8 @@ your users, and the documentation never mentions it.
 
 I needed to create Google Meet links programmatically. The feature had to work
 for every user — free Gmail accounts and paid Google Workspace accounts alike.
-Google offers two APIs that can do this, and picking the wrong one cost me a day
-of debugging.
+Google offers two APIs that can do this, and the obvious choice turned out to
+have a deal-breaking limitation.
 
 ## Options Considered
 
@@ -42,8 +42,8 @@ The Google Meet REST API **requires Google Workspace**. Free Gmail accounts
 cannot call `spaces.create`. The API returns a permission error with no
 indication that account type is the issue.
 
-I discovered this only after building a working integration against a Workspace
-test account. Switching to a free Gmail account for QA broke everything.
+Since our app serves both free Gmail and Workspace users, the Meet REST API was
+not an option. The Calendar API was the only approach that works universally.
 
 ## The Solution: Calendar API with conferenceData
 

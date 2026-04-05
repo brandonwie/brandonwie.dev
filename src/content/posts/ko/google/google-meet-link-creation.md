@@ -24,7 +24,7 @@ Google에는 Meet 링크를 만드는 API가 두 개 있어요. 그중 하나는
 
 ## 문제 상황
 
-Google Meet 링크를 프로그래밍 방식으로 생성해야 했어요. 무료 Gmail 계정과 유료 Google Workspace 계정 모두에서 동작해야 하는 기능이었죠. Google은 이걸 할 수 있는 API를 두 개 제공하는데, 잘못된 걸 선택하는 바람에 하루를 디버깅에 날렸어요.
+Google Meet 링크를 프로그래밍 방식으로 생성해야 했어요. 무료 Gmail 계정과 유료 Google Workspace 계정 모두에서 동작해야 하는 기능이었죠. Google은 이걸 할 수 있는 API를 두 개 제공하는데, 당연해 보이는 선택지에 치명적인 제한이 숨어 있었어요.
 
 ## 검토한 옵션
 
@@ -38,18 +38,18 @@ Google Meet 링크를 프로그래밍 방식으로 생성해야 했어요. 무�
 
 Google Meet REST API는 **Google Workspace가 필수**예요. 무료 Gmail 계정에서는 `spaces.create`를 호출할 수 없어요. API가 permission 에러를 반환하는데, 계정 유형이 원인이라는 힌트는 전혀 없었어요.
 
-Workspace 테스트 계정으로 작동하는 통합을 완성한 후에야 이 사실을 알게 됐어요. QA를 위해 무료 Gmail 계정으로 전환하자마자 모든 게 깨졌죠.
+우리 앱은 무료 Gmail과 Workspace 사용자 모두를 서빙하기 때문에, Meet REST API는 선택지가 될 수 없었어요. Calendar API가 범용적으로 동작하는 유일한 접근 방식이었어요.
 
 ## 해결책: Calendar API + conferenceData
 
 Calendar API 방식은 conferenceData가 포함된 임시 캘린더 이벤트를 만들고, Meet 링크를 추출한 다음, 이벤트를 삭제해요. 해킹처럼 들리지만, 이게 업계 표준 접근 방식이에요.
 
 ```typescript
-// 1. Use the calendar's integration for OAuth
-// 2. Create event with conferenceData
-// 3. Extract Meet link
-// 4. Delete temporary event
-// 5. Return persistent Meet link (survives event deletion)
+// 1. 캘린더의 OAuth 통합 사용
+// 2. conferenceData가 포함된 이벤트 생성
+// 3. Meet 링크 추출
+// 4. 임시 이벤트 삭제
+// 5. 영속적 Meet 링크 반환 (이벤트 삭제 후에도 유지)
 ```
 
 ### 왜 이 방식이 동작하는가
@@ -129,7 +129,7 @@ TypeScript 타입과 실제 API 의미론이 맞지 않는 경우예요. REST AP
 
 2. **"새롭고 반짝이는" 것이 항상 좋은 건 아니에요** — Meet REST API(2024년 2월 출시)가 이상적으로 보였지만, 더 오래된 Calendar API 방식에는 없는 치명적인 제한이 있었어요.
 
-3. **우회 방법이 영구적인 해결책이 될 수 있어요** — 임시 이벤트를 만들고 삭제하는 건 이상하게 느껴지지만, Google이 직접 권장하는 방식이에요. 다만, 앱이 이미 실제 캘린더 이벤트를 생성한다면 그 호출에 편승하세요 — ���버헤드 제로이고, Meet 링크가 실제 이벤트에 연결돼요.
+3. **우회 방법이 영구적인 해결책이 될 수 있어요** — 임시 이벤트를 만들고 삭제하는 건 이상하게 느껴지지만, Google이 직접 권장하는 방식이에요. 다만, 앱이 이미 실제 캘린더 이벤트를 생성한다면 그 호출에 편승하세요 — 오버헤드 제로이고, Meet 링크가 실제 이벤트에 연결돼요.
 
 4. **200 OK 응답이 거짓말할 수 있어요** — `conferenceDataVersion`이 빠지면 Google은 요청을 받아들이고 아무것도 안 해요. 상태 변경은 항상 후속 조회로 확인하세요.
 
