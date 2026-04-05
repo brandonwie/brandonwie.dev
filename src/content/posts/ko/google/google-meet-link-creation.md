@@ -2,7 +2,7 @@
 title: "Google Meet 링크 생성"
 description: "프로그래밍 방식으로 Google Meet 링크를 생성하면서 배운 교훈이에요."
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-03-05T00:00:00.000Z
+updated: "2026-04-06"
 tags:
   - backend
   - google-api
@@ -12,8 +12,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: google-meet-link-creation
-source_updated: "2026-03-05"
-translation_date: "2026-03-10"
+source_updated: "2026-04-06"
+translation_date: "2026-04-06"
 references:
   - url: "https://developers.google.com/workspace/calendar/api/guides/create-events"
     title: Create events — Google Calendar
@@ -63,6 +63,33 @@ Calendar API 방식은 conferenceData가 포함된 임시 캘린더 이벤트를
 
 두 API 모두 무료예요. Calendar API는 이 패턴에 대해 넉넉한 할당량을 제공해요. 한 가지 알아둘 점은 무료 Gmail 계정에서 3명 이상 참여하는 회의에 60분 제한이 있다는 거예요.
 
+## 더 나은 방법: 기존 이벤트에 편승하기
+
+초기 구현 이후 몇 달 뒤에 흔한 경우에 더 깔끔한 접근법을 찾았어요. 애플리케이션이 이미 Google Calendar 이벤트를 생성하고 있다면 — 예를 들어 큐 프로세서가 블록을 캘린더에 동기화하는 경우 — 같은 API 호출에 `conferenceData.createRequest`를 포함시켜서 Meet 링크를 **원자적으로** 생성할 수 있어요. 임시 이벤트가 필요 없어요.
+
+```typescript
+// Instead of: create temp event → extract link → delete temp event
+// Just include in the real event payload:
+event.conferenceData = {
+  createRequest: {
+    requestId: randomUUID(), // Google deduplicates by requestId
+    conferenceSolutionKey: { type: "hangoutsMeet" }
+  }
+};
+// Google returns event.hangoutLink in the response
+```
+
+이 방식은 생성-추출-삭제 과정을 완전히 없애요. Meet 링크가 `events.insert()`나 `events.update()` 응답에서 바로 돌아오고, 실제 캘린더 이벤트에 바인딩돼요. 사용자는 Google Calendar에서 "Google Meet으로 참여" 버튼을 직접 볼 수 있어요.
+
+### 어떤 방식을 언제 사용할까
+
+| 시나리오                              | 접근 방식                                        |
+| ------------------------------------- | ------------------------------------------------ |
+| 앱이 이미 캘린더 이벤트를 생성하는 경우 | 편승 — 해당 호출에 `createRequest` 포함          |
+| 독립적인 Meet 링크 (캘린더 이벤트 없음) | 임시 이벤트 — 생성, 링크 추출, 삭제              |
+
+편승 방식은 API 오버헤드가 제로예요(추가 호출 없음). Meet 링크가 삭제된 임시 이벤트가 아닌 실제 이벤트에 의미적으로 연결돼요. 이미 `events.insert()`나 `events.update()`를 호출하고 있다면, 임시 이벤트 패턴을 사용할 이유가 없어요.
+
 ## Meet 링크 제거하기 (conferenceData = null)
 
 나중에 기존 이벤트에서 Meet 링크를 *제거*해야 할 일이 생겼어요. 이것도 별도의 디버깅 세션이 됐죠.
@@ -102,8 +129,10 @@ TypeScript 타입과 실제 API 의미론이 맞지 않는 경우예요. REST AP
 
 2. **"새롭고 반짝이는" 것이 항상 좋은 건 아니에요** — Meet REST API(2024년 2월 출시)가 이상적으로 보였지만, 더 오래된 Calendar API 방식에는 없는 치명적인 제한이 있었어요.
 
-3. **우회 방법이 영구적인 해결책이 될 수 있어요** — 임시 이벤트를 만들고 삭제하는 건 이상하게 느껴지지만, Google이 직접 권장하는 방식이에요.
+3. **우회 방법이 영구적인 해결책이 될 수 있어요** — 임시 이벤트를 만들고 삭제하는 건 이상하게 느껴지지만, Google이 직접 권장하는 방식이에요. 다만, 앱이 이미 실제 캘린더 이벤트를 생성한다면 그 호출에 편승하세요 — ���버헤드 제로이고, Meet 링크가 실제 이벤트에 연결돼요.
 
 4. **200 OK 응답이 거짓말할 수 있어요** — `conferenceDataVersion`이 빠지면 Google은 요청을 받아들이고 아무것도 안 해요. 상태 변경은 항상 후속 조회로 확인하세요.
 
 5. **타입 정의가 API 현실보다 뒤처질 수 있어요** — 공식 타입이 유효한 API 상태(예: 제거를 위한 `null`)를 모델링하지 않을 때는 REST 문서를 확인하고 타겟 type assertion을 사용하세요.
+
+6. **가능하면 편승하세요** — 이미 `events.insert()`나 `events.update()`를 호출하고 있다면, 별도의 임시 이벤트 왕복 대신 `conferenceData.createRequest`를 포함시키세요. 오버헤드 제로이고, Meet 링크가 실제 이벤트에 의미적으로 바인딩돼요.

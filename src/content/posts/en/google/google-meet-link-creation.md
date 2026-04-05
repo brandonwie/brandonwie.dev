@@ -2,7 +2,7 @@
 title: Google Meet Link Creation
 description: Lesson learned from implementing programmatic Google Meet link creation.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-03-05T00:00:00.000Z
+updated: "2026-04-06"
 tags:
   - backend
   - google-api
@@ -11,7 +11,7 @@ category: google
 draft: false
 lang: en
 expanded: true
-source_content_hash: 39c807b499b88dcace77fec5c8d77fc40211dfbf8f05bacca9f9effcca0bddfc
+source_content_hash: a33cd643d8dc754f8954858ad62fd105cb326dee9a7341570d6a28007daf1ee2
 references:
   - url: "https://developers.google.com/workspace/calendar/api/guides/create-events"
     title: Create events — Google Calendar
@@ -76,6 +76,33 @@ Both APIs are free to use. The Calendar API has generous quotas for this pattern
 One thing to know: free Gmail accounts impose a 60-minute limit on meetings with
 3+ participants.
 
+## The Better Way: Piggyback on Existing Events
+
+Months after the initial implementation, I found a cleaner approach for the common case. If your application already creates a Google Calendar event — say, through a queue processor syncing blocks to calendars — you can generate the Meet link **atomically** by including `conferenceData.createRequest` in the same API call. No temporary event needed.
+
+```typescript
+// Instead of: create temp event → extract link → delete temp event
+// Just include in the real event payload:
+event.conferenceData = {
+  createRequest: {
+    requestId: randomUUID(), // Google deduplicates by requestId
+    conferenceSolutionKey: { type: "hangoutsMeet" }
+  }
+};
+// Google returns event.hangoutLink in the response
+```
+
+This eliminates the create-extract-delete dance entirely. The Meet link comes back in the response to `events.insert()` or `events.update()`, bound to the real calendar event. Users see the "Join with Google Meet" button directly in Google Calendar.
+
+### When to Use Which Approach
+
+| Scenario                                        | Approach                                          |
+| ----------------------------------------------- | ------------------------------------------------- |
+| App already creates a calendar event             | Piggyback — include `createRequest` in that call  |
+| Standalone Meet link (no calendar event context) | Temp event — create, extract link, delete          |
+
+The piggyback approach has zero API overhead (no extra calls), and the Meet link is semantically tied to the actual event rather than orphaned from a deleted placeholder. If you are already calling `events.insert()` or `events.update()`, there is no reason to use the temp event pattern.
+
 ## Clearing Meet Links (conferenceData = null)
 
 Later, I needed to _remove_ a Meet link from an existing event. This turned into
@@ -129,7 +156,9 @@ semantics disagree. The REST API documentation is the source of truth.
    API approach does not.
 
 3. **Workarounds can be permanent solutions** — Creating and deleting a temporary
-   event feels wrong, but it is what Google themselves recommend.
+   event feels wrong, but it is what Google themselves recommend. That said, when
+   your app already creates a real calendar event, piggyback on that call instead
+   — zero overhead, and the Meet link is tied to the actual event.
 
 4. **Silent 200 OK responses lie** — When `conferenceDataVersion` is missing,
    Google accepts your request and does nothing. Always verify state changes
@@ -138,3 +167,8 @@ semantics disagree. The REST API documentation is the source of truth.
 5. **Type definitions lag behind API reality** — When official types do not model
    a valid API state (like `null` for clearing), check the REST documentation
    and use a targeted type assertion.
+
+6. **Piggyback when possible** — If you are already calling `events.insert()` or
+   `events.update()`, include `conferenceData.createRequest` instead of making
+   a separate temp-event round trip. Zero overhead, and the Meet link is
+   semantically bound to the real event.
