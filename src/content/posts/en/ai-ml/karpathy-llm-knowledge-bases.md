@@ -98,9 +98,9 @@ Despite the divergences, the core mechanics are identical:
 
 Karpathy's gist describes a system for accumulating and querying knowledge. It does not describe a system for **publishing** knowledge.
 
-3B has a full publication pipeline: knowledge entries are synced to a blog, expanded from reference format to narrative format, translated to Korean, and deployed. The blog is a fourth layer that Karpathy's pattern does not address — knowledge refined into a form that teaches others, not just reminds yourself.
+3B has a full publication pipeline: knowledge entries are synced to a blog, expanded from reference format to narrative format, translated to Korean, and deployed. The blog is a fourth layer that Karpathy's pattern does not address — knowledge refined into a form you can share, not just reference privately.
 
-This matters because the act of expanding a terse knowledge entry into a blog post forces deeper understanding. Writing "PostgreSQL advisory locks prevent concurrent batch operations" as a bullet point is one level of understanding. Explaining to a reader when to use advisory locks, how they differ from row-level locks, and what happens when you get it wrong is a deeper level. The blog is not just an output channel; it is a compression test for the knowledge itself.
+This matters because the act of expanding a terse knowledge entry into a shareable post forces you to confront what you actually understand versus what you only think you do. Writing "PostgreSQL advisory locks prevent concurrent batch operations" as a bullet point feels like knowledge. Turning it into a post where you walk through when to use them, how they differ from row-level locks, and what happens when you get it wrong — that is where you discover the gaps. The blog is not just an output channel; it is a honesty check against your own understanding.
 
 ## What I Stole From Karpathy
 
