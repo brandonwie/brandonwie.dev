@@ -26,8 +26,36 @@
 - [x] 98 EN + 98 KO posts — crucio RAG pipeline trio + agent-teams concurrency update
 - [x] 3 hash-mismatch posts merged — Pattern #12, UnrecoverableError, Versioned Route Gotcha
 - [x] New original post — social intelligence explosion commentary (EN + KO)
+- [x] 106 EN + 106 KO posts — 7 new posts published + 1 hash-mismatch merged
 
 ## Session Log
+
+### 2026-04-06 (Session 14)
+
+**Blog Publish — 7 New Posts + 1 Hash-Mismatch Merge**
+
+1. **Discovery** — `/blog-publish` found 1 hash-mismatch post
+   (google-meet-link-creation with new Piggyback Approach section) and 7 "almost
+   ready" posts blocked by `publishable: review` or missing references
+
+2. **Blocker fixes** — Updated 7 3B source frontmatter files: set
+   `publishable: true` + `ready: true`. Fixed hidden reference type issue on
+   PSI post (`academic` → `authoritative` to satisfy sync script)
+
+3. **Sync + expand** — Synced 7 new EN posts, expanded all to narrative blog
+   format following blog-writing-guide.md. Merged Piggyback Approach into
+   existing google-meet-link-creation post
+
+4. **Translate** — Created 7 KO templates, translated all 8 posts (7 new + 1
+   delta). 해요체 register with technical terms in English
+
+5. **Build fix** — `< 0.1` in PSI post table parsed as HTML tag by mdsvex.
+   Fixed with `&lt;` escaping in EN + KO
+
+6. **Verify** — `validate:dates` clean, build clean (212 pages indexed),
+   pre-push hooks passed, 2 atomic commits pushed
+
+**Stats:** 7 new + 1 updated post (EN + KO). 106 EN + 106 KO total.
 
 ### 2026-04-01 (Session 13)
 
