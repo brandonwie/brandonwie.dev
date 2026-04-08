@@ -2,7 +2,7 @@
 title: "Claude Code: Shared + Personal AI Config Pattern"
 description: Split AI instructions into committed (shared) and gitignored (personal) layers
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: '2026-04-09'
 tags:
   - devops
   - claude-code
@@ -12,7 +12,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 9f3e301fb75260d49c4d294b4e80bc030cc7d8d5752b9ba5190aa06765512cfd
+source_content_hash: a209a2b38b7a4aba85f3a7e4c7ddd3e3eec6ceee73600fd6c3d595ad175c7d2f
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
     title: Claude Code Documentation
@@ -255,30 +255,134 @@ that don't match a deny or ask pattern. Dangerous commands like
 `terraform destroy` and `git push --force` are in deny. Risky commands like
 `git push` and `rm` are in ask. Everything else flows through to the catch-all.
 
-## Per-Profile settings.json
+## Per-Profile settings.json (Corrected)
 
-One file that resists consolidation is `settings.json` itself. It cannot be
-symlinked across profiles because `statusLine.command` must differ — the work
-profile embeds `CLAUDE_CONFIG_DIR=~/.claude-work` since Claude Code doesn't
-pass environment variables to statusline subprocesses.
+When I first wrote this post in March, I claimed `settings.json` couldn't be
+symlinked across profiles and described the architecture as "three copies." That
+was wrong. The actual architecture _is_ symlinked end-to-end, and per-profile
+differences live in a separate `settings.local.json` override file that Claude
+Code deep-merges over the shared base. I only discovered this when an audit
+script flagged a broken symlink and I had to trace the chain to repair it.
 
-The architecture is three copies:
+The corrected topology:
 
-- **Knowledge base SoT** (`global-claude-setup/settings.json`) — the canonical
-  reference
-- **Personal profile** (`~/.claude/settings.json`) — direct copy of the SoT
-- **Work profile** (`~/.claude-work/settings.json`) — copy with 2 differences:
-  1. `statusLine.command` has the `CLAUDE_CONFIG_DIR` prefix
-  2. `enabledMcpjsonServers` includes work-specific database connections
+- **Knowledge base SoT** (`global-claude-setup/settings.json`) — canonical
+  source, gitignored because it contains machine-specific plugin install state
+- **Personal profile** (`~/.claude/settings.json`) — **symlink** to the SoT
+- **Work profile** (`~/.claude-work/settings.json`) — **symlink chained through
+  personal**: `~/.claude-work/settings.json → ~/.claude/settings.json → SoT`. It
+  is _not_ a separate copy.
+- **Work overrides** (`~/.claude-work/settings.local.json`) — symlink to a
+  separate `settings.local.work.json` in the SoT directory. Contains only the
+  two keys that differ from personal: `statusLine.command` (with the
+  `CLAUDE_CONFIG_DIR=~/.claude-work` prefix) and `enabledMcpjsonServers` (the
+  whitelist for work-specific database connections). Claude Code deep-merges
+  this over the base `settings.json` at load time.
 
-All other settings (env, permissions, hooks, plugins) are identical. When
-editing, update the SoT first, then sync to both profiles.
+All non-override settings — env, permissions, hooks, plugins — come from the
+single shared SoT through the symlink chain. Editing the SoT instantly
+propagates to both profiles. There is no manual sync step.
 
 **Watch out for junk accumulation.** Interactive permission approvals ("Always
 allow") store the exact command string as a permission entry — including
 multi-line bash scripts, entire code blocks, and auth tokens. My work profile
 accumulated ~160 entries (32KB) before cleanup. The `Bash(*)` catch-all
 prevents this by auto-approving before the interactive prompt fires.
+
+## Chain Failure Mode
+
+The `work → personal → SoT` chain has a single-file failure mode that took me a
+while to recognize. If anything breaks `~/.claude/settings.json`, **both
+profiles lose the chain at once**, not just personal. The most common cause is
+the Claude Code UI (or a plugin's permission prompt) writing the file
+atomically: it creates a temp file and uses `rename()` to move it over the
+target. That `rename()` replaces the symlink inode with a regular file in
+place, silently orphaning the SoT.
+
+You don't notice immediately. The first hint is usually "settings I changed in
+the SoT aren't showing up" or "a plugin I enabled isn't running." By then, the
+two profiles may already have drifted apart from the SoT, and any user activity
+that happened in the meantime — UI permission toggles, plugin enables — only
+exists in the broken local file.
+
+**Detection.** I run an audit script that walks all 55 expected symlinks across
+personal, work, and project categories and reports a "REPLACED" classification
+when it finds a regular file where a symlink should be. That classification is
+the telltale failure signature.
+
+**Repair strategy depends on what drifted.** There are two cases.
+
+The first case is straightforward. If the local file is strictly stale and the
+SoT is current — meaning no user activity hit the local file during the broken
+window — a one-way restore is safe:
+
+```bash
+# Back up the local file just in case
+cp ~/.claude/settings.json /tmp/settings.local.backup.$(date +%s)
+
+# Remove the regular file and re-link to SoT
+rm ~/.claude/settings.json
+ln -sfn /path/to/sot/settings.json ~/.claude/settings.json
+
+# Verify the chain is intact from both profiles
+realpath ~/.claude/settings.json
+realpath ~/.claude-work/settings.json
+```
+
+The second case is harder. If the local file accumulated user intent — UI
+toggles, "Always allow" clicks, plugin enables — _and_ the SoT was separately
+edited during the same window, a naive restore would silently reverse the
+user's changes. You need a **bidirectional merge**: walk the two JSONs
+structurally, classify each diff, and merge before re-linking. A minimal walker
+looks like this:
+
+```python
+# Returns diffs as (path, kind, local_value, sot_value)
+# where kind is LOCAL-ONLY | SOT-ONLY | VALUE | LIST
+def walk(l, s, path=""):
+    if type(l) != type(s): ...
+    if isinstance(l, dict):
+        for k in set(l) - set(s): yield (f"{path}.{k}", "LOCAL-ONLY", l[k], None)
+        for k in set(s) - set(l): yield (f"{path}.{k}", "SOT-ONLY", None, s[k])
+        for k in set(l) & set(s):
+            yield from walk(l[k], s[k], f"{path}.{k}")
+    elif isinstance(l, list):
+        if l != s: yield (path, "LIST", len(l), len(s))
+    elif l != s:
+        yield (path, "VALUE", l, s)
+```
+
+Once you have the diffs classified, you can merge structurally — usually
+LOCAL-ONLY entries come from UI activity and should be kept, SOT-ONLY entries
+come from intentional config edits and should also be kept, and VALUE conflicts
+need a human decision. Write the merged result atomically via temp file plus
+`rename()` in the same directory as the SoT, so the work profile's symlink sees
+a consistent file at all times during the swap.
+
+**Why this matters beyond one-off incidents.** User activity that legitimately
+modifies the local file (permission "Always allow" clicks, plugin toggles from
+the UI) is invisible to the SoT during the window the local file is broken. If
+you wait to detect the break, drift can accumulate unintentionally. The
+incident that surfaced this for me had ~3 hours of drift, including a
+plugin-on experiment that was collecting zero data because the tracking hooks
+only existed in the SoT — but my running profile was looking at a stale local
+file that didn't have them.
+
+**No git rollback.** The SoT `settings.json` is gitignored because it contains
+machine-specific plugin install state. That means any destructive repair must
+be preceded by a manual backup (e.g., `cp $SOT /tmp/settings.sot.backup.$(date
++%s)`) so you can recover if the merge is wrong. `/tmp` is ephemeral but
+sufficient for the repair window itself; move to `~/` if you want longer
+retention.
+
+**Open question: should the chain be decoupled?** The current `work → personal
+→ SoT` topology exists because historically only one profile existed and the
+work profile was added as a second hat on top. The alternative — two
+independent symlinks (`{personal,work} → SoT`) — would contain a single UI
+break to one profile instead of cascading across both. The cost is that the
+`settings.local.json` deep-merge mechanism would need re-verification to
+confirm it still works with decoupled chains. I haven't done that spike yet,
+but it's worth it before the next major settings restructure.
 
 ## Cross-Check Discipline
 

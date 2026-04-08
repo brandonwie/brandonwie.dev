@@ -3,7 +3,7 @@ title: "Claude Code Agent Teams"
 description: >-
   여러 Claude Code 인스턴스를 팀으로 조율하는 실험적 기능의 설정, 패턴, 주의사항을 알아봅니다.
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-03-24
+updated: '2026-04-09'
 tags:
   - ai-ml
   - claude-code
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: "2026-03-24"
-translation_date: "2026-03-24"
+source_updated: '2026-04-09'
+translation_date: '2026-04-09'
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Claude Code 세션 팀 조율하기
@@ -118,6 +118,8 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 **TeamCreate가 instructions에서 잘못 제거됨.** 이건 특히 교활했어요. 이전 세션에서 `TeamCreate`가 deferred tool이라 도구 목록에 안 보이니까 존재하지 않는다고 결론 내렸어요. 글로벌 CLAUDE.md가 "Agent tool을 대신 사용하라"로 업데이트됐고, 이후 모든 세션에서 split pane teams 대신 백그라운드 subprocess가 사용됐어요. 수정은 간단했어요: deferred tool이 존재하지 않는다고 결론 내리기 전에 항상 `ToolSearch`로 확인하는 거예요. 하지만 피해는 이미 발생한 뒤였어요 -- teams가 작동하고 있다고 생각했지만 실제로는 백그라운드 subagent를 받고 있던 세션들이 여러 번 있었어요.
 
 **Deferred tool 가시성 편향.** TeamCreate를 올바르게 문서화한 뒤에도, Claude는 `team_name` 없이 `Agent` tool을 계속 사용했어요 -- 항상 split pane 없이 in-process로 실행돼요. 근본 원인: `Agent` tool은 항상 기본 도구 목록에 보이지만, `TeamCreate`는 `ToolSearch`로 로드해야 하거든요. Claude는 보이는 도구를 먼저 선택해요. 해결법은 `SessionStart` hook(`session-start-team-preload.py`)으로 세션 시작 시 Claude에게 TeamCreate 사전 로드를 상기시키는 거였어요. advisory 출력에 명시적 3단계 workflow가 포함돼요: `ToolSearch` → `TeamCreate` → `Agent(team_name)`. 핵심: `Agent` without `team_name` = in-process subprocess; `Agent` WITH `team_name` = tmux split pane. 이 차이는 알지 못하면 보이지 않아요.
+
+**팀원 summary-field 함정 (조용한 deliverable 손실).** 팀원이 메시지를 돌려보낼 때, 답장에는 `summary` 필드(UI 미리보기용 5-10단어)와 `message` 필드(전체 내용)가 모두 있어요. 어떤 팀원들은 `summary` 필드에만 "X 완료, 붙여넣을 준비 됨" 같은 메타 요약을 넣고 message 본문은 비워두거나 메타를 다시 적어요. 실제 deliverable은 절대 도착하지 않아요. 4월 초 3-agent 준비 팀에서 이걸 겪었어요: 3명 중 2명이 summary-only 메시지를 돌려보냈고, 사전 콘텐츠 메시지 없이 idle 알림이 도착했어요. 리드 세션은 "idle"을 작업 완료로 해석하고 넘어갔어요. 근본 원인: 팀원 prompt가 deliverable이 어디에 들어가야 하는지 명시적으로 말해주지 않아서 -- 팀원들이 summary를 보고서로 취급한 거예요. **수정:** 모든 팀원 브리핑은 명시적으로 "전체 deliverable은 message 본문에, summary 필드는 메타데이터 전용으로 최대 10단어"라고 말해야 해요. 똑같이 중요한 것: _사전 콘텐츠 메시지 없는_ idle 알림은 작업 완료가 아니라 silent failure로 취급하세요. 복구는 단순해요 -- idle 팀원에게 `SendMessage`로 깨워서 보고서를 inline으로 요청하면 돼요.
 
 ## 제한 사항 요약
 

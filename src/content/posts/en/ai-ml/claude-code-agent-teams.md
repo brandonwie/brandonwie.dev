@@ -2,7 +2,7 @@
 title: Claude Code Agent Teams
 description: Experimental feature for orchestrating multiple Claude Code instances as a coordinated team with shared task lists and inter-agent messaging
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-03-24
+updated: '2026-04-09'
 tags:
   - ai-ml
   - claude-code
@@ -12,7 +12,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: fb6897ee9eabbd13e586c40f509f24bbbf4bae3de54759505391f6b01157f53b
+source_content_hash: 0a19bcadfcddc42c2a46fa5db54949b4075aaef2d4a25f5912b67a9348a93f36
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
@@ -115,6 +115,8 @@ This section is the reason this post exists. The official docs cover the happy p
 **TeamCreate incorrectly removed from instructions.** This one was particularly insidious. A previous session concluded that `TeamCreate` does not exist because it is a deferred tool -- not visible in the tool list until explicitly loaded via `ToolSearch`. The global CLAUDE.md was updated to say "use Agent tool instead," which made all subsequent sessions use background subprocesses instead of split-pane teams. The fix was straightforward: always use `ToolSearch` to check for deferred tools before concluding they do not exist. But the damage was sessions of degraded behavior where I thought teams were working but was getting background subagents instead.
 
 **Deferred tool visibility bias.** Even after documenting TeamCreate correctly, Claude consistently reached for the `Agent` tool without `team_name` -- which always runs in-process with no split panes. The root cause: the `Agent` tool is always visible in the primary tool list, while `TeamCreate` requires `ToolSearch` to load. Claude defaults to the visible tool. The fix was a `SessionStart` hook (`session-start-team-preload.py`) that reminds Claude to preload TeamCreate at session start. The advisory output now includes an explicit 3-step workflow: `ToolSearch` → `TeamCreate` → `Agent(team_name)`. The key insight: `Agent` without `team_name` = in-process subprocess; `Agent` WITH `team_name` = tmux split pane. This distinction is invisible unless you know to look for it.
+
+**Teammate summary-field trap (silent deliverable loss).** When a teammate sends a message back, its reply has both a `summary` field (5-10 words for the UI preview) and a `message` field (the full content). Some teammates put _only_ a meta-summary like "X complete, ready to paste" in the summary field and leave the message body empty or just restate the meta. The actual deliverable never arrives. I hit this on a 3-agent prep team in early April: 2 of 3 teammates returned summary-only messages, and an idle notification arrived without any prior content message. The lead session interpreted "idle" as task completion and moved on. Root cause: the teammate prompts didn't explicitly tell them where the deliverable belongs -- they treated the summary as the report. **Fix:** every teammate brief must explicitly say "put the full deliverable in the message body; the summary field is metadata only, max 10 words." Equally important: treat an idle notification _without a prior content message_ as a silent failure, not task completion. Recovery is straightforward -- `SendMessage` the idle teammate to wake them up and ask for the report inline.
 
 ## Limitations Summary
 

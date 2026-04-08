@@ -5,7 +5,7 @@ description: >-
   새 개발자는 즉시 AI 지시사항을 사용하고 기존 개발자는 개인 확장을
   유지하는 패턴입니다.
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: '2026-04-09'
 tags:
   - devops
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-shared-personal-config
-source_updated: "2026-03-09"
-translation_date: "2026-03-10"
+source_updated: '2026-04-09'
+translation_date: '2026-04-09'
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
     title: Claude Code 공식 문서
@@ -245,29 +245,124 @@ defaultMode: "default"             ← Bash(*) catch-all로 사실상 자동 승
 위험한 명령어는 deny에 있고, `git push`나 `rm` 같은 리스크 있는 명령어는
 ask에 있어요. 나머지가 catch-all로 통과해요.
 
-## 프로필별 settings.json
+## 프로필별 settings.json (정정)
 
-통합이 안 되는 파일이 하나 있어요. `settings.json` 자체예요.
-`statusLine.command`가 달라야 하기 때문에 프로필 간 symlink가 안 돼요 -- 업무
-프로필은 Claude Code가 statusline 서브프로세스에 환경 변수를 전달하지 않으므로
-`CLAUDE_CONFIG_DIR=~/.claude-work`를 포함해야 해요.
+이 글을 처음 쓴 3월에는 `settings.json`이 프로필 간 symlink가 안 되고
+아키텍처가 "세 개 복사본"이라고 적었어요. 그건 틀렸어요. 실제 아키텍처는
+끝까지 symlink로 연결되어 있고, 프로필별 차이는 별도의 `settings.local.json`
+오버라이드 파일에 들어있어서 Claude Code가 공유 base 위에 deep merge해요.
+audit 스크립트가 깨진 symlink를 잡아내서 체인을 따라가 복구하면서야 알게
+됐어요.
 
-아키텍처는 세 개 복사본이에요:
+정정된 토폴로지:
 
-- **지식 베이스 SoT** (`global-claude-setup/settings.json`) -- 정본 레퍼런스
-- **개인 프로필** (`~/.claude/settings.json`) -- SoT의 직접 복사본
-- **업무 프로필** (`~/.claude-work/settings.json`) -- 2가지 차이가 있는 복사본:
-  1. `statusLine.command`에 `CLAUDE_CONFIG_DIR` 접두사 포함
-  2. `enabledMcpjsonServers`에 업무 전용 데이터베이스 연결 포함
+- **지식 베이스 SoT** (`global-claude-setup/settings.json`) -- 정본 소스,
+  머신별 플러그인 install 상태가 들어있어서 gitignore 처리됨
+- **개인 프로필** (`~/.claude/settings.json`) -- SoT로 향하는 **symlink**
+- **업무 프로필** (`~/.claude-work/settings.json`) -- **개인 프로필을 거치는
+  symlink 체인**: `~/.claude-work/settings.json → ~/.claude/settings.json →
+  SoT`. 별도 복사본이 _아니에요_.
+- **업무 오버라이드** (`~/.claude-work/settings.local.json`) -- SoT 디렉토리의
+  별도 `settings.local.work.json`로 향하는 symlink. 개인 프로필과 다른 두 키만
+  들어있어요: `statusLine.command` (`CLAUDE_CONFIG_DIR=~/.claude-work` 접두사
+  포함)와 `enabledMcpjsonServers` (업무 전용 데이터베이스 연결 whitelist).
+  Claude Code가 로드 시점에 base `settings.json` 위에 deep merge해요.
 
-나머지 설정(env, permissions, hooks, plugins)은 동일해요. 편집할 때는 SoT를
-먼저 업데이트하고 두 프로필에 동기화하세요.
+오버라이드가 아닌 모든 설정 -- env, permissions, hooks, plugins -- 은 단일
+공유 SoT에서 symlink 체인을 통해 전달돼요. SoT를 편집하면 즉시 두 프로필에
+전파돼요. 수동 동기화 단계는 없어요.
 
 **쓰레기 축적에 주의하세요.** 인터랙티브 권한 승인("항상 허용")이 정확한 명령
 문자열을 권한 항목으로 저장해요 -- 여러 줄 bash 스크립트, 전체 코드 블록, 인증
 토큰까지 포함해서요. 제 업무 프로필은 정리 전에 약 160개 항목(32KB)이
 쌓여있었어요. `Bash(*)` catch-all이 인터랙티브 프롬프트가 뜨기 전에 자동
 승인해서 이런 축적을 방지해요.
+
+## 체인 실패 모드
+
+`work → personal → SoT` 체인에는 single-file 실패 모드가 있는데, 이걸 알아채는
+데 한참 걸렸어요. `~/.claude/settings.json`이 깨지면, 개인 프로필만이 아니라
+**두 프로필 모두 체인을 잃어버려요**. 가장 흔한 원인은 Claude Code UI(또는
+플러그인의 권한 프롬프트)가 파일을 atomic하게 쓰는 거예요: 임시 파일을 만들고
+`rename()`으로 대상 위에 옮기는 방식이요. 그 `rename()`이 symlink inode를 일반
+파일로 in-place 교체하면서 SoT를 조용히 끊어버려요.
+
+바로 알아채지는 못해요. 첫 번째 힌트는 보통 "SoT에서 바꾼 설정이 안 보여요"
+또는 "활성화한 플러그인이 안 돌아가요" 같은 거예요. 그쯤 되면 두 프로필이 이미
+SoT와 어긋나 있을 수 있고, 그 사이에 발생한 사용자 활동 -- UI 권한 토글, 플러그인
+활성화 -- 은 깨진 로컬 파일에만 존재하게 돼요.
+
+**감지.** audit 스크립트로 개인, 업무, 프로젝트 카테고리에 걸친 55개의 예상
+symlink를 모두 walk하면서 symlink가 있어야 할 자리에 일반 파일이 발견되면
+"REPLACED"로 분류해서 보고해요. 그 분류가 실패의 명확한 시그니처예요.
+
+**복구 전략은 무엇이 drift됐는지에 따라 달라져요.** 두 가지 케이스가 있어요.
+
+첫 번째 케이스는 단순해요. 로컬 파일이 엄밀히 stale하고 SoT가 current하면 --
+즉, 깨진 윈도우 동안 로컬 파일에 사용자 활동이 없었다면 -- 일방향 복원이
+안전해요:
+
+```bash
+# 혹시 모르니 로컬 파일 백업
+cp ~/.claude/settings.json /tmp/settings.local.backup.$(date +%s)
+
+# 일반 파일 제거하고 SoT로 다시 링크
+rm ~/.claude/settings.json
+ln -sfn /path/to/sot/settings.json ~/.claude/settings.json
+
+# 두 프로필에서 체인이 정상인지 확인
+realpath ~/.claude/settings.json
+realpath ~/.claude-work/settings.json
+```
+
+두 번째 케이스는 더 어려워요. 로컬 파일이 사용자 의도를 누적했고 -- UI 토글,
+"항상 허용" 클릭, 플러그인 활성화 -- _그리고_ 같은 윈도우 동안 SoT도 별도로
+편집됐다면, 단순한 복원은 사용자의 변경을 조용히 되돌려버려요. 이때는
+**양방향 merge**가 필요해요: 두 JSON을 구조적으로 walk하고, 각 diff를 분류하고,
+다시 링크하기 전에 merge해야 해요. 최소한의 walker는 이렇게 생겼어요:
+
+```python
+# 다음 형태의 diff를 반환: (path, kind, local_value, sot_value)
+# kind는 LOCAL-ONLY | SOT-ONLY | VALUE | LIST
+def walk(l, s, path=""):
+    if type(l) != type(s): ...
+    if isinstance(l, dict):
+        for k in set(l) - set(s): yield (f"{path}.{k}", "LOCAL-ONLY", l[k], None)
+        for k in set(s) - set(l): yield (f"{path}.{k}", "SOT-ONLY", None, s[k])
+        for k in set(l) & set(s):
+            yield from walk(l[k], s[k], f"{path}.{k}")
+    elif isinstance(l, list):
+        if l != s: yield (path, "LIST", len(l), len(s))
+    elif l != s:
+        yield (path, "VALUE", l, s)
+```
+
+diff를 분류했으면 구조적으로 merge할 수 있어요 -- 보통 LOCAL-ONLY 항목은 UI
+활동에서 온 것이니 유지하고, SOT-ONLY 항목은 의도적인 설정 편집에서 온 것이니
+역시 유지하고, VALUE 충돌은 사람의 결정이 필요해요. merge된 결과는 SoT와 같은
+디렉토리에 임시 파일 + `rename()`으로 atomic하게 써야 해요. 그래야 swap 동안
+업무 프로필의 symlink가 항상 일관된 파일을 보게 돼요.
+
+**왜 이게 일회성 사건 이상의 의미를 가지는지.** 로컬 파일을 정당하게 수정하는
+사용자 활동(권한 "항상 허용" 클릭, UI에서 플러그인 토글)은 로컬 파일이 깨진
+윈도우 동안 SoT에서 보이지 않아요. 깨짐을 늦게 감지하면, drift가 의도치 않게
+누적될 수 있어요. 저한테 이걸 드러낸 사건은 ~3시간의 drift였는데, 거기에는 추적
+hook이 SoT에만 존재하고 실행 중인 프로필은 그게 없는 stale한 로컬 파일을 보고
+있어서 0 데이터를 수집하던 plugin-on 실험도 포함되어 있었어요.
+
+**git rollback 없음.** SoT `settings.json`은 머신별 플러그인 install 상태가
+들어있어서 gitignore 처리되어 있어요. 그 말은, 파괴적인 복구는 항상 수동
+백업(예: `cp $SOT /tmp/settings.sot.backup.$(date +%s)`)으로 미리 보호되어야
+한다는 뜻이에요. merge가 잘못됐을 때 복구할 수 있게요. `/tmp`는 ephemeral하지만
+복구 윈도우 자체에는 충분해요. 더 길게 보관하고 싶으면 `~/`로 옮기세요.
+
+**열린 질문: 체인을 분리해야 할까요?** 현재의 `work → personal → SoT` 토폴로지는
+역사적으로 프로필이 하나만 있었고 업무 프로필이 두 번째 모자로 나중에 추가됐기
+때문에 존재해요. 대안 -- 두 개의 독립된 symlink (`{personal,work} → SoT`) -- 는
+하나의 UI 깨짐을 두 프로필에 cascade하는 대신 한 프로필에 가둬요. 비용은
+`settings.local.json` deep merge 메커니즘이 분리된 체인에서도 동작하는지
+재검증해야 한다는 거예요. 아직 그 spike를 안 했지만, 다음 큰 settings 재구조화
+전에는 할 가치가 있어요.
 
 ## 교차 검증 규율
 
