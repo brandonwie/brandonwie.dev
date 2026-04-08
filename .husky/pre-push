@@ -7,23 +7,23 @@ echo "Running pre-push checks..."
 echo ""
 
 echo "1/5 Linting..."
-npm run lint || exit 1
+pnpm lint || exit 1
 
 echo ""
 echo "2/5 Format check..."
-npm run format:check || exit 1
+pnpm format:check || exit 1
 
 echo ""
 echo "3/5 Building (includes Pagefind)..."
-npm run build || exit 1
+pnpm build || exit 1
 
 echo ""
 echo "4/5 Svelte check..."
-npm run check || exit 1
+pnpm check || exit 1
 
 echo ""
 echo "5/5 Frontmatter date validation..."
-npm run validate:dates || exit 1
+pnpm validate:dates || exit 1
 
 echo ""
 echo "All pre-push checks passed!"

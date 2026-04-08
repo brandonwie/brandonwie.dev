@@ -7,7 +7,7 @@
 	"scripts": {
 		"prepare": "husky",
 		"dev": "vite dev",
-		"build": "vite build && npx pagefind --site build",
+		"build": "vite build && pnpm exec pagefind --site build",
 		"preview": "vite preview",
 		"search:preview": "npm run build && vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
