@@ -9,3 +9,7 @@ src/content/posts/
 knowledge/
 scripts/CLAUDE.md
 project.inlang/
+
+# Lockfiles — machine-generated, prettier would corrupt them
+pnpm-lock.yaml
+package-lock.json
