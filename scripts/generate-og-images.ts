@@ -4,8 +4,8 @@
  * Build-time script that generates 1200×630 OG images for every blog post.
  * Uses Satori (JSX → SVG) + @resvg/resvg-js (SVG → PNG).
  *
- * Usage:  npx tsx scripts/generate-og-images.ts
- *         npx tsx scripts/generate-og-images.ts --force   # regenerate all
+ * Usage:  pnpm og:generate
+ *         pnpm og:generate:force   # regenerate all
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';

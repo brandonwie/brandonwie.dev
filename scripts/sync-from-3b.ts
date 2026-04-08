@@ -311,7 +311,7 @@ function cleanBody(body: string): string {
  * won't produce false-positive mismatches.
  *
  * NOTE: If cleanBody() logic changes, all stored hashes become invalid.
- * Re-run `npm run sync` to refresh hashes for non-expanded posts.
+ * Re-run `pnpm sync` to refresh hashes for non-expanded posts.
  */
 async function computeContentHash(cleanedBody: string): Promise<string> {
 	const data = new TextEncoder().encode(cleanedBody);
@@ -465,7 +465,7 @@ async function syncPosts() {
 	if (diffMode) {
 		if (!slugArg) {
 			console.error('Error: --diff requires --slug=<slug>');
-			console.error('Usage: npm run sync:diff -- --slug=redis-queue-patterns');
+			console.error('Usage: pnpm sync:diff -- --slug=redis-queue-patterns');
 			Deno.exit(1);
 		}
 		await diffPost(slugArg, verbose);
@@ -561,7 +561,7 @@ async function syncPosts() {
 				// Normal sync: skip expanded posts, always
 				if (hashChanged) {
 					console.log(`🔒 Skipping (expanded, upstream changed): ${relativePath}`);
-					console.log(`   Run: npm run sync:diff -- --slug=${slug}`);
+					console.log(`   Run: pnpm sync:diff -- --slug=${slug}`);
 				} else if (verbose) {
 					console.log(`🔒 Skipping (expanded): ${relativePath}`);
 				}
@@ -620,7 +620,7 @@ ${cleanedBody}
 				console.log(`   - ${m.path}`);
 				console.log(`     Old: ${m.oldHash.substring(0, 16)}...`);
 				console.log(`     New: ${m.newHash.substring(0, 16)}...`);
-				console.log(`     Run: npm run sync:diff -- --slug=${m.slug}`);
+				console.log(`     Run: pnpm sync:diff -- --slug=${m.slug}`);
 			}
 		}
 
