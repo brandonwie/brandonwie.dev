@@ -28,8 +28,77 @@
 - [x] New original post — social intelligence explosion commentary (EN + KO)
 - [x] 106 EN + 106 KO posts — 7 new posts published + 1 hash-mismatch merged
 - [x] 107 EN + 107 KO — Karpathy LLM Knowledge Bases original commentary post
+- [x] Package manager migration — npm → pnpm 10.32.1 (corepack-pinned), CI + husky + deno.json + scripts + README updated, phantom-dep fix, deno.lock hybrid sync
 
 ## Session Log
+
+### 2026-04-09 (Session 15)
+
+**Package Manager Migration — npm → pnpm 10.32.1**
+
+1. **Investigation start** — `package-lock.json` had a 16-line uncommitted
+   deletion removing an `extraneous: true` `yaml@2.8.3` entry. Real
+   `yaml@1.10.3` transitive (via `eslint-plugin-svelte` → `postcss-load-config`)
+   was untouched. Committed as pure cleanup on `main`: `b6f962f chore(deps):
+prune extraneous yaml@2.8.3 from lockfile`.
+
+2. **Migration decision** — Prompted by "can we use pnpm? it's the most
+   popular no?" question. Framed: npm is still #1 overall by install count,
+   pnpm is the natural default in the SvelteKit/Vite ecosystem specifically.
+   Locked in scope: Tier 1+2+3 (everything except blog posts), isolated
+   layout first with hoisted fallback, minimal ceremony (branch + commits,
+   no GitHub issue, no actives/ folder).
+
+3. **Branch `chore/migrate-npm-to-pnpm`** — 6 atomic commits:
+   - `76fcbbe chore(deps): migrate from npm to pnpm` — lockfile swap +
+     `"packageManager": "pnpm@10.32.1"` + `.gitignore` flip. pnpm-lock.yaml
+     is ~35% smaller than package-lock.json (4,833 vs 7,469 lines).
+   - `3a916ce chore(build): update CI, hooks, and tasks to use pnpm` —
+     `.github/workflows/ci.yml` (added `pnpm/action-setup@v4` BEFORE
+     setup-node, `cache: pnpm`, `pnpm install --frozen-lockfile`),
+     `.husky/pre-push` (5× `pnpm X`), `deno.json` tasks, `package.json` build
+     (`pnpm exec pagefind`).
+   - `d1ad882 chore: replace remaining npm/npx references with pnpm` — 9
+     files: 4 scripts (error messages, JSDoc usage, shebangs to
+     `#!/usr/bin/env -S pnpm exec tsx`), 2 i18n JSON (`search_dev_notice` in
+     EN+KO), README.md, package.json (`npx tsx` → bare `tsx` for consistency
+     with existing `og:generate`).
+   - `601df5c chore(lint): exclude lockfiles from prettier` — Husky caught
+     prettier trying to format `pnpm-lock.yaml`. Added both lockfiles to
+     `.prettierignore`.
+   - `205cd9c chore(deps): declare @types/mdast and vfile as devDependencies`
+     — pnpm's isolated layout caught 3 phantom type imports in
+     `src/lib/plugins/remark-*.js` (`@param {import('mdast').Root}`,
+     `@param {import('vfile').VFile}`). svelte-check surfaced them silently;
+     `pnpm build` passed because JSDoc is stripped at build time. Correctness
+     win, not a migration regression.
+   - `4ef1cfe chore(deps): sync deno.lock with new npm devDependencies` —
+     `gh pr create` warning caught uncommitted `deno.lock` update after the
+     phantom-dep fix. `deno.json` with `"nodeModulesDir": "auto"` auto-tracks
+     npm workspace changes.
+
+4. **Cross-repo commit in 3B** — `4b0bcb4 docs(brandonwie-dev): update package
+manager refs to pnpm` in `3b/.claude/project-claude/brandonwie.dev.md`
+   (17 `npm run X` → `pnpm X`). Pushed to main separately.
+
+5. **Verification** — full Husky pre-push pipeline passes end-to-end under
+   pnpm: lint (14 pre-existing warnings, 0 errors), format:check (clean),
+   build (6.95s, 223 HTML files, 214 pages indexed by Pagefind / 26,184 words),
+   svelte-check (0 errors, 0 warnings across 1,005 files — up from 1,001
+   because the phantom-dep fix unlocked 4 more reachable declaration files),
+   validate:dates (107 EN + 107 KO consistent). Also verified `deno task sync
+--check` still passes (105/105 hash matches) — the sync script uses only
+   `https://deno.land/std` URLs, not `node_modules/`.
+
+6. **PR #3** — `chore(deps): migrate from npm to pnpm` with bilingual body
+   (English + 합니다체 Korean 요약), label `enhancement`, assigned to
+   `@brandonwie`, `@claude review` triggered. Base: `main`.
+   [brandonwie/brandonwie.dev#3](https://github.com/brandonwie/brandonwie.dev/pull/3)
+
+**Pending:** Cloudflare Pages preview deploy verification, @claude review
+feedback, merge.
+
+---
 
 ### 2026-04-06 (Session 14)
 
