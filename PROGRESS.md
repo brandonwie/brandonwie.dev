@@ -28,8 +28,36 @@
 - [x] New original post — social intelligence explosion commentary (EN + KO)
 - [x] 106 EN + 106 KO posts — 7 new posts published + 1 hash-mismatch merged
 - [x] 107 EN + 107 KO — Karpathy LLM Knowledge Bases original commentary post
+- [x] 112 EN + 112 KO — 5 new posts (NestJS Swagger + @Headers gotchas, AI review confusion patterns, Claude Code turn latency, macOS VSCode locale fallback)
 
 ## Session Log
+
+### 2026-04-11 (Session 16)
+
+**Blog Publish — 5 New Posts (Two NestJS Gotchas + AI Review Patterns + Claude Code Turn Latency + macOS VSCode Locale)**
+
+1. **Discovery** — `/blog-publish` found 0 hash mismatches and 0 `needs_resync` flags on main. 5 "almost ready" candidates blocked by `publishable: review` (3 backend/ai-ml posts) or stale `exclude_reason: needs-references` labels (2 devops posts).
+
+2. **Classification** — Analyzed each candidate for content depth, real-user anchor in `when_used`, and fabrication risk before recommending publish. Rejected a "single-case deep-dive" framing for `ai-code-review-confusion-patterns` in favor of Framing A (observational catalog) because the source records 4 patterns from 2 PRs with count=1 each — "single case" would lose 3 patterns.
+
+3. **3B source updates** — Flipped `publishable: true`, `ready: true`, cleared `exclude_reason` on all 5 sources. Also changed the Starlette `applications.py` reference on post #3 from `type: source-code` to `type: authoritative` — framework source is the authoritative ground truth for framework behavior, which honestly satisfies the sync gate without fabricating a new URL.
+
+4. **Sync + validate** — `pnpm sync` brought all 5 into `src/content/posts/en/`. `pnpm validate:dates` clean.
+
+5. **Expand** — Narrative expansion for all 5 posts with zero fabrication. Every first-person claim anchored in the source's existing `when_used` entries. Sanitized two company-internal URLs out of the public frontmatter (post #3 `moba-works/backend-v2` PR link, post #5 "brandonwie's laptop" experience ref). Added cross-references between post #2 (NestJS @Headers) and post #3 (AI review patterns) for the Cross-File Blindness example.
+
+6. **Translate** — Created 5 KO templates via `pnpm translation:create`, translated all 5 to 해요체. Voice-calibrated against `~/dev/personal/3b/personal/writing-examples/2026-02-25.md` — kept technical terms in English (sync, query, runtime, framework, decorator, reviewer, context).
+
+7. **Build fix** — `pnpm build` failed on `claude-code-turn-latency-measurement` EN at line 94: `; most sessions are < 24h` in the design choices table. The `;` immediately before `<` hits a different mdsvex parser path than bare `< N`. Fixed with "under 24h" rephrase. Enriched the existing `knowledge/frontend/mdsvex-svelte-tag-parsing.md` entry with this new variant + the 2026-04-11 `when_used`.
+
+8. **Commit + push** — Switched blog repo from `chore/migrate-npm-to-pnpm` (stale branch context) to `main` before committing. 5 atomic `feat(blog): publish … (EN + KO)` commits on blog main. Husky pre-push ran lint + format:check + build + svelte-check — all clean. 5 atomic `chore(knowledge): publish … to blog` commits on 3B main (lint-staged pre-commit applied prettier + markdownlint to each file). Both pushed to origin.
+
+**Stats:** 5 new posts (EN + KO). 112 EN + 112 KO total. Build: 7.32s, 224 pages indexed by Pagefind.
+
+**Notes:**
+
+- Session 15 slot is reserved for the pending npm→pnpm migration PR (commit `55f7c58 docs: add Session 15 wrap — npm→pnpm migration` lives on the unmerged `chore/migrate-npm-to-pnpm` branch). Session 16 here intentionally skips 15 to avoid conflict when that PR lands.
+- Discovered a narrow `sync-from-3b.ts` bug: `cleanBody()` strips only line 1 of a wrapped description paragraph, leaving the continuation as orphaned first-line body text. Hit on 3 of 5 posts today — fixed during manual expansion but added to backlog as a script-level fix-it item.
 
 ### 2026-04-06 (Session 14)
 
