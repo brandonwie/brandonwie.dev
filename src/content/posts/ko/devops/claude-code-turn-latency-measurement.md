@@ -2,10 +2,10 @@
 title: JSONL transcript로 Claude Code turn latency 측정하기
 description: >-
   이미 disk에 쌓여 있는 JSONL transcript를 파싱해서 Claude Code session의
-  per-turn latency를 ground-truth로 측정한 이야기. 그 과정에서 스스로 잡아낸 세
+  per-turn latency를 ground-truth로 측정한 이야기. 그 과정에서 스스로 잡아낸 네
   가지 측정 trap도 같이 정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: '2026-04-11'
+updated: '2026-04-14'
 tags:
   - claude-code
   - latency
@@ -19,15 +19,15 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-turn-latency-measurement
-source_updated: 2026-04-11T00:00:00.000Z
-translation_date: '2026-04-11'
+source_updated: 2026-04-14T00:00:00.000Z
+translation_date: '2026-04-14'
 ---
 
 최근 release 이후 Claude Code session이 5배 느려졌다는 보고가 있었어요. config를 만지기 전에 이게 진짜인지부터 확인해야 했어요. perception은 믿을 만하지 않아요 — 사람은 고통스러웠던 case를 평범한 것보다 더 잘 기억하고, 보고된 규모는 양방향으로 2배씩 틀릴 수 있어요. 뭘 investigate할지 정하기 전에 객관적인 숫자가 필요했어요.
 
 다행히 Claude Code는 이미 모든 session transcript를 `~/.claude/projects/{project_slug}/*.jsonl`에 자동으로 써요. 줄마다 하나의 message가 있고, 각 줄마다 밀리초 단위의 `timestamp` 필드가 달려 있어요. 모든 과거 session이 ground truth로 측정 가능해요. 추가 instrumentation도 필요 없어요. data는 이미 disk에 있어요.
 
-안 좋은 소식은 JSONL 포맷에 quirk가 있어서 측정 tool을 만들면서 세 번이나 걸렸다는 점이에요. 두 개는 스스로 고쳐야 했던 analysis error였고, 하나는 experimental control을 오염시킨 process trap이었어요. 이 글에서는 접근 방식, 세 가지 trap, baseline에서 나온 reference output, 그리고 다른 옵션 대신 retroactive transcript parsing을 고른 이유를 정리할게요.
+안 좋은 소식은 JSONL 포맷에 quirk가 있어서 두 차례의 측정 노력에 걸쳐 네 번이나 걸렸다는 점이에요. 두 개는 스스로 고쳐야 했던 analysis error였고, 두 개는 contamination trap이었어요. 하나는 parallel session이 같은 config를 덮어 쓴 것이고, 다른 하나는 측정 대상이 tracking window 동안 조용히 꺼져 있었던 거예요. 이 글에서는 접근 방식, 네 가지 trap 전부, baseline에서 나온 reference output, 그리고 다른 옵션 대신 retroactive transcript parsing을 고른 이유를 정리할게요.
 
 ## 왜 after-the-fact 측정이 여기 맞는 tool인지
 
@@ -39,9 +39,9 @@ translation_date: '2026-04-11'
 
 이 상황을 구해 주는 게 JSONL transcript예요. plain-text, append-only, 한 줄에 한 message씩, Claude Code가 자동으로 `~/.claude/projects/{slug}/`에 써 주는 log예요. 각 줄은 밀리초 단위 `timestamp`가 붙은 JSON 객체예요. 즉, 측정 tool이 transcript를 retroactive하게 walk해서 임의의 과거 구간에 대해 per-turn latency 분포를 뽑을 수 있어요. quirk를 어떻게 다뤄야 하는지 알기만 한다면요.
 
-## 세 가지 trap
+## 네 가지 trap
 
-첫 버전의 tool을 직관으로 만들었는데 자신 있게 틀린 숫자를 두 번 연속으로 뱉었어요. trap마다 이름을 붙일 만한 가치가 있어요. 각각이 tool을 동작하는 것처럼 보이게 만들면서도 조용히 답을 속이고 있었거든요.
+첫 버전의 tool을 직관으로 만들었는데 자신 있게 틀린 숫자를 두 번 연속으로 뱉었어요. 세 번째 trap은 experimental contamination에서 왔고, 네 번째는 몇 달 뒤 후속 instrumentation에서 드러났어요. 네 가지 모두 이름을 붙일 만한 가치가 있어요. 각각이 측정이 동작하는 것처럼 보이게 만들면서도 조용히 답을 속이고 있었거든요.
 
 ### Trap 1 — grep으로 tool invocation 세기
 
@@ -106,6 +106,29 @@ git log {baseline_hash}..HEAD --oneline -- .claude/ path/to/project/
 ```
 
 baseline과 re-measurement 사이에 landing된 모든 변경을 볼 수 있어요. 실험이 여전히 부분적으로 오염됐을 수는 있지만, 오염이 invisible 대신 detectable하고 attributable해져요.
+
+### Trap 4 — 측정 대상이 조용히 꺼져 있던 오염
+
+**뭐가 잘못됐는지.** 두 번째 instrumentation — plugin별, MCP server별 호출 횟수를 추적하는 프로젝트 — 에서 네 개의 `PostToolUse` / `UserPromptSubmit` hook을 추가해서 usage data를 logging했어요. hook은 ship되고 정상적으로 fire되기 시작했어요. 나흘 뒤 tracking data를 보니 의심스러울 정도로 sparse했어요. plugin skill event 1건, MCP server event 8건, 그게 전부였어요. 자연스러운 해석은 "plugin이 거의 안 쓰이니 prune을 진행하자"였어요.
+
+**왜 틀렸는지.** Claude Code는 두 개의 profile config(`~/.claude`와 `~/.claude-work`)가 symlink로 `settings.json`을 공유하는데, UI가 자체적인 atomic-rename 복사본을 쓸 때 disk의 `enabledPlugins` map이 running state와 어긋날 수 있어요. hook이 ship된 날, 세 개의 plugin이 local runtime state에서는 enabled였는데 canonical `settings.json`에서는 `false`였어요. 다음 날 drift-repair session이 양쪽을 비교해서 세 개의 충돌을 감지하고, canonical 쪽의 entry를 `true`로 뒤집었어요. 측정 대상 plugin이 tracking window 첫날 동안 canonical config에서는 사실상 꺼져 있었던 거예요. local runtime이 enabled로 반영하고 있었는데도요. 그 첫날 동안의 "측정"은 canonical config에서 실제로 돌아가지 않는 대상을 가리키고 있었어요. window가 오염되지 않은 것처럼 보인 건, hook 자체는 계속 fire되면서 JSON 파일을 써 왔는데 정작 셀 것이 없었기 때문이에요.
+
+이건 Trap 3(parallel-session contamination)과는 다른 종류예요. Trap 3은 두 actor가 shared state에서 race하는 거예요. Trap 4는 한 actor가 config에 의해 상태가 결정되는 대상을 측정하는데, 그 config가 측정 도중에 바뀐 거예요. 둘 다 config 변경 이력을 cross-reference하기 전까지는 유효해 보이는 data를 만들어 내요.
+
+**올바른 방법.** instrumentation data를 신뢰하기 전에, 측정 대상의 config 상태가 전체 measurement window에 걸쳐 일관됐는지 확인하세요.
+
+```bash
+# Tracking window 동안 측정 대상에 영향을 미칠 수 있었던 config 변경 찾기
+git log --since="2026-04-08" --until="2026-04-12" \
+  -- .claude/global-claude-setup/settings.json
+
+# Tracking JSON 파일이 처음 쓰여진 시점과 cross-reference
+stat -f "%Sm" ~/.claude/plugin-usage.json ~/.claude/mcp-usage.json
+```
+
+config 변경이 window 도중에 대상에 영향을 미쳤다면, window의 시작점을 instrumentation 시작이 아니라 config 변경 시점으로 잡으세요. 이 case에서 실제 measurement window는 2026-04-09(drift repair 이후)부터였지 2026-04-08부터가 아니었어요. "4일간의 sparse data"가 "3일간의 clean data"로 줄었고, 결론이 "공격적으로 prune하자"에서 "1주일 더 tracking을 연장해서 더 깨끗한 signal을 잡자"로 바뀌었어요.
+
+영속적인 fix는 모든 instrumentation 프로젝트 시작 시점에 **pre-flight check**을 두는 거예요. 측정 대상에 영향을 줄 수 있는 모든 config variable의 snapshot을 찍고, 분석 시 그 snapshot과 비교하고, tracking data에 "window는 config 변경 X 이후에 시작됨"이라고 annotate하세요. invisible한 failure mode를 explicit한 precondition으로 바꾸는 거예요.
 
 ## tool
 
@@ -192,6 +215,7 @@ JSONL transcript parsing이 이긴 이유는 **retroactive 측정이 결정적�
 - **가설부터 진술하세요.** 요약 숫자를 신뢰하기 전에 측정이 어떤 assumption을 하고 있는지 나열하고, 그걸 부정할 수 있는 증거를 찾아보세요. 제 첫 pass 분석은 "tail-only blow-up, 2.4x"를 자신 있게 보고했지만, tool 자체의 diagnostic output이 요약 숫자와 모순된 덕분에 "uniform 2x + tail 4x"로 수정됐어요.
 - **perception보다 측정을 먼저 의심하세요.** 멀쩡한 정신의 사용자 보고가 내 측정과 ~2배 넘게 disagree한다면 tool 어딘가에 문제가 있을 가능성이 높아요. Trap 2가 정확히 이 error를 반대 방향으로 만들었어요 — tool이 tool cycle을 user turn으로 세면서 slowdown을 과소평가했어요.
 - **baseline commit hash는 싼 보험이에요.** 모든 before/after 측정에서 baseline 숫자 옆에 commit hash를 기록하세요. parallel-session 오염이 invisible 대신 detectable해져요.
+- **"data가 없다"가 자동으로 "활동이 없다"를 뜻하지 않아요.** instrumentation과 측정 대상이 같은 config 파일로 제어될 때, sparse한 tracking data는 "활동이 적었다"가 아니라 "측정이 꺼진 대상을 가리키고 있었다"일 수 있어요. tracking window의 시작 시점을 측정 대상의 config 변경 이력과 항상 cross-reference하세요. 관련 flag가 window 도중에 바뀌었다면 실제 window는 그 flip 시점부터예요.
 - **data가 이미 disk에 있다면, retroactive 측정이 "probe를 추가"보다 나아요.** JSONL transcript는 이미 거기 있어요. instrument하지 말고 parse하세요.
 
 tool 자체는 짧아요 — ~400줄 — 그리고 investigation 전체는 하루 오후면 끝났어요. 가치는 tool의 sophistication이 아니었어요. 첫 번째 그럴듯한 숫자를 신뢰하는 대신, 스스로 측정 error를 잡고 tool을 두 번이나 다시 만들 의지였어요.

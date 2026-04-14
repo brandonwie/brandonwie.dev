@@ -2,10 +2,10 @@
 title: Measuring Claude Code Turn Latency from JSONL Transcripts
 description: >-
   Ground-truth, retroactive per-turn latency for Claude Code sessions — parsed
-  from the JSONL transcripts already on disk, with three measurement traps
+  from the JSONL transcripts already on disk, with four measurement traps
   I had to self-correct.
 date: 2026-04-08T00:00:00.000Z
-updated: 2026-04-11T00:00:00.000Z
+updated: 2026-04-14T00:00:00.000Z
 tags:
   - claude-code
   - latency
@@ -18,7 +18,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: df96ca8a4a1f6adaa81e7a0a8238219921ff5aa38381894ec2dedd36ae4a6650
+source_content_hash: 82749304bdc27bde1bdda840f6385eb64c858abb99e21154e2e9af41051bde4c
 references:
   - url: 'https://docs.python.org/3/library/sqlite3.html'
     title: Python sqlite3 — DB-API 2.0 interface
@@ -36,7 +36,7 @@ A reported 5x slowdown in Claude Code sessions after a recent release needed ver
 
 The good news: Claude Code already writes full session transcripts to `~/.claude/projects/{project_slug}/*.jsonl`, one line per message, each carrying a millisecond-precision `timestamp` field. Every past session is measurable from ground truth — no new instrumentation required. The data is already on disk.
 
-The bad news: the JSONL format has quirks that caught me three separate times while building the measurement tool. Two were analysis errors I had to self-correct; one was a process trap that contaminated my experimental control. This post covers the approach, the three traps, the reference output from the baseline I took, and why I chose retroactive transcript parsing over the other options.
+The bad news: the JSONL format has quirks that caught me four separate times across two measurement efforts. Two were analysis errors I had to self-correct; two were contamination traps — one from a parallel session writing the same config, another from the measurement targets being silently disabled during the tracking window. This post covers the approach, all four traps, the reference output from the baseline I took, and why I chose retroactive transcript parsing over the other options.
 
 ## Why after-the-fact measurement is the right tool here
 
@@ -48,9 +48,9 @@ Three things make this kind of investigation hard, and they combine into a speci
 
 What rescues this situation is the JSONL transcripts. They are plain-text, append-only, one-line-per-message logs of every session, written automatically by Claude Code to `~/.claude/projects/{slug}/`. Each line is a JSON object with a `timestamp` field accurate to the millisecond. That means a measurement tool can walk the transcripts retroactively and produce a per-turn latency distribution for any historical period — as long as the tool knows how to handle the quirks.
 
-## Three traps I walked into
+## Four traps I walked into
 
-I built a first version of the tool on intuition and it produced confidently wrong numbers twice in a row. The traps are worth naming because each one made the tool look like it was working while quietly lying about the answer.
+I built a first version of the tool on intuition and it produced confidently wrong numbers twice in a row. A third trap came from experimental contamination, and a fourth surfaced during a follow-up instrumentation effort months later. All four are worth naming because each one made the measurement look like it was working while quietly lying about the answer.
 
 ### Trap 1 — Grep-based tool-invocation counting
 
@@ -115,6 +115,30 @@ git log {baseline_hash}..HEAD --oneline -- .claude/ path/to/project/
 ```
 
 to see every change that landed between baseline and re-measurement. The experiment may still be partially contaminated, but the contamination becomes detectable and attributable instead of invisible.
+
+### Trap 4 — Silent source-disable contamination
+
+**What went wrong.** A second instrumentation effort — tracking per-plugin and per-MCP-server invocation counts — added four `PostToolUse` / `UserPromptSubmit` hooks to log usage data. The hooks shipped and began firing. Four days later the tracking data looked suspiciously sparse: one plugin skill event, eight MCP server events, nothing else. The natural interpretation was "plugins are idle, proceed to prune."
+
+**Why it was wrong.** Claude Code has two profile configs (`~/.claude` and `~/.claude-work`) that share a `settings.json` via symlink, and the `enabledPlugins` map on disk can drift from the running state when the UI writes its own atomic-rename copies. On the day the hooks shipped, three plugins were enabled in the local runtime state but `false` in the canonical `settings.json`. A drift-repair session the next day detected the conflicts and flipped the canonical entries to `true`. The instrumented plugins were effectively off in the canonical config for the first day of the tracking window, even though the local runtime reflected them as enabled. Any "measurement" of those plugins during that first day was pointed at targets that were not really running under the canonical config — the window looked uncontaminated because the hooks themselves kept firing and writing their JSON files, just with nothing to count.
+
+This is distinct from Trap 3 (parallel-session contamination). Trap 3 is about two actors racing on shared state. Trap 4 is about one actor measuring a target whose state is determined by a config that changed underneath the measurement. Both produce data that looks valid until you cross-reference the config change history.
+
+**How to do it right.** Before trusting any instrumentation data, verify the target's config state across the full measurement window:
+
+```bash
+# Find config changes that could have affected the measured target
+# during the tracking window
+git log --since="2026-04-08" --until="2026-04-12" \
+  -- .claude/global-claude-setup/settings.json
+
+# Cross-reference against when the tracking JSON files were first written
+stat -f "%Sm" ~/.claude/plugin-usage.json ~/.claude/mcp-usage.json
+```
+
+If a config change affected the target mid-window, treat the window as starting from the config change, not from the instrumentation start. In this case, the real measurement window started on 2026-04-09 (after the drift repair), not 2026-04-08 — which reduced "4 days of sparse data" to "3 days of clean data" and changed the conclusion from "prune aggressively" to "extend tracking by 1 week for a cleaner signal."
+
+The durable fix is a pre-flight check at the start of any instrumentation project: capture a snapshot of every config variable that could affect what gets measured, compare against that snapshot during analysis, and annotate the tracking data with "window starts after config change X." This turns an invisible failure mode into an explicit precondition.
 
 ## The tool
 
@@ -201,6 +225,7 @@ It is *not* the right tool when:
 - **State the hypothesis first.** Before trusting any summary number, list the assumptions the measurement makes and seek disconfirming evidence. My first-pass analysis confidently reported "tail-only blow-up, 2.4x" — corrected to "uniform 2x + tail 4x" only because the tool's own diagnostic output contradicted the summary numbers.
 - **Suspect the measurement before the perception.** When a clear-headed user report disagrees with your measurement by more than ~2x, something is probably wrong in the tool. Trap 2 made this exact error in reverse — the tool undercounted the slowdown because it was counting tool cycles as user turns.
 - **Baseline commit hashes are cheap insurance.** Record the commit hash alongside baseline numbers for any before/after measurement. That makes parallel-session contamination detectable instead of invisible.
+- **"No data" is not automatically absence.** When instrumentation and the measured thing are both controlled by the same config file, sparse tracking data can mean "measurement was pointed at off targets" rather than "activity was low." Always cross-reference the tracking window's start against the config change history of the measured target — if a relevant flag flipped mid-window, the real window starts at the flip date, not the instrumentation start.
 - **Retroactive measurement beats "add a probe" whenever the data already exists on disk.** JSONL transcripts are already there. Parse them, do not instrument around them.
 
 The tool itself is short — ~400 lines — and the whole investigation took an afternoon. The value was not the tool's sophistication. It was the willingness to rebuild the tool twice after self-catching measurement errors, rather than trusting the first plausible number that came out.
