@@ -29,8 +29,37 @@
 - [x] 106 EN + 106 KO posts — 7 new posts published + 1 hash-mismatch merged
 - [x] 107 EN + 107 KO — Karpathy LLM Knowledge Bases original commentary post
 - [x] 112 EN + 112 KO — 5 new posts (NestJS Swagger + @Headers gotchas, AI review confusion patterns, Claude Code turn latency, macOS VSCode locale fallback)
+- [x] Trap 4 merged into turn-latency post — silent source-disable contamination section + "no data ≠ absence" takeaway (EN + KO)
 
 ## Session Log
+
+### 2026-04-14 (Session 17)
+
+**Hash-Mismatch Merge — Trap 4 into Turn-Latency Post**
+
+1. **Discovery** — `/blog-publish` found 1 hash mismatch (`claude-code-turn-latency-measurement`) and 2 `needs_resync` flags. No new posts to publish. The turn-latency entry was enriched with Trap 4 (silent source-disable contamination) on 2026-04-12 and needed propagating into the expanded blog post.
+
+2. **Delta analysis** — `sync:diff` showed one major addition: a new `### Trap 4` section about the plugin-mcp-usage-tracking experiment's first-day data being against disabled canonical targets, plus a matching "No data is not automatically absence" takeaway. Structural reorganization of the 3B source was ignored — the expanded blog post already has better narrative flow.
+
+3. **Hash recomputation** — computed new `source_content_hash` (`82749304b…`) outside the sync script via `deno eval` using the script's `cleanBody` logic. Saved guessing games when updating frontmatter.
+
+4. **EN integration** — added Trap 4 section preserving existing blog voice (not the terser 3B reference style), updated intro/section headers from "three traps" to "four traps", added matching takeaway bullet, bumped `updated` to 2026-04-14, installed new hash.
+
+5. **KO translation** — translated Trap 4 inline in 해요체 matching the existing KO post style. Kept technical terms in English (instrumentation, contamination, drift, canonical, pre-flight check). Updated `source_updated` and `translation_date` to 2026-04-14.
+
+6. **Resync cleanup** — cleared `needs_resync: true → false` on both 3B sources (turn-latency + fastapi-dependency-injection). The fastapi entry's body hash matched — only metadata had been enriched (new `when_used` entry about `use_cache=True`), so no republishing was needed, just flag clearing.
+
+7. **Ship** — `validate:dates` clean, `build` clean (538 SSR + 2223 client modules). Two commits pushed: `brandonwie.dev@0bc6848` (blog content), `3b@5bbd9a7` (knowledge metadata hygiene).
+
+**Commits:**
+
+- `0bc6848` content(blog): merge Trap 4 into claude-code-turn-latency post (EN + KO)
+- `5bbd9a7` chore(knowledge): clear needs_resync flags after blog publish [3B]
+
+**Next:**
+
+- Monitor Cloudflare Pages deploy for `0bc6848` — verify Trap 4 renders correctly in both EN and KO
+- Carried forward: PR #3 pnpm migration, voice/tone audit on 5 Session 16 posts, `sync-from-3b.ts cleanBody()` wrap bug fix
 
 ### 2026-04-11 (Session 16)
 
