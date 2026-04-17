@@ -1,11 +1,12 @@
 ---
 title: AI Code Review Confusion Patterns
 description: >-
-  Four distinct ways Claude, Copilot, and Codex get things wrong on PRs — with
-  the pattern names, detection signals, and the empirical tiebreaker that
-  resolves factual disagreements.
+  Six distinct ways Claude, Copilot, and Codex get things wrong on PRs — with
+  pattern names, detection signals, the empirical tiebreaker that resolves
+  factual disagreements, and two temporal failure modes involving stale
+  snapshots.
 date: 2026-04-08T00:00:00.000Z
-updated: 2026-04-11T00:00:00.000Z
+updated: 2026-04-18T00:00:00.000Z
 tags:
   - ai-ml
   - code-review
@@ -18,7 +19,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 664b697d0dd2568f3f166d3c69f7415cdeae127ffbbb383c7b488d7302e6302b
+source_content_hash: 827def9371261895bf62ceb33eda0ef78a12ecb1df602f846e31fad8b6e21891
 references:
   - url: 'https://github.com/brandonwie/crucio/pull/83'
     title: 'crucio PR #83 — Claude vs Codex disagreement on Starlette ordering'
@@ -30,11 +31,11 @@ references:
 
 Recently I started running a `/validate-pr-reviews` workflow that takes every inline comment Claude, Copilot, and Codex leave on a diff and classifies each as valid, invalid, controversial, or good-to-have. The point is to catch real bugs from the signal side while filtering out false positives with structure.
 
-Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. I can now point at four distinct ways AI code reviewers get things wrong — each with a concrete example, a detection signal, and a prevention technique. These patterns are small (one sample each so far), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
+Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. I can now point at six distinct ways AI code reviewers get things wrong, each with a concrete example, a detection signal, and a prevention technique. These patterns are small (one or two samples each so far), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
 
 ## The setup
 
-The validation workflow looks at every AI reviewer comment on a PR and, for each INVALID finding, asks one question: *why was this wrong?* Not "why was the reviewer confused?" but "what specific class of reasoning failure does this match?" After two PRs, four distinct classes emerged:
+The validation workflow looks at every AI reviewer comment on a PR and, for each INVALID finding, asks one question: *why was this wrong?* Not "why was the reviewer confused?" but "what specific class of reasoning failure does this match?" Six distinct classes have emerged so far:
 
 | Pattern                                | First seen | Trigger                                                                 |
 | -------------------------------------- | ---------- | ----------------------------------------------------------------------- |
@@ -42,6 +43,8 @@ The validation workflow looks at every AI reviewer comment on a PR and, for each
 | Intentional Design                     | NestJS PR  | Documented trade-off with an inline NOTE                                |
 | Disagreeing Claim                      | Starlette PR | Two reviewers give opposite claims; tiebreaker is an experiment       |
 | Confidently Wrong on Library Internals | Starlette PR | Articulate reassurance about framework behavior that contradicts source |
+| Stale Snapshot Review                  | Python PR  | Review indexed against an earlier revision that no longer is HEAD       |
+| `isOutdated` Is Not a Correctness Signal | NestJS DTO PR | GitHub marked thread outdated but the underlying concern was still real |
 
 What follows is each pattern, with the PR evidence and what I learned about detecting it.
 
@@ -122,6 +125,45 @@ Three signals distinguish this from generic hallucination:
 - **Confident positive assertions deserve more scrutiny, not less.** When a reviewer says "this is correct," ask: "can I verify this in 10 lines of code?" If yes, verify. If no, ask whether the claim is load-bearing enough to warrant writing the verification.
 - **Treat "INFO — X is correct" lines as potentially load-bearing.** I used to skim INFO comments because they are non-actionable. I now read them closely when they touch library internals — they can carry false reassurance that causes real bugs to be dismissed.
 
+## Pattern 5 — Stale Snapshot Review
+
+> **One-line definition:** The reviewer posts a finding against a revision of the PR that is no longer HEAD.
+
+The first four patterns are all _semantic_ misunderstandings — the reviewer processed the code and reached the wrong conclusion. Pattern 5 is _temporal_: the reviewer processed the right code, reached a valid conclusion on that code, and then the code moved before the review posted.
+
+On a Python PR, Copilot inline-commented on a test file flagging a redundant assertion — `assert not any("http" in t for t in tags)` — as brittle to future tags like `"http2"`. The assertion had already been removed a few commits earlier. Copilot's review timestamp was newer than the removing commit, but Copilot's _indexing_ of the PR had happened against an earlier snapshot. Both mirror sites (Ollama and Gemini) were flagged because both had the same pattern at the indexed snapshot.
+
+**Why it happens.** Copilot's review-indexing pass runs 1–5 minutes after the trigger event. During `/validate-pr-reviews` workflows, Round 1 fixes frequently push within that same window. If the fetch timestamp lags HEAD by even a minute, the reviewer reviews the old tree.
+
+**Detection signal.** The flagged line does not appear in current HEAD. A quick `git log --all -S "<exact quoted claim text>"` usually finds the commit where the flagged code was removed, and its timestamp precedes the review post.
+
+**Prevention.**
+
+- **Do not apply a "fix".** There is nothing to fix — the code has moved.
+- **Resolve with `Dismissed: Stale Snapshot — removed in {commit}`** and move on.
+- **Add a reinforcing NOTE at or near the current code** describing the intentional contract that replaced the removed line. Future Copilot re-indexes may still find an old cache; the NOTE makes current intent machine-readable.
+- **If the pattern recurs on the same PR with the same agent,** consider rebasing or force-pushing to a new branch name — some CI+reviewer combinations index against a stale fork ref.
+
+## Pattern 6 — `isOutdated` Is Not a Correctness Signal
+
+> **One-line definition:** GitHub's `isOutdated=true` flag on a review thread means "GitHub couldn't anchor this comment to a current diff line", not "the concern is resolved".
+
+GitHub marks a review thread `isOutdated` when the flagged line is no longer on the current diff — typically because a subsequent commit touched nearby lines. My validate-pr-reviews skill used to auto-skip these threads on that signal, treating the flag as "no longer applicable". It isn't.
+
+On a recent NestJS PR, Copilot raised an empty-string validation concern on a DTO: `""` passing `@IsString()` and hitting a `WHERE IS NOT NULL` partial unique index. The skill auto-skipped the thread because a later commit had reformatted the DTO and GitHub marked the thread outdated. The reformat didn't fix the underlying concern — it just moved the lines. When I looked at the thread manually, the problem was still real, and a Round 2 pass promoted it to a VALID IMPROVEMENT fix.
+
+**Why it happens.** `isOutdated` is a heuristic about anchoring, not about correctness. It fires whenever the line numbers shift, for any reason — autoformatter runs, neighboring edits, stacked-PR rebases. None of these events say anything about whether the original concern is resolved.
+
+**Detection signal.** Any skipped `isOutdated` thread on a PR that ships with a real bug in the same area. Harder to detect in advance — requires a habit of sampling skipped threads, not just trusting the skip.
+
+**Prevention.**
+
+- Treat `isOutdated` as a heuristic, not a correctness signal.
+- If the skill auto-skips these threads, it should still log them as `OUTDATED` in the round's Comment Registry so they remain discoverable during a second pass.
+- Give the user a manual override to reconsider any outdated thread.
+
+Operationally, `isOutdated` is correlated with cross-PR line shifts (stacked PRs where one commit's reformat triggers the flag on another PR's thread) and with autoformatter runs. Treat these events as "line moved", not "concern resolved".
+
 ## Per-reviewer tendencies
 
 Two PRs is not enough data to draw firm conclusions, but the early pattern is worth noting:
@@ -136,9 +178,10 @@ The most surprising observation is that articulation and confidence are not prox
 
 ## Takeaways
 
-- **Four failure modes are worth naming even at count=1.** The goal of classification is not statistical significance — it is faster triage on the next PR. Once you have a name for the pattern, you recognize it in the wild.
-- **Reinforcing NOTEs are the most effective prevention, but only for Patterns 1 and 2.** For Disagreeing Claim and Confidently Wrong, no amount of inline documentation helps — you need an empirical check.
+- **Six failure modes are worth naming even at count=1.** The goal of classification is not statistical significance — it is faster triage on the next PR. Once you have a name for the pattern, you recognize it in the wild.
+- **Reinforcing NOTEs are the most effective prevention, but only for Patterns 1, 2, and 5.** For Disagreeing Claim and Confidently Wrong, no amount of inline documentation helps — you need an empirical check. Stale Snapshot benefits from NOTEs because they help future re-indexes pick up current intent.
 - **The Empirical Tiebreaker Protocol is the highest-leverage technique in the workflow.** When two reviewers disagree, the workflow's job is to flag the disagreement and force an experiment. This is the moment where the whole process pays for itself — it catches the one critical bug that would otherwise have been dismissed via confident but wrong reassurance.
 - **Read INFO comments closely when they touch library internals.** They are the natural home for Pattern 4.
+- **Don't trust tooling heuristics as correctness signals.** `isOutdated` (Pattern 6) feels like it means "concern resolved" but means "comment cannot be anchored to a current diff line". Log skipped threads so you can re-examine them on a second pass.
 
 I expect this catalog to grow. The point is not to produce a comprehensive taxonomy — it is to make each next bug easier to triage than the last. If you are running AI code review on your PRs and have not started classifying the false positives, naming the shapes of the failures is where I would start.
