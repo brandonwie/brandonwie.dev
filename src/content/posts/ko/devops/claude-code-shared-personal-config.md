@@ -5,7 +5,7 @@ description: >-
   새 개발자는 즉시 AI 지시사항을 사용하고 기존 개발자는 개인 확장을
   유지하는 패턴입니다.
 date: 2026-02-04T00:00:00.000Z
-updated: '2026-04-09'
+updated: '2026-04-18'
 tags:
   - devops
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-shared-personal-config
-source_updated: '2026-04-09'
-translation_date: '2026-04-09'
+source_updated: '2026-04-18'
+translation_date: '2026-04-18'
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
     title: Claude Code 공식 문서
@@ -292,9 +292,10 @@ audit 스크립트가 깨진 symlink를 잡아내서 체인을 따라가 복구�
 SoT와 어긋나 있을 수 있고, 그 사이에 발생한 사용자 활동 -- UI 권한 토글, 플러그인
 활성화 -- 은 깨진 로컬 파일에만 존재하게 돼요.
 
-**감지.** audit 스크립트로 개인, 업무, 프로젝트 카테고리에 걸친 55개의 예상
-symlink를 모두 walk하면서 symlink가 있어야 할 자리에 일반 파일이 발견되면
-"REPLACED"로 분류해서 보고해요. 그 분류가 실패의 명확한 시그니처예요.
+**감지.** `/check-symlinks` 슬래시 명령으로 개인, 업무, 프로젝트 카테고리에
+걸친 55개의 예상 symlink를 모두 walk하면서 symlink가 있어야 할 자리에 일반
+파일이 발견되면 "REPLACED"로 분류해서 보고해요. 그 분류가 실패의 명확한
+시그니처예요.
 
 **복구 전략은 무엇이 drift됐는지에 따라 달라져요.** 두 가지 케이스가 있어요.
 
@@ -363,6 +364,89 @@ hook이 SoT에만 존재하고 실행 중인 프로필은 그게 없는 stale한
 `settings.local.json` deep merge 메커니즘이 분리된 체인에서도 동작하는지
 재검증해야 한다는 거예요. 아직 그 spike를 안 했지만, 다음 큰 settings 재구조화
 전에는 할 가치가 있어요.
+
+## 되돌림 루프가 드러나다
+
+2026-04-09 사건 일주일 후에 같은 증상을 또 만났는데, 일회성 atomic-rename
+설명이 전체 이야기라고 가정했어요. 아니었어요. symlink를 다시 링크하고
+runtime 파일을 편집하기 시작했더니, UI가 약 2분 이내에 메모리 안에 있는 설정
+모델을 일반 파일로 다시 직렬화해서 제 수정을 덮어써버렸어요. UI는 여전히 그
+파일을 일반 파일로 인식했고, 깨지기 전의 cached 상태를 들고 있었으며, 모델이
+따라잡을 때까지 계속 수정을 덮어썼어요.
+
+그게 되돌림 루프예요: UI가 파일 내용의 stale한 스냅샷을 들고 있는 한, symlink를
+몇 번 복구하든 상관없어요 -- 다음 저장 사이클이 drift된 상태를 복원해버려요.
+
+**증상 시그니처는 세 가지가 함께 있어야 말이 돼요:**
+
+1. `ls -la ~/.claude/settings.json` -- symlink가 아닌 일반 파일
+2. `diff ~/.claude/settings.json $SOT` -- 상당한 차이(제 경우 290줄의 누적된
+   권한 패턴, 플러그인 설정, `voiceEnabled`,
+   `skipDangerousModePermissionPrompt`, `mcpServers`)
+3. `stat -f '%Sm' ~/.claude/settings.json` -- runtime 파일을 편집한 뒤 2~3분
+   이내에 mtime이 업데이트됨. UI에서 명시적으로 저장하지 않아도.
+
+세 번째가 되돌림 루프를 보통의 깨진 symlink와 구분해 주는 지점이에요. 명시적
+저장 때만 mtime이 움직이면 stale 파일이에요. 수동 저장 없이도 움직이면 UI가
+능동적으로 제 수정을 덮어쓰고 있는 거예요.
+
+**복구: reconcile → SoT → symlink.** 앞 섹션의 양방향 merge는 양쪽 모두 보존할
+의도가 있을 때 맞는 도구예요. 되돌림 루프의 경우, UI의 "의도"는 제 수정 이전의
+stale한 cache일 뿐이에요 -- 그걸 앞으로 merge하면 제거하려던 변경을 다시
+들여올 뿐이에요. 더 안전한 레시피는 live 파일의 상태를 SoT에 freeze한 다음
+다시 symlink로 거는 거예요:
+
+```bash
+SOT=/path/to/3b/.claude/global-claude-setup/settings.json
+LIVE=/Users/you/.claude/settings.json
+
+# 1. live 백업 -- 복구 윈도우 동안은 /tmp면 충분
+cp "$LIVE" "/tmp/live-settings-backup-$(date +%Y%m%d-%H%M%S).json"
+
+# 2. drift된 live 파일에 의도한 수정을 수술적으로 적용
+#    -- Edit/sed/jq 사용. 각 수정 후 JSON 검증
+python3 -m json.tool < "$LIVE" > /dev/null || { echo "JSON broke"; exit 1; }
+
+# 3. cleaned live → SoT 복사. 이제 SoT에는 UI가 누적한 모든 줄 + 의도한
+#    수정이 전부 들어있음. 잃어버린 게 없고, drift가 SoT로 승격됨.
+cp "$LIVE" "$SOT"
+
+# 4. atomic swap: live를 SoT로 가리키는 symlink로 교체
+rm "$LIVE" && ln -s "$SOT" "$LIVE"
+
+# 5. 검증
+ls -la "$LIVE"                                 # -> SoT 출력
+diff "$LIVE" "$SOT" > /dev/null                # symlink 통해서 동일
+python3 -m json.tool < "$LIVE" > /dev/null     # 링크 통한 JSON 유효
+```
+
+핵심 동작은 3단계예요: 다시 링크 _전에_ live를 SoT로 승격해서 아무것도 잃지
+않아요. 1~2단계는 중간 상태가 나빠지지 않게 보호하고, 5단계는 swap 후 체인이
+실제로 유지되는지 검증해요.
+
+**현재 세션에서 고쳐지지 않는 것.** 실행 중인 Claude Code 세션은 여전히
+수정 전 hook 레지스트리를 메모리에 들고 있어요. SoT에서 제거하거나 수정한
+hook은 다음 세션 시작 때만 완전히 효과를 봐요. 관찰 가능한 시그널은 hook이
+세션 시작 시 emit하는 로그 라인이에요 -- 제 경우 다음 세션에서
+`[AGENT-TEAMS-READY]`가 없다는 게 메모리 레지스트리가 refresh됐다는 확인
+이었어요.
+
+**모니터링 갭.** 기존의 `symlink-daily-check.sh` SessionStart hook은 다음 세션
+경계에서 atomic-rename 케이스를 잡아줘요. 세션 _중에_ 일어나는 되돌림 루프는
+못 잡아요. UI의 미래 쓰기 패턴이 delete-then-create-new-regular-file로 바뀌면,
+세션 사이에 symlink가 다시 교체될 거고 daily check가 결국은 잡겠지만 --
+실시간 체크는 PostToolUse나 Stop hook에 살아야 해요. 아직 안 만들었어요.
+되돌림 cadence가 충분히 빠른지가 열린 질문이에요.
+
+**Gitignore된 SoT, 관찰 불가능한 복구.** SoT `settings.json`은 머신별 플러그인
+install 상태를 갖고 있어서 gitignore되어 있어요. 그 말은 reconcile-and-relink
+시퀀스 전체가 로컬 작업 트리 안에만 살아있다는 거예요. `git status`는 아무것도
+안 보여줘요. 어떤 PR도 reconciliation을 리뷰하지 않아요. 새로 clone해도 drift된
+SoT를 재현할 수 없어요. 실용적 완화책은 보관 정책에 맞춰서 주기적으로 수동
+백업(`cp $SOT ~/backup-$(date +%Y%m)/`)하는 거예요 -- "전체 설정 히스토리를
+잃는" 결과가 얼마나 나쁜지에 따라 정해야 해요. 제대로 된 수정은 SoT를
+un-gitignore하는 건데, 그러면 플러그인 install 상태와 머신별 권한을 저장소에
+실어 보내게 되니까 더 나빠져요.
 
 ## 교차 검증 규율
 
