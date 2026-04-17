@@ -30,8 +30,42 @@
 - [x] 107 EN + 107 KO — Karpathy LLM Knowledge Bases original commentary post
 - [x] 112 EN + 112 KO — 5 new posts (NestJS Swagger + @Headers gotchas, AI review confusion patterns, Claude Code turn latency, macOS VSCode locale fallback)
 - [x] Trap 4 merged into turn-latency post — silent source-disable contamination section + "no data ≠ absence" takeaway (EN + KO)
+- [x] 3 hash-mismatch merges — shared-personal-config (Revert Loop), distilbert-vs-bart (HF truncation gotcha), ai-code-review-confusion-patterns (Patterns 5+6) (EN + KO)
 
 ## Session Log
+
+### 2026-04-18 (Session 18)
+
+**Hash-Mismatch Merges — Three Expanded Posts**
+
+1. **Discovery** — `/blog-publish` found 3 hash mismatches and 5 `needs_resync` flags (overlap + `ready: false`). Zero new posts. Targets: `devops/claude-code-shared-personal-config`, `ai-ml/distilbert-vs-bart-intent-classification`, `ai-ml/ai-code-review-confusion-patterns`.
+
+2. **Hash recovery** — `sync:check` output truncates hashes to 16 chars. Patched `scripts/sync-from-3b.ts:621-622` to drop `.substring(0, 16)` for one run, captured all three full 64-char values, reverted the patch. Workaround is awkward; durable fix tracked as `--full-hash` flag backlog item.
+
+3. **Merge #1 (shared-personal-config)** — Added narrative `## The Revert Loop Surfaces` section between existing "Chain Failure Mode" and "Cross-Check Discipline". Covers the 2026-04-17 Silent UI Rewrite incident (UI re-serializes cached state within ~2 min of runtime edits), `reconcile → SoT → symlink` recovery recipe, residual-risk notes, gitignored-SoT paradox. Updated Detection paragraph to name `/check-symlinks` explicitly.
+
+4. **Merge #2 (distilbert-vs-bart)** — Added `## Production Gotcha: HuggingFace Pipelines Don't Auto-Truncate` between "When Not To" and "Key Takeaway". Covers N-pass amplification for zero-shot with oversize input, explicit `truncation=True, max_length=<N>` discipline, model-agnostic constant naming (`_CLASSIFIER_MAX_TOKENS` not `_BART_CONTEXT_WINDOW`), plus `### A Factual Correction Worth Calling Out` clarifying DistilBERT (encoder-only) is not a BART variant (encoder-decoder seq2seq).
+
+5. **Merge #3 (ai-code-review-confusion-patterns)** — Extended catalog from four to six patterns. **Pattern 5 Stale Snapshot Review** (temporal failure — reviewer indexed an earlier PR revision, flagged already-removed code; prevention: dismiss-without-fix + reinforcing NOTE for future re-indexes). **Pattern 6 `isOutdated` Is Not a Correctness Signal** (GitHub flag means "cannot anchor to current diff", not "concern resolved"; log OUTDATED skips so they remain reviewable). Updated intro count, setup table, per-reviewer tendencies, takeaways.
+
+6. **Korean parity** — Full KO translations of new sections in 해요체, not machine-translated. Bumped `source_updated` + `translation_date` to 2026-04-18 on all 3 KO files.
+
+7. **Verification** — `npm run validate:dates` → 113 EN / 113 KO clean. `npm run sync:check` → 110/110 hash matches, 0 mismatches. `npm run build` → 7.2s, 226 pages, Pagefind 29,517 words, 0 errors. Husky pre-push passed silently.
+
+8. **Ship** — 3 atomic commits on `main`, one per post pair. Cloudflare Pages deploy triggered.
+
+**Commits:**
+
+- `205b52f` content(blog): merge Revert Loop section into shared-personal-config (EN + KO)
+- `ca59ef4` content(blog): add HF truncation gotcha to distilbert-vs-bart (EN + KO)
+- `384bcf8` content(blog): add Patterns 5 and 6 to ai-code-review-confusion (EN + KO)
+
+**Stats:** 3 posts refreshed (EN + KO = 6 files changed). 113 EN + 113 KO total.
+
+**Next:**
+
+- Monitor Cloudflare Pages deploy for 3 commits — verify Revert Loop, Production Gotcha, Patterns 5+6 all render correctly in EN + KO
+- Add `--full-hash` (or `--raw`) flag to `sync:check` to avoid the patch-and-revert workflow on future hash-mismatch merges. Update `/blog-publish` Step 5 comment after shipping.
 
 ### 2026-04-14 (Session 17)
 
