@@ -1,0 +1,22 @@
+# graphify exclusion patterns (.gitignore syntax)
+# Generated 2026-04-18 during initial brandonwie.dev graph build.
+
+# Standard noise
+.git/
+.obsidian/
+graphify-out/
+
+# Third-party cache directories
+.claude/plugins/
+.playwright-mcp/
+.svelte-kit/
+
+# Build/lock artifacts (already gitignored but belt-and-suspenders)
+node_modules/
+
+# OG meta-images: auto-generated per blog post, no unique signal — the blog
+# post markdown itself carries the content. Avoids ~4M tokens of vision extraction.
+static/og/
+
+# SVG favicons / icon assets (no blog signal)
+static/favicon.svg

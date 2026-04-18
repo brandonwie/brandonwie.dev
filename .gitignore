@@ -39,3 +39,6 @@ pnpm-lock.yaml
 
 # Claude Code
 .claude/
+
+# graphify output (per-repo knowledge graph — rebuild via /graphify)
+graphify-out/
