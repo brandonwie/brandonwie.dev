@@ -1,8 +1,8 @@
 ---
 title: AI PR Review Validation Patterns
-description: "Common patterns where AI code reviewers (Claude, Copilot, Codex) produce false"
+description: "Common patterns where AI code reviewers (Claude, Copilot, Codex) produce false positives, and how to prevent recurrence."
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-26'
+updated: '2026-04-24'
 tags:
   - devops
   - ai
@@ -11,14 +11,12 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: a2278addd40233dfd30978cff869e26b3299d53666b94aeb2de5014133b04736
+source_content_hash: 82245684b26016c3206f67fbdd1e9614c61035f7efaa64110b08dd6870f85835
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
     type: authoritative
 ---
-
-positives, and how to prevent recurrence.
 
 ## Classification Framework
 
@@ -349,3 +347,27 @@ This is where Cross-Branch Confusion (#9) first showed up. Claude analyzed `main
 - Cross-Branch Confusion (#9): Reviewer analyzed `main` branch code instead of PR's target (`develop`). Claimed `toBeNull()` contradicts implementation at lines 796-800 — but those lines are a NOTE comment on `develop` (the `deletedAt`-setting code was removed in PR #711)
 
 **Outcome:** 3 fixes applied across both rounds, 6 INVALID dismissed. New pattern documented: Cross-Branch Confusion — AI reviewers default to `main` branch context even when PR targets `develop`.
+
+### Example 6: 3b-forge PR #3 Round 1 (4 reviewers — Claude + Copilot + Codex + CodeRabbit)
+
+**Stats:** 16 items: 9 VALID BUG/IMPROVEMENT, 6 GTH→FIX, 1 CONTROVERSIAL→VALID after user redirect. 0 INVALID. 0 DEFER. 18 threads resolved: 11 explicit replies plus 7 CodeRabbit auto-resolves. 16 atomic fix commits. Merged `f56e066`.
+
+**Scope:** Wave 3 SSoT flip tooling: `scripts/flip-to-forge.sh`, a refactored `scripts/check-3b-drift.sh`, and docs. The scripts performed destructive `rm` and `ln -s` operations on a separate git repo through a YAML manifest. High-stakes, low-tests, narrow scope: ideal territory for a four-reviewer pass.
+
+**Cross-reviewer convergence:**
+
+| Finding                                         | Claude | Copilot | Codex | CodeRabbit |
+| ----------------------------------------------- | ------ | ------- | ----- | ---------- |
+| Path-traversal guard missing                    | ✓      | ✓       | ✓     | —          |
+| `stat -f '%HT'` BSD-only                        | ✓      | ✓       | —     | ✓          |
+| Post-flip mode relies solely on local state     | ✓      | ✓       | ✓     | —          |
+| Rollback leaves `.flip-state.json`              | ✓      | —       | —     | ✓          |
+| Exit-code 2 overloaded                          | —      | ✓       | —     | —          |
+
+**Controversial handled via user redirect:** R1-16 flagged `scripts/check-3b-drift.sh:25`, where exit code 2 covered both advisory drift and pre-flight failure. I classified it CONTROVERSIAL instead of immediately fixing it, then surfaced four options: split the codes, narrow code 2, keep the overload with a reinforcing comment, or defer to a follow-up issue. The user chose the split, so the fix landed after the VALID fixes and before the GOOD-TO-HAVE batch.
+
+**Thread-resolution learning:** Copilot and Codex threads stay open until explicitly resolved through GitHub GraphQL's `resolveReviewThread` mutation. CodeRabbit auto-closes some threads when referenced code changes; three of its five threads resolved without a reply. Line numbers also shifted as commits landed, so GraphQL thread IDs were the stable key for mapping findings to commits.
+
+**Key INVALID count: 0.** Convergence across three or more agents was a perfect positive predictor on this PR. The likely reason: the scope was narrow enough for agents to reason end-to-end, the scripts performed destructive operations that biased reviewers toward caution, and four independent reviewers reduced individual false positives.
+
+**Process learning:** Gate CONTROVERSIAL decisions between VALID and GOOD-TO-HAVE work. VALID fixes can move first, CONTROVERSIAL items deserve a clean user decision point, and low-risk improvements can batch after that. Bundling all three tiers into one confirmation step creates the wrong latency for each decision type.

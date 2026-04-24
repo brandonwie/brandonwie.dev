@@ -2,7 +2,7 @@
 title: "AI PR 리뷰 검증 패턴"
 description: "AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 흔한 패턴과 재발 방지 방법."
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-26'
+updated: '2026-04-24'
 tags:
   - devops
   - ai
@@ -12,8 +12,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
-source_updated: "2026-03-26"
-translation_date: "2026-03-26"
+source_updated: "2026-04-24"
+translation_date: "2026-04-24"
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -338,3 +338,27 @@ Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`de
 - Cross-Branch 혼동(#9): Reviewer가 PR target(`develop`) 대신 `main` branch 코드를 분석. `toBeNull()`이 796-800번 줄 구현과 모순된다고 주장했지만, `develop`에서 해당 줄은 NOTE 주석(`deletedAt` 설정 코드는 PR #711에서 제거됨)
 
 **결과:** 양쪽 round에서 3개 수정, 6개 INVALID 기각. 새 패턴 문서화: Cross-Branch 혼동 — AI reviewer가 PR target이 `develop`인데도 `main` branch context를 기본으로 사용.
+
+### 사례 6: 3b-forge PR #3 Round 1 (4 reviewers — Claude + Copilot + Codex + CodeRabbit)
+
+**통계:** 16개 항목: 9 VALID BUG/IMPROVEMENT, 6 GTH→FIX, 1 CONTROVERSIAL→VALID(user redirect 후). 0 INVALID. 0 DEFER. 18개 thread 해결: 11개 명시적 reply + 7개 CodeRabbit auto-resolve. 16개 atomic fix commit. `f56e066`으로 merge.
+
+**범위:** Wave 3 SSoT flip tooling: `scripts/flip-to-forge.sh`, refactor된 `scripts/check-3b-drift.sh`, docs. YAML manifest를 통해 별도 git repo에 destructive `rm`과 `ln -s`를 수행하는 shell script였어요. 고위험, 낮은 test coverage, 좁은 범위라 4-reviewer pass에 적합했어요.
+
+**Cross-reviewer convergence:**
+
+| Finding                                      | Claude | Copilot | Codex | CodeRabbit |
+| -------------------------------------------- | ------ | ------- | ----- | ---------- |
+| Path-traversal guard 누락                    | ✓      | ✓       | ✓     | —          |
+| `stat -f '%HT'` BSD 전용                     | ✓      | ✓       | —     | ✓          |
+| Post-flip mode가 local state에만 의존        | ✓      | ✓       | ✓     | —          |
+| Rollback 후 `.flip-state.json` 잔존          | ✓      | —       | —     | ✓          |
+| Exit-code 2 overload                         | —      | ✓       | —     | —          |
+
+**CONTROVERSIAL은 user redirect로 처리:** R1-16은 `scripts/check-3b-drift.sh:25`에서 exit code 2가 advisory drift와 pre-flight failure를 모두 의미하는 문제였어요. 바로 수정하지 않고 CONTROVERSIAL로 분류한 뒤, code 분리, code 2 의미 축소, reinforcing comment 유지, follow-up issue defer 네 가지 선택지를 제시했어요. 사용자는 code 분리를 선택했고, fix는 VALID 수정 이후 GOOD-TO-HAVE batch 전에 반영했어요.
+
+**Thread-resolution 학습:** Copilot과 Codex thread는 GitHub GraphQL `resolveReviewThread` mutation으로 명시적으로 resolve하기 전까지 열린 상태로 남아요. CodeRabbit은 참조 코드가 바뀌면 일부 thread를 자동 종료했고, 5개 중 3개가 reply 없이 해결됐어요. commit이 쌓이면서 line number도 이동하므로, finding과 commit을 매핑할 stable key는 `path:line`이 아니라 GraphQL thread ID였어요.
+
+**핵심 INVALID count: 0.** 이 PR에서는 3개 이상 agent의 convergence가 valid finding의 완전한 positive predictor였어요. 이유는 범위가 좁아 agent들이 end-to-end로 추론할 수 있었고, script가 destructive operation을 수행해 reviewer들이 보수적으로 판단했으며, 4개의 독립 reviewer가 개별 false positive를 줄였기 때문으로 보여요.
+
+**프로세스 학습:** CONTROVERSIAL 결정은 VALID와 GOOD-TO-HAVE 사이에 gate로 둬야 해요. VALID fix는 먼저 진행하고, CONTROVERSIAL은 사용자에게 깔끔한 결정 지점을 제공하고, low-risk improvement는 그 뒤에 batch 처리하는 흐름이 맞았어요. 세 tier를 하나의 confirm step으로 묶으면 각 decision type에 필요한 latency가 어긋나요.
