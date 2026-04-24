@@ -31,8 +31,38 @@
 - [x] 112 EN + 112 KO — 5 new posts (NestJS Swagger + @Headers gotchas, AI review confusion patterns, Claude Code turn latency, macOS VSCode locale fallback)
 - [x] Trap 4 merged into turn-latency post — silent source-disable contamination section + "no data ≠ absence" takeaway (EN + KO)
 - [x] 3 hash-mismatch merges — shared-personal-config (Revert Loop), distilbert-vs-bart (HF truncation gotcha), ai-code-review-confusion-patterns (Patterns 5+6) (EN + KO)
+- [x] AI PR review validation post refreshed — 3b-forge four-reviewer example added (EN + KO)
 
 ## Session Log
+
+### 2026-04-24 (Session 19)
+
+**Hash-Mismatch Merge — AI PR Review Validation Patterns**
+
+1. **Discovery** — `/blog-publish` found one actionable expanded-post hash
+   mismatch: `devops/ai-pr-review-validation-patterns`. No new raw posts were
+   ready to sync.
+
+2. **Merge** — Added the 3b-forge PR #3 four-reviewer validation example,
+   including convergence table, CONTROVERSIAL user-redirect handling,
+   GraphQL-thread resolution semantics, and zero-INVALID process learning.
+
+3. **Korean parity** — Added matching KO translation in the existing tone and
+   bumped `source_updated` + `translation_date` to 2026-04-24.
+
+4. **Metadata** — Updated English `source_content_hash` to
+   `82245684b26016c3206f67fbdd1e9614c61035f7efaa64110b08dd6870f85835`,
+   `updated` to 2026-04-24, and fixed the truncated description/body fragment.
+
+5. **Verification** — `sync:check` → 110/110 hash matches, 0 mismatches;
+   `translation:status` → 113/113 translated; `validate:dates`, `check`, and
+   `build` all passed.
+
+6. **Ship** — Commit `a15c898` pushed to `main`. First push attempt was blocked
+   by Prettier on generated `AGENTS.md`; formatted, amended, and re-pushed.
+
+**Next:** Monitor Cloudflare Pages deploy for `a15c898` and spot-check EN/KO
+rendering.
 
 ### 2026-04-18 (Session 18)
 
