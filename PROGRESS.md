@@ -108,6 +108,13 @@ sync:reconcile --dry-run` → 0 cleared, 0 kept. Lint passes; svelte-check
 - 3 new knowledge entries flagged blog-publishable; review for Korean
   translation pass on next `/blog-publish` cycle.
 
+**Post-merge (same day):** Created [PR #4](https://github.com/brandonwie/brandonwie.dev/pull/4)
+with full summary + test plan, merged with `gh pr merge --merge` — GitHub
+fast-forwarded `main` (no merge commit since branch was strictly ahead, but PR
+metadata preserves the review context). Local + remote `fix/needs-resync-invariant`
+deleted. `main` @ `d70bf81`. 3b's companion fix branch shipped to its `main`
+via an unexplained auto-fast-forward on push (logged for investigation).
+
 ### 2026-04-24 (Session 19)
 
 **Hash-Mismatch Merge — AI PR Review Validation Patterns**
