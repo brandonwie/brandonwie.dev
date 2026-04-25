@@ -35,6 +35,79 @@
 
 ## Session Log
 
+### 2026-04-25 (Session 20)
+
+**Sync Script `--reconcile` Mode + `/wrap` Skill Checklist Hardening**
+
+1. **Discovery via /blog-publish** — `npm run sync:check` reported 0 hash
+   mismatches. Dry-run sync reported 0 new posts. `grep -rl "needs_resync:
+true"` reported 6 stuck flags on 3B knowledge entries that were never
+   published (`published_at: null`, `ready: false`). Pattern recurred after a
+   prior cleanup (Apr 20 session, friction-log
+   `wrap-needs-resync-stale-on-manual-merge`).
+
+2. **Investigation** — Explore agent traced the setter (`/wrap` Step 5
+   Level 3) and clearer (`sync-from-3b.ts:361`). Two failure modes producing
+   the same stuck state. Setter's compound prose precondition (`If
+published_at is NOT null AND Level 2 changes`) was being LLM-misapplied
+   under context pressure; clearer's `ready: true` gate prevented normal
+   recovery.
+
+3. **Part 1 — sync-from-3b.ts `--reconcile` mode**
+   - Added `clearNeedsResyncInPlace(content)` helper using surgical regex on
+     the frontmatter substring (avoids `stringifyYaml` corruption of unquoted
+     `#` characters in body content).
+   - Added `--reconcile` flag + dedicated `reconcileFlags()` function that
+     enforces the state invariant `needs_resync: true` requires
+     `published_at: NOT null` (or hash-matches local synced post).
+   - Added `sync:reconcile` script alias to package.json.
+   - Diff size per file: 1 line.
+   - Reconciled all 6 stuck flags clean.
+
+4. **Part 2 — /wrap skill checklist hardening (3B repo)**
+   - Replaced compound prose precondition in
+     `.claude/skills/wrap/SKILL.md:570-574` with explicit four-item checkbox
+     checklist + "If ANY box is unchecked" rule.
+   - Surfaced a previously implicit precondition (`blog.ready: true`).
+   - Mirrored the change in `references/blog-publishability.md`.
+
+5. **Part 3 — friction log update** — `~/.claude/friction-log.json` pattern
+   `wrap-needs-resync-stale-on-manual-merge`: status `accumulating` →
+   `resolved` with three commit SHAs in `resolved_by`.
+
+6. **Verification** — `grep -rl "needs_resync: true"` → 0. `npm run
+sync:reconcile --dry-run` → 0 cleared, 0 kept. Lint passes; svelte-check
+   0 errors; validate:dates clean.
+
+7. **AGENTS.md formatting** — bundled the preexisting Prettier drift fix
+   into this wrap commit so the pre-push hook passes cleanly. Memory
+   ID 2660 noted the same friction on 2026-04-24.
+
+**Commits (`fix/needs-resync-invariant` branch, not yet merged to main):**
+
+- `2db3e73` fix(sync): add --reconcile mode for stale needs_resync flags
+- `3b@eeb5aaff` chore(knowledge): clear stale needs_resync flags via sync:reconcile
+- `3b@8fa0458d` docs(wrap): harden Level 3 needs_resync precondition checklist
+
+**Knowledge entries created:**
+
+- `knowledge/devops/state-invariant-flag-drift-recovery.md` (blog-publishable)
+- `knowledge/general/yaml-serializer-unquoted-hash-corruption.md`
+  (blog-publishable)
+- `knowledge/general/skill-instruction-checklist-pattern.md`
+  (blog-publishable)
+
+**Stats:** 0 EN/KO post changes (infra session). Blog parity unchanged at
+113 EN + 113 KO.
+
+**Next:**
+
+- Push `fix/needs-resync-invariant` after AGENTS.md fix is bundled into the
+  wrap commit; pre-push should pass cleanly now.
+- Decide merge strategy for both repos: PR + review or direct merge to main.
+- 3 new knowledge entries flagged blog-publishable; review for Korean
+  translation pass on next `/blog-publish` cycle.
+
 ### 2026-04-24 (Session 19)
 
 **Hash-Mismatch Merge — AI PR Review Validation Patterns**
