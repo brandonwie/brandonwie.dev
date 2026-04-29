@@ -6,6 +6,7 @@ static/fonts/
 node_modules/
 src/content/posts/
 .claude/
+.serena/
 knowledge/
 scripts/CLAUDE.md
 project.inlang/

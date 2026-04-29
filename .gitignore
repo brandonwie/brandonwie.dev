@@ -40,5 +40,8 @@ pnpm-lock.yaml
 # Claude Code
 .claude/
 
+# Serena MCP cache
+.serena/
+
 # graphify output (per-repo knowledge graph — rebuild via /graphify)
 graphify-out/
