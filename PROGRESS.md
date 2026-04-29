@@ -35,6 +35,67 @@
 
 ## Session Log
 
+### 2026-04-30 (Session 21)
+
+**`/blog-publish ultrathink` — drain backlog (6 new + 3 hash-mismatch merges)**
+
+1. **Discovery** — `npm run sync:check` reported 3 hash mismatches (all flagged
+   `needs_resync: true`); dry-run reported 6 net-new publishable posts. Three
+   additional `needs_resync` entries had `ready: false` (out of scope).
+
+2. **6 net-new bilingual posts:**
+   - `devops/ruff-three-gate-preflight` (3-cycle CI loop, lint+format+lock gates)
+   - `backend/typesense-import-byte-aware-chunking` (40 MB import cap, byte vs count)
+   - `backend/emitasync-stamp-gating` (NestJS sync emit + stamp silent failure)
+   - `backend/fallback-branch-test-coverage-gap` (builder fixture hides falsy branch)
+   - `backend/symmetric-redis-kafka-bridge-pair` (Cloud Run vs NAS Kafka,
+     `advertised.listeners`)
+   - `backend/stateless-auth-db-column-drift` (mobile vs web JWT write asymmetry)
+
+3. **3 hash-mismatch merges (re-expanded from new 3B source):**
+   - `ai-ml/ai-code-review-confusion-patterns` — added Pattern 7 (Cross-Round
+     Twin Detection — productive bot behavior)
+   - `devops/ai-pr-review-validation-patterns` — added Pattern 13 (Cross-Skill
+     Name Confusion / Phantom Comparison)
+   - `general/markdownlint-conventions` — added MD033 CJK angle-bracket trap +
+     `*.me.md` folder-rename trap; cleaned 4 duplicate `## Overview` headings
+     from prior bad merge
+
+4. **`needs_resync` clearing** — `npm run sync -- --reconcile` cleared 3 stale
+   flags in 3B sources for slugs whose new hash now matches synced post.
+
+5. **Build pipeline gotchas** (each fix surfaced the next):
+   - Shiki `jsonc` and `makefile` not in bundle → `json` and `text`
+   - Bare `<` in table cells parsed as HTML → backtick-wrapped
+   - `${uuidPattern.source}` in inline code parsed as Svelte expression →
+     fenced code block
+
+6. **`.serena/` MCP cache ignored** — pre-push Prettier hook caught untracked
+   `.serena/project.yml`. Added `.serena/` to both `.gitignore` and
+   `.prettierignore` (gitignore alone doesn't tell Prettier to skip).
+
+**Commits (main, pushed):**
+
+- `e11e9fb` `feat(blog): add 6 bilingual posts via /blog-publish` (12 files, +2613)
+- `f8dc5d7` `docs(blog): integrate new sections into 3 hash-mismatch posts` (6 files, +372/-106)
+- `ff31ded` `chore: ignore .serena/ MCP cache directory` (.gitignore + .prettierignore)
+
+**Stats:** 113 → 119 EN, 113 → 119 KO. Hash 116/116 match. Pagefind indexed
+238 pages, 31772 words.
+
+**Knowledge entries (3B-side, L1 metadata only):**
+
+- `frontend/mdsvex-svelte-tag-parsing.md` (when_used append — `${...}` variant)
+- `frontend/sveltekit-markdown-build-gotchas.md` (when_used append — jsonc/makefile)
+
+**Next:**
+
+- 3 `ready: false` 3B entries (state-invariant-flag-drift-recovery,
+  skill-instruction-checklist-pattern, session-state-merge-vs-overwrite-pattern)
+  remain flagged but unpublishable. Re-run `/blog-publish` after promotion.
+- Consider /wrap-time check for "MCP cache directory needs both gitignore and
+  prettierignore" pattern — `.serena/` joined `.claude/` today.
+
 ### 2026-04-25 (Session 20)
 
 **Sync Script `--reconcile` Mode + `/wrap` Skill Checklist Hardening**
