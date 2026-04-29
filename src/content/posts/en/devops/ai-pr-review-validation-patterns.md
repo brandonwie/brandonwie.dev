@@ -1,8 +1,8 @@
 ---
 title: AI PR Review Validation Patterns
-description: "Common patterns where AI code reviewers (Claude, Copilot, Codex) produce false positives, and how to prevent recurrence."
+description: Thirteen patterns where AI code reviewers (Claude, Copilot, Codex) produce false positives, plus the classification framework and reinforcing-comment templates that keep triage fast.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-04-24'
+updated: 2026-04-29T00:00:00.000Z
 tags:
   - devops
   - ai
@@ -11,7 +11,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 82245684b26016c3206f67fbdd1e9614c61035f7efaa64110b08dd6870f85835
+source_content_hash: ed8d9b7c77aec6908f3e0cc1b48a75bb2bfdbc1081e6a9e983c3f042f05319c2
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -37,11 +37,9 @@ The two tiers I added later — GOOD-TO-HAVE and CONTROVERSIAL — turned out to
 
 ### 1. Stale Diff / Feature Exists
 
-**What it looks like:** Agent claims feature is "missing" but it exists in
-current code.
+**What it looks like:** Agent claims feature is "missing" but it exists in current code.
 
-**Why it happens:** AI reviews PR diff, not current file state. If feature was
-added in earlier commit, agent may miss it.
+**Why it happens:** AI reviews PR diff, not current file state. If feature was added in earlier commit, agent may miss it.
 
 **Example:**
 
@@ -59,11 +57,9 @@ Reality: Service has 1449 lines of full implementation
 
 ### 2. Request Lifecycle Misunderstanding
 
-**What it looks like:** Agent suggests transactions/locking for operations that
-don't need them.
+**What it looks like:** Agent suggests transactions/locking for operations that don't need them.
 
-**Why it happens:** AI doesn't understand framework-specific request lifecycle
-(NestJS, Express).
+**Why it happens:** AI doesn't understand framework-specific request lifecycle (NestJS, Express).
 
 **Example:**
 
@@ -82,11 +78,9 @@ Reality: NestJS HTTP requests execute synchronously in single-threaded event loo
 
 ### 3. Webhook Flow Misunderstanding
 
-**What it looks like:** Agent suggests wrapping webhook handlers in
-transactions.
+**What it looks like:** Agent suggests wrapping webhook handlers in transactions.
 
-**Why it happens:** AI doesn't understand that external service already
-committed state.
+**Why it happens:** AI doesn't understand that external service already committed state.
 
 **Example:**
 
@@ -106,8 +100,7 @@ Reality: LemonSqueezy already committed subscription; our code just syncs state
 
 **What it looks like:** Agent misreads assignment flow after destructuring.
 
-**Why it happens:** AI sees destructuring, assumes all values come from same
-source.
+**Why it happens:** AI sees destructuring, assumes all values come from same source.
 
 **Example:**
 
@@ -187,15 +180,6 @@ This pattern shows up whenever you have a constructor with sensible defaults pai
 // NOTE: Related logic in sync-blocks.helper.ts:232 handles resyncRequired
 ```
 
-## Reinforcing Comment Templates
-
-| Pattern              | Template                                                                                            |
-| -------------------- | --------------------------------------------------------------------------------------------------- |
-| Feature Exists       | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]`                    |
-| No Race Condition    | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
-| Intentional Design   | `// NOTE: Intentionally [omitted/designed this way] - [reason]`                                     |
-| Cross-File Reference | `// NOTE: Related logic in [file:line] handles [concern]`                                           |
-
 ### 9. Cross-Branch Confusion
 
 **What it looks like:** Agent claims code contradicts an assertion, citing line numbers that don't match the PR branch.
@@ -260,6 +244,50 @@ I hit this on crucio PR #40, where 12 of 18 Copilot findings (67%) were this exa
 
 **Prevention:** For documentation PRs, spot-check one flagged file before triaging the full list. If the first finding is a false positive, batch-dismiss all similar findings without individual review.
 
+### 13. Cross-Skill Name Confusion (Phantom Comparison)
+
+**What it looks like:** The reviewer cites specific line numbers and field names that look authoritative — but `grep -n` against the actual file shows entirely different content. The "missing fix" the reviewer suggests would actually break the file under review, but it would be correct for a *different* skill or module that shares a name root.
+
+**Why it happens:** When two skills share a name root and both are available in the session's skill registry, AI reviewers can mentally merge their schemas and review the PR against the OTHER one's behavior. The model produces line-level "findings" that reference content which doesn't exist in your file but DOES exist in the conflated sibling.
+
+**Example (3B PR #19, late April):**
+
+Codex reviewed an import of `/interview` (a markdown-only Socratic skill, zero runtime dependencies). Its findings claimed:
+
+- "curl version check at SKILL.md:33" — line 33 was a `## Instructions` header. No curl anywhere in source.
+- "MCP asks questions at SKILL.md:93" — line 93 was a code-confirmation example. Source explicitly says "no MCP tools" at line 38.
+- "Replace summary with `ooo seed` artifact" — `ooo seed` is the artifact of `/ouroboros:interview`, a different skill in the same session's registry.
+- "Tighten MCP response contract — `meta.session_id`, `meta.is_complete`" — source has no MCP layer; it's a pure conversation engine.
+
+All four findings would apply to `/ouroboros:interview` (Python/MCP/produces ooo seeds). Codex appears to have conflated the two skills based on shared name root plus shared session availability. Only one of five findings (a dead filesystem link) was valid.
+
+**Why this fails AI reviewer heuristics:**
+
+- Skill registries surface multiple skills with overlapping names (`/interview` and `/ouroboros:interview`).
+- LLM reviewers sometimes cite "the skill" without grounding which one.
+- Confidence stays high because the OTHER skill IS internally consistent — the reviewer's mental model isn't broken, it's just pointed at the wrong target.
+- Output looks specific (line numbers, field names) but is fabricated for the file under review.
+
+**Prevention — cross-check discipline.** For every AI review finding that references specific lines, files, or APIs, run:
+
+```bash
+grep -n -i '<claimed-string>' <claimed-file>
+sed -n '<claimed-line>p' <claimed-file>
+```
+
+If the grep returns empty or the line shows different content, the finding is either hallucinated or comparing against a phantom version. Treat every unverified claim as INVALID until grep confirms it. This adds about 5 seconds per finding and catches cross-skill confusion that would otherwise drive 30+ minutes of wasted fix work.
+
+**Reviewer asymmetry (data point, same PR):** the 3b-forge plugin review on the same PR was grounded — 4 of 5 findings valid. Plugin reviewers operating on the actual repo file structure produce higher-precision output than session-scope reviewers (Codex) when the session contains skill name collisions.
+
+## Reinforcing Comment Templates
+
+| Pattern              | Template                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| Feature Exists       | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]`                    |
+| No Race Condition    | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
+| Intentional Design   | `// NOTE: Intentionally [omitted/designed this way] - [reason]`                                     |
+| Cross-File Reference | `// NOTE: Related logic in [file:line] handles [concern]`                                           |
+
 ## Workflow
 
 1. **Fetch** both issue comments (claude[bot]) and review threads (Copilot)
@@ -277,14 +305,12 @@ I hit this on crucio PR #40, where 12 of 18 Copilot findings (67%) were this exa
 **Key INVALID:**
 
 - Feature exists (analytics service fully implemented)
-- Request lifecycle misunderstanding (no race condition in single-threaded event
-  loop)
+- Request lifecycle misunderstanding (no race condition in single-threaded event loop)
 - Webhook flow misunderstanding (external service already committed)
 
 ### Example 2: moba-etl PR #5 (GitHub Copilot)
 
-**Stats:** 10 comments, 0 INVALID, 4 VALID BUG, 3 VALID IMPROVEMENT, 1 ALREADY
-FIXED, 2 OPTIONAL
+**Stats:** 10 comments, 0 INVALID, 4 VALID BUG, 3 VALID IMPROVEMENT, 1 ALREADY FIXED, 2 OPTIONAL
 
 **Key VALID BUG:**
 
@@ -292,8 +318,7 @@ FIXED, 2 OPTIONAL
 - Manifest key inconsistency - read/write using different keys
 - S3 prefix normalization - paths without trailing slash produce malformed keys
 
-**Outcome:** All bugs fixed, no false positives. Copilot review was highly
-accurate for infrastructure/data code.
+**Outcome:** All bugs fixed, no false positives. Copilot review was highly accurate for infrastructure/data code.
 
 ### Example 3: crucio PR #6 Round 2 (CodeRabbit + Claude Bot)
 

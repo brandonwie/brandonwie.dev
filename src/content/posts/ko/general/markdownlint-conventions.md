@@ -1,8 +1,8 @@
 ---
 title: Markdownlint 컨벤션 가이드
-description: '7,500개 이상의 markdownlint 에러를 수정하며 정립한 Markdown 포맷팅 규칙과 설정 방법을 정리합니다.'
+description: '200개 markdown 파일에 7,500개의 markdownlint 에러. 어떤 룰이 중요한지, 어떤 설정이 잘 정착했는지, 그리고 nested scope에서만 표면화되는 두 가지 pre-commit 함정.'
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-04-29'
 tags:
   - general
   - documentation
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: markdownlint-conventions
-source_updated: '2026-03-22'
-translation_date: '2026-02-12'
+source_updated: '2026-04-29'
+translation_date: '2026-04-29'
 references:
   - url: 'https://github.com/DavidAnson/markdownlint'
     title: markdownlint
@@ -202,6 +202,97 @@ Fenced 코드 블록 앞뒤에 빈 줄이 필요해요. 없으면 일부 렌더�
 | MD033 | `false`               | 인라인 HTML 허용 (배지, details 태그 등) |
 | MD041 | `false`               | 최상위 헤딩 없는 문서 허용               |
 
+## Scope 경고: 루트 설정이 항상 이기는 건 아니에요
+
+나중에 배운 미묘한 점: 프로젝트 루트에서 룰을 비활성화해도 nested config
+scope로 propagate되지 **않아요**. `.claude/skills/**`, `.codex/skills/**`,
+기타 tool-managed 디렉토리는 보통 자기만의 `.markdownlint.json` (또는
+markdownlint-cli2 glob 필터) 아래에서 lint되고, 레포 루트가 MD033을
+비활성화해도 거기선 활성화돼 있을 수 있어요.
+
+다음 두 섹션은 이 scoping 동작에서 표면화되는 두 가지 구체적인 함정을
+설명해요. 둘 다 루트 레벨에서 "그 룰 비활성화했는데"가 충분하지 않다는
+걸 깨닫기 전에 commit을 잡아먹었어요.
+
+## MD033 함정 — CJK 텍스트와 angle bracket placeholder
+
+`MD033/no-inline-html`는 `<word>` 패턴을 HTML element로 flag해요. 함정은
+markdownlint의 HTML detector가 placeholder가 진짜 HTML element일 것을
+요구하지 않는다는 거예요 — 산문 어디서든 `<identifier>`가 룰을 트리거해요.
+angle bracket이 명백히 documentation placeholder 문법으로 사용되는 CJK
+텍스트 안에서도요.
+
+```markdown
+<!-- 둘 다 MD033/no-inline-html [Element: id] / [Element: choice]로 flag됨 -->
+
+투표하고 싶다고 하면 node ~/.config/ainc/anc-hook.js vote <id> "<choice>"
+node ~/.config/ainc/anc-hook.js profile edit <필드> "<값>"
+node ~/.config/ainc/anc-hook.js suggest "<내용>"
+```
+
+**Fix:** CLI snippet을 inline backtick으로 감싸서 angle bracket이 HTML이
+아니라 코드로 렌더되게 해요. 시각적 의미 — "이건 교체할 placeholder예요" —
+는 변경에서 살아남아요.
+
+```markdown
+투표하고 싶다고 하면 `node ~/.config/ainc/anc-hook.js vote <id> "<choice>"`
+`node ~/.config/ainc/anc-hook.js profile edit <필드> "<값>"`
+`node ~/.config/ainc/anc-hook.js suggest "<내용>"`
+```
+
+왜 놀라운가:
+
+- 한국어 (또는 모든 비-라틴 스크립트) 문장은 reader에게 "명백히 산문"으로
+  느껴지니까 angle bracket placeholder가 시각적으로 안전해 보여요.
+- bracket 안의 CJK 글자(`<필드>`, `<내용>`)는 `<id>`보다 덜 HTML-like하게
+  느껴지지만 — markdownlint의 lexer는 둘을 같게 다뤄요.
+- 함정은 보통 nested scope (skills 디렉토리, plugin 패키지)에서만 표면화돼요.
+  거기는 MD033이 여전히 활성화돼 있어서, 잘못된 mental model로 이어져요:
+  "근데 MD033을 글로벌로 비활성화했는데."
+
+## `*.me.md` 폴더 이름 변경 시 Pre-Commit 함정
+
+Pre-commit lint는 폴더 이름 변경을 "newly added" 파일로 봐요. 이름 변경된
+폴더가 인라인 HTML(`<aside>`, `<details>`)이나 중복 헤딩이 있는 human-authored
+`.me.md` 파일(Notion export, brain dump, PRD seed)을 포함하면, 콘텐츠가
+이전 경로에서 unchanged여도 markdownlint가 commit을 막아요.
+
+4월 말의 재현: `projects/moba/actives/onboarding/`을
+`frontend-onboarding/`로 이름 변경하니 pre-commit lint가
+`notion-requirements.me.md`(인라인 `<aside>` HTML과 중복 한국어 헤딩이
+있는 Notion export)를 트리거했어요. lint-staged가 콘텐츠가 unchanged여도
+파일을 "newly added"로 봤어요.
+
+```bash
+git add projects/moba/actives/onboarding/ projects/moba/actives/frontend-onboarding/
+git commit
+# → markdownlint-cli2가 notion-requirements.me.md에서 실패:
+#   MD041 first-line-heading
+#   MD033 inline HTML [Element: aside]  (×3)
+#   MD024 duplicate headings (×3)
+```
+
+**Fix:** `**/*.me.md`를 `.markdownlint-cli2.jsonc`의 `ignores` array에
+추가하세요. `.me.md`는 AI/tooling이 수정하면 안 되는 human-authored seed
+파일에 대한 컨벤션이에요. Lint가 그 콘텐츠로 commit을 gating하면 안 돼요.
+
+```json
+"ignores": [
+  // ...
+  "**/*.me.md"
+]
+```
+
+왜 놀라운가:
+
+- 폴더 이름 변경은 직관적으로 "no-content-change" 작업처럼 느껴져요;
+  lint가 의견을 가지면 안 돼요. lint-staged는 동의하지 않아요 — 이름 변경된
+  경로 포함 staged된 무엇이든 lint해요.
+- `.me.md` 확장자는 이미 "수정하지 마세요"를 의미적으로 신호하지만,
+  markdownlint는 그 컨벤션을 모르는 상태예요.
+- 독립적인 `notion-requirements.me.md` 파일도 초기 commit에서 막혔을
+  거예요 — 이름 변경이 잠재적 누락을 노출시킨 것뿐이에요.
+
 ## VS Code 통합
 
 markdownlint 확장 프로그램(`DavidAnson.vscode-markdownlint`)을 설치하고
@@ -235,6 +326,8 @@ markdownlint 확장 프로그램(`DavidAnson.vscode-markdownlint`)을 설치하�
 | 코드 블록 앞뒤 빈 줄   | MD031 | fence 앞뒤에 빈 줄 추가          |
 | 후행 공백              | MD009 | 에디터에서 자동 트림 설정        |
 | 하드 탭                | MD010 | 스페이스 사용 (md 2칸, 코드 4칸) |
+| `<id>`가 HTML로 flag  | MD033 | backtick으로 감싸기: `` `<id>` `` |
+| `.me.md`가 commit 막음 | —     | `**/*.me.md`를 ignores에 추가     |
 
 ## 왜 이 방법이 효과적인가
 

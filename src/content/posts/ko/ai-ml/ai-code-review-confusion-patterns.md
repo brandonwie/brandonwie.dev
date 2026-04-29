@@ -1,11 +1,11 @@
 ---
-title: AI code review가 틀리는 여섯 가지 패턴
+title: Claude, Copilot, Codex가 PR에서 보이는 7가지 패턴
 description: >-
-  Claude, Copilot, Codex가 PR에서 뭔가를 틀리게 짚는 여섯 가지 구체적인 방식.
-  패턴 이름, 탐지 신호, 사실관계 충돌을 해결하는 empirical tiebreaker, 그리고
-  stale snapshot 관련된 두 가지 temporal 실패 유형까지 정리했어요.
+  Claude, Copilot, Codex가 PR에서 동작하는 일곱 가지 방식 — 여섯 가지 실패
+  유형 + 한 가지 amplify할 강점. 탐지 신호와 사실관계 충돌을 해결하는
+  empirical tiebreaker까지 정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: '2026-04-18'
+updated: '2026-04-29'
 tags:
   - ai-ml
   - code-review
@@ -19,28 +19,29 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-code-review-confusion-patterns
-source_updated: 2026-04-18T00:00:00.000Z
-translation_date: '2026-04-18'
+source_updated: 2026-04-29T00:00:00.000Z
+translation_date: '2026-04-29'
 ---
 
 최근에 `/validate-pr-reviews`라는 workflow를 돌리기 시작했어요. Claude, Copilot, Codex가 diff에 남기는 모든 inline comment를 가져와서, 각각을 valid / invalid / controversial / good-to-have로 분류하는 작업이에요. 목적은 signal 쪽에서 진짜 bug는 잡아내면서 false positive를 구조적으로 걸러내는 거예요.
 
-4월 초에 연달아 올라간 PR 두 개에서 failure mode의 이름을 붙일 수 있을 만큼의 분류 자료가 쌓였어요. 같은 달 뒤쪽에 올라간 PR 두 개가 또 다른 class의 실패를 보여줬어요 — semantic이 아니라 temporal이에요. 이제는 AI code reviewer가 틀리는 방식을 여섯 가지로 나눠서 가리킬 수 있어요. 각 패턴마다 구체적인 예시, 탐지 신호, 예방 기법이 있어요. 아직 샘플은 패턴당 하나나 둘이에요. 앞으로 더 많은 PR을 validate하면서 catalog도 늘어날 거라고 봐요. 오늘 공유하고 싶은 건 이 관찰의 모양이에요. 실패 유형에 이름을 붙이고 나니 다음 triage가 훨씬 빨라졌거든요.
+4월 초에 연달아 올라간 PR 두 개에서 failure mode의 이름을 붙일 수 있을 만큼의 분류 자료가 쌓였어요. 같은 달 뒤쪽에 올라간 PR 두 개가 또 다른 class의 실패를 보여줬어요 — semantic이 아니라 temporal이에요. 4월 말에는 multi-round PR(#858)이 또 다른 종류의 관찰을 줬어요: amplify할 가치가 있는 *productive* 행동이요. 이제는 여섯 가지 실패 유형과 한 가지 강점을 가리킬 수 있어요. 각 패턴마다 구체적인 예시, 탐지 신호, 예방(또는 amplify) 기법이 있어요. 아직 샘플은 패턴당 하나나 둘이에요. 앞으로 더 많은 PR을 validate하면서 catalog도 늘어날 거라고 봐요. 오늘 공유하고 싶은 건 이 관찰의 모양이에요. 실패 유형에 이름을 붙이고 나니 다음 triage가 훨씬 빨라졌거든요.
 
 ## 설정
 
-validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐요. 그리고 INVALID로 판정된 finding마다 한 가지 질문을 던져요. *왜 이게 틀렸지?* "reviewer가 왜 헷갈렸지?"가 아니라 "이건 어떤 종류의 reasoning failure에 해당하지?"라고 물어요. 지금까지 여섯 가지 구별되는 class가 드러났어요.
+validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐요. 그리고 INVALID로 판정된 finding마다 한 가지 질문을 던져요. *왜 이게 틀렸지?* "reviewer가 왜 헷갈렸지?"가 아니라 "이건 어떤 종류의 reasoning failure에 해당하지?"라고 물어요. 여섯 가지 실패 유형이 드러났고, 별도로 추적할 가치가 있는 productive 행동 하나도 함께예요:
 
-| 패턴                                     | 처음 본 곳    | 트리거                                                              |
-| ---------------------------------------- | ------------- | ------------------------------------------------------------------- |
-| Cross-File Blindness                     | NestJS PR     | NestJS decorator vs Express typing                                  |
-| Intentional Design                       | NestJS PR     | 이미 inline NOTE로 기록된 trade-off                                 |
-| Disagreeing Claim                        | Starlette PR  | 두 reviewer가 정반대 주장을 함. tiebreaker는 실험                   |
-| Confidently Wrong on Library Internals   | Starlette PR  | source에 반하는 framework 동작을 자신 있게 재보증                  |
-| Stale Snapshot Review                    | Python PR     | 더 이상 HEAD가 아닌 이전 리비전을 기준으로 리뷰가 indexing됐어요    |
-| `isOutdated`는 correctness 신호가 아니에요 | NestJS DTO PR | GitHub가 스레드를 outdated로 마크했지만 실제 concern은 여전히 유효  |
+| 패턴                                     | 유형     | 처음 본 곳     | 트리거                                                              |
+| ---------------------------------------- | -------- | -------------- | ------------------------------------------------------------------- |
+| Cross-File Blindness                     | failure  | NestJS PR      | NestJS decorator vs Express typing                                  |
+| Intentional Design                       | failure  | NestJS PR      | 이미 inline NOTE로 기록된 trade-off                                 |
+| Disagreeing Claim                        | failure  | Starlette PR   | 두 reviewer가 정반대 주장을 함. tiebreaker는 실험                   |
+| Confidently Wrong on Library Internals   | failure  | Starlette PR   | source에 반하는 framework 동작을 자신 있게 재보증                  |
+| Stale Snapshot Review                    | failure  | Python PR      | 더 이상 HEAD가 아닌 이전 리비전을 기준으로 리뷰가 indexing됐어요    |
+| `isOutdated`는 correctness 신호가 아니에요 | failure  | NestJS DTO PR  | GitHub가 스레드를 outdated로 마크했지만 실제 concern은 여전히 유효  |
+| Cross-Round Twin Detection               | strength | NestJS PR #858 | bot이 이전 라운드 fix를 template으로 sibling에서 같은 shape 잡아냄  |
 
-이제 각 패턴을 PR 증거와 함께, 그리고 탐지에 대해 배운 점과 함께 살펴볼게요.
+이제 각 패턴을 PR 증거와 함께, 그리고 탐지(또는 amplify)에 대해 배운 점과 함께 살펴볼게요.
 
 ## Pattern 1 — Cross-File Blindness
 
@@ -158,24 +159,49 @@ GitHub은 flag된 줄이 현재 diff에 없어지면 review 스레드를 `isOutd
 
 운영적으로 `isOutdated`는 cross-PR 줄 이동(한 커밋의 reformat이 다른 PR 스레드의 플래그를 트리거하는 stacked PR)과 autoformatter 실행과 상관관계가 있어요. 이런 이벤트는 "줄이 움직임"이지 "concern이 해결됨"이 아니에요.
 
+## Pattern 7 — Cross-Round Twin Detection (강점)
+
+> **한 줄 정의:** reviewer가 이전 라운드의 fix를 template으로 적용해서 다음 라운드에서 sibling 파일이나 클래스의 같은 shape를 잡아내요.
+
+앞의 여섯 패턴은 모두 *suppress*해야 할 것들이에요. Pattern 7은 그 반대 — 일부러 *amplify*할 가치가 있는 행동이에요. 한 번의 fix를 코드베이스 전체의 구조적 정리로 바꿔주거든요.
+
+Pattern 7은 PR #858에서 나타났어요(4월 28일). 네 라운드에 걸쳐 bot이 이전 fix들을 template으로 계속 적용했어요:
+
+- **R3-1:** bot이 `SyncAttendeeContactListener`의 per-ref `publishContactUpserted` 루프를 flag함. Fix: bulk emit.
+- **R4-1:** bot이 `AttendeeContactListener`의 per-ref `publishContactUpserted` 루프를 flag함 — 다른 클래스, 다른 `@OnEvent` 토픽, 같은 shape. 동일하게 수정.
+- **F-T-4 (proactive):** bot이 `BlockSearchListener`의 `addBulkWithSentry` 누락을 flag함. Fix landed.
+- **R2-1:** bot이 `ContactSearchListener`의 같은 갭을 flag함. 같은 fix 적용.
+
+**왜 작동하나.** bot은 새 라운드를 review할 때 PR diff context — 이전 commit과 summary comment — 를 읽어요. commit N에 fix가 landed하면 commit N+1의 review prompt에 그 fix가 input으로 포함돼요. bot이 그것을 template으로 적용해서, 변경된 파일에서 같은 shape를 다른 곳에서 찾아요. PR diff context가 라운드들 사이의 semantic memory 역할을 하는 거예요.
+
+**어떻게 amplify하나.**
+
+- **라운드 summary comment에 file:line이 아니라 fix shape를 써요.** bot이 그 comment를 읽어요. "per-ref emit을 `publishBulkAsync` + 리스너 `addBulk`로 교체"는 template이고; "attendee listener의 N+1 emit fix"는 아니에요.
+- **한 사이트를 fix한 후에 의도적으로 근처의 twin 코드를 다음 cascade를 위해 남겨두세요.** bot이 찾도록요. commit마다 `@claude review`를 트리거하면 스캔할 surface를 줘요.
+- **Multi-round validation(R1 → R5+)이 이걸 표면화해요.** Single-round PR은 twin을 통째로 놓쳐요. 변경 shape이 반복될 가능성이 있을 때 multi-round를 계획하세요.
+
+**Pattern 7을 suppress하는 anti-pattern.** R4-1 같은 finding을 위치/파일만으로 R3-1의 `DUPLICATE`로 마킹하는 거예요. 중복이 아니에요 — 다른 surface의 같은 shape이에요. `/validate-pr-reviews` Phase 1.5의 dedup 룰이 "정확한 위치 매치"(진짜 중복)와 "패턴 반복"(twin detection)을 구별해야 해요. RELATED-NOT-DUP로 마킹하고 새 finding으로 분류하세요.
+
 ## Reviewer별 성향
 
 PR 두 개는 firm conclusion을 내리기엔 부족한 데이터지만, 초기 패턴은 적어 둘 만해요.
 
-| Agent   | 가장 자주 나오는 실패 유형                | 강점                                               | 약점                                                                   |
-| ------- | ----------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------- |
-| Copilot | Cross-File Blindness                      | 표면 수준의 code quality와 style 체크에 좋아요     | single-file scope로 분석해서 패키지 너머 동작을 놓쳐요                 |
-| Claude  | Confidently Wrong on Library Internals    | architectural narrative를 풀어내는 데 강해요       | source에 반하는 framework internals에 자신 있게 reassurance를 줘요    |
-| Codex   | (샘플이 너무 적어요)                       | terse하지만 library-internals 주장에 대체로 정확해요 | 아직 샘플이 많지 않아요                                                 |
+| Agent   | 가장 자주 나오는 실패 유형                | 강점                                                          | 약점                                                                   |
+| ------- | ----------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Copilot | Cross-File Blindness                      | 표면 수준의 code quality와 style 체크에 좋아요                | single-file scope로 분석해서 패키지 너머 동작을 놓쳐요                 |
+| Claude  | Confidently Wrong on Library Internals    | architectural narrative + 강한 cross-round twin detection     | source에 반하는 framework internals에 자신 있게 reassurance를 줘요    |
+| Codex   | (샘플이 너무 적어요)                       | terse하지만 library-internals 주장에 대체로 정확해요          | 아직 샘플이 많지 않아요                                                 |
 
 가장 의외였던 관찰은 articulation과 confidence가 correctness의 proxy가 아니라는 점이에요. Starlette disagreement에서 Claude의 INFO는 articulate하고 상세했고 틀렸어요. Codex의 flag는 terse했고 맞았어요. tiebreaker는 reviewer의 연차나 글솜씨가 아니라 0.2초짜리 실험이었어요.
 
 ## 정리
 
-- **count=1이어도 여섯 가지 실패 유형에 이름을 붙일 가치가 있어요.** 분류의 목적은 통계적 significance가 아니에요. 다음 PR의 triage를 빠르게 하는 거예요. 일단 패턴에 이름이 생기면 실전에서 알아보게 돼요.
+- **count=1이어도 여섯 가지 실패 유형 + 한 가지 강점에 이름을 붙일 가치가 있어요.** 분류의 목적은 통계적 significance가 아니에요. 다음 PR의 triage를 빠르게 하는 거예요. 일단 패턴에 이름이 생기면 실전에서 알아보게 돼요.
 - **보강 NOTE는 가장 효과적인 예방법이에요. 단, Pattern 1, 2, 5에 한해서요.** Disagreeing Claim과 Confidently Wrong에는 inline 문서가 얼마나 있든 도움이 안 돼요. empirical check가 필요해요. Stale Snapshot은 미래 re-indexing이 현재 의도를 집어들게 도와주니까 NOTE가 도움이 돼요.
 - **Empirical Tiebreaker Protocol이 workflow 전체에서 가장 leverage가 높은 기법이에요.** 두 reviewer가 disagree할 때, workflow의 역할은 그 disagreement를 flag하고 실험을 강제하는 거예요. 이 순간이 바로 전체 process가 스스로의 값어치를 하는 지점이에요. confident but wrong한 reassurance 때문에 dismiss될 뻔한 critical bug 하나를 잡아 주거든요.
+- **Cross-round twin detection이 multi-round PR validation의 killer feature예요.** Single-round PR은 두 번째, 세 번째 twin을 통째로 놓쳐요. bot은 패턴을 적용하기 위해 prior-fix context (commit + summary comment trailer)가 필요해요. 항상 round summary comment에 fix *shape*을 써서 다음 cascade가 그것을 template input으로 가질 수 있게 하세요.
 - **INFO comment가 library internals를 건드릴 땐 꼼꼼히 읽으세요.** Pattern 4가 가장 자연스럽게 자리 잡는 곳이에요.
 - **툴링 휴리스틱을 correctness 신호로 신뢰하지 마세요.** `isOutdated`(Pattern 6)는 "concern 해결됨"처럼 느껴지지만 실제로는 "현재 diff 줄에 anchor할 수 없음"을 뜻해요. skip된 스레드를 로그해서 두 번째 pass에서 재검토할 수 있게 하세요.
+- **제도적 룰이 AI flag를 override할 수 있어요.** AI reviewer는 문서화된 모범 사례(예: hot table에 `CREATE INDEX CONCURRENTLY`)를 정확히 flag하지만, 제도적 룰("필수가 아니면 generated migration 파일을 건드리지 말 것")은 볼 수 없어요. flag가 그런 룰과 충돌하면 룰이 이겨요 — flag의 기술적 내용이 맞아도요. 그런 룰을 durable feedback memory로 저장해서 미래 validation 라운드가 default-skip하게 하세요.
 
-이 catalog는 계속 늘어날 거예요. 목적은 포괄적인 taxonomy를 만드는 게 아니라, 다음 bug의 triage를 바로 이전보다 더 쉽게 만드는 거예요. PR에 AI code review를 돌리고 있는데 false positive를 분류해 본 적이 없다면, 실패의 모양에 이름을 붙이는 것부터 시작해 보는 걸 권해요.
+이 catalog는 계속 늘어날 거예요. 목적은 포괄적인 taxonomy를 만드는 게 아니라, 다음 bug의 triage를 바로 이전보다 더 쉽게 만드는 거예요. PR에 AI code review를 돌리고 있는데 false positive를 분류해 본 적이 없다면, 실패의 모양에 이름을 붙이는 것부터 시작해 보는 걸 권해요. 그리고 cross-round twin detection 같은 *productive* 행동을 발견하면, 같은 방식으로 대해주세요 — 이름 붙이고, amplify할 방법을 찾고, 그것을 suppress할 dedup 룰로부터 보호하세요.

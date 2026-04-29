@@ -1,12 +1,11 @@
 ---
 title: AI Code Review Confusion Patterns
 description: >-
-  Six distinct ways Claude, Copilot, and Codex get things wrong on PRs — with
-  pattern names, detection signals, the empirical tiebreaker that resolves
-  factual disagreements, and two temporal failure modes involving stale
-  snapshots.
+  Seven distinct ways Claude, Copilot, and Codex behave on PRs — six failure
+  modes plus one strength to amplify, with detection signals and the empirical
+  tiebreaker that resolves factual disagreements.
 date: 2026-04-08T00:00:00.000Z
-updated: 2026-04-18T00:00:00.000Z
+updated: 2026-04-29T00:00:00.000Z
 tags:
   - ai-ml
   - code-review
@@ -19,7 +18,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 827def9371261895bf62ceb33eda0ef78a12ecb1df602f846e31fad8b6e21891
+source_content_hash: 955f120c65447916f6ec0024df8c389287316dba6dd64f1b0d1615be8f40d4fc
 references:
   - url: 'https://github.com/brandonwie/crucio/pull/83'
     title: 'crucio PR #83 — Claude vs Codex disagreement on Starlette ordering'
@@ -31,22 +30,23 @@ references:
 
 Recently I started running a `/validate-pr-reviews` workflow that takes every inline comment Claude, Copilot, and Codex leave on a diff and classifies each as valid, invalid, controversial, or good-to-have. The point is to catch real bugs from the signal side while filtering out false positives with structure.
 
-Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. I can now point at six distinct ways AI code reviewers get things wrong, each with a concrete example, a detection signal, and a prevention technique. These patterns are small (one or two samples each so far), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
+Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR (#858) surfaced something different: a *productive* behavior worth amplifying. I can now point at six failure modes and one strength, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one or two samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
 
 ## The setup
 
-The validation workflow looks at every AI reviewer comment on a PR and, for each INVALID finding, asks one question: *why was this wrong?* Not "why was the reviewer confused?" but "what specific class of reasoning failure does this match?" Six distinct classes have emerged so far:
+The validation workflow looks at every AI reviewer comment on a PR and, for each INVALID finding, asks one question: *why was this wrong?* Not "why was the reviewer confused?" but "what specific class of reasoning failure does this match?" Six failure modes have emerged, plus one productive behavior worth tracking separately:
 
-| Pattern                                | First seen | Trigger                                                                 |
-| -------------------------------------- | ---------- | ----------------------------------------------------------------------- |
-| Cross-File Blindness                   | NestJS PR  | NestJS decorator vs. Express typing                                     |
-| Intentional Design                     | NestJS PR  | Documented trade-off with an inline NOTE                                |
-| Disagreeing Claim                      | Starlette PR | Two reviewers give opposite claims; tiebreaker is an experiment       |
-| Confidently Wrong on Library Internals | Starlette PR | Articulate reassurance about framework behavior that contradicts source |
-| Stale Snapshot Review                  | Python PR  | Review indexed against an earlier revision that no longer is HEAD       |
-| `isOutdated` Is Not a Correctness Signal | NestJS DTO PR | GitHub marked thread outdated but the underlying concern was still real |
+| Pattern                                | Type     | First seen   | Trigger                                                                 |
+| -------------------------------------- | -------- | ------------ | ----------------------------------------------------------------------- |
+| Cross-File Blindness                   | failure  | NestJS PR    | NestJS decorator vs. Express typing                                     |
+| Intentional Design                     | failure  | NestJS PR    | Documented trade-off with an inline NOTE                                |
+| Disagreeing Claim                      | failure  | Starlette PR | Two reviewers give opposite claims; tiebreaker is an experiment         |
+| Confidently Wrong on Library Internals | failure  | Starlette PR | Articulate reassurance about framework behavior that contradicts source |
+| Stale Snapshot Review                  | failure  | Python PR    | Review indexed against an earlier revision that no longer is HEAD       |
+| `isOutdated` Is Not a Correctness Signal | failure | NestJS DTO PR | GitHub marked thread outdated but the underlying concern was still real |
+| Cross-Round Twin Detection             | strength | NestJS PR #858 | Bot applies prior-round fix as template, catches same shape on sibling |
 
-What follows is each pattern, with the PR evidence and what I learned about detecting it.
+What follows is each pattern, with the PR evidence and what I learned about detecting (or amplifying) it.
 
 ## Pattern 1 — Cross-File Blindness
 
@@ -164,24 +164,49 @@ On a recent NestJS PR, Copilot raised an empty-string validation concern on a DT
 
 Operationally, `isOutdated` is correlated with cross-PR line shifts (stacked PRs where one commit's reformat triggers the flag on another PR's thread) and with autoformatter runs. Treat these events as "line moved", not "concern resolved".
 
-## Per-reviewer tendencies
+## Pattern 7 — Cross-Round Twin Detection (Strength)
+
+> **One-line definition:** The reviewer applies a fix from an earlier round as a template and catches the same shape in a sibling file or class on the next round.
+
+The first six patterns are all things you want to *suppress*. Pattern 7 is the opposite — a behavior worth deliberately *amplifying*, because it converts one fix into a structural cleanup across a codebase.
+
+Pattern 7 emerged on PR #858 (April 28). Across four rounds, the bot kept applying earlier fixes as templates:
+
+- **R3-1:** bot flagged a per-ref `publishContactUpserted` loop on `SyncAttendeeContactListener`. Fix: bulk emit.
+- **R4-1:** bot flagged a per-ref `publishContactUpserted` loop on `AttendeeContactListener` — different class, different `@OnEvent` topic, but the same shape. Fixed identically.
+- **F-T-4 (proactive):** bot flagged missing `addBulkWithSentry` on `BlockSearchListener`. Fix landed.
+- **R2-1:** bot flagged the same gap on `ContactSearchListener`. Same fix applied.
+
+**Why it works.** The bot reads the PR's diff context — prior commits plus summary comments — when it reviews a new round. When a fix lands in commit N, commit N+1's review prompt includes that fix as input. The bot applies it as a template, looking for the same shape elsewhere in changed files. The PR diff context is acting as semantic memory across rounds.
+
+**How to amplify.**
+
+- **Use the round summary comment to describe the fix shape, not just the file:line.** The bot reads the comment. "Replaced per-ref emit with `publishBulkAsync` + listener `addBulk`" is a template; "Fixed N+1 emit in attendee listener" is not.
+- **After fixing one site, deliberately leave nearby twin code for the next cascade.** Let the bot find it. Triggering `@claude review` on every commit gives it the surface to scan.
+- **Multi-round validation (R1 → R5+) is what surfaces these.** Single-round PRs miss the twins entirely. Plan for multiple rounds when the change shape is likely to repeat.
+
+**Anti-pattern that suppresses Pattern 7.** Marking R4-1-style findings as `DUPLICATE` of R3-1 by location/file alone. They're not duplicates — they're the same shape on a different surface. Dedup rules in `/validate-pr-reviews` Phase 1.5 should distinguish "exact location match" (real duplicate) from "pattern repeat" (twin detection). Mark as RELATED-NOT-DUP and classify as a new finding.
+
+## Per-Reviewer Tendencies
 
 Two PRs is not enough data to draw firm conclusions, but the early pattern is worth noting:
 
 | Agent   | Most common failure mode                | Strength                                            | Weakness                                                                  |
 | ------- | ---------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------- |
 | Copilot | Cross-File Blindness                     | Good at surface-level code quality and style checks | Analyzes single-file scope, misses cross-package behavior                 |
-| Claude  | Confidently Wrong on Library Internals   | Articulate architectural narrative                  | Confident reassurance on framework internals that contradicts source      |
+| Claude  | Confidently Wrong on Library Internals   | Articulate architectural narrative; strong cross-round twin detection | Confident reassurance on framework internals that contradicts source      |
 | Codex   | (too few samples)                        | Terse but often correct on library-internals claims | Small sample size so far                                                  |
 
 The most surprising observation is that articulation and confidence are not proxies for correctness. On the Starlette disagreement, Claude's INFO was articulate, detailed, and wrong; Codex's flag was terse and correct. The tiebreaker was a 0.2-second experiment, not reviewer seniority or prose quality.
 
 ## Takeaways
 
-- **Six failure modes are worth naming even at count=1.** The goal of classification is not statistical significance — it is faster triage on the next PR. Once you have a name for the pattern, you recognize it in the wild.
+- **Six failure modes plus one strength are worth naming even at count=1.** The goal of classification is not statistical significance — it is faster triage on the next PR. Once you have a name for the pattern, you recognize it in the wild.
 - **Reinforcing NOTEs are the most effective prevention, but only for Patterns 1, 2, and 5.** For Disagreeing Claim and Confidently Wrong, no amount of inline documentation helps — you need an empirical check. Stale Snapshot benefits from NOTEs because they help future re-indexes pick up current intent.
 - **The Empirical Tiebreaker Protocol is the highest-leverage technique in the workflow.** When two reviewers disagree, the workflow's job is to flag the disagreement and force an experiment. This is the moment where the whole process pays for itself — it catches the one critical bug that would otherwise have been dismissed via confident but wrong reassurance.
+- **Cross-round twin detection is multi-round PR validation's killer feature.** Single-round PRs miss the second and third twins entirely. The bot needs prior-fix context (commits + summary comment trailer) to apply the pattern. Always use the round summary comment to describe the fix *shape* so the next cascade has it as template input.
 - **Read INFO comments closely when they touch library internals.** They are the natural home for Pattern 4.
 - **Don't trust tooling heuristics as correctness signals.** `isOutdated` (Pattern 6) feels like it means "concern resolved" but means "comment cannot be anchored to a current diff line". Log skipped threads so you can re-examine them on a second pass.
+- **Institutional rules can override AI flags.** AI reviewers correctly flag documented best practices (e.g., `CREATE INDEX CONCURRENTLY` on hot tables) but cannot see institutional rules ("don't touch generated migration files unless inevitable"). When a flag conflicts with such a rule, the rule wins — even when the flag's technical content is correct. Save such rules as durable feedback memories so future validation rounds default-skip the flag instead of re-litigating it.
 
-I expect this catalog to grow. The point is not to produce a comprehensive taxonomy — it is to make each next bug easier to triage than the last. If you are running AI code review on your PRs and have not started classifying the false positives, naming the shapes of the failures is where I would start.
+I expect this catalog to grow. The point is not to produce a comprehensive taxonomy — it is to make each next bug easier to triage than the last. If you are running AI code review on your PRs and have not started classifying the false positives, naming the shapes of the failures is where I would start. And when you spot a *productive* behavior like cross-round twin detection, treat it the same way — name it, find ways to amplify it, and protect it from dedup rules that would otherwise suppress it.

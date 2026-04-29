@@ -1,8 +1,8 @@
 ---
 title: "AI PR 리뷰 검증 패턴"
-description: "AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 흔한 패턴과 재발 방지 방법."
+description: "AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 13가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크 + 보강 주석 템플릿."
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-04-24'
+updated: '2026-04-29'
 tags:
   - devops
   - ai
@@ -12,8 +12,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
-source_updated: "2026-04-24"
-translation_date: "2026-04-24"
+source_updated: "2026-04-29"
+translation_date: "2026-04-29"
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -253,6 +253,41 @@ git log origin/main..HEAD -- {file} --format="%h %ae %s"
 crucio PR #40에서 실제로 겪은 사례예요. 18개 Copilot 지적 중 12개(67%)가 11개 README file에 걸쳐 이 똑같은 환각이었어요. 테이블 포매팅 문제는 단 하나도 없었어요. 처음에는 각 file을 개별적으로 확인하려 했지만, 두 번째 지적이 동일하다는 걸 확인한 후 나머지를 일괄 기각해서 한 시간 넘게 절약했어요.
 
 **예방:** 문서 PR에서는 지적된 file 하나를 먼저 스팟 체크하세요. 첫 번째 지적이 false positive면, 개별 review 없이 비슷한 지적을 일괄 기각하세요.
+
+### 13. Cross-Skill Name Confusion (Phantom Comparison)
+
+**어떻게 보이나:** Reviewer가 권위 있어 보이는 line 번호와 field 이름을 인용해요 — 그런데 실제 file에 `grep -n` 해보면 완전히 다른 내용이 나와요. Reviewer가 제안하는 "누락된 fix"는 review 중인 file을 깨뜨리지만, 이름 root를 공유하는 *다른* skill이나 module에는 맞을 거예요.
+
+**왜 이런 일이 생기나:** 두 skill이 이름 root를 공유하고 둘 다 세션의 skill registry에 있을 때, AI reviewer가 그 schema들을 mental하게 merge해서 PR을 *다른* 쪽 skill의 동작에 대해 review할 수 있어요. 모델이 line-level "finding"을 만들어내는데, 그 내용이 우리 file에는 없지만 conflated된 sibling에는 있는 거예요.
+
+**예시 (3B PR #19, 4월 말):**
+
+Codex가 `/interview` (markdown-only Socratic skill, 런타임 의존성 0) import를 review했어요. Codex의 finding들은 이렇게 주장했어요:
+
+- "SKILL.md:33의 curl version check" — line 33은 `## Instructions` 헤더였어요. 소스 어디에도 curl 없음.
+- "SKILL.md:93의 MCP가 질문함" — line 93은 code-confirmation 예시였어요. 소스는 line 38에 명시적으로 "MCP tools 없음"이라고 적혀 있어요.
+- "summary를 `ooo seed` artifact로 교체" — `ooo seed`는 `/ouroboros:interview`의 artifact예요. 같은 세션 registry에 있는 다른 skill요.
+- "MCP response contract — `meta.session_id`, `meta.is_complete` 강화" — 소스에는 MCP layer가 없어요. pure conversation engine이에요.
+
+네 finding 모두 `/ouroboros:interview` (Python/MCP/`ooo seed` 생성)에 적용될 내용이에요. Codex가 이름 root 공유 + 세션 가용성 공유 기반으로 두 skill을 conflated한 것 같아요. 5개 중 1개(dead filesystem link)만 valid했어요.
+
+**왜 AI reviewer 휴리스틱이 실패하나:**
+
+- Skill registry가 이름이 겹치는 여러 skill을 노출해요(`/interview`와 `/ouroboros:interview`).
+- LLM reviewer가 가끔 어느 skill인지 grounding 없이 "the skill"이라고 인용해요.
+- *다른* skill이 internally consistent하니까 confidence가 높게 유지돼요 — reviewer의 mental model이 깨진 게 아니라 잘못된 target을 가리킬 뿐이에요.
+- output이 specific해 보여요(line 번호, field 이름) 하지만 review 중인 file에 대해서는 fabricated예요.
+
+**예방 — cross-check 규율.** specific line, file, API를 인용하는 모든 AI review finding에 대해 다음을 실행하세요:
+
+```bash
+grep -n -i '<claimed-string>' <claimed-file>
+sed -n '<claimed-line>p' <claimed-file>
+```
+
+grep이 비어 있거나 line이 다른 내용을 보여주면, finding은 hallucinated이거나 phantom version과 비교 중이에요. grep이 확인할 때까지 모든 미검증 주장을 INVALID로 다루세요. finding당 ~5초 추가되고, 그렇지 않으면 30+ 분 낭비할 cross-skill confusion을 잡아요.
+
+**Reviewer 비대칭(같은 PR의 데이터 포인트):** 같은 PR의 3b-forge plugin review는 grounded였어요 — 5개 중 4개 valid finding. 실제 repo file 구조에서 동작하는 plugin reviewer가 세션 scope reviewer (Codex)보다 — 세션이 skill 이름 충돌을 포함할 때 — 더 높은 정밀도 output을 만들어요.
 
 ## 워크플로
 
