@@ -40,8 +40,11 @@ pnpm-lock.yaml
 # Claude Code
 .claude/
 
-# Serena MCP cache
-.serena/cache/
+# Serena MCP local tool state (cache + memories + project.local.yml)
+.serena/
 
 # graphify output (per-repo knowledge graph — rebuild via /graphify)
 graphify-out/
+
+# context-mode plugin local sandbox + index (per-repo, rebuild on demand)
+.context-mode/
