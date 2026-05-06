@@ -1,8 +1,8 @@
 ---
 title: Markdownlint 컨벤션 가이드
-description: '200개 markdown 파일에 7,500개의 markdownlint 에러. 어떤 룰이 중요한지, 어떤 설정이 잘 정착했는지, 그리고 nested scope에서만 표면화되는 두 가지 pre-commit 함정.'
+description: '200개 markdown 파일에 7,500개의 markdownlint 에러. 어떤 룰이 중요한지, 어떤 설정이 잘 정착했는지, nested scope에서만 표면화되는 두 가지 pre-commit 함정, 그리고 14-rule custom config를 한 줄 extends + 5개 carve-out으로 collapse한 strict-preset 마이그레이션.'
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-04-29'
+updated: 2026-05-06
 tags:
   - general
   - documentation
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: markdownlint-conventions
-source_updated: '2026-04-29'
-translation_date: '2026-04-29'
+source_updated: 2026-05-06
+translation_date: '2026-05-06'
 references:
   - url: 'https://github.com/DavidAnson/markdownlint'
     title: markdownlint
@@ -26,6 +26,15 @@ references:
       https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint
     title: items
     type: verified
+  - url: 'https://github.com/DavidAnson/markdownlint/blob/main/style/all.json'
+    title: 'markdownlint built-in style/all preset'
+    type: official
+  - url: 'https://www.joshuakgoldberg.com/blog/configuring-markdownlint-alongside-prettier/'
+    title: 'Configuring Markdownlint Alongside Prettier (Joshua Goldberg)'
+    type: authoritative
+  - url: 'https://github.com/github/markdownlint-github'
+    title: 'GitHub의 markdownlint preset (accessibility-focused)'
+    type: official
 ---
 
 나의 지식 베이스에 처음으로 `markdownlint`를 돌렸더니 7,500개의 에러가
@@ -202,6 +211,91 @@ Fenced 코드 블록 앞뒤에 빈 줄이 필요해요. 없으면 일부 렌더�
 | MD033 | `false`               | 인라인 HTML 허용 (배지, details 태그 등) |
 | MD041 | `false`               | 최상위 헤딩 없는 문서 허용               |
 
+## Strict preset 채택하기 (`style/all` + Carve-Outs)
+
+위 같은 14-rule custom config는 시간이 지나면서 no-op이거나 redundant이거나 조용히 broken인 entry들이 쌓여요. 몇 달 같이 살아본 후 저는 upstream `style/all` preset + 적은 수의 documented carve-out으로 마이그레이션했어요. 마이그레이션은 sprawling per-rule config를 한 줄 `extends:` + 몇 개의 explicit exception으로 collapse했고, ineffective override 뒤에 숨어 있던 36개 MD040 에러를 표면화시켰어요.
+
+### Recipe
+
+```json
+{
+  "config": {
+    "extends": "markdownlint/style/all",
+
+    // Carve-out — 각각 reason과 함께 documented
+    "MD013": false, // prettier가 wrapping 처리
+    "MD024": { "siblings_only": true }, // sibling section repetition 허용
+    "MD025": { "front_matter_title": "" }, // frontmatter 아래 H1 없음
+    "MD036": false, // **Bold:** 패턴이 의도적
+    "MD060": false // table column style이 다양함
+  },
+  "ignores": [
+    /* ... */
+  ]
+}
+```
+
+### `style/all`이 실제로 뭔지
+
+upstream preset([style/all.json](https://github.com/DavidAnson/markdownlint/blob/main/style/all.json))은 문자 그대로:
+
+```json
+{
+  "comment": "All rules",
+  "default": true
+}
+```
+
+그래서 `extends: "markdownlint/style/all"`은 `{"default": true}`와 동치예요 — default 설정으로 모든 룰 ON. 둘 다 valid baseline이지만, `extends:`가 의도를 documenting하니까 선호돼요(anonymous `default: true` 대비).
+
+### 다른 built-in preset
+
+같은 `style/` 디렉토리에 세 가지 옵션이 더 있어요. 모두 subtractive(extend되도록 디자인됨, custom 룰을 위에 layer해서 standalone으로 사용 X):
+
+| Preset                    | 비활성화                                                                                                                       | Use case                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| `style/all.json`          | nothing — `{default: true}`                                                                                                    | 가장 strict한 baseline, 필요한 만큼 carve out        |
+| `style/relaxed.json`      | line-length, ul-indent, no-inline-html, no-bare-urls, fenced-code-language, first-line-h1, whitespace                          | 산문 위주의 GitHub README에 permissive default       |
+| `style/prettier.json`     | 23개 formatting 룰 (blanks-around-fences, code-fence-style, hr-style, line-length, list-indent, no-trailing-spaces, etc.)      | prettier와 공존 — Joshua Goldberg의 recipe          |
+| `style/cirosantilli.json` | Ciro Santilli의 personal style                                                                                                 | 참조용                                                |
+
+### proposed config를 먼저 돌려보고, 그 다음 약속하기
+
+config 단순화를 제안할 때, proposed config를 unmodified content에 대해 먼저 돌려봐요. current-config output에서 추정하지 마세요 — 기존 override들이 "pure default"로 전환하면 inherit할 수천 개 failure를 silencing하고 있을 수도 있어요. 3B test(2026-05-01)에서:
+
+| Config                                | Failure (보고됨)                  |
+| ------------------------------------- | --------------------------------- |
+| 기존 14-rule custom                    | 131                               |
+| `extends: "markdownlint/style/all"`   | **11,398** (MD013 만: 10,491)     |
+| `extends: "style/all"` + 5 carve-out  | 36 (MD040만, sweepable)           |
+
+처음 둘은 14개 customization이 "default에 대해 no-op"이었다면 동일해야 했어요. 대신 기존 config가 MD013 false(line-length), MD024 siblings_only=true, MD025 front_matter_title=""을 통해 ~11,000 failure를 silencing하고 있었어요 — 즉, 그 override들은 redundant가 아니라 load-bearing이었던 거예요.
+
+workflow: temp config 파일 작성(파일명에 `markdownlint-cli2` prefix 필요, 예: `pure-default.markdownlint-cli2.jsonc` — CLI가 임의 이름을 reject), `npx markdownlint-cli2 --config <temp-file> '<glob>'` 실행, failure를 `MD###/rule-name`별로 그룹화한 다음 carve out vs fix할 것 결정.
+
+### config-theater 함정
+
+valid해 보이지만 인식되지 않는 값이라서 효과 없는 custom 룰 값이에요. markdownlint가 경고 없이 default behavior로 silently fall back해요. config만 읽어서 감지하기 어려워요. 3B의 이전 config에서 본 예시:
+
+| Override                  | Issue                                                                  | Fix                                                |
+| ------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------- |
+| `MD060: { style: "any" }` | `"any"`는 valid 값이 아님(valid: `compact`, `aligned`, `consistent`)  | 룰을 비활성화하려면 `MD060: false`                  |
+| 11× `MD###: true` entry   | default와 정확히 일치 — redundant noise                                | drop; `default: true`에 의존                        |
+
+Diff-test 룰: override 있이 vs 없이 lint. failure count + distribution이 동일하면 override가 broken이거나 redundant. fix 또는 drop.
+
+### `@github/markdownlint-github`와 비교
+
+DavidAnson lib 위에 빌드된 third-party preset이고, 다른 청중(이미지가 있는 accessible OSS 문서)을 위해 opinionated돼 있어요. `base.js` + `accessibility.js` + custom `GH001-003` 룰 composing:
+
+- `ul-style: { style: "asterisk" }` 강제(모든 `-` bullet flag됨)
+- `no-emphasis-as-heading: true` 강제
+- `no-duplicate-heading`을 `siblings_only: false`로 강제
+- GH001 (no-default-alt-text), GH002 (no-generic-link-text), GH003 (no-empty-alt-text) 추가
+- `.markdownlint-cli2.mjs`(function-based config) + `@github/markdownlint-github` + `markdownlint-cli2-formatter-pretty` npm install 필요
+
+이미지가 있는 public OSS 문서에서 accessibility 강제가 중요하지 않으면 skip. 산문 위주의 private knowledge base에는 마이그레이션 비용(3B 콘텐츠에서 수천 개 rewrite 에러 추정)이 이익을 능가해요.
+
 ## Scope 경고: 루트 설정이 항상 이기는 건 아니에요
 
 나중에 배운 미묘한 점: 프로젝트 루트에서 룰을 비활성화해도 nested config
@@ -341,7 +435,10 @@ Markdownlint는 암묵적인 포맷팅 기대를 명시적이고 강제할 수 �
 기존 파일에 `markdownlint`를 먼저 돌려보세요. 한 번에 모든 걸 고치려 하지
 마세요. 가장 많은 에러를 생성하는 규칙을 파악하고, 그 규칙의 컨벤션을 먼저
 정립한 뒤 대량으로 수정하세요. 프로젝트의 필요와 충돌하는 규칙은 설정으로
-비활성화하세요 (산문이 많은 저장소의 MD013 같은 경우).
+비활성화하세요 (산문이 많은 저장소의 MD013 같은 경우). 후속 `style/all` 마이그레이션은
+sprawling 14-rule custom config를 한 줄 `extends:` + 5개 documented carve-out으로 대체했고,
+이전 override들이 silencing하던 ~11,000 failure를 표면화시켰어요 — load-bearing,
+not redundant.
 
 markdownlint를 적용할 곳:
 

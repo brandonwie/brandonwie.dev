@@ -1,11 +1,12 @@
 ---
 title: AI Code Review Confusion Patterns
 description: >-
-  Seven distinct ways Claude, Copilot, and Codex behave on PRs — six failure
-  modes plus one strength to amplify, with detection signals and the empirical
-  tiebreaker that resolves factual disagreements.
+  Eleven distinct ways Claude, Copilot, and Codex behave on PRs — nine failure
+  modes plus one strength to amplify, plus an analyst-side error class. With
+  detection signals and the empirical tiebreaker that resolves factual
+  disagreements.
 date: 2026-04-08T00:00:00.000Z
-updated: 2026-04-29T00:00:00.000Z
+updated: 2026-05-06
 tags:
   - ai-ml
   - code-review
@@ -18,7 +19,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 955f120c65447916f6ec0024df8c389287316dba6dd64f1b0d1615be8f40d4fc
+source_content_hash: eef4d625d79a647208eedfc6498a013c576aa8b255cb352a6f61d657f29fcb02
 references:
   - url: 'https://github.com/brandonwie/crucio/pull/83'
     title: 'crucio PR #83 — Claude vs Codex disagreement on Starlette ordering'
@@ -30,21 +31,25 @@ references:
 
 Recently I started running a `/validate-pr-reviews` workflow that takes every inline comment Claude, Copilot, and Codex leave on a diff and classifies each as valid, invalid, controversial, or good-to-have. The point is to catch real bugs from the signal side while filtering out false positives with structure.
 
-Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR (#858) surfaced something different: a *productive* behavior worth amplifying. I can now point at six failure modes and one strength, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one or two samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
+Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR (#858) surfaced something different: a *productive* behavior worth amplifying. May added three more failure modes — including the first analyst-side error class — and one PR-body-vs-source-conflation pattern. I can now point at nine failure modes, one strength, and one analyst-side class, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one or two samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
 
 ## The setup
 
-The validation workflow looks at every AI reviewer comment on a PR and, for each INVALID finding, asks one question: *why was this wrong?* Not "why was the reviewer confused?" but "what specific class of reasoning failure does this match?" Six failure modes have emerged, plus one productive behavior worth tracking separately:
+The validation workflow looks at every AI reviewer comment on a PR and, for each INVALID finding, asks one question: *why was this wrong?* Not "why was the reviewer confused?" but "what specific class of reasoning failure does this match?" Nine reviewer-side failure modes have emerged, plus one productive behavior worth tracking separately, plus one analyst-side class:
 
-| Pattern                                | Type     | First seen   | Trigger                                                                 |
-| -------------------------------------- | -------- | ------------ | ----------------------------------------------------------------------- |
-| Cross-File Blindness                   | failure  | NestJS PR    | NestJS decorator vs. Express typing                                     |
-| Intentional Design                     | failure  | NestJS PR    | Documented trade-off with an inline NOTE                                |
-| Disagreeing Claim                      | failure  | Starlette PR | Two reviewers give opposite claims; tiebreaker is an experiment         |
-| Confidently Wrong on Library Internals | failure  | Starlette PR | Articulate reassurance about framework behavior that contradicts source |
-| Stale Snapshot Review                  | failure  | Python PR    | Review indexed against an earlier revision that no longer is HEAD       |
-| `isOutdated` Is Not a Correctness Signal | failure | NestJS DTO PR | GitHub marked thread outdated but the underlying concern was still real |
-| Cross-Round Twin Detection             | strength | NestJS PR #858 | Bot applies prior-round fix as template, catches same shape on sibling |
+| Pattern                                  | Type     | First seen      | Trigger                                                                 |
+| ---------------------------------------- | -------- | --------------- | ----------------------------------------------------------------------- |
+| Cross-File Blindness                     | failure  | NestJS PR       | NestJS decorator vs. Express typing                                     |
+| Intentional Design                       | failure  | NestJS PR       | Documented trade-off with an inline NOTE                                |
+| Disagreeing Claim                        | failure  | Starlette PR    | Two reviewers give opposite claims; tiebreaker is an experiment         |
+| Confidently Wrong on Library Internals   | failure  | Starlette PR    | Articulate reassurance about framework behavior that contradicts source |
+| Stale Snapshot Review                    | failure  | Python PR       | Review indexed against an earlier revision that no longer is HEAD       |
+| `isOutdated` Is Not a Correctness Signal | failure  | NestJS DTO PR   | GitHub marked thread outdated but the underlying concern was still real |
+| Cross-Round Twin Detection               | strength | NestJS PR #858  | Bot applies prior-round fix as template, catches same shape on sibling  |
+| PR Diff Scope Confusion                  | analyst  | 3B PR #45       | Analyst used local-base diff instead of origin-base diff                |
+| Cross-File Mirror Drift                  | failure  | 3B PR #45       | Mirror prose enumerated 4 of 7 canonical rows; reviewer caught          |
+| Issue-Comment vs Inline Thread Gap       | failure  | 3B PR #45       | Bot posted findings as one issue-comment summary, not inline threads    |
+| PR-Body-Source-Conflation                | failure  | 3B PR #47       | Reviewer treated PR description prose as source-code commentary         |
 
 What follows is each pattern, with the PR evidence and what I learned about detecting (or amplifying) it.
 
@@ -187,6 +192,76 @@ Pattern 7 emerged on PR #858 (April 28). Across four rounds, the bot kept applyi
 
 **Anti-pattern that suppresses Pattern 7.** Marking R4-1-style findings as `DUPLICATE` of R3-1 by location/file alone. They're not duplicates — they're the same shape on a different surface. Dedup rules in `/validate-pr-reviews` Phase 1.5 should distinguish "exact location match" (real duplicate) from "pattern repeat" (twin detection). Mark as RELATED-NOT-DUP and classify as a new finding.
 
+## Pattern 8 — PR Diff Scope Confusion (analyst-side)
+
+> **One-line definition:** The analyst running `/validate-pr-reviews` misverifies PR scope by using local-base diff instead of origin-base diff.
+
+This pattern is distinct from the rest of the catalog because it's a failure of the analyst (Claude doing the validation), not the reviewer. It's worth aggregating because cross-agent skills may have analysts on multiple sides; the failure mode is symmetric.
+
+On 3B PR #45, Claude (analyst) dismissed a reviewer claim that an archive deletion was unrelated to the PR. The dismissal used `git diff main..HEAD --name-only`, which returned 4 task-starter files only — the archive was filtered out because local `main` already had it. The reviewer was correct: `git log origin/main..HEAD` listed the archive commit. A Round 2 reviewer (claude bot) caught the dismissal mistake and forced a retraction.
+
+**Why it happens.** Local `main` may diverge from `origin/main` if commits were made locally but not pushed. GitHub's PR diff is computed against `origin/{base}`. When the analyst uses `main..HEAD` instead of `origin/main..HEAD`, the local-only commits look like base content, and any PR commit that touches the same files appears narrower than it actually is.
+
+**Prevention.** ALWAYS use `git diff origin/{base}..HEAD --name-only` (after `git fetch origin`) or `gh pr view {N} --json files` for PR scope verification. Document the lesson in the affected round file with explicit retraction when the mistake surfaces.
+
+**Resolution path.** Either (a) push local `{base}` forward to align with the intent (archive belongs on main → push), or (b) acknowledge the commit is in PR scope and update PR description to call it out.
+
+## Pattern 9 — Cross-File Mirror Drift
+
+> **One-line definition:** A prose mirror of a canonical table drifts silently when the canonical table changes but the mirror doesn't.
+
+Skill systems where one file (e.g., `.codex/skills/X/SKILL.md`) is a prose mirror of canonical tables in another file (e.g., `.agents/skills/X/SKILL.md`) suffer this pattern. Manual mirror maintenance drifts silently when the canonical table changes but the mirror prose doesn't. Reviewers reading both files structurally catch the asymmetry; unit tests counting individual properties (e.g., grep for routing rows) miss it because the count alone may match.
+
+On 3B PR #45, the Codex adapter Phase 0.7 contract bullet enumerated only 4 of the 7 routing rows in the canonical table. Round 3 reviewer (claude bot) caught that `fix-broad → full-project` was missing from the adapter. Round 4 surfaced a separate but same-class issue: `output_commitment` comment style diverged between SKILL.md (`| null`) and templates.md (`; null otherwise`).
+
+**Prevention.** Three layers, increasing in cost and reliability:
+
+- (a) Add a back-reference from mirror to canonical: "See `.agents/skills/X/SKILL.md § Phase 0.7` for the authoritative table." This gives reviewers and humans a clear path to compare.
+- (b) Long-term: add a smoke parity test that grep-compares the mirror against canonical for row count and key rows.
+- (c) Even better: programmatic cross-file consistency check in CI.
+
+**Root cause category.** Manual sync drift. Same class as drift between docstrings and code, or between schema and migration.
+
+## Pattern 10 — Issue-Comment vs Inline Thread Classification Gap
+
+> **One-line definition:** Bots report findings via two distinct GitHub mechanisms; thread-centric classification flow misroutes the issue-comment-summary kind.
+
+AI bots report findings via two distinct GitHub mechanisms: (a) inline review threads tied to specific file:line, (b) issue-comment summaries posted to the PR conversation. `/validate-pr-reviews` Phase 1 fetches both, but the classification flow (Phase 2-3) is thread-centric — designed around per-finding inline threads with thread IDs. Issue-comment summaries with multiple findings inline get treated as a single bag instead of split per-finding.
+
+On 3B PR #45 R4, claude bot Round 4 review posted findings as ONE issue-comment summary with 2 findings (R4-1 ACTIVE-STATUS stale, R4-2 output_commitment style). No inline review threads were created. The skill protocol asks for "per-thread reply + resolve" — there were no threads. The round file captured both findings correctly but GitHub-side replies could only happen via new issue-comment, not thread-resolve mutation.
+
+**Prevention.** Refine `/validate-pr-reviews` Phase 1 to explicitly distinguish "inline thread findings" from "issue-comment findings" and route classification + reply differently. Issue-comment findings need: (a) parse finding list out of comment body, (b) reply via new issue-comment referencing original, (c) optional `minimizeComment` mutation on the original. Same classification rules apply; reply mechanism differs.
+
+**Root cause category.** Skill design assumption. Designed for one mode; bots use both. Symmetric refinement needed.
+
+## Pattern 11 — PR-Body-Source-Conflation
+
+> **One-line definition:** The reviewer reads PR description prose as if it were source-code commentary, then flags claims that exist in the PR body but not in the file.
+
+This is a variant of Cross-File Blindness, but inverted: instead of missing context across source files, the reviewer is OVER-anchored to the PR body text and misattributes it to the source.
+
+**Example claim:** "the comment at line N says 'Mirrors lines 5-15' — but `oauth_client_ids` is lines 6-10, not 5-15."
+
+**Reality:** the file's actual comment at line N says "Mirrors the `oauth_client_ids` map pattern above; consumed by the gated dynamic env block in `containers{}` below." It contains NO line numbers. The reviewer was referencing the PR description, which DID cite "lines 5-10 / 369-377" as prose context for human readers — not as a comment to be checked against source.
+
+**Why it happens.**
+
+- AI reviewers receive both the PR diff AND the PR body in their prompt context. The body's prose mentions line numbers as orientation aids for the human reviewer; the AI matches that prose against the source as if it were a code comment claim.
+- Reviewers don't always tag the source of a quoted phrase ("the docstring says X" vs "the PR description says X"). This pattern is most visible when the reviewer's quote uses the article "the" without specifying which artifact contains it.
+
+**How to detect during validation.**
+
+1. The reviewer's quoted text DOES NOT exist in the source file at the flagged line.
+2. The quoted text DOES exist in the PR description.
+3. The reviewer treats the PR-body prose as authoritative ("the comment says X — but the actual lines don't match").
+
+**Resolution.** DISMISS as INVALID. No reinforcing comment needed in the source — the source comment was already correct. Optionally: add a note to the round file's confusion-pattern log; if the pattern recurs, add a tag in the PR description prose like `(PR-body description; not a code comment)` to disambiguate.
+
+**Mitigation strategies.**
+
+- Avoid using line numbers in PR description prose unless the line numbers are stable AND close to merge. PR descriptions are durable text; line numbers reference an unstable target.
+- When PR body NEEDS to cite line ranges (e.g., for cross-file pattern references), add explicit "(in PR description, not source)" framing so the AI reviewer can disambiguate.
+
 ## Per-Reviewer Tendencies
 
 Two PRs is not enough data to draw firm conclusions, but the early pattern is worth noting:
@@ -201,12 +276,14 @@ The most surprising observation is that articulation and confidence are not prox
 
 ## Takeaways
 
-- **Six failure modes plus one strength are worth naming even at count=1.** The goal of classification is not statistical significance — it is faster triage on the next PR. Once you have a name for the pattern, you recognize it in the wild.
-- **Reinforcing NOTEs are the most effective prevention, but only for Patterns 1, 2, and 5.** For Disagreeing Claim and Confidently Wrong, no amount of inline documentation helps — you need an empirical check. Stale Snapshot benefits from NOTEs because they help future re-indexes pick up current intent.
+- **Eleven patterns are worth naming even at count=1 each.** The goal of classification is not statistical significance — it is faster triage on the next PR. Once you have a name for the pattern, you recognize it in the wild.
+- **Reinforcing NOTEs are the most effective prevention, but only for Patterns 1, 2, 5, and (partially) 9.** For Disagreeing Claim and Confidently Wrong, no amount of inline documentation helps — you need an empirical check. Stale Snapshot benefits from NOTEs because they help future re-indexes pick up current intent. Cross-File Mirror Drift can use back-references as a halfway fix while a CI consistency check is the real solution.
 - **The Empirical Tiebreaker Protocol is the highest-leverage technique in the workflow.** When two reviewers disagree, the workflow's job is to flag the disagreement and force an experiment. This is the moment where the whole process pays for itself — it catches the one critical bug that would otherwise have been dismissed via confident but wrong reassurance.
 - **Cross-round twin detection is multi-round PR validation's killer feature.** Single-round PRs miss the second and third twins entirely. The bot needs prior-fix context (commits + summary comment trailer) to apply the pattern. Always use the round summary comment to describe the fix *shape* so the next cascade has it as template input.
 - **Read INFO comments closely when they touch library internals.** They are the natural home for Pattern 4.
-- **Don't trust tooling heuristics as correctness signals.** `isOutdated` (Pattern 6) feels like it means "concern resolved" but means "comment cannot be anchored to a current diff line". Log skipped threads so you can re-examine them on a second pass.
+- **Don't trust tooling heuristics as correctness signals.** `isOutdated` (Pattern 6) feels like it means "concern resolved" but means "comment cannot be anchored to a current diff line." Log skipped threads so you can re-examine them on a second pass.
 - **Institutional rules can override AI flags.** AI reviewers correctly flag documented best practices (e.g., `CREATE INDEX CONCURRENTLY` on hot tables) but cannot see institutional rules ("don't touch generated migration files unless inevitable"). When a flag conflicts with such a rule, the rule wins — even when the flag's technical content is correct. Save such rules as durable feedback memories so future validation rounds default-skip the flag instead of re-litigating it.
+- **Always verify PR scope against `origin/{base}`, not local `{base}`.** Pattern 8 is the analyst-side mirror of Pattern 5 — the failure mode is the same shape (stale view of HEAD), only the actor differs. The remediation is mechanical: use `git fetch origin` + `git diff origin/{base}..HEAD --name-only` or `gh pr view --json files`.
+- **Mirror systems need a parity check.** Pattern 9's prose-table drift is the same class of bug as docstring-vs-code drift. Treat it the same way: a CI check is the only durable defense; back-references are a useful interim.
 
 I expect this catalog to grow. The point is not to produce a comprehensive taxonomy — it is to make each next bug easier to triage than the last. If you are running AI code review on your PRs and have not started classifying the false positives, naming the shapes of the failures is where I would start. And when you spot a *productive* behavior like cross-round twin detection, treat it the same way — name it, find ways to amplify it, and protect it from dedup rules that would otherwise suppress it.

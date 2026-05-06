@@ -1,8 +1,8 @@
 ---
 title: Markdownlint Conventions
-description: 7,500 markdownlint errors across 200 markdown files. The rules that mattered, the configuration that stuck, and two pre-commit traps that surface only in nested scopes.
+description: 7,500 markdownlint errors across 200 markdown files. The rules that mattered, the configuration that stuck, two pre-commit traps that surface only in nested scopes, and the strict-preset migration that collapsed a 14-rule custom config into one extends + five carve-outs.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-04-29T00:00:00.000Z
+updated: 2026-05-06
 tags:
   - general
   - documentation
@@ -23,12 +23,21 @@ references:
       https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint
     title: VS Code markdownlint extension
     type: verified
-source_content_hash: a2ebd93049fdc6d39dd441fec84b9bb4555eae1400ef59581abac63f29e6345a
+  - url: 'https://github.com/DavidAnson/markdownlint/blob/main/style/all.json'
+    title: 'markdownlint built-in style/all preset'
+    type: official
+  - url: 'https://www.joshuakgoldberg.com/blog/configuring-markdownlint-alongside-prettier/'
+    title: 'Configuring Markdownlint Alongside Prettier (Joshua Goldberg)'
+    type: authoritative
+  - url: 'https://github.com/github/markdownlint-github'
+    title: 'GitHub''s markdownlint preset (accessibility-focused)'
+    type: official
+source_content_hash: 3d848f0000ca9b1a2362b7ef1ad24b548f0bbb3f22ffc83a60ede840e9c1e89b
 ---
 
 I ran markdownlint on a knowledge base with about 200 markdown files and got back 7,500 errors. Seven thousand five hundred. The repository had accumulated formatting debt over months — missing blank lines around lists, code blocks without language specifiers, duplicate headings, inconsistent table spacing. Every contributor applied their own conventions, and the result was a codebase where diffs were noisy, GitHub rendering was unpredictable, and no one could tell "correct" formatting from "works on my machine" formatting.
 
-This post covers the rules that matter most, the configuration decisions I made, and two non-obvious traps that show up later in nested config scopes — even after the project root looks clean.
+This post covers the rules that matter most, the configuration decisions I made, two non-obvious traps that show up later in nested config scopes, and a follow-up migration that replaced a 14-rule custom config with a one-line `extends:` plus five documented carve-outs.
 
 ## Why Consistent Markdown Formatting Matters
 
@@ -169,6 +178,91 @@ Here is the reasoning behind common configuration choices:
 
 MD013 (line length) deserves special mention. The default 80-character limit makes sense for code but fights against natural prose. When writing documentation, forcing line breaks mid-sentence creates awkward diffs and harder-to-read raw files. I disable it in every project.
 
+## Adopting a Strict Preset (`style/all` + Carve-Outs)
+
+A 14-rule custom config like the one above accumulates entries that are no-ops, redundant, or quietly broken. After living with mine for a few months I migrated to the upstream `style/all` preset plus a small number of documented carve-outs. The migration collapsed sprawling per-rule configs into one `extends:` plus a handful of explicit exceptions, and surfaced 36 MD040 errors that had been hiding behind ineffective overrides.
+
+### The recipe
+
+```json
+{
+  "config": {
+    "extends": "markdownlint/style/all",
+
+    // Carve-outs — each documented with reason
+    "MD013": false, // prettier handles wrapping
+    "MD024": { "siblings_only": true }, // sibling section repetition allowed
+    "MD025": { "front_matter_title": "" }, // no H1 below frontmatter
+    "MD036": false, // **Bold:** patterns intentional
+    "MD060": false // table column style varies
+  },
+  "ignores": [
+    /* ... */
+  ]
+}
+```
+
+### What `style/all` actually is
+
+The upstream preset ([style/all.json](https://github.com/DavidAnson/markdownlint/blob/main/style/all.json)) is literally:
+
+```json
+{
+  "comment": "All rules",
+  "default": true
+}
+```
+
+So `extends: "markdownlint/style/all"` is equivalent to `{"default": true}` — every rule on with default settings. Both are valid baselines; `extends:` is preferable because it documents intent (vs. anonymous `default: true`).
+
+### Other built-in presets
+
+The same `style/` directory ships three more options, all subtractive (designed to be extended, not used standalone with custom rules layered on top):
+
+| Preset                    | Disables                                                                                                                   | Use case                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `style/all.json`          | nothing — `{default: true}`                                                                                                | Strictest baseline, then carve out as needed       |
+| `style/relaxed.json`      | line-length, ul-indent, no-inline-html, no-bare-urls, fenced-code-language, first-line-h1, whitespace                      | Permissive defaults for prose-heavy GitHub READMEs |
+| `style/prettier.json`     | 23 formatting rules (blanks-around-fences, code-fence-style, hr-style, line-length, list-indent, no-trailing-spaces, etc.) | Coexist with prettier — Joshua Goldberg's recipe   |
+| `style/cirosantilli.json` | personal style of Ciro Santilli                                                                                            | Reference only                                     |
+
+### Run the proposed config first, then promise
+
+When proposing a config simplification, run the proposed config FIRST against unmodified content. Don't extrapolate from current-config output — existing overrides may be silencing thousands of failures you'd inherit if you switched to "pure defaults." On a 3B test (2026-05-01):
+
+| Config                                | Failures (reported)              |
+| ------------------------------------- | -------------------------------- |
+| Existing 14-rule custom               | 131                              |
+| `extends: "markdownlint/style/all"`   | **11,398** (MD013 alone: 10,491) |
+| `extends: "style/all"` + 5 carve-outs | 36 (MD040 only, sweepable)       |
+
+The first two should be identical if the 14 customizations were "no-op against defaults." Instead the existing config silenced ~11,000 failures via MD013 false (line-length), MD024 siblings_only=true, and MD025 front_matter_title="" — meaning those overrides were load-bearing, not redundant.
+
+The workflow: write a temp config file (must include the `markdownlint-cli2` prefix in the filename, e.g., `pure-default.markdownlint-cli2.jsonc` — the CLI rejects arbitrary names), invoke `npx markdownlint-cli2 --config <temp-file> '<glob>'`, group failures by `MD###/rule-name`, then decide which to carve out vs. fix.
+
+### The config-theater trap
+
+Custom rule values that LOOK valid but produce no effect because the value isn't recognized. markdownlint silently falls back to default behavior without warning. Hard to detect by reading the config alone. Examples seen in 3B's prior config:
+
+| Override                  | Issue                                                                 | Fix                                               |
+| ------------------------- | --------------------------------------------------------------------- | ------------------------------------------------- |
+| `MD060: { style: "any" }` | `"any"` not a valid value (valid: `compact`, `aligned`, `consistent`) | Use `MD060: false` if the rule should be disabled |
+| 11× `MD###: true` entries | Match defaults exactly — redundant noise                              | Drop them; rely on `default: true`                |
+
+Diff-test rule: lint with vs. without the override. If failure count and distribution are identical, the override is broken or redundant. Fix or drop.
+
+### Comparison with `@github/markdownlint-github`
+
+This third-party preset (built on DavidAnson's lib) is opinionated for a different audience — accessible OSS docs with images. Composes `base.js` + `accessibility.js` + custom `GH001-003` rules:
+
+- Forces `ul-style: { style: "asterisk" }` (every `-` bullet flagged)
+- Forces `no-emphasis-as-heading: true`
+- Forces `no-duplicate-heading` with `siblings_only: false`
+- Adds GH001 (no-default-alt-text), GH002 (no-generic-link-text), GH003 (no-empty-alt-text)
+- Requires `.markdownlint-cli2.mjs` (function-based config) + npm install of `@github/markdownlint-github` + `markdownlint-cli2-formatter-pretty`
+
+Skip unless: publishing public OSS docs with images where accessibility enforcement matters. For prose-heavy private knowledge bases, the migration cost (estimated thousands of rewrite errors on 3B's content) outweighs the benefit.
+
 ## Scope Warning: Root Config Doesn't Always Win
 
 A subtle one I learned later: disabling a rule at the project root does NOT propagate into nested config scopes. `.claude/skills/**`, `.codex/skills/**`, and other tool-managed directories are routinely linted under their own `.markdownlint.json` (or markdownlint-cli2 glob filter) and may keep MD033 enabled even when the repo root disables it.
@@ -271,4 +365,4 @@ When you encounter a markdownlint error and need to fix it fast, this table maps
 
 ## Takeaway
 
-Markdownlint is not about making markdown pretty. It is about making markdown predictable — consistent rendering across platforms, clean diffs in version control, and formatting conventions that scale across contributors. The initial investment is configuring the rules to match your project's needs and running a one-time cleanup. After that, the VS Code extension and CI integration keep the error count at zero. In my case, going from 7,500 errors to zero took one afternoon of automated fixes and one configuration file. The repository has stayed clean since — with the caveat that nested config scopes follow their own rules, so the first commit into a new tool-managed directory is worth lint-checking explicitly.
+Markdownlint is not about making markdown pretty. It is about making markdown predictable — consistent rendering across platforms, clean diffs in version control, and formatting conventions that scale across contributors. The initial investment is configuring the rules to match your project's needs and running a one-time cleanup. After that, the VS Code extension and CI integration keep the error count at zero. In my case, going from 7,500 errors to zero took one afternoon of automated fixes and one configuration file. The follow-up `style/all` migration replaced a sprawling 14-rule custom config with one `extends:` line plus five documented carve-outs, and surfaced ~11,000 failures that the prior overrides had been silencing — load-bearing, not redundant. The repository has stayed clean since, with the caveat that nested config scopes follow their own rules, so the first commit into a new tool-managed directory is worth lint-checking explicitly.
