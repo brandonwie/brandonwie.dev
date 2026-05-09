@@ -2,7 +2,7 @@
 title: AWS WAF 구현
 description: Allowlist 방식의 Web Application Firewall 설정 가이드.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-05-10'
 tags:
   - aws
   - security
@@ -213,7 +213,7 @@ allowlist 방식은 일반적인 WAF 사고 모델을 뒤집어요. "뭘 막을�
 
 운영 비용은 규율이에요. 새 API 라우트마다 WAF 룰을 같이 업데이트해야 하니까요.
 이걸 배포 체크리스트에 박아두면, allowlist 방식은 월 $25 미만으로 production
-수준의 보호 계층을 안정적으로 깔아주는 셈이에요.
+수준의 보호 계층을 안정적으로 깔아줘요.
 
 ## References
 

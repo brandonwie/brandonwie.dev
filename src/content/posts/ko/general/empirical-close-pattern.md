@@ -2,7 +2,7 @@
 title: 'Empirical Close: 자연스러운 trigger에 skill-side test를 맡기기'
 description: '어떤 verification test는 fixture로 충실히 재현되지 않는 진짜 trigger가 필요해요 — 대화형 prompt, 대화 파싱, AskUserQuestion flow. test를 [~] empirical-close-pending으로 표시하고 다음 자연스러운 trigger가 verify해 주리라 믿는 건, friction-log reopen과 짝지을 때 위생적인 선택이에요.'
 date: 2026-04-30T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-05-10'
 tags:
   - general
   - process
@@ -18,9 +18,9 @@ translation_date: '2026-05-10'
 ---
 
 `wrap-followup-persistence-fix` 작업을 닫으려는데 test 두 개가 끝까지 안
-풀렸어요. 19개 중 17개는 통과, 두 개는 fixture로 재현이 안 되는
-종류였어요 — 진짜 대화 안에서 "next session: do X" 같은 follow-up이 발생해야
-검증되는 skill-side 동작이었거든요. 어떻게든 close해야 하는데, 거짓 trigger를
+풀렸어요. 19개 중 17개는 통과, 두 개는 fixture로 재현이 안 되는 종류였어요.
+진짜 대화 안에서 "next session: do X" 같은 follow-up이 발생해야 검증되는
+skill-side 동작이었거든요. 어떻게든 close해야 하는데, 거짓 trigger를
 짜내자니 session state가 오염되고, 그렇다고 task를 열어두자니 7일 뒤 stale
 경고로 dashboard만 어지럽혀요. 결국 세 번째 길로 갔어요.
 
@@ -97,7 +97,7 @@ friction-log reopen이 뒤를 받쳐 주면, empirical close가 제일 깔끔해
    ```
 
 3. **`/archive-task`로 평소처럼 archive.** empirical 신호를 기다린다고
-   folder를 열어두지 마세요 — 그건 그냥 stale folder예요.
+   folder를 열어두지 마세요. 그건 그냥 stale folder예요.
 
 4. **reopen 메커니즘을 미리 엮어두기:** archive 후에 regression 신호가
    나타나면 fire되는 friction-log 패턴이나 /wrap 경고를 추가해 둬요.
@@ -150,7 +150,7 @@ test를 그냥 작성하는 게 답이에요. empirical close는 mock 자체가 
 ## 실용적인 takeaway
 
 Empirical close는 task 위생이지 test 게으름이 아니에요. test는 그대로
-존재해요 — fixture가 아니라 production에서 실행될 뿐이에요. test를 안 돌리는
+존재해요. 다만 fixture가 아니라 production에서 실행될 뿐이에요. test를 안 돌리는
 대안은 task의 존재 자체를 잊는 거고요. 모든 empirical close는 friction-log
 reopen 패턴과 짝지어 두세요. 그게 빠지면 empirical close는 "지우고 기도하기"가
 돼요. post-merge 변형(PR-merged + branch-gone = task done)은 같은 패턴을
