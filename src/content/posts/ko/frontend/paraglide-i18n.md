@@ -2,7 +2,7 @@
 title: SvelteKit용 Paraglide-JS i18n
 description: 번들을 부풀리지 않고 런타임 오버헤드 없이 SvelteKit 정적 블로그에 한국어/영어 다국어 지원을 추가한 방법을 정리했어요.
 date: 2026-01-28T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-03-22'
 tags:
   - frontend
   - i18n

@@ -1,8 +1,11 @@
 ---
 title: Anthropic Prompt Cache TTL과 비용 메커니즘
-description: 'Anthropic이 2026년 3월 초쯤 Claude Code의 prompt cache TTL을 1시간에서 5분으로 조용히 줄였어요. 이걸 모르면 메시지 사이에 5분 이상 비는 순간 cache가 날아가고, 다음 메시지에 전체 conversation prefix를 처음부터 다시 써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요.'
+description: >-
+  Anthropic이 2026년 3월 초쯤 Claude Code의 prompt cache TTL을 1시간에서 5분으로 조용히 줄였어요. 이걸
+  모르면 메시지 사이에 5분 이상 비는 순간 cache가 날아가고, 다음 메시지에 전체 conversation prefix를 처음부터 다시
+  써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요.
 date: 2026-05-03T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - knowledge
   - devops

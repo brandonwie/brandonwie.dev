@@ -2,7 +2,7 @@
 title: Airflow Manual DAG Config 패턴
 description: 수동 DAG 트리거 시 커스텀 파라미터를 전달하면서도 예약 실행은 그대로 유지하는 패턴이에요.
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-03-22'
 tags:
   - devops
   - airflow

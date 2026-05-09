@@ -1,8 +1,11 @@
 ---
 title: Wrap Skill Follow-Up 영속화 아키텍처
-description: 'session-state 대시보드를 매번 오늘 journal 하나만 보고 다시 만들면, 이전 session에서 풀리지 않은 follow-up이 rebuild할 때마다 조용히 사라져요. 단일 source 탐색 + 대화에서만 언급된 항목과 겹치면 동시에 세 갈래로 증발해요. 해결책은 4-layer 아키텍처예요.'
+description: >-
+  session-state 대시보드를 매번 오늘 journal 하나만 보고 다시 만들면, 이전 session에서 풀리지 않은
+  follow-up이 rebuild할 때마다 조용히 사라져요. 단일 source 탐색 + 대화에서만 언급된 항목과 겹치면 동시에 세 갈래로
+  증발해요. 해결책은 4-layer 아키텍처예요.
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - devops
   - claude-code

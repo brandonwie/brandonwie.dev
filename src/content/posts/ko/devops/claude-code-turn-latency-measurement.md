@@ -1,11 +1,10 @@
 ---
 title: JSONL transcript로 Claude Code turn latency 측정하기
 description: >-
-  이미 disk에 쌓여 있는 JSONL transcript를 파싱해서 Claude Code session의
-  per-turn latency를 ground-truth로 측정한 이야기. 그 과정에서 스스로 잡아낸 네
-  가지 측정 trap도 같이 정리했어요.
+  이미 disk에 쌓여 있는 JSONL transcript를 파싱해서 Claude Code session의 per-turn latency를
+  ground-truth로 측정한 이야기. 그 과정에서 스스로 잡아낸 네 가지 측정 trap도 같이 정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-04-14'
 tags:
   - claude-code
   - latency

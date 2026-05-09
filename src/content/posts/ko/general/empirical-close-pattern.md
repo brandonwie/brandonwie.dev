@@ -1,8 +1,11 @@
 ---
 title: 'Empirical Close: 자연스러운 trigger에 skill-side test를 맡기기'
-description: '어떤 verification test는 fixture로 충실히 재현되지 않는 진짜 trigger가 필요해요 — 대화형 prompt, 대화 파싱, AskUserQuestion flow. test를 [~] empirical-close-pending으로 표시하고 다음 자연스러운 trigger가 verify해 주리라 믿는 건, friction-log reopen과 짝지을 때 위생적인 선택이에요.'
+description: >-
+  어떤 verification test는 fixture로 충실히 재현되지 않는 진짜 trigger가 필요해요 — 대화형 prompt, 대화
+  파싱, AskUserQuestion flow. test를 [~] empirical-close-pending으로 표시하고 다음 자연스러운
+  trigger가 verify해 주리라 믿는 건, friction-log reopen과 짝지을 때 위생적인 선택이에요.
 date: 2026-04-30T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - general
   - process

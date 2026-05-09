@@ -1,8 +1,10 @@
 ---
 title: 크로스 클라우드 이벤트 흐름을 위한 대칭형 Redis ↔ Kafka 브리지 페어
-description: Cloud Run은 내부 Kafka 브로커에 못 닿아요 — `advertised.listeners`가 항상 이겨요. Redis를 통과하는 단방향 브리지 한 쌍이 모든 invariant를 지켜줘요.
+description: >-
+  Cloud Run은 내부 Kafka 브로커에 못 닿아요 — `advertised.listeners`가 항상 이겨요. Redis를 통과하는
+  단방향 브리지 한 쌍이 모든 invariant를 지켜줘요.
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-04-29'
 tags:
   - backend
   - distributed-systems

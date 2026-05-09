@@ -1,8 +1,11 @@
 ---
 title: 'Markdownlint Pre-Commit: MD041 + MD001 heading 함정'
-description: 'YAML frontmatter가 있는 새 markdown 파일에 husky pre-commit을 반복적으로 막는 두 가지 markdownlint 규칙. 둘 다 조용히 fire되고, --fix로 자동 수정되지 않으며, 보통 같이 나타나요 — 하나를 고치면 다른 하나가 노출돼요.'
+description: >-
+  YAML frontmatter가 있는 새 markdown 파일에 husky pre-commit을 반복적으로 막는 두 가지
+  markdownlint 규칙. 둘 다 조용히 fire되고, --fix로 자동 수정되지 않으며, 보통 같이 나타나요 — 하나를 고치면 다른
+  하나가 노출돼요.
 date: 2026-04-19T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - devops
   - markdown

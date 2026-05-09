@@ -1,8 +1,11 @@
 ---
-title: 'Serena MCP — Claude Code 다중 프로필 설정 (cpers/cwork)'
-description: 'Claude Code 이중 프로필 환경(cpers/cwork)과 Codex에 Serena MCP server를 설치하는 전체 절차. 권장 hook 4개, system-prompt 교체, 그리고 설치 도구가 기본 ~/.claude.json에만 쓰고 프로필별 저장소는 놓치는 함정까지 다뤄요.'
+title: Serena MCP — Claude Code 다중 프로필 설정 (cpers/cwork)
+description: >-
+  Claude Code 이중 프로필 환경(cpers/cwork)과 Codex에 Serena MCP server를 설치하는 전체 절차. 권장
+  hook 4개, system-prompt 교체, 그리고 설치 도구가 기본 ~/.claude.json에만 쓰고 프로필별 저장소는 놓치는
+  함정까지 다뤄요.
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - devops
   - claude-code

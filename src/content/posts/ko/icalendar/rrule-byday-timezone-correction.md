@@ -2,7 +2,7 @@
 title: rrule BYDAY 타임존 보정
 description: rrule JavaScript 라이브러리가 BYDAY 요일을 이벤트 타임존이 아닌 UTC로 해석하는 문제와 해결 방법을 정리했어요.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-03-22'
 tags:
   - backend
   - rrule

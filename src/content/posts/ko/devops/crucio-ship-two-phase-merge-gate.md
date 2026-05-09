@@ -1,8 +1,11 @@
 ---
 title: 수동 merge gate로서의 두 단계 호출 패턴
-description: 'CI/CD automation skill이 "all-in-one" mode(`/skill +flag`)를 지원할 때, all-in-one mode는 default가 아니라 opt-in이어야 해요. 호출을 분리하면 CI green과 되돌릴 수 없는 merge 사이에 의미 있는 일시정지 지점을 보존해요.'
+description: >-
+  CI/CD automation skill이 "all-in-one" mode(`/skill +flag`)를 지원할 때, all-in-one
+  mode는 default가 아니라 opt-in이어야 해요. 호출을 분리하면 CI green과 되돌릴 수 없는 merge 사이에 의미 있는
+  일시정지 지점을 보존해요.
 date: 2026-05-05T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - devops
   - automation

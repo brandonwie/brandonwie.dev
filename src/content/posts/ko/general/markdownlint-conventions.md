@@ -1,8 +1,11 @@
 ---
 title: Markdownlint 컨벤션 가이드
-description: '200개 markdown 파일에 7,500개의 markdownlint 에러. 어떤 룰이 중요한지, 어떤 설정이 잘 정착했는지, nested scope에서만 표면화되는 두 가지 pre-commit 함정, 그리고 14-rule custom config를 한 줄 extends + 5개 carve-out으로 collapse한 strict-preset 마이그레이션.'
+description: >-
+  200개 markdown 파일에 7,500개의 markdownlint 에러. 어떤 룰이 중요한지, 어떤 설정이 잘 정착했는지, nested
+  scope에서만 표면화되는 두 가지 pre-commit 함정, 그리고 14-rule custom config를 한 줄 extends + 5개
+  carve-out으로 collapse한 strict-preset 마이그레이션.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-05-10
+updated: '2026-05-06'
 tags:
   - general
   - documentation
@@ -13,7 +16,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: markdownlint-conventions
-source_updated: 2026-05-06
+source_updated: 2026-05-06T00:00:00.000Z
 translation_date: '2026-05-10'
 references:
   - url: 'https://github.com/DavidAnson/markdownlint'
@@ -27,13 +30,14 @@ references:
     title: items
     type: verified
   - url: 'https://github.com/DavidAnson/markdownlint/blob/main/style/all.json'
-    title: 'markdownlint built-in style/all preset'
+    title: markdownlint built-in style/all preset
     type: official
-  - url: 'https://www.joshuakgoldberg.com/blog/configuring-markdownlint-alongside-prettier/'
-    title: 'Configuring Markdownlint Alongside Prettier (Joshua Goldberg)'
+  - url: >-
+      https://www.joshuakgoldberg.com/blog/configuring-markdownlint-alongside-prettier/
+    title: Configuring Markdownlint Alongside Prettier (Joshua Goldberg)
     type: authoritative
   - url: 'https://github.com/github/markdownlint-github'
-    title: 'GitHub의 markdownlint preset (accessibility-focused)'
+    title: GitHub의 markdownlint preset (accessibility-focused)
     type: official
 ---
 

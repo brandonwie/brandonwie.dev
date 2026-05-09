@@ -1,8 +1,11 @@
 ---
-title: 'state-invariant flag drift — reconciliation pass로 복구하기'
-description: 'boolean lifecycle flag가 클리어 코드 경로에 절대 도달하지 못하는 entry들에 계속 끼는 현상이 있었어요. 증상만 고치는 fix는 계속 재발했고, 진짜 해결은 setter나 clearer 어느 쪽이 어떻게 set했든 상관없이 flag가 함의하는 invariant를 강제하는 세 번째 workflow를 추가하는 거였어요.'
+title: state-invariant flag drift — reconciliation pass로 복구하기
+description: >-
+  boolean lifecycle flag가 클리어 코드 경로에 절대 도달하지 못하는 entry들에 계속 끼는 현상이 있었어요. 증상만 고치는
+  fix는 계속 재발했고, 진짜 해결은 setter나 clearer 어느 쪽이 어떻게 set했든 상관없이 flag가 함의하는
+  invariant를 강제하는 세 번째 workflow를 추가하는 거였어요.
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - devops
   - sync

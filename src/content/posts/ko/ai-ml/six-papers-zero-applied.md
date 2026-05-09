@@ -1,11 +1,11 @@
 ---
-title: "논문 6편, 적용 0개 — 훈련된 읽기로 보낸 한 주"
+title: '논문 6편, 적용 0개 — 훈련된 읽기로 보낸 한 주'
 description: >-
-  DAIR.AI 4월 6-12일 배치에서 논문 6편을 읽고 3가지 공통 theme을 뽑았지만,
-  3B에는 한 줄도 적용하지 않았어요. Pattern A(theme saturation before action)가
-  실제로 어떻게 동작하는지 보여주는 weekly synthesis예요.
+  DAIR.AI 4월 6-12일 배치에서 논문 6편을 읽고 3가지 공통 theme을 뽑았지만, 3B에는 한 줄도 적용하지 않았어요.
+  Pattern A(theme saturation before action)가 실제로 어떻게 동작하는지 보여주는 weekly
+  synthesis예요.
 date: 2026-04-17T00:00:00.000Z
-updated: 2026-05-10T00:00:00.000Z
+updated: '2026-04-17'
 tags:
   - forge
   - ai-ml
@@ -17,26 +17,28 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: six-papers-zero-applied
-source_updated: "2026-04-17"
-translation_date: "2026-05-10"
+source_updated: '2026-04-17'
+translation_date: '2026-05-10'
 references:
-  - url: "https://arxiv.org/abs/2604.02460"
-    title: "Single-Agent LLMs Outperform Multi-Agent Systems on Multi-Hop Reasoning Under Equal Thinking Token Budgets"
+  - url: 'https://arxiv.org/abs/2604.02460'
+    title: >-
+      Single-Agent LLMs Outperform Multi-Agent Systems on Multi-Hop Reasoning
+      Under Equal Thinking Token Budgets
     type: authoritative
-  - url: "https://arxiv.org/abs/2604.04323"
-    title: "How Well Do Agentic Skills Work in the Wild"
+  - url: 'https://arxiv.org/abs/2604.04323'
+    title: How Well Do Agentic Skills Work in the Wild
     type: authoritative
-  - url: "https://arxiv.org/abs/2604.06240"
-    title: "The Art of Building Verifiers for Computer Use Agents"
+  - url: 'https://arxiv.org/abs/2604.06240'
+    title: The Art of Building Verifiers for Computer Use Agents
     type: authoritative
-  - url: "https://github.com/microsoft/memento"
-    title: "MEMENTO: Teaching LLMs to Manage Their Own Context"
+  - url: 'https://github.com/microsoft/memento'
+    title: 'MEMENTO: Teaching LLMs to Manage Their Own Context'
     type: authoritative
-  - url: "https://arxiv.org/abs/2604.04503"
-    title: "Memory Intelligence Agent (MIA)"
+  - url: 'https://arxiv.org/abs/2604.04503'
+    title: Memory Intelligence Agent (MIA)
     type: authoritative
-  - url: "https://arxiv.org/abs/2604.05013"
-    title: "Scaling Coding Agents via Atomic Skills"
+  - url: 'https://arxiv.org/abs/2604.05013'
+    title: Scaling Coding Agents via Atomic Skills
     type: authoritative
 ---
 

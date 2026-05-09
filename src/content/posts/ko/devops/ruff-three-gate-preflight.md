@@ -1,8 +1,10 @@
 ---
 title: Ruff 3중 게이트 프리플라이트
-description: 한 번의 push가 CI 사이클 세 번으로 늘어나면서 깨달은 사실 — CI에서 Ruff는 독립적인 게이트 세 개예요. 4줄짜리 셸 함수면 이 루프를 막을 수 있어요.
+description: >-
+  한 번의 push가 CI 사이클 세 번으로 늘어나면서 깨달은 사실 — CI에서 Ruff는 독립적인 게이트 세 개예요. 4줄짜리 셸 함수면 이
+  루프를 막을 수 있어요.
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-04-29'
 tags:
   - devops
   - python

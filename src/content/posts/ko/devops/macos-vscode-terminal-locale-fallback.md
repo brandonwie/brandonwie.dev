@@ -1,11 +1,10 @@
 ---
 title: macOS VSCode 터미널 locale fallback 문제
 description: >-
-  macOS에서 VSCode integrated terminal이 조용히 비영어 locale로 바뀔 수 있어요.
-  `git status`가 갑자기 한국어로 말하는 이유, 그리고 `settings.json`에 `LANG`을
-  고정하는 방법이에요.
+  macOS에서 VSCode integrated terminal이 조용히 비영어 locale로 바뀔 수 있어요. `git status`가
+  갑자기 한국어로 말하는 이유, 그리고 `settings.json`에 `LANG`을 고정하는 방법이에요.
 date: 2026-04-11T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-04-11'
 tags:
   - devops
   - macos

@@ -1,8 +1,10 @@
 ---
-title: "AI PR 리뷰 검증 패턴"
-description: "AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 13가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크 + 보강 주석 템플릿."
+title: AI PR 리뷰 검증 패턴
+description: >-
+  AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 13가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크
+  + 보강 주석 템플릿.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-04-29'
 tags:
   - devops
   - ai
@@ -12,10 +14,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
-source_updated: "2026-04-29"
-translation_date: "2026-05-10"
+source_updated: '2026-04-29'
+translation_date: '2026-05-10'
 references:
-  - url: "https://docs.github.com/en/rest/pulls/reviews"
+  - url: 'https://docs.github.com/en/rest/pulls/reviews'
     title: REST API endpoints for pull request reviews — GitHub Docs
     type: authoritative
 ---

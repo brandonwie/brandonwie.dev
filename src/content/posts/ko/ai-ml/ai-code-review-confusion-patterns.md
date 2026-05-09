@@ -1,11 +1,11 @@
 ---
-title: Claude, Copilot, Codex가 PR에서 보이는 11가지 패턴
+title: 'Claude, Copilot, Codex가 PR에서 보이는 11가지 패턴'
 description: >-
-  Claude, Copilot, Codex가 PR에서 동작하는 열한 가지 방식 — 아홉 가지 실패
-  유형 + 한 가지 amplify할 강점 + 한 가지 analyst-side error class. 탐지
-  신호와 사실관계 충돌을 해결하는 empirical tiebreaker까지 정리했어요.
+  Claude, Copilot, Codex가 PR에서 동작하는 열한 가지 방식 — 아홉 가지 실패 유형 + 한 가지 amplify할 강점 +
+  한 가지 analyst-side error class. 탐지 신호와 사실관계 충돌을 해결하는 empirical tiebreaker까지
+  정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: 2026-05-10
+updated: '2026-05-06'
 tags:
   - ai-ml
   - code-review
@@ -19,7 +19,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-code-review-confusion-patterns
-source_updated: 2026-05-06
+source_updated: 2026-05-06T00:00:00.000Z
 translation_date: '2026-05-10'
 ---
 

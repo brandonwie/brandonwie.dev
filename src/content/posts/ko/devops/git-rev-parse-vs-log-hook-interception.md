@@ -1,8 +1,12 @@
 ---
-title: 'watcher hook 아래서 `git rev-parse HEAD`와 `git log -1`이 어긋날 때'
-description: '`gh pr merge` 끝내고 로컬에서 pull 받았는데, `git rev-parse HEAD`는 올바른 merge commit을 가리키고 `git log -1`은 방금 merge로 사라진 feature branch tip을 몇 초간 보여줬어요. checkout 도중에 graphify watcher rebuild가 돌고 있었어요. low-level ref 읽기가 권위 있고, log 렌더링은 늦어질 수 있어요.'
+title: watcher hook 아래서 `git rev-parse HEAD`와 `git log -1`이 어긋날 때
+description: >-
+  `gh pr merge` 끝내고 로컬에서 pull 받았는데, `git rev-parse HEAD`는 올바른 merge commit을 가리키고
+  `git log -1`은 방금 merge로 사라진 feature branch tip을 몇 초간 보여줬어요. checkout 도중에
+  graphify watcher rebuild가 돌고 있었어요. low-level ref 읽기가 권위 있고, log 렌더링은 늦어질 수
+  있어요.
 date: 2026-05-05T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - devops
   - git

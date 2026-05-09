@@ -4,7 +4,7 @@ description: >-
   PostToolUse hook은 도구 실행이 끝난 뒤 발동해요. session 정보, 도구 이름, 입력값, 결과, 작업 디렉토리가 들어 있는
   JSON을 stdin으로 받아요.
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-03-22'
 tags:
   - devops
   - claude-code

@@ -4,7 +4,7 @@ description: >-
   Claude Code, Codex, Gemini가 함께 쓰는 스킬은 한 에이전트의 MCP 도구 별칭을 하드코딩하면 깨져요. 두 단계 패턴 —
   frontmatter에 두 별칭 패밀리를 모두 선언하고, 본문 prose에는 일반 이름만 써요.
 date: 2026-05-01T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-05'
 tags:
   - ai-ml
   - skills

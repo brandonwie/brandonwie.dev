@@ -1,8 +1,11 @@
 ---
 title: Task를 다시 잡을 때 plan과 실제 shipped 상태가 어긋나는 순간
-description: '여러 세션에 걸친 task를 다시 잡으면, 처음 작성한 plan.md가 지금 main에 반영된 모습과 어긋나 있을 때가 많아요. 구현은 도중에 바뀌고, 범위는 옮겨가고, branch는 어느새 merge돼요. 3분짜리 pre-flight check 하나면 한참 동안 obsolete된 작업을 붙들고 있는 시간을 막아줘요.'
+description: >-
+  여러 세션에 걸친 task를 다시 잡으면, 처음 작성한 plan.md가 지금 main에 반영된 모습과 어긋나 있을 때가 많아요. 구현은
+  도중에 바뀌고, 범위는 옮겨가고, branch는 어느새 merge돼요. 3분짜리 pre-flight check 하나면 한참 동안
+  obsolete된 작업을 붙들고 있는 시간을 막아줘요.
 date: 2026-04-30T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - general
   - process

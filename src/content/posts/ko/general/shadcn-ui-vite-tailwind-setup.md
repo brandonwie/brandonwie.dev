@@ -4,7 +4,7 @@ description: >-
   Vite + React + TypeScript + Tailwind CSS 프로젝트에서 shadcn CLI 없이 shadcn/ui 컴포넌트
   프리미티브를 수동으로 설정하는 방법이에요.
 date: 2026-02-04T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-03-22'
 tags:
   - general
   - react

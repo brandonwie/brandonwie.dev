@@ -1,8 +1,10 @@
 ---
 title: Codex Skill Mirror 패턴
-description: '`.agents/skills/`를 정식 skill 출처로 두는 repo에서 Codex를 깔끔하게 붙이는 방법은 통째로 교체하거나 통째로 심볼릭링크하는 게 아니에요. 정식 출처는 그대로 두고, 필요한 skill에만 어댑터를 다는 mirror 레이어가 답이에요.'
+description: >-
+  `.agents/skills/`를 정식 skill 출처로 두는 repo에서 Codex를 깔끔하게 붙이는 방법은 통째로 교체하거나 통째로
+  심볼릭링크하는 게 아니에요. 정식 출처는 그대로 두고, 필요한 skill에만 어댑터를 다는 mirror 레이어가 답이에요.
 date: 2026-04-18T00:00:00.000Z
-updated: '2026-05-10'
+updated: '2026-05-06'
 tags:
   - devops
   - codex
