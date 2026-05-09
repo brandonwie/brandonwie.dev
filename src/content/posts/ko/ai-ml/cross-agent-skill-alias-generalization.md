@@ -20,7 +20,7 @@ lang: ko
 source_lang: en
 source_slug: cross-agent-skill-alias-generalization
 source_updated: 2026-05-05T00:00:00.000Z
-translation_date: '2026-05-05'
+translation_date: '2026-05-10'
 ---
 
 3B의 `.agents/skills/` 디렉토리에 출시한 스킬이 Claude Code에서는 멀쩡히
@@ -148,9 +148,9 @@ allowed-tools:
   감사가 이 단락을 allowlist에 넣어야 해요.
 - **별칭은 이름 바뀌어도; prose는 안 바뀌어요** — 모든 별칭 이름 변경은
   frontmatter만 바뀌는 변경이어야 해요.
-- **해석자는 바이너리, 당신이 아님** — 두 에이전트의 MCP 로더가 `allowed-tools`
-  항목을 등록된 도구와 매칭해요. 두 패밀리 다 나열하면 어느 런타임이 켜져 있든
-  매칭되는 항목을 골라요.
+- **해석은 바이너리가 해요, 사람이 아니라** — 두 에이전트의 MCP 로더가
+  `allowed-tools` 항목을 등록된 도구와 매칭해요. 두 패밀리 다 나열하면 어느
+  런타임이 켜져 있든 매칭되는 항목을 골라요.
 
 ## 언제 쓰나
 

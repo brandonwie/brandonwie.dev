@@ -1,8 +1,8 @@
 ---
-title: 'Serena MCP — Claude Code Multi-Profile 설정 (cpers/cwork)'
-description: 'Claude Code dual-profile 설정(cpers/cwork) + Codex에 걸쳐 Serena MCP server를 설치하는 전체 절차. 4개 권장 hook, system-prompt override, 그리고 비명시적인 "installer가 default ~/.claude.json에 쓰고 profile-specific store를 놓치는" 함정 포함.'
+title: 'Serena MCP — Claude Code 다중 프로필 설정 (cpers/cwork)'
+description: 'Claude Code 이중 프로필 환경(cpers/cwork)과 Codex에 Serena MCP server를 설치하는 전체 절차. 권장 hook 4개, system-prompt 교체, 그리고 설치 도구가 기본 ~/.claude.json에만 쓰고 프로필별 저장소는 놓치는 함정까지 다뤄요.'
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-05-10'
 tags:
   - devops
   - claude-code
@@ -18,78 +18,78 @@ lang: ko
 source_lang: en
 source_slug: serena-claude-code-multi-profile-setup
 source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-06'
+translation_date: '2026-05-10'
 ---
 
-이 글은 Claude Code dual-profile 설정(`cpers` / `cwork`)에 [Serena](https://oraios.github.io/serena/) language-server-backed MCP server를 + Codex와 함께 설치하는 전체 절차예요. 4개 권장 hook과 multi-profile user를 첫 install에서 무는 비명시적인 "installer가 default `~/.claude.json`에 쓰고 profile-specific store를 놓치는" 함정 포함.
+`cpers`로 Claude Code를 켰는데 `/mcp` 목록에 Serena가 안 보였어요. `serena setup claude-code`는 분명히 성공 메시지를 찍었는데도 그랬어요. 이중 프로필 환경(`cpers` / `cwork`)에 [Serena](https://oraios.github.io/serena/)를 깔면서 만난 함정과, 그걸 피해서 Claude Code 두 프로필 + Codex까지 한 번에 셋업하는 전체 절차를 정리했어요. 권장 hook 4개와 system-prompt 교체도 같이 다뤄요.
 
-## Serena가 default install 이상이 필요한 이유
+## 기본 설치만으로는 부족한 이유
 
-최근 Claude Code(그리고 Opus 4.7) 업데이트가 매우 긴 built-in tool description(~16k token, unmodifiable)을 추가했고, agent가 MCP-provided symbolic tool보다 `Read` / `Grep`을 선호하도록 bias하는 default system prompt를 ship했어요. Serena는 세 가지 메커니즘으로 이걸 counteract해요:
+최근 Claude Code(Opus 4.7 포함)는 내장 도구 설명이 굉장히 길어졌어요(약 16k 토큰, 수정 불가). 게다가 기본 system prompt가 MCP 쪽 심볼 도구보다 `Read` / `Grep`을 먼저 쓰도록 모델을 유도해요. Serena는 이걸 세 가지로 상쇄해요.
 
-1. language server로 backed된 symbolic code-intelligence tool(`get_symbols_overview`, `find_symbol`, `find_referencing_symbols`, `replace_symbol_body` 등)을 제공하는 MCP server.
-2. agent를 default bias에서 멀어지게 nudge하는 4개 behavioral hook(`activate`, `remind`, `auto-approve`, `cleanup`).
-3. agent를 symbolic-first workflow로 다시 anchor하는 system-prompt override(~7800자).
+1. 언어 서버를 백엔드로 둔 심볼 기반 도구를 제공하는 MCP server(`get_symbols_overview`, `find_symbol`, `find_referencing_symbols`, `replace_symbol_body` 등).
+2. 기본 편향에서 벗어나도록 모델을 밀어주는 동작 hook 4개(`activate`, `remind`, `auto-approve`, `cleanup`).
+3. 모델을 다시 심볼 우선 흐름으로 고정하는 system-prompt 교체본(약 7800자).
 
-`serena setup claude-code` CLI는 step 1만 처리해요. step 2와 3은 manual이에요. 그리고 dual-profile 설정에서(`cpers`는 `CLAUDE_CONFIG_DIR=~/.claude`로 Claude 실행, `cwork`는 `CLAUDE_CONFIG_DIR=~/.claude-work`로), installer가 env var를 무시하기 때문에 step 1도 profile당 다시 실행해야 해요.
+`serena setup claude-code` CLI는 1번만 처리해요. 2번과 3번은 직접 손봐야 해요. 그리고 이중 프로필 환경(`cpers`는 `CLAUDE_CONFIG_DIR=~/.claude`, `cwork`는 `CLAUDE_CONFIG_DIR=~/.claude-work`)에서는 1번도 프로필마다 다시 돌려야 해요. 설치 도구가 환경 변수를 무시하거든요.
 
-## 겪었던 어려움들
+## 마주친 어려움
 
-### 1. Dual-Profile Installer 함정
+### 1. 이중 프로필 설치 함정
 
-`serena setup claude-code`은 thin wrapper:
+`serena setup claude-code`는 다음 명령을 감싼 얇은 wrapper예요.
 
 ```bash
 claude mcp add --scope user serena -- serena start-mcp-server --context=claude-code --project-from-cwd
 ```
 
-`claude mcp add --scope user`는 `CLAUDE_CONFIG_DIR`이 resolve하는 경로가 아니라 무조건 `$HOME/.claude.json`에 써요. dual-profile 설정에서:
+`claude mcp add --scope user`는 `CLAUDE_CONFIG_DIR`이 가리키는 경로가 아니라 무조건 `$HOME/.claude.json`에 써요. 그래서 이중 프로필 환경이면 이렇게 갈라져요.
 
 ```text
-~/.claude.json              ← installer가 여기 씀 (default home store)
-~/.claude/.claude.json      ← cpers가 여기 읽음 (CLAUDE_CONFIG_DIR=~/.claude)
-~/.claude-work/.claude.json ← cwork가 여기 읽음 (CLAUDE_CONFIG_DIR=~/.claude-work)
+~/.claude.json              ← 설치 도구가 여기에 씀 (기본 home store)
+~/.claude/.claude.json      ← cpers가 읽는 곳 (CLAUDE_CONFIG_DIR=~/.claude)
+~/.claude-work/.claude.json ← cwork가 읽는 곳 (CLAUDE_CONFIG_DIR=~/.claude-work)
 ```
 
-`serena setup claude-code` 후, 두 profile store 모두 serena entry가 여전히 missing이에요. `/mcp`가 N개 다른 server를 보여주지만 serena는 없어요. plain `claude`(orphan entry를 읽었을 텐데)는 zshrc launcher gate에 의해 disabled. serena MCP entry가 어떤 profile도 안 읽는 파일에 sit해요.
+`serena setup claude-code`를 돌린 뒤에도 두 프로필 저장소엔 serena 항목이 그대로 빠져 있어요. `/mcp`에는 다른 서버는 다 보이는데 serena만 없어요. 원래라면 그 고아 항목을 읽었을 plain `claude` 명령은 zshrc 런처 게이트가 막아둔 상태예요. 결국 serena 항목이 어느 프로필도 안 읽는 파일에 덩그러니 남아요.
 
-Fix:
+해결법이에요.
 
 ```bash
 CLAUDE_CONFIG_DIR=~/.claude      serena setup claude-code
 CLAUDE_CONFIG_DIR=~/.claude-work serena setup claude-code
 ```
 
-env override로 installer를 두 번 다시 실행해서, 두 profile-specific store에 entry가 land해요. `~/.claude.json`의 orphan은 그대로 둬도 돼요. plain `claude`는 gate-off됐고 그 파일은 건드리면 안 되는 다른 unrelated state key(OAuth, growthbook flag 등)를 많이 가지고 있어요.
+환경 변수를 덮어씌워서 설치 도구를 두 번 돌리면 두 프로필 저장소에 항목이 제대로 들어가요. `~/.claude.json`에 남은 고아 항목은 그냥 둬도 돼요. plain `claude`는 어차피 게이트로 막혀 있고, 그 파일에는 손대면 안 되는 다른 상태 키(OAuth, growthbook 플래그 등)가 잔뜩 들어 있거든요.
 
 ### 2. `--system-prompt` vs `--append-system-prompt`
 
-Serena docs의 example:
+Serena 문서 예시는 이렇게 돼 있어요.
 
 ```bash
 claude --system-prompt="$(serena prompts print-cc-system-prompt-override)"
 ```
 
-흔한 (잘못된) 가정: `--system-prompt`은 `--print` mode 전용이라서 interactive launcher에 `--append-system-prompt`을 강제. Wrong — 두 flag 모두 interactive Claude Code에서 작동해요(`claude --help`로 검증). 실질적 차이:
+흔한 오해 하나가 `--system-prompt`은 `--print` 모드 전용이라서 대화형 런처에선 `--append-system-prompt`을 써야 한다는 거예요. 틀렸어요. 두 플래그 모두 대화형 Claude Code에서 동작해요(`claude --help`로 확인했어요). 차이는 동작이에요.
 
-| Flag                     | Behavior                                    |
-| ------------------------ | ------------------------------------------- |
-| `--system-prompt`        | default system prompt를 완전히 REPLACE     |
-| `--append-system-prompt` | default system prompt에 APPEND              |
+| 플래그                   | 동작                                |
+| ------------------------ | ----------------------------------- |
+| `--system-prompt`        | 기본 system prompt를 통째로 교체   |
+| `--append-system-prompt` | 기본 system prompt 뒤에 덧붙임      |
 
-Serena의 override는 ~7800자로 `"You are Claude Code, Anthropic's official CLI for Claude..."`로 시작 — **replacement**로 작성됨. `--append-`를 사용하면 두 개의 `"You are Claude Code..."` preamble이 redundantly stack되어 override의 signal을 dilute해요. `--system-prompt` 사용.
+Serena의 교체본은 `"You are Claude Code, Anthropic's official CLI for Claude..."`로 시작하는 약 7800자 문서이고, **교체용**으로 쓰여 있어요. `--append-`를 쓰면 `"You are Claude Code..."` 도입부가 두 번 쌓여서 교체본의 신호가 흐려져요. `--system-prompt`을 써야 해요.
 
-### 3. Symlink Atomic-Rename Drift
+### 3. 심볼릭 링크 atomic-rename 표류
 
-`~/.claude/settings.json`과 `~/.claude-work/settings.json` 모두 `3b/.agents/global-claude-setup/settings.json`(SoT)로 symlink되어야 해요. 실제로는 Claude Code의 UI가 부하 아래서 atomic하게 다시 써요(create-temp-then-rename), symlink inode를 regular file로 silently 교체. SoT의 새 hook install 후 profile copy는 symlink가 `/check-symlinks`(또는 `ln -sf {SoT} ~/.claude/settings.json`)로 복원될 때까지 stale 유지. `claude-mem` 제거 시도 #1, #2를 defeat한 같은 bug class.
+`~/.claude/settings.json`과 `~/.claude-work/settings.json`은 둘 다 `3b/.agents/global-claude-setup/settings.json`(SoT)로 링크돼 있어야 해요. 그런데 Claude Code UI가 부하 상황에서 이 파일을 통째로 다시 쓸 때가 있어요(임시 파일 만든 다음 rename). 그러면 심볼릭 링크 inode가 슬그머니 일반 파일로 바뀌어요. SoT에 새 hook을 넣어도, `/check-symlinks`(또는 `ln -sf {SoT} ~/.claude/settings.json`)로 링크를 복구하기 전까진 프로필 쪽 사본은 옛날 상태로 남아요. `claude-mem` 제거를 두 번이나 실패하게 만든 그 버그 부류와 똑같아요.
 
-### 4. Codex MCP는 Out of the Box로 작동
+### 4. Codex MCP는 별 일 없이 됐어요
 
-`serena setup codex`는 `~/.codex/config.toml`에 쓰는데, `3b/.agents/global-codex-setup/config.toml`에 symlink돼 있어요. Single profile, `cpers`/`cwork` 아날로그 없음 → installer 함정 없음. MCP entry가 그냥 작동해요. Hook setup은 manual로 남아요.
+`serena setup codex`는 `~/.codex/config.toml`에 쓰는데, 이 파일은 이미 `3b/.agents/global-codex-setup/config.toml`로 링크돼 있어요. 프로필이 하나뿐이라 `cpers`/`cwork` 같은 짝이 없고, 그래서 설치 함정도 없어요. MCP 항목은 그냥 들어가요. hook은 따로 설정해야 하지만요.
 
-## 전체 install 시퀀스
+## 전체 설치 순서
 
-### Step 1 — Claude profile당 MCP entry
+### Step 1 — Claude 프로필별로 MCP 항목 등록
 
 ```bash
 # Personal profile
@@ -98,7 +98,7 @@ CLAUDE_CONFIG_DIR=~/.claude      serena setup claude-code
 CLAUDE_CONFIG_DIR=~/.claude-work serena setup claude-code
 ```
 
-`~/.claude/.claude.json`과 `~/.claude-work/.claude.json` 모두 다음을 포함하는지 verify:
+`~/.claude/.claude.json`과 `~/.claude-work/.claude.json` 둘 다에 다음이 들어 있는지 확인해요.
 
 ```json
 "serena": {
@@ -109,11 +109,11 @@ CLAUDE_CONFIG_DIR=~/.claude-work serena setup claude-code
 }
 ```
 
-Codex MCP entry는 one-shot: `serena setup codex` (이 setup에서 `~/.codex/config.toml`에 쓰는데 — 이미 3B SoT로 symlinked).
+Codex 쪽은 한 방으로 끝나요. `serena setup codex` 한 번 돌리면 `~/.codex/config.toml`에 들어가는데, 이 파일은 이미 3B SoT로 링크돼 있어요.
 
-### Step 2 — Claude SoT settings.json에 4개 hook
+### Step 2 — Claude SoT settings.json에 hook 4개
 
-`3b/.agents/global-claude-setup/settings.json`(symlinked SoT) edit:
+`3b/.agents/global-claude-setup/settings.json`(링크된 SoT)을 편집해요.
 
 ```json
 "SessionStart": [
@@ -128,18 +128,18 @@ Codex MCP entry는 one-shot: `serena setup codex` (이 setup에서 `~/.codex/con
 ]
 ```
 
-Hook 의미(Serena docs에서):
+각 hook의 의미예요(Serena 문서 기준).
 
-| Hook         | Event                         | Effect                                                                                                                              |
-| ------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| activate     | SessionStart                  | session 시작 시 agent에게 project activate를 prompt, Serena instruction 읽기.                                                       |
-| remind       | PreToolUse (`""`)             | internally throttled — consecutive non-Serena tool call(Read/Grep/etc.) 후 agent를 Serena tool로 nudge.                             |
-| auto-approve | PreToolUse (`mcp__serena__*`) | CC가 `acceptEdits` mode일 때 Serena call을 auto-approve(destructive한 `replace_symbol_body`, `rename_symbol` 같은 것 포함).         |
-| cleanup      | Stop                          | session end에 hook session state cleanup.                                                                                            |
+| Hook         | 이벤트                        | 효과                                                                                                                  |
+| ------------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| activate     | SessionStart                  | 세션 시작 때 모델에게 프로젝트를 활성화하라고 알려주고 Serena 안내문을 읽혀요.                                        |
+| remind       | PreToolUse (`""`)             | 내부적으로 throttle돼요. Read/Grep 같은 비-Serena 도구가 연속으로 불리면 모델을 다시 Serena 도구 쪽으로 밀어줘요.    |
+| auto-approve | PreToolUse (`mcp__serena__*`) | Claude Code가 `acceptEdits` 모드일 때 Serena 호출을 자동 승인해요(`replace_symbol_body`, `rename_symbol`까지 포함). |
+| cleanup      | Stop                          | 세션이 끝나면 hook의 세션 상태를 정리해요.                                                                            |
 
-### Step 3 — Codex SoT hooks.json에 1개 hook
+### Step 3 — Codex SoT hooks.json에 hook 1개
 
-`3b/.agents/global-codex-setup/hooks.json` edit:
+`3b/.agents/global-codex-setup/hooks.json`을 편집해요.
 
 ```json
 "SessionStart": [
@@ -147,24 +147,24 @@ Hook 의미(Serena docs에서):
 ]
 ```
 
-Codex docs는 `SessionStart`만 explicitly 권장 — Codex hook system이 "less refined"이고 Codex가 natively less drift를 보여요. `auto-approve`는 적용 안 함(no `acceptEdits` 아날로그). `remind`/`cleanup`은 docs가 endorse 안 함; drift 표면화하면 나중에 add.
+Codex 문서는 `SessionStart`만 명시적으로 권장해요. Codex의 hook 시스템이 "덜 다듬어졌"고, Codex 자체는 표류가 덜한 편이거든요. `auto-approve`는 적용 대상이 없어요(Codex엔 `acceptEdits` 같은 게 없어요). `remind`/`cleanup`은 문서에 없어서 일단 안 넣고, 나중에 표류가 보이면 그때 추가해요.
 
-### Step 4 — SoT symlink 복원
+### Step 4 — SoT 심볼릭 링크 복구
 
 ```bash
-# Claude Code의 /check-symlinks skill, 또는 manually:
+# Claude Code의 /check-symlinks skill, 또는 직접:
 ln -sf /Users/brandonwie/dev/personal/3b/.agents/global-claude-setup/settings.json /Users/brandonwie/.claude/settings.json
 ln -sf /Users/brandonwie/.claude/settings.json /Users/brandonwie/.claude-work/settings.json
 ```
 
-Work profile이 personal을 통해 chain(per `setup.sh` line 241+)되어서 single SoT edit이 둘 다에 propagate.
+work 프로필은 personal을 거쳐 체이닝돼요(`setup.sh` 241번 줄 이후 참고). 그래서 SoT 한 번만 고치면 두 프로필에 같이 반영돼요.
 
-### Step 5 — Shell launcher의 system-prompt override
+### Step 5 — shell 런처에서 system-prompt 교체
 
-`dotfiles/zsh/.zshrc`(또는 `cpers`/`cwork` 정의된 곳):
+`dotfiles/zsh/.zshrc`(또는 `cpers`/`cwork`가 정의된 곳)에 이걸 넣어요.
 
 ```zsh
-# Lazy cache — shell session당 one subprocess.
+# Lazy cache — shell 세션당 서브프로세스 한 번만 띄움.
 function _serena_cc_prompt() {
   if [[ -z "${_SERENA_CC_PROMPT_CACHE-}" ]]; then
     _SERENA_CC_PROMPT_CACHE=$(serena prompts print-cc-system-prompt-override 2>/dev/null)
@@ -183,66 +183,66 @@ function cpers() {
 }
 ```
 
-Graceful degradation: `serena`가 missing/broken이면 `_serena_cc_prompt`가 empty return → `--system-prompt=""`(no-op). serena 설치 안 돼도 launcher 작동.
+망가져도 안전하게 떨어져요. `serena`가 빠지거나 깨지면 `_serena_cc_prompt`가 빈 문자열을 돌려줘서 `--system-prompt=""`(no-op)이 돼요. Serena가 없어도 런처는 그대로 돌아가요.
 
 ### Step 6 — 검증
 
 ```bash
-# 1. Binary reachable
+# 1. 바이너리 잡히는지
 which serena serena-hooks
 serena --version
 serena-hooks --help | grep -E "activate|remind|cleanup|auto-approve"
 
-# 2. Profile당 MCP entry
+# 2. 프로필별 MCP 항목
 jq '.mcpServers.serena' ~/.claude/.claude.json
 jq '.mcpServers.serena' ~/.claude-work/.claude.json
 grep -A 2 '\[mcp_servers.serena\]' ~/.codex/config.toml
 
-# 3. Claude SoT의 hook count(4개 serena-hooks entry 예상)
+# 3. Claude SoT의 hook 개수 (serena-hooks 4개 기대)
 jq '[.hooks.SessionStart, .hooks.PreToolUse, .hooks.Stop] | flatten
     | map(select(.hooks[].command | contains("serena-hooks")))
     | length' \
   ~/dev/personal/3b/.agents/global-claude-setup/settings.json
 
-# 4. Codex SoT의 hook count(SessionStart 아래 1개 serena-hooks entry 예상)
+# 4. Codex SoT의 hook 개수 (SessionStart 아래 serena-hooks 1개 기대)
 jq '.hooks.SessionStart' \
   ~/dev/personal/3b/.agents/global-codex-setup/hooks.json
 
-# 5. Symlink 복원됨
+# 5. 심볼릭 링크 복구됐는지
 ls -la ~/.claude/settings.json ~/.claude-work/settings.json
 
-# 6. Launcher가 flag 전달
+# 6. 런처가 플래그를 들고 가는지
 zsh -c 'source ~/.zshrc; which cpers' | grep system-prompt
 ```
 
-Claude Code 재시작. `/mcp`가 이제 profile당 적절한 user MCP section 아래 `serena · ✔ connected`를 보여줘야 해요.
+Claude Code를 재시작하면 `/mcp`가 프로필마다 user MCP 영역 아래에 `serena · ✔ connected`를 보여줘야 해요.
 
-## 대안들 대신 이 접근을 선택한 이유
+## 다른 방법 대신 이걸 고른 이유
 
-5가지 obvious approach와 env-override + SoT path를 chosen 만든 trade-off:
+후보가 다섯 개 있었어요. 환경 변수 덮어쓰기 + SoT 경로를 고른 이유는 트레이드오프 표를 보면 분명해요.
 
-| Approach                                          | Pro                                            | Con                                                                                                          |
-| ------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Profile당 `~/.claude/.claude.json` hand-edit       | 가장 직접적                                      | 그 파일이 그 profile의 OAuth/state store이기도 함 — unrelated key 손상 위험.                                 |
-| `serena setup claude-code` + `CLAUDE_CONFIG_DIR`  | upstream installer 사용, env-overridden        | 두 번 installer 호출, 그러나 trivially cheap. **선택됨.**                                                    |
-| SoT `mcpServers` block hand-edit                   | Single source                                   | `mcpServers`가 SoT `settings.json`이 아닌 profile당 `~/.claude/.claude.json`에 살아요. 적용 안 됨.            |
-| Repo당 `claude mcp add --scope project`           | Repo-scoped                                    | "global" intent를 defeat — repo당 install 기억해야 함.                                                        |
-| Auto-approve hook skip                            | 더 단순                                         | `acceptEdits` mode에서 destructive Serena call의 blanket-approval coverage 손실.                              |
+| 방법                                              | 장점                                           | 단점                                                                                            |
+| ------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 프로필별 `~/.claude/.claude.json` 직접 편집       | 가장 직접적                                     | 같은 파일이 그 프로필의 OAuth/상태 저장소이기도 해서, 무관한 키를 망가뜨릴 위험.                |
+| `serena setup claude-code` + `CLAUDE_CONFIG_DIR`  | 공식 설치 도구를 그대로 쓰면서 환경만 바꿈    | 설치를 두 번 돌리지만 비용은 거의 없음. **선택.**                                              |
+| SoT의 `mcpServers` 블록 직접 편집                  | 단일 출처                                       | `mcpServers`는 SoT `settings.json`이 아니라 프로필별 `~/.claude/.claude.json`에 살아요. 적용 안 됨. |
+| repo마다 `claude mcp add --scope project`         | repo 단위                                       | "전역으로 깔겠다"는 의도가 깨져요. repo마다 깔아줘야 함.                                          |
+| auto-approve hook 빼기                            | 더 단순                                         | `acceptEdits` 모드에서 파괴적인 Serena 호출까지 묶어서 승인하는 커버리지가 사라져요.            |
 
-선택된 approach(env-override + SoT symlink + shell-launcher injection)는 install을 global 유지, 기존 3B SoT pipeline 활용, Serena uninstall 시 gracefully degrade.
+선택한 방법(환경 변수 덮어쓰기 + SoT 심볼릭 링크 + shell 런처 주입)은 설치 범위를 전역으로 유지하고, 기존 3B SoT 파이프라인을 그대로 쓰고, Serena를 떼어내도 부드럽게 무력화돼요.
 
-## multi-profile MCP install에 대한 핵심 takeaway
+## 다중 프로필 MCP 설치에 가져갈 핵심
 
-- **MCP entry는 profile-specific `.claude.json` 파일에 살아요**, shared SoT `settings.json`이 아님. 둘은 완전히 다른 파일(하나는 hook/permission/plugin 포함, 다른 하나는 MCP server + OAuth state 포함).
-- **`claude mcp add --scope user`는 env override 없이 직접 호출할 때만 `CLAUDE_CONFIG_DIR`을 무시.** env를 explicitly 설정하면 fix: `CLAUDE_CONFIG_DIR=~/.claude-work claude mcp add ...`.
-- **Opus 4.7에 4-hook layout이 optional이 아니라 necessary.** system-prompt override + remind hook 없이는 agent가 `find_symbol`/`get_symbols_overview`보다 `Read`와 `Grep`을 강하게 선호 — Serena 설치의 point를 defeat.
-- **Codex는 less 필요.** Single MCP entry + 1개 SessionStart hook. `auto-approve` 아날로그 없음. `--system-prompt` override 필요 없음(Codex가 natively less drift).
-- **모든 settings.json이나 `.claude.json` 변경 후 Claude Code 재시작.** in-flight session은 새 MCP entry나 새 hook을 안 가져옴.
-- **SoT 파일이 관련된 모든 install/upgrade 후 symlink 검증.** atomic-rename drift class(UI가 symlink를 regular file로 다시 씀)가 SoT pipeline을 silently break.
+- **MCP 항목은 프로필별 `.claude.json`에 살아요.** 공유 SoT `settings.json`이 아니에요. 두 파일은 완전히 달라요. 한쪽은 hook/권한/플러그인이고 다른 쪽은 MCP 서버 + OAuth 상태예요.
+- **`claude mcp add --scope user`는 환경 변수 덮어쓰기 없이 그냥 부를 때만 `CLAUDE_CONFIG_DIR`을 무시해요.** 명시적으로 깔아주면 동작해요. `CLAUDE_CONFIG_DIR=~/.claude-work claude mcp add ...`처럼요.
+- **Opus 4.7에서는 hook 4개 구성이 선택이 아니라 필수예요.** system-prompt 교체와 remind hook이 없으면 모델이 `find_symbol`/`get_symbols_overview`보다 `Read`/`Grep`을 강하게 선호해요. Serena를 깐 의미가 사라져요.
+- **Codex는 더 적게 필요해요.** MCP 항목 하나 + SessionStart hook 하나면 끝이에요. `auto-approve` 짝이 없고, `--system-prompt` 교체도 필요 없어요(Codex는 표류가 덜해요).
+- **settings.json이나 `.claude.json`을 바꾼 뒤엔 Claude Code를 꼭 재시작해요.** 진행 중인 세션은 새 MCP 항목이나 새 hook을 안 받아와요.
+- **SoT 파일이 얽힌 설치/업그레이드가 끝나면 심볼릭 링크를 다시 확인해요.** atomic-rename 표류(UI가 심볼릭 링크를 일반 파일로 다시 쓰는 그 부류)가 SoT 파이프라인을 조용히 깨요.
 
-## 이게 맞는 상황
+## 어떤 상황에 맞는 절차일까
 
-이건 Claude Code dual-profile 설정에 새 MCP server 설치, `cpers`/`cwork`가 이미 존재하는 새 머신을 Serena로 onboarding, installer가 successfully 실행된 후 "MCP server가 register됐는데 `/mcp`가 안 보여줌" 진단의 패턴이에요. Single-profile Claude Code 설정(no `CLAUDE_CONFIG_DIR` indirection — `serena setup claude-code` works as-is)과 per-repo(project-scope) MCP installation(`mcp.json`을 directly edit하는 다른 메커니즘)은 skip.
+이 절차는 세 가지 상황에 잘 맞아요. Claude Code 이중 프로필 환경에 새 MCP server를 깔 때, `cpers`/`cwork`가 이미 있는 새 머신에 Serena를 올릴 때, 그리고 설치 도구가 성공했다는데 `/mcp`엔 안 보이는 문제를 진단할 때예요. 단일 프로필 Claude Code 환경엔 안 맞아요. `CLAUDE_CONFIG_DIR` 우회가 필요 없어서 `serena setup claude-code` 한 번이면 끝나거든요. repo 단위(project scope) MCP 설치도 다른 메커니즘이라 빠져요. 그쪽은 `.mcp.json`을 직접 편집하는 흐름이에요.
 
 ## References
 

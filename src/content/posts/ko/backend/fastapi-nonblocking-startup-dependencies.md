@@ -19,13 +19,13 @@ source_updated: 2026-05-06T00:00:00.000Z
 translation_date: '2026-05-06'
 ---
 
-FastAPI의 lifespan code는 application이 request를 받기 전에 실행돼요. startup이 Kafka 같은 optional dependency를 await하면, API가 그 dependency 없이도 안전하게 route를 serve할 수 있는데도 Cloud Run cold start에서 user-facing health check + E2E probe가 실패할 수 있어요. 헷갈리는 signal: Kafka producer 실패가 service startup 실패처럼 보이는데, 실제 contract는 더 좁았어요 — note creation은 event가 best-effort observability일 때 Kafka를 기다리면 안 돼요.
+FastAPI의 lifespan은 앱이 요청을 받기 전에 실행돼요. 그래서 startup이 Kafka 같은 optional dependency를 await하면, 그 dependency 없이도 라우트를 안전하게 처리할 수 있는데도 Cloud Run cold start에서 health check와 E2E probe가 실패하기도 해요. 헷갈리는 부분은 신호 자체예요. Kafka producer 실패가 마치 서비스 startup 실패처럼 보이지만, 실제 계약은 더 좁아요 — 노트 생성은 이벤트가 best-effort 관측용일 뿐이라면 Kafka를 기다리면 안 돼요.
 
-이전 가능한 교훈은 correctness를 게이팅하는 dependency(database, auth)와 observability를 게이팅하는 dependency(event bus, audit fan-out, cache warmer)의 구분이에요. 첫 번째는 startup을 막아야 해요. 두 번째는 절대 막으면 안 되고요.
+여기서 얻을 수 있는 교훈은 정합성을 좌우하는 dependency(database, auth)와 관측성을 좌우하는 dependency(event bus, audit fan-out, cache warmer)를 구분하는 거예요. 앞쪽은 startup을 막아야 해요. 뒤쪽은 절대 막으면 안 되고요.
 
-## producer는 background, request는 foreground
+## producer는 background, 요청은 foreground
 
-optional producer는 lifespan 동안 background task로 시작하고, shutdown cleanup을 위해 task handle을 `app.state`에 두세요. request path는 event publishing을 fire-and-forget으로 다루고, 실패는 business operation을 실패시키지 않으면서 log해요.
+optional producer는 lifespan 동안 background task로 띄우고, task handle은 shutdown 정리를 위해 `app.state`에 보관하세요. 요청 경로는 이벤트 발행을 fire-and-forget으로 처리하고, 실패는 비즈니스 작업을 실패시키지 않으면서 로그만 남겨요.
 
 ```python
 app.state.kafka_init_task = asyncio.create_task(start_kafka_producer())
@@ -36,23 +36,23 @@ with suppress(asyncio.CancelledError):
 await stop_kafka_producer()
 ```
 
-이게 동작하는 이유는 두 가지예요. 첫째, `asyncio.create_task`가 producer 초기화를 lifespan continuation을 막지 않고 schedule해요 — producer가 background에서 connect하는 동안 app은 올라오는 걸 끝내요. 둘째, cancel-then-await shutdown 시퀀스가 필요한 이유는 `stop_kafka_producer()`도 깔끔하게 실행돼야 할 수 있고, shutdown이 fire될 때 init이 아직 진행 중인 케이스를 다뤄야 하기 때문이에요.
+이게 동작하는 이유는 두 가지예요. 첫째, `asyncio.create_task`는 producer 초기화를 예약만 하고 lifespan 진행을 막지 않아요 — producer가 백그라운드에서 연결되는 동안 앱은 올라오는 절차를 마저 끝내요. 둘째, cancel 후 await하는 shutdown 순서가 필요한 이유는 `stop_kafka_producer()`도 깔끔하게 돌아가야 할 수 있고, shutdown이 떨어질 때 초기화가 아직 진행 중인 경우도 다뤄야 하기 때문이에요.
 
-## connectivity가 아니라 latency로 test하세요
+## 연결 여부가 아니라 지연으로 test하세요
 
-직접 socket 기반 test는 flaky해요 — Kafka availability가 CI 환경마다 다르고, connection-refused error가 원래 startup-stall 증상을 안정적으로 재현하지 않거든요. 실제로 버그를 잡는 regression check는 latency 기반이에요: slow `start_kafka_producer()` stub이 lifespan 완료를 service startup budget 너머로 늦추면 안 돼요.
+소켓 기반 test를 직접 거는 방식은 잘 깨져요 — Kafka 가용성이 CI 환경마다 다르고, connection-refused 에러가 원래 startup이 멈추던 증상을 안정적으로 재현하지 않거든요. 실제로 버그를 잡아주는 회귀 검사는 지연 시간 기반이에요. `start_kafka_producer()`를 느린 stub으로 바꿔서, lifespan 완료가 서비스 startup 예산을 넘어가지 않는지 확인하는 형태죠.
 
-이 모양의 test가 "우리가 실수로 다시 blocking으로 만들지 않았나"에 일반적으로 더 robust해요. 실제 failure mode는 "lifespan이 event loop를 너무 오래 잡았다"이지 "dependency가 실패했다"가 아니에요 — 그래서 test는 loop-holding behavior를 타겟해야 해요.
+이런 모양의 test가 "실수로 다시 블로킹으로 돌아가지 않았나"를 잡는 데 일반적으로 더 단단해요. 실제 실패 양상은 "lifespan이 event loop를 너무 오래 잡고 있었다"이지 "dependency가 실패했다"가 아니에요 — 그래서 test도 event loop를 잡고 있는 동작을 겨냥해야 해요.
 
 ## 이게 맞는 상황
 
-이 패턴은 dependency가 telemetry, audit fan-out, cache warming, event propagation에 유용하지만 API가 핵심 트래픽을 받는 데 필수가 아닐 때 써요. safety invariant: dependency가 필요 없는 request path가 그게 다운돼서 막히면 안 돼요.
+이 패턴은 dependency가 텔레메트리, audit fan-out, cache warming, 이벤트 전파에는 유용하지만 API가 핵심 트래픽을 받는 데 꼭 필요하지는 않을 때 써요. 지켜야 할 안전 불변식은 하나예요. 그 dependency가 필요 없는 요청 경로가, 그게 다운됐다는 이유로 막히면 안 돼요.
 
-correctness, persistence, authorization에 필수인 dependency를 background에 두지 마세요. 앱이 그것 없이 안전하게 serve할 수 없다면, startup을 큰 소리로 실패시키고 platform이 restart하거나 page하게 두세요. correctness-critical dependency를 background에 두면 startup-time 실패를 진단하기 더 어려운 runtime 실패로 바꾸는 건데, 그건 엄격히 더 나빠요.
+정합성, 영속성, 인가에 꼭 필요한 dependency는 백그라운드로 돌리지 마세요. 앱이 그것 없이 안전하게 응답할 수 없다면, startup을 시끄럽게 실패시키고 플랫폼이 재시작하거나 페이징하도록 두는 게 맞아요. 정합성에 결정적인 dependency를 백그라운드로 빼면 startup 시점의 실패가 진단하기 더 어려운 런타임 실패로 바뀌는 거라, 분명히 더 나쁜 선택이에요.
 
-## 실용적인 takeaway
+## 실용적인 정리
 
-optional dependency는 lifespan 중 `asyncio.create_task`에 들어가고, task handle은 shutdown을 위해 `app.state`에 stash해요. slow stub으로 test하세요 — 신경 쓰는 failure mode는 "event loop를 너무 오래 막는다"이고, latency-bounded assertion이 connectivity check보다 그걸 더 안정적으로 잡아요. "이걸 block한다" vs "이걸 background한다"의 경계선은 request path가 그것 없이 안전하게 return할 수 있는지예요.
+optional dependency는 lifespan 안에서 `asyncio.create_task`로 띄우고, task handle은 shutdown을 위해 `app.state`에 보관하세요. 느린 stub으로 test하면 돼요 — 신경 써야 할 실패 양상은 "event loop를 너무 오래 막는다"이고, 지연 시간을 기준으로 두는 단언이 단순한 연결 확인보다 이 양상을 더 안정적으로 잡아줘요. "이건 막는다" vs "이건 백그라운드로 돌린다"의 경계선은, 요청 경로가 그것 없이 안전하게 응답을 돌려줄 수 있느냐예요.
 
 ## References
 
