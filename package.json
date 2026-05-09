@@ -33,6 +33,7 @@
 		"@sveltejs/kit": "^2.59.1",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/typography": "^0.5.16",
+		"@types/mdast": "^4.0.4",
 		"@types/node": "^24.12.0",
 		"eslint": "^10.0.3",
 		"eslint-config-prettier": "^10.1.8",
@@ -57,6 +58,7 @@
 		"typescript": "^5.7.3",
 		"typescript-eslint": "^8.57.0",
 		"unist-util-visit": "^5.1.0",
+		"vfile": "^6.0.3",
 		"vite": "^8.0.0"
 	},
 	"dependencies": {
