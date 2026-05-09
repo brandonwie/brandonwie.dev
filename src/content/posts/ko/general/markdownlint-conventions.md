@@ -2,7 +2,7 @@
 title: Markdownlint 컨벤션 가이드
 description: '200개 markdown 파일에 7,500개의 markdownlint 에러. 어떤 룰이 중요한지, 어떤 설정이 잘 정착했는지, nested scope에서만 표면화되는 두 가지 pre-commit 함정, 그리고 14-rule custom config를 한 줄 extends + 5개 carve-out으로 collapse한 strict-preset 마이그레이션.'
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-05-06
+updated: 2026-05-10
 tags:
   - general
   - documentation
@@ -14,7 +14,7 @@ lang: ko
 source_lang: en
 source_slug: markdownlint-conventions
 source_updated: 2026-05-06
-translation_date: '2026-05-06'
+translation_date: '2026-05-10'
 references:
   - url: 'https://github.com/DavidAnson/markdownlint'
     title: markdownlint
@@ -37,13 +37,13 @@ references:
     type: official
 ---
 
-나의 지식 베이스에 처음으로 `markdownlint`를 돌렸더니 7,500개의 에러가
-나왔어요. 오타나 깨진 링크가 아니라 -- 포맷팅 불일치였습니다. 리스트 앞뒤에
-빈 줄 누락, 언어 지정 없는 코드 블록, 중복 헤딩, 스페이싱 없는 테이블. 모든
-파일이 자기만의 스타일을 가지고 있었고, 서로 일치하는 게 하나도 없었어요.
+지식 베이스에 처음으로 `markdownlint`를 돌렸더니 에러 7,500개가
+쏟아져 나왔어요. 오타나 깨진 링크가 아니라 — 포맷 불일치였어요. 리스트 앞뒤
+빈 줄 누락, 언어 지정 없는 코드 블록, 중복 헤딩, 스페이싱 없는 테이블. 파일마다
+자기만의 스타일을 가지고 있었고, 서로 일치하는 게 하나도 없었어요.
 
 문제는 개별 규칙이 어렵다는 게 아니었어요. 강제되는 컨벤션 없이는 엔트로피가
-이긴다는 게 문제였습니다. 파일을 건드릴 때마다 조금씩 다른 포맷팅 스타일이
+이긴다는 게 문제였어요. 파일을 건드릴 때마다 조금씩 다른 포맷이
 쌓이고, 시간이 지나면 코드베이스 전체가 충돌하는 컨벤션의 짜깁기가 돼서
 지저분한 diff를 만들고 GitHub 렌더링을 혼란스럽게 만들어요.
 
@@ -56,34 +56,34 @@ GitHub은 스페이싱에 따라 테이블을 다르게 렌더링하고, 언어 
 문단과 합쳐질 수 있어요.
 
 Markdownlint는 이런 문제를 프로덕션에 도달하기 전에 잡아줘요. 모든 markdown
-파일에 일관된 포맷팅 규칙을 강제하는 Node.js 스타일 체커입니다.
+파일에 일관된 포맷 규칙을 강제하는 Node.js 기반 스타일 체커예요.
 
 ## 겪었던 어려움들
 
-**에러의 절대적인 양 (7,500+).** 수동으로 고칠 수가 없었어요. 어떤 규칙이
+**에러의 절대적인 양 (7,500+).** 손으로 고칠 수가 없었어요. 어떤 규칙이
 가장 영향력이 큰지 파악해서 수정 우선순위를 정하고, 어떤 건 설정으로 무시할
-수 있는지 이해해야 했습니다.
+수 있는지 이해해야 했어요.
 
 **MD060이 에러 수를 지배 (3,600+).** 테이블 스페이싱 에러가 만연했지만
 기계적이었어요. 자동 수정과 컨벤션 먼저 정립하기 사이에서 결정해야 했고,
-컨벤션을 먼저 정립한 뒤 수정하는 걸 택했습니다.
+컨벤션을 먼저 정립한 뒤 수정하는 쪽을 택했어요.
 
 **규칙 충돌.** MD013(줄 길이) 같은 규칙은 테이블 가독성과 충돌해요. 80자에서
-줄바꿈하는 긴 테이블 행은 읽기 어려워져요. 일괄 적용이 아닌 규칙별 설정
-결정이 필요했습니다.
+줄바꿈하는 긴 테이블 행은 읽기 어려워져요. 일괄 적용이 아니라 규칙별로
+따로 정해야 했어요.
 
-**기존 파일들이 다양한 컨벤션 사용.** 일부 파일은 압축된 테이블 구문을,
-다른 파일은 패딩을 사용했어요. 정규화하려면 전체에 수정을 적용하기 전에 하나의
-표준 스타일을 먼저 선택해야 했습니다.
+**기존 파일들이 다양한 컨벤션 사용.** 어떤 파일은 압축된 테이블 구문을,
+어떤 파일은 패딩을 썼어요. 정규화하려면 전체에 수정을 적용하기 전에 하나의
+표준 스타일을 먼저 골라야 했어요.
 
 ## 가장 중요한 규칙들
 
-실제 문제를 일으킨 빈도 순으로 정리한 규칙들입니다.
+실제 문제를 일으킨 빈도 순으로 정리한 규칙들이에요.
 
 ### MD032 -- 리스트 앞뒤 빈 줄
 
 리스트 앞뒤에 빈 줄이 필요해요. 없으면 일부 렌더러에서 리스트 항목이 주변
-문단과 합쳐질 수 있습니다.
+문단과 합쳐질 수 있어요.
 
 ```markdown
 <!-- Bad -->
@@ -109,8 +109,8 @@ More text after
 
 ### MD040 -- 코드 블록 언어 지정
 
-모든 fenced 코드 블록에 언어를 지정해야 해요. 언어 태그 없으면 구문 강조가
-안 됩니다.
+모든 fenced 코드 블록에 언어를 지정해야 해요. 언어 태그가 없으면 구문 강조가
+안 돼요.
 
 ````markdown
 <!-- Bad -->
@@ -131,8 +131,8 @@ some code here
 
 ### MD060 -- 테이블 컬럼 스타일
 
-테이블은 일관된 스페이싱을 사용해야 해요. 가독성이 가장 좋은
-`leading_and_trailing`을 선택했습니다:
+테이블은 일관된 스페이싱을 써야 해요. 가독성이 가장 좋은
+`leading_and_trailing`을 골랐어요.
 
 ```markdown
 | Header 1 | Header 2 |
@@ -140,8 +140,8 @@ some code here
 | Cell 1   | Cell 2   |
 ```
 
-이 단일 규칙이 7,500개 에러 중 3,600개 이상을 차지했어요. 수정은 기계적이었지만
-컨벤션이 먼저 있어야 했습니다.
+이 규칙 하나가 7,500개 에러 중 3,600개 이상을 차지했어요. 수정은 기계적이었지만
+컨벤션이 먼저 있어야 했어요.
 
 ### MD024 -- 중복 헤딩 금지
 
@@ -172,7 +172,7 @@ MD024는 `siblings_only: true`로 설정하면 다른 부모 헤딩 아래의 �
 ### MD031 -- 코드 블록 앞뒤 빈 줄
 
 Fenced 코드 블록 앞뒤에 빈 줄이 필요해요. 없으면 일부 렌더러가 코드 블록
-경계를 감지하지 못할 수 있습니다.
+경계를 감지하지 못할 수 있어요.
 
 ### MD009 -- 후행 공백 금지
 
@@ -180,8 +180,8 @@ Fenced 코드 블록 앞뒤에 빈 줄이 필요해요. 없으면 일부 렌더�
 
 ### MD010 -- 하드 탭 금지
 
-탭 대신 스페이스를 사용하세요. 표준은 markdown에 2스페이스, 코드 블록에
-4스페이스입니다.
+탭 대신 스페이스를 쓰세요. 표준은 markdown에 2스페이스, 코드 블록에
+4스페이스예요.
 
 ### MD013 -- 줄 길이
 
@@ -259,9 +259,9 @@ upstream preset([style/all.json](https://github.com/DavidAnson/markdownlint/blob
 | `style/prettier.json`     | 23개 formatting 룰 (blanks-around-fences, code-fence-style, hr-style, line-length, list-indent, no-trailing-spaces, etc.)      | prettier와 공존 — Joshua Goldberg의 recipe          |
 | `style/cirosantilli.json` | Ciro Santilli의 personal style                                                                                                 | 참조용                                                |
 
-### proposed config를 먼저 돌려보고, 그 다음 약속하기
+### 제안한 config는 먼저 돌려보고 약속하기
 
-config 단순화를 제안할 때, proposed config를 unmodified content에 대해 먼저 돌려봐요. current-config output에서 추정하지 마세요 — 기존 override들이 "pure default"로 전환하면 inherit할 수천 개 failure를 silencing하고 있을 수도 있어요. 3B test(2026-05-01)에서:
+config 단순화를 제안할 때는, 제안한 config를 손대지 않은 콘텐츠에 먼저 돌려봐요. 지금 config의 출력에서 추정하면 안 돼요 — 기존 override들이 "pure default"로 전환되는 순간 다시 따라올 수천 개 실패를 막고 있을 수도 있어요. 3B 테스트(2026-05-01) 결과는 이렇게 나왔어요.
 
 | Config                                | Failure (보고됨)                  |
 | ------------------------------------- | --------------------------------- |
@@ -269,7 +269,7 @@ config 단순화를 제안할 때, proposed config를 unmodified content에 대�
 | `extends: "markdownlint/style/all"`   | **11,398** (MD013 만: 10,491)     |
 | `extends: "style/all"` + 5 carve-out  | 36 (MD040만, sweepable)           |
 
-처음 둘은 14개 customization이 "default에 대해 no-op"이었다면 동일해야 했어요. 대신 기존 config가 MD013 false(line-length), MD024 siblings_only=true, MD025 front_matter_title=""을 통해 ~11,000 failure를 silencing하고 있었어요 — 즉, 그 override들은 redundant가 아니라 load-bearing이었던 거예요.
+위 두 줄은 14개 커스터마이징이 "default 대비 no-op"이었다면 결과가 같아야 했어요. 그런데 기존 config가 MD013 false(line-length), MD024 siblings_only=true, MD025 front_matter_title=""을 통해 약 11,000개 실패를 막고 있었던 거예요 — 즉, 그 override들은 군더더기가 아니라 무게를 받치고 있었어요.
 
 workflow: temp config 파일 작성(파일명에 `markdownlint-cli2` prefix 필요, 예: `pure-default.markdownlint-cli2.jsonc` — CLI가 임의 이름을 reject), `npx markdownlint-cli2 --config <temp-file> '<glob>'` 실행, failure를 `MD###/rule-name`별로 그룹화한 다음 carve out vs fix할 것 결정.
 
@@ -282,7 +282,7 @@ valid해 보이지만 인식되지 않는 값이라서 효과 없는 custom 룰 
 | `MD060: { style: "any" }` | `"any"`는 valid 값이 아님(valid: `compact`, `aligned`, `consistent`)  | 룰을 비활성화하려면 `MD060: false`                  |
 | 11× `MD###: true` entry   | default와 정확히 일치 — redundant noise                                | drop; `default: true`에 의존                        |
 
-Diff-test 룰: override 있이 vs 없이 lint. failure count + distribution이 동일하면 override가 broken이거나 redundant. fix 또는 drop.
+Diff 테스트 규칙은 이래요. override를 켠 채로 한 번, 끈 채로 한 번 lint를 돌려서 실패 건수와 분포가 똑같이 나오면 그 override는 깨졌거나 군더더기예요. 고치든지 빼든지 해야 해요.
 
 ### `@github/markdownlint-github`와 비교
 
@@ -366,9 +366,9 @@ git commit
 #   MD024 duplicate headings (×3)
 ```
 
-**Fix:** `**/*.me.md`를 `.markdownlint-cli2.jsonc`의 `ignores` array에
-추가하세요. `.me.md`는 AI/tooling이 수정하면 안 되는 human-authored seed
-파일에 대한 컨벤션이에요. Lint가 그 콘텐츠로 commit을 gating하면 안 돼요.
+**Fix:** `**/*.me.md`를 `.markdownlint-cli2.jsonc`의 `ignores` 배열에
+추가하세요. `.me.md`는 AI나 도구가 수정하면 안 되는 사람-작성 seed
+파일에 대한 컨벤션이에요. Lint가 그 콘텐츠로 commit을 막으면 안 돼요.
 
 ```json
 "ignores": [
@@ -406,8 +406,8 @@ markdownlint 확장 프로그램(`DavidAnson.vscode-markdownlint`)을 설치하�
 }
 ```
 
-이렇게 하면 에디터에서 실시간 린팅을 받을 수 있어요. 에러가 노란 물결선으로
-표시되고, 대부분 키 하나로 고칠 수 있습니다.
+이렇게 하면 에디터에서 실시간으로 린트 결과를 받을 수 있어요. 에러가 노란 물결선으로
+표시되고, 대부분은 키 하나로 고칠 수 있어요.
 
 ## 빠른 참조
 
@@ -425,10 +425,10 @@ markdownlint 확장 프로그램(`DavidAnson.vscode-markdownlint`)을 설치하�
 
 ## 왜 이 방법이 효과적인가
 
-Markdownlint는 암묵적인 포맷팅 기대를 명시적이고 강제할 수 있는 규칙으로
-바꿔줘요. 설정 파일에 컨벤션이 존재하면 모든 기여자가 같은 표준을 따르게
-됩니다. 포맷팅 변경이 콘텐츠 변경을 오염시키지 않으니 diff가 깔끔해지고,
-소스 포맷팅이 일관되니 GitHub이 테이블과 코드 블록을 일관되게 렌더링해요.
+Markdownlint는 암묵적인 포맷 기대치를 명시적이고 강제할 수 있는 규칙으로
+바꿔줘요. 설정 파일에 컨벤션이 적혀 있으면 모든 기여자가 같은 표준을 따르게
+돼요. 포맷 변경이 콘텐츠 변경을 오염시키지 않으니 diff가 깔끔해지고,
+소스 포맷이 일관되니 GitHub도 테이블과 코드 블록을 일관되게 렌더링해요.
 
 ## 실전 팁
 

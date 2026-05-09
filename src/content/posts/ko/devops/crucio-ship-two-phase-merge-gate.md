@@ -2,7 +2,7 @@
 title: 수동 merge gate로서의 두 단계 호출 패턴
 description: 'CI/CD automation skill이 "all-in-one" mode(`/skill +flag`)를 지원할 때, all-in-one mode는 default가 아니라 opt-in이어야 해요. 호출을 분리하면 CI green과 되돌릴 수 없는 merge 사이에 의미 있는 일시정지 지점을 보존해요.'
 date: 2026-05-05T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-05-10'
 tags:
   - devops
   - automation
@@ -15,7 +15,7 @@ lang: ko
 source_lang: en
 source_slug: crucio-ship-two-phase-merge-gate
 source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-06'
+translation_date: '2026-05-10'
 ---
 
 `/crucio-ship`은 PR-to-prod ship에 대해 세 개의 논리적 phase를 실행해요. 각 phase는 reversibility 속성이 매우 다른데, 이걸 한 번의 호출에 묶으면 쉬운 부분과 되돌릴 수 없는 부분이 섞여요.
@@ -68,11 +68,11 @@ CI 비용이 큰 케이스에는 대안이 있어요: skill을 다시 호출하�
 
 multi-invocation split을 사용할 때:
 
-- operator가 되돌릴 수 없는 단계(merge, push to main, dispatch deploy)를 의식적으로 authorize해야 하는 production deploy.
-- intermediate state(CI green) 자체가 operator가 검사하고 싶은 의미 있는 정보인 multi-phase automation.
-- hard-block gate가 있는 skill(red CI = abort) — 게이트가 당신이 온 이유예요. auto-everything으로 우회하지 마세요.
+- operator가 되돌릴 수 없는 단계(merge, main 푸시, deploy 디스패치)를 의식적으로 승인해야 하는 production deploy.
+- 중간 상태(CI green) 자체가 operator가 검사하고 싶은 의미 있는 정보가 되는 multi-phase automation.
+- hard-block 게이트가 있는 skill(red CI = abort) — 이 게이트를 쓰려고 split 패턴을 고른 거예요. auto-everything으로 우회하지 마세요.
 
-automation이 진짜 low-blast-radius일 때(preview deploy, dev 환경, internal tooling — all-in-one OK), shipping이 unattended/cron-driven일 때(CI bot, Renovate auto-merge — 사람이 기다리지 않으면 게이트는 무의미), 게이트가 그냥 도장 찍기일 때는 split이 필요 없어요. operator의 결정이 늘 "yes, ship"이면 게이트는 연극이에요. pre-merge signal을 개선하거나 auto-shipping을 받아들이세요.
+automation이 진짜 low-blast-radius일 때(미리보기 배포, dev 환경, 내부 도구 — all-in-one도 괜찮음), 배포가 무인/cron 기반일 때(CI bot, Renovate auto-merge — 사람이 기다리지 않으면 게이트는 무의미), 게이트가 그냥 도장 찍기일 때는 split이 필요 없어요. operator의 결정이 늘 "yes, ship"이면 게이트는 연극이에요. merge 전 시그널을 개선하거나, auto-shipping을 받아들이세요.
 
 ## 실용적인 takeaway
 

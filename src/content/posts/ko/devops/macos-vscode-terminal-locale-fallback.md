@@ -5,7 +5,7 @@ description: >-
   `git status`가 갑자기 한국어로 말하는 이유, 그리고 `settings.json`에 `LANG`을
   고정하는 방법이에요.
 date: 2026-04-11T00:00:00.000Z
-updated: '2026-04-11'
+updated: '2026-05-10'
 tags:
   - devops
   - macos
@@ -19,7 +19,7 @@ lang: ko
 source_lang: en
 source_slug: macos-vscode-terminal-locale-fallback
 source_updated: 2026-04-11T00:00:00.000Z
-translation_date: '2026-04-11'
+translation_date: '2026-05-10'
 ---
 
 오늘 VSCode를 열고 변경사항이 있는 repo에서 `git status`를 돌렸는데, 출력이 한국어로 나왔어요. login shell은 여전히 영어였어요. 다른 건 전혀 이상하지 않았어요 — Terminal.app, iTerm2, tmux, 열려 있던 다른 모든 shell은 전부 표준 `en_US.UTF-8` 출력을 보여 주고 있었어요. 오직 VSCode의 integrated terminal만 git이 한국어로 말해야 한다고 결정한 거예요.
@@ -136,4 +136,4 @@ shell rc가 `LANG`을 확실히 설정한다고 신뢰하고 설정 layer를 하
 - VSCode의 `terminal.integrated.detectLocale: "auto"`는 macOS에서 primary lookup이 실패하면 `AppleLanguages`를 walk하면서, `LANG=ko_KR.UTF-8`(또는 `ja_JP.UTF-8` 등 보조 언어가 무엇이든)을 얌전히 주입해 버려요.
 - `terminal.integrated.env.osx`는 auto-detect된 값과 *merge*해요. 부분 block은 auto-detection을 끄지 못해요.
 - `LC_ALL`은 nuclear override예요. 어떤 다른 process가 뭘 주입하든 특정 locale을 보장해야 할 땐 `LANG`과 `LC_ALL`을 둘 다 설정하세요.
-- macOS에서 Language: English + Region: 비영어권으로 쓰고 있다면 이 trap이 당신을 기다리고 있어요. fix는 `settings.json`에 세 줄이면 돼요.
+- macOS에서 Language: English + Region: 비영어권 조합으로 쓰고 있다면 이 trap이 기다리고 있어요. fix는 `settings.json`에 세 줄이면 돼요.

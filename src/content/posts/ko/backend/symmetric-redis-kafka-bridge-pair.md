@@ -2,7 +2,7 @@
 title: 크로스 클라우드 이벤트 흐름을 위한 대칭형 Redis ↔ Kafka 브리지 페어
 description: Cloud Run은 내부 Kafka 브로커에 못 닿아요 — `advertised.listeners`가 항상 이겨요. Redis를 통과하는 단방향 브리지 한 쌍이 모든 invariant를 지켜줘요.
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-04-29'
+updated: '2026-05-10'
 tags:
   - backend
   - distributed-systems
@@ -14,7 +14,7 @@ lang: ko
 source_lang: en
 source_slug: symmetric-redis-kafka-bridge-pair
 source_updated: 2026-04-29T00:00:00.000Z
-translation_date: '2026-04-29'
+translation_date: '2026-05-10'
 ---
 
 > 내구성 있는 내부 이벤트 버스(Kafka)와 ephemeral edge 버스(Redis pub/sub)가
@@ -67,13 +67,14 @@ response에 broker의 `advertised.listeners` 값을 반환해요 — 보통 Dock
                                                               [Cloud Run API publishers]
 ```
 
-- **Forward bridge** (`Kafka → Redis`): consumer group이 모든 SSE-관련
-  Kafka 토픽을 구독하고, 각 메시지를 reserved-prefix Redis pub/sub
-  채널(`sse:{topic}`)로 verbatim하게 republish해요. Cloud Run API가 SSE
-  fan-out을 위해 그 Redis 채널을 구독해요 — edge에 Kafka 클라이언트 없음.
-- **Reverse bridge** (`Redis → Kafka`): 같은 `sse:*` 채널을 PSubscribe로
-  구독하고, prefix를 떼고, audit 내구성을 위해 `RequiredAcks=All`로 매칭
-  Kafka 토픽에 각 메시지를 republish해요.
+- **Forward 브리지** (`Kafka → Redis`): consumer group이 SSE 관련 Kafka
+  토픽을 모두 구독하고, 들어온 메시지를 그대로 예약된 prefix를 붙인 Redis
+  pub/sub 채널(`sse:{topic}`)로 다시 흘려요. Cloud Run API는 SSE fan-out을
+  위해 그 Redis 채널만 구독하면 돼요. edge에는 Kafka 클라이언트를 둘 필요가
+  없어요.
+- **Reverse 브리지** (`Redis → Kafka`): 똑같은 `sse:*` 채널을 PSubscribe로
+  구독한 다음, prefix를 떼고 짝이 맞는 Kafka 토픽으로 다시 보내요. audit
+  내구성을 지키려고 `RequiredAcks=All`로 묶어서 보내요.
 
 Producer 측은 환경에 따라 뒤집혀요. NAS-내부 서비스는 직접 Kafka
 publishing을 유지해요(`EVENT_BUS_BACKEND=kafka`). Cloud Run publisher는
@@ -118,62 +119,67 @@ sse-bridge를 mirror해서 sse-revbridge를 만들 때, "consumer started" 로�
 mechanical: 페어된 서비스가 구조 대부분을 공유할 때, 코멘트를 계약의 일부로
 취급하고 metric 이름과 같은 주의로 리뷰해요.
 
-## /healthz semantics asymmetry
+## /healthz 의미가 양쪽이 달라요
 
-sse-bridge는 시작시 Redis를 ping해요(output side); sse-revbridge도 시작시
-Redis를 ping해요(input side). Producer side의 Kafka는 `kafka-go.Writer`
-에서 lazy해요 — 연결은 첫 `WriteMessages`에 일어나요. 초록 `/healthz`는
-Kafka가 도달 가능하다는 뜻이 **아니에요**. Operator alert는 producer-side
-브리지에 대해 `errors_total{type="kafka"}`를 포함해야 잘못 설정된 broker
-URL이 다음 배포 전에 표면화돼요.
+두 브리지 모두 시작할 때 Redis에 ping을 던져요. forward는 출력 쪽,
+reverse는 입력 쪽이에요. 그런데 producer 쪽 Kafka는 다르게 동작해요 —
+`kafka-go.Writer`는 lazy하게 잡혀서, 실제 연결은 첫 `WriteMessages`
+호출 때 일어나요. 그러니까 `/healthz`가 초록이어도 Kafka가 닿는다는
+보장은 **없어요**. 잘못 설정한 broker URL이 다음 배포 전에 드러나려면,
+producer 쪽 브리지의 알람에 `errors_total{type="kafka"}`를 꼭 같이
+넣어둬야 해요.
 
-## NAS 배포 동안의 audit-loss 윈도우
+## NAS 배포 중 생기는 audit 손실 구간
 
-sse-revbridge가 재시작할 때, Cloud-Run-originated 이벤트가 Redis로
-publish되는데 받는 subscriber가 없어요 — Redis pub/sub이 offline subscriber에
-대해 buffer하지 않아요. 배포 동안은 acceptable; zero-loss audit이 hard
-requirement가 되면, reverse bridge를 PSubscribe에서 consumer-group offset이
-있는 Redis Stream으로 바꿔서 missed 메시지를 replay할 수 있게 해요.
+sse-revbridge가 재시작하는 동안, Cloud Run에서 발생한 이벤트는 Redis로
+publish되지만 받아주는 구독자가 없어요. Redis pub/sub은 끊긴 구독자를
+위해 따로 버퍼를 두지 않거든요. 배포 잠깐 동안은 감수할 수 있는 손실인데,
+zero-loss audit이 꼭 필요한 환경이라면 reverse 브리지를 PSubscribe 대신
+consumer-group offset이 있는 Redis Stream으로 바꿔야 해요. 그러면 놓친
+메시지를 다시 흘려보낼 수 있어요.
 
-## JSON parse 실패가 진짜 위험
+## JSON parse 실패가 진짜 위험해요
 
-Forward bridge는 dumb byte-forwarder일 수 있어요(Kafka → Redis), Redis가
-그냥 byte를 relay하니까요. Reverse bridge는 페이로드에서 partition key를
-추출하기 위해 parse를 **반드시** 해야 해요 — malformed JSON이 그렇지 않으면
-empty key로 Kafka에 republish돼서 잠재적으로 다운스트림 consumer를 손상시켜요.
-`errors_total{type="json-decode"}`와 `errors_total{type="missing-key"}`를
-별도로 분류해서 operator가 어떤 계약이 위반됐는지 알 수 있게 해요.
+Forward 브리지는 그냥 바이트만 흘려보내도 돼요. Redis가 받은 그대로 다시
+내보내니까요. 그런데 reverse 브리지는 다르게 가야 해요 — payload에서
+partition key를 뽑으려면 **반드시** parse를 해야 하거든요. 깨진 JSON을
+그대로 두면 빈 키로 Kafka에 republish되고, 그게 그대로 다운스트림 consumer를
+망가뜨릴 수 있어요. 그래서 `errors_total{type="json-decode"}`와
+`errors_total{type="missing-key"}`를 따로 잡아두는 게 좋아요. 둘이 분리돼
+있어야 어떤 계약이 깨졌는지 운영자가 바로 보고 판단할 수 있어요.
 
-## 언제 사용할까
+## 언제 쓰면 좋아요
 
-- 내구성 이벤트 버스가 private 네트워크(NAS, on-prem, VPC)에 존재.
+- 내구성 이벤트 버스가 사설망(NAS, on-prem, VPC)에 자리 잡고 있어요.
 - 서버리스 edge tier(Cloud Run, Lambda, Vercel)가 같은 이벤트 흐름에
-  참여해야 하지만 내구성 버스에 persistent 연결을 만들 수 없음.
-- Audit-trail completeness가 hard requirement (compliance, security
-  posture, tamper-proof log).
-- Ephemeral edge 버스(Redis pub/sub, NATS, MQTT)가 이미 사용 가능하고
-  양쪽에서 도달 가능.
+  참여해야 하는데, 내구성 버스에 상시 연결을 유지할 수 없어요.
+- audit 추적의 빈틈이 허용되지 않는 환경이에요(컴플라이언스, 보안 자세,
+  변조 방지 로그가 걸려 있는 경우).
+- 양쪽에서 닿을 수 있는 휘발성 edge 버스(Redis pub/sub, NATS, MQTT)가
+  이미 깔려 있어요.
 
-## 언제 사용하지 말까
+## 언제 쓰지 말아야 해요
 
-- 내구성 버스가 edge tier에서 도달 가능하면 (public endpoint 있는 managed
-  Kafka, Confluent Cloud, MSK Public). 직접 연결이 이김.
-- Audit completeness가 필요 없으면 — edge에서 Redis-only로 accept-gap이
-  훨씬 저렴.
-- 이벤트 볼륨이 두 추가 hop(~5-10ms 각각)이 레이턴시 예산을 폭발시킬 만큼
-  높으면 — direct VPC peering이 복잡도 비용을 정당화함.
-- 두 브리지의 RAM 비용이 헤드룸을 초과하면 (durable-bus side에서 각
-  ~30-100MB).
+- 내구성 버스가 edge에서 그대로 닿을 때 — 공개 엔드포인트가 있는 managed
+  Kafka나 Confluent Cloud, MSK Public이라면 직접 연결이 이겨요.
+- audit 완전성이 필요 없을 때 — edge에서 Redis만 쓰고 약간의 누락을
+  감수하는 쪽이 훨씬 싸요.
+- 이벤트 볼륨이 너무 커서 hop이 두 번 추가되는 비용(~각 5-10ms)이 레이턴시
+  예산을 깨뜨릴 때 — 이때는 VPC peering으로 직접 잇는 쪽이 복잡도 값을
+  해요.
+- 두 브리지의 메모리 비용이 헤드룸을 넘길 때 — 내구성 버스 쪽에서 각각
+  대략 30-100MB가 들어요.
 
-## 패턴 선례
+## 비슷한 패턴을 쓰는 곳
 
-- **LinkedIn** — hybrid storage solutions; Kafka가 내구성 backbone, fan-out
-  위한 edge-friendly transport (Espresso, Voldemort).
-- **Slack** — real-time messaging; Kafka 아래, edge transport 위.
-- **Discord** — Cassandra/ScyllaDB에 수십억 메시지 저장, edge에서 ephemeral
-  pub/sub.
-- **Stripe** — origin tier 관계없이 모든 쓰기를 내구성 버스로 라우팅하는
-  audit pipeline.
+- **LinkedIn**은 하이브리드 저장 구조를 써요. Kafka가 내구성 backbone을
+  맡고, fan-out은 edge에 친화적인 transport(Espresso, Voldemort)가 받아요.
+- **Slack**의 실시간 메시징도 비슷해요. 아래에 Kafka, 위에 edge transport를
+  올렸어요.
+- **Discord**는 Cassandra와 ScyllaDB에 수십억 개 메시지를 쌓으면서,
+  edge에서는 휘발성 pub/sub을 써요.
+- **Stripe**의 audit 파이프라인은 어디서 시작된 쓰기든 전부 내구성 버스로
+  돌려보내요.
 
 ## 안티패턴
 

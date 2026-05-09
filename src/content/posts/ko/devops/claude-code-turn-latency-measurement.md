@@ -5,7 +5,7 @@ description: >-
   per-turn latency를 ground-truth로 측정한 이야기. 그 과정에서 스스로 잡아낸 네
   가지 측정 trap도 같이 정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: '2026-04-14'
+updated: '2026-05-10'
 tags:
   - claude-code
   - latency
@@ -20,7 +20,7 @@ lang: ko
 source_lang: en
 source_slug: claude-code-turn-latency-measurement
 source_updated: 2026-04-14T00:00:00.000Z
-translation_date: '2026-04-14'
+translation_date: '2026-05-10'
 ---
 
 최근 release 이후 Claude Code session이 5배 느려졌다는 보고가 있었어요. config를 만지기 전에 이게 진짜인지부터 확인해야 했어요. perception은 믿을 만하지 않아요 — 사람은 고통스러웠던 case를 평범한 것보다 더 잘 기억하고, 보고된 규모는 양방향으로 2배씩 틀릴 수 있어요. 뭘 investigate할지 정하기 전에 객관적인 숫자가 필요했어요.
@@ -47,7 +47,7 @@ translation_date: '2026-04-14'
 
 **뭐가 잘못됐는지.** 특정 tool(`storm.py`)이 각 session에서 몇 번 호출됐는지 세고 싶어서 `grep -c 'storm.py' session.jsonl`을 돌렸어요. 어느 session에서 111이 나왔어요. storm이 slowdown contributor라는 초기 가설을 확증해 주는 damning한 숫자였어요.
 
-**왜 틀렸는지.** Claude Code transcript는 tool invocation 뿐만 아니라 session이 건드린 모든 파일의 Read 내용, documentation quote, ADR body, buffer entry까지 담고 있어요. Claude가 `storm.py`를 언급하는 README를 읽으면 그 README 본문이 transcript 안에 들어가요. grep은 "Claude가 이 command를 실행했다"와 "Claude가 이 command를 prose로 언급하는 파일을 읽었다"를 구분하지 못해요.
+**왜 틀렸는지.** Claude Code transcript는 tool 호출 기록만 담는 게 아니에요. session이 건드린 모든 파일의 Read 결과, 문서에서 따온 인용문, ADR 본문, buffer에 적힌 메모까지 전부 들어가요. Claude가 `storm.py`를 언급하는 README를 읽으면 그 본문이 그대로 transcript에 박혀요. grep은 "Claude가 이 command를 실행했다"와 "Claude가 이 command를 prose로 언급하는 파일을 읽었다"를 구분하지 못해요.
 
 **올바른 방법.** JSONL을 구조적으로 parse해서 input이 매치되는 `tool_use` block만 세는 거예요.
 
@@ -69,7 +69,7 @@ for msg in iter_messages(jsonl_path):
 
 ### Trap 2 — Claude Code JSONL의 `role: "user"`가 overload돼 있어요
 
-**뭐가 잘못됐는지.** tool counting을 고친 뒤 실제 latency 측정으로 넘어갔어요. state machine을 만들어서 JSONL을 walk하면서, `role: "user"` message를 전부 turn-start로 다루고 다음 `role: "assistant"` message까지의 delta를 쟀어요. session 당 "turn count"가 실제 user message 수보다 ~4배 높게 나왔고, 가장 느린 "turn"은 user text가 0인데 latency가 120초 넘게 찍혔어요.
+**뭐가 잘못됐는지.** tool 카운팅을 고친 뒤 본격적으로 latency를 재기 시작했어요. state machine으로 JSONL을 훑으면서 `role: "user"` message를 전부 turn 시작점으로 다루고, 다음 `role: "assistant"`까지의 시간 차이를 쟀어요. session 당 "turn count"가 실제 user message 수보다 ~4배 높게 나왔고, 가장 느린 "turn"은 user text가 0인데 latency가 120초 넘게 찍혔어요.
 
 **왜 틀렸는지.** Claude Code는 두 가지 다른 것을 `role: "user"`로 인코딩해요.
 
@@ -91,7 +91,7 @@ def is_real_user_input(msg: dict) -> bool:
     return False
 ```
 
-filter 후 한 session의 turn count가 733에서 65로 떨어졌고, median latency는 4.93초(fast tool cycle에 희석된 unfiltered 측정치)에서 16.80초(진짜 user-perceived latency)로 뛰었어요. 질적인 이야기 자체가 뒤집혔어요 — "tail만 blow-up"에서 "균일한 slowdown + tail amplification"으로요. 이 경험 덕분에 항상 요약 통계 옆에 diagnostic column을 같이 출력하는 습관이 생겼어요. `u_chars=0` per-turn diagnostic이 애초에 Trap 2를 발견하게 해 준 유일한 신호였거든요.
+filter를 걸고 나니 한 session의 turn 수가 733에서 65로 떨어졌고, median latency는 4.93초(빠른 tool cycle에 희석된 측정치)에서 16.80초(실제 사용자 체감 latency)로 뛰었어요. 정성적인 이야기 자체가 뒤집혔어요 — "tail만 blow-up"에서 "전반적으로 느려진 데다 tail이 더 커진" 쪽으로요. 그 뒤로는 늘 요약 통계 옆에 diagnostic column을 같이 찍는 습관이 생겼어요. `u_chars=0`이라는 per-turn diagnostic이 애초에 Trap 2를 발견하게 해 준 유일한 신호였거든요.
 
 ### Trap 3 — 병렬 session의 실험적 오염
 
@@ -134,12 +134,12 @@ config 변경이 window 도중에 대상에 영향을 미쳤다면, window의 �
 
 trap을 이해한 뒤, tool 자체는 ~400줄 pure-stdlib Python script예요. 하는 일은 이래요.
 
-1. `~/.claude/projects/{slug}/*.jsonl`을 scan해요.
-2. 각 파일을 state machine으로 walk하면서 *user text* message만 turn-start로 다뤄요. tool result는 제외해요.
-3. 첫 assistant reply까지의 delta를 measure해요 (user-perceived "first byte" latency).
-4. 600초 넘는 gap은 filter해요. 이건 사용자가 자리를 뜬 거지 tool이 hang된 게 아니에요.
-5. session을 cutoff date로 split해서 era 별로 P50, P90, P99, mean, max를 계산해요.
-6. 선택적인 `--slow` flag는 threshold를 넘는 turn에 대해 per-turn diagnostic column(`u_chars`, `a_chars`, tool count)을 덤프해요.
+1. `~/.claude/projects/{slug}/*.jsonl` 파일들을 훑어요.
+2. 각 파일을 state machine으로 따라가면서 *user text* message만 turn 시작점으로 다뤄요. tool result는 빼요.
+3. 첫 assistant 응답까지의 시간 차이를 재요 (사용자 체감 "first byte" latency).
+4. 600초 넘는 gap은 걸러내요. 이건 사람이 자리를 비운 거지 tool이 멈춘 게 아니에요.
+5. session을 cutoff 날짜로 잘라서 era 별로 P50, P90, P99, mean, max를 계산해요.
+6. `--slow` flag를 켜면 임계값을 넘는 turn마다 per-turn diagnostic column(`u_chars`, `a_chars`, tool 호출 수)이 같이 찍혀요.
 
 design choice는 하나씩 설명할 가치가 있어요. 각각이 빌드 중에 실제로 겪은 뭔가에 의해 결정됐거든요.
 
@@ -196,7 +196,7 @@ JSONL transcript parsing이 이긴 이유는 **retroactive 측정이 결정적�
 
 이 접근은 이런 상황에 맞는 tool이에요.
 
-- 사용자(혹은 당신 본인)가 "Claude Code가 느려진 것 같아요"라고 보고했는데, config를 건드리기 전에 그게 진짜인지 판단해야 할 때.
+- 누군가(혹은 본인)가 "Claude Code가 느려진 것 같아요"라고 보고했는데, config를 건드리기 전에 그게 진짜인지 판단해야 할 때.
 - config 변경(예: "MEMORY.md 다이어트가 도움이 됐나?")을 objective per-turn data로 A/B test하고 싶을 때.
 - 시간에 따른 drift를 탐지하기 위해 주기적인 latency baseline을 원할 때.
 - 새로운 skill, hook, MCP server가 ship됐는데 뭔가 regress시키진 않았는지 검증하고 싶을 때.
@@ -204,14 +204,14 @@ JSONL transcript parsing이 이긴 이유는 **retroactive 측정이 결정적�
 
 반대로 이런 경우엔 *맞지 않아요*.
 
-- server-side(Anthropic API) latency가 필요할 때 — transcript는 round-trip wall time만 볼 수 있어요.
-- token-count-weighted latency가 필요할 때 — 이 tool은 wall time만 재요.
-- population이 아니라 single-turn 이상을 측정할 때 — JSONL timestamp는 aggregate에서 신뢰할 만하지만, 개별 turn은 clock skew나 client-side delay가 있을 수 있어요.
-- 서브 100ms 정밀도가 필요할 때 — Claude Code는 밀리초 timestamp를 쓰지만 네트워크 너머의 측정은 그 단위에서 noisy해요.
+- server-side(Anthropic API) latency가 필요할 때 — transcript로는 왕복 시간(round-trip wall time)만 보여요.
+- token 수에 가중치를 둔 latency가 필요할 때 — 이 tool은 시간만 재요.
+- 집단이 아니라 단일 turn을 측정할 때 — JSONL timestamp는 모아서 보면 믿을 만하지만, 개별 turn에는 clock skew나 client-side 지연이 끼어들 수 있어요.
+- 서브 100ms 정밀도가 필요할 때 — Claude Code가 밀리초 단위로 timestamp를 찍긴 하지만, 네트워크를 건너간 측정은 그 단위에서 noisy해요.
 
 ## 정리
 
-- **diagnostic column이 당신 스스로의 bug를 잡아 줘요.** 요약 통계만 필요할 것 같아도, 측정 tool엔 항상 per-turn metadata를 포함시키세요. `u_chars=0` diagnostic이 Trap 2로 이어 준 유일한 신호였어요.
+- **diagnostic column이 스스로의 bug를 잡아 줘요.** 요약 통계만 필요할 것 같아도, 측정 tool엔 항상 per-turn metadata를 포함시키세요. `u_chars=0` diagnostic이 Trap 2로 이어 준 유일한 신호였어요.
 - **가설부터 진술하세요.** 요약 숫자를 신뢰하기 전에 측정이 어떤 assumption을 하고 있는지 나열하고, 그걸 부정할 수 있는 증거를 찾아보세요. 제 첫 pass 분석은 "tail-only blow-up, 2.4x"를 자신 있게 보고했지만, tool 자체의 diagnostic output이 요약 숫자와 모순된 덕분에 "uniform 2x + tail 4x"로 수정됐어요.
 - **perception보다 측정을 먼저 의심하세요.** 멀쩡한 정신의 사용자 보고가 내 측정과 ~2배 넘게 disagree한다면 tool 어딘가에 문제가 있을 가능성이 높아요. Trap 2가 정확히 이 error를 반대 방향으로 만들었어요 — tool이 tool cycle을 user turn으로 세면서 slowdown을 과소평가했어요.
 - **baseline commit hash는 싼 보험이에요.** 모든 before/after 측정에서 baseline 숫자 옆에 commit hash를 기록하세요. parallel-session 오염이 invisible 대신 detectable해져요.

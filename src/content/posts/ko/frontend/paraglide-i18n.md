@@ -1,8 +1,8 @@
 ---
 title: SvelteKit용 Paraglide-JS i18n
-description: 번들을 부풀리거나 런타임 오버헤드 없이 SvelteKit 정적 블로그에 한국어/영어 다국어 지원을 추가하는 방법을 알아봅니다.
+description: 번들을 부풀리지 않고 런타임 오버헤드 없이 SvelteKit 정적 블로그에 한국어/영어 다국어 지원을 추가한 방법을 정리했어요.
 date: 2026-01-28T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-05-10'
 tags:
   - frontend
   - i18n
@@ -14,7 +14,7 @@ lang: ko
 source_lang: en
 source_slug: paraglide-i18n
 source_updated: '2026-03-22'
-translation_date: '2026-02-12'
+translation_date: '2026-05-10'
 references:
   - url: 'https://inlang.com/m/gerre34r/library-inlang-paraglideJs'
     title: Paraglide-JS 공식 문서
@@ -24,10 +24,10 @@ references:
     type: official
 ---
 
-블로그에 한국어와 영어가 필요했어요. SvelteKit의 adapter-static으로 정적 생성되는
-사이트라서, i18n 솔루션은 빌드 타임에 번역을 해결해야 했습니다. 런타임 파서를
-브라우저에 보내면 안 됐어요. 대부분의 i18n 라이브러리가 이 요구사항에서 바로
-탈락했습니다.
+블로그에 한국어와 영어가 같이 필요했어요. SvelteKit의 adapter-static으로 정적
+생성되는 사이트라서, i18n 솔루션이 빌드 타임에 번역을 해결해 줘야 했어요. 런타임
+파서를 브라우저로 내려보내면 안 됐어요. 대부분의 i18n 라이브러리는 이 요구사항에서
+바로 떨어져 나갔어요.
 
 ## 대부분의 i18n 라이브러리가 안 된 이유
 
@@ -40,16 +40,16 @@ references:
 | i18next + svelte adapter | 거대한 생태계, 복수형/포맷팅 플러그인                                                  | 큰 번들, 컴파일 타임 아님, 수동 SvelteKit 연결       |
 | DIY JSON + store         | 의존성 없음, 완전한 제어                                                               | 타입 안정성 없음, 도구를 처음부터 구축               |
 
-svelte-i18n과 i18next는 둘 다 런타임에 번역을 파싱합니다. 파서, 로케일 파일
-로더, 인터폴레이션 로직을 브라우저에 보내야 한다는 뜻이에요. 번역 키가 30개
-정도인 정적 블로그에는 너무 많은 오버헤드입니다.
+svelte-i18n과 i18next는 둘 다 런타임에 번역을 파싱해요. 파서, 로케일 파일
+로더, 인터폴레이션 로직을 브라우저에 같이 보내야 한다는 뜻이에요. 번역 키가
+30개쯤인 정적 블로그에는 너무 큰 오버헤드예요.
 
-JSON 파일과 Svelte store로 직접 만드는 방법도 가능하지만, 타입 안정성이 없으면
-키 이름을 추측하고 오타를 빌드 타임이 아닌 런타임에 잡아야 합니다.
+JSON 파일과 Svelte store로 직접 만드는 방법도 있지만, 타입 안정성이 없으면
+키 이름을 일일이 외우게 되고 오타도 런타임에서 터져요.
 
-Paraglide-JS가 이긴 이유는 빌드 타임에 번역을 일반 JavaScript 함수로 컴파일하기
-때문이에요. 결과물은 tree-shaking이 가능하고, 타입이 안전하며, 번들에 거의
-아무것도 추가하지 않습니다.
+Paraglide-JS가 이긴 이유는 빌드 타임에 번역을 평범한 JavaScript 함수로 컴파일해
+주기 때문이에요. 결과물은 tree-shaking이 되고, 타입이 안전하고, 번들에 거의
+아무것도 추가하지 않아요.
 
 | 기능           | Paraglide           | svelte-i18n | i18next |
 | -------------- | ------------------- | ----------- | ------- |
@@ -64,7 +64,7 @@ Paraglide-JS가 이긴 이유는 빌드 타임에 번역을 일반 JavaScript �
 npx @inlang/paraglide-js init
 ```
 
-세 가지가 생성됩니다:
+세 가지가 생겨요.
 
 - `project.inlang/settings.json` - 설정 파일
 - `messages/en.json` - 영어 메시지
@@ -72,7 +72,7 @@ npx @inlang/paraglide-js init
 
 ## 메시지 파일 작성
 
-메시지는 언어별 JSON 파일에 작성합니다:
+메시지는 언어별 JSON 파일에 적어요.
 
 ```json
 // messages/en.json
@@ -84,13 +84,13 @@ npx @inlang/paraglide-js init
 // messages/ko.json
 {
   "site_title": "Brandon Wie | 소프트웨어 엔지니어",
-  "welcome_message": "블로그에 오신 것을 환영합니다"
+  "welcome_message": "블로그에 오신 걸 환영해요"
 }
 ```
 
 ## 컴포넌트에서 사용하기
 
-생성된 메시지 함수를 import해서 호출합니다:
+생성된 메시지 함수를 import해서 호출해요.
 
 ```svelte
 <script>
@@ -101,7 +101,7 @@ npx @inlang/paraglide-js init
 <p>{m.welcome_message()}</p>
 ```
 
-메시지가 문자열이 아닌 함수인 이유는 파라미터를 받을 수 있기 때문입니다:
+메시지가 문자열이 아니라 함수인 이유는 파라미터를 받을 수 있기 때문이에요.
 
 ```json
 {
@@ -113,12 +113,12 @@ npx @inlang/paraglide-js init
 {m.greeting({ name: 'Brandon' })}
 ```
 
-키를 잘못 입력하거나 파라미터를 빠뜨리면 TypeScript가 빌드 타임에 잡아줍니다.
-런타임 "missing translation" 에러가 없어요.
+키를 잘못 입력하거나 파라미터를 빠뜨리면 TypeScript가 빌드 타임에 잡아줘요.
+런타임 "missing translation" 에러가 안 떠요.
 
 ## 라우트 기반 로케일 감지
 
-SSG에서는 쿠키나 브라우저 감지 대신 라우트 기반 로케일을 사용합니다:
+SSG에서는 쿠키나 브라우저 감지 대신 라우트 기반 로케일을 써요.
 
 ```text
 /           → 영어 (기본값)
@@ -127,7 +127,7 @@ SSG에서는 쿠키나 브라우저 감지 대신 라우트 기반 로케일을 
 /ko/posts   → 한국어 포스트
 ```
 
-한국어 레이아웃에서 language tag를 설정합니다:
+한국어 레이아웃에서 language tag를 설정해요.
 
 ```svelte
 <!-- src/routes/ko/+layout.svelte -->
@@ -139,13 +139,13 @@ SSG에서는 쿠키나 브라우저 감지 대신 라우트 기반 로케일을 
 <slot />
 ```
 
-`/ko/` 아래의 모든 페이지가 자동으로 한국어 번역을 받게 돼요. 미들웨어도, 쿠키도,
-클라이언트 사이드 감지도 필요 없습니다. 정적 사이트 생성기가 빌드 타임에 양쪽
-언어 버전을 모두 프리렌더링합니다.
+`/ko/` 아래의 모든 페이지가 자동으로 한국어 번역을 받아요. 미들웨어도, 쿠키도,
+클라이언트 사이드 감지도 필요 없어요. 정적 사이트 생성기가 빌드 타임에 양쪽
+언어 버전을 모두 프리렌더링해 줘요.
 
 ## 언어 전환 컴포넌트 만들기
 
-전환 컴포넌트는 현재 경로를 조작해서 다른 언어의 URL을 만듭니다:
+전환 컴포넌트는 현재 경로를 조작해서 다른 언어의 URL을 만들어요.
 
 ```svelte
 <script lang="ts">
@@ -166,12 +166,12 @@ SSG에서는 쿠키나 브라우저 감지 대신 라우트 기반 로케일을 
 </a>
 ```
 
-루트 경로가 엣지 케이스예요. `/ko`에서 `/ko`를 제거하면 빈 문자열이 되므로
-`|| '/'` 폴백이 필수입니다.
+루트 경로가 엣지 케이스예요. `/ko`에서 `/ko`를 떼면 빈 문자열이 돼서
+`|| '/'` 폴백이 꼭 필요해요.
 
 ## Vite 연결
 
-Paraglide는 Vite 플러그인을 통해 SvelteKit과 통합됩니다:
+Paraglide는 Vite 플러그인을 통해 SvelteKit과 통합돼요.
 
 ```typescript
 // vite.config.ts
@@ -187,24 +187,24 @@ export default defineConfig({
 });
 ```
 
-플러그인이 메시지 파일을 감시하고 번역을 추가하거나 수정할 때마다 런타임 코드를
-재생성합니다. `src/lib/paraglide/`의 생성된 코드는 자동 생성되므로 직접
-수정하면 안 됩니다.
+플러그인이 메시지 파일을 지켜보다가 번역을 추가하거나 수정할 때마다 런타임
+코드를 다시 생성해요. `src/lib/paraglide/` 안의 코드는 자동 생성물이라 직접
+손대면 안 돼요.
 
 ## 까다로웠던 부분들
 
 **SSG 호환성이 명확하지 않았어요.** 대부분의 Paraglide 예제가 로케일 감지에
-서버사이드 미들웨어를 가정했습니다. 레이아웃에서 `setLanguageTag`를 호출하는
-라우트 기반 감지가 SSG 친화적인 접근법이라는 걸 알아내는 데 시간이 걸렸어요.
+서버사이드 미들웨어를 가정해요. 레이아웃에서 `setLanguageTag`를 호출하는
+라우트 기반 감지가 SSG에 어울리는 접근이라는 걸 알아내는 데 시간이 걸렸어요.
 
-**생성된 런타임이 불투명합니다.** Paraglide는 건드리면 안 되는 코드를
-`src/lib/paraglide/`에 생성합니다. `setLanguageTag`(로케일 설정)과
-`languageTag`(현재 로케일 읽기)의 차이를 이해하려면 문서가 이 부분에 대해
-부족했기 때문에 생성된 소스 코드를 직접 읽어야 했어요.
+**생성된 런타임이 불투명해요.** Paraglide는 손대면 안 되는 코드를
+`src/lib/paraglide/`에 생성해요. `setLanguageTag`(로케일 설정)와
+`languageTag`(현재 로케일 읽기)의 차이를 이해하려고 생성된 소스 코드를 직접
+열어 봐야 했어요. 문서가 이 부분에선 좀 부족했거든요.
 
-**언어 전환 URL 구성에 엣지 케이스가 있어요.** 루트 경로(`/ko`에서 `/`)와 중첩
-경로(`/ko/posts/my-post`에서 `/posts/my-post`)에 주의 깊은 경로명 조작이
-필요합니다. 양방향 모두 테스트하세요.
+**언어 전환 URL 구성에 엣지 케이스가 있어요.** 루트 경로(`/ko`에서 `/`)와
+중첩 경로(`/ko/posts/my-post`에서 `/posts/my-post`)는 경로명을 꼼꼼히
+다듬어야 해요. 양쪽 다 테스트해 두세요.
 
 ## 이런 경우에 사용하세요
 
@@ -216,21 +216,21 @@ export default defineConfig({
 ## 이런 경우에는 사용하지 마세요
 
 - **CMS/데이터베이스의 동적 번역** -- Paraglide는 빌드 타임에 메시지를
-  컴파일하므로 재배포 없이 번역이 자주 바뀌면 i18next 같은 런타임 라이브러리가
-  적합합니다.
+  컴파일하니까, 재배포 없이 번역이 자주 바뀌어야 한다면 i18next 같은 런타임
+  라이브러리가 더 맞아요.
 - **비기술 번역가가 있는 큰 팀** -- Paraglide는 코드베이스의 JSON 파일을
-  사용하므로 번역 관리 플랫폼(Crowdin, Lokalise)이 필요한 팀은 i18next 생태계가
-  더 잘 통합되어 있어요.
+  쓰니까, 번역 관리 플랫폼(Crowdin, Lokalise)이 필요한 팀은 i18next 생태계가
+  더 잘 맞아요.
 - **복잡한 ICU 메시지 문법** -- 고급 복수형, 성별 일치, 중첩 선택이 필요하면
-  i18next나 FormatJS가 더 성숙한 ICU 지원을 제공합니다.
-- **SvelteKit이 아닌 프레임워크** -- Paraglide의 DX는 SvelteKit에 최적화되어
-  있으므로 React/Next.js나 Vue/Nuxt에서는 프레임워크 네이티브 i18n 솔루션을
-  사용하세요.
+  i18next나 FormatJS가 더 성숙한 ICU 지원을 갖고 있어요.
+- **SvelteKit이 아닌 프레임워크** -- Paraglide의 DX는 SvelteKit에 최적화돼
+  있어서, React/Next.js나 Vue/Nuxt에서는 프레임워크 네이티브 i18n 솔루션을
+  쓰는 게 좋아요.
 
 ## 핵심 정리
 
 Paraglide-JS는 런타임 비용 없이 컴파일 타임 i18n과 완전한 타입 안정성을 원할 때
-올바른 선택이에요. SvelteKit SSG에서의 설정은 간단합니다: 라우트 기반 로케일,
-language tag를 설정하는 레이아웃, JSON 메시지 파일. 트레이드오프는 i18next에 비해
-작은 커뮤니티와 아직 성숙 중인 문서이지만, 두 개 언어를 지원하는 개인 블로그에는
-충분히 가치 있는 트레이드오프입니다.
+올바른 선택이에요. SvelteKit SSG에서의 설정은 간단해요. 라우트 기반 로케일,
+language tag를 설정하는 레이아웃, JSON 메시지 파일이면 끝이에요. 트레이드오프는
+i18next에 비해 작은 커뮤니티와 아직 성숙 중인 문서지만, 두 개 언어를 지원하는
+개인 블로그에는 충분히 받아들일 만해요.

@@ -2,7 +2,7 @@
 title: 'state-invariant flag drift — reconciliation pass로 복구하기'
 description: 'boolean lifecycle flag가 클리어 코드 경로에 절대 도달하지 못하는 entry들에 계속 끼는 현상이 있었어요. 증상만 고치는 fix는 계속 재발했고, 진짜 해결은 setter나 clearer 어느 쪽이 어떻게 set했든 상관없이 flag가 함의하는 invariant를 강제하는 세 번째 workflow를 추가하는 거였어요.'
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-05-10'
 tags:
   - devops
   - sync
@@ -16,7 +16,7 @@ lang: ko
 source_lang: en
 source_slug: state-invariant-flag-drift-recovery
 source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-06'
+translation_date: '2026-05-10'
 ---
 
 boolean lifecycle flag (`needs_resync: true`)가 그 flag를 클리어하는 코드 경로에 절대 도달할 수 없는 entry들에 계속 끼고 있었어요. flag는 한 workflow(`/wrap`)가 set하고 다른 workflow(`sync-from-3b.ts`)가 클리어하는데, clearer 쪽에는 setter가 체크하지 않는 precondition(`ready: true`)이 걸려 있었거든요. `ready: false`인 entry들에 flag가 영원히 쌓였어요.
@@ -31,7 +31,7 @@ boolean lifecycle flag (`needs_resync: true`)가 그 flag를 클리어하는 코
 
 ## reconciliation pass
 
-durable fix는 flag가 어떻게 set됐든 상관없이 flag가 함의하는 **state invariant**를 강제하는 세 번째 workflow를 두는 거예요. 이건 workflow layer가 아니라 data layer의 defense-in-depth예요.
+오래 가는 fix는, flag가 어떻게 set됐든 상관없이 flag가 함의하는 **state invariant**를 강제하는 세 번째 workflow를 두는 거예요. workflow 층이 아니라 data 층에 둔 defense-in-depth예요.
 
 `needs_resync: true`에 대한 invariant는 이거예요:
 
@@ -41,7 +41,7 @@ durable fix는 flag가 어떻게 set됐든 상관없이 flag가 함의하는 **s
 
 > 로컬 synced post의 `source_content_hash`가 source의 현재 cleaned-body hash와 일치하면, source는 drift하지 않은 거예요. Re-sync는 no-op이 될 거고요. flag는 클리어할 수 있어요.
 
-두 invariant 모두 source tree를 walk하면서 적용하고 write back하는 `--reconcile` mode에 인코딩돼 있어요. Idempotent하고요. 다시 실행해도 안전해요.
+두 invariant 모두 `--reconcile` mode 안에 박아 뒀어요. source tree를 따라 내려가면서 두 조건을 적용하고 다시 파일에 써요. Idempotent라서 몇 번을 다시 돌려도 안전해요.
 
 이 pass는 opt-in이에요. 일반 sync 중에 실행되지 않아요 — operator가 시작하는 maintenance지 hot path가 아니거든요. 일반 sync 중에 실행하면 "이거 클리어해도 안전해?"(구조적 질문)와 "지금 sync해야 해?"(편집적 질문)가 섞여요. 둘은 failure mode가 달라요.
 
@@ -57,15 +57,15 @@ durable fix는 flag가 어떻게 set됐든 상관없이 flag가 함의하는 **s
 
 이 패턴이 맞는 경우:
 
-- sync system에 두 state 사이를 toggle하는 metadata field가 있고, toggling logic이 여러 workflow에 분산돼 있을 때.
-- clearer의 precondition이 setter보다 엄격해서, 정상 흐름으로는 청소될 수 없는 state가 남을 때.
-- 수동 청소가 계속 재발할 때. 재발은 버그가 operator-level이 아니라 system-level이라는 가장 강한 signal이에요.
+- sync system에 두 state 사이를 오가는 metadata 필드가 있고, 그 토글 로직이 여러 workflow에 흩어져 있을 때.
+- clearer의 precondition이 setter보다 엄격해서, 정상 흐름으로는 청소되지 못한 채 남는 state가 있을 때.
+- 수동으로 치워도 같은 증상이 자꾸 재발할 때. 재발은 버그가 operator 수준이 아니라 시스템 수준이라는 가장 강한 신호예요.
 
 drift가 single-source라서 setter만 조여서 고칠 수 있다면 — reconcile pass를 추가하는 건 한 곳에 버그가 있는 경우엔 overkill이에요. 또 metadata field가 stuck state에 의미적으로 의존하는 외부 consumer가 있을 때도 안 맞아요. invariant가 정말 invariant인지 인코딩하기 전에 검증하세요.
 
 ## 실용적인 takeaway
 
-stuck-state flag는 setter와 clearer가 분기했다는 뜻이에요. 가장 빠른 durable fix는 setter나 clearer 어느 쪽이든 단독으로 패치하는 게 아니라, flag가 함의하는 invariant를 강제하는 세 번째 workflow예요. invariant를 코드에 명시적으로 인코딩해서 미래 workflow 변경이 조용히 깨뜨릴 수 없게 하세요. cleanup workflow는 opt-in으로 표시하세요. data-layer fix를 setter의 instruction-layer fix(prose precondition이 아니라 checklist)와 짝지어서 새로운 drift를 막으세요. reconcile pass는 safety net이고, setter checklist가 1차 방어선이에요.
+stuck-state flag가 보인다면 setter와 clearer가 따로 노는 거예요. 가장 빨리 굳히는 fix는 setter나 clearer 한쪽만 패치하는 게 아니라, flag가 함의하는 invariant를 강제하는 세 번째 workflow를 두는 거예요. invariant를 코드에 또렷하게 박아 두면, 나중에 workflow를 바꿔도 조용히 깨질 일이 없어요. cleanup workflow는 opt-in으로 표시해요. data 층의 fix는 setter 쪽의 instruction 층 fix(산문 형태의 precondition 말고 checklist)와 짝을 지어서 새 drift를 막아요. reconcile pass는 안전망이고, setter checklist가 1차 방어선이에요.
 
 ## References
 

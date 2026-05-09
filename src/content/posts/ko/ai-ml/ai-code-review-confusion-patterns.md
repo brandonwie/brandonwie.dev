@@ -5,7 +5,7 @@ description: >-
   유형 + 한 가지 amplify할 강점 + 한 가지 analyst-side error class. 탐지
   신호와 사실관계 충돌을 해결하는 empirical tiebreaker까지 정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: 2026-05-06
+updated: 2026-05-10
 tags:
   - ai-ml
   - code-review
@@ -20,10 +20,10 @@ lang: ko
 source_lang: en
 source_slug: ai-code-review-confusion-patterns
 source_updated: 2026-05-06
-translation_date: '2026-05-06'
+translation_date: '2026-05-10'
 ---
 
-최근에 `/validate-pr-reviews`라는 workflow를 돌리기 시작했어요. Claude, Copilot, Codex가 diff에 남기는 모든 inline comment를 가져와서, 각각을 valid / invalid / controversial / good-to-have로 분류하는 작업이에요. 목적은 signal 쪽에서 진짜 bug는 잡아내면서 false positive를 구조적으로 걸러내는 거예요.
+최근에 `/validate-pr-reviews`라는 workflow를 돌리기 시작했어요. Claude, Copilot, Codex가 diff에 남긴 inline 코멘트를 전부 가져와서 valid / invalid / controversial / good-to-have로 분류하는 흐름이에요. 진짜 bug는 놓치지 않으면서 false positive는 구조적으로 걸러내는 게 목적이에요.
 
 4월 초에 연달아 올라간 PR 두 개에서 failure mode의 이름을 붙일 수 있을 만큼의 분류 자료가 쌓였어요. 같은 달 뒤쪽에 올라간 PR 두 개가 또 다른 class의 실패를 보여줬어요 — semantic이 아니라 temporal이에요. 4월 말에는 multi-round PR(#858)이 또 다른 종류의 관찰을 줬어요: amplify할 가치가 있는 *productive* 행동이요. 5월에 세 가지 failure mode가 더 추가됐어요 — 첫 analyst-side error class 포함 — 그리고 PR-body-vs-source-conflation 패턴 하나도. 이제는 아홉 가지 실패 유형, 한 가지 강점, 한 가지 analyst-side class를 가리킬 수 있어요. 각 패턴마다 구체적인 예시, 탐지 신호, 예방(또는 amplify) 기법이 있어요. 아직 샘플은 패턴당 하나나 둘이에요. 앞으로 더 많은 PR을 validate하면서 catalog도 늘어날 거라고 봐요. 오늘 공유하고 싶은 건 이 관찰의 모양이에요. 실패 유형에 이름을 붙이고 나니 다음 triage가 훨씬 빨라졌거든요.
 
@@ -59,7 +59,7 @@ NestJS PR에서 Copilot이 컨트롤러 parameter `clientTypeHeader?: string`에
 
 **예방.** flag된 위치에 decorator의 리턴 타입을 명시적으로 알려 주는 보강용 inline NOTE를 달아 주세요. 다음 PR에서 reviewer의 행동이 바뀌진 않겠지만, 같은 패턴이 다시 나타났을 때 triage 시간을 단축해 줘요.
 
-이 case에 대한 기술적인 deep-dive는 별도로 썼어요. Express normalization 동작까지 자세히 알고 싶다면 [NestJS @Headers decorator는 string | undefined를 리턴해요](/posts/nestjs-headers-decorator-typing)를 참고하세요.
+이 케이스의 기술적인 deep-dive는 따로 정리해 뒀어요. Express의 normalize 동작까지 자세히 알고 싶다면 [NestJS @Headers decorator는 string | undefined를 리턴해요](/posts/nestjs-headers-decorator-typing) 글을 참고하세요.
 
 ## Pattern 2 — Intentional Design
 
@@ -104,7 +104,7 @@ def mk(name):
 
 > **한 줄 정의:** reviewer가 authoritative source에 반하는 library 동작에 대해 긍정적이고 자신 있는 주장을 해요.
 
-이건 Pattern 3 disagreement의 반대편이에요. Starlette middleware 등록에 대한 Claude-review의 full INFO text는 이랬어요.
+이건 Pattern 3 disagreement의 반대편 사례예요. Starlette middleware 등록에 대해 Claude-review가 남긴 INFO 전문은 이랬어요.
 
 > "Starlette가 index 0에 insert한 뒤 reverse로 적용하니까, 처음 등록된 게 가장 바깥 layer가 돼요."
 
@@ -188,73 +188,73 @@ Pattern 7은 PR #858에서 나타났어요(4월 28일). 네 라운드에 걸쳐 
 
 ## Pattern 8 — PR Diff Scope Confusion (analyst-side)
 
-> **한 줄 정의:** `/validate-pr-reviews`를 실행하는 analyst가 origin-base diff 대신 local-base diff를 사용해서 PR scope를 misverify해요.
+> **한 줄 정의:** `/validate-pr-reviews`를 도는 analyst가 origin 기준 diff 대신 local 기준 diff를 써서 PR scope를 잘못 검증해요.
 
-이 패턴은 reviewer가 아닌 analyst(validation을 하는 Claude)의 실패라서 catalog의 나머지와 구별돼요. cross-agent skill이 multiple side에 analyst를 가질 수 있어서 aggregate할 가치가 있어요; failure mode가 symmetric이에요.
+이 패턴은 reviewer가 아니라 analyst(validation을 도는 Claude) 쪽의 실패라서 catalog의 다른 항목들과 결이 달라요. cross-agent skill은 양쪽에 다 analyst를 둘 수 있고, 실패 양상이 대칭이라 따로 모아 둘 가치가 있어요.
 
-3B PR #45에서 Claude(analyst)가 archive deletion이 PR과 unrelated라는 reviewer claim을 dismiss했어요. dismissal은 `git diff main..HEAD --name-only`를 사용했고, 4개 task-starter file만 return했어요 — local `main`에 archive가 이미 있었기 때문에 archive가 filter됐어요. reviewer가 옳았어요: `git log origin/main..HEAD`가 archive commit을 list했어요. Round 2 reviewer(claude bot)가 dismissal mistake를 잡고 retraction을 강제했어요.
+3B PR #45에서 Claude(analyst)가 archive 삭제는 PR과 무관하다는 reviewer 주장을 dismiss했어요. 근거로 `git diff main..HEAD --name-only`를 썼는데, task-starter 파일 4개만 돌아왔어요 — local `main`에 archive가 이미 있어서 결과에서 빠져나갔거든요. 사실 reviewer가 맞았어요. `git log origin/main..HEAD`를 돌리면 archive commit이 떠요. Round 2 reviewer(claude bot)가 이 실수를 잡아서 retraction을 강제했어요.
 
-**왜 이런 일이 생길까요.** Local `main`이 commit이 로컬에 있고 push되지 않으면 `origin/main`에서 diverge할 수 있어요. GitHub의 PR diff는 `origin/{base}`에 대해 계산돼요. analyst가 `origin/main..HEAD` 대신 `main..HEAD`를 사용하면, local-only commit이 base content처럼 보이고, 같은 file을 건드리는 모든 PR commit이 실제보다 narrow하게 보여요.
+**왜 이런 일이 생길까요.** Local `main`은 커밋을 로컬에만 두고 push 안 하면 `origin/main`에서 갈라질 수 있어요. GitHub의 PR diff는 `origin/{base}` 기준으로 계산돼요. analyst가 `origin/main..HEAD` 대신 `main..HEAD`를 쓰면, push 안 된 커밋이 base 내용처럼 보이고, 같은 파일을 건드린 PR 커밋이 실제보다 좁게 보여요.
 
-**예방.** PR scope verification에는 ALWAYS `git diff origin/{base}..HEAD --name-only` (after `git fetch origin`) 또는 `gh pr view {N} --json files` 사용. mistake가 표면화될 때 affected round file에 explicit retraction으로 lesson을 documenting.
+**예방.** PR scope를 확인할 때는 항상 `git fetch origin` 뒤에 `git diff origin/{base}..HEAD --name-only`를 쓰거나 `gh pr view {N} --json files`를 쓰세요. 실수가 드러난 라운드 파일에는 retraction을 명시적으로 남겨서 교훈을 기록해 두세요.
 
-**Resolution path.** (a) intent에 align되도록 local `{base}`를 push forward(archive가 main에 속함 → push), 또는 (b) commit이 PR scope 안이라고 acknowledge하고 PR description을 update해서 call out.
+**해결 경로.** (a) 의도에 맞게 local `{base}`를 push해서 정렬하거나(archive가 main에 속함 → push), (b) 그 commit도 PR scope 안이라고 인정하고 PR description을 업데이트해서 명시적으로 call out하세요.
 
 ## Pattern 9 — Cross-File Mirror Drift
 
-> **한 줄 정의:** canonical table의 prose mirror가 canonical table이 변경됐는데 mirror가 안 바뀔 때 silently drift해요.
+> **한 줄 정의:** canonical table을 prose 형태로 옮겨 둔 mirror가, 원본은 바뀌었는데 mirror가 안 따라가서 조용히 어긋나요.
 
-한 file(예: `.codex/skills/X/SKILL.md`)이 다른 file(예: `.agents/skills/X/SKILL.md`)의 canonical table의 prose mirror인 skill system이 이 패턴을 겪어요. canonical table이 변경됐는데 mirror prose가 안 바뀌면 manual mirror maintenance가 silently drift해요. 둘 다 structurally 읽는 reviewer가 asymmetry를 잡고; 개별 property를 count하는 unit test(예: routing row를 grep)는 count만 매치할 수 있어서 놓쳐요.
+파일 하나(예: `.codex/skills/X/SKILL.md`)가 다른 파일(예: `.agents/skills/X/SKILL.md`)의 canonical table을 prose 형태로 mirror하는 skill system이 이 패턴을 겪어요. canonical table이 바뀌었는데 mirror prose가 안 따라가면 수동 동기화가 조용히 어긋나요. 두 파일을 구조적으로 같이 읽는 reviewer는 비대칭을 잡지만, 개별 row를 grep으로 세는 unit test는 개수만 맞으면 놓쳐요.
 
-3B PR #45에서 Codex adapter Phase 0.7 contract bullet이 canonical table의 7개 routing row 중 4개만 enumerate했어요. Round 3 reviewer(claude bot)가 `fix-broad → full-project`가 adapter에서 missing이라고 잡았어요. Round 4가 same-class issue를 표면화: `output_commitment` comment style이 SKILL.md(`| null`)와 templates.md(`; null otherwise`) 사이에서 diverge.
+3B PR #45에서 Codex adapter의 Phase 0.7 contract bullet이 canonical table의 7개 routing row 중 4개만 적어 놨어요. Round 3 reviewer(claude bot)가 `fix-broad → full-project`가 adapter에서 빠졌다고 잡았어요. Round 4에선 같은 부류의 이슈가 또 떴어요. `output_commitment` 코멘트 스타일이 SKILL.md(`| null`)와 templates.md(`; null otherwise`) 사이에서 갈라져 있었거든요.
 
-**예방.** 비용과 안정성이 증가하는 세 layer:
+**예방.** 비용과 안정성이 점점 올라가는 세 단계예요.
 
-- (a) mirror에서 canonical로의 back-reference 추가: "authoritative table은 `.agents/skills/X/SKILL.md § Phase 0.7` 참조." reviewer와 사람에게 비교할 명확한 path를 줘요.
-- (b) 장기: row count + key row에 대해 mirror를 canonical과 grep-compare하는 smoke parity test 추가.
-- (c) 더 나음: CI의 programmatic cross-file consistency check.
+- (a) mirror에서 canonical로 거슬러 가는 back-reference 한 줄을 추가하세요. 예를 들면 "authoritative table은 `.agents/skills/X/SKILL.md § Phase 0.7` 참조." reviewer와 사람에게 비교할 경로를 알려줘요.
+- (b) 장기적으로는 row 개수와 핵심 row를 grep으로 비교하는 smoke parity test를 추가하세요.
+- (c) 더 나은 방향은 CI에서 cross-file consistency를 코드로 검사하는 거예요.
 
-**Root cause category.** Manual sync drift. docstring과 code 간 drift, schema와 migration 간 drift와 같은 class.
+**근본 원인 분류.** 수동 동기화 어긋남이에요. docstring과 코드의 어긋남, schema와 migration의 어긋남과 같은 부류예요.
 
 ## Pattern 10 — Issue-Comment vs Inline Thread 분류 gap
 
-> **한 줄 정의:** bot이 두 가지 distinct GitHub mechanism으로 finding을 report; thread-centric classification flow가 issue-comment-summary 종류를 misroute해요.
+> **한 줄 정의:** bot이 finding을 두 가지 GitHub 메커니즘으로 보고하는데, thread 중심으로 짜인 분류 플로우가 issue-comment summary를 잘못된 경로로 보내요.
 
-AI bot은 두 가지 distinct GitHub mechanism으로 finding을 report해요: (a) 특정 file:line에 묶인 inline review thread, (b) PR conversation에 게시되는 issue-comment summary. `/validate-pr-reviews` Phase 1이 둘 다 fetch하지만, classification flow(Phase 2-3)는 thread-centric — thread ID가 있는 per-finding inline thread를 중심으로 디자인. 여러 finding을 inline에 가진 issue-comment summary가 per-finding으로 split되지 않고 single bag으로 다뤄져요.
+AI bot은 finding을 두 가지 방식으로 게시해요. (a) 특정 file:line에 묶인 inline review thread, (b) PR 대화창에 올라가는 issue-comment summary. `/validate-pr-reviews` Phase 1은 둘 다 가져오지만, 분류 플로우(Phase 2-3)는 thread 중심이에요. thread ID가 붙은 per-finding inline thread를 전제로 짜였거든요. 그래서 여러 finding을 inline에 묶어 놓은 issue-comment summary는 finding별로 쪼개지지 않고 통째로 하나의 bag처럼 다뤄져요.
 
-3B PR #45 R4에서 claude bot Round 4 review가 finding 2개(R4-1 ACTIVE-STATUS stale, R4-2 output_commitment style)를 ONE issue-comment summary로 게시. inline review thread가 생성되지 않음. skill protocol은 "per-thread reply + resolve"를 요청 — thread가 없었음. round file이 두 finding을 정확히 capture했지만 GitHub-side reply는 thread-resolve mutation이 아니라 새 issue-comment를 통해서만 가능했음.
+3B PR #45 R4에서 claude bot의 Round 4 review가 finding 두 개(R4-1 ACTIVE-STATUS stale, R4-2 output_commitment style)를 issue-comment summary 하나에 묶어 올렸어요. inline thread는 안 만들어졌고요. skill 프로토콜은 thread 단위로 reply하고 resolve하라고 요구하는데, thread 자체가 없는 셈이죠. 라운드 파일은 finding 두 개를 정확히 잡아냈지만, GitHub 쪽 reply는 thread mutation이 아니라 새 issue-comment로만 가능했어요.
 
-**예방.** `/validate-pr-reviews` Phase 1을 refine해서 "inline thread finding"과 "issue-comment finding"을 explicitly distinguish하고 classification + reply를 다르게 route. issue-comment finding 필요사항: (a) comment body에서 finding list parse, (b) original referencing하는 새 issue-comment로 reply, (c) original에 optional `minimizeComment` mutation. 같은 classification rule 적용; reply mechanism 다름.
+**예방.** `/validate-pr-reviews` Phase 1을 다듬어서 "inline thread finding"과 "issue-comment finding"을 명시적으로 구분하고, 분류와 reply 경로를 따로 태우세요. issue-comment finding 처리에는 다음이 필요해요. (a) comment 본문에서 finding 목록을 파싱하고, (b) 원본을 참조하는 새 issue-comment로 reply하고, (c) 선택적으로 원본에 `minimizeComment` mutation을 거는 것. 분류 규칙은 동일하게 두고, reply 메커니즘만 분기시켜요.
 
-**Root cause category.** Skill design assumption. one mode를 위해 디자인됨; bot이 둘 다 사용. Symmetric refinement 필요.
+**근본 원인 분류.** Skill 설계 가정이에요. 한 가지 모드를 전제로 만들었는데 bot이 두 모드를 다 쓰는 거죠. 대칭적인 개선이 필요해요.
 
 ## Pattern 11 — PR-Body-Source-Conflation
 
-> **한 줄 정의:** reviewer가 PR description prose를 source-code commentary처럼 읽고, PR body에 존재하지만 file에는 없는 claim을 flag해요.
+> **한 줄 정의:** reviewer가 PR description의 prose를 source 코드 코멘트처럼 읽어서, PR body엔 있지만 파일엔 없는 문구를 flag해요.
 
-이건 Cross-File Blindness의 variant인데, 거꾸로예요: source file 간 context를 missing하는 대신, reviewer가 PR body text에 OVER-anchor돼서 source에 misattribute해요.
+이건 Cross-File Blindness의 변형인데 방향이 거꾸로예요. source 파일 간 맥락을 놓치는 게 아니라, reviewer가 PR body 텍스트에 지나치게 anchor돼서 그걸 source 발언으로 오인하는 거예요.
 
 **예시 claim:** "line N의 comment가 'Mirrors lines 5-15'라고 하는데 — `oauth_client_ids`는 lines 6-10이지 5-15가 아님."
 
-**Reality:** file의 line N의 actual comment는 "Mirrors the `oauth_client_ids` map pattern above; consumed by the gated dynamic env block in `containers{}` below."라고 함. line number는 NO 포함. reviewer가 PR description을 referencing하고 있었는데, PR description은 사람 reader를 위한 prose context로 "lines 5-10 / 369-377"을 cite했어요 — source에 대해 check할 comment가 아님.
+**실제로는.** line N의 코멘트는 "Mirrors the `oauth_client_ids` map pattern above; consumed by the gated dynamic env block in `containers{}` below."였어요. line number는 들어 있지도 않아요. reviewer가 본 건 source가 아니라 PR description이었어요. PR description에 사람 reader용 prose context로 "lines 5-10 / 369-377"이 인용돼 있었거든요 — source에 대해 검증할 코멘트가 아니에요.
 
 **왜 이런 일이 생길까요.**
 
-- AI reviewer는 prompt context에 PR diff와 PR body 둘 다 받아요. body의 prose가 사람 reviewer를 위한 orientation aid로 line number를 mention하는데, AI가 그 prose를 code comment claim처럼 source에 대해 매치해요.
-- reviewer가 quoted phrase의 source를 항상 tag하지는 않음("the docstring says X" vs "the PR description says X"). 이 패턴은 reviewer의 quote가 어떤 artifact에 있는지 specifying 없이 article "the"를 사용할 때 가장 visible해요.
+- AI reviewer는 prompt 안에 PR diff와 PR body를 같이 받아요. body의 prose가 사람 reviewer용 orientation aid로 line number를 적어 두는데, AI는 그 prose를 source에 있는 코드 코멘트처럼 매칭해요.
+- reviewer가 인용한 문구의 출처를 항상 명시하지는 않아요("the docstring says X" vs "the PR description says X"). reviewer의 인용이 어떤 artifact에서 나온 건지 명시하지 않고 그냥 "the"로 받을 때 이 패턴이 제일 두드러져요.
 
-**validation 중 어떻게 detect.**
+**validation 중 탐지하는 법.**
 
-1. reviewer의 quoted text가 flagged line의 source file에 EXIST 안 함.
-2. quoted text가 PR description에 EXIST 함.
-3. reviewer가 PR-body prose를 authoritative로 다룸("the comment says X — but the actual lines don't match").
+1. reviewer가 인용한 문장이 flag된 줄의 source 파일에 없어요.
+2. 그 인용 문장이 PR description에는 있어요.
+3. reviewer가 PR body의 prose를 authoritative처럼 다뤄요("the comment says X — but the actual lines don't match").
 
-**Resolution.** INVALID로 DISMISS. source에 reinforcing comment 필요 없음 — source comment가 이미 정확했어요. Optionally: round file의 confusion-pattern log에 note 추가; 패턴이 recur하면 PR description prose에 `(PR-body description; not a code comment)` 같은 tag를 추가해서 disambiguate.
+**Resolution.** INVALID로 dismiss하세요. source에 보강 코멘트도 필요 없어요 — source 코멘트는 원래 정확했거든요. 선택적으로 라운드 파일의 confusion-pattern 로그에 한 줄 남겨 두고, 같은 패턴이 또 보이면 PR description prose에 `(PR-body description; not a code comment)` 같은 태그를 붙여서 모호함을 줄이세요.
 
 **완화 전략.**
 
-- line number가 stable AND merge에 가깝지 않으면 PR description prose에서 line number 사용 회피. PR description은 durable text; line number는 unstable target을 reference.
-- PR body가 line range를 cite해야 할 때(예: cross-file pattern reference), AI reviewer가 disambiguate할 수 있도록 explicit "(in PR description, not source)" framing 추가.
+- line number가 안정적이고 머지에 가깝지 않은 한, PR description prose에 line number를 안 쓰는 게 좋아요. PR description은 오래 남는 텍스트인데 line number는 움직이는 표적이거든요.
+- PR body가 line range를 꼭 인용해야 한다면(예: cross-file 패턴 참조), AI reviewer가 출처를 구분할 수 있게 "(in PR description, not source)" 같은 명시적인 framing을 같이 넣어 두세요.
 
 ## Reviewer별 성향
 

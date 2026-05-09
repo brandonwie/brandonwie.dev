@@ -1,8 +1,8 @@
 ---
-title: Task resume 시점의 Plan-vs-Shipped Divergence 감지
-description: 'multi-session task를 resume할 때, task 시작 시 작성된 plan.md가 지금 실제로 ship된 것을 반영하지 않을 수 있어요. 구현은 mid-flight로 진화하고, scope가 shift하고, branch가 merge돼요. 3분짜리 pre-flight check가 obsolete한 작업을 실행하는 시간을 막아줘요.'
+title: Task를 다시 잡을 때 plan과 실제 shipped 상태가 어긋나는 순간
+description: '여러 세션에 걸친 task를 다시 잡으면, 처음 작성한 plan.md가 지금 main에 반영된 모습과 어긋나 있을 때가 많아요. 구현은 도중에 바뀌고, 범위는 옮겨가고, branch는 어느새 merge돼요. 3분짜리 pre-flight check 하나면 한참 동안 obsolete된 작업을 붙들고 있는 시간을 막아줘요.'
 date: 2026-04-30T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-05-10'
 tags:
   - general
   - process
@@ -14,50 +14,52 @@ lang: ko
 source_lang: en
 source_slug: plan-vs-shipped-divergence
 source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-06'
+translation_date: '2026-05-10'
 ---
 
-multi-session task를 resume할 때, task 시작 시 작성된 `plan.md`가 지금 실제로 ship된 것을 반영하지 않을 수 있어요. 구현은 mid-flight로 진화해요: design decision이 revise되고, scope가 shift하고, branch가 merge돼요. pre-flight check 없이 resume하면 plan의 framing을 문자 그대로 실행해요 — obsolete한 test를 돌리고, 은퇴한 결정을 다시 말하고, 이미 merge된 PR을 열어요.
+5일 전에 멈춰뒀던 task를 다시 펼쳤어요. plan.md가 이끄는 대로 따라갔다면 manual test 7개를 처음부터 돌렸을 거예요. 그런데 이미 main에 merge된 commit이 있었고, 그 중 4개는 새로 추가된 unit test가 cover하고 있었고, 1개는 retire된 path를 검증하던 거였어요.
 
-**plan narrative가 아니라 repo state를 신뢰하세요.** 3분짜리 pre-flight가 obsolete한 작업을 실행하는 몇 시간을 막아줘요.
+처음 잡은 plan.md는 그때의 의도를 담은 기록일 뿐, 지금 repo에 반영된 모습과는 다를 수 있어요. 구현은 도중에 진화해요. design decision이 바뀌고, 범위가 옮겨가고, branch가 어느새 merge돼요. pre-flight check 없이 곧장 다시 시작하면 plan의 framing을 글자 그대로 따라가게 돼요. obsolete된 test를 돌리고, 이미 끝난 결정을 다시 꺼내고, 진작에 merge된 PR을 또 열려고 해요.
 
-## plan이 조용히 drift하는 이유
+**plan에 적힌 서사가 아니라 repo 상태를 믿으세요.** 3분짜리 pre-flight 한 번이 obsolete된 작업에 몇 시간을 빼앗기는 걸 막아줘요.
 
-plan이 resume를 오해시킬 수 있는 네 가지 방식:
+## plan이 조용히 어긋나는 이유
 
-- **Plan narrative가 끈적여요.** plan이 한 번 "Path A/B/C decision pending"이라고 말하면, 그 framing이 triage output, journal Next bullet, ACTIVE-STATUS Priorities로 carry forward돼요. framing이 reality를 지나서 지속돼요. resume 시점에 여러 downstream artifact가 outdated framing을 반복해요 — canonical truth로 잘못 인식하기 쉬워요.
-- **Section label이 오해를 일으켜요.** plan §A, §B, §C가 한 design의 COMPONENT(additive)일 수도 있고 ALTERNATIVE(exclusive)일 수도 있어요. 모든 section을 읽지 않으면 reader가 분간할 수 없어요. 2026-04-30 wrap-followup 케이스는 section A-G가 component였는데 (journal + triage에서) A/B/C exclusive option으로 misread됐어요.
-- **Branch state가 거짓말해요.** locally-deleted branch는 main의 merge commit을 체크할 때까지 "task가 시작되지 않았다"처럼 보여요. `git branch -a`는 merge되고 auto-delete된 remote-only branch를 표면화하지 않아요.
-- **Test가 plan보다 빨리 진화해요.** 구현이 plan의 manual verification list를 obsolete하게 만드는 unit test를 추가했을 수 있어요. plan-driven resume는 manual test를 다시 돌리는데, reality는 같은 의도를 cover하는 unit suite가 있어요.
+plan이 다시 잡을 때 사람을 헷갈리게 만드는 경로는 네 가지예요.
 
-## 세 옵션, 나란히
+- **plan에 적힌 서사가 끈적하게 남아요.** plan이 한번 "Path A/B/C 결정 보류"라고 적어두면, 그 framing이 triage 결과에도, journal의 Next 항목에도, ACTIVE-STATUS의 Priorities에도 그대로 따라가요. 현실은 이미 지나갔는데 framing만 살아남는 거예요. 다시 잡는 시점이 되면 여러 곳에 같은 옛 framing이 반복돼 있어요. canonical truth로 착각하기 딱 좋아요.
+- **section 라벨이 사람을 속여요.** plan §A, §B, §C는 한 design의 구성요소(더해지는 항목)일 수도 있고, 서로 배타적인 대안일 수도 있어요. 모든 section을 끝까지 읽지 않으면 어느 쪽인지 가릴 수가 없어요. 2026-04-30 wrap-followup case가 딱 그랬어요. A부터 G까지가 구성요소였는데, journal과 triage에서 A/B/C 셋 중 하나를 고르는 배타적 옵션으로 잘못 읽혔어요.
+- **branch 상태가 거짓말을 해요.** 로컬에서 지워진 branch는 main의 merge commit을 직접 들여다보기 전까지는 "task를 아직 시작 안 한" 모습으로 보여요. `git branch -a`도 merge되고 자동 삭제된 remote-only branch는 보여주지 않고요.
+- **test가 plan보다 빨리 진화해요.** 구현 쪽에 unit test가 이미 붙어서 plan의 manual verification 목록을 obsolete하게 만들었을 수 있어요. plan을 그대로 따라가면 manual test를 또 돌리는데, 현실은 같은 의도를 cover하는 unit suite가 자리를 잡은 뒤예요.
 
-| Option                         | Pros                                          | Cons                                                                    |
-| ------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------- |
-| Trust plan as-written          | 빠른 resume; 탐색 비용 없음                     | obsolete 작업 실행 위험; missed-divergence에 비용 큼                       |
-| Re-spec from scratch           | 보장된 fresh framing                            | plan의 reasoning + decision context 버림                                 |
-| **Pre-flight check + reframe** | 3분에 divergence 잡음; plan core 재사용         | 규율 필요; user/agent가 모든 resume에서 실행을 기억해야 함                  |
+## 세 가지 선택지를 나란히 두면
 
-Pre-flight check는 저렴하고(3분) 레버리지가 커요(missed-divergence에서 시간 절약). Re-spec은 routine evolution에 overkill, trust-as-written은 multi-session task에 실패해요. pre-flight가 plan의 decision context를 버리지 않고 reality에 비춰 reframe해요.
+| 선택지 | 장점 | 단점 |
+| --- | --- | --- |
+| plan 그대로 믿고 진행 | 빠르게 다시 시작; 탐색 비용 0 | obsolete된 작업을 실행할 위험; 어긋남을 놓치면 비용 큼 |
+| 처음부터 다시 spec | framing이 무조건 신선함 | plan의 reasoning과 결정 맥락을 통째로 버림 |
+| **Pre-flight check 후 reframe** | 3분 안에 어긋남을 잡아냄; plan의 핵심을 재사용 | 약간의 규율 필요; 다시 잡을 때마다 챙겨야 함 |
 
-## 실제 "divergence"가 어떻게 보이는지
+Pre-flight check는 비용은 3분 정도로 작고 효과는 커요. 어긋남을 놓치면 잃는 시간이 훨씬 많아요. 처음부터 다시 spec하는 건 이런 평범한 진화에는 과해요. 그대로 믿고 진행하는 건 multi-session task에서 깨져요. pre-flight는 plan의 결정 맥락을 버리지 않으면서 현실에 비춰 다시 짜는 길이에요.
 
-2026-04-30 구체적 케이스: 2026-04-25의 plan.md는 "Phase 5 blocks on Path A/B/C decision"이라고 말했어요. 5일 후의 reality:
+## 실제로 어긋난 모습은 어땠을까
 
-- branch `feat/wrap-followup-persistence`가 더 이상 로컬에 존재하지 않음
-- 구현이 commit `46e23c05`로 main에 merge됨
-- 디자인이 진화: carry-forward merge(plan §B)가 parallel-wrap concurrency safety를 위해 durable-source-only generator(`scripts/regenerate-active-status.js`)로 REPLACE됨
-- "Path A/B/C"가 misread였음 — section A-G가 alternative가 아니라 component였음
-- 7개 verification test 중 4개가 이미 20개 generator unit test로 cover됨(모두 green)
-- 1개 test(carry-forward)가 testing하던 path가 의도적으로 retire됐기 때문에 DESIGN-OBSOLETE
+2026-04-30의 구체적인 case예요. 2026-04-25의 plan.md는 "Phase 5는 Path A/B/C 결정에 막혀 있다"고 적혀 있었어요. 5일 뒤의 현실은 이랬어요.
 
-순진한 resume는 7개 manual test를 모두 실행할 거예요. ~3시간 낭비.
+- branch `feat/wrap-followup-persistence`는 로컬에서 사라졌음
+- 구현은 commit `46e23c05`로 이미 main에 들어갔음
+- design이 바뀌었음 — carry-forward merge(plan §B)는 parallel-wrap의 동시성을 지키려고 durable-source-only generator(`scripts/regenerate-active-status.js`)로 갈아탔음
+- "Path A/B/C"는 잘못 읽은 거였음 — section A부터 G까지는 대안이 아니라 한 design의 구성요소였음
+- verification test 7개 중 4개는 이미 generator unit test 20개가 덮고 있었음(전부 green)
+- 1개(carry-forward) test는 검증하던 path 자체를 일부러 retire한 뒤라 design 단계에서 obsolete였음
 
-## 3분 pre-flight check
+plan 그대로 다시 시작했다면 manual test 7개를 전부 돌렸을 거예요. 약 3시간을 그냥 흘렸을 자리예요.
 
-plan.md를 resume에서 ground truth로 다루기 전에, 네 가지 기계적 check를 실행하세요:
+## 3분짜리 pre-flight check
 
-1. **Branch state:**
+plan.md를 다시 잡을 때의 ground truth로 다루기 전에, 기계적인 check 네 가지를 먼저 돌려요.
+
+1. **branch 상태:**
 
    ```bash
    git branch --show-current
@@ -65,22 +67,22 @@ plan.md를 resume에서 ground truth로 다루기 전에, 네 가지 기계적 c
    git log --oneline main..HEAD       # commits ahead of main
    ```
 
-   - branch가 로컬에 없음? → 이미 merge됐을 가능성
-   - branch는 있는데 commit이 ahead 없음? → 이미 merge됨 + branch stale
+   - 로컬에 branch가 없어요? → 이미 merge됐을 가능성이 커요
+   - branch는 있는데 ahead가 없어요? → 이미 merge되고 branch가 stale한 상태예요
 
-2. **Critical 파일에 대한 commit history:**
+2. **핵심 파일의 commit history:**
 
    ```bash
    git log --oneline -15 main -- {plan-mentioned-files}
    # e.g., -- '.agents/skills/wrap/SKILL.md'
    ```
 
-   - task를 참조하는 최근 commit → 구현이 land했을 가능성
-   - commit 없음 → plan이 여전히 pending
+   - 최근 commit이 task를 언급해요 → 구현이 이미 land한 거예요
+   - commit이 없어요 → plan이 아직 살아 있어요
 
-3. **실제 파일 들여다보기:**
+3. **파일을 직접 들여다보기:**
 
-   plan.md의 각 `## Critical Files to Modify` entry에 대해, plan에서 설명한 변경이 존재하는지 verify. 파일 콘텐츠가 plan intent와 일치하면 → plan이 구현됨.
+   plan.md의 `## Critical Files to Modify` 항목을 하나씩 짚어가면서, plan이 약속한 변경이 실제 파일에 들어갔는지 직접 확인해요. 파일 내용이 plan의 의도와 맞는다면 → plan은 이미 구현된 거예요.
 
 4. **해당 영역의 test suite:**
 
@@ -89,30 +91,30 @@ plan.md를 resume에서 ground truth로 다루기 전에, 네 가지 기계적 c
    node --test scripts/{task-area}.test.js
    ```
 
-   plan을 postdate하는 기존 test suite → 구현이 plan을 지나서 진화하고 자체 verification을 추가함. 새로 작성하기 전에 plan test를 기존 unit에 매핑.
+   plan 이후에 추가된 test suite가 보이면 → 구현이 plan을 지나서 자체 verification까지 갖춘 거예요. 새로 짜기 전에 plan에 적힌 test를 기존 unit으로 매핑해 봐요.
 
-## resume plan 재구성
+## 다시 잡은 plan을 reframe하기
 
-pre-flight 후, resume plan은 reframe돼요:
+pre-flight를 끝내고 나면 다시 잡은 plan이 이렇게 reframe돼요.
 
-| Plan said            | Reality is                      | Action                                            |
-| -------------------- | ------------------------------- | ------------------------------------------------- |
-| "Decision pending"   | "Decision was made + shipped"   | decision 건너뛰기; shipped state verify           |
-| "Implement Phase N"  | "Phase N already merged"        | 건너뛰기; output verify                           |
-| "Run 7 manual tests" | "20 unit tests cover 4+ of 7"   | plan test → unit test 매핑; 나머지만 manual       |
-| "Open PR"            | "Already direct-merged to main" | PR 단계 건너뛰기; `[-]`로 표시                    |
+| plan에서 말한 것 | 실제 모습 | Action |
+| --- | --- | --- |
+| "결정 보류" | "결정 끝났고 ship됨" | 결정 단계는 건너뛰고, ship된 상태만 verify |
+| "Phase N 구현" | "Phase N 이미 merge됨" | 구현은 건너뛰고, output만 verify |
+| "manual test 7개 실행" | "unit test 20개가 7개 중 4개 이상 cover함" | plan test → unit test로 매핑하고, 남는 것만 manual로 |
+| "PR 열기" | "이미 main에 직접 merge함" | PR 단계 건너뛰고, `[-]`로 표시 |
 
-obsolete plan item을 `[-] superseded`로 표시하고, divergence 증거(commit hash, file location, test name)를 인용하는 rationale을 적으세요.
+obsolete된 plan 항목은 `[-] superseded`로 표시하고, 어긋났다는 증거(commit hash, 파일 위치, test 이름)를 짧게 인용해 두면 다음 사람이 why를 읽을 수 있어요.
 
-## 이게 맞는 상황
+## 어떤 상황에 쓰면 좋은가
 
-이 패턴은 >3일 idle 후의 **mid-flight task resume**, 여러 agent/session이 작업을 건드린 **multi-session task**, plan의 verification phase가 실행되기 전에 task가 운영적으로 끝난 **post-merge close-out**, 원래 plan이 reality에 추월당한 **refactor handoff**에 적용돼요.
+이 패턴은 다음 같은 자리에 잘 맞아요. 사흘 넘게 멈춰뒀다가 다시 잡는 task, 여러 agent나 세션이 번갈아 손댄 task, 운영적으로는 끝났는데 plan의 verification 단계만 남아 있는 close-out, 그리고 처음에 짜둔 plan이 현실에 추월당한 refactor 인수인계예요.
 
-**same-session resume**(plan ≈ reality by definition), **greenfield work**(아직 ship된 reality가 없어 divergence 없음), **plan-mode-only session**(비교할 구현 없음)에는 적용 안 돼요.
+같은 세션에서 그대로 이어가는 자리에는 굳이 필요 없어요. plan과 현실이 같다고 봐도 되니까요. 아직 ship된 게 없는 greenfield 작업이나, 비교할 구현이 없는 plan-mode-only 세션에도 적용할 자리가 없어요.
 
 ## 실용적인 takeaway
 
-Repo state가 canonical이에요. plan.md는 의도의 historical record이고, shipped state가 reality예요. 충돌 시 repo가 이겨요. divergence는 정상이지 실패가 아니에요 — 구현 진화는 healthy해요. Pre-flight는 저렴하고(3분) missed-divergence는 비싸요(obsolete test 실행 시간). close에서 divergence를 문서화해서 다음 resume가 why를 보게 하세요. empirical close와 짝지으세요 — divergence는 종종 test를 "manual"에서 "unit suite로 cover"나 "design에 의해 obsolete"로 shift시키고, 남은 un-coverable test는 empirical하게 닫아요.
+repo 상태가 canonical이에요. plan.md는 의도의 historical record, ship된 상태가 reality예요. 둘이 충돌하면 repo가 이겨요. 어긋남은 실패가 아니라 보통 일어나는 일이에요. 구현이 진화하는 건 healthy한 신호예요. pre-flight는 3분이면 끝나고, 어긋남을 놓치면 obsolete된 test를 붙들고 몇 시간을 보내요. close 단계에서 어긋남을 짧게 문서화해두면 다음에 다시 잡는 사람이 why를 바로 읽을 수 있어요. empirical close와도 잘 어울려요. 어긋남은 보통 test를 "manual"에서 "unit suite로 cover됨"이나 "design 단계에서 obsolete"로 옮겨놓고, 끝까지 unit으로 cover가 안 되는 것만 empirical하게 닫아요.
 
 ## References
 

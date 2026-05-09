@@ -1,8 +1,8 @@
 ---
 title: Codex Skill Mirror 패턴
-description: 'repository가 이미 `.agents/skills/`를 canonical skill source로 다루고 있을 때, clean한 Codex 통합은 "그것을 `.codex/skills/`로 교체"나 "전체 폴더를 wholesale 심볼릭링크"가 아니에요. selective adapter가 있는 mirror layer가 canonical source를 보존하면서 Codex가 필요한 걸 줘요.'
+description: '`.agents/skills/`를 정식 skill 출처로 두는 repo에서 Codex를 깔끔하게 붙이는 방법은 통째로 교체하거나 통째로 심볼릭링크하는 게 아니에요. 정식 출처는 그대로 두고, 필요한 skill에만 어댑터를 다는 mirror 레이어가 답이에요.'
 date: 2026-04-18T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-05-10'
 tags:
   - devops
   - codex
@@ -15,31 +15,33 @@ lang: ko
 source_lang: en
 source_slug: codex-skill-mirror-pattern
 source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-06'
+translation_date: '2026-05-10'
 ---
 
-repository가 이미 `.agents/skills/`를 canonical skill source로 다룰 때, clean한 Codex 통합은 "그것을 `.codex/skills/`로 교체"나 "전체 폴더를 wholesale 심볼릭링크"가 아니에요. 두 shortcut 모두 install 후에만 표면화되는 failure mode가 있어요. skill이 작동하는 것처럼 보이지만 조용히 misbehave해요. 안정적인 패턴은 6단계예요:
+3B repo에서 Codex CLI를 붙이려고 하다가, `.agents/skills/`를 그대로 `~/.codex/skills/`로 심볼릭링크해 봤어요. discover는 됐는데, 막상 `task-starter`를 돌리니까 조용히 어긋나기 시작했어요. Claude 전용 tool을 가정하고 쓴 instruction이 Codex에서는 다르게 해석돼서, 작동하는 척만 하고 실제로는 misbehave했어요.
 
-1. `.agents/skills/`를 canonical skill source로 유지.
-2. repo-local `.codex/skills/` mirror 추가.
-3. portable skill을 심볼릭링크로 mirror.
-4. runtime assumption이 cleanly transfer 안 되는 skill에만 real Codex adapter 작성.
-5. repo-local mirror를 한 번에 한 skill씩 `~/.codex/skills/`로 sync.
-6. same-name real Codex adapter가 존재하면 Codex config에서 Claude-native `.agents/skills/{name}/SKILL.md`를 disable.
+`.agents/skills/`를 이미 정식 skill 출처로 두고 있다면, 통째로 `.codex/skills/`로 바꾸거나 폴더 전체를 심볼릭링크하는 건 둘 다 함정이에요. 안정적으로 굴러가는 패턴은 6단계예요.
 
-## 직접 심볼릭링크가 충분하지 않은 이유
+1. `.agents/skills/`를 정식 skill 출처로 유지해요.
+2. repo 안에 `.codex/skills/` mirror를 따로 둬요.
+3. 이식 가능한 skill은 심볼릭링크로 mirror해요.
+4. runtime 가정이 깨끗하게 옮겨가지 않는 skill만 진짜 Codex 어댑터로 작성해요.
+5. repo-local mirror를 한 번에 하나씩 `~/.codex/skills/`로 sync해요.
+6. 같은 이름의 진짜 Codex 어댑터가 있으면 Codex config에서 Claude 쪽 `.agents/skills/{name}/SKILL.md`만 끄세요.
 
-Claude-native skill은 `AskUserQuestion`, `TodoWrite`, slash-skill chaining, `WebSearch`/`WebFetch` 같은 Claude-specific tool name 같은 — 같은 이름이나 의미로 Codex에 존재하지 않는 runtime feature를 종종 가정해요.
+## 직접 심볼릭링크가 부족한 이유
 
-`.agents/skills/`에서 `~/.codex/skills/`로 raw 디렉토리 심볼릭링크는 skill을 discoverable하게 만들지만, **seamless하게 만들진 않아요**. 결과는 hybrid failure mode:
+Claude 쪽 skill은 Codex에 같은 이름이나 의미로는 없는 runtime 기능을 가정하는 경우가 많아요. `AskUserQuestion`, `TodoWrite`, slash skill 체이닝, `WebSearch`/`WebFetch` 같은 Claude 전용 tool이 그래요.
 
-- portable markdown-only skill이 작동하는 것처럼 보임
-- high-friction workflow skill이 discoverable하지만 operationally 오해의 소지
-- in-place edit하면 Codex-specific fix가 canonical Claude skill에서 drift
+`.agents/skills/`를 `~/.codex/skills/`로 그대로 심볼릭링크하면 discover는 되지만 매끄럽게 돌아가지는 **않아요**. 결과는 어중간한 실패 모드예요.
 
-## mirror-with-adapter 레이아웃
+- markdown만 있는 이식 가능한 skill은 잘 도는 것처럼 보여요.
+- workflow 의존도가 높은 skill은 discover는 되지만 실제로는 오해를 부르는 동작을 해요.
+- Codex 쪽에서 in-place로 고치면 Claude의 정식 skill에서 drift해요.
 
-target runtime이 own하는 **mirror-with-adapter** layer 도입:
+## mirror-with-adapters 레이아웃
+
+타겟 runtime이 직접 소유하는 **mirror-with-adapters** 레이어를 두는 게 핵심이에요.
 
 ```text
 .agents/skills/                  # canonical Claude source
@@ -58,77 +60,77 @@ target runtime이 own하는 **mirror-with-adapter** layer 도입:
   └── wrap -> 3b/.codex/skills/wrap
 ```
 
-### Adapter write 경계
+### 어댑터로 바꾸는 경계
 
-Mirror된 Codex skill 경로가 여전히 `.agents/skills/`로의 심볼릭링크일 때, Codex 경로의 `SKILL.md`를 edit하면 Claude source도 edit해요. 즉 "portable mirror"에서 "real Codex adapter"로의 transition은 명시적인 첫 단계가 있어요:
+mirror된 Codex skill 경로가 아직 `.agents/skills/`로의 심볼릭링크 상태라면, Codex 쪽 경로의 `SKILL.md`를 고치는 순간 Claude 정식 출처도 같이 바뀌어요. 그래서 "이식용 mirror"에서 "진짜 Codex 어댑터"로 넘어갈 때는 첫 단계가 명시적이어야 해요.
 
-1. `.codex/skills/{name}`의 mirror된 심볼릭링크 제거 또는 교체
-2. 그 경로에 real 디렉토리 생성
-3. Codex-owned `SKILL.md`를 거기 작성
+1. `.codex/skills/{name}`의 mirror된 심볼릭링크를 지우거나 교체해요.
+2. 그 경로에 진짜 디렉토리를 만들어요.
+3. Codex가 소유하는 `SKILL.md`를 거기 작성해요.
 
-git에서 이 마이그레이션은 **old 심볼릭링크 삭제 + 같은 경로 아래 real 파일 추가**로 나타나요. 그게 변경의 정확한 모양이지, mirror가 broken이라는 sign이 아니에요.
+git에서 이 마이그레이션은 **기존 심볼릭링크 삭제 + 같은 경로에 진짜 파일 추가**로 보여요. 변경의 정확한 모양이 그래요. mirror가 깨졌다는 신호가 아니에요.
 
-### real adapter를 언제 작성할지
+### 진짜 어댑터를 쓸지 말지
 
-원래 skill이 runtime-specific behavior에 의존할 때만 real adapter 생성. 3B rollout의 예시:
+원래 skill이 runtime에 종속된 동작을 쓸 때만 진짜 어댑터를 만들어요. 3B에서 실제로 쪼갠 사례를 보면 이래요.
 
-- `task-starter`는 `AskUserQuestion`, `EnterPlanMode` / `ExitPlanMode`, inline slash-skill invocation에 Codex-side translation 필요했음.
-- `wrap`은 `TodoWrite`, `AskUserQuestion`, nested slash-skill chaining에 translation 필요했음.
-- 더 단순한 instruction-driven skill은 직접 심볼릭링크 유지.
+- `task-starter`는 `AskUserQuestion`, `EnterPlanMode`/`ExitPlanMode`, inline slash skill 호출에 Codex 쪽 변환이 필요했어요.
+- `wrap`은 `TodoWrite`, `AskUserQuestion`, 중첩 slash skill 체이닝에 변환이 필요했어요.
+- 단순한 instruction 위주 skill은 직접 심볼릭링크 그대로 뒀어요.
 
-### Adapter sync 규율
+### 어댑터 sync 규율
 
-skill이 real Codex adapter가 되면, intentionally compact 유지:
+skill이 진짜 Codex 어댑터가 되면, 일부러 작게 유지해요.
 
-1. upstream Claude `metadata.version`에 sync.
-2. execution semantics를 변경하는 Codex runtime translation만 보존.
-3. contract parity 유지에 필요한 decision-critical upstream delta만 port.
-4. target runtime이 진짜로 full fork가 필요하지 않으면 full Claude skill body 복사 회피.
+1. upstream Claude `metadata.version`에 sync해요.
+2. 실행 의미를 바꾸는 Codex runtime 변환만 보존해요.
+3. contract parity에 필요한 결정적 upstream delta만 옮겨요.
+4. 타겟 runtime이 진짜로 fork가 필요한 게 아니라면, Claude skill 본문 전체를 복사하지 말아요.
 
-### portable plugin으로 escalation
+### 이식 가능한 plugin으로 승격
 
-workflow가 reusable domain logic(state model, scorer, prompt asset, provider protocol)을 포함하면, adapter-only mirror가 너무 thin해져요. 추출된 system을 다음으로 promote:
+workflow에 재사용 가능한 도메인 로직이 들어가면(state model, scorer, prompt asset, provider protocol 같은 거), 어댑터만으로는 너무 얇아져요. 추출한 시스템을 이렇게 승격해요.
 
-1. runtime-agnostic core package
-2. thin runtime/plugin wrapper
-3. 추출된 package를 directly import하는 test
+1. runtime에 종속되지 않는 코어 패키지로 빼요.
+2. 얇은 runtime/plugin wrapper를 둬요.
+3. 추출한 패키지를 직접 import하는 test를 둬요.
 
-이건 cross-agent logic을 reusable 유지하면서 runtime-specific boot step, update flow, downstream pipeline coupling을 wrapper layer 안에 가둬요.
+이렇게 하면 cross-agent 로직은 재사용 가능한 상태로 유지하면서, runtime에 종속된 boot 단계, update flow, downstream pipeline 결합은 wrapper 레이어 안에 가둘 수 있어요.
 
-## 이 layering이 작동하는 이유
+## 이 레이어링이 작동하는 이유
 
-### Canonical source가 single 유지
+### 정식 출처가 하나로 유지돼요
 
-Claude-first workflow logic이 `.agents/skills/`에 anchored 유지 — 기존 3B 생태계와 connected repo가 변경할 필요 없음.
+Claude 중심 workflow 로직이 `.agents/skills/`에 그대로 있어서, 기존 3B 생태계와 연결된 repo는 바꿀 필요가 없어요.
 
-### Target runtime이 own compatibility layer를 own
+### 타겟 runtime이 자기 호환 레이어를 직접 소유해요
 
-Codex-specific 적응이 `.codex/skills/` 아래 살고, 거기서 tool-specific conditional로 Claude source를 오염시키지 않으면서 진화 가능.
+Codex 전용 적응은 `.codex/skills/` 아래에 살고, 거기서 진화해요. tool 종속 분기로 Claude 출처를 오염시키지 않아요.
 
-### Discovery와 execution이 깔끔하게 분리
+### Discovery와 실행이 깔끔하게 분리돼요
 
-repo-local mirror가 **Codex가 discover할 수 있는 것**을 해결. adapter가 **Codex가 cleanly execute할 수 있는 것**을 해결. 이걸 별개 문제로 다루면 over-duplication과 false seamlessness 둘 다 회피.
+repo-local mirror는 **Codex가 뭘 discover할 수 있는지**를 풀어요. 어댑터는 **Codex가 뭘 깔끔하게 실행할 수 있는지**를 풀어요. 두 문제를 따로 다루면 과도한 중복도, 매끄러움을 가장하는 일도 피할 수 있어요.
 
-Codex는 repo에서 `.agents/skills/`도 directly discover 가능. portable pass-through skill에 유용하지만, `.codex/skills/`에 same-name real adapter가 존재할 때 혼란스러움. 그 경우 `~/.codex/config.toml`의 `[[skills.config]]`로 Claude-native source `SKILL.md`만 disable; `.codex/skills/` adapter는 enabled 유지.
+Codex는 repo의 `.agents/skills/`도 직접 discover할 수 있어요. 이식 가능한 pass-through skill에는 도움이 되지만, `.codex/skills/`에 같은 이름의 진짜 어댑터가 있으면 헷갈려요. 그럴 땐 `~/.codex/config.toml`의 `[[skills.config]]`로 Claude 쪽 `SKILL.md`만 disable하세요. `.codex/skills/` 어댑터는 켜둔 채로요.
 
-### Global install이 reversible 유지
+### 글로벌 install이 되돌리기 쉬워요
 
-repo-local skill을 한 번에 하나씩 `~/.codex/skills/`로 link하는 sync script는 global Codex home을 additive 유지. built-in/system skill clobber 회피 + repository-owned tree로 entire global skills 디렉토리 교체 회피.
+repo-local skill을 한 번에 하나씩 `~/.codex/skills/`로 link하는 sync script가 글로벌 Codex home을 추가식으로 유지해줘요. 빌트인 skill을 덮어쓰지도 않고, 글로벌 skills 디렉토리 전체를 repo가 소유하는 트리로 바꿔치지도 않아요.
 
-## 이게 맞는 상황
+## 이 패턴이 맞는 경우
 
-패턴이 맞는 경우:
+이런 상황에 잘 맞아요.
 
-- repository가 이미 다른 agent format에 mature한 skill system을 가지고 있을 때.
-- source skill tree가 canonical이고 canonical 유지되어야 할 때.
-- 일부 skill은 tool-agnostic이지만 몇 high-value workflow는 아닐 때.
-- 전체 skill library를 up front rewrite 안 하고 Codex discovery가 native하게 느끼고 싶을 때.
+- repo가 이미 다른 agent 포맷으로 성숙한 skill 시스템을 가지고 있을 때.
+- 출처 skill 트리가 정식이고, 정식인 채로 유지돼야 할 때.
+- 일부 skill은 tool에 무관하지만, 가치가 큰 workflow 몇 개는 그렇지 않을 때.
+- skill 라이브러리 전체를 처음부터 다시 쓰지 않고도 Codex discovery를 native하게 느끼게 하고 싶을 때.
 
-target runtime이 즉시 새 source of truth가 되어야 할 때, 모든 skill이 deeply runtime-specific일 때(mirror가 대부분 wrapper가 됨), 또는 hub repository뿐 아니라 connected external repo 전체에 cross-agent parity가 필요할 때는 안 맞아요.
+반대로 타겟 runtime이 즉시 새로운 정식 출처가 돼야 할 때, 모든 skill이 깊게 runtime에 종속돼서 mirror가 거의 wrapper로 바뀌는 경우, 또는 hub repo만이 아니라 외부 연결 repo 전체에 cross-agent parity가 필요할 때는 안 맞아요.
 
-## 실용적인 takeaway
+## 실용적 정리
 
-Discovery compatibility와 execution compatibility는 다른 문제예요. Portable skill을 심볼릭링크로 mirror; runtime mismatch가 진짜인 것에만 adapt. mirror된 skill을 edit하기 **전에** real adapter로 promote, 그렇지 않으면 write가 Claude의 canonical source에 land. adapter는 compact 유지하고 upstream `metadata.version` + decision-critical delta로 sync; full clone 아님. adapter translation이 더 이상 충분하지 않을 때, reusable logic을 portable core package로 split하고 runtime/plugin layer를 thin 유지.
+discovery 호환성과 실행 호환성은 다른 문제예요. 이식 가능한 skill은 심볼릭링크로 mirror하고, runtime 미스매치가 진짜인 것에만 어댑터를 다세요. mirror된 skill은 고치기 **전에** 진짜 어댑터로 승격해요. 안 그러면 그 수정이 Claude 정식 출처로 들어가요. 어댑터는 작게 유지하고, upstream `metadata.version`과 결정적 delta만으로 sync하세요. 통째로 복제하는 거 아니에요. 어댑터 변환만으로 부족해지면, 재사용 가능한 로직을 이식 가능한 코어 패키지로 분리하고 runtime/plugin 레이어는 얇게 두세요.
 
 ## References
 

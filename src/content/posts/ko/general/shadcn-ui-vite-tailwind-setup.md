@@ -2,9 +2,9 @@
 title: shadcn/ui 수동 설정 (Vite + Tailwind)
 description: >-
   Vite + React + TypeScript + Tailwind CSS 프로젝트에서 shadcn CLI 없이 shadcn/ui 컴포넌트
-  프리미티브를 수동으로 설정하는 방법입니다.
+  프리미티브를 수동으로 설정하는 방법이에요.
 date: 2026-02-04T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-05-10'
 tags:
   - general
   - react
@@ -18,7 +18,7 @@ lang: ko
 source_lang: en
 source_slug: shadcn-ui-vite-tailwind-setup
 source_updated: '2026-03-22'
-translation_date: '2026-02-12'
+translation_date: '2026-05-10'
 references:
   - url: null
     title: Manual shadcn/ui setup in Vite + Tailwind project
@@ -32,22 +32,22 @@ references:
 ---
 
 React 대시보드 프로젝트에 컴포넌트 라이브러리가 필요했어요. 요구사항이
-구체적이었습니다: 처음부터 다크 테마, 스타일링에 대한 완전한 제어, 비대한
+꽤 구체적이었어요. 처음부터 다크 테마, 스타일링에 대한 완전한 제어, 비대한
 의존성 트리 없을 것. Material UI, Chakra, Ant Design을 살펴봤어요. 전부
-원하지 않는 의견과 필요 없는 CSS-in-JS 오버헤드를 갖고 있었습니다.
+원하지 않는 의견과 필요 없는 CSS-in-JS 오버헤드를 갖고 있었어요.
 
 그러다 shadcn/ui를 발견했어요. 전통적인 의미의 컴포넌트 라이브러리가 아니에요.
 의존성으로 설치하는 게 아니라 컴포넌트를 프로젝트에 복사해서 완전히 소유하는
 방식이에요. 접근성을 위해 Radix UI 프리미티브로 구축되고, 유연성을 위해
-Tailwind CSS로 스타일링돼요. CLI를 건너뛰고 수동으로 설정해서 모든 조각을
-이해했습니다.
+Tailwind CSS로 스타일링돼요. CLI를 건너뛰고 수동으로 설정하면서 각 조각을
+직접 파악했어요.
 
 ## CLI 대신 수동 설정을 선택한 이유
 
 shadcn/ui 문서는 `npx shadcn-ui init`을 실행하라고 권장해요. 작동하지만
 블랙박스예요. `components.json` 설정 파일을 생성하고, 필요 없을 수 있는
 의존성을 설치하고, 정해진 폴더 구조를 만들어요. 완전한 제어를 원하는
-프로젝트에서는 수동 설정이 더 나은 선택이었습니다.
+프로젝트에서는 수동 설정이 더 나았어요.
 
 | 요소   | CLI (`npx shadcn-ui init`) | 수동           |
 | ------ | -------------------------- | -------------- |
@@ -57,13 +57,13 @@ shadcn/ui 문서는 `npx shadcn-ui init`을 실행하라고 권장해요. 작동
 | 학습   | 블랙박스                   | 각 요소를 이해 |
 
 수동 접근법은 더 적은 의존성을 설치하고 각 조각이 무슨 역할을 하는지 이해하도록
-강제해요. 뭔가 깨지면 어디를 봐야 하는지 알 수 있습니다.
+강제해요. 뭔가 깨졌을 때 어디를 봐야 하는지도 자연스럽게 보여요.
 
 ## shadcn/ui가 실제로 무엇인가
 
 shadcn/ui는 Radix UI 프리미티브 위에 구축된 copy-paste 컴포넌트 모음이에요.
-Radix가 어려운 접근성 작업을 처리합니다 -- 키보드 내비게이션, 포커스 관리,
-ARIA 속성. shadcn/ui는 이 프리미티브를 Tailwind 스타일로 감싸고 일관된 API를
+Radix가 어려운 접근성 작업을 다 처리해줘요 -- 키보드 내비게이션, 포커스 관리,
+ARIA 속성. shadcn/ui는 이 프리미티브를 Tailwind 스타일로 감싸면서 일관된 API를
 제공해요.
 
 핵심 의존성은 작고 조합 가능해요:
@@ -91,7 +91,7 @@ npm install tailwindcss-animate
 ### 2. `cn()` 유틸리티 생성
 
 모든 shadcn/ui 컴포넌트의 기반이에요. `clsx`(조건부 클래스 결합)와
-`tailwind-merge`(클래스 중복 제거)를 결합합니다:
+`tailwind-merge`(클래스 중복 제거)를 결합해요.
 
 ```typescript
 // src/lib/utils.ts
@@ -106,7 +106,7 @@ export function cn(...inputs: ClassValue[]) {
 두 라이브러리가 다 필요한 이유는? `clsx`는
 `clsx('base', isActive && 'active')` 같은 조건부 클래스를 처리해요.
 `tailwind-merge`는 `p-4 p-2` 같은 충돌을 `p-2`로 해소해요 (마지막이 승리).
-둘을 합치면 className 조합이 예측 가능해집니다.
+둘을 합치면 className 조합이 예측 가능해져요.
 
 ### 3. Tailwind 플러그인 추가
 
@@ -191,7 +191,7 @@ const buttonVariants = cva(
 
 `cva` 함수는 기본 클래스 세트, variant 옵션, 기본값을 정의해요. 컴포넌트를
 사용할 때 variant prop을 전달하면 `cva`가 최종 className을 계산해요. `cn()`
-유틸리티가 모든 걸 병합하면서 충돌을 중복 제거합니다.
+유틸리티가 모든 걸 병합하면서 충돌을 중복 제거해요.
 
 ## 왜 이 방법이 효과적인가
 
@@ -203,7 +203,7 @@ const buttonVariants = cva(
 
 `cn()` + `cva` 패턴은 Tailwind의 어려운 부분인 className 조합을 처리해줘요.
 이게 없으면 조건부 클래스와 Tailwind 오버라이드를 결합하면 예측할 수 없는
-결과가 나와요. 이게 있으면 마지막 클래스가 항상 이기고, 조건문이 깔끔합니다.
+결과가 나와요. 이게 있으면 마지막 클래스가 항상 이기고 조건문이 깔끔해져요.
 
 ## 실전 팁
 
@@ -217,4 +217,4 @@ const buttonVariants = cva(
 
 핵심 인사이트: shadcn/ui는 의존하는 라이브러리가 아니에요. 소유하는 패턴의
 모음이에요. `cn()` 유틸리티와 `cva` variant 시스템이 진짜 핵심 -- shadcn/ui의
-구체적인 컴포넌트 없이도 사용할 수 있습니다.
+구체적인 컴포넌트 없이도 사용할 수 있어요.

@@ -5,7 +5,7 @@ description: >-
   3B에는 한 줄도 적용하지 않았어요. Pattern A(theme saturation before action)가
   실제로 어떻게 동작하는지 보여주는 weekly synthesis예요.
 date: 2026-04-17T00:00:00.000Z
-updated: 2026-04-17T00:00:00.000Z
+updated: 2026-05-10T00:00:00.000Z
 tags:
   - forge
   - ai-ml
@@ -18,7 +18,7 @@ lang: ko
 source_lang: en
 source_slug: six-papers-zero-applied
 source_updated: "2026-04-17"
-translation_date: "2026-04-17"
+translation_date: "2026-05-10"
 references:
   - url: "https://arxiv.org/abs/2604.02460"
     title: "Single-Agent LLMs Outperform Multi-Agent Systems on Multi-Hop Reasoning Under Equal Thinking Token Budgets"
@@ -115,13 +115,13 @@ baseline보다 **더 낮은** 성능을 냈어요. 관련 없는 skill이 오히
 오도한 거예요. Claude조차도 사용 가능한 curated skill을 전부 load하는
 비율은 49%에 불과해요.
 
-Retrieval quality가 지배적인 메커니즘이에요. Agentic hybrid search(iterative
-query formulation + RRF 기반 BM25/dense hybrid)는 direct embedding lookup을
-18.7 point 앞서요. Name과 description만이 아니라 SKILL.md 본문 전체를 indexing
-하면 Recall@5에서 2 point가 붙어요. Query-specific refinement는 TERMINAL-BENCH
-2.0에서 7.8pp를 recover해요 — 단, 초기 skill quality가 괜찮을 때만
-(LLM-judge coverage score ≥ 3.83/5). Refinement는 multiplier지 generator가
-아니에요. 없는 skill을 메워주지는 못해요.
+결국 메커니즘을 가르는 건 retrieval 품질이에요. Agentic hybrid search —
+질의를 반복 다듬으면서 RRF 기반 BM25와 dense를 섞는 방식 — 가 direct embedding
+lookup을 18.7 point 앞서요. 이름과 설명만 indexing하지 말고 SKILL.md 본문
+전체까지 색인하면 Recall@5에서 2 point가 더 붙어요. 질의를 한 번 더 다듬는
+refinement는 TERMINAL-BENCH 2.0에서 7.8pp를 회복하는데, 초기 skill 품질이
+받쳐줄 때만(LLM-judge coverage score ≥ 3.83/5) 성립해요. Refinement는 곱셈일
+뿐, 없는 걸 만들어내는 generator가 아니에요. 빠진 skill을 메우지는 못해요.
 
 두 논문이 공유하는 구조적 주장은 이거예요. 작은 규모에서 설계된 시스템에는
 숨은 임계치가 있어요. Compute-equivalence 체크 없이 agent를 추가하면 정보가
@@ -202,13 +202,13 @@ high-usage memory가 similarity hit과 value-reward weight를 모두 누적해�
 rare-but-valuable entry를 익사시켜요. 시간이 지나면 시스템은 canonical memory
 몇 개로 최적화되고, 나머지는 찾을 수 없게 돼요.
 
-세 논문이 공유하는 구조적 주장은 one-directional 아키텍처가 reverse arrow를
-하나 얹으면 사라질 ceiling에 부딪힌다는 거예요. Outcome-only verification은
-모델의 stochastic variance를 상속해요 — process channel을 추가하면 독립적인
-signal이 붙어요. Summarize-and-discard compression은 요약의 faithfulness를
-상속해요 — retention channel을 추가하면 residual signal이 붙어요. Graduation-only
-memory는 popularity bias를 상속해요 — demotion-or-diversity channel을 추가하면
-long-tail의 discoverability가 붙어요.
+세 논문이 공유하는 구조적 주장은 한쪽 방향 아키텍처가 반대 화살표를
+하나 얹으면 사라질 ceiling에 부딪힌다는 거예요. 결과만 보는 verification은
+모델의 stochastic variance를 그대로 받아요 — process를 별도 채널로 빼면 독립
+signal이 붙어요. 요약하고 버리는 compression은 요약의 faithfulness에 종속돼요 —
+원본을 잡고 있는 retention 채널을 더하면 residual signal이 붙어요. 졸업만
+허용하는 memory는 popularity bias를 그대로 물려받아요 — demotion이나 다양성
+채널을 더하면 long-tail까지 꺼낼 수 있게 돼요.
 
 공유하지 않는 건 구현 방식이에요. Rosset의 Universal Verifier는 Python 3,000줄에
 prompt 2,000줄이고 multi-second latency로 offline에서 돌아가요. Kontonis의 Memento는
@@ -365,11 +365,11 @@ coherence를 잃어요. 둘째는 **sunk-cost inflation** — 성급하게 commi
 하기 전에 commit된 아키텍처 변경은 의도치 않은 이유로 load-bearing이 되곤
 한다는 걸 알고 있어요. Rollback이 원래 commit보다 더 어려워져요.
 
-Pattern A는 filter예요. Skill-retrieval degradation을 주장하는 논문 하나는
-data point예요. 다른 팀이 다른 도메인에서 같은 curve를 확인하는 두 번째 논문은
-signal이에요. 실제 session에서 관찰된 friction — Claude가 실제 task에서 맞는
-skill을 load하지 못하고 friction log에 잡히는 것 — 은 validation이에요. 그
-둘 중 어느 조합이든 주장이 shelf에서 implementation queue로 졸업해요.
+Pattern A는 filter예요. Skill-retrieval이 무너진다고 주장하는 논문 하나는
+data point에 불과해요. 다른 팀이 다른 도메인에서 같은 곡선을 짚어주는 두
+번째 논문이 붙어야 signal이에요. 실제 session에서 부딪힌 friction — Claude가
+맞는 skill을 못 골라 friction log에 잡히는 일 — 은 validation이고요. 둘 중
+어느 조합이든 주장이 shelf에서 빠져나와 implementation queue로 올라와요.
 
 운영 discipline은 기계적이에요. 논문이 theme을 제시하면 shelf에 source, 근거
 강도, shelved upgrade target, 졸업 기준과 함께 로그해요. 계속 읽어요. 다음

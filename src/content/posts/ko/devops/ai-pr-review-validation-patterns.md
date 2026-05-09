@@ -2,7 +2,7 @@
 title: "AI PR 리뷰 검증 패턴"
 description: "AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 13가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크 + 보강 주석 템플릿."
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-04-29'
+updated: '2026-05-10'
 tags:
   - devops
   - ai
@@ -13,7 +13,7 @@ lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
 source_updated: "2026-04-29"
-translation_date: "2026-04-29"
+translation_date: "2026-05-10"
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -120,9 +120,9 @@ resyncOccurred = true;
 
 ### 5. Process 모델 오해
 
-**어떻게 보이나:** 에이전트가 module-level singleton을 thread-unsafe하다고 지적하거나 lock 추가를 제안해요.
+**어떻게 보이나:** 에이전트가 모듈 단위 싱글턴을 thread-unsafe하다고 지적하거나 lock을 추가하라고 제안해요.
 
-**왜 이런 일이 생기나:** AI가 기본적으로 threading 모델을 가정하지만, 실제 production 환경에서는 process 기반 worker를 쓰는 경우가 많아요. Celery prefork, gunicorn worker process — 각 worker가 별도의 메모리 공간을 가지기 때문에 공유 상태 자체가 없어요.
+**왜 이런 일이 생기나:** AI가 기본적으로 스레드 기반 모델을 가정해요. 그런데 실제 production 환경에서는 프로세스 기반 worker를 쓰는 경우가 많아요. Celery prefork, gunicorn worker process — 각 worker가 별도의 메모리 공간을 가지기 때문에 공유 상태 자체가 없어요.
 
 **예시:**
 
@@ -131,7 +131,7 @@ resyncOccurred = true;
 현실: Celery prefork = 별도 process. 각각 자기만의 global namespace를 가짐
 ```
 
-Python 프로젝트에서 CodeRabbit이 module-level 변수마다 thread-safety 이슈로 지적한 사례예요. Django/Celery stack에서 prefork worker를 쓰면 각 process가 global namespace의 자기 사본을 갖게 돼요. thread도 없고, 공유도 없고, 문제도 없어요.
+Python 프로젝트에서 CodeRabbit이 모듈 단위 변수마다 스레드 안전성 이슈로 지적한 사례예요. Django/Celery 스택에서 prefork worker를 쓰면 각 프로세스가 global namespace의 자기 사본을 갖게 돼요. 스레드도 없고, 공유도 없고, 문제도 없어요.
 
 **예방:** 보강 주석을 추가해요.
 
@@ -262,14 +262,14 @@ crucio PR #40에서 실제로 겪은 사례예요. 18개 Copilot 지적 중 12�
 
 **예시 (3B PR #19, 4월 말):**
 
-Codex가 `/interview` (markdown-only Socratic skill, 런타임 의존성 0) import를 review했어요. Codex의 finding들은 이렇게 주장했어요:
+Codex가 `/interview`(markdown 전용 Socratic skill, 런타임 의존성 0) import를 살펴봤어요. Codex가 내놓은 지적은 다음과 같았어요.
 
-- "SKILL.md:33의 curl version check" — line 33은 `## Instructions` 헤더였어요. 소스 어디에도 curl 없음.
-- "SKILL.md:93의 MCP가 질문함" — line 93은 code-confirmation 예시였어요. 소스는 line 38에 명시적으로 "MCP tools 없음"이라고 적혀 있어요.
-- "summary를 `ooo seed` artifact로 교체" — `ooo seed`는 `/ouroboros:interview`의 artifact예요. 같은 세션 registry에 있는 다른 skill요.
-- "MCP response contract — `meta.session_id`, `meta.is_complete` 강화" — 소스에는 MCP layer가 없어요. pure conversation engine이에요.
+- "SKILL.md:33의 curl 버전 체크" — 33번 줄은 `## Instructions` 헤더였어요. 소스 어디에도 curl은 없어요.
+- "SKILL.md:93의 MCP 질문" — 93번 줄은 code-confirmation 예시였어요. 소스 38번 줄에는 "MCP tools 없음"이라고 명시되어 있어요.
+- "summary를 `ooo seed` 산출물로 교체" — `ooo seed`는 `/ouroboros:interview`의 산출물이에요. 같은 세션 registry에 있는 다른 skill 거예요.
+- "MCP 응답 계약 — `meta.session_id`, `meta.is_complete` 강화" — 소스에는 MCP 계층이 없어요. 순수한 conversation engine이거든요.
 
-네 finding 모두 `/ouroboros:interview` (Python/MCP/`ooo seed` 생성)에 적용될 내용이에요. Codex가 이름 root 공유 + 세션 가용성 공유 기반으로 두 skill을 conflated한 것 같아요. 5개 중 1개(dead filesystem link)만 valid했어요.
+네 finding 전부 `/ouroboros:interview`(Python/MCP/`ooo seed` 생성)에 적용될 내용이었어요. Codex가 이름이 같다는 점과 같은 세션에 둘 다 떠 있다는 점 때문에 두 skill을 섞어서 본 것 같아요. 5개 중 1개(dead filesystem link)만 유효했어요.
 
 **왜 AI reviewer 휴리스틱이 실패하나:**
 
@@ -278,7 +278,7 @@ Codex가 `/interview` (markdown-only Socratic skill, 런타임 의존성 0) impo
 - *다른* skill이 internally consistent하니까 confidence가 높게 유지돼요 — reviewer의 mental model이 깨진 게 아니라 잘못된 target을 가리킬 뿐이에요.
 - output이 specific해 보여요(line 번호, field 이름) 하지만 review 중인 file에 대해서는 fabricated예요.
 
-**예방 — cross-check 규율.** specific line, file, API를 인용하는 모든 AI review finding에 대해 다음을 실행하세요:
+**예방 — 교차 확인 규율.** 특정 라인, 파일, API를 인용한 AI 리뷰 finding이라면 모두 다음을 실행하세요.
 
 ```bash
 grep -n -i '<claimed-string>' <claimed-file>
@@ -392,7 +392,7 @@ Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`de
 
 **CONTROVERSIAL은 user redirect로 처리:** R1-16은 `scripts/check-3b-drift.sh:25`에서 exit code 2가 advisory drift와 pre-flight failure를 모두 의미하는 문제였어요. 바로 수정하지 않고 CONTROVERSIAL로 분류한 뒤, code 분리, code 2 의미 축소, reinforcing comment 유지, follow-up issue defer 네 가지 선택지를 제시했어요. 사용자는 code 분리를 선택했고, fix는 VALID 수정 이후 GOOD-TO-HAVE batch 전에 반영했어요.
 
-**Thread-resolution 학습:** Copilot과 Codex thread는 GitHub GraphQL `resolveReviewThread` mutation으로 명시적으로 resolve하기 전까지 열린 상태로 남아요. CodeRabbit은 참조 코드가 바뀌면 일부 thread를 자동 종료했고, 5개 중 3개가 reply 없이 해결됐어요. commit이 쌓이면서 line number도 이동하므로, finding과 commit을 매핑할 stable key는 `path:line`이 아니라 GraphQL thread ID였어요.
+**스레드 해결에서 배운 점:** Copilot과 Codex 스레드는 GitHub GraphQL `resolveReviewThread` mutation으로 명시적으로 닫아주기 전까지 열린 상태로 남아요. CodeRabbit은 참조 코드가 바뀌면 일부 스레드를 자동으로 닫았고, 5개 중 3개가 답글 없이 해결됐어요. commit이 쌓이면서 라인 번호도 이동해요. 그래서 finding과 commit을 매핑할 안정적인 키는 `path:line`이 아니라 GraphQL 스레드 ID였어요.
 
 **핵심 INVALID count: 0.** 이 PR에서는 3개 이상 agent의 convergence가 valid finding의 완전한 positive predictor였어요. 이유는 범위가 좁아 agent들이 end-to-end로 추론할 수 있었고, script가 destructive operation을 수행해 reviewer들이 보수적으로 판단했으며, 4개의 독립 reviewer가 개별 false positive를 줄였기 때문으로 보여요.
 

@@ -1,8 +1,8 @@
 ---
-title: 'watcher hook 아래서 `git rev-parse HEAD`와 `git log -1`의 divergence'
-description: '`gh pr merge` 후 local pull을 했더니, `git rev-parse HEAD`는 올바른 merge commit을 반환하는데 `git log -1`은 방금 merge돼서 사라진 feature branch tip을 몇 초간 렌더링했어요. checkout 도중 graphify watcher rebuild가 fire됐어요. low-level read가 권위 있고, log render는 lag할 수 있어요.'
+title: 'watcher hook 아래서 `git rev-parse HEAD`와 `git log -1`이 어긋날 때'
+description: '`gh pr merge` 끝내고 로컬에서 pull 받았는데, `git rev-parse HEAD`는 올바른 merge commit을 가리키고 `git log -1`은 방금 merge로 사라진 feature branch tip을 몇 초간 보여줬어요. checkout 도중에 graphify watcher rebuild가 돌고 있었어요. low-level ref 읽기가 권위 있고, log 렌더링은 늦어질 수 있어요.'
 date: 2026-05-05T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-05-10'
 tags:
   - devops
   - git
@@ -15,7 +15,7 @@ lang: ko
 source_lang: en
 source_slug: git-rev-parse-vs-log-hook-interception
 source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-06'
+translation_date: '2026-05-10'
 ---
 
 `gh pr merge`가 PR #138을 merge하고 로컬 repo가 `origin/main`에 sync된 후, "내가 어느 commit에 있지?"를 묻는 두 가지 방식이 disagree했어요:
@@ -37,7 +37,7 @@ $ git log -1 --pretty=format:'%H %s'
 
 ## watcher가 뭘 하고 있었는지
 
-`git checkout main && git pull` 시퀀스 동안 graphify watcher rebuild가 fire됐는데, output stream에서 보였어요:
+`git checkout main && git pull`이 도는 동안 graphify watcher rebuild가 같이 돌았어요. 출력 스트림에서 이렇게 보였어요:
 
 ```text
 [graphify] Branch switched - rebuilding knowledge graph (code files)...
@@ -46,7 +46,7 @@ $ git log -1 --pretty=format:'%H %s'
 [graphify watch] Rebuild failed: Graph has 5196 nodes - too large for HTML viz.
 ```
 
-watcher가 어떤 state를 잡고 있었던 게 `git log`의 HEAD read와 interleave된 것 같아요. `git rev-parse HEAD`는 `.git/HEAD`를 직접 읽는 thin wrapper예요 — hook과의 상호작용이 minimal이에요. `git log`는 더 많은 일을 해요(commit 렌더, first-parent 추적, output 포맷팅) — file descriptor나 환경에 대한 hook side-effect에 더 민감할 수 있어요.
+watcher가 들고 있던 어떤 상태가 `git log`의 HEAD 읽기와 겹친 것 같아요. `git rev-parse HEAD`는 `.git/HEAD`를 그냥 읽는 얇은 wrapper라서 hook과의 접점이 거의 없어요. `git log`는 일을 더 많이 해요 — commit을 렌더링하고, first-parent를 따라가고, 출력을 포맷해요. 그만큼 hook이 file descriptor나 환경 변수에 남긴 부수효과에 흔들릴 여지도 커요.
 
 이건 가설이지 증명된 게 아니에요. reproducer는 race를 잡을 만큼 짧은 succession으로 graphify watcher + `git log`를 실행해야 하는데, 계측이 어려워요. watcher 자신의 로그("Rebuild failed: Graph has 5196 nodes — too large for HTML viz")는 무관하고, git이나 watcher 어느 쪽도 HEAD-state sync gap에 대한 깔끔한 에러를 안 줘요.
 
@@ -77,20 +77,20 @@ hook이 활성일 때 HEAD-state 쿼리에 `git log -1`을 피하세요 — 명�
 
 비대칭은 각 명령이 얼마나 많은 일을 하는지로 귀결돼요:
 
-- **`git rev-parse`는 file 레벨에서 ref를 읽어요.** commit sha를 얻는 가장 저렴하고 안정적인 방법이에요 — traversal 없음, 렌더 없음, `.git/HEAD`를 여는 것 외엔 hook 상호작용 없음.
-- **`git log`는 더 많은 일을 해요.** first-parent chain 따라가기, commit object 로딩, output 포맷팅. hook side-effect가 manifest할 surface가 더 많아요.
-- **watcher hook(graphify, Serena, post-checkout)은 셸 컨텍스트에서 실행돼요.** file descriptor, 작업 디렉토리, 환경을 공유해요. side effect가 가능해요.
-- **`git reset --hard origin/<branch>`는 안정적인 resync예요.** 권위 있는 state가 `origin/<branch>`이고 로컬이 lag로 보이면, fetch + reset --hard. workflow 중간에 hook을 디버깅하지 마세요.
+- **`git rev-parse`는 ref를 파일 단위로 읽어요.** commit sha를 얻는 가장 싸고 안정적인 길이에요. 트리를 따라가지 않고, 렌더링도 없고, `.git/HEAD`를 여는 것 말고는 hook과 엮일 일이 없어요.
+- **`git log`는 일을 더 많이 해요.** first-parent chain을 따라가고, commit object를 로딩하고, 출력을 포맷해요. 그만큼 hook 부수효과가 드러날 표면적이 넓어요.
+- **watcher hook(graphify, Serena, post-checkout)은 셸 컨텍스트에서 실행돼요.** file descriptor, 작업 디렉토리, 환경 변수를 공유해요. 부수효과가 끼어들 수 있어요.
+- **`git reset --hard origin/<branch>`는 가장 안정적인 resync예요.** 권위 있는 상태가 `origin/<branch>`인데 로컬이 늦은 것처럼 보이면 fetch 후 reset --hard로 끊어내세요. 워크플로 한복판에서 hook을 디버깅하려고 매달리지 말고요.
 
 ## 이게 중요한 상황
 
 규율의 가치가 있는 세 가지 컨텍스트:
 
-- hook-triggering 작업(checkout, pull, merge, reset) 직후 HEAD state를 읽는 automation.
-- watcher가 설치된 상태에서 "git이 왜 내가 잘못된 commit에 있다고 생각하지?" 디버깅.
-- 무엇을 dispatch할지 결정하기 전에 HEAD sha를 알아야 하는 CI pre-flight script.
+- hook을 발동시키는 동작(checkout, pull, merge, reset) 직후에 HEAD 상태를 읽는 자동화 스크립트.
+- watcher가 깔린 환경에서 "왜 git이 내가 엉뚱한 commit에 있다고 보지?"를 디버깅할 때.
+- 무엇을 dispatch할지 정하기 전에 HEAD sha를 먼저 알아야 하는 CI pre-flight script.
 
-hook이 설치되지 않은 인터랙티브 사용에는 중요하지 않아요(`git log` OK), graphify/Serena/custom watcher가 없는 repo, watcher가 settle된 후(checkout 후 몇 초) — 두 명령이 일치해요.
+hook 없이 그냥 인터랙티브로 쓸 때는 신경 안 써도 돼요(`git log`로 충분해요). graphify/Serena/custom watcher가 없는 repo, 그리고 watcher가 안정화된 다음(checkout 후 몇 초)에는 두 명령이 알아서 일치해요.
 
 ## 실용적인 takeaway
 
