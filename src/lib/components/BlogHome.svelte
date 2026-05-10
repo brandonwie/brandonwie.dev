@@ -134,14 +134,6 @@
 				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· {m.crucio_role()}</span>
 				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
 					{m.portfolio_description()}
-					<a
-						href="https://github.com/brandonwie/crucio"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="ml-1 text-terminal-accent-orange opacity-60 hover:opacity-100 transition-opacity no-underline"
-					>
-						GitHub ↗
-					</a>
 				</p>
 			</div>
 		</section>
