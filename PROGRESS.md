@@ -32,8 +32,37 @@
 - [x] Trap 4 merged into turn-latency post — silent source-disable contamination section + "no data ≠ absence" takeaway (EN + KO)
 - [x] 3 hash-mismatch merges — shared-personal-config (Revert Loop), distilbert-vs-bart (HF truncation gotcha), ai-code-review-confusion-patterns (Patterns 5+6) (EN + KO)
 - [x] AI PR review validation post refreshed — 3b-forge four-reviewer example added (EN + KO)
+- [x] Cloudflare build fix — dropped stale `package-lock.json`, added `packageManager: pnpm@10.32.1`, switched CI + husky pre-push to pnpm
 
 ## Session Log
+
+### 2026-05-20 (Session 23)
+
+**Cloudflare build fix — pnpm dual-lockfile drift**
+
+- **Symptom:** Cloudflare Pages deploy of `ebed0f2` failed with
+  `npm error Invalid: lock file's @sveltejs/kit@2.55.0 does not satisfy @sveltejs/kit@2.60.1`.
+- **Root cause:** `package-lock.json` + `pnpm-lock.yaml` coexisted since
+  April migration (`049035a1`). Local pnpm-only installs let the npm lock rot;
+  `package.json` caret-range `"^2.59.1"` drifted to 2.60.1; Cloudflare detected
+  `package-lock.json` first and ran `npm ci` against the stale lock.
+- **Fix:**
+  - Dropped `package-lock.json`
+  - Added `"packageManager": "pnpm@10.32.1"` to `package.json` (Corepack pin)
+  - Switched `.github/workflows/ci.yml` to `pnpm/action-setup@v4` +
+    `pnpm install --frozen-lockfile`
+  - Switched `.husky/pre-push` to `pnpm run X` (was `npm run X`)
+  - Updated Cloudflare dashboard build cmd to `pnpm run build` (cosmetic)
+- **Verification:** `pnpm run build` green locally (274 Pagefind pages
+  indexed); pre-push hook ran all 5 checks green (lint, format:check, build,
+  svelte-check 0 errors, dates 137/137).
+- **Side-quest:** Pre-push hook first failed on untracked
+  `3b-SKILL-PROPAGATION-MAP.md` in repo root — Prettier `format:check`
+  scans entire working tree, not just staged diff. Moved orphan to
+  `~/dev/personal/3b/tmp/intake/` (3B classify queue). Third recurrence of
+  the same pattern (`knowledge/general/prettierignore-gitignore-gap.md`).
+- **Commit:** `5c4b9eb fix(build): standardize on pnpm to unblock Cloudflare deploy`
+  pushed to origin/main.
 
 ### 2026-04-30 (Session 21)
 
