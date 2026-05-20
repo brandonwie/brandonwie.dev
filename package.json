@@ -15,6 +15,7 @@
 		"sync:check": "deno run --allow-read --allow-env scripts/sync-from-3b.ts --check",
 		"sync:diff": "deno run --allow-read --allow-write --allow-env --allow-run scripts/sync-from-3b.ts --diff",
 		"sync:reconcile": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts --reconcile",
+		"hash": "deno run --allow-read --allow-env scripts/compute-content-hash.ts",
 		"translation:status": "npx tsx scripts/translation-status.ts",
 		"translation:create": "npx tsx scripts/translation-create.ts",
 		"og:generate": "tsx scripts/generate-og-images.ts",

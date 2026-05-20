@@ -1,11 +1,11 @@
 ---
-title: 'Claude, Copilot, Codex가 PR에서 보이는 11가지 패턴'
+title: 'Claude, Copilot, Codex가 PR에서 보이는 13가지 패턴'
 description: >-
-  Claude, Copilot, Codex가 PR에서 동작하는 열한 가지 방식 — 아홉 가지 실패 유형 + 한 가지 amplify할 강점 +
-  한 가지 analyst-side error class. 탐지 신호와 사실관계 충돌을 해결하는 empirical tiebreaker까지
-  정리했어요.
+  Claude, Copilot, Codex가 PR에서 동작하는 열세 가지 방식 — 열 가지 실패 유형 + 두 가지 amplify할 productive
+  behavior + 한 가지 analyst-side error class. 탐지 신호와 사실관계 충돌을 해결하는 empirical
+  tiebreaker까지 정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-05-20'
 tags:
   - ai-ml
   - code-review
@@ -19,31 +19,33 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-code-review-confusion-patterns
-source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-10'
+source_updated: '2026-05-20'
+translation_date: '2026-05-20'
 ---
 
 최근에 `/validate-pr-reviews`라는 workflow를 돌리기 시작했어요. Claude, Copilot, Codex가 diff에 남긴 inline 코멘트를 전부 가져와서 valid / invalid / controversial / good-to-have로 분류하는 흐름이에요. 진짜 bug는 놓치지 않으면서 false positive는 구조적으로 걸러내는 게 목적이에요.
 
-4월 초에 연달아 올라간 PR 두 개에서 failure mode의 이름을 붙일 수 있을 만큼의 분류 자료가 쌓였어요. 같은 달 뒤쪽에 올라간 PR 두 개가 또 다른 class의 실패를 보여줬어요 — semantic이 아니라 temporal이에요. 4월 말에는 multi-round PR(#858)이 또 다른 종류의 관찰을 줬어요: amplify할 가치가 있는 *productive* 행동이요. 5월에 세 가지 failure mode가 더 추가됐어요 — 첫 analyst-side error class 포함 — 그리고 PR-body-vs-source-conflation 패턴 하나도. 이제는 아홉 가지 실패 유형, 한 가지 강점, 한 가지 analyst-side class를 가리킬 수 있어요. 각 패턴마다 구체적인 예시, 탐지 신호, 예방(또는 amplify) 기법이 있어요. 아직 샘플은 패턴당 하나나 둘이에요. 앞으로 더 많은 PR을 validate하면서 catalog도 늘어날 거라고 봐요. 오늘 공유하고 싶은 건 이 관찰의 모양이에요. 실패 유형에 이름을 붙이고 나니 다음 triage가 훨씬 빨라졌거든요.
+4월 초에 연달아 올라간 PR 두 개에서 failure mode의 이름을 붙일 수 있을 만큼의 분류 자료가 쌓였어요. 같은 달 뒤쪽에 올라간 PR 두 개가 또 다른 class의 실패를 보여줬어요 — semantic이 아니라 temporal이에요. 4월 말에는 multi-round PR(#858)이 또 다른 종류의 관찰을 줬어요: amplify할 가치가 있는 *productive* 행동이요. 5월에 세 가지 failure mode가 더 추가됐어요 — 첫 analyst-side error class 포함 — 그리고 PR-body-vs-source-conflation 패턴 하나도. 5월 중순에는 두 개가 더 붙었어요: phantom formatting bug에 두 reviewer가 cross-converge하는 케이스 하나, 그리고 reviewer가 analyst가 놓친 sibling을 audit해 주는 두 번째 productive behavior 하나예요. 이제는 열 가지 실패 유형, 두 가지 productive behavior, 한 가지 analyst-side class를 가리킬 수 있어요. 각 패턴마다 구체적인 예시, 탐지 신호, 예방(또는 amplify) 기법이 있어요. 아직 샘플은 패턴당 하나에서 셋 정도예요. 앞으로 더 많은 PR을 validate하면서 catalog도 늘어날 거라고 봐요. 오늘 공유하고 싶은 건 이 관찰의 모양이에요. 실패 유형에 이름을 붙이고 나니 다음 triage가 훨씬 빨라졌거든요.
 
 ## 설정
 
-validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐요. 그리고 INVALID로 판정된 finding마다 한 가지 질문을 던져요. *왜 이게 틀렸지?* "reviewer가 왜 헷갈렸지?"가 아니라 "이건 어떤 종류의 reasoning failure에 해당하지?"라고 물어요. 아홉 가지 reviewer-side 실패 유형이 드러났고, 별도로 추적할 가치가 있는 productive 행동 하나, analyst-side class 하나도 함께예요:
+validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐요. 그리고 INVALID로 판정된 finding마다 한 가지 질문을 던져요. *왜 이게 틀렸지?* "reviewer가 왜 헷갈렸지?"가 아니라 "이건 어떤 종류의 reasoning failure에 해당하지?"라고 물어요. 열 가지 reviewer-side 실패 유형이 드러났고, 별도로 추적할 가치가 있는 productive behavior 둘, analyst-side class 하나도 함께예요:
 
-| 패턴                                     | 유형     | 처음 본 곳     | 트리거                                                              |
-| ---------------------------------------- | -------- | -------------- | ------------------------------------------------------------------- |
-| Cross-File Blindness                     | failure  | NestJS PR      | NestJS decorator vs Express typing                                  |
-| Intentional Design                       | failure  | NestJS PR      | 이미 inline NOTE로 기록된 trade-off                                 |
-| Disagreeing Claim                        | failure  | Starlette PR   | 두 reviewer가 정반대 주장을 함. tiebreaker는 실험                   |
-| Confidently Wrong on Library Internals   | failure  | Starlette PR   | source에 반하는 framework 동작을 자신 있게 재보증                  |
-| Stale Snapshot Review                    | failure  | Python PR      | 더 이상 HEAD가 아닌 이전 리비전을 기준으로 리뷰가 indexing됐어요    |
-| `isOutdated`는 correctness 신호가 아니에요 | failure  | NestJS DTO PR  | GitHub가 스레드를 outdated로 마크했지만 실제 concern은 여전히 유효  |
-| Cross-Round Twin Detection               | strength | NestJS PR #858 | bot이 이전 라운드 fix를 template으로 sibling에서 같은 shape 잡아냄  |
-| PR Diff Scope Confusion                  | analyst  | 3B PR #45      | analyst가 origin-base diff 대신 local-base diff 사용                 |
-| Cross-File Mirror Drift                  | failure  | 3B PR #45      | mirror prose가 canonical 7개 row 중 4개만 enumerate; reviewer 잡음   |
-| Issue-Comment vs Inline Thread Gap        | failure  | 3B PR #45      | bot이 inline thread가 아니라 issue-comment summary 하나로 finding 게시 |
-| PR-Body-Source-Conflation                | failure  | 3B PR #47      | reviewer가 PR description prose를 source-code commentary로 다룸      |
+| 패턴                                     | 유형     | 처음 본 곳        | 트리거                                                              |
+| ---------------------------------------- | -------- | ----------------- | ------------------------------------------------------------------- |
+| Cross-File Blindness                     | failure  | NestJS PR         | NestJS decorator vs Express typing                                  |
+| Intentional Design                       | failure  | NestJS PR         | 이미 inline NOTE로 기록된 trade-off                                 |
+| Disagreeing Claim                        | failure  | Starlette PR      | 두 reviewer가 정반대 주장을 함. tiebreaker는 실험                   |
+| Confidently Wrong on Library Internals   | failure  | Starlette PR      | source에 반하는 framework 동작을 자신 있게 재보증                  |
+| Stale Snapshot Review                    | failure  | Python PR         | 더 이상 HEAD가 아닌 이전 리비전을 기준으로 리뷰가 indexing됐어요    |
+| `isOutdated`는 correctness 신호가 아니에요 | failure  | NestJS DTO PR     | GitHub가 스레드를 outdated로 마크했지만 실제 concern은 여전히 유효  |
+| Cross-Round Twin Detection               | strength | NestJS PR #858    | bot이 이전 라운드 fix를 template으로 sibling에서 같은 shape 잡아냄  |
+| PR Diff Scope Confusion                  | analyst  | 3B PR #45         | analyst가 origin-base diff 대신 local-base diff 사용                 |
+| Cross-File Mirror Drift                  | failure  | 3B PR #45         | mirror prose가 canonical 7개 row 중 4개만 enumerate; reviewer 잡음   |
+| Issue-Comment vs Inline Thread Gap        | failure  | 3B PR #45         | bot이 inline thread가 아니라 issue-comment summary 하나로 finding 게시 |
+| PR-Body-Source-Conflation                | failure  | 3B PR #47         | reviewer가 PR description prose를 source-code commentary로 다룸      |
+| Long-Row Formatting Hallucination        | failure  | 3B PR #84         | 두 reviewer가 긴 row에 phantom "backtick 누락"을 converge함         |
+| Sibling-Fix Holdout                      | strength | Frontend PR #2799 | reviewer가 폴더 단위 fix에서 analyst가 놓친 sibling을 잡아냄        |
 
 이제 각 패턴을 PR 증거와 함께, 그리고 탐지(또는 amplify)에 대해 배운 점과 함께 살펴볼게요.
 
@@ -256,6 +258,53 @@ AI bot은 finding을 두 가지 방식으로 게시해요. (a) 특정 file:line�
 - line number가 안정적이고 머지에 가깝지 않은 한, PR description prose에 line number를 안 쓰는 게 좋아요. PR description은 오래 남는 텍스트인데 line number는 움직이는 표적이거든요.
 - PR body가 line range를 꼭 인용해야 한다면(예: cross-file 패턴 참조), AI reviewer가 출처를 구분할 수 있게 "(in PR description, not source)" 같은 명시적인 framing을 같이 넣어 두세요.
 
+## Pattern 12 — Long-Row Formatting Hallucination
+
+> **한 줄 정의:** 두 명 이상의 reviewer가 긴 markdown table row에 formatting이 빠졌다고 flag하는데, 실제로는 이미 formatting이 들어가 있어요.
+
+Pattern 1부터 11까지는 대부분 단일 reviewer의 실패예요. Pattern 12는 두 reviewer가 같은 false positive에 convergence하는 첫 케이스예요 — 평소엔 real bug 신호로 해석되는 그 convergence요.
+
+3B PR #84에서 Copilot(`copilot-pull-request-reviewer`)과 Claude(`claude[bot]`)가 동시에 `failure-state-routing.md` row(`_index.md:55`)에 trigger glob이 backtick으로 감싸여 있지 않다고 flag했어요. 그 row는 사실 backtick으로 감싸여 있었고 — 같은 commit hash에서 확인했어요 — Copilot이 제안한 `suggestion` block은 기존 markup의 byte-for-byte 복사본이었어요. 그 row는 glob 8개로 이루어져 있어서, 인접 row의 일반적인 2~3개보다 2~3배 길었어요.
+
+**왜 convergence가 여기선 신호가 아닐까요.** Copilot과 Claude 둘 다 "긴 table row는 formatting이 자주 어긋난다"는 prior를 공유하는 것 같아요. 둘의 일치는 공유 관찰이 아니라 공유 prior예요. Pattern 7의 twin detection 같은 productive convergence는 각 reviewer가 실제 content에 대해 reasoning할 때만 작동해요 — 둘 다 table 너비를 보고 pattern-match할 때가 아니라요. validation workflow에서 "두 reviewer가 같은 말을 했어요"는 보통 high-priority로 승격되는 신호인데, 여기선 정확히 그 반대로 작동해요. 둘 사이를 구분할 줄 알아야 해요.
+
+**진단 시그니처.**
+
+1. 2명 이상의 reviewer가 같은 "formatting 누락" claim에 converge해요.
+2. raw markdown을 보면 formatting이 이미 들어가 있어요.
+3. flag된 row의 글자 수나 너비가 이웃 row 대비 이상치예요.
+4. reviewer의 `suggestion` block이 있다면, 기존 content를 byte-for-byte(또는 거의) 복사한 형태예요.
+
+**예방.**
+
+- `suggestion` block이 기존 content와 일치하면 즉시 INVALID로 처리하세요. `git diff`도 필요 없어요 — 제안된 변경이 no-op이거든요.
+- 일부러 긴 table row 위에 inline HTML 코멘트로 미래 reviewer에게 raw markdown을 확인하라고 알려 두세요: `<!-- NOTE: row is backtick-wrapped despite length. Verify raw markdown, not rendered width. -->`
+- 같은 row에서 한 라운드에 2건 이상 INVALID review가 뜨면 패턴으로 모아 두세요.
+
+이 패턴은 convergence에 대한 제 멘탈 모델을 바꿔 줬어요 — *어떤 종류의* convergence인지가 reviewer 수보다 더 중요해요.
+
+## Pattern 13 — Sibling-Fix Holdout (강점)
+
+> **한 줄 정의:** Productive reviewer behavior — analyst가 폴더 안의 A와 B 파일에 fix를 적용했지만 sibling C를 건너뛰었을 때, 다음 라운드 reviewer가 폴더를 구조적으로 읽어서 C를 누락된 sibling으로 flag해요.
+
+Pattern 13은 catalog의 두 번째 productive behavior예요. Pattern 7처럼 amplify할 가치가 있어요. 차이점은 blind spot이 reviewer가 아니라 analyst(저, validation을 도는 사람)에게 있다는 점이에요.
+
+moba-frontend onboarding-tutorial PR #2799에서 한 세션 안에 같은 antipattern shape의 인스턴스 세 개가 라운드 10부터 14까지 떴어요. 세 가지 다른 convention fix지만 모양은 같아요:
+
+| Round            | analyst가 fix함                                                                | reviewer가 잡은 missed sibling                                                          |
+| ---------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| R10-2            | `CalendarConnectModal` + `CalendarReconnectModal`의 `isUserProfileReady` guard | 같은 폴더의 `CalendarConnectButton` → R12-2 (P2 bug, `userId="undefined"`)              |
+| R1, R10-1, R10-4 | tutorial component + modal/index에서 `const` arrow → `function` 선언            | calendar-connection component 4개 → R13-2..R13-5 (cross-file 스레드 하나로 묶임)        |
+| R12-4            | `ConnectedCalendarAccount.tsx`의 relative import → `@/` alias                  | group order가 inverted된 채로 남음(`@/assets`가 canonical 마지막이 아니라 첫 번째) → R14-1 |
+
+이건 **Pattern 8(PR Diff Scope Confusion)의 reviewer-side mirror**예요. analyst의 blind spot은 "이전 reviewer가 이름 붙인 것만 건드렸어요"이고, reviewer의 productive behavior는 "scope 안에 같은 패턴의 다른 인스턴스 중 analyst가 놓친 게 있나요?"예요. Pattern 1(reviewer가 isolation에서 분석)이나 Pattern 9(manual prose drift)와는 달라요 — 거기서는 **reviewer**가 맥락을 놓치는 쪽이었어요. 여기선 **reviewer**가 구조적 읽기를 하면서 **analyst**가 놓친 걸 잡아 줘요.
+
+**예방 (analyst-side).** 폴더 단위 convention이나 fix를 적용할 때는, commit 전에 같은 디렉토리의 모든 sibling을 audit하세요. 다음 라운드에서 reviewer가 holdout을 잡아 주겠지만, 각 holdout은 full round-trip 비용이에요 — commit, push, workflow, bot review, validation cycle. 폴더를 한 번에 sweep하는 게 더 싸요.
+
+**Amplify (reviewer-side).** productive behavior를 보강하세요. bot이 convention fix를 flag할 때, 같은 패턴의 다른 인스턴스를 폴더에서 스캔해 cross-file 스레드 하나에 surface하도록 유도하세요. PR #2799의 R13 thread B가 깨끗한 예예요: 한 코멘트가 파일 4개를 나열했고, 답글 하나가 commit 4개를 cover했고, resolve 한 번으로 loop가 닫혔어요.
+
+**왜 process gap이 아니라 strength로 다루나.** "내 validation process가 절대 sibling을 놓치면 안 돼"라고 읽고 engineer-out하려고 시도할 수도 있어요. 하지만 round-trip 비용은 실제이고, bot의 구조적 폴더 읽기는 진짜 cheap해요. 정직한 선택은 sweep discipline은 tight하게 유지하면서 *동시에* bot의 audit을 safety net으로 켜 두는 거예요. Pattern 7과 13이 multi-round PR validation이 reviewer의 강점을 amplify해서 자기 비용을 회수하는 두 케이스예요.
+
 ## Reviewer별 성향
 
 PR 두 개는 firm conclusion을 내리기엔 부족한 데이터지만, 초기 패턴은 적어 둘 만해요.
@@ -263,14 +312,14 @@ PR 두 개는 firm conclusion을 내리기엔 부족한 데이터지만, 초기 
 | Agent   | 가장 자주 나오는 실패 유형                | 강점                                                          | 약점                                                                   |
 | ------- | ----------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | Copilot | Cross-File Blindness                      | 표면 수준의 code quality와 style 체크에 좋아요                | single-file scope로 분석해서 패키지 너머 동작을 놓쳐요                 |
-| Claude  | Confidently Wrong on Library Internals    | architectural narrative + 강한 cross-round twin detection     | source에 반하는 framework internals에 자신 있게 reassurance를 줘요    |
+| Claude  | Confidently Wrong on Library Internals    | architectural narrative + 강한 cross-round twin detection + 구조적 sibling audit | source에 반하는 framework internals에 자신 있게 reassurance를 줘요    |
 | Codex   | (샘플이 너무 적어요)                       | terse하지만 library-internals 주장에 대체로 정확해요          | 아직 샘플이 많지 않아요                                                 |
 
 가장 의외였던 관찰은 articulation과 confidence가 correctness의 proxy가 아니라는 점이에요. Starlette disagreement에서 Claude의 INFO는 articulate하고 상세했고 틀렸어요. Codex의 flag는 terse했고 맞았어요. tiebreaker는 reviewer의 연차나 글솜씨가 아니라 0.2초짜리 실험이었어요.
 
 ## 정리
 
-- **각각 count=1이어도 11가지 패턴에 이름을 붙일 가치가 있어요.** 분류의 목적은 통계적 significance가 아니에요. 다음 PR의 triage를 빠르게 하는 거예요. 일단 패턴에 이름이 생기면 실전에서 알아보게 돼요.
+- **각각 count=1~3이어도 13가지 패턴에 이름을 붙일 가치가 있어요.** 분류의 목적은 통계적 significance가 아니에요. 다음 PR의 triage를 빠르게 하는 거예요. 일단 패턴에 이름이 생기면 실전에서 알아보게 돼요.
 - **보강 NOTE는 가장 효과적인 예방법이에요. 단, Pattern 1, 2, 5, (부분적으로) 9에 한해서요.** Disagreeing Claim과 Confidently Wrong에는 inline 문서가 얼마나 있든 도움이 안 돼요. empirical check가 필요해요. Stale Snapshot은 미래 re-indexing이 현재 의도를 집어들게 도와주니까 NOTE가 도움이 돼요. Cross-File Mirror Drift는 CI consistency check가 진짜 해결책인 동안 back-reference를 halfway fix로 사용 가능.
 - **PR scope는 항상 local `{base}`가 아니라 `origin/{base}`에 대해 verify.** Pattern 8은 Pattern 5의 analyst-side mirror — failure mode가 같은 모양(stale view of HEAD), actor만 다름. remediation은 기계적이에요: `git fetch origin` + `git diff origin/{base}..HEAD --name-only` 또는 `gh pr view --json files` 사용.
 - **Mirror system은 parity check가 필요.** Pattern 9의 prose-table drift는 docstring-vs-code drift와 같은 class. 같은 방식으로 다뤄요: CI check가 유일한 durable defense이고, back-reference는 useful interim.
@@ -279,5 +328,7 @@ PR 두 개는 firm conclusion을 내리기엔 부족한 데이터지만, 초기 
 - **INFO comment가 library internals를 건드릴 땐 꼼꼼히 읽으세요.** Pattern 4가 가장 자연스럽게 자리 잡는 곳이에요.
 - **툴링 휴리스틱을 correctness 신호로 신뢰하지 마세요.** `isOutdated`(Pattern 6)는 "concern 해결됨"처럼 느껴지지만 실제로는 "현재 diff 줄에 anchor할 수 없음"을 뜻해요. skip된 스레드를 로그해서 두 번째 pass에서 재검토할 수 있게 하세요.
 - **제도적 룰이 AI flag를 override할 수 있어요.** AI reviewer는 문서화된 모범 사례(예: hot table에 `CREATE INDEX CONCURRENTLY`)를 정확히 flag하지만, 제도적 룰("필수가 아니면 generated migration 파일을 건드리지 말 것")은 볼 수 없어요. flag가 그런 룰과 충돌하면 룰이 이겨요 — flag의 기술적 내용이 맞아도요. 그런 룰을 durable feedback memory로 저장해서 미래 validation 라운드가 default-skip하게 하세요.
+- **Convergence가 항상 신호인 건 아니에요.** Pattern 12 (Long-Row Formatting Hallucination)에서 봤듯이, 두 reviewer가 false positive에 converge할 수 있어요 — 둘 다 content를 독립적으로 관찰하는 게 아니라 "긴 table row는 formatting이 자주 어긋난다" 같은 prior를 공유할 때요. Pattern 7 / Pattern 13 식의 convergence(각 reviewer가 실제 content에 대해 reasoning)가 productive shape이에요. 둘을 구분하려면 reviewer의 `suggestion` block이 실제로 뭔가 바꾸는지 확인하세요.
+- **Convention fix는 commit 전에 폴더 sweep하세요.** Pattern 13 (Sibling-Fix Holdout)은 두 번째 productive cross-round behavior지만, multi-round PR에서만 비용을 회수해요. single-round PR에서는 놓친 sibling이 그대로 ship돼요. 원칙은 단순해요: fix가 폴더의 A, B 파일을 건드리면 push 전에 폴더의 나머지를 audit하세요. reviewer의 구조적 읽기는 safety net이지 대체재가 아니에요.
 
-이 catalog는 계속 늘어날 거예요. 목적은 포괄적인 taxonomy를 만드는 게 아니라, 다음 bug의 triage를 바로 이전보다 더 쉽게 만드는 거예요. PR에 AI code review를 돌리고 있는데 false positive를 분류해 본 적이 없다면, 실패의 모양에 이름을 붙이는 것부터 시작해 보는 걸 권해요. 그리고 cross-round twin detection 같은 *productive* 행동을 발견하면, 같은 방식으로 대해주세요 — 이름 붙이고, amplify할 방법을 찾고, 그것을 suppress할 dedup 룰로부터 보호하세요.
+이 catalog는 계속 늘어날 거예요. 목적은 포괄적인 taxonomy를 만드는 게 아니라, 다음 bug의 triage를 바로 이전보다 더 쉽게 만드는 거예요. PR에 AI code review를 돌리고 있는데 false positive를 분류해 본 적이 없다면, 실패의 모양에 이름을 붙이는 것부터 시작해 보는 걸 권해요. 그리고 cross-round twin detection이나 sibling-fix holdout 같은 *productive* 행동을 발견하면, 같은 방식으로 대해 주세요 — 이름 붙이고, amplify할 방법을 찾고, 그것을 suppress할 dedup 룰로부터 보호하세요.

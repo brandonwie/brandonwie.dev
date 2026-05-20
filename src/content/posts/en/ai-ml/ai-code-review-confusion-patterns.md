@@ -1,12 +1,12 @@
 ---
 title: AI Code Review Confusion Patterns
 description: >-
-  Eleven distinct ways Claude, Copilot, and Codex behave on PRs — nine failure
-  modes plus one strength to amplify, plus an analyst-side error class. With
-  detection signals and the empirical tiebreaker that resolves factual
-  disagreements.
+  Thirteen distinct ways Claude, Copilot, and Codex behave on PRs — ten failure
+  modes plus two productive behaviors to amplify, plus an analyst-side error
+  class. With detection signals and the empirical tiebreaker that resolves
+  factual disagreements.
 date: 2026-04-08T00:00:00.000Z
-updated: 2026-05-06
+updated: 2026-05-20
 tags:
   - ai-ml
   - code-review
@@ -19,7 +19,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: eef4d625d79a647208eedfc6498a013c576aa8b255cb352a6f61d657f29fcb02
+source_content_hash: 3428ab5872f8f4b8c92fca752e3d1a99e2ab24b44f4c933d2ce1f19a745488c3
 references:
   - url: 'https://github.com/brandonwie/crucio/pull/83'
     title: 'crucio PR #83 — Claude vs Codex disagreement on Starlette ordering'
@@ -31,11 +31,11 @@ references:
 
 Recently I started running a `/validate-pr-reviews` workflow that takes every inline comment Claude, Copilot, and Codex leave on a diff and classifies each as valid, invalid, controversial, or good-to-have. The point is to catch real bugs from the signal side while filtering out false positives with structure.
 
-Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR (#858) surfaced something different: a *productive* behavior worth amplifying. May added three more failure modes — including the first analyst-side error class — and one PR-body-vs-source-conflation pattern. I can now point at nine failure modes, one strength, and one analyst-side class, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one or two samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
+Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR (#858) surfaced something different: a *productive* behavior worth amplifying. May added three more failure modes — including the first analyst-side error class — and one PR-body-vs-source-conflation pattern. Mid-May added two more: a cross-reviewer convergence on a phantom formatting bug, and a second productive behavior where the reviewer audits siblings the analyst missed. I can now point at ten failure modes, two productive behaviors, and one analyst-side class, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one to three samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
 
 ## The setup
 
-The validation workflow looks at every AI reviewer comment on a PR and, for each INVALID finding, asks one question: *why was this wrong?* Not "why was the reviewer confused?" but "what specific class of reasoning failure does this match?" Nine reviewer-side failure modes have emerged, plus one productive behavior worth tracking separately, plus one analyst-side class:
+The validation workflow looks at every AI reviewer comment on a PR and, for each INVALID finding, asks one question: *why was this wrong?* Not "why was the reviewer confused?" but "what specific class of reasoning failure does this match?" Ten reviewer-side failure modes have emerged, plus two productive behaviors worth tracking separately, plus one analyst-side class:
 
 | Pattern                                  | Type     | First seen      | Trigger                                                                 |
 | ---------------------------------------- | -------- | --------------- | ----------------------------------------------------------------------- |
@@ -50,6 +50,8 @@ The validation workflow looks at every AI reviewer comment on a PR and, for each
 | Cross-File Mirror Drift                  | failure  | 3B PR #45       | Mirror prose enumerated 4 of 7 canonical rows; reviewer caught          |
 | Issue-Comment vs Inline Thread Gap       | failure  | 3B PR #45       | Bot posted findings as one issue-comment summary, not inline threads    |
 | PR-Body-Source-Conflation                | failure  | 3B PR #47       | Reviewer treated PR description prose as source-code commentary         |
+| Long-Row Formatting Hallucination        | failure  | 3B PR #84       | Two reviewers converge on phantom "missing backticks" on a long row     |
+| Sibling-Fix Holdout                      | strength | Frontend PR #2799 | Reviewer catches analyst's missed siblings of a folder-scoped fix     |
 
 What follows is each pattern, with the PR evidence and what I learned about detecting (or amplifying) it.
 
@@ -262,6 +264,53 @@ This is a variant of Cross-File Blindness, but inverted: instead of missing cont
 - Avoid using line numbers in PR description prose unless the line numbers are stable AND close to merge. PR descriptions are durable text; line numbers reference an unstable target.
 - When PR body NEEDS to cite line ranges (e.g., for cross-file pattern references), add explicit "(in PR description, not source)" framing so the AI reviewer can disambiguate.
 
+## Pattern 12 — Long-Row Formatting Hallucination
+
+> **One-line definition:** Two or more reviewers independently flag a long markdown table row as missing formatting when the formatting is already present.
+
+Patterns 1 through 11 are mostly single-reviewer failures. Pattern 12 is the first one I've seen where two reviewers converge on the same false positive — which is exactly the signal that *normally* indicates a real bug.
+
+On 3B PR #84, both Copilot (`copilot-pull-request-reviewer`) and Claude (`claude[bot]`) flagged the `failure-state-routing.md` row in `_index.md:55` as having unwrapped trigger globs. The row IS backtick-wrapped — verified at the commit hash in the diff — and Copilot's `suggestion` block was a literal byte-for-byte copy of the existing markup. The row in question is roughly 8 globs wide, two to three times the typical 2-3 globs in neighboring rows.
+
+**Why convergence isn't a signal here.** Both Copilot and Claude appear to share a prior that "long table rows often have formatting drift." Their convergence is shared prior, not shared observation. The genuine cross-reviewer convergence pattern (Pattern 7's twin detection) is productive ONLY when each reviewer is reasoning about the actual content — not when both are pattern-matching against table width. The distinction matters because, in a validation workflow, "two reviewers said the same thing" is usually upgrade-to-high-priority territory.
+
+**Diagnostic signature.**
+
+1. 2+ reviewers converge on the same "missing formatting" claim.
+2. Inspection of the raw markdown confirms the formatting is present.
+3. The flagged row's character count or width is an outlier relative to its neighbors.
+4. The reviewer's `suggestion` block (if any) duplicates the existing content byte-for-byte (or near it).
+
+**Prevention.**
+
+- When a `suggestion` block matches the existing content, treat the finding as INVALID immediately. No `git diff` needed — the proposed change is a no-op.
+- Add an inline HTML comment NOTE above any deliberately long table row warning future reviewers to verify the raw markdown rather than the rendered width: `<!-- NOTE: row is backtick-wrapped despite length. Verify raw markdown, not rendered width. -->`
+- Aggregate the pattern when 2+ INVALID reviews land on the same row in one round.
+
+This one shifted my mental model on convergence — *what kind* of convergence matters more than the count of reviewers.
+
+## Pattern 13 — Sibling-Fix Holdout (Strength)
+
+> **One-line definition:** Productive reviewer behavior — when the analyst applies a fix to files A and B in a folder but skips sibling C, the next round's reviewer reads the folder structurally and flags C as a missed sibling.
+
+Pattern 13 is the second productive behavior in the catalog. Like Pattern 7, it's worth amplifying. Unlike Pattern 7, the blind spot belongs to the analyst (me, doing the validation), not to the reviewer.
+
+On the moba-frontend onboarding-tutorial PR #2799, three independent instances of this pattern surfaced across rounds 10 through 14 of a single session. Same antipattern shape, three different convention fixes:
+
+| Round            | Fixed by analyst                                                                | Missed sibling caught by reviewer                                                 |
+| ---------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| R10-2            | `isUserProfileReady` guard in `CalendarConnectModal` + `CalendarReconnectModal` | `CalendarConnectButton` in same folder → R12-2 (P2 bug, `userId="undefined"`)     |
+| R1, R10-1, R10-4 | `const` arrow → `function` declaration across tutorial components + modal/index | 4 calendar-connection components → R13-2..R13-5 (one cross-file review thread)    |
+| R12-4            | Relative imports → `@/` alias on `ConnectedCalendarAccount.tsx`                 | Group order left inverted (`@/assets` first instead of canonical last) → R14-1    |
+
+This is the **reviewer-side mirror of Pattern 8 (PR Diff Scope Confusion)**. The analyst's blind spot is "I only touched what the prior reviewer named"; the reviewer's productive behavior is "are there other instances of this pattern in scope that the analyst missed?" Distinct from Pattern 1 (reviewer analyzes in isolation) and Pattern 9 (manual prose drift) — in those, the **reviewer** is the one missing context. Here, the **reviewer** is doing the structural read and catching what the **analyst** missed.
+
+**Prevention (analyst-side).** When applying any folder-scoped convention or fix, audit ALL siblings in the same directory before committing. The reviewer will catch the holdouts next round, but each holdout costs a full round-trip — commit, push, workflow, bot review, validation cycle. Cheaper to sweep the folder once.
+
+**Amplification (reviewer-side).** Reinforce the productive behavior. When the bot flags a convention fix, encourage it to scan the folder for other instances of the same pattern and surface them in ONE cross-file thread. R13 thread B on PR #2799 is a clean example: one comment listed 4 files, one reply covered 4 commits, one resolve closed the loop.
+
+**Why I'm treating this as a strength, not a process gap.** I could read this as "my validation process should never miss siblings" and try to engineer that out. But the round-trip cost is real, and the bot's structural folder read is genuinely cheap. The honest move is to keep my sweep discipline tight while *also* leaving the bot's audit running as a safety net. Patterns 7 and 13 together are the two cases where multi-round PR validation pays for itself by amplifying what the reviewer does well.
+
 ## Per-Reviewer Tendencies
 
 Two PRs is not enough data to draw firm conclusions, but the early pattern is worth noting:
@@ -269,14 +318,14 @@ Two PRs is not enough data to draw firm conclusions, but the early pattern is wo
 | Agent   | Most common failure mode                | Strength                                            | Weakness                                                                  |
 | ------- | ---------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------- |
 | Copilot | Cross-File Blindness                     | Good at surface-level code quality and style checks | Analyzes single-file scope, misses cross-package behavior                 |
-| Claude  | Confidently Wrong on Library Internals   | Articulate architectural narrative; strong cross-round twin detection | Confident reassurance on framework internals that contradicts source      |
+| Claude  | Confidently Wrong on Library Internals   | Architectural narrative; strong cross-round twin detection; structural sibling audits | Confident reassurance on framework internals that contradicts source      |
 | Codex   | (too few samples)                        | Terse but often correct on library-internals claims | Small sample size so far                                                  |
 
 The most surprising observation is that articulation and confidence are not proxies for correctness. On the Starlette disagreement, Claude's INFO was articulate, detailed, and wrong; Codex's flag was terse and correct. The tiebreaker was a 0.2-second experiment, not reviewer seniority or prose quality.
 
 ## Takeaways
 
-- **Eleven patterns are worth naming even at count=1 each.** The goal of classification is not statistical significance — it is faster triage on the next PR. Once you have a name for the pattern, you recognize it in the wild.
+- **Thirteen patterns are worth naming even at count=1-3 each.** The goal of classification is not statistical significance — it is faster triage on the next PR. Once you have a name for the pattern, you recognize it in the wild.
 - **Reinforcing NOTEs are the most effective prevention, but only for Patterns 1, 2, 5, and (partially) 9.** For Disagreeing Claim and Confidently Wrong, no amount of inline documentation helps — you need an empirical check. Stale Snapshot benefits from NOTEs because they help future re-indexes pick up current intent. Cross-File Mirror Drift can use back-references as a halfway fix while a CI consistency check is the real solution.
 - **The Empirical Tiebreaker Protocol is the highest-leverage technique in the workflow.** When two reviewers disagree, the workflow's job is to flag the disagreement and force an experiment. This is the moment where the whole process pays for itself — it catches the one critical bug that would otherwise have been dismissed via confident but wrong reassurance.
 - **Cross-round twin detection is multi-round PR validation's killer feature.** Single-round PRs miss the second and third twins entirely. The bot needs prior-fix context (commits + summary comment trailer) to apply the pattern. Always use the round summary comment to describe the fix *shape* so the next cascade has it as template input.
@@ -285,5 +334,7 @@ The most surprising observation is that articulation and confidence are not prox
 - **Institutional rules can override AI flags.** AI reviewers correctly flag documented best practices (e.g., `CREATE INDEX CONCURRENTLY` on hot tables) but cannot see institutional rules ("don't touch generated migration files unless inevitable"). When a flag conflicts with such a rule, the rule wins — even when the flag's technical content is correct. Save such rules as durable feedback memories so future validation rounds default-skip the flag instead of re-litigating it.
 - **Always verify PR scope against `origin/{base}`, not local `{base}`.** Pattern 8 is the analyst-side mirror of Pattern 5 — the failure mode is the same shape (stale view of HEAD), only the actor differs. The remediation is mechanical: use `git fetch origin` + `git diff origin/{base}..HEAD --name-only` or `gh pr view --json files`.
 - **Mirror systems need a parity check.** Pattern 9's prose-table drift is the same class of bug as docstring-vs-code drift. Treat it the same way: a CI check is the only durable defense; back-references are a useful interim.
+- **Convergence isn't always signal.** Pattern 12 (Long-Row Formatting Hallucination) showed that two reviewers can converge on a false positive when both share a prior — "long table rows often have formatting drift" — rather than each independently observing the content. The Pattern 7 / Pattern 13 kind of convergence (each reviewer reasoning about actual content) is the productive shape. Distinguish them by checking whether the reviewer's `suggestion` block actually changes anything.
+- **Sweep folders before committing convention fixes.** Pattern 13 (Sibling-Fix Holdout) is the second productive cross-round behavior, but it pays for itself only on multi-round PRs. On a single-round PR, missed siblings ship. The discipline is: when fix touches files A and B in a folder, audit the rest of the folder before pushing. The reviewer's structural read is a safety net, not a substitute.
 
-I expect this catalog to grow. The point is not to produce a comprehensive taxonomy — it is to make each next bug easier to triage than the last. If you are running AI code review on your PRs and have not started classifying the false positives, naming the shapes of the failures is where I would start. And when you spot a *productive* behavior like cross-round twin detection, treat it the same way — name it, find ways to amplify it, and protect it from dedup rules that would otherwise suppress it.
+I expect this catalog to grow. The point is not to produce a comprehensive taxonomy — it is to make each next bug easier to triage than the last. If you are running AI code review on your PRs and have not started classifying the false positives, naming the shapes of the failures is where I would start. And when you spot a *productive* behavior like cross-round twin detection or sibling-fix holdout, treat it the same way — name it, find ways to amplify it, and protect it from dedup rules that would otherwise suppress it.
