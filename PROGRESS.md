@@ -36,6 +36,29 @@
 
 ## Session Log
 
+### 2026-05-26 (Session 24)
+
+**Blog publish — `dont-retry-retrieval-diagnose-it` (AI/ML, EN + KO)**
+
+- **Published:** New post synthesizing Wei et al. (2026) Skill-RAG — "diagnose
+  retrieval failure, don't retry." Synced from 3B, expanded to ~1,300-word
+  narrative, translated to Korean (해요체).
+- **Editorial:** Genericized internal "3B" → "my own knowledge system" (prose +
+  table header); sanitized all internal cross-links (dropped See-also block
+  linking unpublished sibling notes + `personal/research/` private paths); kept
+  the 2 external arXiv refs. Restored the intro the sync truncated.
+- **Verification:** `validate:dates` clean (138 EN / 138 KO); `corepack pnpm
+build` green, Pagefind indexed 276 pages.
+- **Re-encounters (documented):** asdf `pnpm` ghost shim shadows Corepack
+  (`No version is set`) → used `corepack pnpm`; context-mode sandbox doesn't
+  source the shell profile so asdf shims fail there → routed version-managed
+  CLIs through Bash.
+- **Recurring bug:** `sync-from-3b.ts cleanBody()` wrap bug (open todo since
+  Session 16) hit again — first paragraph truncated mid-sentence. Masked by
+  expansion.
+- **Deferred:** 2 stale `needs_resync` flags + 2 `blog.ready:false` enriched
+  entries (left for a separate cleanup pass per user).
+
 ### 2026-05-20 (Session 23)
 
 **Cloudflare build fix — pnpm dual-lockfile drift**
