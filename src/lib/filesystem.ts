@@ -30,6 +30,21 @@ export function buildFileSystem(posts: PostMetadata[]): FSNode {
 		children: new Map(),
 	});
 
+	root.children!.set('system', {
+		name: 'system',
+		type: 'directory',
+		children: new Map([
+			[
+				'3b',
+				{
+					name: '3b',
+					type: 'directory',
+					children: new Map(),
+				},
+			],
+		]),
+	});
+
 	// Add posts directory
 	const postsDir: FSNode = {
 		name: 'posts',

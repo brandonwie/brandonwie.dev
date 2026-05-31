@@ -12,6 +12,9 @@ const socialLinks: Record<string, { url: string; name: string }> = {
 	archcalendar: { url: 'https://www.archcalendar.com', name: 'Arch Calendar' },
 	arch: { url: 'https://www.archcalendar.com', name: 'Arch Calendar' },
 	moba: { url: 'https://www.archcalendar.com', name: 'Arch Calendar (Moba)' },
+	system: { url: '/system/3b', name: '3B System' },
+	'3b': { url: '/system/3b', name: '3B System' },
+	'system-3b': { url: '/system/3b', name: '3B System' },
 	portfolio: {
 		url: 'https://crucio.brandonwie.dev',
 		name: 'Portfolio (Crucio)',
@@ -34,6 +37,7 @@ registerCommand('open', (args) => {
 					type: 'text',
 					content: '  archcalendar, arch - Arch Calendar (Moba)',
 				},
+				{ type: 'text', content: '  3b, system      - 3B system hub' },
 				{ type: 'text', content: '  portfolio, crucio - AISecOps portfolio' },
 			],
 		};
@@ -52,7 +56,7 @@ registerCommand('open', (args) => {
 				{
 					type: 'text',
 					content:
-						"Available: github, linkedin, twitter, email, archcalendar, portfolio (or run 'open' for help)",
+						"Available: github, linkedin, twitter, email, archcalendar, 3b, portfolio (or run 'open' for help)",
 				},
 			],
 		};
@@ -60,7 +64,11 @@ registerCommand('open', (args) => {
 
 	// Open the link in a new tab
 	if (typeof window !== 'undefined') {
-		window.open(link.url, '_blank', 'noopener,noreferrer');
+		if (link.url.startsWith('/')) {
+			window.location.href = link.url;
+		} else {
+			window.open(link.url, '_blank', 'noopener,noreferrer');
+		}
 	}
 
 	return {

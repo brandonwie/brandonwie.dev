@@ -34,6 +34,7 @@
 
 	// Paraglide for i18n
 	import { page } from '$app/state';
+	import { m } from '$lib/paraglide/messages';
 	import { locales, localizeHref } from '$lib/paraglide/runtime';
 
 	// View Transitions API - smooth crossfade between pages
@@ -59,6 +60,8 @@
 	// `children` is a special "snippet" prop that SvelteKit passes to layouts,
 	// containing the page content that should be rendered inside this layout.
 	let { children } = $props();
+
+	const systemHref = $derived(page.url.pathname.startsWith('/ko') ? '/ko/system/3b' : '/system/3b');
 
 	function handleSearchShortcut(event: KeyboardEvent) {
 		if (!((event.metaKey || event.ctrlKey) && event.key === 'f')) return;
@@ -156,11 +159,19 @@
 -->
 <div class="min-h-screen bg-terminal-bg-primary text-terminal-text-primary font-mono">
 	{@render children()}
+	<footer class="mx-auto max-w-2xl px-4 py-6 text-right text-xs sm:px-6">
+		<a
+			href={systemHref}
+			class="text-terminal-text-muted no-underline transition-colors hover:text-terminal-accent-orange"
+		>
+			{m.system_3b_title()}
+		</a>
+	</footer>
 </div>
 
 <!-- Hidden links for SSG prerendering - allows SvelteKit to crawl all locale versions -->
 <div style="display:none">
-	{#each locales as locale}
+	{#each locales as locale (locale)}
 		<a href={localizeHref(page.url.pathname, { locale })}>{locale}</a>
 	{/each}
 </div>

@@ -53,6 +53,13 @@ export default defineConfig({
 					],
 				},
 				{
+					pattern: '/system',
+					localized: [
+						['en', '/system'],
+						['ko', '/ko/system'],
+					],
+				},
+				{
 					pattern: '/system/3b',
 					localized: [
 						['en', '/system/3b'],

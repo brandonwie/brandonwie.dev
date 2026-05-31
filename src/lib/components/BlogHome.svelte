@@ -19,6 +19,11 @@
 		const base = basePath === '/' ? '' : basePath;
 		return `${base}/posts`;
 	}
+
+	function systemHref(): string {
+		const base = basePath === '/' ? '' : basePath;
+		return `${base}/system/3b`;
+	}
 </script>
 
 <div class="min-h-screen bg-terminal-bg-primary">
@@ -115,6 +120,23 @@
 				>
 				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
 					{m.archcalendar_description()}
+				</p>
+			</a>
+
+			<!-- 3B System -->
+			<a
+				href={systemHref()}
+				class="group block py-3 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
+			>
+				<span
+					class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors"
+				>
+					{m.system_3b_title()}
+				</span>
+				<span class="text-xs text-terminal-text-dim ml-2">— {m.system_3b_card_subtitle()}</span>
+				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· /system/3b</span>
+				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
+					{m.system_3b_card_description()}
 				</p>
 			</a>
 

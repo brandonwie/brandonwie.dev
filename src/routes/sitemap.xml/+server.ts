@@ -49,6 +49,8 @@ export const GET: RequestHandler = async () => {
 	const staticPages = [
 		{ en: '', ko: '/ko', priority: '1.0' },
 		{ en: '/posts', ko: '/ko/posts', priority: '0.8' },
+		{ en: '/system', ko: '/ko/system', priority: '0.5' },
+		{ en: '/system/3b', ko: '/ko/system/3b', priority: '0.7' },
 	];
 
 	const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
