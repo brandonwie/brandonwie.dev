@@ -6,10 +6,9 @@ static/fonts/
 node_modules/
 src/content/posts/
 .claude/
+.serena/
 knowledge/
 scripts/CLAUDE.md
 project.inlang/
-
-# Lockfiles — machine-generated, prettier would corrupt them
+.worktrees/
 pnpm-lock.yaml
-package-lock.json

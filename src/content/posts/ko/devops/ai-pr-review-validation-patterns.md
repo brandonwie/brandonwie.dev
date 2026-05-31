@@ -1,8 +1,10 @@
 ---
-title: "AI PR 리뷰 검증 패턴"
-description: "AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 흔한 패턴과 재발 방지 방법."
+title: AI PR 리뷰 검증 패턴
+description: >-
+  AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 13가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크
+  + 보강 주석 템플릿.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-26'
+updated: '2026-04-29'
 tags:
   - devops
   - ai
@@ -12,10 +14,10 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
-source_updated: "2026-03-26"
-translation_date: "2026-03-26"
+source_updated: '2026-04-29'
+translation_date: '2026-05-10'
 references:
-  - url: "https://docs.github.com/en/rest/pulls/reviews"
+  - url: 'https://docs.github.com/en/rest/pulls/reviews'
     title: REST API endpoints for pull request reviews — GitHub Docs
     type: authoritative
 ---
@@ -120,9 +122,9 @@ resyncOccurred = true;
 
 ### 5. Process 모델 오해
 
-**어떻게 보이나:** 에이전트가 module-level singleton을 thread-unsafe하다고 지적하거나 lock 추가를 제안해요.
+**어떻게 보이나:** 에이전트가 모듈 단위 싱글턴을 thread-unsafe하다고 지적하거나 lock을 추가하라고 제안해요.
 
-**왜 이런 일이 생기나:** AI가 기본적으로 threading 모델을 가정하지만, 실제 production 환경에서는 process 기반 worker를 쓰는 경우가 많아요. Celery prefork, gunicorn worker process — 각 worker가 별도의 메모리 공간을 가지기 때문에 공유 상태 자체가 없어요.
+**왜 이런 일이 생기나:** AI가 기본적으로 스레드 기반 모델을 가정해요. 그런데 실제 production 환경에서는 프로세스 기반 worker를 쓰는 경우가 많아요. Celery prefork, gunicorn worker process — 각 worker가 별도의 메모리 공간을 가지기 때문에 공유 상태 자체가 없어요.
 
 **예시:**
 
@@ -131,7 +133,7 @@ resyncOccurred = true;
 현실: Celery prefork = 별도 process. 각각 자기만의 global namespace를 가짐
 ```
 
-Python 프로젝트에서 CodeRabbit이 module-level 변수마다 thread-safety 이슈로 지적한 사례예요. Django/Celery stack에서 prefork worker를 쓰면 각 process가 global namespace의 자기 사본을 갖게 돼요. thread도 없고, 공유도 없고, 문제도 없어요.
+Python 프로젝트에서 CodeRabbit이 모듈 단위 변수마다 스레드 안전성 이슈로 지적한 사례예요. Django/Celery 스택에서 prefork worker를 쓰면 각 프로세스가 global namespace의 자기 사본을 갖게 돼요. 스레드도 없고, 공유도 없고, 문제도 없어요.
 
 **예방:** 보강 주석을 추가해요.
 
@@ -254,6 +256,41 @@ crucio PR #40에서 실제로 겪은 사례예요. 18개 Copilot 지적 중 12�
 
 **예방:** 문서 PR에서는 지적된 file 하나를 먼저 스팟 체크하세요. 첫 번째 지적이 false positive면, 개별 review 없이 비슷한 지적을 일괄 기각하세요.
 
+### 13. Cross-Skill Name Confusion (Phantom Comparison)
+
+**어떻게 보이나:** Reviewer가 권위 있어 보이는 line 번호와 field 이름을 인용해요 — 그런데 실제 file에 `grep -n` 해보면 완전히 다른 내용이 나와요. Reviewer가 제안하는 "누락된 fix"는 review 중인 file을 깨뜨리지만, 이름 root를 공유하는 *다른* skill이나 module에는 맞을 거예요.
+
+**왜 이런 일이 생기나:** 두 skill이 이름 root를 공유하고 둘 다 세션의 skill registry에 있을 때, AI reviewer가 그 schema들을 mental하게 merge해서 PR을 *다른* 쪽 skill의 동작에 대해 review할 수 있어요. 모델이 line-level "finding"을 만들어내는데, 그 내용이 우리 file에는 없지만 conflated된 sibling에는 있는 거예요.
+
+**예시 (3B PR #19, 4월 말):**
+
+Codex가 `/interview`(markdown 전용 Socratic skill, 런타임 의존성 0) import를 살펴봤어요. Codex가 내놓은 지적은 다음과 같았어요.
+
+- "SKILL.md:33의 curl 버전 체크" — 33번 줄은 `## Instructions` 헤더였어요. 소스 어디에도 curl은 없어요.
+- "SKILL.md:93의 MCP 질문" — 93번 줄은 code-confirmation 예시였어요. 소스 38번 줄에는 "MCP tools 없음"이라고 명시되어 있어요.
+- "summary를 `ooo seed` 산출물로 교체" — `ooo seed`는 `/ouroboros:interview`의 산출물이에요. 같은 세션 registry에 있는 다른 skill 거예요.
+- "MCP 응답 계약 — `meta.session_id`, `meta.is_complete` 강화" — 소스에는 MCP 계층이 없어요. 순수한 conversation engine이거든요.
+
+네 finding 전부 `/ouroboros:interview`(Python/MCP/`ooo seed` 생성)에 적용될 내용이었어요. Codex가 이름이 같다는 점과 같은 세션에 둘 다 떠 있다는 점 때문에 두 skill을 섞어서 본 것 같아요. 5개 중 1개(dead filesystem link)만 유효했어요.
+
+**왜 AI reviewer 휴리스틱이 실패하나:**
+
+- Skill registry가 이름이 겹치는 여러 skill을 노출해요(`/interview`와 `/ouroboros:interview`).
+- LLM reviewer가 가끔 어느 skill인지 grounding 없이 "the skill"이라고 인용해요.
+- *다른* skill이 internally consistent하니까 confidence가 높게 유지돼요 — reviewer의 mental model이 깨진 게 아니라 잘못된 target을 가리킬 뿐이에요.
+- output이 specific해 보여요(line 번호, field 이름) 하지만 review 중인 file에 대해서는 fabricated예요.
+
+**예방 — 교차 확인 규율.** 특정 라인, 파일, API를 인용한 AI 리뷰 finding이라면 모두 다음을 실행하세요.
+
+```bash
+grep -n -i '<claimed-string>' <claimed-file>
+sed -n '<claimed-line>p' <claimed-file>
+```
+
+grep이 비어 있거나 line이 다른 내용을 보여주면, finding은 hallucinated이거나 phantom version과 비교 중이에요. grep이 확인할 때까지 모든 미검증 주장을 INVALID로 다루세요. finding당 ~5초 추가되고, 그렇지 않으면 30+ 분 낭비할 cross-skill confusion을 잡아요.
+
+**Reviewer 비대칭(같은 PR의 데이터 포인트):** 같은 PR의 3b-forge plugin review는 grounded였어요 — 5개 중 4개 valid finding. 실제 repo file 구조에서 동작하는 plugin reviewer가 세션 scope reviewer (Codex)보다 — 세션이 skill 이름 충돌을 포함할 때 — 더 높은 정밀도 output을 만들어요.
+
 ## 워크플로
 
 1. issue 코멘트(claude[bot])와 review 스레드(Copilot) 모두 가져오기
@@ -338,3 +375,27 @@ Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`de
 - Cross-Branch 혼동(#9): Reviewer가 PR target(`develop`) 대신 `main` branch 코드를 분석. `toBeNull()`이 796-800번 줄 구현과 모순된다고 주장했지만, `develop`에서 해당 줄은 NOTE 주석(`deletedAt` 설정 코드는 PR #711에서 제거됨)
 
 **결과:** 양쪽 round에서 3개 수정, 6개 INVALID 기각. 새 패턴 문서화: Cross-Branch 혼동 — AI reviewer가 PR target이 `develop`인데도 `main` branch context를 기본으로 사용.
+
+### 사례 6: 3b-forge PR #3 Round 1 (4 reviewers — Claude + Copilot + Codex + CodeRabbit)
+
+**통계:** 16개 항목: 9 VALID BUG/IMPROVEMENT, 6 GTH→FIX, 1 CONTROVERSIAL→VALID(user redirect 후). 0 INVALID. 0 DEFER. 18개 thread 해결: 11개 명시적 reply + 7개 CodeRabbit auto-resolve. 16개 atomic fix commit. `f56e066`으로 merge.
+
+**범위:** Wave 3 SSoT flip tooling: `scripts/flip-to-forge.sh`, refactor된 `scripts/check-3b-drift.sh`, docs. YAML manifest를 통해 별도 git repo에 destructive `rm`과 `ln -s`를 수행하는 shell script였어요. 고위험, 낮은 test coverage, 좁은 범위라 4-reviewer pass에 적합했어요.
+
+**Cross-reviewer convergence:**
+
+| Finding                                      | Claude | Copilot | Codex | CodeRabbit |
+| -------------------------------------------- | ------ | ------- | ----- | ---------- |
+| Path-traversal guard 누락                    | ✓      | ✓       | ✓     | —          |
+| `stat -f '%HT'` BSD 전용                     | ✓      | ✓       | —     | ✓          |
+| Post-flip mode가 local state에만 의존        | ✓      | ✓       | ✓     | —          |
+| Rollback 후 `.flip-state.json` 잔존          | ✓      | —       | —     | ✓          |
+| Exit-code 2 overload                         | —      | ✓       | —     | —          |
+
+**CONTROVERSIAL은 user redirect로 처리:** R1-16은 `scripts/check-3b-drift.sh:25`에서 exit code 2가 advisory drift와 pre-flight failure를 모두 의미하는 문제였어요. 바로 수정하지 않고 CONTROVERSIAL로 분류한 뒤, code 분리, code 2 의미 축소, reinforcing comment 유지, follow-up issue defer 네 가지 선택지를 제시했어요. 사용자는 code 분리를 선택했고, fix는 VALID 수정 이후 GOOD-TO-HAVE batch 전에 반영했어요.
+
+**스레드 해결에서 배운 점:** Copilot과 Codex 스레드는 GitHub GraphQL `resolveReviewThread` mutation으로 명시적으로 닫아주기 전까지 열린 상태로 남아요. CodeRabbit은 참조 코드가 바뀌면 일부 스레드를 자동으로 닫았고, 5개 중 3개가 답글 없이 해결됐어요. commit이 쌓이면서 라인 번호도 이동해요. 그래서 finding과 commit을 매핑할 안정적인 키는 `path:line`이 아니라 GraphQL 스레드 ID였어요.
+
+**핵심 INVALID count: 0.** 이 PR에서는 3개 이상 agent의 convergence가 valid finding의 완전한 positive predictor였어요. 이유는 범위가 좁아 agent들이 end-to-end로 추론할 수 있었고, script가 destructive operation을 수행해 reviewer들이 보수적으로 판단했으며, 4개의 독립 reviewer가 개별 false positive를 줄였기 때문으로 보여요.
+
+**프로세스 학습:** CONTROVERSIAL 결정은 VALID와 GOOD-TO-HAVE 사이에 gate로 둬야 해요. VALID fix는 먼저 진행하고, CONTROVERSIAL은 사용자에게 깔끔한 결정 지점을 제공하고, low-risk improvement는 그 뒤에 batch 처리하는 흐름이 맞았어요. 세 tier를 하나의 confirm step으로 묶으면 각 decision type에 필요한 latency가 어긋나요.

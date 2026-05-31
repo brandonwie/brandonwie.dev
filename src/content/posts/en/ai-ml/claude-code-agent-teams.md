@@ -2,7 +2,7 @@
 title: Claude Code Agent Teams
 description: Experimental feature for orchestrating multiple Claude Code instances as a coordinated team with shared task lists and inter-agent messaging
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-04-09'
+updated: '2026-05-20'
 tags:
   - ai-ml
   - claude-code
@@ -12,11 +12,15 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 0a19bcadfcddc42c2a46fa5db54949b4075aaef2d4a25f5912b67a9348a93f36
+source_content_hash: 8fcf09a87193287adf1dc61f8d685a54b84a712ca8c8cf708539dede494c7c2b
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
     type: official
+  - url: "internal://claude-binary-strings/v2.1.138"
+    title: BackendRegistry + persistent-macro evidence (binary strings dump)
+    type: verified
+    notes: "strings $(which claude) reveals [BackendRegistry] Selected: tmux log + S_()/e_() macros (preferTmuxOverIterm2, iterm2It2SetupComplete) outside settings.json"
 ---
 
 I needed three independent code reviews running in parallel -- security, performance, and test coverage -- on the same PR. Opening three terminal tabs and copy-pasting context between them felt like managing interns over Slack. Agent Teams let one Claude session act as lead, spawn teammates into separate tmux panes, and coordinate through a shared task list. The idea is compelling. The execution requires knowing where the sharp edges are.
@@ -104,6 +108,15 @@ This section is the reason this post exists. The official docs cover the happy p
 
 **iTerm2 `ITermBackend` NOT functional (known bug #24301).** The binary contains an `ITermBackend` with full `it2 session split` support, but the backend selection logic never activates it. With `teammateMode: "auto"` or `"tmux"`, Claude Code silently falls back to `in-process` when not inside a tmux session -- even with `it2` installed, Python API enabled, and all iTerm2 env vars present. Confirmed in v2.1.74 across multiple test cycles. The `teammateMode` setting is snapshotted at session start, so mid-session changes to `settings.json` have no effect. **Workaround:** Use `tmux -CC` (iTerm2 control mode) to get native iTerm2 panes with the tmux backend.
 
+**Backend selector stores macros outside `settings.json` (v2.1.138 audit).** A regression report on Claude Code 2.1.138 sent me into the binary's string table to figure out why split panes still weren't spawning despite `teammateMode: "tmux"` + `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` + an active tmux session. `strings $(which claude)` surfaced two persistent flags managed by a getter/setter pair the binary calls `S_()` / `e_()`:
+
+- `preferTmuxOverIterm2` -- set to `true` when the user picks "Use tmux instead" on the iTerm2 setup prompt; read by `hk7()`.
+- `iterm2It2SetupComplete` -- set to `true` after a successful `it2 session list` verify.
+
+Neither flag lives in `settings.json`, and neither has a CLI read/write surface. The runtime backend selector emits `[BackendRegistry] Selected: tmux (running inside tmux session)` to stderr when `process.env.TMUX` is set -- which means the tmux backend wins for any session launched from inside an existing tmux pane, regardless of what `settings.json` says.
+
+The implication that surprised me: `teammateMode` reads as authoritative in the docs, but the runtime detector is the actual decision point. `settings.json` acts as a hint, not a hard override. If you want to know which backend the binary really picked, run `claude --debug`, attempt a `TeamCreate`, and grep stderr for `[BackendRegistry] Selected:`. The string is the ground truth; everything else is configuration.
+
 **TeamDelete doesn't kill orphaned tmux panes.** When agents shut down, the tmux pane stays alive as a fresh zsh shell. `TeamDelete` cleans team metadata but not panes. You must manually run `tmux kill-pane -t %<id>` for each orphan. Check with `tmux list-panes -a` after team work to avoid accumulating zombie shells.
 
 **Tmux pane race condition on parallel spawn.** Spawning three or more teammates simultaneously can trigger "not in a mode" errors from tmux `send-keys`. The pane gets created, but the agent fails to start. Retrying individually usually works. Spawning teammates sequentially (with a brief pause) avoids the issue entirely.
@@ -129,6 +142,7 @@ For quick reference, here is the full constraint set:
 - Split panes require tmux (iTerm2 ITermBackend exists but is broken -- #24301)
 - Without tmux, teammates run in-process silently (no error, no split panes)
 - Workaround for iTerm2: tmux -CC control mode gives native panes via tmux backend
+- Backend selection is decided by the runtime detector (`process.env.TMUX`), not `teammateMode` in `settings.json` (verify with `claude --debug` + grep `[BackendRegistry] Selected:`)
 - TeamDelete does not clean up orphaned tmux panes (manual cleanup needed)
 - Parallel spawn race condition with 3+ teammates (retry individually)
 - Idle teammates can claim another agent's in-progress tasks (use explicit ownership)
@@ -155,3 +169,5 @@ The lead assigns each reviewer a task, the reviewers work independently in their
 Agent Teams solve a real coordination problem: parallel work across a codebase with shared state. The task list and mailbox primitives are well-designed. The rough edges are in infrastructure -- tmux pane management, config parsing, worktree isolation, and the deferred tool visibility problem that can silently downgrade your setup.
 
 The most important lesson: verify your tools exist before concluding they do not. Deferred tools in Claude Code are invisible until you search for them. One bad assumption in one session propagated through my configuration and degraded every subsequent session for days. Check with `ToolSearch`, not with the visible tool list.
+
+The second-most important lesson came later, from the v2.1.138 binary-strings audit: configuration files describe intent, runtime detectors decide behavior. When something is not working the way the docs say it should, grep the binary's stderr (`claude --debug`) for what the runtime actually picked. The `[BackendRegistry] Selected:` line is the ground truth in a way that `settings.json` is not.

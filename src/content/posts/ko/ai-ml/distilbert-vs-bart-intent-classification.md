@@ -4,7 +4,7 @@ description: >-
   라벨링된 데이터 없이 첫날부터 동작하는 인텐트 분류기를 배포하고,
   예시가 모이면 도메인 특화 모델로 졸업하는 방법을 알아보세요.
 date: 2026-03-26T00:00:00.000Z
-updated: "2026-04-06"
+updated: "2026-04-18"
 tags:
   - ai-ml
   - nlp
@@ -17,8 +17,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: distilbert-vs-bart-intent-classification
-source_updated: "2026-04-06"
-translation_date: "2026-04-06"
+source_updated: "2026-04-18"
+translation_date: "2026-04-18"
 references:
   - url: 'https://huggingface.co/distilbert-base-uncased'
     title: DistilBERT model card
@@ -83,6 +83,37 @@ Phase A는 즉시 배포할 수 있어요. 정확도는 괜찮지만(~85%) 도�
 - 이미 풍부한 라벨링 데이터가 있는 경우 — Phase A를 건너뛰세요
 - 카테고리가 자주 변경되는 경우 — 제로샷의 유연성이 파인튜닝보다 영구적인 이점일 수 있어요
 - 분류 작업이 NLI 프레이밍으로는 너무 미묘한 경우(예: 미세한 감성 구분)
+
+## 프로덕션 함정: HuggingFace 파이프라인은 자동 truncation을 안 해요
+
+"링크 콘텐츠에서 분류가 멈춘다"는 결정적 버그로 꽤 많은 디버깅 시간을 쓴 뒤에야 이 원인에 도달했어요. BART(1024 토큰 컨텍스트)와 DistilBERT(512 토큰 컨텍스트) 모두 고정된 컨텍스트 윈도우를 가져요. HuggingFace `transformers` 파이프라인은 기본으로 입력을 _자동 truncation 하지 않아요_ — 경고만 로그하고 초과 크기 입력을 그대로 처리하려고 해요. zero-shot-classification의 경우, 이건 N번의 forward pass 각각이 초과 크기 입력에서 돌아간다는 뜻이에요. 20KB 기사(~5000 토큰)면 CPU에서 전체 지연이 30~60초를 넘길 수 있어요. 보통 100 토큰 입력에서 기대하는 ~200ms 대신에요.
+
+해법은 항상 `truncation=True`와 `max_length=<context_window>`를 명시적으로 전달하는 거예요:
+
+```python
+# 올바른 방식 — 명시적 truncation
+_CLASSIFIER_MAX_TOKENS = 1024  # BART; DistilBERT는 512
+
+result = self._pipeline(
+    text,
+    candidate_labels=candidate_labels,
+    multi_label=multi_label,
+    truncation=True,                     # ← 필수
+    max_length=_CLASSIFIER_MAX_TOKENS,   # ← 필수
+)
+```
+
+**왜 제로샷에서 더 나빠지는가.** 제로샷은 후보 라벨당 forward pass를 한 번씩 돌려요. 라벨 5개와 초과 크기 입력이면 속도 저하 페널티를 5배로 내게 돼요. 단일 라벨 분류기(회귀, 이진)는 한 번만 내요.
+
+**왜 RAG나 콘텐츠 추출 파이프라인에서 중요한가.** 분류기 입력이 스크래핑되거나 LLM이 추출한 텍스트(기사, PDF, 웹 콘텐츠)에서 올 때 입력 크기가 변동이 커요 — 수백 토큰부터 수십만 토큰까지. 적대적 크기 입력을 가정하세요. 명시적 truncation은 다중 방어예요.
+
+**왜 인텐트 분류에서 tail은 보통 중요하지 않은가.** 인텐트("요약해줘", "데이터 추출해줘", "그냥 저장해줘")는 보통 문서의 처음 500~1000 토큰에서 결정 가능해요. 분류용으로는 tail 손실이 괜찮아요. PII 스캔과 콘텐츠 요약은 여전히 전체 텍스트를 봐야 해요 — 그건 truncation 되지 않은 입력에서 따로 돌리세요.
+
+**상수는 모델 비특정적으로 이름 붙이세요.** `_BART_CONTEXT_WINDOW`는 DistilBERT(512)로 바꾸는 순간 misleading해져요. `_CLASSIFIER_MAX_TOKENS`로 이름 붙이고, 코멘트로 현재 모델을 문서화하세요. Phase B 전환 시 모든 호출부가 아닌 값 하나만 업데이트하면 돼요.
+
+### 짚고 넘어갈 사실 정정
+
+이 글을 쓰면서 Phase A→B 전환을 "다른 BART 변종으로 바꾸기"라고 무심하게 표현하고 있었다는 걸 알아챘어요. 틀렸어요. DistilBERT는 encoder-only BERT distillation이에요(Sanh et al., 2019). BART는 encoder-decoder seq2seq 모델이에요(Lewis et al., 2019). 서로 다른 모델 계열이에요. MNLI 제로샷 래퍼는 적절한 파인튜닝이 있으면 어느 아키텍처와도 동작하지만, 코드 코멘트에서 둘을 혼용하는 건 피해야 할 정확성 오류예요.
 
 ## 핵심 교훈
 

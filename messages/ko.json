@@ -25,7 +25,7 @@
 	"archcalendar_role": "백엔드 리드",
 	"crucio_role": "제작자",
 	"portfolio_subtitle": "AISecOps 지식 플랫폼",
-	"portfolio_description": "온프레미스 인프라에서 생성형 AI를 위한 Zero Trust 보안 시스템. 개발 중 — 데모 공개.",
+	"portfolio_description": "생성형 AI를 위한 Zero Trust 보안 — 6개 폴리글랏 마이크로서비스(Python + Go + Rust + TypeScript), Kafka 이벤트 스트리밍, 해시 체인 감사 로그, GCP + NAS 하이브리드 인프라 위 LGTM 풀 옵저버빌리티.",
 	"reading_time": "{minutes}분 읽기",
 	"copy_link": "링크 복사",
 	"copied": "복사됨!",

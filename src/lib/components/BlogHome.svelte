@@ -119,23 +119,23 @@
 			</a>
 
 			<!-- Crucio -->
-			<a
-				href="https://crucio.brandonwie.dev"
-				target="_blank"
-				rel="noopener noreferrer"
+			<div
 				class="group block py-3 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
 			>
-				<span
-					class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors"
+				<a
+					href="https://crucio.brandonwie.dev"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors no-underline"
 				>
 					Project Crucio
-				</span>
+				</a>
 				<span class="text-xs text-terminal-text-dim ml-2">— {m.portfolio_subtitle()}</span>
 				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· {m.crucio_role()}</span>
 				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
 					{m.portfolio_description()}
 				</p>
-			</a>
+			</div>
 		</section>
 
 		<!-- Recent Posts -->

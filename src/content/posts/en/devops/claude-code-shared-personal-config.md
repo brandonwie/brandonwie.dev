@@ -2,7 +2,7 @@
 title: "Claude Code: Shared + Personal AI Config Pattern"
 description: Split AI instructions into committed (shared) and gitignored (personal) layers
 date: 2026-02-04T00:00:00.000Z
-updated: '2026-04-09'
+updated: '2026-04-18'
 tags:
   - devops
   - claude-code
@@ -12,7 +12,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: a209a2b38b7a4aba85f3a7e4c7ddd3e3eec6ceee73600fd6c3d595ad175c7d2f
+source_content_hash: 248b0b206475650469306682dd37ca5d96b2593ff291d82299ca0b542db4fb7c
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
     title: Claude Code Documentation
@@ -305,10 +305,10 @@ two profiles may already have drifted apart from the SoT, and any user activity
 that happened in the meantime — UI permission toggles, plugin enables — only
 exists in the broken local file.
 
-**Detection.** I run an audit script that walks all 55 expected symlinks across
-personal, work, and project categories and reports a "REPLACED" classification
-when it finds a regular file where a symlink should be. That classification is
-the telltale failure signature.
+**Detection.** I run `/check-symlinks`, a slash command that walks all 55
+expected symlinks across personal, work, and project categories and reports a
+"REPLACED" classification when it finds a regular file where a symlink should
+be. That classification is the telltale failure signature.
 
 **Repair strategy depends on what drifted.** There are two cases.
 
@@ -383,6 +383,94 @@ break to one profile instead of cascading across both. The cost is that the
 `settings.local.json` deep-merge mechanism would need re-verification to
 confirm it still works with decoupled chains. I haven't done that spike yet,
 but it's worth it before the next major settings restructure.
+
+## The Revert Loop Surfaces
+
+A week after the 2026-04-09 incident, I hit the same symptom again and assumed
+the one-shot atomic-rename explanation was still the whole story. It wasn't.
+After I re-linked the symlink and started editing the runtime file, the UI
+re-serialized its in-memory settings model back to the regular file within
+about two minutes, clobbering the fix. The UI still thought the file was a
+regular file, still held cached state from before the break, and kept
+overwriting corrections until its model caught up.
+
+That's the revert loop: as long as the UI has a stale snapshot of the file's
+contents, it doesn't matter how many times you repair the symlink — the next
+save cycle restores the drifted state.
+
+**The symptom signature has three signals that only make sense together:**
+
+1. `ls -la ~/.claude/settings.json` — regular file, not a symlink
+2. `diff ~/.claude/settings.json $SOT` — substantial divergence (in my case,
+   290 lines of accumulated permission patterns, plugin configs,
+   `voiceEnabled`, `skipDangerousModePermissionPrompt`, `mcpServers`)
+3. `stat -f '%Sm' ~/.claude/settings.json` — mtime updates within 2–3 minutes
+   of any edit, even with no explicit save action in the UI
+
+The third one is what distinguishes a revert loop from a normal broken
+symlink. If the mtime only moves when you explicitly save, you have a stale
+file. If it moves passively, the UI is actively writing over your edits.
+
+**Recovery: reconcile → SoT → symlink.** The bidirectional merge from the
+previous section is the right tool when both sides have intent to preserve. In
+the revert-loop case, the UI's "intent" is a stale cache from before your
+edits — merging it forward just re-introduces the changes you're trying to
+remove. A safer recipe is to freeze the live file's state into the SoT and
+then re-symlink:
+
+```bash
+SOT=/path/to/3b/.claude/global-claude-setup/settings.json
+LIVE=/Users/you/.claude/settings.json
+
+# 1. Back up live — /tmp is fine for the repair window
+cp "$LIVE" "/tmp/live-settings-backup-$(date +%Y%m%d-%H%M%S).json"
+
+# 2. Apply intended edits surgically to the live (drifted) file
+#    — use Edit/sed/jq; validate JSON after each edit
+python3 -m json.tool < "$LIVE" > /dev/null || { echo "JSON broke"; exit 1; }
+
+# 3. Copy cleaned live → SoT. SoT now holds every line the UI has accumulated
+#    plus the intended edits. Nothing is lost; drift is promoted to SoT.
+cp "$LIVE" "$SOT"
+
+# 4. Atomic swap: replace live with a symlink to SoT
+rm "$LIVE" && ln -s "$SOT" "$LIVE"
+
+# 5. Verify
+ls -la "$LIVE"                                 # shows -> SoT
+diff "$LIVE" "$SOT" > /dev/null                # identical via symlink
+python3 -m json.tool < "$LIVE" > /dev/null     # JSON valid through link
+```
+
+The key move is step 3: promote live to SoT _before_ re-linking, so nothing
+is lost. Steps 1 and 2 protect against a bad intermediate state; step 5
+verifies the chain actually holds after the swap.
+
+**What this doesn't fix on the current session.** The running Claude Code
+session still has the pre-fix hook registry in memory. Hooks removed or
+modified in the SoT only take full effect on the next session start. The
+observable signal is whatever start-of-session log line your hooks emit — in
+my case, the absence of `[AGENT-TEAMS-READY]` at the next session was the
+confirmation that the in-memory registry had refreshed.
+
+**The monitoring gap.** The existing `symlink-daily-check.sh` SessionStart
+hook catches the atomic-rename case at the next session boundary. It doesn't
+catch a revert loop _during_ a session. If the UI's future write pattern
+shifts to delete-then-create-new-regular-file, the symlink would be replaced
+again between sessions, and the daily check would catch it eventually — but a
+real-time check would need to live in a PostToolUse or Stop hook. I haven't
+written that yet; the open question is whether the revert cadence is fast
+enough to warrant it.
+
+**Gitignored SoT, unobservable repair.** The SoT `settings.json` is gitignored
+because it holds machine-specific plugin install state. That means the whole
+reconcile-and-relink sequence lives only in my local working tree. `git
+status` shows nothing. No PR reviews the reconciliation. A fresh clone would
+not reproduce the drifted SoT. The pragmatic mitigation is a periodic manual
+backup (`cp $SOT ~/backup-$(date +%Y%m)/`) at whatever retention policy
+matches how bad a "lost my entire settings history" outcome would be. The
+proper fix would be un-gitignoring SoT — but that ships plugin-install state
+and machine-specific permissions into the repo, which is worse.
 
 ## Cross-Check Discipline
 

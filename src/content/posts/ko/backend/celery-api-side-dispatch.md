@@ -16,7 +16,7 @@ lang: ko
 source_lang: en
 source_slug: celery-api-side-dispatch
 source_updated: '2026-03-22'
-translation_date: '2026-02-12'
+translation_date: '2026-05-10'
 references:
   - url: 'https://docs.celeryq.dev/en/stable/userguide/calling.html#basics'
     title: Celery - Calling Tasks
@@ -26,18 +26,18 @@ references:
     type: official
 ---
 
-FastAPI 서비스가 시작할 때 `ModuleNotFoundError: No module named
-'psycopg2'`로 크래시했어요. API의 dependency에 psycopg2를 추가하지
-않았는데, API는 asyncpg를 사용하니까요. 에러는 Celery task 함수를
-import해서 `.delay()`를 호출하려던 데서 나왔어요 -- 그 import가 전체
-worker dependency 트리를 끌어온 거예요.
+FastAPI 서비스를 띄우려는데 `ModuleNotFoundError: No module named
+'psycopg2'`가 떴어요. API 쪽에는 일부러 psycopg2를 안 깔아 둔 상황이었어요.
+API는 asyncpg를 쓰거든요. 에러를 따라가 보니까, Celery task 함수를
+import해서 `.delay()`를 호출하려던 줄에서 터졌더라고요. 그 한 줄이 worker가
+쓰는 의존성 트리를 통째로 끌고 들어온 거예요.
 
-API와 worker가 별도 서비스인 microservices 아키텍처에서, worker task
-함수를 import해서 dispatch하는 건 함정이에요. 표준 Celery 패턴(task를
-import하고 `.delay()` 호출)은 monolith에서는 작동해요. API가
-async(FastAPI + asyncpg)이고 worker가 sync(Celery + psycopg2)인 분리된
-아키텍처에서는, task 함수를 import하면 worker에 필요한 모든 dependency를
-끌어와요.
+API랑 worker가 따로 떨어진 microservices 구조에서는, task 함수를 그대로
+가져와서 호출하는 방식이 함정이에요. 표준 Celery 패턴이라고 하는 "task
+import 후 `.delay()` 호출"은 monolith에서나 잘 돌아가요. API는
+async(FastAPI + asyncpg), worker는 sync(Celery + psycopg2)인 분리된
+구조에서는, task 함수를 import하는 순간 worker가 필요로 하는 의존성이 전부
+같이 따라와요.
 
 ## 왜 표준 패턴이 깨지는가
 

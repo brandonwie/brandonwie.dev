@@ -7,23 +7,23 @@ echo "Running pre-push checks..."
 echo ""
 
 echo "1/5 Linting..."
-pnpm lint || exit 1
+corepack pnpm run lint || exit 1
 
 echo ""
 echo "2/5 Format check..."
-pnpm format:check || exit 1
+corepack pnpm run format:check || exit 1
 
 echo ""
 echo "3/5 Building (includes Pagefind)..."
-pnpm build || exit 1
+corepack pnpm run build || exit 1
 
 echo ""
 echo "4/5 Svelte check..."
-pnpm check || exit 1
+corepack pnpm run check || exit 1
 
 echo ""
 echo "5/5 Frontmatter date validation..."
-pnpm validate:dates || exit 1
+corepack pnpm run validate:dates || exit 1
 
 echo ""
 echo "All pre-push checks passed!"

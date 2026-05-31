@@ -3,7 +3,7 @@ title: "Claude Code Agent Teams"
 description: >-
   여러 Claude Code 인스턴스를 팀으로 조율하는 실험적 기능의 설정, 패턴, 주의사항을 알아봅니다.
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-04-09'
+updated: '2026-05-20'
 tags:
   - ai-ml
   - claude-code
@@ -14,12 +14,16 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: '2026-04-09'
-translation_date: '2026-04-09'
+source_updated: '2026-05-20'
+translation_date: '2026-05-20'
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Claude Code 세션 팀 조율하기
     type: official
+  - url: "internal://claude-binary-strings/v2.1.138"
+    title: "BackendRegistry + 영속 매크로 증거 (binary strings dump)"
+    type: verified
+    notes: "strings $(which claude) 결과에서 [BackendRegistry] Selected: tmux 로그와 settings.json 바깥에 저장되는 S_()/e_() 매크로(preferTmuxOverIterm2, iterm2It2SetupComplete)를 확인"
 ---
 
 같은 PR에 대해 보안, 성능, test 커버리지 세 가지 독립적인 코드 review를 동시에 돌려야 했어요. 터미널 탭 세 개를 열고 context를 복붙하는 건 Slack으로 인턴 관리하는 느낌이었죠. Agent Teams를 쓰면 하나의 Claude 세션이 리드 역할을 하고, 팀원을 별도 tmux pane에 생성하고, 공유 작업 목록으로 조율할 수 있어요. 아이디어는 매력적이에요. 다만 실행하려면 날카로운 모서리가 어디 있는지 알아야 해요.
@@ -107,6 +111,15 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 
 **iTerm2 `ITermBackend`가 동작하지 않아요(known bug #24301).** 바이너리에 `it2 session split` 지원이 포함된 `ITermBackend`가 있지만, backend 선택 로직이 이걸 활성화하지 않아요. `teammateMode: "auto"`나 `"tmux"`를 설정해도 tmux 세션 안이 아니면 Claude Code가 조용히 `in-process`로 빠져요 -- `it2`가 설치되어 있고, Python API가 활성화되어 있고, 모든 iTerm2 환경 변수가 있어도요. v2.1.74에서 여러 번 test해서 확인했어요. `teammateMode` 설정은 세션 시작 시 스냅샷되기 때문에 세션 중간에 `settings.json`을 바꿔도 효과가 없어요. **우회 방법:** `tmux -CC`(iTerm2 control mode)를 쓰면 tmux backend를 통해 네이티브 iTerm2 pane을 쓸 수 있어요.
 
+**Backend 선택 매크로가 `settings.json` 바깥에 저장돼요 (v2.1.138 감사).** Claude Code 2.1.138에서 split pane이 여전히 안 뜨는 regression 보고가 와서, 바이너리의 string table을 들여다봤어요. `teammateMode: "tmux"` + `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` + 활성 tmux 세션이 다 갖춰져 있는데도 split이 안 됐거든요. `strings $(which claude)`를 돌리니 바이너리가 `S_()` / `e_()`라고 부르는 getter/setter 쌍이 관리하는 영속 플래그 두 개가 보였어요:
+
+- `preferTmuxOverIterm2` -- 사용자가 iTerm2 셋업 prompt에서 "Use tmux instead"를 고르면 `true`로 설정되고, `hk7()`이 읽어요.
+- `iterm2It2SetupComplete` -- `it2 session list` 검증이 성공한 뒤 `true`로 설정돼요.
+
+두 플래그 모두 `settings.json`에 없고, CLI read/write 표면도 없어요. runtime backend selector는 `process.env.TMUX`가 설정돼 있으면 stderr에 `[BackendRegistry] Selected: tmux (running inside tmux session)`을 찍어요 -- 즉, 기존 tmux pane 안에서 띄운 세션이면 `settings.json`이 뭐라고 적혀 있든 tmux backend가 이겨요.
+
+이 점이 의외였어요. `teammateMode`는 문서상 authoritative처럼 읽히지만, 실제 결정은 runtime detector가 해요. `settings.json`은 hint이지 hard override가 아니에요. 바이너리가 어떤 backend를 실제로 골랐는지 알고 싶으면, `claude --debug`로 실행하고 `TeamCreate`를 시도한 뒤 stderr에서 `[BackendRegistry] Selected:`를 grep하세요. 그 한 줄이 ground truth이고, 나머지는 다 configuration일 뿐이에요.
+
 **TeamDelete가 참조가 끊긴 tmux pane을 정리하지 않아요.** 에이전트가 종료되면 tmux pane이 새 zsh 셸로 살아 있어요. `TeamDelete`는 팀 메타데이터만 정리하고 pane은 안 건드려요. 참조가 끊긴 각 pane에 `tmux kill-pane -t %<id>`를 수동으로 실행해야 해요. 팀 작업 후 `tmux list-panes -a`로 좀비 셸이 쌓이지 않게 확인하세요.
 
 **동시에 3명 이상 spawn하면 tmux race condition이 생겨요.** 팀원을 동시에 3명 이상 생성하면 tmux `send-keys`에서 "not in a mode" error가 나요. Pane은 만들어지지만 에이전트가 시작되지 않아요. 개별적으로 다시 시도하면 보통 해결돼요. 팀원을 순차적으로(잠깐의 간격을 두고) 생성하면 문제를 아예 피할 수 있어요.
@@ -132,6 +145,7 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 - Split pane에 tmux 필요 (iTerm2 ITermBackend가 존재하지만 동작하지 않음 -- #24301)
 - tmux 없이는 팀원이 에러 없이 조용히 in-process로 빠짐
 - iTerm2 우회 방법: tmux -CC control mode로 tmux backend를 통해 네이티브 pane 사용
+- backend 선택은 `settings.json`의 `teammateMode`가 아니라 runtime detector(`process.env.TMUX`)가 결정함 (`claude --debug` + `[BackendRegistry] Selected:` grep으로 확인)
 - TeamDelete가 참조가 끊긴 tmux pane을 정리하지 않음 (수동 정리 필요)
 - 팀원 3명 이상 동시 spawn 시 race condition 발생 (개별 재시도로 해결)
 - 유휴 팀원이 다른 에이전트의 진행 중 작업을 가져갈 수 있음 (명시적 소유권 지정 필요)
@@ -158,3 +172,5 @@ Have them each review and report findings.
 Agent Teams는 실질적인 조율 문제를 해결해요: 공유 상태가 있는 codebase에서의 병렬 작업이에요. 작업 목록과 메일박스 프리미티브는 잘 설계되어 있어요. 거친 모서리는 인프라 쪽에 있어요 -- tmux pane 관리, config parsing, worktree 격리, 그리고 셋업을 조용히 다운그레이드할 수 있는 deferred tool 가시성 문제예요.
 
 가장 중요한 교훈은: 도구가 존재하지 않는다고 결론 내리기 전에 확인하세요. Claude Code의 deferred tool은 검색하기 전까지 안 보여요. 한 세션에서의 잘못된 가정 하나가 설정에 전파되어 며칠간 이후 모든 세션의 품질을 떨어뜨렸어요. 보이는 도구 목록이 아니라 `ToolSearch`로 확인하세요.
+
+두 번째 교훈은 v2.1.138 binary-strings 감사에서 나왔어요: 설정 파일은 의도를 기술하고, 동작은 runtime detector가 결정해요. 문서대로 동작하지 않을 땐 바이너리의 stderr(`claude --debug`)에서 runtime이 실제로 뭘 골랐는지를 grep하세요. `[BackendRegistry] Selected:` 줄이 ground truth이고, `settings.json`은 그렇지 않아요.

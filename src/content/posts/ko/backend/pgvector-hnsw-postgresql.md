@@ -17,13 +17,13 @@ lang: ko
 source_lang: en
 source_slug: pgvector-hnsw-postgresql
 source_updated: '2026-03-24'
-translation_date: '2026-03-24'
+translation_date: '2026-05-10'
 source_content_hash: e767390118af91ca90bd07c0817b75b09cb3ce6ee398b2ca4594218e98f7090d
 ---
 
 PostgreSQL을 이미 쓰고 있는 프로젝트에 semantic search를 추가해야 했어요. 가장 먼저 떠오른 건 Pinecone이나 Weaviate 같은 전용 vector database를 붙이는 거였는데, 서비스를 하나 더 추가한다는 건 관리할 connection이 하나 더 늘고, 비용이 늘고, 새벽 2시에 장애날 수 있는 포인트가 하나 더 생긴다는 의미잖아요. 그래서 궁금했어요 — PostgreSQL만으로 가능할까?
 
-가능해요. 답은 **pgvector**예요 — PostgreSQL extension으로, vector embedding을 저장하고 native SQL로 similarity search를 수행할 수 있어요.
+가능해요. 답은 **pgvector**였어요. PostgreSQL 확장으로 붙여 쓰면 vector embedding을 저장하고, 익숙한 SQL 그대로 유사도 검색을 돌릴 수 있어요.
 
 ## pgvector가 제공하는 것
 
@@ -44,7 +44,7 @@ LIMIT 5;
 
 ## HNSW: 빠른 근사 검색
 
-HNSW(Hierarchical Navigable Small World)는 approximate nearest neighbor search를 위한 graph 기반 인덱스 구조예요. 모든 vector를 하나하나 비교하는 대신, 계층화된 graph를 탐색해서 가까운 결과를 **O(log n)** 시간에 찾아요.
+HNSW(Hierarchical Navigable Small World)는 근사 최근접 이웃 검색을 위한 graph 기반 인덱스예요. 모든 vector를 하나씩 비교하는 대신, 계층 graph를 따라 내려가면서 가까운 결과를 **O(log n)** 안에 찾아내요.
 
 생성하는 건 SQL 한 줄이면 돼요:
 

@@ -5,13 +5,16 @@
  *   deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts
  *   deno run --allow-read --allow-env scripts/sync-from-3b.ts --check
  *   deno run --allow-read --allow-write --allow-env --allow-run scripts/sync-from-3b.ts --diff --slug=<slug>
+ *   deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts --reconcile
  *
  * Modes:
- *   (default)  Sync new + unexpanded posts. Never overwrites expanded posts.
- *   --check    Report hash mismatches for expanded posts (read-only).
- *   --diff     Show unified diff for a specific post (requires --slug=<slug>).
- *   --dry-run  Preview what would sync without writing.
- *   --verbose  Show skip reasons for each file.
+ *   (default)    Sync new + unexpanded posts. Never overwrites expanded posts.
+ *   --check      Report hash mismatches for expanded posts (read-only).
+ *   --diff       Show unified diff for a specific post (requires --slug=<slug>).
+ *   --reconcile  Clear stale needs_resync flags from 3B source frontmatter.
+ *                Writes only to source files; never touches blog posts.
+ *   --dry-run    Preview what would sync (or reconcile) without writing.
+ *   --verbose    Show skip / clear / keep reasons for each file.
  *
  * This script:
  * 1. Reads markdown files from 3B knowledge directory
@@ -453,12 +456,159 @@ async function diffPost(slug: string, _verbose: boolean) {
 	}
 }
 
+/**
+ * Surgically flip `needs_resync: true` → `needs_resync: false` inside the
+ * YAML frontmatter only, preserving the rest of the file byte-for-byte.
+ *
+ * WHY NOT stringifyYaml: round-tripping through the YAML serializer reformats
+ * tags lists, normalizes date strings to ISO datetimes, and re-quotes strings —
+ * producing 60+ line diffs for a 1-line semantic change. Surgical regex on
+ * the frontmatter substring keeps the diff to exactly one line.
+ *
+ * Returns null if the file has no frontmatter or the flag was not found
+ * (signals a no-op to the caller).
+ */
+function clearNeedsResyncInPlace(content: string): string | null {
+	const match = content.match(/^(---\n)([\s\S]*?)(\n---\n)([\s\S]*)$/);
+	if (!match) return null;
+	const [, openDelim, frontmatterRaw, closeDelim, body] = match;
+	const updatedFrontmatter = frontmatterRaw.replace(/(\n\s+needs_resync:\s*)true\b/, '$1false');
+	if (updatedFrontmatter === frontmatterRaw) return null;
+	return `${openDelim}${updatedFrontmatter}${closeDelim}${body}`;
+}
+
+/**
+ * --reconcile mode: clear stale needs_resync flags.
+ *
+ * State invariant: `blog.needs_resync: true` is meaningless in two cases:
+ *   1. `published_at` is null  → entry was never synced; "re-sync" makes no sense.
+ *   2. content hash matches the synced blog post → already up to date.
+ *
+ * This pass walks the 3B source tree, finds entries with the flag set, and
+ * clears it when one of those impossible-state conditions holds. Writes only
+ * to 3B source frontmatter; never touches blog post content.
+ *
+ * Background: prior /wrap and /blog-publish flows could leave the flag set on
+ * states the regular sync path can't reach (e.g. ready: false rejects sync
+ * before the clearer runs; hash-mismatch merges update the blog post but not
+ * the 3B source). This pass is the recovery / drift-cleanup invariant.
+ */
+async function reconcileFlags(dryRun: boolean, verbose: boolean) {
+	console.log('🔄 Reconciling stale needs_resync flags...');
+	console.log(`   Mode: ${dryRun ? 'DRY RUN' : 'APPLY'}`);
+	console.log('');
+
+	let scanned = 0;
+	let cleared = 0;
+	let kept = 0;
+	const clearedFiles: { path: string; reason: string }[] = [];
+	const keptFiles: { path: string; reason: string }[] = [];
+
+	for await (const entry of walk(SOURCE_DIR, {
+		exts: ['.md'],
+		includeDirs: false,
+	})) {
+		if (basename(entry.path).startsWith('_')) continue;
+
+		const content = await Deno.readTextFile(entry.path);
+		const { frontmatter, body } = parseFrontmatter(content);
+
+		if (!frontmatter?.blog || frontmatter.blog.needs_resync !== true) {
+			continue;
+		}
+
+		scanned++;
+		const relativePath = entry.path.replace(SOURCE_DIR + '/', '');
+
+		// Reason 1: never published — flag is logically impossible
+		if (!frontmatter.blog.published_at) {
+			clearedFiles.push({
+				path: relativePath,
+				reason: 'never published (published_at is null)',
+			});
+
+			if (!dryRun) {
+				const updated = clearNeedsResyncInPlace(content);
+				if (updated !== null) {
+					await Deno.writeTextFile(entry.path, updated);
+				}
+			}
+			cleared++;
+			continue;
+		}
+
+		// Reason 2: hash matches synced post — already current
+		const category = dirname(relativePath).split('/')[0];
+		const targetPath = join(TARGET_DIR, category, basename(entry.path));
+		const existing = await readExistingPost(targetPath);
+
+		if (existing?.frontmatter?.source_content_hash) {
+			const cleanedBody = cleanBody(body);
+			const currentHash = await computeContentHash(cleanedBody);
+
+			if (currentHash === existing.frontmatter.source_content_hash) {
+				clearedFiles.push({
+					path: relativePath,
+					reason: 'hash matches synced post (already up to date)',
+				});
+
+				if (!dryRun) {
+					const updated = clearNeedsResyncInPlace(content);
+					if (updated !== null) {
+						await Deno.writeTextFile(entry.path, updated);
+					}
+				}
+				cleared++;
+				continue;
+			}
+		}
+
+		// Otherwise: legitimate flag — keep
+		keptFiles.push({
+			path: relativePath,
+			reason: existing
+				? 'hash mismatch (real resync pending)'
+				: 'no synced post yet (real first-publish pending)',
+		});
+		kept++;
+	}
+
+	console.log('📋 Reconciliation Report');
+	console.log(`   Files with needs_resync: true scanned: ${scanned}`);
+	console.log(`   Cleared: ${cleared}`);
+	console.log(`   Kept (legitimate): ${kept}`);
+
+	if (clearedFiles.length > 0) {
+		console.log('');
+		console.log(`✅ ${dryRun ? 'Would clear' : 'Cleared'}:`);
+		for (const f of clearedFiles) {
+			console.log(`   - ${f.path}`);
+			if (verbose) console.log(`     reason: ${f.reason}`);
+		}
+	}
+
+	if (keptFiles.length > 0) {
+		console.log('');
+		console.log('🔒 Kept (legitimate flag):');
+		for (const f of keptFiles) {
+			console.log(`   - ${f.path}`);
+			if (verbose) console.log(`     reason: ${f.reason}`);
+		}
+	}
+
+	if (dryRun && cleared > 0) {
+		console.log('');
+		console.log('Run without --dry-run to apply changes');
+	}
+}
+
 async function syncPosts() {
 	const args = Deno.args;
 	const dryRun = args.includes('--dry-run');
 	const verbose = args.includes('--verbose');
 	const checkOnly = args.includes('--check');
 	const diffMode = args.includes('--diff');
+	const reconcileMode = args.includes('--reconcile');
 	const slugArg = args.find((a) => a.startsWith('--slug='))?.split('=')[1];
 
 	// --diff mode: early exit to dedicated function
@@ -469,6 +619,12 @@ async function syncPosts() {
 			Deno.exit(1);
 		}
 		await diffPost(slugArg, verbose);
+		return;
+	}
+
+	// --reconcile mode: clear stale needs_resync flags, then exit
+	if (reconcileMode) {
+		await reconcileFlags(dryRun, verbose);
 		return;
 	}
 
