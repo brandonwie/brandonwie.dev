@@ -1,9 +1,9 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env -S pnpm exec tsx
 /**
  * Translation Create Script
  *
  * Creates a Korean translation template from an English post.
- * Run: npm run translation:create -- --slug=<post-slug>
+ * Run: pnpm translation:create -- --slug=<post-slug>
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -45,7 +45,7 @@ function parseArgs(): { slug: string } {
 
 	if (!slug) {
 		console.error('\n❌ Error: --slug argument is required');
-		console.error('   Usage: npm run translation:create -- --slug=<post-slug>\n');
+		console.error('   Usage: pnpm translation:create -- --slug=<post-slug>\n');
 		process.exit(1);
 	}
 
@@ -117,7 +117,7 @@ function main() {
 	console.log('   2. Update title and description in frontmatter');
 	console.log('   3. Remove the instruction comment block');
 	console.log('   4. Set draft: false when ready');
-	console.log('   5. Run `npm run build` to verify\n');
+	console.log('   5. Run `pnpm build` to verify\n');
 }
 
 main();

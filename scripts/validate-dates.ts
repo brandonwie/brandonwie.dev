@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env -S pnpm exec tsx
 /**
  * Validate frontmatter date consistency across EN and KO posts.
  *
@@ -10,8 +10,8 @@
  *   5. KO posts: updated must match EN's updated
  *
  * Usage:
- *   npx tsx scripts/validate-dates.ts          # Report errors, exit 1 if any
- *   npx tsx scripts/validate-dates.ts --fix    # Auto-fix date mismatches (rules 3-5)
+ *   pnpm validate:dates          # Report errors, exit 1 if any
+ *   pnpm validate:dates:fix      # Auto-fix date mismatches (rules 3-5)
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';

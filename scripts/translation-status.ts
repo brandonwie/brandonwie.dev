@@ -1,9 +1,9 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env -S pnpm exec tsx
 /**
  * Translation Status Script
  *
  * Shows which English posts need Korean translations.
- * Run: npm run translation:status
+ * Run: pnpm translation:status
  */
 
 import { readdirSync, existsSync } from 'fs';
@@ -51,7 +51,7 @@ function main() {
 
 	if (enPosts.size === 0) {
 		console.log('\n⚠️  No English posts found in', EN_DIR);
-		console.log('   Run `npm run sync` first to sync posts from 3B.\n');
+		console.log('   Run `pnpm sync` first to sync posts from 3B.\n');
 		return;
 	}
 
@@ -80,7 +80,7 @@ function main() {
 		console.log('\n🔴 Needs Translation:\n');
 		for (const { slug, category } of needsTranslation) {
 			console.log(`   ${category}/${slug}`);
-			console.log(`   └─ Create: npm run translation:create -- --slug=${slug}\n`);
+			console.log(`   └─ Create: pnpm translation:create -- --slug=${slug}\n`);
 		}
 	}
 

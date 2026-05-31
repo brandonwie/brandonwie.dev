@@ -34,7 +34,7 @@
 	"search_placeholder": "글 검색...",
 	"search_results_count": "{count}개 결과",
 	"search_no_results": "\"{query}\"에 대한 결과가 없습니다",
-	"search_dev_notice": "검색은 프로덕션 빌드에서만 사용 가능합니다. `npm run build && npm run preview`로 테스트하세요.",
+	"search_dev_notice": "검색은 프로덕션 빌드에서만 사용 가능합니다. `pnpm build && pnpm preview`로 테스트하세요.",
 	"search_loading": "검색 중...",
 	"stats_title": "통계",
 	"stats_subtitle": "사이트 통계",

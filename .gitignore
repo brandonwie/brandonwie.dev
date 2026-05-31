@@ -32,8 +32,9 @@ npm-debug.log*
 .cache/
 .turbo/
 
-# Lock files
+# Lock files — this project uses pnpm as its package manager
 yarn.lock
+package-lock.json
 .playwright-mcp/
 
 # Claude Code

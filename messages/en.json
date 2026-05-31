@@ -34,7 +34,7 @@
 	"search_placeholder": "Search posts...",
 	"search_results_count": "{count} results",
 	"search_no_results": "No results found for \"{query}\"",
-	"search_dev_notice": "Search is only available in production builds. Run `npm run build && npm run preview` to test.",
+	"search_dev_notice": "Search is only available in production builds. Run `pnpm build && pnpm preview` to test.",
 	"search_loading": "Searching...",
 	"stats_title": "Stats",
 	"stats_subtitle": "site stats",

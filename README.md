@@ -23,18 +23,22 @@ Personal blog with a terminal-style interface, built with SvelteKit.
 
 ## Development
 
+This project uses [pnpm](https://pnpm.io/) as its package manager.
+The exact version is pinned via `"packageManager"` in `package.json`
+(Node 16.10+ picks it up automatically through corepack).
+
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Start dev server
-npm run dev
+pnpm dev
 
 # Build for production
-npm run build
+pnpm build
 
 # Preview production build
-npm run preview
+pnpm preview
 ```
 
 ## Content Management
@@ -44,17 +48,17 @@ npm run preview
 English posts are synced from the 3B knowledge base:
 
 ```bash
-npm run sync
+pnpm sync
 ```
 
 ### Translation Workflow
 
 ```bash
 # Check what needs translation
-npm run translation:status
+pnpm translation:status
 
 # Create Korean translation template
-npm run translation:create -- --slug=<post-slug>
+pnpm translation:create -- --slug=<post-slug>
 
 # Edit the generated file in src/content/posts/ko/
 # Set draft: false when ready
