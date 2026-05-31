@@ -1,0 +1,1534 @@
+{
+  "model_generated": "2026-05-30",
+  "snapshot_built_at": "2026-05-31T08:15:48.788Z",
+  "layers": [
+    {
+      "id": "source-of-truth",
+      "name": "Source of Truth (.agents/)",
+      "description": "The single canonical store for all shared agent configuration and content stores — rules, skills, command-permission policy, buffer, friction log. Everything is authored here exactly once."
+    },
+    {
+      "id": "generators-sync",
+      "name": "Generators + Cross-Agent Sync",
+      "description": "Node generators that read frontmatter-gated SoT inputs and project them into per-agent profiles, permission files, and ignore lists; pre-commit/CI drift gates keep targets consistent."
+    },
+    {
+      "id": "mounts-runtimes",
+      "name": "Symlink Mounts + Agent Runtimes",
+      "description": "Compatibility back-symlinks/hardlinks that resolve the SoT at each CLI's hardcoded mount, plus the three agent runtimes (Claude Code, Codex CLI, AGY) and the generated docs they load."
+    },
+    {
+      "id": "content-lifecycle",
+      "name": "Content + Knowledge Lifecycle",
+      "description": "The Zettelkasten knowledge base and the six-layer progressive-refinement pipeline that promotes ephemeral session work upward to durable, publishable entries."
+    },
+    {
+      "id": "governance-audit",
+      "name": "Governance, HITL + Self-Improvement",
+      "description": "The three-gate HITL/audit ladder, the immutable decision (ADR) registry, and the friction lifecycle that turns one-off mistakes into governed, measured fixes."
+    },
+    {
+      "id": "tooling-mcp-layer",
+      "name": "Tooling + MCP",
+      "description": "The external code-intelligence and doc-conversion stack (graphify, code-review-graph, Serena, context-mode, markitdown) plus model-tier routing and the asdf/brew runtime contract."
+    }
+  ],
+  "subsystems": [
+    {
+      "key": "rules",
+      "name": "Rules Engine + Routing",
+      "display_one_liner": "Frontmatter-gated rule files decide what loads — always-on vs lazy — per agent.",
+      "public_safe": true
+    },
+    {
+      "key": "skills",
+      "name": "Skills System",
+      "display_one_liner": "Markdown-defined skills, signal-routed for Claude and mirrored to the other agents.",
+      "public_safe": true
+    },
+    {
+      "key": "sot-sync",
+      "name": "Cross-Agent SoT + Sync Engine",
+      "display_one_liner": "One canonical config store; a generator projects every edit into each agent profile.",
+      "public_safe": true
+    },
+    {
+      "key": "knowledge",
+      "name": "Zettelkasten Knowledge Base",
+      "display_one_liner": "An atomic, forward-linked Zettelkasten knowledge base — backlinks computed, never stored.",
+      "public_safe": false
+    },
+    {
+      "key": "info-lifecycle",
+      "name": "Information Layer + Progressive Refinement",
+      "display_one_liner": "A folder-as-destiny pipeline that refines content through progressive layers.",
+      "public_safe": true
+    },
+    {
+      "key": "journals-wrap",
+      "name": "Journal Rollup + Wrap Workflow",
+      "display_one_liner": "A session engine: buffer to wrap to daily journal to knowledge, with clean-slate rollups.",
+      "public_safe": false
+    },
+    {
+      "key": "projects-tasks",
+      "name": "Projects + Task Lifecycle + Worktrees",
+      "display_one_liner": "Task setup gates work into isolated worktrees with explicit ownership and locks.",
+      "public_safe": false
+    },
+    {
+      "key": "governance-hitl",
+      "name": "Governance, HITL Gates + Audit",
+      "display_one_liner": "A three-gate human-in-the-loop ladder governing every architecture-changing action.",
+      "public_safe": true
+    },
+    {
+      "key": "decisions-adr",
+      "name": "Decision System (ADRs + Rule-6 READMEs)",
+      "display_one_liner": "An immutable ADR registry plus a per-folder decision-doc convention.",
+      "public_safe": true
+    },
+    {
+      "key": "friction",
+      "name": "Friction Lifecycle",
+      "display_one_liner": "Captured friction accumulates into scored patterns and graduates into governed fixes.",
+      "public_safe": false
+    },
+    {
+      "key": "tooling-mcp",
+      "name": "MCP + Graph + Runtime Tooling",
+      "display_one_liner": "A layered code-intelligence and doc-ingestion stack, each layer owning one waste vector.",
+      "public_safe": true
+    }
+  ],
+  "nodes": [
+    {
+      "id": "sub-rules",
+      "kind": "subsystem",
+      "layer": "source-of-truth",
+      "subsystem": "rules",
+      "name": "Rules Engine + Routing"
+    },
+    {
+      "id": "sub-skills",
+      "kind": "subsystem",
+      "layer": "source-of-truth",
+      "subsystem": "skills",
+      "name": "Skills System"
+    },
+    {
+      "id": "sub-sot-sync",
+      "kind": "subsystem",
+      "layer": "generators-sync",
+      "subsystem": "sot-sync",
+      "name": "Cross-Agent SoT + Sync Engine"
+    },
+    {
+      "id": "sub-knowledge",
+      "kind": "subsystem",
+      "layer": "content-lifecycle",
+      "subsystem": "knowledge",
+      "name": "Zettelkasten Knowledge Base"
+    },
+    {
+      "id": "sub-info-lifecycle",
+      "kind": "subsystem",
+      "layer": "content-lifecycle",
+      "subsystem": "info-lifecycle",
+      "name": "Information Layer + Progressive Refinement"
+    },
+    {
+      "id": "sub-journals-wrap",
+      "kind": "subsystem",
+      "layer": "content-lifecycle",
+      "subsystem": "journals-wrap",
+      "name": "Journal Rollup + Wrap Workflow"
+    },
+    {
+      "id": "sub-projects-tasks",
+      "kind": "subsystem",
+      "layer": "content-lifecycle",
+      "subsystem": "projects-tasks",
+      "name": "Projects + Task Lifecycle + Worktrees"
+    },
+    {
+      "id": "sub-governance-hitl",
+      "kind": "subsystem",
+      "layer": "governance-audit",
+      "subsystem": "governance-hitl",
+      "name": "Governance, HITL Gates + Audit"
+    },
+    {
+      "id": "sub-decisions-adr",
+      "kind": "subsystem",
+      "layer": "governance-audit",
+      "subsystem": "decisions-adr",
+      "name": "Decision System"
+    },
+    {
+      "id": "sub-friction",
+      "kind": "subsystem",
+      "layer": "governance-audit",
+      "subsystem": "friction",
+      "name": "Friction Lifecycle"
+    },
+    {
+      "id": "sub-tooling-mcp",
+      "kind": "subsystem",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "MCP + Graph + Runtime Tooling"
+    },
+    {
+      "id": "agents-dir",
+      "kind": "store",
+      "layer": "source-of-truth",
+      "subsystem": "sot-sync",
+      "name": "SoT root"
+    },
+    {
+      "id": "rules-dir",
+      "kind": "store",
+      "layer": "source-of-truth",
+      "subsystem": "rules",
+      "name": "Rules Dir"
+    },
+    {
+      "id": "rules-index",
+      "kind": "store",
+      "layer": "source-of-truth",
+      "subsystem": "rules",
+      "name": "Rules Index"
+    },
+    {
+      "id": "yaml-schema",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "rules",
+      "name": "Yaml Schema"
+    },
+    {
+      "id": "routing-field-schema",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "rules",
+      "name": "Routing Field Schema"
+    },
+    {
+      "id": "change-discipline",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "rules",
+      "name": "Change Discipline"
+    },
+    {
+      "id": "tier-model-rule",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "rules",
+      "name": "Tier Model Rule"
+    },
+    {
+      "id": "intent-resolution",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "rules",
+      "name": "Intent Resolution"
+    },
+    {
+      "id": "information-layer-rule",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "info-lifecycle",
+      "name": "Information Layer Rule"
+    },
+    {
+      "id": "skills-dir",
+      "kind": "store",
+      "layer": "source-of-truth",
+      "subsystem": "skills",
+      "name": "Skills Dir"
+    },
+    {
+      "id": "skill-caps-schema",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "skills",
+      "name": "Skill Caps Schema"
+    },
+    {
+      "id": "kfm-table",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "friction",
+      "name": "Kfm Table"
+    },
+    {
+      "id": "hitl-rule",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "governance-hitl",
+      "name": "Hitl Rule"
+    },
+    {
+      "id": "concurrency-rule",
+      "kind": "doc",
+      "layer": "source-of-truth",
+      "subsystem": "projects-tasks",
+      "name": "Concurrency Rule"
+    },
+    {
+      "id": "sync-agents-gen",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "sot-sync",
+      "name": "Sync Agents Gen"
+    },
+    {
+      "id": "sync-perms-gen",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "governance-hitl",
+      "name": "Sync Perms Gen"
+    },
+    {
+      "id": "report-friction-cli",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "friction",
+      "name": "Report Friction Cli"
+    },
+    {
+      "id": "buffer-write",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "friction",
+      "name": "Buffer Write"
+    },
+    {
+      "id": "regen-active-status",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "journals-wrap",
+      "name": "Regen Active Status"
+    },
+    {
+      "id": "agy-skill-adapter-gen",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "skills",
+      "name": "Agy Skill Adapter Gen"
+    },
+    {
+      "id": "skill-twin-check",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "skills",
+      "name": "Skill Twin Check"
+    },
+    {
+      "id": "gate-b-validator",
+      "kind": "gate",
+      "layer": "generators-sync",
+      "subsystem": "governance-hitl",
+      "name": "Gate B Validator"
+    },
+    {
+      "id": "friction-validator",
+      "kind": "gate",
+      "layer": "generators-sync",
+      "subsystem": "friction",
+      "name": "Friction Validator"
+    },
+    {
+      "id": "rule6-checker",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "decisions-adr",
+      "name": "Rule6 Checker"
+    },
+    {
+      "id": "worktree-path-helper",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "projects-tasks",
+      "name": "Worktree Path Helper"
+    },
+    {
+      "id": "privacy-matrix-lib",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "info-lifecycle",
+      "name": "Privacy Matrix Lib"
+    },
+    {
+      "id": "graphifyignore-gen",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "tooling-mcp",
+      "name": "Graphifyignore Gen"
+    },
+    {
+      "id": "system-status-review",
+      "kind": "generator",
+      "layer": "generators-sync",
+      "subsystem": "governance-hitl",
+      "name": "System Status Review"
+    },
+    {
+      "id": "sync-doctor",
+      "kind": "gate",
+      "layer": "generators-sync",
+      "subsystem": "governance-hitl",
+      "name": "Sync Doctor"
+    },
+    {
+      "id": "precommit-hook",
+      "kind": "gate",
+      "layer": "generators-sync",
+      "subsystem": "sot-sync",
+      "name": "Precommit Hook"
+    },
+    {
+      "id": "claude-back-symlinks",
+      "kind": "store",
+      "layer": "mounts-runtimes",
+      "subsystem": "sot-sync",
+      "name": "back-symlinks"
+    },
+    {
+      "id": "claude-template",
+      "kind": "doc",
+      "layer": "mounts-runtimes",
+      "subsystem": "sot-sync",
+      "name": "Claude Template"
+    },
+    {
+      "id": "agents-md",
+      "kind": "doc",
+      "layer": "mounts-runtimes",
+      "subsystem": "sot-sync",
+      "name": "Agents Md"
+    },
+    {
+      "id": "gemini-md",
+      "kind": "doc",
+      "layer": "mounts-runtimes",
+      "subsystem": "sot-sync",
+      "name": "Gemini Md"
+    },
+    {
+      "id": "codex-adapters",
+      "kind": "doc",
+      "layer": "mounts-runtimes",
+      "subsystem": "skills",
+      "name": "Codex Adapters"
+    },
+    {
+      "id": "agy-skill-manifest",
+      "kind": "doc",
+      "layer": "mounts-runtimes",
+      "subsystem": "skills",
+      "name": "Agy Skill Manifest"
+    },
+    {
+      "id": "runtime-claude",
+      "kind": "runtime",
+      "layer": "mounts-runtimes",
+      "subsystem": "sot-sync",
+      "name": "Claude Code runtime"
+    },
+    {
+      "id": "runtime-codex",
+      "kind": "runtime",
+      "layer": "mounts-runtimes",
+      "subsystem": "sot-sync",
+      "name": "Codex CLI runtime"
+    },
+    {
+      "id": "runtime-agy",
+      "kind": "runtime",
+      "layer": "mounts-runtimes",
+      "subsystem": "sot-sync",
+      "name": "AGY runtime"
+    },
+    {
+      "id": "knowledge-store",
+      "kind": "store",
+      "layer": "content-lifecycle",
+      "subsystem": "knowledge",
+      "name": "Knowledge Store"
+    },
+    {
+      "id": "knowledge-categories",
+      "kind": "doc",
+      "layer": "content-lifecycle",
+      "subsystem": "knowledge",
+      "name": "Knowledge Categories"
+    },
+    {
+      "id": "knowledge-index",
+      "kind": "store",
+      "layer": "content-lifecycle",
+      "subsystem": "knowledge",
+      "name": "Knowledge Index"
+    },
+    {
+      "id": "tmp-intake",
+      "kind": "store",
+      "layer": "content-lifecycle",
+      "subsystem": "info-lifecycle",
+      "name": "Tmp Intake"
+    },
+    {
+      "id": "decisions-store",
+      "kind": "store",
+      "layer": "governance-audit",
+      "subsystem": "decisions-adr",
+      "name": "Decisions Store"
+    },
+    {
+      "id": "skill-wrap",
+      "kind": "runtime",
+      "layer": "content-lifecycle",
+      "subsystem": "journals-wrap",
+      "name": "/wrap skill"
+    },
+    {
+      "id": "skill-rollup",
+      "kind": "runtime",
+      "layer": "content-lifecycle",
+      "subsystem": "journals-wrap",
+      "name": "/rollup skill"
+    },
+    {
+      "id": "skill-task-starter",
+      "kind": "runtime",
+      "layer": "content-lifecycle",
+      "subsystem": "projects-tasks",
+      "name": "/task-starter skill"
+    },
+    {
+      "id": "skill-setup-worktree",
+      "kind": "runtime",
+      "layer": "content-lifecycle",
+      "subsystem": "projects-tasks",
+      "name": "/setup-worktree skill"
+    },
+    {
+      "id": "skill-archive-task",
+      "kind": "runtime",
+      "layer": "content-lifecycle",
+      "subsystem": "knowledge",
+      "name": "/archive-task skill"
+    },
+    {
+      "id": "skill-blog-publish",
+      "kind": "runtime",
+      "layer": "content-lifecycle",
+      "subsystem": "info-lifecycle",
+      "name": "/blog-publish skill"
+    },
+    {
+      "id": "skill-pr-creator",
+      "kind": "runtime",
+      "layer": "content-lifecycle",
+      "subsystem": "projects-tasks",
+      "name": "/pr-creator skill"
+    },
+    {
+      "id": "skill-system-status",
+      "kind": "runtime",
+      "layer": "governance-audit",
+      "subsystem": "governance-hitl",
+      "name": "/system-status skill"
+    },
+    {
+      "id": "gate-a",
+      "kind": "gate",
+      "layer": "governance-audit",
+      "subsystem": "governance-hitl",
+      "name": "Gate A — concurrency locks"
+    },
+    {
+      "id": "gate-b",
+      "kind": "gate",
+      "layer": "governance-audit",
+      "subsystem": "governance-hitl",
+      "name": "Gate B — pre-mutation HITL"
+    },
+    {
+      "id": "gate-c",
+      "kind": "gate",
+      "layer": "governance-audit",
+      "subsystem": "governance-hitl",
+      "name": "Gate C — periodic audit review"
+    },
+    {
+      "id": "mcp-config",
+      "kind": "doc",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "Mcp Config"
+    },
+    {
+      "id": "graphify",
+      "kind": "runtime",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "graphify"
+    },
+    {
+      "id": "graphify-out",
+      "kind": "store",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "Graphify Out"
+    },
+    {
+      "id": "code-review-graph",
+      "kind": "runtime",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "code-review-graph"
+    },
+    {
+      "id": "serena",
+      "kind": "runtime",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "Serena"
+    },
+    {
+      "id": "context-mode",
+      "kind": "runtime",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "context-mode"
+    },
+    {
+      "id": "markitdown",
+      "kind": "runtime",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "markitdown"
+    },
+    {
+      "id": "model-routing-rule",
+      "kind": "doc",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "Model Routing Rule"
+    },
+    {
+      "id": "runtime-env-rule",
+      "kind": "doc",
+      "layer": "tooling-mcp-layer",
+      "subsystem": "tooling-mcp",
+      "name": "Runtime Env Rule"
+    }
+  ],
+  "edges": [
+    {
+      "from": "rules-dir",
+      "to": "agents-dir",
+      "kind": "dependency",
+      "label": "lives under"
+    },
+    {
+      "from": "skills-dir",
+      "to": "agents-dir",
+      "kind": "dependency",
+      "label": "lives under"
+    },
+    {
+      "from": "sub-rules",
+      "to": "rules-dir",
+      "kind": "dependency",
+      "label": "manages"
+    },
+    {
+      "from": "rules-dir",
+      "to": "rules-index",
+      "kind": "reads",
+      "label": "registered in"
+    },
+    {
+      "from": "rules-dir",
+      "to": "yaml-schema",
+      "kind": "dependency",
+      "label": "frontmatter spec"
+    },
+    {
+      "from": "rules-dir",
+      "to": "routing-field-schema",
+      "kind": "dependency",
+      "label": "routed-layer gate"
+    },
+    {
+      "from": "change-discipline",
+      "to": "rules-dir",
+      "kind": "dependency",
+      "label": "universal rule in"
+    },
+    {
+      "from": "tier-model-rule",
+      "to": "rules-dir",
+      "kind": "dependency",
+      "label": "rule in"
+    },
+    {
+      "from": "intent-resolution",
+      "to": "rules-dir",
+      "kind": "dependency",
+      "label": "rule in"
+    },
+    {
+      "from": "information-layer-rule",
+      "to": "rules-dir",
+      "kind": "dependency",
+      "label": "rule in"
+    },
+    {
+      "from": "hitl-rule",
+      "to": "rules-dir",
+      "kind": "dependency",
+      "label": "rule in"
+    },
+    {
+      "from": "concurrency-rule",
+      "to": "rules-dir",
+      "kind": "dependency",
+      "label": "rule in"
+    },
+    {
+      "from": "kfm-table",
+      "to": "rules-dir",
+      "kind": "dependency",
+      "label": "rule in"
+    },
+    {
+      "from": "sub-skills",
+      "to": "skills-dir",
+      "kind": "dependency",
+      "label": "manages"
+    },
+    {
+      "from": "skills-dir",
+      "to": "skill-caps-schema",
+      "kind": "dependency",
+      "label": "caps schema"
+    },
+    {
+      "from": "sub-sot-sync",
+      "to": "sync-agents-gen",
+      "kind": "dependency",
+      "label": "drives"
+    },
+    {
+      "from": "rules-dir",
+      "to": "sync-agents-gen",
+      "kind": "dataflow",
+      "label": "rule bodies in"
+    },
+    {
+      "from": "sync-agents-gen",
+      "to": "claude-template",
+      "kind": "generates",
+      "label": "inline + router AUTO-GEN"
+    },
+    {
+      "from": "sync-agents-gen",
+      "to": "agents-md",
+      "kind": "generates",
+      "label": "inline + router AUTO-GEN"
+    },
+    {
+      "from": "sync-agents-gen",
+      "to": "gemini-md",
+      "kind": "generates",
+      "label": "inline + router AUTO-GEN"
+    },
+    {
+      "from": "sync-agents-gen",
+      "to": "precommit-hook",
+      "kind": "triggers",
+      "label": "drift gate on staged rules"
+    },
+    {
+      "from": "precommit-hook",
+      "to": "sync-agents-gen",
+      "kind": "triggers",
+      "label": "re-runs on commit"
+    },
+    {
+      "from": "claude-template",
+      "to": "claude-back-symlinks",
+      "kind": "symlink",
+      "label": "resolved via"
+    },
+    {
+      "from": "claude-back-symlinks",
+      "to": "agents-dir",
+      "kind": "symlink",
+      "label": "back-symlink to"
+    },
+    {
+      "from": "claude-template",
+      "to": "runtime-claude",
+      "kind": "reads",
+      "label": "loaded by"
+    },
+    {
+      "from": "agents-md",
+      "to": "runtime-codex",
+      "kind": "reads",
+      "label": "loaded by"
+    },
+    {
+      "from": "gemini-md",
+      "to": "runtime-agy",
+      "kind": "reads",
+      "label": "loaded by"
+    },
+    {
+      "from": "skills-dir",
+      "to": "agy-skill-adapter-gen",
+      "kind": "dataflow",
+      "label": "canonical input"
+    },
+    {
+      "from": "agy-skill-adapter-gen",
+      "to": "agy-skill-manifest",
+      "kind": "generates",
+      "label": "emits sha256 manifest"
+    },
+    {
+      "from": "agy-skill-manifest",
+      "to": "runtime-agy",
+      "kind": "reads",
+      "label": "adapters loaded by"
+    },
+    {
+      "from": "skills-dir",
+      "to": "codex-adapters",
+      "kind": "dataflow",
+      "label": "version-pinned copy"
+    },
+    {
+      "from": "codex-adapters",
+      "to": "runtime-codex",
+      "kind": "reads",
+      "label": "loaded by"
+    },
+    {
+      "from": "skills-dir",
+      "to": "runtime-claude",
+      "kind": "symlink",
+      "label": "symlink-mounted to"
+    },
+    {
+      "from": "skill-twin-check",
+      "to": "precommit-hook",
+      "kind": "triggers",
+      "label": "enforced at"
+    },
+    {
+      "from": "runtime-codex",
+      "to": "report-friction-cli",
+      "kind": "writes",
+      "label": "captures friction via"
+    },
+    {
+      "from": "runtime-agy",
+      "to": "report-friction-cli",
+      "kind": "writes",
+      "label": "captures friction via"
+    },
+    {
+      "from": "report-friction-cli",
+      "to": "buffer-write",
+      "kind": "writes",
+      "label": "locked append"
+    },
+    {
+      "from": "sub-friction",
+      "to": "report-friction-cli",
+      "kind": "dependency",
+      "label": "capture CLI"
+    },
+    {
+      "from": "skill-wrap",
+      "to": "knowledge-store",
+      "kind": "writes",
+      "label": "promotes evergreen entries"
+    },
+    {
+      "from": "skill-wrap",
+      "to": "buffer-write",
+      "kind": "triggers",
+      "label": "clears buffer after ingest"
+    },
+    {
+      "from": "skill-wrap",
+      "to": "regen-active-status",
+      "kind": "triggers",
+      "label": "regenerates dashboard"
+    },
+    {
+      "from": "skill-wrap",
+      "to": "skill-rollup",
+      "kind": "triggers",
+      "label": "triggers when due"
+    },
+    {
+      "from": "sub-journals-wrap",
+      "to": "skill-wrap",
+      "kind": "dependency",
+      "label": "session-end engine"
+    },
+    {
+      "from": "sub-journals-wrap",
+      "to": "skill-rollup",
+      "kind": "dependency",
+      "label": "rollup engine"
+    },
+    {
+      "from": "friction-validator",
+      "to": "precommit-hook",
+      "kind": "triggers",
+      "label": "strict block at"
+    },
+    {
+      "from": "tmp-intake",
+      "to": "knowledge-store",
+      "kind": "dataflow",
+      "label": "promote before context fades"
+    },
+    {
+      "from": "skill-archive-task",
+      "to": "knowledge-store",
+      "kind": "writes",
+      "label": "distills task into entries"
+    },
+    {
+      "from": "knowledge-store",
+      "to": "knowledge-categories",
+      "kind": "reads",
+      "label": "classified by taxonomy"
+    },
+    {
+      "from": "knowledge-store",
+      "to": "knowledge-index",
+      "kind": "dataflow",
+      "label": "indexed into"
+    },
+    {
+      "from": "sub-knowledge",
+      "to": "knowledge-store",
+      "kind": "dependency",
+      "label": "owns entries"
+    },
+    {
+      "from": "information-layer-rule",
+      "to": "privacy-matrix-lib",
+      "kind": "dataflow",
+      "label": "matrix sourced into"
+    },
+    {
+      "from": "privacy-matrix-lib",
+      "to": "graphifyignore-gen",
+      "kind": "reads",
+      "label": "feeds privacy gate"
+    },
+    {
+      "from": "privacy-matrix-lib",
+      "to": "graphify",
+      "kind": "reads",
+      "label": "shared loader"
+    },
+    {
+      "from": "sub-info-lifecycle",
+      "to": "information-layer-rule",
+      "kind": "dependency",
+      "label": "convention SoT"
+    },
+    {
+      "from": "tier-model-rule",
+      "to": "sub-info-lifecycle",
+      "kind": "dependency",
+      "label": "staleness enum"
+    },
+    {
+      "from": "skill-task-starter",
+      "to": "skill-setup-worktree",
+      "kind": "triggers",
+      "label": "routes branch setup"
+    },
+    {
+      "from": "skill-setup-worktree",
+      "to": "worktree-path-helper",
+      "kind": "triggers",
+      "label": "computes canonical path"
+    },
+    {
+      "from": "skill-task-starter",
+      "to": "skill-pr-creator",
+      "kind": "triggers",
+      "label": "PR after implementation"
+    },
+    {
+      "from": "sub-projects-tasks",
+      "to": "skill-task-starter",
+      "kind": "dependency",
+      "label": "task-init dispatcher"
+    },
+    {
+      "from": "decisions-store",
+      "to": "rule6-checker",
+      "kind": "reads",
+      "label": "Rule-6 README enforced"
+    },
+    {
+      "from": "rule6-checker",
+      "to": "skill-wrap",
+      "kind": "triggers",
+      "label": "scaffold offer at /wrap"
+    },
+    {
+      "from": "decisions-store",
+      "to": "knowledge-store",
+      "kind": "dataflow",
+      "label": "bidirectional related links"
+    },
+    {
+      "from": "sub-decisions-adr",
+      "to": "decisions-store",
+      "kind": "dependency",
+      "label": "ADR registry"
+    },
+    {
+      "from": "decisions-store",
+      "to": "gate-b",
+      "kind": "triggers",
+      "label": "in-scope; amendment"
+    },
+    {
+      "from": "gate-b",
+      "to": "rules-dir",
+      "kind": "triggers",
+      "label": "fires on rule edits"
+    },
+    {
+      "from": "gate-b",
+      "to": "skills-dir",
+      "kind": "triggers",
+      "label": "fires on skill edits"
+    },
+    {
+      "from": "gate-b",
+      "to": "gate-b-validator",
+      "kind": "triggers",
+      "label": "validated at pre-commit"
+    },
+    {
+      "from": "gate-b-validator",
+      "to": "precommit-hook",
+      "kind": "triggers",
+      "label": "position-III validator"
+    },
+    {
+      "from": "hitl-rule",
+      "to": "gate-b",
+      "kind": "dependency",
+      "label": "defines contract"
+    },
+    {
+      "from": "hitl-rule",
+      "to": "gate-b",
+      "kind": "triggers",
+      "label": "self-reinforce on own edit"
+    },
+    {
+      "from": "sync-doctor",
+      "to": "system-status-review",
+      "kind": "reads",
+      "label": "9-category health input"
+    },
+    {
+      "from": "system-status-review",
+      "to": "skill-system-status",
+      "kind": "generates",
+      "label": "per-layer verdicts"
+    },
+    {
+      "from": "gate-c",
+      "to": "skill-system-status",
+      "kind": "dependency",
+      "label": "periodic review surface"
+    },
+    {
+      "from": "sub-governance-hitl",
+      "to": "gate-b",
+      "kind": "dependency",
+      "label": "central HITL gate"
+    },
+    {
+      "from": "sub-governance-hitl",
+      "to": "gate-a",
+      "kind": "dependency",
+      "label": "concurrency gate"
+    },
+    {
+      "from": "sub-governance-hitl",
+      "to": "gate-c",
+      "kind": "dependency",
+      "label": "audit gate"
+    },
+    {
+      "from": "sync-doctor",
+      "to": "precommit-hook",
+      "kind": "triggers",
+      "label": "pre-push health gate"
+    },
+    {
+      "from": "mcp-config",
+      "to": "code-review-graph",
+      "kind": "dependency",
+      "label": "declares server"
+    },
+    {
+      "from": "mcp-config",
+      "to": "markitdown",
+      "kind": "dependency",
+      "label": "declares server"
+    },
+    {
+      "from": "mcp-config",
+      "to": "runtime-claude",
+      "kind": "reads",
+      "label": "MCP servers reach"
+    },
+    {
+      "from": "graphify",
+      "to": "graphify-out",
+      "kind": "generates",
+      "label": "regenerates graph"
+    },
+    {
+      "from": "graphifyignore-gen",
+      "to": "graphify",
+      "kind": "reads",
+      "label": "privacy exclude list"
+    },
+    {
+      "from": "code-review-graph",
+      "to": "runtime-claude",
+      "kind": "triggers",
+      "label": "PostToolUse graph update"
+    },
+    {
+      "from": "serena",
+      "to": "runtime-codex",
+      "kind": "reads",
+      "label": "shared daemon for"
+    },
+    {
+      "from": "serena",
+      "to": "runtime-agy",
+      "kind": "reads",
+      "label": "shared daemon for"
+    },
+    {
+      "from": "context-mode",
+      "to": "runtime-claude",
+      "kind": "dataflow",
+      "label": "keeps output out of context"
+    },
+    {
+      "from": "sub-tooling-mcp",
+      "to": "mcp-config",
+      "kind": "dependency",
+      "label": "MCP inventory"
+    },
+    {
+      "from": "sub-tooling-mcp",
+      "to": "graphify",
+      "kind": "dependency",
+      "label": "repo-macro layer"
+    },
+    {
+      "from": "model-routing-rule",
+      "to": "runtime-claude",
+      "kind": "dependency",
+      "label": "tier defaults for"
+    },
+    {
+      "from": "runtime-env-rule",
+      "to": "agents-dir",
+      "kind": "dependency",
+      "label": "runtime contract rule"
+    },
+    {
+      "from": "sync-agents-gen",
+      "to": "information-layer-rule",
+      "kind": "generates",
+      "label": "lazy-router propagation"
+    },
+    {
+      "from": "intent-resolution",
+      "to": "sync-agents-gen",
+      "kind": "reads",
+      "label": "intent block validated by"
+    },
+    {
+      "from": "skill-wrap",
+      "to": "decisions-store",
+      "kind": "writes",
+      "label": "routes non-trivial decisions"
+    }
+  ],
+  "blog_series": [
+    {
+      "order": 1,
+      "slug": "one-folder-three-agents",
+      "title": "One Folder, Three Agents: The .agents/ Source of Truth",
+      "status": "published"
+    },
+    {
+      "order": 2,
+      "slug": "rules-that-route-themselves",
+      "title": "Rules That Route Themselves: Frontmatter as the Loader",
+      "status": "planned"
+    },
+    {
+      "order": 3,
+      "slug": "skills-three-transports",
+      "title": "Same Skill, Three Transport Physics",
+      "status": "planned"
+    },
+    {
+      "order": 4,
+      "slug": "computed-backlinks-zettelkasten",
+      "title": "Forward Links Only: A Zettelkasten Where Backlinks Are Computed",
+      "status": "planned"
+    },
+    {
+      "order": 5,
+      "slug": "folder-is-destiny",
+      "title": "Folder Is Destiny: A Six-Layer Information Lifecycle",
+      "status": "planned"
+    },
+    {
+      "order": 6,
+      "slug": "wrap-and-rollup",
+      "title": "The Session Engine: /wrap, Clean-Slate Rollups, and a Cross-Session Buffer",
+      "status": "planned"
+    },
+    {
+      "order": 7,
+      "slug": "parallel-agents-no-collisions",
+      "title": "Parallel Agents Without Collisions: Tasks, Worktrees, and Locks",
+      "status": "planned"
+    },
+    {
+      "order": 8,
+      "slug": "three-gates-and-an-audit-log",
+      "title": "Three Gates and an Audit Log: HITL for an Agent Harness",
+      "status": "planned"
+    },
+    {
+      "order": 9,
+      "slug": "a-harness-that-fixes-itself",
+      "title": "A Harness That Fixes Itself — And Prunes Its Own Fixes",
+      "status": "planned"
+    },
+    {
+      "order": 10,
+      "slug": "the-token-stack",
+      "title": "The Token Stack: Four Layers of Code Intelligence Without Re-Scanning",
+      "status": "planned"
+    }
+  ],
+  "evolution": [
+    {
+      "id": "ADR-001",
+      "title": "Friction Feedback Loop",
+      "date": "2026-02-12"
+    },
+    {
+      "id": "ADR-002",
+      "title": "Regex Permission Hook",
+      "date": "2026-02-19"
+    },
+    {
+      "id": "ADR-003",
+      "title": "Empty Deny, All in Ask",
+      "date": "2026-03-12"
+    },
+    {
+      "id": "ADR-004",
+      "title": "RTK Hook Removal",
+      "date": "2026-03-21"
+    },
+    {
+      "id": "ADR-005",
+      "title": "QMD MCP Server Removal",
+      "date": "2026-03-29"
+    },
+    {
+      "id": "ADR-006",
+      "title": "Storm Brainstorm Engine",
+      "date": "2026-04-08"
+    },
+    {
+      "id": "ADR-007",
+      "title": "Claude-Forge Merge into 3B Workspace",
+      "date": "2026-04-08"
+    },
+    {
+      "id": "ADR-008",
+      "title": "RTK Hook Re-enable with Defense",
+      "date": "2026-04-09"
+    },
+    {
+      "id": "ADR-009",
+      "title": "Retire Agent Teams + Restore Symlink",
+      "date": "2026-04-17"
+    },
+    {
+      "id": "ADR-010",
+      "title": "Retire Pattern A (Forge Theme Saturation) for Apply-over-Shelve",
+      "date": "2026-04-17"
+    },
+    {
+      "id": "ADR-011",
+      "title": "Retire Storm Brainstorm Engine (superseded by graphify)",
+      "date": "2026-04-18"
+    },
+    {
+      "id": "ADR-012",
+      "title": "Per-project Claude rules in 3B subdirectory, symlinked",
+      "date": "2026-04-18"
+    },
+    {
+      "id": "ADR-013",
+      "title": "claude-hud v0.0.12 pin + three-defense pattern",
+      "date": "2026-04-21"
+    },
+    {
+      "id": "ADR-014",
+      "title": "Cross-Agent SoT Folder; Phase 1 + Phase 2 sub-phases) executed 2026-04-27",
+      "date": "2026-04-27"
+    },
+    {
+      "id": "ADR-015",
+      "title": "Codex broader cross-agent sharing via routing + sync generator",
+      "date": "2026-04-27"
+    },
+    {
+      "id": "ADR-016",
+      "title": "Cross-agent command permission policy generator",
+      "date": "2026-04-28"
+    },
+    {
+      "id": "ADR-017",
+      "title": "claude-mem definitive removal (attempt #3) after silent billing leak",
+      "date": "2026-04-28"
+    },
+    {
+      "id": "ADR-018",
+      "title": "Codex skill discovery boundary for source vs adapters",
+      "date": "2026-04-28"
+    },
+    {
+      "id": "ADR-019",
+      "title": "Graph-tool integration: graphify hooks + scoped rule + cross-agent propagation",
+      "date": "2026-04-29"
+    },
+    {
+      "id": "ADR-020",
+      "title": "3B partial-tracking: memories + project.yml in, cache out",
+      "date": "2026-04-30"
+    },
+    {
+      "id": "ADR-021",
+      "title": "Shared Serena MCP daemon at (HTTP) for Codex + Gemini reuse",
+      "date": "2026-05-01"
+    },
+    {
+      "id": "ADR-022",
+      "title": "Gemini Phase 3 completion — generator + markers + MCP + parity",
+      "date": "2026-05-02"
+    },
+    {
+      "id": "ADR-023",
+      "title": "wrap cross-agent: single skill + agent detect + adapter pattern; HIGH bias #1…",
+      "date": "2026-05-02"
+    },
+    {
+      "id": "ADR-024",
+      "title": "D2 concurrency: cross-journal carry-forward for + mkdir-lock",
+      "date": "2026-05-03"
+    },
+    {
+      "id": "ADR-025",
+      "title": "Custom Cache Keepalive (Claude-only after scope narrowing)",
+      "date": "2026-05-03"
+    },
+    {
+      "id": "ADR-026",
+      "title": "Cross-Agent Worktree Strategy (agent-namespaced path)",
+      "date": "2026-05-03"
+    },
+    {
+      "id": "ADR-027",
+      "title": "Per-Agent Content Filtering Convention (v0.1.0 markers ignored, v0.2.0 filtered)",
+      "date": "2026-05-06"
+    },
+    {
+      "id": "ADR-028",
+      "title": "Initiative #51 (3B-redesign) Closure — phases shipped (D4 deferred outside…",
+      "date": "2026-05-06"
+    },
+    {
+      "id": "ADR-029",
+      "title": "Information-Layer Schema Additive ( + + ) — Phase E1",
+      "date": "2026-05-11"
+    },
+    {
+      "id": "ADR-030",
+      "title": "3B Layered Self-Improvement Architecture (2-plane + L0-L6 + 9-step loop +…",
+      "date": "2026-05-16"
+    },
+    {
+      "id": "ADR-031",
+      "title": "Gates A+B Concurrency + HITL Protocols — 2 canonical rule bodies…",
+      "date": "2026-05-18"
+    },
+    {
+      "id": "ADR-033",
+      "title": "AGY Migration — Replace Gemini CLI with Antigravity CLI; D1-D5 + 6-phase…",
+      "date": "2026-05-22"
+    },
+    {
+      "id": "ADR-034",
+      "title": "Close emit vs lint reformat drift loop (issue #134) — surgical wrappers around…",
+      "date": "2026-05-22"
+    },
+    {
+      "id": "ADR-035",
+      "title": "Flat Worktree Paths — drop the level; canonical (supersedes ADR-026 on path…",
+      "date": "2026-05-23"
+    },
+    {
+      "id": "ADR-036",
+      "title": "Untrack — worktree project-name collision under the shared daemon (partially…",
+      "date": "2026-05-27"
+    },
+    {
+      "id": "ADR-037",
+      "title": "Cross-Agent SSoT — Codex network-on baseline (the axis approval never touched)…",
+      "date": "2026-05-27"
+    },
+    {
+      "id": "ADR-038",
+      "title": "Two-Layer Commit Discipline — branch WIP checkpoints (Layer 1) + atomic…",
+      "date": "2026-05-29"
+    },
+    {
+      "id": "ADR-039",
+      "title": "Universal-Rule Native-Load Suppression — never-match sentinel on the 3…",
+      "date": "2026-05-30"
+    },
+    {
+      "id": "ADR-040",
+      "title": "F2 Agent-Managed Memory Layer — split-tier candidate → HITL-promotion → tracked…",
+      "date": "2026-05-30"
+    }
+  ],
+  "stats": [
+    {
+      "metric": "Layers",
+      "value": "6"
+    },
+    {
+      "metric": "Architecture nodes",
+      "value": "92"
+    },
+    {
+      "metric": "Architecture edges",
+      "value": "134"
+    },
+    {
+      "metric": "Documented flows",
+      "value": "8"
+    },
+    {
+      "metric": "Blog series posts",
+      "value": "10"
+    },
+    {
+      "metric": "ADRs",
+      "value": "39"
+    },
+    {
+      "metric": "Rule files",
+      "value": "46"
+    },
+    {
+      "metric": "Skills",
+      "value": "44"
+    },
+    {
+      "metric": "Knowledge entries",
+      "value": "836"
+    },
+    {
+      "metric": "Knowledge categories",
+      "value": "15"
+    },
+    {
+      "metric": "Agent runtimes",
+      "value": "3"
+    },
+    {
+      "metric": "Graph validation (dangling / orphan / invalid)",
+      "value": "0 / 0 / 0"
+    }
+  ],
+  "flows": [
+    {
+      "id": "rule-edit-to-three-agents",
+      "display_label": "One rule edit reaches three agents"
+    },
+    {
+      "id": "knowledge-graduation",
+      "display_label": "How a session becomes durable knowledge"
+    },
+    {
+      "id": "friction-self-improvement",
+      "display_label": "The harness improves itself"
+    },
+    {
+      "id": "task-starter-to-merge",
+      "display_label": "From task setup to a merged change"
+    },
+    {
+      "id": "command-policy-to-runtimes",
+      "display_label": "One permission policy, every runtime"
+    },
+    {
+      "id": "gate-b-self-reinforce",
+      "display_label": "The governance gate guards itself"
+    },
+    {
+      "id": "skill-three-transports",
+      "display_label": "One skill, three transports"
+    },
+    {
+      "id": "privacy-single-source",
+      "display_label": "One privacy rule gates every index"
+    }
+  ]
+}

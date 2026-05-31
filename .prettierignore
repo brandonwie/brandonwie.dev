@@ -12,3 +12,4 @@ scripts/CLAUDE.md
 project.inlang/
 .worktrees/
 pnpm-lock.yaml
+src/lib/data/system-snapshot.json
