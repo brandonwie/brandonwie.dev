@@ -373,7 +373,7 @@ function assertClean(snapshot: any): string[] {
 // ---------- build ----------
 async function build(): Promise<void> {
 	const HOME = Deno.env.get('HOME')!;
-	THREEB = join(HOME, 'dev', 'personal', '3b');
+	THREEB = Deno.env.get('THREEB_PATH') ?? join(HOME, 'dev', 'personal', '3b');
 	const MODEL = join(THREEB, 'projects', '3b', 'architecture', 'model.json');
 	const ADR_INDEX = join(THREEB, 'projects', '3b', 'decisions', '_index.md');
 	const model = JSON.parse(await Deno.readTextFile(MODEL));
