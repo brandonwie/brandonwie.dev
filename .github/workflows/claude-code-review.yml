@@ -1,0 +1,212 @@
+name: Claude Code Review
+
+# Formal PR review handler. Triggered ONLY by "@claude review" comments on
+# pull requests. The general @claude assistant (claude.yml) explicitly
+# excludes this trigger phrase to prevent both workflows firing on the same
+# comment.
+#
+# brandonwie.dev is a SvelteKit (SSG) personal blog with a dual blog/terminal
+# UX and bilingual (EN/KO) mdsvex content. PRs touch Svelte 5 components,
+# TypeScript, Tailwind v4 CSS, i18n message files, and markdown posts. The
+# review prompt below reflects that mix.
+#
+# Security note: github.event.*.body fields appear ONLY in `if:` contains()
+# expressions (YAML-time evaluation, never shell-injected). Numeric inputs
+# (issue.number, repository) are interpolated into the prompt block as data,
+# not commands.
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-review:
+    # PR comments only. issue_comment fires for both issues and PRs; the
+    # `pull_request` field is only present when the parent is a PR.
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@claude review')
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # read-only review; never auto-pushes commits
+      pull-requests: write # required to post comments + inline annotations
+      issues: read
+      id-token: write
+
+    steps:
+      - name: Validate Claude token
+        env:
+          CLAUDE_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$CLAUDE_TOKEN" ]; then
+            echo "::error::CLAUDE_CODE_OAUTH_TOKEN is not configured. Set via: gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo brandonwie/brandonwie.dev"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        id: claude-review
+        # Pinned to v1.0.105 (commit e58dfa55, 2026-04-23) — last pre-regression
+        # release. v1.0.106..v1.0.113 ship a bundled install.sh that exits 0 but
+        # does NOT place the claude binary at /home/runner/.local/bin/claude,
+        # causing the action to fail with "Claude Code native binary not found"
+        # (anthropics/claude-code-action#1254 + #1260, both open as of
+        # 2026-05-06). The `@v1` floating tag was bumped to v1.0.113 today,
+        # propagating the regression to every pinned-to-v1 caller. Revisit when
+        # upstream lands the SDK fallback fix proposed in #1260.
+        uses: anthropics/claude-code-action@e58dfa55559035499a4982426bb73605e8b5ad8e # v1.0.105
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.issue.number }}
+
+            Please review this pull request.
+
+            ## Project Context
+
+            brandonwie.dev is a personal blog + portfolio built with SvelteKit
+            (SSG via adapter-static) and deployed to Cloudflare Pages. It has a
+            dual-view UX: a minimalist "blog" mode and an interactive "terminal"
+            mode (Claude Code aesthetics) backed by a virtual filesystem and a
+            self-registering command registry. Content is bilingual — English
+            (default) plus Korean — authored as mdsvex markdown under
+            `src/content/posts/{en,ko}/{category}/`.
+
+            Stack: Svelte 5 (runes), SvelteKit 2, Tailwind CSS v4 (CSS-first,
+            no JS config), Paraglide-JS i18n, mdsvex + Shiki +
+            remark-reading-time, Fuse.js + Pagefind search, JetBrains Mono.
+            Package manager is pnpm (corepack); deno only runs the
+            `scripts/sync-from-3b.ts` sync tooling. Build: `pnpm build`
+            (vite build + pagefind). Quality gates: `pnpm lint` (ESLint),
+            `pnpm format:check` (Prettier), `pnpm check` (svelte-check),
+            `pnpm validate:dates`. There is no unit-test suite — do not ask for
+            one or treat its absence as a finding.
+
+            ## Architecture Notes
+
+            - Dual-view: `ViewToggle.svelte` switches blog/terminal; the
+              `viewMode` store persists to localStorage. Terminal commands
+              self-register via side-effect imports in `Terminal.svelte`
+              (`import '$lib/commands/ls'`). Virtual FS lives in
+              `src/lib/filesystem.ts`; fuzzy finder uses `src/lib/fuzzy.ts`.
+            - i18n: `messages/{en,ko}.json` hold UI strings; `src/lib/paraglide/`
+              is GENERATED (never hand-edit). Korean routes mirror under
+              `/ko/*`. A missing KO post falls back to EN content with a notice
+              banner (`isFallback`) — intentional, not a bug.
+            - Content: posts require frontmatter (`title`, `description`,
+              `date`, `updated`, `tags`, `category`, `lang`, `draft`).
+              `readingTime` is computed by the remark-reading-time plugin at
+              build time — NEVER set manually. KO posts add `source_lang`,
+              `source_slug`, `source_updated`, `translation_date`.
+            - `PostDetail.svelte` is the shared EN/KO detail page (JSON-LD
+              Article schema, hreflang, Open Graph, reading-progress bar). RSS
+              (`rss.xml`, `ko/rss.xml`) and `sitemap.xml` are generated routes.
+
+            ## Review Categories
+
+            For Svelte / TypeScript changes:
+
+            1. Svelte 5 runes — props via `$props()` (not `export let`); state
+               via `$state()`; computed via `$derived()` (not `$:`); side
+               effects via `$effect()`. Handlers use `onclick={...}` (not
+               `on:click`). Flag any Svelte 4 syntax as a migration regression.
+            2. SSG safety (adapter-static) — everything must prerender. No
+               server-runtime assumptions (no request-time secrets, no
+               always-on `+server` endpoints). Dynamic post routes must resolve
+               via `entries()` / prerender config so every slug is emitted.
+            3. Accessibility — svelte-check surfaces a11y warnings (labels,
+               `alt`, ARIA, keyboard handlers on click targets). The terminal
+               captures keystrokes — verify focus management and that
+               interactive elements have keyboard equivalents.
+            4. XSS / injection — `{@html}` on rendered post content is the main
+               XSS surface; confirm input is trusted markdown, not user data.
+               Terminal commands act on a virtual FS — confirm none shell out
+               or `eval` raw input.
+            5. Reactivity correctness — don't mutate state inside `$derived`;
+               watch for `$effect` loops and stale store subscriptions; check
+               `bind:this` lifecycle (null before mount).
+            6. i18n integrity — new UI strings added to BOTH `messages/en.json`
+               and `messages/ko.json` (key parity), consumed via `m.key_name()`
+               from `$lib/paraglide/messages` — not hardcoded. Never edit the
+               generated `src/lib/paraglide/` runtime.
+            7. Tailwind v4 — theme tokens live in `@theme {}` inside
+               `src/app.css`; there is no `tailwind.config.*` / `postcss.config.*`.
+               Custom utilities use `@utility`. Flag reintroduced v3 patterns
+               (`@tailwind base`, JS config, `@layer components` for utilities).
+
+            For markdown / content changes (blog posts):
+
+            8. Frontmatter completeness — required fields present; `readingTime`
+               NOT set by hand; KO posts include the translation-linkage fields.
+            9. EN/KO parity — a KO post's `source_slug` resolves to a real EN
+               slug; `category` and `tags` stay consistent across the pair.
+            10. Mermaid — diagrams use the `<Mermaid>` component, NOT fenced
+                ```mermaid blocks (Shiki transforms code fences before rehype
+                runs). Curly braces in node labels are Svelte-expression
+                footguns — flag unescaped `{...}` in diagram source.
+            11. Blog voice — the blog SHARES, it does not lecture (intellectual
+                humility). Flag fabricated debugging narratives or "here's what
+                I'll teach you" framing. KO translations: natural 해요/합니다,
+                keep technical terms in English, don't over-formalize.
+
+            For all changes:
+
+            12. Conventional Commits — PR title `type(scope): description`
+                (lowercase, no trailing period).
+            13. Atomic scope — only files tied to the claimed change; flag
+                unrelated drift.
+            14. Build-order gotcha — `build` MUST precede `check`: Paraglide-JS
+                emits TypeScript into `src/lib/paraglide/` during the vite
+                build, so running `svelte-check` first fails on missing types.
+                Do not suggest reordering CI to run `check` before `build`.
+
+            ## brandonwie.dev Conventions (Do NOT flag)
+
+            - `src/lib/paraglide/` is GENERATED by Paraglide-JS — never flag as
+              "duplicated code" or suggest editing it directly.
+            - Korean pages rendering EN content behind a fallback banner is
+              intentional (`isFallback`), not a "missing translation" to fix in
+              code.
+            - Client-side category filtering on `/posts` (no URL params) is a
+              deliberate SSG choice — do not suggest server-side or URL-based
+              filtering (it would force prerendering every category combo).
+            - The transparent hidden-input + custom block-cursor in
+              `CommandLine.svelte` is intentional (browser inputs render a line
+              cursor, not a block) — not redundant DOM.
+            - Side-effect command imports in `Terminal.svelte`
+              (`import '$lib/commands/ls'`) are the registration mechanism —
+              not unused / dead imports.
+            - Precompressed `.br` / `.gz` output and adapter-static prerendered
+              HTML are expected build artifacts, not misconfiguration.
+            - `docs/` and `CLAUDE.md` are 3B symlinks (gitignored / SoT
+              pointers) — they should NOT appear in PR diffs. If they do, that
+              IS the finding.
+            - `deno.lock` and `pnpm-lock.yaml` coexisting is intentional: deno
+              runs the 3B sync scripts, pnpm runs the app build. Not a
+              "two package managers" mistake.
+
+            ## Output Instructions
+
+            Use `gh pr comment` for top-level summary feedback (one comment
+            per review run; do NOT post multiple summary comments).
+
+            Use `mcp__github_inline_comment__create_inline_comment` (with
+            `confirmed: true`) to highlight specific issues on diff lines.
+
+            Only post GitHub comments — do not return review text as assistant
+            messages without posting.
+
+            If the PR is purely cosmetic (whitespace, formatter output) or
+            entirely generated-file churn (e.g. `src/lib/paraglide/`), post a
+            single sentence confirming the change scope and skip the category
+            checklist.
+
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
