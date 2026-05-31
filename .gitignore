@@ -34,7 +34,6 @@ npm-debug.log*
 
 # Lock files
 yarn.lock
-pnpm-lock.yaml
 .playwright-mcp/
 
 # Claude Code

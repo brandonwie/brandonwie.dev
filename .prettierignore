@@ -11,3 +11,4 @@ knowledge/
 scripts/CLAUDE.md
 project.inlang/
 .worktrees/
+pnpm-lock.yaml
