@@ -52,6 +52,13 @@ export default defineConfig({
 						['ko', '/ko/stats'],
 					],
 				},
+				{
+					pattern: '/system/3b',
+					localized: [
+						['en', '/system/3b'],
+						['ko', '/ko/system/3b'],
+					],
+				},
 				// Catch-all for other routes
 				{
 					pattern: '/:path(.*)?',

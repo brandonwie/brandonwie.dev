@@ -99,20 +99,21 @@
 		   blank lines in mermaid code become paragraph breaks
 		 - That's why we use a `code` prop instead: <Mermaid code={`...`} />
 
-	USAGE IN MARKDOWN FILES:
+	USAGE:
 
-	```svelte
-	<script>
-	import Mermaid from '$lib/components/Mermaid.svelte';
-	</script>
+	Pass the diagram source as the string "code" prop (not slot children). Avoid
+	curly braces in node labels — Svelte parses them as expressions; escape or
+	omit them.
 
-	<Mermaid code={`
-	flowchart LR
-	    A[Source] -->
-B[Process] --> C[Output] `} /> ``` NOTE: Curly braces in mermaid code will be interpreted as Svelte expressions.
-Either escape them or avoid using braces in labels. REFERENCES: - MDsveX + Mermaid issue: https://github.com/pngwn/MDsveX/issues/737
-- MDsveX plugin discussion: https://github.com/pngwn/MDsveX/discussions/354 - Svelte Mermaid approach:
-https://jamesjoy.site/posts/2023-06-26-svelte-mermaidjs -->
+	NOTE: do not embed a literal mermaid arrow example in this comment. An HTML
+	comment terminates at the first arrow-style sequence, which would split the
+	comment and leak the remainder as visible text.
+
+	References:
+	- github.com/pngwn/MDsveX/issues/737
+	- github.com/pngwn/MDsveX/discussions/354
+	- jamesjoy.site/posts/2023-06-26-svelte-mermaidjs
+-->
 
 <div class="mermaid-wrapper" class:rendered class:error={!!error}>
 	{#if error}
