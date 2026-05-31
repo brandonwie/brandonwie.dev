@@ -55,6 +55,14 @@ export default ts.config(
 		},
 	},
 	{
-		ignores: ['build/', '.svelte-kit/', 'src/lib/paraglide/', 'static/', 'node_modules/', 'docs/'],
+		ignores: [
+			'build/',
+			'.svelte-kit/',
+			'src/lib/paraglide/',
+			'static/',
+			'node_modules/',
+			'docs/',
+			'.worktrees/',
+		],
 	},
 );
