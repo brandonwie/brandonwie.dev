@@ -1,0 +1,18 @@
+#!/bin/sh
+
+echo "Running pre-commit checks..."
+echo ""
+
+echo "1/3 Linting..."
+corepack pnpm run lint || exit 1
+
+echo ""
+echo "2/3 Format check..."
+corepack pnpm run format:check || exit 1
+
+echo ""
+echo "3/3 Frontmatter date validation..."
+corepack pnpm run validate:dates || exit 1
+
+echo ""
+echo "All pre-commit checks passed!"
