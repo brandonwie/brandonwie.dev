@@ -1657,3 +1657,21 @@ directory.
 
 **Stats:** All 3 AI coding CLIs now installed (Claude=binary, Codex=brew cask,
 Gemini=brew formula).
+
+### Session 13 — 2026-05-31: System Hub Merge + Review Fix
+
+**What:** Merged `feat/3b-system-hub` (public `/system/3b` + `/ko/system/3b` over
+a sanitized 3B architecture snapshot) to `main` as a fast-forward, excising a
+stray `.claude/settings.local.json` noise commit via
+`git rebase --onto a5a5161 093f5c4`. Then fixed a code review on the snapshot
+generator (`be52407`): the graph-validation stat was hardcoded `0 / 0 / 0`
+despite 2 orphan nodes — added `computeGraphValidation()` as the single source of
+truth for the build-time stat and `assertClean()`'s honesty check (now
+`0 / 2 / 0`), and tightened the schema gate to require exact top-level keys +
+shapes (previously `{}` passed). Cleaned up the worktree + feature branch.
+
+**Stats:** Final `main` = `be52407`. CI + Cloudflare Pages green; `/system/3b` +
+`/ko/system/3b` live (200). Snapshot: 75 nodes / 93 edges, 2 orphans reported.
+
+**Next:** Package-refresh maintenance pass (deps + lockfile + full CI/build), per
+reviewer recommendation.
