@@ -5,7 +5,7 @@ description: >-
   behavior + 한 가지 analyst-side error class. 탐지 신호와 사실관계 충돌을 해결하는 empirical
   tiebreaker까지 정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: '2026-05-20'
+updated: '2026-05-31'
 tags:
   - ai-ml
   - code-review
@@ -19,8 +19,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-code-review-confusion-patterns
-source_updated: '2026-05-20'
-translation_date: '2026-05-20'
+source_updated: 2026-05-31T00:00:00.000Z
+translation_date: '2026-05-31'
 ---
 
 최근에 `/validate-pr-reviews`라는 workflow를 돌리기 시작했어요. Claude, Copilot, Codex가 diff에 남긴 inline 코멘트를 전부 가져와서 valid / invalid / controversial / good-to-have로 분류하는 흐름이에요. 진짜 bug는 놓치지 않으면서 false positive는 구조적으로 걸러내는 게 목적이에요.
@@ -33,7 +33,7 @@ validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐�
 
 | 패턴                                     | 유형     | 처음 본 곳        | 트리거                                                              |
 | ---------------------------------------- | -------- | ----------------- | ------------------------------------------------------------------- |
-| Cross-File Blindness                     | failure  | NestJS PR         | NestJS decorator vs Express typing                                  |
+| Cross-File Blindness                     | failure  | NestJS PR         | NestJS decorator vs Express typing; entity NOT-NULL/default invariant |
 | Intentional Design                       | failure  | NestJS PR         | 이미 inline NOTE로 기록된 trade-off                                 |
 | Disagreeing Claim                        | failure  | Starlette PR      | 두 reviewer가 정반대 주장을 함. tiebreaker는 실험                   |
 | Confidently Wrong on Library Internals   | failure  | Starlette PR      | source에 반하는 framework 동작을 자신 있게 재보증                  |
@@ -55,11 +55,13 @@ validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐�
 
 NestJS PR에서 Copilot이 컨트롤러 parameter `clientTypeHeader?: string`에 배열 normalize가 필요하다고 flag를 걸었어요. 근거는 Express의 raw type signature `string | string[] | undefined`였어요. flag 자체는 Express type과 일관됐지만, 맥락에서는 틀렸어요. NestJS의 `@Headers('key')` decorator는 custom header에 대해 정확히 `string | undefined`를 리턴해요. Express가 중복을 쉼표로 합쳐 normalize해 주기 때문이에요. reviewer는 parameter의 annotation을 보면서도, decorator가 구현된 곳까지 따라가진 않았어요.
 
+같은 패턴은 PR #872에서 다른 모양으로 다시 나왔어요. Claude는 `fromEntity`에서 `create()`로 이어지는 trace를 따라가며, plain all-day block이 400을 던질 수 있다고 봤어요. `dto.detail === undefined`면 `isAllDay`가 false가 된다는 reasoning이었죠. 두 파일만 놓고 보면 trace는 그럴듯했지만, entity-level invariant를 놓쳤어요. `hasDetailFields`에는 `block.priority`가 들어가고, 이 필드는 default truthy 값을 가진 NOT-NULL enum column이에요. DB에서 로드된 entity에는 항상 그 값이 있고, `{ ...block }`도 그 값을 보존하니까 `detail`은 만들어져요. 빠진 context는 다른 함수 호출이 아니라, guard 입력 shape를 더 강하게 만드는 `@Column({ default })` 선언이었어요.
+
 **왜 이런 일이 생길까요.** 대부분의 AI reviewer는 single-file 또는 single-diff context window로 동작해요. 현재 파일을 흐르는 타입은 볼 수 있지만, decorator 호출을 따라 dependency 패키지 내부 구현까지 들어가진 못해요. 그래서 "이 decorator가 runtime에서 실제로 뭘 리턴하지?" 하는 질문은 답할 수 없는 질문이 되고, 가장 가까운 도달 가능한 지점의 type signature(보통 raw framework type)가 기본 가정이 돼 버려요.
 
-**탐지 신호.** "framework type이 X라고 말해요"라고 인용하면서, 실제로는 framework decorator가 만들어낸 parameter를 지적하는 모든 flag. 스스로에게 이렇게 물어보세요. *reviewer가 decorator를 찾아봤나, 아니면 parameter에 적힌 타입만 찾아봤나?*
+**탐지 신호.** "framework type이 X라고 말해요"라고 인용하면서, 실제로는 framework decorator가 만들어낸 parameter를 지적하는 모든 flag. 또는 NOT-NULL/defaulted entity column을 무시한 two-file trace. 스스로에게 이렇게 물어보세요. *reviewer가 decorator를 찾아봤나, 아니면 parameter에 적힌 타입만 봤나? entity invariant를 확인했나, mapper와 DTO만 봤나?*
 
-**예방.** flag된 위치에 decorator의 리턴 타입을 명시적으로 알려 주는 보강용 inline NOTE를 달아 주세요. 다음 PR에서 reviewer의 행동이 바뀌진 않겠지만, 같은 패턴이 다시 나타났을 때 triage 시간을 단축해 줘요.
+**예방.** flag된 위치에 decorator의 리턴 타입이나 NOT-NULL/default invariant를 명시적으로 알려 주는 보강용 inline NOTE를 달아 주세요. 다음 PR에서 reviewer의 행동이 바뀌진 않겠지만, 같은 패턴이 다시 나타났을 때 triage 시간을 단축해 줘요.
 
 이 케이스의 기술적인 deep-dive는 따로 정리해 뒀어요. Express의 normalize 동작까지 자세히 알고 싶다면 [NestJS @Headers decorator는 string | undefined를 리턴해요](/posts/nestjs-headers-decorator-typing) 글을 참고하세요.
 

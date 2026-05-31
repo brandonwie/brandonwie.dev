@@ -10,6 +10,7 @@ tags:
 category: devops
 draft: false
 lang: en
+expanded: true
 references:
   - url: 'https://docs.claude.com/en/docs/claude-code'
     title: Claude Code documentation

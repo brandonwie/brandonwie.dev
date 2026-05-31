@@ -5,7 +5,7 @@ description: >-
   모르면 메시지 사이에 5분 이상 비는 순간 cache가 날아가고, 다음 메시지에 전체 conversation prefix를 처음부터 다시
   써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요.
 date: 2026-05-03T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-05-31'
 tags:
   - knowledge
   - devops
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: anthropic-prompt-cache-ttl
-source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-10'
+source_updated: 2026-05-31T00:00:00.000Z
+translation_date: '2026-05-31'
 ---
 
 점심 먹고 돌아와서 이어서 질문을 던졌더니, `/usage`의 cache hit 비율이 갑자기 떨어져 있었어요. 별 고민 없이 켜둔 줄 알았는데 그 사이에 cache가 통째로 날아가 있었던 거예요. 알고 보니 Anthropic이 2026년 3월 초쯤 Claude Code의 prompt cache TTL을 1시간에서 5분으로 조용히 줄여뒀어요([issue #46829](https://github.com/anthropics/claude-code/issues/46829)). 이걸 모르고 있으면, 메시지 사이에 5분 이상 비는 순간 cache가 증발하고, 다음 메시지에 **전체 conversation prefix**(system prompt + tools + CLAUDE.md + 이전 turn 전부)를 처음부터 다시 써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요. 200K 토큰짜리 Opus 세션이라면 한 번 이어붙일 때 약 $1.25씩 들어요. 하루 일하다 보면 세션당 비용이 30~60% 더 붙어요.
@@ -87,7 +87,7 @@ Pro/Max 구독자는 cache miss로 \$가 청구되진 않아요(정액 요금). 
 
 | 레버                                     | 행동                                                                                                                              |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 세션을 활성으로 유지                      | 작업 도중 cache가 만료되지 않게 해요. 자리 비우기 전에 한 turn 채우고 가거나, cache keepalive를 깔아요(관련 글 참고).             |
+| 세션을 활성으로 유지                      | 작업 도중 cache가 만료되지 않게 해요. 자리 비우기 전에 한 turn 채우고 가요. keepalive pinger는 API/token billing에서는 도움이 되지만, Pro/Max에서는 quota를 태워요. |
 | CLAUDE.md를 가볍게                        | 세션 시작 때 한 번 로드돼서 cache prefix에 영원히 박혀요. 세부 워크플로는 호출 시점에 lazy load되는 **skill**로 옮겨요.            |
 | MCP server는 처음부터 잠가서              | 세션 도중에 server를 켰다 껐다 하지 말아요. `.mcp.json`을 한 번만 설정해요.                                                       |
 | 한 세션 안에서 모델 고정                  | 한 작업 안에서 Opus ↔ Sonnet을 갈아끼우지 않아요.                                                                                  |
@@ -111,7 +111,7 @@ Claude Code 사용자에겐 의미가 없는 얘기예요. Anthropic이 5분을 
 
 ## 실용적인 정리
 
-cache TTL regression은 조용해요. 대신 비용은 진짜로 들어요. 200K 토큰 Opus 세션에서 cold write 한 번에 \$1.25, 그리고 5분을 넘기는 idle 구간 수만큼 곱해서요. 직접 만질 수 있는 레버는 이거예요. 세션을 활성으로 유지(filler turn이나 keepalive), CLAUDE.md를 가볍게 유지(세부 워크플로는 lazy load되는 skill로), MCP server를 처음부터 잠그기, 한 세션 안에서 모델 고정, 길이 큰 작업은 subagent로 빼서 무거운 토큰이 cache prefix에 안 들어오게 하기. `/compact`은 cache 친화적으로 디자인됐어요. 그냥 써요. `/usage`에서 cache hit 비율이 90% 아래로 떨어지면 그게 신호예요. 어디선가 prefix가 무효화되고 있다는 뜻이에요.
+cache TTL regression은 조용해요. 대신 비용은 진짜로 들어요. 200K 토큰 Opus 세션에서 cold write 한 번에 \$1.25, 그리고 5분을 넘기는 idle 구간 수만큼 곱해서요. 직접 만질 수 있는 레버는 이거예요. 세션을 활성으로 유지(자리 비우기 전 filler turn, API/token billing에서만 keepalive가 맞는 trade-off인지 확인), CLAUDE.md를 가볍게 유지(세부 워크플로는 lazy load되는 skill로), MCP server를 처음부터 잠그기, 한 세션 안에서 모델 고정, 길이 큰 작업은 subagent로 빼서 무거운 토큰이 cache prefix에 안 들어오게 하기. `/compact`은 cache 친화적으로 디자인됐어요. 그냥 써요. `/usage`에서 cache hit 비율이 90% 아래로 떨어지면 그게 신호예요. 어디선가 prefix가 무효화되고 있다는 뜻이에요.
 
 ## References
 

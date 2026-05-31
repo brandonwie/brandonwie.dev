@@ -2,7 +2,7 @@
 title: Paraglide-JS i18n for SvelteKit
 description: Adding Korean/English internationalization to a SvelteKit static blog without
 date: 2026-01-28T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-05-31'
 tags:
   - frontend
   - i18n
@@ -19,7 +19,7 @@ references:
   - url: 'https://svelte.dev/docs/kit/routing'
     title: SvelteKit Routing
     type: official
-source_content_hash: 36af3ef4879870da14ba427898acdb989db4d535b8a68392477efd021f331968
+source_content_hash: 1b4ffe901e8466db18cb7b3edf8e4debcf5c9957a241325dbef87a4bbbc26692
 ---
 
 I wanted to add Korean translations to my SvelteKit blog. The site is statically generated and deployed to Cloudflare Pages, so the i18n solution needed to resolve translations at build time -- not ship a runtime parser to the browser. I spent a day evaluating options and fighting with SSG compatibility before landing on Paraglide-JS. Here is everything I learned, including the gotchas the docs do not cover.
@@ -212,6 +212,50 @@ export default defineConfig({
 ```
 
 One important build-order detail: the Vite plugin generates TypeScript files in `src/lib/paraglide/` during the build step. If you run `svelte-check` before `build`, it will fail on missing type definitions. Always build first, then type-check.
+
+---
+
+## Prerendered Locale Resolution with URL Strategy
+
+Paraglide's newer URL strategy changes one important SSG assumption. With `adapter-static`, the generated `/ko/...` HTML can still be prerendered as the base locale: `<html lang="en">` and English `m.*()` output are present in the static file. After hydration, Paraglide reads the `/ko` prefix, switches locale on the client, and re-renders the title and body text in Korean.
+
+That means a grep over `build/ko/<route>.html` is not a valid localization test. It will find the base-locale text, and that can be correct. Verify localized output in a real browser or Playwright after hydration.
+
+The practical split is:
+
+- Message text can stay in `m.*()` calls; the runtime handles translation after it resolves the URL locale.
+- Locale-aware links should take an explicit `locale` prop and derive their base path (`/ko` vs `''`) instead of relying on message translation state.
+- Static-only crawlers see the base locale; JavaScript-executing crawlers see the hydrated locale. That trade-off is acceptable for this blog, but it is worth checking for projects with stricter SEO requirements.
+
+```typescript
+// vite.config.ts — url strategy + per-route urlPatterns
+paraglideVitePlugin({
+  project: "./project.inlang",
+  outdir: "./src/lib/paraglide",
+  strategy: ["url", "cookie", "baseLocale"],
+  urlPatterns: [
+    {
+      pattern: "/system/3b",
+      localized: [
+        ["en", "/system/3b"],
+        ["ko", "/ko/system/3b"]
+      ]
+    }
+    // ... one entry per localized route
+  ]
+});
+```
+
+```svelte
+<!-- component: locale prop drives links; m.*() drives translation -->
+<script lang="ts">
+  import { m } from '$lib/paraglide/messages';
+  let { locale }: { locale: 'en' | 'ko' } = $props();
+  const basePath = $derived(locale === 'ko' ? '/ko' : '');
+</script>
+
+<a href="{basePath}/posts/{slug}">{m.read_post()}</a>
+```
 
 ---
 

@@ -2,7 +2,7 @@
 title: SvelteKit용 Paraglide-JS i18n
 description: 번들을 부풀리지 않고 런타임 오버헤드 없이 SvelteKit 정적 블로그에 한국어/영어 다국어 지원을 추가한 방법을 정리했어요.
 date: 2026-01-28T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-05-31'
 tags:
   - frontend
   - i18n
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: paraglide-i18n
-source_updated: '2026-03-22'
-translation_date: '2026-05-10'
+source_updated: 2026-05-31T00:00:00.000Z
+translation_date: '2026-05-31'
 references:
   - url: 'https://inlang.com/m/gerre34r/library-inlang-paraglideJs'
     title: Paraglide-JS 공식 문서
@@ -190,6 +190,60 @@ export default defineConfig({
 플러그인이 메시지 파일을 지켜보다가 번역을 추가하거나 수정할 때마다 런타임
 코드를 다시 생성해요. `src/lib/paraglide/` 안의 코드는 자동 생성물이라 직접
 손대면 안 돼요.
+
+## URL strategy와 prerendered locale 해석
+
+Paraglide의 newer URL strategy를 쓰면 SSG에서 한 가지 중요한 가정이 바뀌어요.
+`adapter-static`으로 만든 `/ko/...` HTML도 base locale로 prerender될 수
+있어요. 정적 파일에는 `<html lang="en">`과 영어 `m.*()` output이 들어가고,
+hydration 이후에 Paraglide가 `/ko` prefix를 읽어서 client 쪽에서 locale을
+한국어로 바꿔요. 그러면 `<title>`과 body text가 그때 한국어로 다시
+render돼요.
+
+그래서 `build/ko/<route>.html`을 grep해서 한국어 문자열이 없다고 판단하면
+오진이에요. 그 파일에서 base-locale text가 나오는 건 정상일 수 있어요.
+localized output은 browser나 Playwright처럼 hydration 이후 상태를 보는
+도구로 확인해야 해요.
+
+실무적으로는 이렇게 나눠 생각하면 편해요.
+
+- Message text는 `m.*()` call에 맡겨요. runtime이 URL locale을 resolve한 뒤
+  translation을 처리해요.
+- Locale-aware link href는 explicit `locale` prop을 받고, `basePath`(`/ko`
+  또는 `''`)를 직접 계산하는 편이 안전해요.
+- static-only crawler는 base locale을 보고, JavaScript를 실행하는 crawler는
+  hydrated locale을 봐요. 개인 블로그에서는 받아들일 만한 trade-off였지만,
+  SEO 요구가 강한 프로젝트라면 별도로 판단해야 해요.
+
+```typescript
+// vite.config.ts — url strategy + per-route urlPatterns
+paraglideVitePlugin({
+  project: "./project.inlang",
+  outdir: "./src/lib/paraglide",
+  strategy: ["url", "cookie", "baseLocale"],
+  urlPatterns: [
+    {
+      pattern: "/system/3b",
+      localized: [
+        ["en", "/system/3b"],
+        ["ko", "/ko/system/3b"]
+      ]
+    }
+    // ... one entry per localized route
+  ]
+});
+```
+
+```svelte
+<!-- component: locale prop drives links; m.*() drives translation -->
+<script lang="ts">
+  import { m } from '$lib/paraglide/messages';
+  let { locale }: { locale: 'en' | 'ko' } = $props();
+  const basePath = $derived(locale === 'ko' ? '/ko' : '');
+</script>
+
+<a href="{basePath}/posts/{slug}">{m.read_post()}</a>
+```
 
 ## 까다로웠던 부분들
 

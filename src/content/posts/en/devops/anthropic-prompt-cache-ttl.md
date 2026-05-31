@@ -2,7 +2,7 @@
 title: Anthropic Prompt Cache TTL + Cost Mechanics
 description: 'Anthropic silently dropped Claude Code''s prompt-cache TTL from 1 hour to 5 minutes around early March 2026. Without explicit awareness, idle gaps ≥5 min between messages evaporate the cache and force a full cold cache-write on the next message — pricing it at 1.25× base input on the entire conversation prefix.'
 date: 2026-05-03T00:00:00.000Z
-updated: 2026-05-06
+updated: 2026-05-31
 tags:
   - knowledge
   - devops
@@ -31,7 +31,7 @@ references:
       https://www.claudecodecamp.com/p/how-prompt-caching-actually-works-in-claude-code
     title: How Prompt Caching Actually Works in Claude Code
     type: authoritative
-source_content_hash: 0d50ed92b6ac244640032752b73102cee7a43a2e5218dd082fb54353359bc323
+source_content_hash: 2bdb47c95c7ca619ee004445ad8752cf28b6be9e26940a1f29d9dbcdb0ec261e
 ---
 
 Anthropic silently dropped Claude Code's prompt-cache TTL from 1 hour to 5 minutes around early March 2026 ([issue #46829](https://github.com/anthropics/claude-code/issues/46829)). Without explicit awareness, idle gaps ≥5 min between messages evaporate the cache and force a full cold cache-write on the next message — pricing it at 1.25× base input on the **entire conversation prefix** (system prompt + tools + CLAUDE.md + every prior turn). On a 200K-token Opus session that's ~$1.25 per resume; across a working day this can raise per-session cost 30–60%.
@@ -101,7 +101,7 @@ For Pro/Max subscribers: cache misses don't bill \$ (flat fee), but they consume
 
 | Lever                                 | Action                                                                                                                 |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Keep sessions active                  | Don't let cache expire mid-task. Type a filler turn before a known break, OR install cache-keepalive (see related).    |
+| Keep sessions active                  | Don't let cache expire mid-task. Type a filler turn before a known break. A keepalive pinger helps only on API/token billing; on Pro/Max it burns quota. |
 | Slim CLAUDE.md                        | Loaded at session start → sits in cached prefix forever. Move workflow detail to **skills** which lazy-load on invoke. |
 | Lock MCP servers up front             | Don't toggle servers mid-session. Configure `.mcp.json` once.                                                          |
 | Pin model per session                 | Don't switch Opus ↔ Sonnet inside one task.                                                                            |
@@ -125,7 +125,7 @@ For Claude Code users this is moot — Anthropic chose 5m default and exposes no
 
 ## Practical takeaway
 
-The cache TTL regression is silent and the cost is real — \$1.25 per cold-write on a 200K-token Opus session, multiplied by however many idle gaps fall over 5 minutes. The user-controllable levers are: keep sessions active (filler turn or a keepalive), slim CLAUDE.md (move workflow detail to lazy-loaded skills), lock MCP servers up front, pin the model per session, and use subagents for verbose ops so heavy tokens never enter the cached prefix. `/compact` is cache-safe by design — use it. Watch `/usage` for cache hit ratios below 90%; that's the signal that something in your setup is invalidating the prefix.
+The cache TTL regression is silent and the cost is real — \$1.25 per cold-write on a 200K-token Opus session, multiplied by however many idle gaps fall over 5 minutes. The user-controllable levers are: keep sessions active (a filler turn before a break; keepalive only when API/token billing is the right trade-off), slim CLAUDE.md (move workflow detail to lazy-loaded skills), lock MCP servers up front, pin the model per session, and use subagents for verbose ops so heavy tokens never enter the cached prefix. `/compact` is cache-safe by design — use it. Watch `/usage` for cache hit ratios below 90%; that's the signal that something in your setup is invalidating the prefix.
 
 ## References
 

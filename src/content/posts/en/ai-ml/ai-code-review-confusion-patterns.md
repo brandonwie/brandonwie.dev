@@ -6,7 +6,7 @@ description: >-
   class. With detection signals and the empirical tiebreaker that resolves
   factual disagreements.
 date: 2026-04-08T00:00:00.000Z
-updated: 2026-05-20
+updated: 2026-05-31
 tags:
   - ai-ml
   - code-review
@@ -19,7 +19,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 3428ab5872f8f4b8c92fca752e3d1a99e2ab24b44f4c933d2ce1f19a745488c3
+source_content_hash: 2bf6c179019898b93b54dbb3b915cd3f2f791e9f1bfdb12f1c819668ef22afbd
 references:
   - url: 'https://github.com/brandonwie/crucio/pull/83'
     title: 'crucio PR #83 — Claude vs Codex disagreement on Starlette ordering'
@@ -39,7 +39,7 @@ The validation workflow looks at every AI reviewer comment on a PR and, for each
 
 | Pattern                                  | Type     | First seen      | Trigger                                                                 |
 | ---------------------------------------- | -------- | --------------- | ----------------------------------------------------------------------- |
-| Cross-File Blindness                     | failure  | NestJS PR       | NestJS decorator vs. Express typing                                     |
+| Cross-File Blindness                     | failure  | NestJS PR       | NestJS decorator vs. Express typing; entity NOT-NULL/default invariant  |
 | Intentional Design                       | failure  | NestJS PR       | Documented trade-off with an inline NOTE                                |
 | Disagreeing Claim                        | failure  | Starlette PR    | Two reviewers give opposite claims; tiebreaker is an experiment         |
 | Confidently Wrong on Library Internals   | failure  | Starlette PR    | Articulate reassurance about framework behavior that contradicts source |
@@ -61,11 +61,13 @@ What follows is each pattern, with the PR evidence and what I learned about dete
 
 On a NestJS PR, Copilot flagged a controller parameter `clientTypeHeader?: string` as needing array normalization, citing Express's raw type signature `string | string[] | undefined`. The flag was technically consistent with the Express type, but it was wrong in context: NestJS's `@Headers('key')` decorator returns `string | undefined` for custom headers, precisely because Express normalizes duplicates by joining them with comma-space. The reviewer analyzed the parameter's annotation without following the decorator into its implementation.
 
+The same pattern showed up again in a different shape on PR #872. Claude traced `fromEntity` into `create()` and argued that a plain all-day block could throw 400 because `dto.detail === undefined` would make `isAllDay` false. The two-file trace was internally consistent, but it missed the entity-level invariant: `hasDetailFields` includes `block.priority`, a NOT-NULL enum column with a default truthy value. A DB-loaded entity always carries that field, `{ ...block }` preserves it, and `detail` is therefore created. The missing context was not another function call; it was the `@Column({ default })` declaration that made the guard's input shape stronger than the local DTO trace suggested.
+
 **Why it happens.** Most AI reviewers work with a single-file or single-diff context window. They can see the types flowing through the current file but cannot trace a decorator call into its implementation in a dependency package. So "what does this decorator actually return at runtime?" becomes a question they cannot answer, and the type signature at the nearest reachable point (often a raw framework type) becomes the default assumption.
 
-**Detection signal.** Any flag that cites "the framework type says X" for a parameter that is actually produced by a framework decorator. Ask yourself: *did the reviewer look up the decorator, or did they look up the parameter's declared type?*
+**Detection signal.** Any flag that cites "the framework type says X" for a parameter that is actually produced by a framework decorator, or any two-file trace that ignores a NOT-NULL/defaulted entity column. Ask yourself: *did the reviewer look up the decorator, or did it stop at the declared type? Did it check the entity invariant, or only the mapper and DTO?*
 
-**Prevention.** Add a reinforcing inline NOTE at the flagged location that explicitly states the decorator's return type. It will not change the reviewer's behavior on the next PR, but it will shortcut future triage when the same pattern reappears.
+**Prevention.** Add a reinforcing inline NOTE at the flagged location that explicitly states the decorator's return type or the NOT-NULL/default invariant. It will not change the reviewer's behavior on the next PR, but it will shortcut future triage when the same pattern reappears.
 
 I wrote the technical deep-dive for this specific case in a separate post — see [NestJS @Headers Decorator Returns string | undefined](/posts/nestjs-headers-decorator-typing) if you want to understand the underlying Express normalization behavior in detail.
 
