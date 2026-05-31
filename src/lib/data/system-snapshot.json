@@ -1,6 +1,6 @@
 {
   "model_generated": "2026-05-30",
-  "snapshot_built_at": "2026-05-31T08:15:48.788Z",
+  "snapshot_built_at": "2026-05-31T12:11:22.810Z",
   "layers": [
     {
       "id": "source-of-truth",
@@ -1494,7 +1494,7 @@
     },
     {
       "metric": "Graph validation (dangling / orphan / invalid)",
-      "value": "0 / 0 / 0"
+      "value": "0 / 2 / 0"
     }
   ],
   "flows": [

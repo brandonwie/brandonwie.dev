@@ -278,26 +278,95 @@ function parseAdrIndex(md: string): { id: string; title: string; date: string }[
 }
 
 // ---------- assertions (privacy grep + schema + graph integrity) ----------
+const GRAPH_VALIDATION_METRIC = 'Graph validation (dangling / orphan / invalid)';
+
+// Real graph integrity over the SANITIZED snapshot — single source of truth for both
+// the `stats` value and assertClean's honesty check. dangling = edge endpoint missing
+// from nodes; orphan = node with no incident edge (expected after privacy edge-filtering);
+// invalid = node/edge missing a required non-empty string field.
+function computeGraphValidation(
+	nodes: { id?: unknown; kind?: unknown }[],
+	edges: { from?: unknown; to?: unknown; kind?: unknown }[],
+): { dangling: number; orphan: number; invalid: number } {
+	const ids = new Set(nodes.map((n) => n.id));
+	const connected = new Set<unknown>();
+	let dangling = 0;
+	for (const e of edges) {
+		const okFrom = ids.has(e.from);
+		const okTo = ids.has(e.to);
+		if (!okFrom || !okTo) dangling++;
+		if (okFrom) connected.add(e.from);
+		if (okTo) connected.add(e.to);
+	}
+	let orphan = 0;
+	for (const n of nodes) if (!connected.has(n.id)) orphan++;
+	const nonEmpty = (v: unknown): boolean => typeof v === 'string' && v.length > 0;
+	let invalid = 0;
+	for (const n of nodes) if (!nonEmpty(n.id) || !nonEmpty(n.kind)) invalid++;
+	for (const e of edges) if (!nonEmpty(e.from) || !nonEmpty(e.to) || !nonEmpty(e.kind)) invalid++;
+	return { dangling, orphan, invalid };
+}
+
 // deno-lint-ignore no-explicit-any
 function assertClean(snapshot: any): string[] {
 	const errs: string[] = [];
-	for (const k of Object.keys(snapshot)) {
+
+	// Schema: top-level keys must match ALLOWED_KEYS exactly — reject extra AND missing.
+	const actual = new Set(Object.keys(snapshot));
+	for (const k of actual) {
 		if (!ALLOWED_KEYS.includes(k)) errs.push(`unexpected top-level key: ${k}`);
 	}
+	for (const k of ALLOWED_KEYS) {
+		if (!actual.has(k)) errs.push(`missing required top-level key: ${k}`);
+	}
 	if ('narrative' in snapshot) errs.push('forbidden field present: narrative');
+
+	// Required shapes for the public contract (v2-reserved arrays must exist as arrays).
+	for (const k of [
+		'layers',
+		'subsystems',
+		'nodes',
+		'edges',
+		'blog_series',
+		'evolution',
+		'stats',
+		'flows',
+	]) {
+		if (!Array.isArray(snapshot[k])) errs.push(`field ${k} must be an array`);
+	}
+	for (const k of ['model_generated', 'snapshot_built_at']) {
+		if (typeof snapshot[k] !== 'string') errs.push(`field ${k} must be a string`);
+	}
+
 	for (const f of snapshot.flows ?? []) {
 		const ks = Object.keys(f).sort().join(',');
 		if (ks !== 'display_label,id') errs.push(`flow ${f.id} has unexpected keys: ${ks}`);
 	}
+
 	const blob = JSON.stringify(snapshot);
 	for (const { re, name } of DENY_PATTERNS) {
 		const hit = blob.match(re);
 		if (hit) errs.push(`privacy leak [${name}]: "${hit[0]}"`);
 	}
+
+	// Graph integrity. Dangling edges and structurally invalid nodes/edges are hard
+	// failures; orphans are allowed (a sanitized snapshot legitimately drops edges to
+	// private nodes) but their count must be reported honestly in the stats block.
 	const ids = new Set((snapshot.nodes ?? []).map((n: { id: string }) => n.id));
 	for (const e of snapshot.edges ?? []) {
 		if (!ids.has(e.from) || !ids.has(e.to)) errs.push(`dangling edge ${e.from} -> ${e.to}`);
 	}
+	const gv = computeGraphValidation(snapshot.nodes ?? [], snapshot.edges ?? []);
+	if (gv.invalid > 0) errs.push(`${gv.invalid} structurally invalid node(s) or edge(s)`);
+	const gvStat = (snapshot.stats ?? []).find(
+		(s: { metric: string }) => s.metric === GRAPH_VALIDATION_METRIC,
+	);
+	const gvExpected = `${gv.dangling} / ${gv.orphan} / ${gv.invalid}`;
+	if (!gvStat) errs.push(`missing stat: ${GRAPH_VALIDATION_METRIC}`);
+	else if (gvStat.value !== gvExpected) {
+		errs.push(`graph-validation stat mismatch: reported "${gvStat.value}", actual "${gvExpected}"`);
+	}
+
 	return errs;
 }
 
@@ -399,6 +468,8 @@ async function build(): Promise<void> {
 
 	const evolution = parseAdrIndex(await Deno.readTextFile(ADR_INDEX));
 
+	const gv = computeGraphValidation(nodes as { id?: unknown; kind?: unknown }[], edges);
+
 	// FROZEN literal allowlist — aggregate only; never per-category / repo / telemetry.
 	const stats = [
 		{ metric: 'Layers', value: String(model.layers.length) },
@@ -412,7 +483,10 @@ async function build(): Promise<void> {
 		{ metric: 'Knowledge entries', value: '836' },
 		{ metric: 'Knowledge categories', value: '15' },
 		{ metric: 'Agent runtimes', value: '3' },
-		{ metric: 'Graph validation (dangling / orphan / invalid)', value: '0 / 0 / 0' },
+		{
+			metric: GRAPH_VALIDATION_METRIC,
+			value: `${gv.dangling} / ${gv.orphan} / ${gv.invalid}`,
+		},
 	];
 
 	const snapshot = {
