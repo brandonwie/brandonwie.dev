@@ -7,6 +7,7 @@
 <script lang="ts">
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import { kindStyle } from '$lib/utils/system3b-graph';
+	import { m } from '$lib/paraglide/messages';
 
 	let { id, data }: NodeProps = $props();
 
@@ -31,7 +32,9 @@
 	onclick={click}
 	onmouseenter={() => hover(id)}
 	onmouseleave={() => hover(null)}
-	title={expandable ? `Expand ${data.name}` : String(data.name)}
+	tabindex={expandable ? 0 : -1}
+	aria-disabled={!expandable}
+	title={expandable ? `${m.system_3b_graph_expand()} ${data.name}` : String(data.name)}
 >
 	<Handle type="target" position={Position.Top} style="opacity:0;width:6px;height:6px;border:0" />
 	<span class="dot"></span>

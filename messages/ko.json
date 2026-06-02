@@ -78,5 +78,6 @@
 	"system_3b_graph_back": "개요로 돌아가기",
 	"system_3b_graph_relations_legend": "관계",
 	"system_3b_graph_loading": "인터랙티브 그래프 불러오는 중…",
-	"system_3b_graph_unavailable": "인터랙티브 그래프를 사용할 수 없어 레이어 개요를 표시합니다."
+	"system_3b_graph_unavailable": "인터랙티브 그래프를 사용할 수 없어 레이어 개요를 표시합니다.",
+	"system_3b_graph_expand": "펼치기"
 }

@@ -8,6 +8,8 @@
 	let { data }: NodeProps = $props();
 </script>
 
+<!-- NOTE: Svelte interpolates {…} inside quoted style: directive values, so
+     style:width="{Number(data.width)}px" is valid + render-verified — NOT literal CSS. -->
 <div
 	class="s3b-band"
 	style:width="{Number(data.width)}px"

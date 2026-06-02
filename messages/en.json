@@ -78,5 +78,6 @@
 	"system_3b_graph_back": "back to overview",
 	"system_3b_graph_relations_legend": "relations",
 	"system_3b_graph_loading": "Loading interactive graph…",
-	"system_3b_graph_unavailable": "Interactive graph unavailable — showing the layer outline."
+	"system_3b_graph_unavailable": "Interactive graph unavailable — showing the layer outline.",
+	"system_3b_graph_expand": "Expand"
 }

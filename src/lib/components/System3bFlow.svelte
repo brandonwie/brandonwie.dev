@@ -154,8 +154,7 @@
 				<span class="chip"
 					><span
 						class="line"
-						style:background={s.color}
-						style:opacity={s.dash ? 0.7 : 1}
+						style:border-top="2px {s.dash ? 'dashed' : 'solid'} {s.color}"
 					></span>{s.label}</span
 				>
 			{/each}
@@ -245,9 +244,9 @@
 	}
 	.line {
 		width: 16px;
-		height: 2px;
-		border-radius: 2px;
+		height: 0;
 		display: inline-block;
+		vertical-align: middle;
 	}
 	/* xyflow surface tweaks to match the terminal palette */
 	.canvas :global(.svelte-flow) {

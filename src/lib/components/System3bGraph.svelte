@@ -34,9 +34,9 @@
 
 	// Fallback only — pure reduce, no helper import (keeps dagre out of the shell).
 	const countByLayer = $derived.by(() => {
-		const m: Record<string, number> = {};
-		for (const n of nodes) m[n.layer] = (m[n.layer] ?? 0) + 1;
-		return m;
+		const counts: Record<string, number> = {};
+		for (const n of nodes) counts[n.layer] = (counts[n.layer] ?? 0) + 1;
+		return counts;
 	});
 </script>
 
