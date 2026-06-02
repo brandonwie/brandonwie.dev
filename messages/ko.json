@@ -72,5 +72,12 @@
 	"system_3b_blog_progress": "{total}개 중 {published}개 발행",
 	"system_3b_model_generated": "모델 생성일",
 	"system_3b_snapshot_built": "스냅샷 생성 시각",
-	"system_3b_status_note": "3B 아키텍처 모델에서 생성되었습니다. 정제됨 — 비공개 파일, 경로, 세션 데이터를 포함하지 않습니다."
+	"system_3b_status_note": "3B 아키텍처 모델에서 생성되었습니다. 정제됨 — 비공개 파일, 경로, 세션 데이터를 포함하지 않습니다.",
+	"system_3b_graph_overview": "아키텍처 · 개요",
+	"system_3b_graph_expand_hint": "서브시스템을 클릭하면 펼쳐집니다",
+	"system_3b_graph_back": "개요로 돌아가기",
+	"system_3b_graph_relations_legend": "관계",
+	"system_3b_graph_loading": "인터랙티브 그래프 불러오는 중…",
+	"system_3b_graph_unavailable": "인터랙티브 그래프를 사용할 수 없어 레이어 개요를 표시합니다.",
+	"system_3b_graph_expand": "펼치기"
 }

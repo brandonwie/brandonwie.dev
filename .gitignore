@@ -51,3 +51,6 @@ graphify-out/
 
 # Git worktrees (canonical 3B path, ADR-035 — never committed)
 .worktrees/
+
+# Cross-agent lock symlink mounted into worktrees (3B multi-session locks)
+.agents/
