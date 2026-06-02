@@ -72,5 +72,11 @@
 	"system_3b_blog_progress": "{published} of {total} published",
 	"system_3b_model_generated": "model generated",
 	"system_3b_snapshot_built": "snapshot built",
-	"system_3b_status_note": "Generated from the 3B architecture model. Sanitized — it contains no private files, paths, or session data."
+	"system_3b_status_note": "Generated from the 3B architecture model. Sanitized — it contains no private files, paths, or session data.",
+	"system_3b_graph_overview": "architecture · overview",
+	"system_3b_graph_expand_hint": "click a subsystem to expand",
+	"system_3b_graph_back": "back to overview",
+	"system_3b_graph_relations_legend": "relations",
+	"system_3b_graph_loading": "Loading interactive graph…",
+	"system_3b_graph_unavailable": "Interactive graph unavailable — showing the layer outline."
 }

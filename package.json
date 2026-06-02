@@ -64,8 +64,10 @@
 		"vite": "^8.0.0"
 	},
 	"dependencies": {
+		"@dagrejs/dagre": "^3.0.0",
 		"@inlang/paraglide-js": "^2.9.1",
 		"@tailwindcss/vite": "^4.2.1",
+		"@xyflow/svelte": "^1.6.0",
 		"clsx": "^2.1.1",
 		"fuse.js": "^7.0.0",
 		"mermaid": "^11.12.2"

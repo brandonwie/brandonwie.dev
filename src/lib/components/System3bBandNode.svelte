@@ -1,0 +1,37 @@
+<!--
+	System3bBandNode.svelte — non-interactive layer lane behind the chips.
+	Spans the full graph width; carries the layer name top-left. zIndex -1 so it
+	sits behind subsystem chips and pans/zooms with the graph (true swimlane).
+-->
+<script lang="ts">
+	import type { NodeProps } from '@xyflow/svelte';
+	let { data }: NodeProps = $props();
+</script>
+
+<div
+	class="s3b-band"
+	style:width="{Number(data.width)}px"
+	style:height="{Number(data.height)}px"
+>
+	<span class="lane-label">{data.name}</span>
+</div>
+
+<style>
+	.s3b-band {
+		border: 1px dashed #353535;
+		border-radius: 10px;
+		background: rgba(45, 45, 45, 0.18);
+		pointer-events: none;
+	}
+	.lane-label {
+		position: absolute;
+		top: 6px;
+		left: 10px;
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: 11px;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: #666666;
+		white-space: nowrap;
+	}
+</style>

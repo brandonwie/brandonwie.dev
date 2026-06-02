@@ -16,7 +16,7 @@
 	import { m } from '$lib/paraglide/messages';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 	import ViewToggle from '$lib/components/ViewToggle.svelte';
-	import Mermaid from '$lib/components/Mermaid.svelte';
+	import System3bGraph from '$lib/components/System3bGraph.svelte';
 	import { viewMode } from '$lib/stores/viewMode';
 
 	interface Layer {
@@ -36,6 +36,16 @@
 		layer: string;
 		subsystem?: string;
 		name: string;
+	}
+	interface EdgeItem {
+		from: string;
+		to: string;
+		kind: string;
+		label: string;
+	}
+	interface FlowItem {
+		id: string;
+		display_label: string;
 	}
 	interface BlogItem {
 		order: number;
@@ -58,6 +68,8 @@
 		layers: Layer[];
 		subsystems: Subsystem[];
 		nodes: NodeItem[];
+		edges: EdgeItem[];
+		flows: FlowItem[];
 		blog_series: BlogItem[];
 		evolution: AdrItem[];
 		stats: Stat[];
@@ -87,49 +99,6 @@
 
 	// Decision history, newest first.
 	const evolution = $derived([...snapshot.evolution].sort((a, b) => b.date.localeCompare(a.date)));
-
-	function diagramKey(id: string): string {
-		return id.replace(/[^a-zA-Z0-9]/g, '_');
-	}
-
-	// Build the Mermaid source from the snapshot. Constructed as a plain JS string
-	// (not inline template markup) so Svelte never tries to parse mermaid braces.
-	// Labels are quoted, which lets mermaid handle the parens/slashes/commas in
-	// layer names safely.
-	function buildMermaid(layers: Layer[], counts: Record<string, number>): string {
-		const byId = new Map(layers.map((l) => [l.id, l]));
-		const lines = ['flowchart TD'];
-		for (const l of layers) {
-			lines.push(`\t${diagramKey(l.id)}["${l.name} — ${counts[l.id] ?? 0} nodes"]`);
-		}
-		// Truthful edge structure when the canonical layer ids are all present:
-		// everything is authored in the Source of Truth; generators project it to
-		// the symlink mounts + runtimes; the content, governance, and tooling
-		// layers all build on the SoT. Degrade to a simple ordered chain otherwise.
-		const expected = [
-			'source-of-truth',
-			'generators-sync',
-			'mounts-runtimes',
-			'content-lifecycle',
-			'governance-audit',
-			'tooling-mcp-layer',
-		];
-		const k = diagramKey;
-		if (expected.every((id) => byId.has(id))) {
-			lines.push(`\t${k('source-of-truth')} --> ${k('generators-sync')}`);
-			lines.push(`\t${k('generators-sync')} --> ${k('mounts-runtimes')}`);
-			lines.push(`\t${k('source-of-truth')} --> ${k('content-lifecycle')}`);
-			lines.push(`\t${k('source-of-truth')} --> ${k('governance-audit')}`);
-			lines.push(`\t${k('source-of-truth')} --> ${k('tooling-mcp-layer')}`);
-		} else {
-			for (let i = 0; i < layers.length - 1; i++) {
-				lines.push(`\t${k(layers[i].id)} --> ${k(layers[i + 1].id)}`);
-			}
-		}
-		return lines.join('\n');
-	}
-
-	const mermaidCode = $derived(buildMermaid(snapshot.layers, countByLayer));
 </script>
 
 <svelte:head>
@@ -194,7 +163,12 @@
 			<h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim">
 				{m.system_3b_map_heading()}
 			</h2>
-			<Mermaid code={mermaidCode} />
+			<System3bGraph
+				nodes={snapshot.nodes}
+				edges={snapshot.edges}
+				layers={snapshot.layers}
+				{locale}
+			/>
 		</section>
 
 		<!-- Layers -->
