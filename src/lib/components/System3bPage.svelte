@@ -163,11 +163,7 @@
 			<h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim">
 				{m.system_3b_map_heading()}
 			</h2>
-			<System3bGraph
-				nodes={snapshot.nodes}
-				edges={snapshot.edges}
-				layers={snapshot.layers}
-			/>
+			<System3bGraph nodes={snapshot.nodes} edges={snapshot.edges} layers={snapshot.layers} />
 		</section>
 
 		<!-- Layers -->

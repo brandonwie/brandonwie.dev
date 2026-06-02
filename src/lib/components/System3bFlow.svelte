@@ -110,7 +110,8 @@
 <div class="s3b-flow">
 	<div class="toolbar">
 		<span class="title">
-			{#if expandedSubKey}<span class="crumb">▸</span> {expandedName}{:else}{m.system_3b_graph_overview()}{/if}
+			{#if expandedSubKey}<span class="crumb">▸</span>
+				{expandedName}{:else}{m.system_3b_graph_overview()}{/if}
 		</span>
 		<div class="spacer"></div>
 		{#if expandedSubKey}
@@ -136,7 +137,13 @@
 		>
 			<Background bgColor="#1a1a1a" patternColor="#2b2b2b" gap={22} />
 			<Controls showLock={false} />
-			<MiniMap pannable zoomable nodeColor={mmColor} maskColor="rgba(10,10,10,0.6)" bgColor="#161616" />
+			<MiniMap
+				pannable
+				zoomable
+				nodeColor={mmColor}
+				maskColor="rgba(10,10,10,0.6)"
+				bgColor="#161616"
+			/>
 			<FitView trigger={expandedSubKey} />
 		</SvelteFlow>
 	</div>
@@ -152,9 +159,7 @@
 			<span class="legend-head">{m.system_3b_graph_relations_legend()}</span>
 			{#each Object.entries(EDGE_STYLE) as [kind, s] (kind)}
 				<span class="chip"
-					><span
-						class="line"
-						style:border-top="2px {s.dash ? 'dashed' : 'solid'} {s.color}"
+					><span class="line" style:border-top="2px {s.dash ? 'dashed' : 'solid'} {s.color}"
 					></span>{s.label}</span
 				>
 			{/each}

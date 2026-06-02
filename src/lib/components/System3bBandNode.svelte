@@ -10,11 +10,7 @@
 
 <!-- NOTE: Svelte interpolates {…} inside quoted style: directive values, so
      style:width="{Number(data.width)}px" is valid + render-verified — NOT literal CSS. -->
-<div
-	class="s3b-band"
-	style:width="{Number(data.width)}px"
-	style:height="{Number(data.height)}px"
->
+<div class="s3b-band" style:width="{Number(data.width)}px" style:height="{Number(data.height)}px">
 	<span class="lane-label">{data.name}</span>
 </div>
 
