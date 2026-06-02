@@ -17,9 +17,8 @@
 		nodes: SnapNode[];
 		edges: SnapEdge[];
 		layers: SnapLayer[];
-		locale?: 'en' | 'ko';
 	}
-	let { nodes, edges, layers, locale = 'en' }: Props = $props();
+	let { nodes, edges, layers }: Props = $props();
 
 	let Flow = $state<Component<Props> | null>(null);
 	let failed = $state(false);
@@ -42,7 +41,7 @@
 </script>
 
 {#if Flow}
-	<Flow {nodes} {edges} {layers} {locale} />
+	<Flow {nodes} {edges} {layers} />
 {:else}
 	<div class="s3b-fallback" class:failed>
 		<p class="note">

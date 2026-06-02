@@ -167,7 +167,6 @@
 				nodes={snapshot.nodes}
 				edges={snapshot.edges}
 				layers={snapshot.layers}
-				{locale}
 			/>
 		</section>
 

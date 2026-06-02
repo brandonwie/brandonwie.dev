@@ -29,7 +29,6 @@
 		nodes: SnapNode[];
 		edges: SnapEdge[];
 		layers: SnapLayer[];
-		locale?: 'en' | 'ko';
 	}
 	let { nodes: snapNodes, edges: snapEdges, layers }: Props = $props();
 
@@ -66,6 +65,8 @@
 		hovered = v;
 	}
 
+	// $state.raw (not $state): SvelteFlow requires full-array reassignment per change;
+	// in-place mutations (push/splice) are NOT tracked. Both arrays are reassigned wholesale below.
 	let flowNodes = $state.raw<Node[]>([]);
 	let flowEdges = $state.raw<Edge[]>([]);
 
