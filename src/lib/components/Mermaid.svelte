@@ -30,7 +30,7 @@
 				lineColor: '#888888',
 
 				// Accent colors (matching terminal theme)
-				primaryColor: '#da7756', // orange
+				primaryColor: '#a855f7', // neon violet (brand)
 				secondaryColor: '#6b9eff', // blue
 				tertiaryColor: '#2d2d2d',
 

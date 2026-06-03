@@ -9,11 +9,14 @@
 	--color-terminal-text-primary: #e5e5e5;
 	--color-terminal-text-muted: #888888;
 	--color-terminal-text-dim: #666666;
-	--color-terminal-accent-orange: #da7756;
+	--color-terminal-accent-orange: #a855f7; /* brand: neon violet — repointed so existing accent-orange classes recolor; class rename is a DX-1 follow-up */
+	--color-terminal-accent-violet: #a855f7;
+	--color-terminal-accent-violet-glow: #c084fc;
+	--color-terminal-accent-violet-deep: #7c3aed;
 	--color-terminal-accent-blue: #6b9eff;
 	--color-terminal-accent-green: #7ec699;
 	--color-terminal-accent-yellow: #e5c07b;
-	--color-terminal-accent-purple: #c678dd;
+	--color-terminal-accent-purple: #c084fc;
 	--color-terminal-accent-cyan: #56b6c2;
 	--color-terminal-accent-red: #e06c75;
 	--color-terminal-border: #404040;
@@ -60,11 +63,14 @@
 		--text-primary: #e5e5e5;
 		--text-muted: #888888;
 		--text-dim: #666666;
-		--accent-orange: #da7756;
+		--accent-orange: #a855f7; /* brand: neon violet */
+		--accent-violet: #a855f7;
+		--accent-violet-glow: #c084fc;
+		--accent-violet-deep: #7c3aed;
 		--accent-blue: #6b9eff;
 		--accent-green: #7ec699;
 		--accent-yellow: #e5c07b;
-		--accent-purple: #c678dd;
+		--accent-purple: #c084fc;
 		--accent-cyan: #56b6c2;
 		--accent-red: #e06c75;
 		--border: #404040;
@@ -181,6 +187,7 @@
 	vertical-align: text-bottom;
 	background-color: var(--accent-orange);
 	color: var(--bg-primary);
+	box-shadow: 0 0 8px var(--accent-violet-glow);
 	animation: blink 1s step-end infinite;
 }
 
@@ -222,15 +229,15 @@
 	--tw-prose-body: #e5e5e5;
 	--tw-prose-headings: #e5e5e5;
 	--tw-prose-lead: #888888;
-	--tw-prose-links: #6b9eff;
+	--tw-prose-links: #a855f7;
 	--tw-prose-bold: #e5e5e5;
 	--tw-prose-counters: #888888;
 	--tw-prose-bullets: #888888;
 	--tw-prose-hr: #404040;
 	--tw-prose-quotes: #888888;
-	--tw-prose-quote-borders: #da7756;
+	--tw-prose-quote-borders: #7c3aed;
 	--tw-prose-captions: #888888;
-	--tw-prose-code: #da7756;
+	--tw-prose-code: #a855f7;
 	--tw-prose-pre-code: #e5e5e5;
 	--tw-prose-pre-bg: #2d2d2d;
 	--tw-prose-th-borders: #404040;

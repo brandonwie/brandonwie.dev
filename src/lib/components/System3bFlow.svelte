@@ -188,7 +188,7 @@
 		color: #e5e5e5;
 	}
 	.crumb {
-		color: #da7756;
+		color: #a855f7;
 	}
 	.spacer {
 		flex: 1;
@@ -206,8 +206,8 @@
 		cursor: pointer;
 	}
 	.btn:hover {
-		border-color: #da7756;
-		color: #da7756;
+		border-color: #a855f7;
+		color: #a855f7;
 	}
 	.canvas {
 		height: clamp(440px, 70vh, 760px);
