@@ -24,7 +24,6 @@
 	import { onMount } from 'svelte';
 	import CommandLine from './CommandLine.svelte';
 	import Output from './Output.svelte';
-	import FuzzyFinder from './FuzzyFinder.svelte';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
 	import ViewToggle from '$lib/components/ViewToggle.svelte';
 
@@ -33,14 +32,8 @@
 	// Stores are imported and accessed with `$` prefix for auto-subscription.
 	// `$cwd` reads the store value and auto-updates when it changes.
 	// `cwd.set(value)` updates the store value.
-	import {
-		cwd,
-		outputBuffer,
-		addOutput,
-		addToHistory,
-		fuzzyFinderOpen,
-		clearOutput,
-	} from '$lib/stores/terminal';
+	import { cwd, outputBuffer, addOutput, addToHistory, clearOutput } from '$lib/stores/terminal';
+	import { paletteOpen } from '$lib/stores/palette';
 	import { posts } from '$lib/stores/posts';
 
 	// Command execution system
@@ -126,7 +119,7 @@
 			{ type: 'text', content: '' },
 			{ type: 'text', content: "  Type 'help' for available commands" },
 			{ type: 'text', content: "  Type 'whoami' to learn about me" },
-			{ type: 'text', content: '  Press Ctrl+P (or Cmd+P) for fuzzy search' },
+			{ type: 'text', content: '  Press Cmd+K (or Ctrl+P) for the command palette' },
 			{ type: 'text', content: '' },
 		]);
 	}
@@ -161,7 +154,7 @@
 					onNavigateToPost(slug);
 				}
 			},
-			openFuzzyFinder: () => fuzzyFinderOpen.set(true), // Open search modal
+			openFuzzyFinder: () => paletteOpen.set(true), // Open command palette
 		};
 
 		const result = executeCommand(command, context);
@@ -198,30 +191,17 @@
 		}
 	}
 
-	// GLOBAL KEYBOARD SHORTCUTS
-	// -------------------------
-	// Ctrl+P/K: Open fuzzy finder (like VS Code)
-	// Ctrl+L: Clear terminal (like bash)
+	// TERMINAL KEYBOARD SHORTCUTS
+	// ---------------------------
+	// Ctrl+L: Clear terminal (like bash).
+	// The command palette (Cmd/Ctrl+K, +P alias) is handled globally in +layout.svelte
+	// so it works in blog mode too — no terminal-local binding is needed here.
 	function handleKeyDown(event: KeyboardEvent) {
-		// Ctrl+P or Ctrl+K (or Cmd on Mac) to open fuzzy finder
-		if ((event.ctrlKey || event.metaKey) && (event.key === 'p' || event.key === 'k')) {
-			event.preventDefault(); // Prevent browser's default (print dialog)
-			fuzzyFinderOpen.set(true);
-		}
-
 		// Ctrl+L to clear (standard terminal shortcut)
 		if ((event.ctrlKey || event.metaKey) && event.key === 'l') {
 			event.preventDefault();
 			clearOutput();
 			showWelcome();
-		}
-	}
-
-	// Handle post selection from FuzzyFinder
-	function handleFuzzySelect(slug: string) {
-		fuzzyFinderOpen.set(false); // Close the modal
-		if (onNavigateToPost) {
-			onNavigateToPost(slug); // Navigate to selected post
 		}
 	}
 </script>
@@ -305,19 +285,4 @@
 		-->
 		<CommandLine bind:this={commandLineRef} cwd={$cwd} onSubmit={handleCommand} />
 	</div>
-
-	<!--
-	  CONDITIONAL RENDERING - FUZZY FINDER MODAL
-	  ------------------------------------------
-	  {#if $fuzzyFinderOpen} only mounts FuzzyFinder when store is true.
-	  WHY: Modal doesn't exist in DOM until opened - better performance.
-	  When fuzzyFinderOpen becomes false, component unmounts (cleanup runs).
-	-->
-	{#if $fuzzyFinderOpen}
-		<FuzzyFinder
-			posts={$posts}
-			onSelect={handleFuzzySelect}
-			onClose={() => fuzzyFinderOpen.set(false)}
-		/>
-	{/if}
 </div>

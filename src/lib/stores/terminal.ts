@@ -33,9 +33,6 @@ export const historyIndex = writable<number>(-1);
 // Current input value
 export const currentInput = writable<string>('');
 
-// Fuzzy finder state
-export const fuzzyFinderOpen = writable<boolean>(false);
-
 // Terminal output buffer (for display)
 export const outputBuffer = writable<OutputLine[]>([]);
 
