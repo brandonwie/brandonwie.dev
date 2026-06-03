@@ -25,7 +25,7 @@
 	// `tick` - Returns promise that resolves after Svelte has applied pending state changes.
 	// WHY: Need to wait for DOM update before focusing input.
 	// REFERENCE: https://svelte.dev/docs/svelte/lifecycle-hooks#tick
-	import { onMount, tick } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import type { PostMetadata } from '$lib/stores/posts';
 
 	// FUSE.JS INTEGRATION
@@ -64,6 +64,11 @@
 	//       Container's children are the result items, accessed by index: children[selectedIndex].
 	let resultsContainerRef: HTMLDivElement;
 
+	// A11Y-2: focus-trap refs. `dialogRef` scopes the trap to the modal;
+	// `previouslyFocused` is restored when the palette closes.
+	let dialogRef: HTMLDivElement;
+	let previouslyFocused: HTMLElement | null = null;
+
 	// AUTO-SCROLL TO SELECTED ITEM ($effect)
 	// --------------------------------------
 	// WHAT: Reactive effect that scrolls the selected result item into view.
@@ -100,6 +105,9 @@
 	// `async` in onMount allows using await inside.
 	// WHY async here: Need to await `tick()` before focusing.
 	onMount(async () => {
+		// A11Y-2: remember what had focus so we can restore it when the palette closes.
+		previouslyFocused = document.activeElement as HTMLElement | null;
+
 		// Create Fuse.js instance with posts data
 		fuse = createPostsFuse(posts);
 
@@ -118,6 +126,10 @@
 		await tick();
 		inputRef?.focus();
 	});
+
+	// A11Y-2: return focus to the element focused before the palette opened.
+	// onMount is async here, so its return value can't be used as cleanup — use onDestroy.
+	onDestroy(() => previouslyFocused?.focus?.());
 
 	// SEARCH HANDLER
 	// --------------
@@ -187,6 +199,31 @@
 			event.preventDefault();
 			event.stopPropagation();
 			onClose();
+			return;
+		}
+		// A11Y-2: keep Tab focus inside the dialog while it is open.
+		if (event.key === 'Tab') {
+			trapFocus(event);
+		}
+	}
+
+	// Cycle focus between the first and last focusable elements in the dialog.
+	function trapFocus(event: KeyboardEvent) {
+		const focusables = dialogRef?.querySelectorAll<HTMLElement>(
+			'a[href], button, input, [tabindex]:not([tabindex="-1"])',
+		);
+		if (!focusables || focusables.length === 0) return;
+
+		const first = focusables[0];
+		const last = focusables[focusables.length - 1];
+		const active = document.activeElement;
+
+		if (event.shiftKey && active === first) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && active === last) {
+			event.preventDefault();
+			first.focus();
 		}
 	}
 </script>
@@ -220,6 +257,7 @@
   - tabindex="-1": Allows programmatic focus
 -->
 <div
+	bind:this={dialogRef}
 	class="fuzzy-overlay fixed inset-0 z-50 flex items-start justify-center pt-24"
 	onclick={(e) => e.target === e.currentTarget && onClose()}
 	onkeydown={(e) => e.key === 'Escape' && onClose()}

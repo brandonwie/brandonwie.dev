@@ -41,6 +41,9 @@
 	// Progressive enhancement: unsupported browsers get instant navigation
 	import { onNavigate, goto } from '$app/navigation';
 	import { viewMode } from '$lib/stores/viewMode';
+	import { posts } from '$lib/stores/posts';
+	import { paletteOpen } from '$lib/stores/palette';
+	import FuzzyFinder from '$lib/components/terminal/FuzzyFinder.svelte';
 
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
@@ -59,7 +62,13 @@
 	// It returns an object containing all props passed to this component.
 	// `children` is a special "snippet" prop that SvelteKit passes to layouts,
 	// containing the page content that should be rendered inside this layout.
-	let { children } = $props();
+	let { data, children } = $props();
+
+	// Hydrate the posts store on every route (folds ARCH-1: previously only the home
+	// page populated it). Reactive so EN <-> KO navigation swaps the locale set.
+	$effect(() => {
+		posts.set(data.posts);
+	});
 
 	const systemHref = $derived(page.url.pathname.startsWith('/ko') ? '/ko/system/3b' : '/system/3b');
 
@@ -82,6 +91,28 @@
 		const isKorean = pathname.startsWith('/ko');
 		goto(isKorean ? '/ko/search' : '/search');
 	}
+
+	// Command palette: Cmd/Ctrl+K (primary) or Cmd/Ctrl+P (alias). Works in every
+	// view, terminal mode included. ADR-0001 Phase 0.
+	function handlePaletteShortcut(event: KeyboardEvent): boolean {
+		if (!((event.metaKey || event.ctrlKey) && (event.key === 'k' || event.key === 'p'))) {
+			return false;
+		}
+		event.preventDefault();
+		paletteOpen.set(true);
+		return true;
+	}
+
+	function handleGlobalKeyDown(event: KeyboardEvent) {
+		if (handlePaletteShortcut(event)) return;
+		handleSearchShortcut(event);
+	}
+
+	// Navigate to the selected post, then close the palette. Locale-aware path.
+	function handlePaletteSelect(slug: string) {
+		paletteOpen.set(false);
+		goto(page.url.pathname.startsWith('/ko') ? `/ko/posts/${slug}` : `/posts/${slug}`);
+	}
 </script>
 
 <!--
@@ -96,7 +127,7 @@
 
   REFERENCE: https://svelte.dev/docs/svelte/svelte-head
 -->
-<svelte:window onkeydown={handleSearchShortcut} />
+<svelte:window onkeydown={handleGlobalKeyDown} />
 
 <svelte:head>
 	<title>Brandon Wie | Software Engineer</title>
@@ -168,6 +199,20 @@
 		</a>
 	</footer>
 </div>
+
+<!--
+  GLOBAL COMMAND PALETTE
+  ----------------------
+  Mounted once at the root so Cmd/Ctrl+K works on every route (blog + terminal),
+  not just inside the terminal. Fixed-position overlay, so DOM placement is moot.
+-->
+{#if $paletteOpen}
+	<FuzzyFinder
+		posts={$posts}
+		onSelect={handlePaletteSelect}
+		onClose={() => paletteOpen.set(false)}
+	/>
+{/if}
 
 <!-- Hidden links for SSG prerendering - allows SvelteKit to crawl all locale versions -->
 <div style="display:none">

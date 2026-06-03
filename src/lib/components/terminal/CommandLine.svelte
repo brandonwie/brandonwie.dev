@@ -19,8 +19,9 @@
 	// -------------
 	// `currentInput` - Store holding current command text
 	// `historyUp/Down` - Functions to navigate command history
-	// `fuzzyFinderOpen` - Need to know when modal is open (disable focus stealing)
-	import { currentInput, historyUp, historyDown, fuzzyFinderOpen } from '$lib/stores/terminal';
+	// `paletteOpen` - Need to know when the palette is open (disable focus stealing)
+	import { currentInput, historyUp, historyDown } from '$lib/stores/terminal';
+	import { paletteOpen } from '$lib/stores/palette';
 	import { getCommandCompletions } from '$lib/commands';
 	import { onMount } from 'svelte';
 
@@ -72,24 +73,24 @@
 		cursorPosition = inputRef?.selectionStart ?? $currentInput.length;
 	}
 
-	// $effect() - REFOCUS AFTER FUZZY FINDER CLOSES
+	// $effect() - REFOCUS AFTER PALETTE CLOSES
 	// ----------------------------------------------
 	// PATTERN: Tracking previous state to detect changes.
-	// WHY: Need to refocus CommandLine when FuzzyFinder closes.
-	// HOW: Compare current vs previous value of fuzzyFinderOpen.
+	// WHY: Need to refocus CommandLine when the palette closes.
+	// HOW: Compare current vs previous value of paletteOpen.
 	//
-	// NOTE: `wasFuzzyOpen` is $state because we need to persist across renders.
-	let wasFuzzyOpen = $state(false);
+	// NOTE: `wasPaletteOpen` is $state because we need to persist across renders.
+	let wasPaletteOpen = $state(false);
 	$effect(() => {
-		const isOpen = $fuzzyFinderOpen;
-		if (wasFuzzyOpen && !isOpen) {
-			// Fuzzy finder just closed (was open, now closed)
-			// Small delay ensures FuzzyFinder has unmounted
+		const isOpen = $paletteOpen;
+		if (wasPaletteOpen && !isOpen) {
+			// Palette just closed (was open, now closed)
+			// Small delay ensures the palette has unmounted
 			setTimeout(() => {
 				inputRef?.focus();
 			}, 50);
 		}
-		wasFuzzyOpen = isOpen;
+		wasPaletteOpen = isOpen;
 	});
 
 	// KEYBOARD EVENT HANDLER
@@ -190,11 +191,11 @@
 	// FOCUS MANAGEMENT
 	// ----------------
 	// WHY: Terminal should always be ready for input.
-	// BEHAVIOR: Refocus after blur, unless FuzzyFinder is open.
+	// BEHAVIOR: Refocus after blur, unless the palette is open.
 	// setTimeout prevents focus race conditions.
 	function handleBlur() {
 		setTimeout(() => {
-			if (!$fuzzyFinderOpen) {
+			if (!$paletteOpen) {
 				inputRef?.focus();
 			}
 		}, 10);
