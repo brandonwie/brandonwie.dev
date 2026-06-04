@@ -3,7 +3,6 @@
 	"site_description": "소프트웨어 엔지니어링 인사이트, 튜토리얼, 배움",
 	"posts_title": "모든 글",
 	"posts_description": "Brandon Wie의 모든 블로그 글",
-	"back_to_terminal": "터미널로 돌아가기",
 	"no_posts": "아직 글이 없습니다. 곧 돌아와주세요!",
 	"translation_notice": "이 글은 아직 한국어로 번역되지 않았습니다.",
 	"view_in_english": "영어로 보기",
@@ -14,6 +13,7 @@
 	"updated": "수정일",
 	"comments_title": "댓글",
 	"blog_tagline": "백엔드 시스템, DevOps, 그리고 실제 제품을 만들며 배운 것들을 기록합니다.",
+	"blog_bio": "프로덕션 시스템을 만드는 백엔드 엔지니어입니다. 영화를 전공하다 엔지니어가 되었고, 지금은 Moba에서 백엔드를 리드하고 있어요. 이 블로그엔 그동안 배운 것들을 기록합니다.",
 	"recent_posts": "최근 글",
 	"see_all_posts": "전체 {count}개 글 보기",
 	"back_to_home": "홈으로 돌아가기",
@@ -81,7 +81,7 @@
 	"system_3b_graph_unavailable": "인터랙티브 그래프를 사용할 수 없어 레이어 개요를 표시합니다.",
 	"system_3b_graph_expand": "펼치기",
 	"palette_placeholder": "글과 명령 검색...",
-	"palette_no_results": "일치하는 항목이 없습니다. 제목, 'toggle', 'language', 또는 페이지 이름을 입력해 보세요.",
+	"palette_no_results": "일치하는 항목이 없습니다. 제목, 'about', 'github', 또는 페이지 이름을 입력해 보세요.",
 	"palette_group_nav": "이동",
 	"palette_group_action": "동작",
 	"palette_group_post": "글",
@@ -90,9 +90,11 @@
 	"palette_nav_search": "검색",
 	"palette_nav_stats": "통계",
 	"palette_nav_system": "3B 시스템",
-	"palette_action_toggle_view": "블로그 / 터미널 보기 전환",
+	"palette_action_about": "Brandon 소개",
 	"palette_action_switch_language": "언어 전환",
 	"palette_action_copy_link": "현재 링크 복사",
 	"palette_action_rss": "RSS 피드",
-	"palette_action_github": "GitHub 저장소"
+	"palette_action_github": "GitHub 저장소",
+	"palette_action_linkedin": "LinkedIn 프로필",
+	"palette_action_email": "이메일 보내기"
 }

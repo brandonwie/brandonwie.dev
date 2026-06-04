@@ -9,7 +9,7 @@
 
 meta:
   project: brandonwie.dev
-  type: personal-blog (SSG) + interactive terminal UI
+  type: personal-blog (SSG) with a global Cmd/Ctrl+K command palette
   domain: brandonwie.dev
   hosting: Cloudflare Pages (precompressed .br/.gz, edge-served)
   repo: github.com/brandonwie/brandonwie.dev
@@ -18,8 +18,7 @@ meta:
   analysis_method: 5 parallel code-explorer agents (routing, content+i18n, terminal, blog-ui, build) + verification pass
   scale:
     source_files_ts_svelte_js: ~55
-    component_files: 21 # 17 top-level + 4 terminal (src/lib/components/ui/ is EMPTY)
-    command_files: 11 # 18 registered command names
+    component_files: 17 # 16 top-level + 1 palette (FuzzyFinder moved from terminal/); src/lib/components/ui/ is EMPTY
     posts_en: 139
     posts_ko: 139
     ko_coverage: '100%'
@@ -33,7 +32,7 @@ stack:
   styling: Tailwind CSS v4 (CSS-first, @theme in app.css) + @tailwindcss/typography
   i18n: Paraglide-JS 2 (inlang message-format), EN base + /ko prefix
   markdown: mdsvex 0.12 + remark/rehype chain + Shiki 4 (github-dark)
-  search: Pagefind 1.4 (build-time full-text index) + Fuse.js 7 (terminal fuzzy)
+  search: Pagefind 1.4 (build-time full-text index) + Fuse.js 7 (command-palette fuzzy)
   diagrams: Mermaid 11 (lazy) + @xyflow/svelte 1.6 + @dagrejs/dagre 3 (system graph)
   comments: Giscus (GitHub Discussions)
   analytics: Umami (self-hosted API)
@@ -73,7 +72,7 @@ subsystems:
       Hidden locale-alternate anchors in +layout.svelte give the crawler /ko variants.
       `handleHttpError:'fail'` aborts build on broken internal links.
     key_files:
-      'src/routes/+page.{ts,svelte}': 'Home — Terminal vs BlogHome by viewMode; eager glob EN metadata'
+      'src/routes/+page.{ts,svelte}': 'Home — BlogHome (blog-only); eager glob EN metadata'
       'src/routes/posts/+page.{ts,svelte}': '/posts list + CategorySidebar client-filter (153 loc)'
       'src/routes/posts/[slug]/+page.{ts,svelte}': 'EN post — lazy glob resolves slug → PostDetail (8 loc wrapper)'
       'src/routes/ko/**': 'KO mirror of every EN route; ko/posts/[slug] adds isFallback merge'
@@ -109,7 +108,7 @@ subsystems:
       'src/lib/plugins/remark-toc-extract.js': 'h2/h3 → github-slugger → fm.headings[]'
       'src/lib/plugins/remark-mermaid-component.js': '```mermaid fence → <Mermaid code={...}/> before Shiki'
     i18n:
-      engine: Paraglide-JS 2 (project.inlang/settings.json; messages/{en,ko}.json — 60 keys, parity)
+      engine: Paraglide-JS 2 (project.inlang/settings.json; messages/{en,ko}.json — 98 keys, parity)
       runtime_generated: src/lib/paraglide/ (regenerated each build — why build MUST precede check)
       strategy: "['url','cookie','baseLocale'] (vite.config.ts)"
       usage: 'import * as m; m.key()'
@@ -125,33 +124,19 @@ subsystems:
       'scripts/translation-create.ts': 'scaffold KO template (draft:true, [번역 필요])'
     depends_on: [3B knowledge repo (external), components.Mermaid, utils.date]
 
-  terminal_cli:
-    purpose: Interactive Claude-Code-style terminal as an alternate home view
-    registry:
-      file: src/lib/commands/index.ts (115 loc)
-      mechanism: 'module-level Map<string,CommandHandler>; commands self-register via side-effect import in Terminal.svelte'
-      types: 'CommandContext (cwd,setCwd,fs,posts,navigateToPost,openFuzzyFinder) ; CommandResult {output,newCwd?}'
-    commands: # 18 names across 11 files
-      ls.ts: [ls, ll]
-      cd.ts: [cd]
-      cat.ts: [cat, read]
-      grep.ts: [grep, search, find]
-      help.ts: [help, man] # commandHelp dict is hand-maintained — drifts from registry
-      open.ts: [open] # internal links use window.location (full reload — bypasses View Transitions)
-      whoami.ts: [whoami, about]
-      clear.ts: [clear, cls] # imports store directly — breaks pure-fn model
-      echo.ts: [echo]
-      history.ts: [history] # imports store directly
-      pwd.ts: [pwd]
+  command_palette:
+    purpose: Global Cmd/Ctrl+K (+ Cmd/Ctrl+P alias) command palette — GO TO nav, ACTIONS, post search (ADR-0001; replaced the retired terminal_cli)
+    model:
+      file: src/lib/palette/items.ts
+      types: 'PaletteItem {id,group,label,description?,keywords?,icon?,run(),meta?} ; PaletteGroup = nav|action|post'
+      builders: 'buildNavItems / buildActionItems (about, switch-language, copy-link, rss, github, linkedin, email) / postToItem / buildPaletteItems — all locale-aware'
     key_files:
-      'src/lib/filesystem.ts': "in-memory virtual FS over PostMetadata[] (184 loc); resolvePath skips '..'; getAllFiles unused"
-      'src/lib/fuzzy.ts': 'Fuse.js wrapper — indexes title/desc/tags/category/slug (NOT body), threshold 0.4 (73 loc)'
-      'src/lib/stores/terminal.ts': "cwd, history, output buffer, OutputLine union incl 'html' (103 loc)"
-      'src/lib/components/terminal/Terminal.svelte': 'orchestrator; rebuilds FS on $posts via $effect; global Ctrl+P/K/L (324 loc)'
-      'src/lib/components/terminal/CommandLine.svelte': 'hidden-input + block-cursor; tab-complete (cmd names only — path TODO) (332 loc)'
-      'src/lib/components/terminal/Output.svelte': "renders OutputLine[]; {@html} branch for type:'html' (DEAD but live sink) (184 loc)"
-      'src/lib/components/terminal/FuzzyFinder.svelte': 'Ctrl+P/K modal; no focus trap (402 loc)'
-    depends_on: [state_stores.posts, SvelteKit goto (via callback)]
+      'src/lib/palette/items.ts': 'PaletteItem model + builders; each item self-executes via run()'
+      'src/lib/fuzzy.ts': 'Fuse.js wrapper — createPaletteFuse over label/keywords/description; highlightMatches'
+      'src/lib/stores/palette.ts': 'paletteOpen writable; toggled by Cmd/Ctrl+K|P in +layout.svelte'
+      'src/lib/components/palette/FuzzyFinder.svelte': 'modal palette; grouped GO TO/ACTIONS/POSTS; focus trap + restore (A11Y-2); empty-query post cap + empty state (UX-3); keyboard-hint footer'
+    mounted: 'globally in src/routes/+layout.svelte (every route); Cmd/Ctrl+F still routes to /search'
+    depends_on: [state_stores.posts, SvelteKit goto]
 
   blog_ui_components:
     purpose: Blog-mode presentation, shared components, app-level state, styling
@@ -161,7 +146,6 @@ subsystems:
       'CategorySidebar.svelte': 'desktop sidebar + mobile pills; role=tablist mismatch (84 loc)'
       'TableOfContents.svelte': 'IntersectionObserver active-heading; desktop + mobile <details> (101 loc)'
       'ReadingProgress.svelte': 'scroll progress bar, good a11y (19 loc)'
-      'ViewToggle.svelte': 'blog/CLI switch; aria-label hardcoded EN (15 loc)'
       'LanguageToggle.svelte': 'EN/KR — URL-based, SSG-safe, no JS needed (37 loc)'
       'Mermaid.svelte': "client render; await import('mermaid'); securityLevel:'loose' + innerHTML (197 loc)"
       'Giscus.svelte': 'GitHub Discussions script injection (55 loc)'
@@ -225,17 +209,14 @@ subsystems:
 cross_cutting:
   security:
     - 'StatsPage.svelte:20 — hardcoded Umami API_KEY (read-only public, but committed secret; 0 PUBLIC_ env usage)'
-    - '{@html} sinks: Output.svelte (dead html branch), SearchPage.svelte (Pagefind excerpt), PostDetail.svelte (JSON-LD, controlled)'
+    - '{@html} sinks: SearchPage.svelte (Pagefind excerpt), PostDetail.svelte (JSON-LD, controlled) — SEC-2 partial: Output.svelte sink removed w/ terminal; 2 {@html} + Mermaid innerHTML remain, SEC-2 stays OPEN'
     - "Mermaid.svelte:53 securityLevel:'loose' + innerHTML (author-content claim; widens if provenance broadens)"
   a11y:
     - '<html lang> not per-locale'
-    - 'terminal output role=log without explicit aria-live; FuzzyFinder no focus trap'
     - 'CategorySidebar mobile role=tablist without tabpanels (should be nav + aria-pressed)'
-    - 'ViewToggle aria-label hardcoded English (i18n gap)'
   state_stores:
-    'posts.ts': 'writable PostMetadata[] — hydrated ONLY in home onMount; deep-link to /posts/* leaves terminal store empty'
-    'viewMode.ts': "writable 'blog'|'terminal'; localStorage 'brandonwie-view-mode'; default blog"
-    'terminal.ts': 'cwd/history/output buffers'
+    'posts.ts': 'writable PostMetadata[] — hydrated globally in +layout.svelte $effect on every route (ARCH-1)'
+    'palette.ts': 'paletteOpen writable; toggled by Cmd/Ctrl+K|P in +layout.svelte'
   utils:
     'src/lib/utils/date.ts': 'effectiveDate (updated||date), formatDateShort/Long, locale-aware (KO YYYY.MM.DD)'
     'src/lib/utils/system3b-graph.ts': 'dagre layout for system graph'
@@ -264,7 +245,6 @@ known_risks:
   draft_exposure: '[slug] loaders resolve any slug incl draft:true — direct URL shows draft content (list views correctly filter)'
   prerender_coverage: 'no entries() — a post not linked anywhere is silently not prerendered (strict:true crawler-only)'
   og_gap: '45 of 139 posts lack a slug OG image (94 present + 1 default) — manual og:generate, no build failure'
-  store_hydration: 'terminal features (grep/fuzzy) broken on deep-links until home visited'
   frontmatter_schema: 'app.d.ts:17 metadata is Record<string,unknown>, cast to PostMetadata in loaders — no runtime validation'
   hashless_posts: '3 EN ai-ml posts lack source_content_hash (karpathy-llm-knowledge-bases, next-intelligence-explosion-social, six-papers-zero-applied) — invisible to sync:check'
   deno_task_perms: 'deno.json sync task lacks --allow-env that package.json sync has (sync-from-3b.ts reads env)'

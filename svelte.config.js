@@ -80,7 +80,6 @@ const config = {
 		alias: {
 			$components: 'src/lib/components',
 			$stores: 'src/lib/stores',
-			$commands: 'src/lib/commands',
 			$content: 'src/content',
 		},
 	},

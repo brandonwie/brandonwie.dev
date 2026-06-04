@@ -1,6 +1,6 @@
 # brandonwie.dev
 
-Personal blog with a terminal-style interface, built with SvelteKit.
+Personal blog built with SvelteKit, featuring a Cmd/Ctrl+K command palette.
 
 ## Features
 
@@ -70,7 +70,7 @@ See [docs/TRANSLATION.md](docs/TRANSLATION.md) for translation guidelines.
 
 | Route              | Description                                           |
 | ------------------ | ----------------------------------------------------- |
-| `/`                | English home (terminal)                               |
+| `/`                | English home                                          |
 | `/posts`           | English posts list                                    |
 | `/posts/{slug}`    | English post                                          |
 | `/ko`              | Korean home                                           |
@@ -87,7 +87,6 @@ src/
 │   ├── en/          # English posts
 │   └── ko/          # Korean translations
 ├── lib/
-│   ├── commands/    # Terminal commands
 │   ├── components/  # Svelte components
 │   └── paraglide/   # Generated i18n runtime
 ├── routes/

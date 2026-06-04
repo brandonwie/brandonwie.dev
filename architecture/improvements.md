@@ -1,7 +1,7 @@
 ---
 tags: [architecture, renewal, backlog, tech-debt, svelte-kit]
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-06-04
 status: in-progress
 related:
   - ./structure.yaml
@@ -35,7 +35,7 @@ queue** — not a commitment, a menu with honest trade-offs.
 
 ## Summary
 
-_The table lists the **41 active engineering findings** (P0–P3); each has a matching `###` detail section below — table ID set ≡ `###` finding-heading set. `PROD-1`/`PROD-2` (product decisions) and the 3 IDs superseded by [ADR-0001](./decisions/0001-terminal-vs-command-palette.md) are in their own sections, **excluded** from the 41 count._
+_The table lists the **37 active engineering findings** (P0–P3); each has a matching `###` detail section below — table ID set ≡ `###` finding-heading set. `PROD-1`/`PROD-2` (product decisions) and the IDs retired or shipped via [ADR-0001](./decisions/0001-terminal-vs-command-palette.md) terminal retirement (see the Superseded section) are in their own section, **excluded** from the 37 count._
 
 | ID        | Title                                            | Cat        | Effort | Risk | Priority |
 | --------- | ------------------------------------------------ | ---------- | ------ | ---- | -------- |
@@ -50,14 +50,11 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 | A11Y-1    | `<html lang>` per locale                         | a11y/seo   | S      | low  | P1       |
 | A11Y-2    | FuzzyFinder focus trap                           | a11y       | S      | low  | P1       |
 | A11Y-4    | CategorySidebar `tablist`→`nav`/`aria-pressed`   | a11y       | S      | low  | P1       |
-| A11Y-5    | ViewToggle `aria-label` i18n                     | a11y/i18n  | S      | low  | P1       |
 | SEO-3     | Canonical + hreflang in post `<head>`            | seo        | M      | low  | P1       |
 | ARCH-1    | Hydrate posts store site-wide                    | arch       | M      | med  | P1       |
 | DEPS-1    | `pnpm audit`: 2 high + 15 moderate advisories    | deps       | M      | med  | P1       |
 | DX-1      | Consolidate dual CSS variable system             | dx         | M      | low  | P2       |
 | ARCH-2    | Extract shared content loader module             | arch/dx    | S      | low  | P2       |
-| DX-2      | Command metadata in registry (kill `help` drift) | dx         | M      | low  | P2       |
-| ARCH-4    | `open` internal nav via `goto`                   | arch       | S      | low  | P2       |
 | ARCH-5    | Split domain types from UI stores (`posts.ts`)   | arch       | M      | med  | P2       |
 | ARCH-6    | Extract shared sync/hash util (lockstep dup)     | arch       | S      | low  | P2       |
 | DX-3      | Remove empty `ui/` or adopt shadcn               | dx         | S      | low  | P2       |
@@ -74,7 +71,6 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 | UX-2      | `copyLink` clipboard fallback                    | ux         | S      | low  | P3       |
 | DX-6      | Remove `@ts-nocheck` from vite.config            | dx         | S      | low  | P3       |
 | DX-7      | Split pre-push build for content-only commits    | dx         | S      | low  | P3       |
-| UX-3      | FuzzyFinder default cap + empty state            | ux         | S      | low  | P3       |
 | SEO-4     | Sitemap emits `/ko` for untranslated posts       | seo        | S      | low  | P3       |
 | PERF-2    | Verify dagre stays route-split                   | perf       | S      | low  | P3       |
 | CONTENT-7 | translate-create message drift                   | content    | S      | low  | P3       |
@@ -85,13 +81,18 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 
 ## Superseded by ADR-0001 (Option B — retire terminal)
 
-[ADR-0001](./decisions/0001-terminal-vs-command-palette.md) retires terminal mode, so these terminal-only fixes are moot — kept for rationale, **excluded** from the active count:
+[ADR-0001](./decisions/0001-terminal-vs-command-palette.md) retired terminal mode (Phase 1b + Phase 2 shipped 2026-06-04), so these terminal-only findings are moot — kept for rationale, **excluded** from the active count:
 
 - **A11Y-3 · Terminal output `aria-live`** — terminal removed.
 - **UX-1 · Terminal path tab-completion** — terminal removed.
-- **ARCH-3 · Pure-function command model** — terminal commands removed/transformed.
+- **ARCH-3 · Pure-function command model** — terminal commands removed.
+- **A11Y-5 · ViewToggle `aria-label` i18n** — `ViewToggle.svelte` deleted.
+- **ARCH-4 · `open` internal nav via `goto`** — `open.ts` deleted (no terminal `open` command).
+- **DX-2 · Command metadata in registry** — the terminal command registry (`commands/index.ts`, `help.ts`) was deleted.
 
-**Replacement path:** the Cmd+P palette (`FuzzyFinder`) is extracted to a global mount and promoted to primary (ADR-0001 Phase 0); `A11Y-2` (palette focus trap) + `UX-3` stay active. **Security guard:** the `SEC-2` `Output.svelte` branch is _not_ resolved until the terminal code is deleted (Phase 2) — `SEC-2` stays open.
+**Shipped (resolved, not superseded):** **UX-3** (FuzzyFinder default cap + empty state) landed in Phase 1 (#9/#10) — the palette caps the empty-query post list at 8 and shows a helpful empty state.
+
+**Replacement path:** the Cmd/Ctrl+K palette (`FuzzyFinder`) is mounted globally and is the primary surface (ADR-0001 Phase 0–1); `A11Y-2` (palette focus trap) stays active. **Security guard:** `SEC-2` is now **partial** — the `Output.svelte` `{@html}` sink was deleted with the terminal, but 2 `{@html}` sinks (`SearchPage`, `PostDetail`) + the `Mermaid` `innerHTML` sink remain, so **`SEC-2` stays open**.
 
 ---
 
@@ -107,15 +108,15 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 
 ### SEC-2 · `{@html}` / `innerHTML` sink audit
 
-- **Problem:** Three Svelte `{@html}` sinks plus one `innerHTML` sink:
-  - `Output.svelte:129` — `{@html line.content}` on the `type:'html'` branch (currently **dead** but live; removed with the file in [ADR-0001](./decisions/0001-terminal-vs-command-palette.md) Phase 2 — **not** resolved before then, so `SEC-2` stays open).
-  - `SearchPage.svelte:169` — `{@html result.excerpt}` from Pagefind (typed `any`).
-  - `PostDetail.svelte:135` — `{@html}` for the JSON-LD `<script>` (author-controlled, `</script>` escaped — lowest risk).
-  - `Mermaid.svelte:74` — `container.innerHTML = svg` with `securityLevel:'loose'` (`Mermaid.svelte:53`; a separate sink, not `{@html}`).
-- **Proposal:** Delete the dead `html` branch + type from the `OutputLine` union; type the Pagefind result and/or `DOMPurify.sanitize` the excerpt; keep the PostDetail JSON-LD as-is (document the escape); set Mermaid `securityLevel:'strict'` (default, fine for these diagrams) after auditing for HTML-in-labels.
-- **Pros:** Closes the XSS class before any future command/content activates it; defense-in-depth.
-- **Cons:** Removing the `html` type is a tiny breaking change to the output API; `strict` mermaid breaks any diagram using HTML labels (audit first); DOMPurify adds ~7–20kB if tree-shaking misses.
-- **Effort:** S–M · **Risk:** low
+- **Status:** **PARTIAL** — the `Output.svelte` `{@html}` sink was deleted with the terminal (ADR-0001 Phase 2); `SEC-2` **stays open** for the remaining sinks.
+- **Problem:** Two `{@html}` sinks plus one `innerHTML` sink remain:
+  - `SearchPage.svelte` — `{@html result.excerpt}` from Pagefind (typed `any`).
+  - `PostDetail.svelte` — `{@html}` for the JSON-LD `<script>` (author-controlled, `</script>` escaped — lowest risk).
+  - `Mermaid.svelte` — `container.innerHTML = svg` with `securityLevel:'loose'` (a separate sink, not `{@html}`).
+- **Proposal:** Type the Pagefind result and/or `DOMPurify.sanitize` the excerpt; keep the PostDetail JSON-LD as-is (document the escape); set Mermaid `securityLevel:'strict'` (default, fine for these diagrams) after auditing for HTML-in-labels.
+- **Pros:** Closes the XSS class; defense-in-depth.
+- **Cons:** `strict` mermaid breaks any diagram using HTML labels (audit first); DOMPurify adds ~7–20kB if tree-shaking misses.
+- **Effort:** S · **Risk:** low
 
 ### CONTENT-1 · Draft guard in `[slug]` loaders
 
@@ -152,7 +153,7 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 ### TEST-1 · Add Vitest
 
 - **Problem:** Zero tests, no framework. CI only lints + type-checks.
-- **Proposal:** Vitest (Vite-native) for the 3 remark plugins (fixture `.md`), `fuzzy.ts`, `filesystem.ts` (`resolvePath` incl. the `..` bug), `validate-dates.ts`, `sync-from-3b` `cleanBody`.
+- **Proposal:** Vitest (Vite-native) for the 3 remark plugins (fixture `.md`), `fuzzy.ts` (palette search), `validate-dates.ts`, `sync-from-3b` `cleanBody`.
 - **Pros:** Catches plugin/pipeline regressions at commit; makes CI meaningful; unblocks `@testing-library/svelte` later.
 - **Cons:** Initial suite is real effort; remark fixtures take setup.
 - **Effort:** L · **Risk:** low
@@ -175,10 +176,8 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 
 ### A11Y-2 · FuzzyFinder focus trap
 
-- **Problem:** `FuzzyFinder.svelte` has `role="dialog"`/`aria-modal` but no Tab trap; `CommandLine` blur-refocus (10ms) can also steal focus.
-- **Proposal:** Trap Tab/Shift+Tab within the modal; suspend CommandLine refocus while open.
-- **Pros:** Keyboard + SR users can navigate results (WCAG 2.1.2).
-- **Cons:** ~20 lines of keyboard logic.
+- **Status:** Implemented — `FuzzyFinder.svelte` traps Tab/Shift+Tab within the modal and restores focus on close; the old `CommandLine` focus-steal concern is moot (terminal removed). Kept active to verify under a screen reader + add a regression test.
+- **Problem (original):** the modal palette needs a Tab trap so keyboard/SR users cannot tab out behind it (WCAG 2.1.2 / 2.4.3).
 - **Effort:** S · **Risk:** low
 
 ### A11Y-4 · CategorySidebar role semantics
@@ -187,14 +186,6 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 - **Proposal:** Mobile → `<nav aria-label>` + buttons with `aria-pressed` (or `aria-current`).
 - **Pros:** Correct semantics; no visual change.
 - **Cons:** None.
-- **Effort:** S · **Risk:** low
-
-### A11Y-5 · ViewToggle `aria-label` i18n
-
-- **Problem:** `ViewToggle.svelte:8` hardcodes English `aria-label`; KO users get English label.
-- **Proposal:** `m.switch_to_terminal()` / `m.switch_to_blog()` keys in both message files.
-- **Pros:** Full KO SR support; consistent with i18n approach.
-- **Cons:** 2 new keys.
 - **Effort:** S · **Risk:** low
 
 ### SEO-3 · Canonical + hreflang in post `<head>`
@@ -207,8 +198,8 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 
 ### ARCH-1 · Hydrate posts store site-wide
 
-- **Problem:** `posts` store is set only in home `onMount` (`+page.svelte:13`). Deep-linking to `/posts/*` leaves it empty → terminal `grep`/fuzzy nonfunctional until home is visited.
-- **Proposal:** Populate in root `+layout.ts` `load()` and pass through `data`; or guard terminal commands on empty store.
+- **Status:** Largely addressed — `+layout.svelte` hydrates the `posts` store on every route via `$effect` (`+layout.ts` `load` supplies `data.posts`). Kept active to verify + close.
+- **Problem (original):** `posts` store was set only in home `onMount`, so deep-linking to `/posts/*` left it empty.
 - **Pros:** Removes the deep-link failure mode; unifies data access.
 - **Cons:** Layout-level glob adds a little weight to non-home routes.
 - **Effort:** M · **Risk:** med
@@ -244,18 +235,6 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 - **Problem:** The `import.meta.glob` + `path.split('/').pop().replace('.md','')` pattern is copy-pasted in 5 `+page.ts` files.
 - **Proposal:** `src/lib/content/loader.ts` exporting resolved EN/KO maps + `resolve{En,Ko}Post(slug)`. (Globs must stay literal strings inside the module — Vite static-analysis constraint.)
 - **Pros / Cons:** One change-point; ends slug-extraction dup · module must hardcode both glob roots. **Effort:** S · **Risk:** low
-
-### DX-2 · Command metadata in registry
-
-- **Problem:** `help.ts` keeps a hand-maintained `commandHelp` dict separate from the registry → `ll`, `cls`, `about`, `man` are registered but missing from help; drift is silent.
-- **Proposal:** `registerCommand(name, handler, meta?)` storing `{usage, description, examples}`; `help`/`man` read it.
-- **Pros / Cons:** Single source of truth; impossible to ship undocumented commands · touches 18 call sites (meta optional → back-compat). **Effort:** M · **Risk:** low
-
-### ARCH-4 · `open` internal nav via `goto`
-
-- **Problem:** `open.ts:67–68` uses `window.location.href` for internal paths → full reload, bypasses View Transitions/client routing.
-- **Proposal:** Add `navigateTo(path)` to context (`goto`); use for `/`-paths, `window.open` for external.
-- **Pros / Cons:** Soft nav + transitions; no `window` in handlers · one more context field. **Effort:** S · **Risk:** low
 
 ### DX-3 · Remove empty `ui/` or adopt shadcn
 
@@ -301,9 +280,9 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 
 ### ARCH-5 · Split domain types from UI stores
 
-- **Problem:** `src/lib/stores/posts.ts` holds both the post **domain types** (`PostMetadata`, `Post`) and the **Svelte UI stores** (`posts`, derived). Terminal, filesystem, fuzzy, and routes all depend on it, so the module is both domain model and UI state. No `src/lib/types` or `src/lib/server` exists.
+- **Problem:** `src/lib/stores/posts.ts` holds both the post **domain types** (`PostMetadata`, `Post`) and the **Svelte UI stores** (`posts`, derived). The palette (`fuzzy.ts`), search, and routes all depend on it, so the module is both domain model and UI state. No `src/lib/types` or `src/lib/server` exists.
 - **Proposal:** Extract types to `src/lib/types/posts.ts` (or `src/lib/content/posts.ts`); keep stores thin.
-- **Pros:** Clarifies pure domain/content helpers vs UI state; easier to review terminal/route/search deps.
+- **Pros:** Clarifies pure domain/content helpers vs UI state; easier to review route/search/palette deps.
 - **Cons:** Import churn across many modules; keep mdsvex metadata types compatible.
 - **Effort:** M · **Risk:** med
 
@@ -360,11 +339,6 @@ _The table lists the **41 active engineering findings** (P0–P3); each has a ma
 - **Problem / fix:** full `build` (30–60s) + `handleHttpError:'fail'` runs even on content-only commits. Run `build` only when `src/` changed (keep build before any `src/` push).
 - **Effort:** S · **Risk:** low
 
-### UX-3 · FuzzyFinder default cap + empty state
-
-- **Problem / fix:** `FuzzyFinder.svelte:109` shows all posts on open; cap to ~15 recent + add an empty-state suggestion. The unused `markdown` output type also renders as plain text inside a prose wrapper — wire it or remove it.
-- **Effort:** S · **Risk:** low
-
 ### PERF-2 · Verify dagre stays route-split
 
 - **Problem / fix:** `@dagrejs/dagre` is used by `utils/system3b-graph.ts` + `System3bGraph.svelte`; confirm it never enters a site-wide bundle (it shouldn't — SvelteKit route-splits `/system/3b`). Verify only.
@@ -413,10 +387,10 @@ _Reviewer-surfaced — user-preference + product-strategy signals, not repo defe
 ## Renewal themes (how to sequence)
 
 1. **Trust & correctness pass** (SEC-1/2, CONTENT-1, SEO-1/2, I18N-1) — small, high-confidence, ships safety + SEO wins fast.
-2. **Accessibility sweep** (A11Y-1…5) — all S, all independent; batch into one PR.
+2. **Accessibility sweep** (A11Y-1, A11Y-2, A11Y-4) — all S, all independent; batch into one PR.
 3. **Foundations for change** (TEST-1, DOC-1, ARCH-2) — tests + accurate docs + dedup make every later change cheaper and safer.
 4. **Pipeline hardening** (CI-1/2/3, CONTENT-3) — automate the manual content/deploy steps that currently fail silently.
-5. **Maintainability** (DX-1…5, ARCH-1/3/4, UX-1) — pay down structural debt once tests exist to catch regressions.
+5. **Maintainability** (DX-1/3/4/5, ARCH-1/2/5/6) — pay down structural debt once tests exist to catch regressions.
 6. **Polish** (P3) — opportunistic.
 
-> **Product-direction track (parallel).** `PROD-1`/`PROD-2` are strategy calls for you, not sequenced engineering work. Decide `PROD-2` (terminal vs Cmd+P) **before** spending on terminal-mode polish (`A11Y-2`, `A11Y-3`, `UX-1`, `UX-3`, `ARCH-3/4`) — that effort is wasted if terminal mode is cut.
+> **Product-direction track (parallel).** `PROD-1` (palette / visual mood) remains a strategy call. `PROD-2` is **decided** — [ADR-0001](./decisions/0001-terminal-vs-command-palette.md) retired the terminal (Phase 1b + 2 shipped 2026-06-04), so the terminal-coupled items (`A11Y-3`, `UX-1`, `ARCH-3/4`, `DX-2`) are superseded and `UX-3` shipped; `A11Y-2` (palette focus trap) remains active.

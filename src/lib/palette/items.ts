@@ -1,9 +1,10 @@
 import { goto } from '$app/navigation';
 import { m } from '$lib/paraglide/messages';
-import { toggleViewMode } from '$lib/stores/viewMode';
 import type { PostMetadata } from '$lib/stores/posts';
 
 const GITHUB_REPO_URL = 'https://github.com/brandonwie/brandonwie.dev';
+const LINKEDIN_URL = 'https://linkedin.com/in/brandonwie';
+const EMAIL = 'brandon@brandonwie.dev';
 
 export type PaletteGroup = 'nav' | 'action' | 'post';
 
@@ -56,12 +57,13 @@ export function buildActionItems(pathname: string): PaletteItem[] {
 	const ko = isKorean(pathname);
 	return [
 		{
-			id: 'action:toggle-view',
+			id: 'action:about',
 			group: 'action',
-			label: m.palette_action_toggle_view(),
-			keywords: ['toggle', 'view', 'terminal', 'blog', 'cli'],
-			icon: '⇄',
-			run: () => toggleViewMode(),
+			label: m.palette_action_about(),
+			keywords: ['about', 'bio', 'who', 'brandon', 'profile'],
+			icon: '☻',
+			// Bio lives on the home page; jump there.
+			run: () => goto(localePath(pathname, '/')),
 		},
 		{
 			id: 'action:switch-language',
@@ -104,6 +106,25 @@ export function buildActionItems(pathname: string): PaletteItem[] {
 			keywords: ['github', 'source', 'code', 'repo', 'repository'],
 			icon: '↗',
 			run: () => window.open(GITHUB_REPO_URL, '_blank', 'noopener,noreferrer'),
+		},
+		{
+			id: 'action:linkedin',
+			group: 'action',
+			label: m.palette_action_linkedin(),
+			keywords: ['linkedin', 'profile', 'connect', 'work'],
+			icon: '↗',
+			run: () => window.open(LINKEDIN_URL, '_blank', 'noopener,noreferrer'),
+		},
+		{
+			id: 'action:email',
+			group: 'action',
+			label: m.palette_action_email(),
+			keywords: ['email', 'contact', 'mail', 'hire', 'reach'],
+			icon: '✉',
+			// mailto: is not an SPA route — hard-navigate.
+			run: () => {
+				window.location.href = `mailto:${EMAIL}`;
+			},
 		},
 	];
 }

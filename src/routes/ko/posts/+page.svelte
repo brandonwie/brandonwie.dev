@@ -8,15 +8,13 @@
 	import type { PageData } from './$types';
 	import { m } from '$lib/paraglide/messages';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
-	import ViewToggle from '$lib/components/ViewToggle.svelte';
 	import CategorySidebar from '$lib/components/CategorySidebar.svelte';
-	import { viewMode } from '$lib/stores/viewMode';
 	import { getCategoriesWithCounts } from '$lib/stores/posts';
 	import { formatDateShort, effectiveDate } from '$lib/utils/date';
 
 	let { data }: { data: PageData } = $props();
 
-	const backLabel = $derived($viewMode === 'terminal' ? m.back_to_terminal() : m.back_to_home());
+	const backLabel = m.back_to_home();
 
 	// Category filtering
 	let activeCategory: string | null = $state(null);
@@ -71,7 +69,6 @@
 						<path d="m21 21-4.3-4.3" />
 					</svg>
 				</a>
-				<ViewToggle />
 				<LanguageToggle />
 			</div>
 		</div>

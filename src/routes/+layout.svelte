@@ -40,10 +40,9 @@
 	// View Transitions API - smooth crossfade between pages
 	// Progressive enhancement: unsupported browsers get instant navigation
 	import { onNavigate, goto } from '$app/navigation';
-	import { viewMode } from '$lib/stores/viewMode';
 	import { posts } from '$lib/stores/posts';
 	import { paletteOpen } from '$lib/stores/palette';
-	import FuzzyFinder from '$lib/components/terminal/FuzzyFinder.svelte';
+	import FuzzyFinder from '$lib/components/palette/FuzzyFinder.svelte';
 	import { buildPaletteItems, type PaletteItem } from '$lib/palette/items';
 
 	onNavigate((navigation) => {
@@ -82,8 +81,7 @@
 
 		const pathname = page.url.pathname;
 
-		// Don't intercept in terminal mode, on search page, or on post detail pages
-		if ($viewMode === 'terminal') return;
+		// Don't intercept on the search page or on post detail pages
 		if (pathname.includes('/search')) return;
 		if (/\/posts\/.+/.test(pathname)) return;
 
@@ -97,8 +95,8 @@
 		goto(isKorean ? '/ko/search' : '/search');
 	}
 
-	// Command palette: Cmd/Ctrl+K (primary) or Cmd/Ctrl+P (alias). Works in every
-	// view, terminal mode included. ADR-0001 Phase 0.
+	// Command palette: Cmd/Ctrl+K (primary) or Cmd/Ctrl+P (alias). Works on every
+	// route. ADR-0001 Phase 0.
 	function handlePaletteShortcut(event: KeyboardEvent): boolean {
 		if (!((event.metaKey || event.ctrlKey) && (event.key === 'k' || event.key === 'p'))) {
 			return false;
@@ -209,8 +207,8 @@
 <!--
   GLOBAL COMMAND PALETTE
   ----------------------
-  Mounted once at the root so Cmd/Ctrl+K works on every route (blog + terminal),
-  not just inside the terminal. Fixed-position overlay, so DOM placement is moot.
+  Mounted once at the root so Cmd/Ctrl+K works on every route.
+  Fixed-position overlay, so DOM placement is moot.
 -->
 {#if $paletteOpen}
 	<FuzzyFinder

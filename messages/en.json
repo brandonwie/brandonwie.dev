@@ -3,7 +3,6 @@
 	"site_description": "Software engineering insights, tutorials, and learnings",
 	"posts_title": "All Posts",
 	"posts_description": "All blog posts by Brandon Wie",
-	"back_to_terminal": "Back to terminal",
 	"no_posts": "No posts yet. Check back soon!",
 	"translation_notice": "This article is not available in Korean yet.",
 	"view_in_english": "View in English",
@@ -14,6 +13,7 @@
 	"updated": "Updated",
 	"comments_title": "Comments",
 	"blog_tagline": "Software engineer writing about backend systems, DevOps, and lessons learned building real products.",
+	"blog_bio": "Backend engineer building production systems at scale — film school grad turned engineer, now leading backend at Moba. This blog collects what I've learned along the way.",
 	"recent_posts": "Recent Posts",
 	"see_all_posts": "See all {count} posts",
 	"back_to_home": "Back to home",
@@ -81,7 +81,7 @@
 	"system_3b_graph_unavailable": "Interactive graph unavailable — showing the layer outline.",
 	"system_3b_graph_expand": "Expand",
 	"palette_placeholder": "Search posts and commands...",
-	"palette_no_results": "No matches. Try a title, 'toggle', 'language', or a page name.",
+	"palette_no_results": "No matches. Try a title, 'about', 'github', or a page name.",
 	"palette_group_nav": "Go to",
 	"palette_group_action": "Actions",
 	"palette_group_post": "Posts",
@@ -90,9 +90,11 @@
 	"palette_nav_search": "Search",
 	"palette_nav_stats": "Stats",
 	"palette_nav_system": "3B System",
-	"palette_action_toggle_view": "Toggle blog / terminal view",
+	"palette_action_about": "About Brandon",
 	"palette_action_switch_language": "Switch language",
 	"palette_action_copy_link": "Copy current link",
 	"palette_action_rss": "RSS feed",
-	"palette_action_github": "GitHub repository"
+	"palette_action_github": "GitHub repository",
+	"palette_action_linkedin": "LinkedIn profile",
+	"palette_action_email": "Email Brandon"
 }

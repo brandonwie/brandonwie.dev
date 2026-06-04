@@ -1,9 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import Terminal from '$lib/components/terminal/Terminal.svelte';
 	import BlogHome from '$lib/components/BlogHome.svelte';
 	import { posts } from '$lib/stores/posts';
-	import { viewMode } from '$lib/stores/viewMode';
 	import { onMount } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
 
@@ -12,18 +9,10 @@
 	onMount(() => {
 		posts.set(data.posts);
 	});
-
-	function handleNavigateToPost(slug: string) {
-		goto(`/ko/posts/${slug}`);
-	}
 </script>
 
 <svelte:head>
 	<title>{m.site_title()}</title>
 </svelte:head>
 
-{#if $viewMode === 'terminal'}
-	<Terminal onNavigateToPost={handleNavigateToPost} />
-{:else}
-	<BlogHome posts={data.posts} basePath="/ko" />
-{/if}
+<BlogHome posts={data.posts} basePath="/ko" />

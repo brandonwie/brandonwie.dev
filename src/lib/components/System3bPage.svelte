@@ -15,9 +15,7 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
-	import ViewToggle from '$lib/components/ViewToggle.svelte';
 	import System3bGraph from '$lib/components/System3bGraph.svelte';
-	import { viewMode } from '$lib/stores/viewMode';
 
 	interface Layer {
 		id: string;
@@ -83,7 +81,7 @@
 	let { locale, snapshot }: Props = $props();
 
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
-	const backLabel = $derived($viewMode === 'terminal' ? m.back_to_terminal() : m.back_to_home());
+	const backLabel = m.back_to_home();
 
 	// Node count per layer, derived from the snapshot so the diagram + badges
 	// stay accurate across snapshot regenerations.
@@ -123,7 +121,6 @@
 				brandonwie.dev
 			</a>
 			<div class="flex items-center gap-2">
-				<ViewToggle />
 				<LanguageToggle />
 			</div>
 		</div>

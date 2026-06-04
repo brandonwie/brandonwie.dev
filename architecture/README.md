@@ -45,7 +45,7 @@ flowchart TD
     end
 
     subgraph routes["Routes (EN + /ko mirror)"]
-      HOME["/ → Terminal | BlogHome"]
+      HOME["/ → BlogHome"]
       LIST["/posts → CategorySidebar filter"]
       POST["/posts/[slug] → PostDetail"]
       SEARCH["/search → Pagefind"]
@@ -56,10 +56,9 @@ flowchart TD
     HTML --> routes
 
     subgraph state["Stores"]
-      P[posts.ts] --- V[viewMode.ts] --- T[terminal.ts]
+      P[posts.ts]
     end
     HOME -. hydrates .-> P
-    P --> TERM[terminal: ls/cat/grep/fuzzy over virtual FS]
     POST --> SEO[JSON-LD · OG · hreflang · Giscus · ToC]
 
     CF[Cloudflare Pages] -.serves.-> build
@@ -69,7 +68,7 @@ flowchart TD
 
 1. **routing_ssg_seo** — `src/routes/**`, prerender, feeds, sitemap, View Transitions
 2. **content_pipeline_i18n** — mdsvex + remark plugins, Paraglide, `scripts/sync-from-3b.ts`
-3. **terminal_cli** — `src/lib/commands/**`, `filesystem.ts`, `fuzzy.ts`, `components/terminal/**`
+3. **command_palette** — `src/lib/palette/items.ts`, `src/lib/fuzzy.ts`, `components/palette/FuzzyFinder.svelte`
 4. **blog_ui_components** — `components/*.svelte`, stores, `app.css` (Tailwind v4)
 5. **build_tooling_ci** — Vite/svelte config, pnpm/Deno toolchain, husky, GitHub Actions
 

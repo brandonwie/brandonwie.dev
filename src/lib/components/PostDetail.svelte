@@ -4,8 +4,6 @@
 	import type { Component } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
-	import ViewToggle from '$lib/components/ViewToggle.svelte';
-	import { viewMode } from '$lib/stores/viewMode';
 	import Giscus from '$lib/components/Giscus.svelte';
 	import ReadingProgress from '$lib/components/ReadingProgress.svelte';
 	import TableOfContents from '$lib/components/TableOfContents.svelte';
@@ -45,7 +43,7 @@
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
 	const postUrl = $derived(`${siteUrl}${basePath}/posts/${meta.slug}`);
 	const ogImageUrl = $derived(`${siteUrl}/og/${meta.slug}.png`);
-	const backLabel = $derived($viewMode === 'terminal' ? m.back_to_terminal() : m.back_to_home());
+	const backLabel = m.back_to_home();
 
 	let copied = $state(false);
 
@@ -152,7 +150,6 @@
 				>brandonwie.dev</a
 			>
 			<div class="flex items-center gap-2">
-				<ViewToggle />
 				<LanguageToggle />
 			</div>
 		</div>
