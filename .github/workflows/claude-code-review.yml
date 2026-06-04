@@ -124,8 +124,12 @@ jobs:
                `alt`, ARIA, keyboard handlers on click targets). Verify focus
                management and that interactive elements have keyboard
                equivalents.
-            4. XSS / injection — `{@html}` on rendered post content is the main
-               XSS surface; confirm input is trusted markdown, not user data.
+            4. XSS / injection — the real `{@html}` / `innerHTML` sinks are
+               Pagefind search excerpts (`SearchPage.svelte`), the JSON-LD
+               `ld+json` block (`PostDetail.svelte`), and Mermaid diagram
+               rendering (`innerHTML`) — NOT mdsvex-compiled post content.
+               Confirm injected values are trusted (build-time markdown / own
+               schema), not user-controlled data.
             5. Reactivity correctness — don't mutate state inside `$derived`;
                watch for `$effect` loops and stale store subscriptions; check
                `bind:this` lifecycle (null before mount).
