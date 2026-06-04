@@ -103,5 +103,5 @@ Full detail (files, LOC, data flows, dependencies) lives in `structure.yaml`.
 
 ## Status
 
-Analysis complete (2026-06-03). Renewal implementation **not started** — pick a
-theme from `improvements.md › Renewal themes` to begin.
+Analysis complete (2026-06-03). Renewal **in progress** — see
+`improvements.md` for the active/superseded backlog.
