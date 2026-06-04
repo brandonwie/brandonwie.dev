@@ -1,0 +1,75 @@
+{
+	"_comment": "Korean overlay for system-snapshot.json. Regen-safe: the snapshot is generator-written (scripts/snapshot-3b-system.ts), so KO lives here, outside it. Sectioned by rendered surface; keys match the snapshot (layers=id, subsystems=key, evolution=id, nodes=id). Missing keys fall back to the EN snapshot field. Node names intentionally stay English (technical identifiers); the 'evolution' + 'nodes' sections are optional and omitted for now.",
+	"layers": {
+		"source-of-truth": {
+			"name": "단일 진실 공급원 (.agents/)",
+			"description": "모든 공유 에이전트 설정과 콘텐츠 저장소(규칙, 스킬, 명령 권한 정책, 버퍼, 마찰 로그)의 유일한 정본 저장소입니다. 모든 것은 여기서 단 한 번만 작성됩니다."
+		},
+		"generators-sync": {
+			"name": "생성기 + 크로스 에이전트 동기화",
+			"description": "frontmatter로 게이팅된 SoT 입력을 읽어 에이전트별 프로필, 권한 파일, ignore 목록으로 투영하는 Node 생성기입니다. pre-commit/CI 드리프트 게이트가 대상들의 일관성을 유지합니다."
+		},
+		"mounts-runtimes": {
+			"name": "심링크 마운트 + 에이전트 런타임",
+			"description": "각 CLI의 하드코딩된 마운트 위치에서 SoT를 해석하는 호환용 역방향 심링크/하드링크와, 세 가지 에이전트 런타임(Claude Code, Codex CLI, AGY) 및 이들이 로드하는 생성된 문서로 구성됩니다."
+		},
+		"content-lifecycle": {
+			"name": "콘텐츠 + 지식 생애주기",
+			"description": "제텔카스텐 지식 베이스와, 일시적인 세션 작업을 지속 가능하고 발행 가능한 항목으로 끌어올리는 6단계 점진적 정제 파이프라인입니다."
+		},
+		"governance-audit": {
+			"name": "거버넌스, HITL + 자기 개선",
+			"description": "3단계 HITL/감사 사다리, 불변 의사결정(ADR) 레지스트리, 그리고 일회성 실수를 관리되고 측정되는 수정으로 바꾸는 마찰 생애주기입니다."
+		},
+		"tooling-mcp-layer": {
+			"name": "도구 + MCP",
+			"description": "외부 코드 인텔리전스 및 문서 변환 스택(graphify, code-review-graph, Serena, context-mode, markitdown)과 모델 티어 라우팅, asdf/brew 런타임 계약으로 구성됩니다."
+		}
+	},
+	"subsystems": {
+		"rules": {
+			"name": "규칙 엔진 + 라우팅",
+			"display_one_liner": "frontmatter로 게이팅된 규칙 파일이 에이전트별로 무엇을 로드할지(상시 로드 vs 지연 로드) 결정합니다."
+		},
+		"skills": {
+			"name": "스킬 시스템",
+			"display_one_liner": "마크다운으로 정의된 스킬로, Claude에서는 신호 기반으로 라우팅되고 다른 에이전트에는 미러링됩니다."
+		},
+		"sot-sync": {
+			"name": "크로스 에이전트 SoT + 동기화 엔진",
+			"display_one_liner": "하나의 정본 설정 저장소를 두고, 생성기가 모든 수정을 각 에이전트 프로필로 투영합니다."
+		},
+		"knowledge": {
+			"name": "제텔카스텐 지식 베이스",
+			"display_one_liner": "원자적이고 순방향 링크로 연결된 제텔카스텐 지식 베이스로, 백링크는 저장하지 않고 계산합니다."
+		},
+		"info-lifecycle": {
+			"name": "정보 계층 + 점진적 정제",
+			"display_one_liner": "폴더가 곧 운명인(folder-as-destiny) 파이프라인으로, 콘텐츠를 점진적 계층을 거쳐 정제합니다."
+		},
+		"journals-wrap": {
+			"name": "저널 롤업 + Wrap 워크플로",
+			"display_one_liner": "버퍼 → wrap → 일일 저널 → 지식으로 이어지는 세션 엔진으로, 클린 슬레이트 롤업을 수행합니다."
+		},
+		"projects-tasks": {
+			"name": "프로젝트 + 작업 생애주기 + 워크트리",
+			"display_one_liner": "작업 설정 단계가 명시적 소유권과 잠금을 갖춘 격리된 워크트리로 작업을 게이팅합니다."
+		},
+		"governance-hitl": {
+			"name": "거버넌스, HITL 게이트 + 감사",
+			"display_one_liner": "아키텍처를 바꾸는 모든 행위를 관장하는 3단계 휴먼 인 더 루프(HITL) 사다리입니다."
+		},
+		"decisions-adr": {
+			"name": "의사결정 시스템 (ADR + Rule-6 README)",
+			"display_one_liner": "불변 ADR 레지스트리와 폴더별 의사결정 문서 규약으로 구성됩니다."
+		},
+		"friction": {
+			"name": "마찰 생애주기",
+			"display_one_liner": "포착된 마찰이 점수화된 패턴으로 축적되고, 관리되는 수정으로 승격됩니다."
+		},
+		"tooling-mcp": {
+			"name": "MCP + 그래프 + 런타임 도구",
+			"display_one_liner": "계층화된 코드 인텔리전스 및 문서 수집 스택으로, 각 계층이 하나의 낭비 요인을 담당합니다."
+		}
+	}
+}
