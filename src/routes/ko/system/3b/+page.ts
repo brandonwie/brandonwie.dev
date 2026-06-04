@@ -15,6 +15,7 @@ const koModules = import.meta.glob('../../../../content/posts/ko/**/*.md', {
 
 const koTitleBySlug: Record<string, string> = {};
 for (const [path, metadata] of Object.entries(koModules)) {
+	if (metadata.draft) continue; // unpublished drafts must not surface titles (mirrors +layout.ts)
 	const slug = path.split('/').pop()?.replace('.md', '') ?? '';
 	if (slug) koTitleBySlug[slug] = metadata.title;
 }
