@@ -1,11 +1,11 @@
 # brandonwie.dev
 
-Personal blog with a terminal-style interface, built with SvelteKit.
+Personal blog built with SvelteKit, featuring a Cmd/Ctrl+K command palette.
 
 ## Features
 
-- Interactive CLI experience (ls, cd, cat, grep, etc.)
-- Fuzzy search with Ctrl+P/K
+- Command palette (Cmd/Ctrl+K, with Cmd/Ctrl+P alias) for navigation and actions
+- Fuzzy post search (Fuse.js), available from the palette
 - Bilingual support (English/Korean)
 - RSS feeds per language
 - Static site generation (SSG)
@@ -70,7 +70,7 @@ See [docs/TRANSLATION.md](docs/TRANSLATION.md) for translation guidelines.
 
 | Route              | Description                                           |
 | ------------------ | ----------------------------------------------------- |
-| `/`                | English home (terminal)                               |
+| `/`                | English home                                          |
 | `/posts`           | English posts list                                    |
 | `/posts/{slug}`    | English post                                          |
 | `/ko`              | Korean home                                           |
@@ -87,8 +87,8 @@ src/
 │   ├── en/          # English posts
 │   └── ko/          # Korean translations
 ├── lib/
-│   ├── commands/    # Terminal commands
-│   ├── components/  # Svelte components
+│   ├── components/  # Svelte components (incl. palette/ UI)
+│   ├── palette/     # Command palette item model
 │   └── paraglide/   # Generated i18n runtime
 ├── routes/
 │   ├── posts/       # English routes

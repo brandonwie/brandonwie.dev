@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
-	import ViewToggle from '$lib/components/ViewToggle.svelte';
 	import type { PostMetadata } from '$lib/stores/posts';
 	import { formatDateShort, effectiveDate } from '$lib/utils/date';
 
@@ -84,7 +83,6 @@
 						<line x1="6" y1="20" x2="6" y2="14" />
 					</svg>
 				</a>
-				<ViewToggle />
 				<LanguageToggle />
 			</div>
 		</div>
@@ -93,8 +91,13 @@
 	<!-- Main Content -->
 	<main class="mx-auto max-w-2xl px-4 py-10 sm:px-6">
 		<!-- Tagline -->
-		<p class="text-terminal-text-muted text-sm mb-10">
+		<p class="text-terminal-text-muted text-sm mb-3">
 			{m.blog_tagline()}
+		</p>
+
+		<!-- Bio (rehomed from the retired terminal `about` command) -->
+		<p class="text-terminal-text-dim text-sm mb-10 leading-relaxed">
+			{m.blog_bio()}
 		</p>
 
 		<!-- Work Section -->
@@ -240,6 +243,12 @@
 					rel="noopener noreferrer"
 				>
 					LinkedIn
+				</a>
+				<a
+					href="mailto:brandon@brandonwie.dev"
+					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors"
+				>
+					Email
 				</a>
 				<a
 					href="https://www.archcalendar.com"

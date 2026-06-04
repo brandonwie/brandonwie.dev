@@ -2,8 +2,6 @@
 	import { onMount } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
 	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
-	import ViewToggle from '$lib/components/ViewToggle.svelte';
-	import { viewMode } from '$lib/stores/viewMode';
 
 	interface Props {
 		locale: 'en' | 'ko';
@@ -12,7 +10,7 @@
 	let { locale }: Props = $props();
 
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
-	const backLabel = $derived($viewMode === 'terminal' ? m.back_to_terminal() : m.back_to_home());
+	const backLabel = m.back_to_home();
 
 	// Umami API config
 	const UMAMI_API_BASE = 'https://api.umami.is';
@@ -160,7 +158,6 @@
 				brandonwie.dev
 			</a>
 			<div class="flex items-center gap-2">
-				<ViewToggle />
 				<LanguageToggle />
 			</div>
 		</div>

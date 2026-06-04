@@ -120,6 +120,8 @@ trust-&-correctness pass except the terminal-coupled a11y items above.**
 
 ## Migration sequence (if B)
 
+> **Status: COMPLETE (2026-06-04)** — Phase 0 (#7 / PR #8), Phase 1 (#9 / PR #10), Phase 1b + Phase 2 combined (#11). The terminal subsystem is removed; the global Cmd/Ctrl+K palette is the sole power-user surface.
+
 1. **Phase 0 (Option C mechanics, low risk):** mount `FuzzyFinder` globally; make Cmd+P/Ctrl+K work in blog mode; document palette as primary; freeze terminal feature work.
 2. **Phase 1:** expand palette to actions (nav/toggle/links/search); rehome `whoami`/`about`/`help`.
 3. **Phase 2:** remove `Terminal.svelte`, `CommandLine.svelte`, `Output.svelte`, `filesystem.ts`, most of `commands/**`, `terminal.ts`; drop `ViewToggle` + `viewMode` split. Update `structure.yaml` (`terminal_cli` → folds into a `command_palette` note).
@@ -128,11 +130,11 @@ trust-&-correctness pass except the terminal-coupled a11y items above.**
 ## Related
 
 - `../improvements.md` — `PROD-1` (palette/visual mood — decide alongside, since cutting terminal reframes the palette question), `PROD-2` (this decision), and the coupled IDs above.
-- `../structure.yaml` — `subsystems.terminal_cli` (what gets removed), `subsystems.blog_ui_components` (`FuzzyFinder`, `ViewToggle`, `viewMode`).
+- `../structure.yaml` — `subsystems.command_palette` (replaced `terminal_cli`), `subsystems.blog_ui_components`.
 
 ## Sign-off
 
 - **Decision:** ☑ **B** — retire terminal → promote Cmd+P palette. A (keep) and C (freeze) rejected: C preserves maintenance ambiguity; the team wants a clean product call.
 - **Decided by:** Brandon · **Date:** 2026-06-04
-- **Guard (per decision):** the `SEC-2` `Output.svelte` `{@html}` branch is **not** treated as resolved by this ADR — that sink ships until the terminal code is actually deleted (Phase 2). `SEC-2` stays an active security item until then.
-- **Backlog impact applied:** `A11Y-3`, `UX-1`, `ARCH-3` pruned to the _Superseded_ section of `improvements.md` (moot once terminal is removed); `A11Y-2` (palette focus trap) + `UX-3` retained; FuzzyFinder global-extraction is the replacement path (Phase 0).
+- **Guard (per decision):** the `SEC-2` `Output.svelte` `{@html}` branch is **not** treated as resolved by this ADR — that sink ships until the terminal code is actually deleted (Phase 2). `SEC-2` stays an active security item until then. _[2026-06-04: Phase 2 shipped — `Output.svelte` deleted, so its sink is gone; `SEC-2` is now **partial** (`SearchPage` + `PostDetail` `{@html}` + `Mermaid` `innerHTML` remain) and **stays open**.]_
+- **Backlog impact applied (final, 2026-06-04):** superseded in `improvements.md` (terminal removed): `A11Y-3`, `UX-1`, `ARCH-3`, `A11Y-5`, `ARCH-4`, `DX-2`. Shipped: `UX-3` (palette default-cap + empty state, Phase 1). Retained active: `A11Y-2` (palette focus trap). Active count 41 → 37.

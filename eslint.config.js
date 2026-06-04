@@ -50,7 +50,7 @@ export default ts.config(
 			'svelte/no-navigation-without-resolve': 'off',
 			// Giscus and Mermaid require direct DOM manipulation
 			'svelte/no-dom-manipulating': 'off',
-			// Terminal output intentionally uses {@html}
+			// SearchPage (Pagefind excerpt) + PostDetail (JSON-LD) intentionally use {@html}
 			'svelte/no-at-html-tags': 'warn',
 			// Optional strictness — enable incrementally later
 			'svelte/require-each-key': 'warn',

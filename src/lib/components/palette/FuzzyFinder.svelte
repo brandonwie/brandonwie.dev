@@ -304,6 +304,7 @@
 			<div class="flex gap-4">
 				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↑↓</kbd> navigate</span>
 				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↵</kbd> select</span>
+				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">esc</kbd> close</span>
 			</div>
 			<div>
 				{results.length} result{results.length === 1 ? '' : 's'}

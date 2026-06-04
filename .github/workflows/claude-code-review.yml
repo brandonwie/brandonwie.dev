@@ -5,8 +5,8 @@ name: Claude Code Review
 # excludes this trigger phrase to prevent both workflows firing on the same
 # comment.
 #
-# brandonwie.dev is a SvelteKit (SSG) personal blog with a dual blog/terminal
-# UX and bilingual (EN/KO) mdsvex content. PRs touch Svelte 5 components,
+# brandonwie.dev is a SvelteKit (SSG) personal blog with a command palette
+# and bilingual (EN/KO) mdsvex content. PRs touch Svelte 5 components,
 # TypeScript, Tailwind v4 CSS, i18n message files, and markdown posts. The
 # review prompt below reflects that mix.
 #
@@ -73,9 +73,9 @@ jobs:
 
             brandonwie.dev is a personal blog + portfolio built with SvelteKit
             (SSG via adapter-static) and deployed to Cloudflare Pages. It has a
-            dual-view UX: a minimalist "blog" mode and an interactive "terminal"
-            mode (Claude Code aesthetics) backed by a virtual filesystem and a
-            self-registering command registry. Content is bilingual — English
+            single blog UI with a global Cmd/Ctrl+K command palette
+            (Raycast / VS-Code style) for searching posts and jumping to nav
+            and actions. Content is bilingual — English
             (default) plus Korean — authored as mdsvex markdown under
             `src/content/posts/{en,ko}/{category}/`.
 
@@ -91,11 +91,10 @@ jobs:
 
             ## Architecture Notes
 
-            - Dual-view: `ViewToggle.svelte` switches blog/terminal; the
-              `viewMode` store persists to localStorage. Terminal commands
-              self-register via side-effect imports in `Terminal.svelte`
-              (`import '$lib/commands/ls'`). Virtual FS lives in
-              `src/lib/filesystem.ts`; fuzzy finder uses `src/lib/fuzzy.ts`.
+            - Command palette: mounted globally in `+layout.svelte`. The item
+              model lives in `src/lib/palette/items.ts`; fuzzy search uses
+              `src/lib/fuzzy.ts`; the modal is
+              `src/lib/components/palette/FuzzyFinder.svelte`.
             - i18n: `messages/{en,ko}.json` hold UI strings; `src/lib/paraglide/`
               is GENERATED (never hand-edit). Korean routes mirror under
               `/ko/*`. A missing KO post falls back to EN content with a notice
@@ -122,13 +121,11 @@ jobs:
                always-on `+server` endpoints). Dynamic post routes must resolve
                via `entries()` / prerender config so every slug is emitted.
             3. Accessibility — svelte-check surfaces a11y warnings (labels,
-               `alt`, ARIA, keyboard handlers on click targets). The terminal
-               captures keystrokes — verify focus management and that
-               interactive elements have keyboard equivalents.
+               `alt`, ARIA, keyboard handlers on click targets). Verify focus
+               management and that interactive elements have keyboard
+               equivalents.
             4. XSS / injection — `{@html}` on rendered post content is the main
                XSS surface; confirm input is trusted markdown, not user data.
-               Terminal commands act on a virtual FS — confirm none shell out
-               or `eval` raw input.
             5. Reactivity correctness — don't mutate state inside `$derived`;
                watch for `$effect` loops and stale store subscriptions; check
                `bind:this` lifecycle (null before mount).
@@ -177,12 +174,6 @@ jobs:
             - Client-side category filtering on `/posts` (no URL params) is a
               deliberate SSG choice — do not suggest server-side or URL-based
               filtering (it would force prerendering every category combo).
-            - The transparent hidden-input + custom block-cursor in
-              `CommandLine.svelte` is intentional (browser inputs render a line
-              cursor, not a block) — not redundant DOM.
-            - Side-effect command imports in `Terminal.svelte`
-              (`import '$lib/commands/ls'`) are the registration mechanism —
-              not unused / dead imports.
             - Precompressed `.br` / `.gz` output and adapter-static prerendered
               HTML are expected build artifacts, not misconfiguration.
             - `docs/` and `CLAUDE.md` are 3B symlinks (gitignored / SoT
