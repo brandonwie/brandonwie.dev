@@ -25,6 +25,26 @@
 		type FlowModel,
 	} from '$lib/utils/system3b-graph';
 
+	// Legend labels routed through Paraglide. Static property refs (not m[key])
+	// so keys resolve at build time; falls back to the style .label if unmapped.
+	const KIND_LABEL: Record<string, () => string> = {
+		subsystem: m.system_3b_kind_subsystem,
+		generator: m.system_3b_kind_generator,
+		runtime: m.system_3b_kind_runtime,
+		store: m.system_3b_kind_store,
+		doc: m.system_3b_kind_doc,
+		gate: m.system_3b_kind_gate,
+	};
+	const EDGE_LABEL: Record<string, () => string> = {
+		dependency: m.system_3b_edge_dependency,
+		reads: m.system_3b_edge_reads,
+		writes: m.system_3b_edge_writes,
+		generates: m.system_3b_edge_generates,
+		triggers: m.system_3b_edge_triggers,
+		dataflow: m.system_3b_edge_dataflow,
+		symlink: m.system_3b_edge_symlink,
+	};
+
 	interface Props {
 		nodes: SnapNode[];
 		edges: SnapEdge[];
@@ -152,7 +172,10 @@
 		<div class="legend-row">
 			<span class="legend-head">{m.system_3b_nodes_label()}</span>
 			{#each Object.entries(KIND_STYLE) as [kind, s] (kind)}
-				<span class="chip"><span class="swatch" style:background={s.color}></span>{s.label}</span>
+				<span class="chip"
+					><span class="swatch" style:background={s.color}></span>{KIND_LABEL[kind]?.() ??
+						s.label}</span
+				>
 			{/each}
 		</div>
 		<div class="legend-row">
@@ -160,7 +183,7 @@
 			{#each Object.entries(EDGE_STYLE) as [kind, s] (kind)}
 				<span class="chip"
 					><span class="line" style:border-top="2px {s.dash ? 'dashed' : 'solid'} {s.color}"
-					></span>{s.label}</span
+					></span>{EDGE_LABEL[kind]?.() ?? s.label}</span
 				>
 			{/each}
 		</div>
