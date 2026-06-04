@@ -1,8 +1,8 @@
 import Fuse from 'fuse.js';
-import type { PostMetadata } from './stores/posts';
+import type { PaletteItem } from './palette/items';
 
 export interface FuzzyResult {
-	item: PostMetadata;
+	item: PaletteItem;
 	score: number;
 	matches?: ReadonlyArray<{
 		indices: ReadonlyArray<readonly [number, number]>;
@@ -11,15 +11,13 @@ export interface FuzzyResult {
 	}>;
 }
 
-// Create Fuse instance for posts
-export function createPostsFuse(posts: PostMetadata[]): Fuse<PostMetadata> {
-	return new Fuse(posts, {
+// Create a Fuse instance over palette items (nav, actions, posts).
+export function createPaletteFuse(items: PaletteItem[]): Fuse<PaletteItem> {
+	return new Fuse(items, {
 		keys: [
-			{ name: 'title', weight: 0.4 },
+			{ name: 'label', weight: 0.5 },
+			{ name: 'keywords', weight: 0.3 },
 			{ name: 'description', weight: 0.2 },
-			{ name: 'tags', weight: 0.2 },
-			{ name: 'category', weight: 0.1 },
-			{ name: 'slug', weight: 0.1 },
 		],
 		threshold: 0.4,
 		includeScore: true,
@@ -28,8 +26,8 @@ export function createPostsFuse(posts: PostMetadata[]): Fuse<PostMetadata> {
 	});
 }
 
-// Search posts with fuzzy matching
-export function fuzzySearch(fuse: Fuse<PostMetadata>, query: string): FuzzyResult[] {
+// Search palette items with fuzzy matching
+export function fuzzySearch(fuse: Fuse<PaletteItem>, query: string): FuzzyResult[] {
 	if (!query.trim()) {
 		return [];
 	}
