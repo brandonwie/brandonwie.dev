@@ -81,7 +81,7 @@
 	"system_3b_graph_unavailable": "인터랙티브 그래프를 사용할 수 없어 레이어 개요를 표시합니다.",
 	"system_3b_graph_expand": "펼치기",
 	"palette_placeholder": "글과 명령 검색...",
-	"palette_no_results": "일치하는 항목이 없습니다. 제목, 'about', 'github', 또는 페이지 이름을 입력해 보세요.",
+	"palette_no_results": "일치하는 항목이 없습니다. 제목, 'about', 'linkedin', 또는 페이지 이름을 입력해 보세요.",
 	"palette_group_nav": "이동",
 	"palette_group_action": "동작",
 	"palette_group_post": "글",
