@@ -1,176 +1,118 @@
 <!--
-  FuzzyFinder.svelte - Search Modal Component
-  ===========================================
+  FuzzyFinder.svelte - Command Palette Modal
+  ==========================================
 
-  WHAT: A modal search dialog for finding posts with fuzzy matching.
-  WHY:  Quick navigation - users can search posts without typing full names.
-  HOW:  Uses Fuse.js for fuzzy search, renders as an overlay modal.
+  WHAT: A modal command palette over heterogeneous items — navigation, actions,
+        and posts — with fuzzy matching, grouped into GO TO / ACTIONS / POSTS.
+  WHY:  One Cmd/Ctrl+K surface for jumping anywhere and running quick actions.
+  HOW:  Fuse.js over PaletteItem[]; each item self-executes via item.run().
 
-  FUZZY SEARCH:
-  - "redis" matches "Redis Caching Patterns"
-  - "k8s pod" matches "Kubernetes Pod Lifecycle"
-  - Typo-tolerant: "redsi" still finds "redis"
-
-  UX INSPIRATION: VS Code's Ctrl+P file finder, Spotlight search
-
-  KEYBOARD SHORTCUTS:
-  - ↑/↓: Navigate results
-  - Enter: Select result
-  - Escape: Close modal
-  - Click outside: Close modal
+  KEYBOARD:
+  - ↑/↓: navigate (across section boundaries)  - Enter: select  - Escape: close
 -->
 <script lang="ts">
-	// SVELTE IMPORTS
-	// --------------
-	// `tick` - Returns promise that resolves after Svelte has applied pending state changes.
-	// WHY: Need to wait for DOM update before focusing input.
-	// REFERENCE: https://svelte.dev/docs/svelte/lifecycle-hooks#tick
 	import { onMount, onDestroy, tick } from 'svelte';
-	import type { PostMetadata } from '$lib/stores/posts';
-
-	// FUSE.JS INTEGRATION
-	// -------------------
-	// Fuse.js is a lightweight fuzzy-search library.
-	// - `createPostsFuse`: Factory to create Fuse instance with posts
-	// - `fuzzySearch`: Wrapper to search and return results
-	// - `highlightMatches`: Utility to highlight matched portions
-	// - `FuzzyResult`: Type for search results with match info
-	import { createPostsFuse, fuzzySearch, highlightMatches, type FuzzyResult } from '$lib/fuzzy';
+	import { m } from '$lib/paraglide/messages';
+	import { createPaletteFuse, fuzzySearch, highlightMatches, type FuzzyResult } from '$lib/fuzzy';
+	import type { PaletteItem, PaletteGroup } from '$lib/palette/items';
 	import type Fuse from 'fuse.js';
 
-	// PROPS INTERFACE
-	// ---------------
 	interface Props {
-		posts: PostMetadata[]; // Posts to search through
-		onSelect: (slug: string) => void; // Called when user selects a post
-		onClose: () => void; // Called when user closes modal
+		items: PaletteItem[]; // full item set (nav + actions + posts) for the route
+		onSelect: (item: PaletteItem) => void; // called when the user selects an item
+		onClose: () => void; // called when the user closes the palette
 	}
 
-	let { posts, onSelect, onClose }: Props = $props();
+	let { items, onSelect, onClose }: Props = $props();
 
-	// COMPONENT STATE
-	// ---------------
+	// UX-3: cap the default (empty-query) POSTS section instead of dumping all posts.
+	const DEFAULT_POST_LIMIT = 8;
+
+	// Section ordering for grouped display. Stable-sort by this so Fuse rank is
+	// preserved within each group.
+	const GROUP_ORDER: Record<PaletteGroup, number> = { nav: 0, action: 1, post: 2 };
+
 	let inputRef: HTMLInputElement;
-	let query = $state(''); // Search query
-	let results: FuzzyResult[] = $state([]); // Search results
-	let selectedIndex = $state(0); // Currently selected result
-	let fuse: Fuse<PostMetadata>; // Fuse.js instance (not reactive)
+	let query = $state('');
+	let results: FuzzyResult[] = $state([]);
+	let selectedIndex = $state(0);
+	let fuse: Fuse<PaletteItem>;
 
-	// RESULTS CONTAINER REF
-	// ---------------------
-	// WHAT: Reference to the scrollable results list container (<div> with overflow-y-auto).
-	// WHY:  Need direct DOM access to scroll selected items into view during keyboard navigation.
-	// HOW:  Bound via `bind:this={resultsContainerRef}` in template.
-	//       Container's children are the result items, accessed by index: children[selectedIndex].
 	let resultsContainerRef: HTMLDivElement;
 
-	// A11Y-2: focus-trap refs. `dialogRef` scopes the trap to the modal;
-	// `previouslyFocused` is restored when the palette closes.
+	// A11Y-2: focus-trap refs. `dialogRef` scopes the trap; `previouslyFocused`
+	// is restored when the palette closes.
 	let dialogRef: HTMLDivElement;
 	let previouslyFocused: HTMLElement | null = null;
 
-	// AUTO-SCROLL TO SELECTED ITEM ($effect)
-	// --------------------------------------
-	// WHAT: Reactive effect that scrolls the selected result item into view.
-	// WHY:  When user navigates with ↑/↓ keys beyond visible area, the selected item
-	//       would be hidden. This ensures the selection is always visible (like VS Code's Ctrl+P).
-	// HOW:  $effect() runs whenever its dependencies change (selectedIndex, results.length).
-	//
-	// SVELTE 5 $effect RUNE:
-	// - Automatically tracks reactive state read inside the function
-	// - Re-runs when any tracked state changes
-	// - Here it tracks: `resultsContainerRef`, `results.length`, `selectedIndex`
-	// - REFERENCE: https://svelte.dev/docs/svelte/$effect
-	//
-	// scrollIntoView OPTIONS:
-	// - `block: 'nearest'`: Only scrolls if element is outside visible area.
-	//   - If already visible → no scroll (prevents jarring jumps)
-	//   - If above viewport → scrolls up to show at top
-	//   - If below viewport → scrolls down to show at bottom
-	// - `behavior: 'smooth'`: Animates the scroll for better UX.
-	// - REFERENCE: https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView
+	// Default list shown before the user types: nav + actions in full, then the
+	// most-recent posts capped at DEFAULT_POST_LIMIT (UX-3). `items` is already
+	// ordered nav → action → post by buildPaletteItems.
+	function defaultResults(): FuzzyResult[] {
+		const navAction = items
+			.filter((item) => item.group !== 'post')
+			.map((item) => ({ item, score: 0 }));
+		const recentPosts = items
+			.filter((item) => item.group === 'post')
+			.slice()
+			.sort((a, b) => new Date(b.meta?.date ?? 0).getTime() - new Date(a.meta?.date ?? 0).getTime())
+			.slice(0, DEFAULT_POST_LIMIT)
+			.map((item) => ({ item, score: 0 }));
+		return [...navAction, ...recentPosts];
+	}
+
+	// Group Fuse results into sections (nav → action → post) while keeping rank
+	// order within each group. Array.prototype.sort is stable.
+	function grouped(list: FuzzyResult[]): FuzzyResult[] {
+		return [...list].sort((a, b) => GROUP_ORDER[a.item.group] - GROUP_ORDER[b.item.group]);
+	}
+
+	// AUTO-SCROLL TO SELECTED ROW
+	// Section headers interleave the result rows in the DOM, so the old
+	// `container.children[selectedIndex]` no longer maps to result items. Tag
+	// each row with data-result-index and query it directly.
 	$effect(() => {
 		if (resultsContainerRef && results.length > 0) {
-			// Access the selected item via container's children NodeList
-			// children[selectedIndex] corresponds to the result item at that index
-			const selectedElement = resultsContainerRef.children[selectedIndex] as HTMLElement;
-			if (selectedElement) {
-				selectedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-			}
+			const selectedElement = resultsContainerRef.querySelector<HTMLElement>(
+				`[data-result-index="${selectedIndex}"]`,
+			);
+			selectedElement?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 		}
 	});
 
-	// INITIALIZATION ON MOUNT
-	// -----------------------
-	// `async` in onMount allows using await inside.
-	// WHY async here: Need to await `tick()` before focusing.
 	onMount(async () => {
-		// A11Y-2: remember what had focus so we can restore it when the palette closes.
+		// A11Y-2: remember focus so it can be restored on close.
 		previouslyFocused = document.activeElement as HTMLElement | null;
-
-		// Create Fuse.js instance with posts data
-		fuse = createPostsFuse(posts);
-
-		// Initial results - show recent posts when no search query
-		// PATTERN: Default to showing useful content (recent posts) vs empty state
-		results = posts
-			.slice() // Copy array to avoid mutating original
-			.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-			.map((post) => ({ item: post, score: 0 }));
-
-		// TICK - WAIT FOR DOM UPDATE
-		// --------------------------
-		// `tick()` returns a promise that resolves after DOM updates.
-		// WHY: Input element doesn't exist until Svelte renders it.
-		// Without tick, inputRef might be undefined.
+		fuse = createPaletteFuse(items);
+		results = defaultResults();
 		await tick();
 		inputRef?.focus();
 	});
 
-	// A11Y-2: return focus to the element focused before the palette opened.
-	// onMount is async here, so its return value can't be used as cleanup — use onDestroy.
+	// A11Y-2: async onMount can't host cleanup (its return is a Promise) — use onDestroy.
 	onDestroy(() => previouslyFocused?.focus?.());
 
-	// SEARCH HANDLER
-	// --------------
-	// Called on every input change to update results.
 	function handleInput() {
-		if (query.trim()) {
-			// Perform fuzzy search
-			results = fuzzySearch(fuse, query);
-		} else {
-			// No query - show recent posts
-			results = posts
-				.slice()
-				.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-				.map((post) => ({ item: post, score: 0 }));
-		}
-		// Reset selection to first item
+		results = query.trim() ? grouped(fuzzySearch(fuse, query)) : defaultResults();
 		selectedIndex = 0;
 	}
 
-	// KEYBOARD NAVIGATION
-	// -------------------
-	// Arrow keys to navigate, Enter to select, Escape to close.
 	function handleKeyDown(event: KeyboardEvent) {
 		switch (event.key) {
 			case 'ArrowUp':
-				event.preventDefault(); // Prevent cursor moving in input
+				event.preventDefault();
 				selectedIndex = Math.max(0, selectedIndex - 1);
 				break;
-
 			case 'ArrowDown':
 				event.preventDefault();
 				selectedIndex = Math.min(results.length - 1, selectedIndex + 1);
 				break;
-
 			case 'Enter':
 				event.preventDefault();
 				if (results[selectedIndex]) {
-					onSelect(results[selectedIndex].item.slug);
+					onSelect(results[selectedIndex].item);
 				}
 				break;
-
 			case 'Escape':
 				event.preventDefault();
 				onClose();
@@ -178,22 +120,27 @@
 		}
 	}
 
-	// HIGHLIGHT MATCHING TEXT
-	// -----------------------
-	// Returns array of text segments with highlighted flag.
-	// Used to highlight matched portions in search results.
-	function getHighlightedTitle(result: FuzzyResult): { text: string; highlighted: boolean }[] {
-		const titleMatch = result.matches?.find((m) => m.key === 'title');
-		if (titleMatch && titleMatch.indices) {
-			return highlightMatches(result.item.title, titleMatch.indices);
+	// Highlight matched characters in the item label (Fuse `label` key).
+	function getHighlightedLabel(result: FuzzyResult): { text: string; highlighted: boolean }[] {
+		const labelMatch = result.matches?.find((match) => match.key === 'label');
+		if (labelMatch && labelMatch.indices) {
+			return highlightMatches(result.item.label, labelMatch.indices);
 		}
-		return [{ text: result.item.title, highlighted: false }];
+		return [{ text: result.item.label, highlighted: false }];
 	}
 
-	// GLOBAL ESCAPE HANDLER
-	// ---------------------
-	// WHY: Ensure ESC always closes modal, even if focus is elsewhere.
-	// stopPropagation prevents parent handlers from also receiving the event.
+	function groupLabel(group: PaletteGroup): string {
+		switch (group) {
+			case 'nav':
+				return m.palette_group_nav();
+			case 'action':
+				return m.palette_group_action();
+			case 'post':
+				return m.palette_group_post();
+		}
+	}
+
+	// GLOBAL ESCAPE + TAB TRAP (A11Y-2)
 	function handleGlobalKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
 			event.preventDefault();
@@ -201,13 +148,11 @@
 			onClose();
 			return;
 		}
-		// A11Y-2: keep Tab focus inside the dialog while it is open.
 		if (event.key === 'Tab') {
 			trapFocus(event);
 		}
 	}
 
-	// Cycle focus between the first and last focusable elements in the dialog.
 	function trapFocus(event: KeyboardEvent) {
 		const focusables = dialogRef?.querySelectorAll<HTMLElement>(
 			'a[href], button, input, [tabindex]:not([tabindex="-1"])',
@@ -228,34 +173,8 @@
 	}
 </script>
 
-<!--
-  <svelte:window> - Global Escape Handler
-  ---------------------------------------
-  Captures Escape key at window level for reliable modal closing.
-  This ensures ESC works even if focus moves unexpectedly.
--->
 <svelte:window onkeydown={handleGlobalKeyDown} />
 
-<!--
-  MODAL OVERLAY
-  -------------
-  POSITIONING:
-  - fixed inset-0: Covers entire viewport
-  - z-50: High z-index to appear above everything
-  - pt-24: Push dialog down from top
-
-  BACKDROP CLICK TO CLOSE:
-  `onclick={(e) => e.target === e.currentTarget && onClose()}`
-  - Only close if clicking the overlay itself
-  - NOT if clicking the dialog (bubbled event)
-  - `e.target === e.currentTarget` checks if click was directly on this element
-
-  ACCESSIBILITY:
-  - role="dialog": Screen readers announce as dialog
-  - aria-modal="true": Indicates modal behavior
-  - aria-label: Describes the dialog purpose
-  - tabindex="-1": Allows programmatic focus
--->
 <div
 	bind:this={dialogRef}
 	class="fuzzy-overlay fixed inset-0 z-50 flex items-start justify-center pt-24"
@@ -263,160 +182,122 @@
 	onkeydown={(e) => e.key === 'Escape' && onClose()}
 	role="dialog"
 	aria-modal="true"
-	aria-label="Search posts"
+	aria-label="Command palette"
 	tabindex="-1"
 >
-	<!-- DIALOG CONTAINER -->
 	<div
 		class="w-full max-w-2xl rounded-lg border border-terminal-border bg-terminal-bg-secondary shadow-2xl"
 	>
-		<!--
-		  SEARCH INPUT HEADER
-		  -------------------
-		  Contains prompt icon, input field, and keyboard hint.
-		-->
+		<!-- SEARCH INPUT HEADER -->
 		<div class="flex items-center gap-3 border-b border-terminal-border p-4">
-			<!-- Prompt icon (terminal aesthetic) -->
 			<span class="text-terminal-accent-orange">❯</span>
-			<!--
-			  TWO-WAY BINDING: bind:value
-			  ---------------------------
-			  `bind:value={query}` creates two-way binding:
-			  - Input changes → query updates
-			  - query changes → input updates
-
-			  REFERENCE: https://svelte.dev/docs/svelte/bind#input-bind:value
-			-->
 			<input
 				bind:this={inputRef}
 				bind:value={query}
 				oninput={handleInput}
 				onkeydown={handleKeyDown}
 				type="text"
-				placeholder="Search posts..."
+				placeholder={m.palette_placeholder()}
 				class="flex-1 border-none bg-transparent text-terminal-text-primary placeholder-terminal-text-dim outline-hidden"
 				spellcheck="false"
 			/>
-			<!-- Keyboard hint -->
 			<kbd class="rounded-sm bg-terminal-bg-primary px-2 py-1 text-xs text-terminal-text-muted"
 				>esc</kbd
 			>
 		</div>
 
-		<!--
-		  RESULTS LIST CONTAINER
-		  ----------------------
-		  WHAT: Scrollable container for search results.
-		  WHY:  Limits visible results to prevent modal from growing too tall.
-		  HOW:  CSS constraints + overflow creates scrollable region.
-
-		  STYLING:
-		  - max-h-96: Maximum height of 24rem (384px) - shows ~5-6 results
-		  - overflow-y-auto: Shows vertical scrollbar only when content exceeds max-h
-
-		  DOM REFERENCE (bind:this):
-		  - `bind:this={resultsContainerRef}` stores DOM element reference
-		  - Used by $effect to access children for auto-scrolling
-		  - Children are the result item divs, indexed 0 to results.length-1
-		  - REFERENCE: https://svelte.dev/docs/svelte/bind#bind:this
-		-->
+		<!-- RESULTS LIST (max-h-96 + scroll). Rows carry data-result-index; section
+		     headers are interleaved but non-selectable. -->
 		<div bind:this={resultsContainerRef} class="max-h-96 overflow-y-auto">
 			{#if results.length === 0}
-				<div class="p-4 text-center text-terminal-text-muted">No posts found</div>
+				<div class="p-4 text-center text-terminal-text-muted">{m.palette_no_results()}</div>
 			{:else}
-				<!--
-				  KEYED EACH - Using slug as key
-				  ------------------------------
-				  WHY slug instead of index?
-				  - Posts have stable identity (slug is unique)
-				  - Results can be reordered (by search relevance)
-				  - Using slug ensures DOM elements are reused correctly
-				-->
-				{#each results as result, i (result.item.slug)}
-					<!--
-					  RESULT ITEM
-					  -----------
-					  CONDITIONAL CLASSES:
-					  Selected items get:
-					  - Orange left border (visual indicator)
-					  - Orange tinted background
-					  - Adjusted padding to account for border
-
-					  TEMPLATE EXPRESSION IN CLASS:
-					  `class="... {condition ? 'class-a' : 'class-b'}"`
-					  Svelte allows JS expressions in class attribute.
-					-->
+				{#each results as result, i (result.item.id)}
+					{@const showHeader = i === 0 || results[i - 1].item.group !== result.item.group}
+					{#if showHeader}
+						<div
+							class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim"
+						>
+							{groupLabel(result.item.group)}
+						</div>
+					{/if}
 					<div
+						data-result-index={i}
 						class="cursor-pointer border-b border-terminal-border/50 py-3 last:border-b-0 {i ===
 						selectedIndex
 							? 'border-l-2 border-l-terminal-accent-orange bg-terminal-accent-orange/10 pl-3.5 pr-4'
 							: 'px-4'}"
-						onclick={() => onSelect(result.item.slug)}
-						onkeydown={(e) => e.key === 'Enter' && onSelect(result.item.slug)}
+						onclick={() => onSelect(result.item)}
+						onkeydown={(e) => e.key === 'Enter' && onSelect(result.item)}
 						role="option"
 						aria-selected={i === selectedIndex}
 						tabindex={0}
 					>
-						<div class="flex items-start justify-between gap-4">
-							<div class="min-w-0 flex-1">
-								<!--
-								  HIGHLIGHTED TITLE
-								  -----------------
-								  Renders title with matched portions highlighted.
-								  Each segment is either highlighted or plain text.
-								-->
-								<div class="truncate font-medium text-terminal-text-primary">
-									{#each getHighlightedTitle(result) as segment}
-										{#if segment.highlighted}
-											<!-- fuzzy-match class defined in app.css for highlight styling -->
-											<span class="fuzzy-match">{segment.text}</span>
-										{:else}
-											{segment.text}
+						{#if result.item.group === 'post'}
+							<!-- POST ROW (rich: title, description, category/tags/date) -->
+							<div class="flex items-start justify-between gap-4">
+								<div class="min-w-0 flex-1">
+									<div class="truncate font-medium text-terminal-text-primary">
+										{#each getHighlightedLabel(result) as segment, si (si)}
+											{#if segment.highlighted}
+												<span class="fuzzy-match">{segment.text}</span>
+											{:else}{segment.text}{/if}
+										{/each}
+									</div>
+									{#if result.item.description}
+										<div class="mt-1 truncate text-sm text-terminal-text-muted">
+											{result.item.description}
+										</div>
+									{/if}
+									<div class="mt-2 flex flex-wrap gap-2">
+										{#if result.item.meta?.category}
+											<span
+												class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-accent-yellow"
+											>
+												{result.item.meta.category}
+											</span>
 										{/if}
-									{/each}
+										{#each (result.item.meta?.tags ?? []).slice(0, 3) as tag (tag)}
+											<span
+												class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted"
+											>
+												{tag}
+											</span>
+										{/each}
+									</div>
 								</div>
-								<!-- Description -->
-								<div class="mt-1 truncate text-sm text-terminal-text-muted">
-									{result.item.description}
-								</div>
-								<!-- Tags and category -->
-								<div class="mt-2 flex flex-wrap gap-2">
-									<span
-										class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-accent-yellow"
-									>
-										{result.item.category}
-									</span>
-									<!--
-									  INLINE ARRAY OPERATION: .slice(0, 3)
-									  ------------------------------------
-									  Only show first 3 tags to prevent overflow.
-									  This runs every render, but is cheap (array.slice).
-									-->
-									{#each result.item.tags.slice(0, 3) as tag}
-										<span
-											class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted"
-										>
-											{tag}
-										</span>
-									{/each}
+								{#if result.item.meta?.date}
+									<div class="text-xs text-terminal-text-dim">{result.item.meta.date}</div>
+								{/if}
+							</div>
+						{:else}
+							<!-- NAV / ACTION ROW (icon + label + dim hint) -->
+							<div class="flex items-center gap-3">
+								<span class="w-4 shrink-0 text-center text-terminal-accent-orange">
+									{result.item.icon ?? '›'}
+								</span>
+								<div class="min-w-0 flex-1">
+									<div class="truncate font-medium text-terminal-text-primary">
+										{#each getHighlightedLabel(result) as segment, si (si)}
+											{#if segment.highlighted}
+												<span class="fuzzy-match">{segment.text}</span>
+											{:else}{segment.text}{/if}
+										{/each}
+									</div>
+									{#if result.item.description}
+										<div class="truncate text-xs text-terminal-text-dim">
+											{result.item.description}
+										</div>
+									{/if}
 								</div>
 							</div>
-							<!-- Date -->
-							<div class="text-xs text-terminal-text-dim">
-								{result.item.date}
-							</div>
-						</div>
+						{/if}
 					</div>
 				{/each}
 			{/if}
 		</div>
 
-		<!--
-		  FOOTER - Keyboard hints and result count
-		  ----------------------------------------
-		  Helps users discover keyboard shortcuts.
-		  Result count updates reactively as results change.
-		-->
+		<!-- FOOTER - keyboard hints + result count -->
 		<div
 			class="flex items-center justify-between border-t border-terminal-border px-4 py-2 text-xs text-terminal-text-muted"
 		>
@@ -424,13 +305,6 @@
 				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↑↓</kbd> navigate</span>
 				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↵</kbd> select</span>
 			</div>
-			<!--
-			  PLURALIZATION
-			  -------------
-			  `results.length === 1 ? '' : 's'`
-			  Simple approach: add 's' for plural.
-			  For complex i18n, use a library like svelte-i18n.
-			-->
 			<div>
 				{results.length} result{results.length === 1 ? '' : 's'}
 			</div>

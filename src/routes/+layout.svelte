@@ -44,6 +44,7 @@
 	import { posts } from '$lib/stores/posts';
 	import { paletteOpen } from '$lib/stores/palette';
 	import FuzzyFinder from '$lib/components/terminal/FuzzyFinder.svelte';
+	import { buildPaletteItems, type PaletteItem } from '$lib/palette/items';
 
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
@@ -71,6 +72,10 @@
 	});
 
 	const systemHref = $derived(page.url.pathname.startsWith('/ko') ? '/ko/system/3b' : '/system/3b');
+
+	// Full palette item set (nav + actions + posts) for the current route.
+	// Rebuilds on navigation (locale-aware) and when the posts store hydrates.
+	const paletteItems = $derived(buildPaletteItems($posts, page.url.pathname));
 
 	function handleSearchShortcut(event: KeyboardEvent) {
 		if (!((event.metaKey || event.ctrlKey) && event.key === 'f')) return;
@@ -108,10 +113,11 @@
 		handleSearchShortcut(event);
 	}
 
-	// Navigate to the selected post, then close the palette. Locale-aware path.
-	function handlePaletteSelect(slug: string) {
+	// Close the palette, then run the selected item's command (nav goto, view/lang
+	// toggle, copy, etc.). Each PaletteItem carries its own run().
+	function handlePaletteSelect(item: PaletteItem) {
 		paletteOpen.set(false);
-		goto(page.url.pathname.startsWith('/ko') ? `/ko/posts/${slug}` : `/posts/${slug}`);
+		item.run();
 	}
 </script>
 
@@ -208,7 +214,7 @@
 -->
 {#if $paletteOpen}
 	<FuzzyFinder
-		posts={$posts}
+		items={paletteItems}
 		onSelect={handlePaletteSelect}
 		onClose={() => paletteOpen.set(false)}
 	/>

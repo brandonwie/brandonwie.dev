@@ -41,7 +41,10 @@ export default ts.config(
 		},
 	},
 	{
-		files: ['**/*.svelte'],
+		// `no-navigation-without-resolve` also covers .ts — the palette navigation
+		// builders live in src/lib/palette/items.ts; the other rules here are
+		// svelte-template-only and inert on .ts files.
+		files: ['**/*.svelte', '**/*.ts'],
 		rules: {
 			// SSG site with no base path — resolve() not needed
 			'svelte/no-navigation-without-resolve': 'off',
