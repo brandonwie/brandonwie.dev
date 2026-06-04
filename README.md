@@ -4,8 +4,8 @@ Personal blog built with SvelteKit, featuring a Cmd/Ctrl+K command palette.
 
 ## Features
 
-- Interactive CLI experience (ls, cd, cat, grep, etc.)
-- Fuzzy search with Ctrl+P/K
+- Command palette (Cmd/Ctrl+K, with Cmd/Ctrl+P alias) for navigation and actions
+- Fuzzy post search (Fuse.js), available from the palette
 - Bilingual support (English/Korean)
 - RSS feeds per language
 - Static site generation (SSG)
@@ -87,7 +87,8 @@ src/
 │   ├── en/          # English posts
 │   └── ko/          # Korean translations
 ├── lib/
-│   ├── components/  # Svelte components
+│   ├── components/  # Svelte components (incl. palette/ UI)
+│   ├── palette/     # Command palette item model
 │   └── paraglide/   # Generated i18n runtime
 ├── routes/
 │   ├── posts/       # English routes
