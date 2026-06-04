@@ -1,14 +1,11 @@
 <script lang="ts">
 	import BlogHome from '$lib/components/BlogHome.svelte';
-	import { posts } from '$lib/stores/posts';
-	import { onMount } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
 
 	let { data } = $props();
 
-	onMount(() => {
-		posts.set(data.posts);
-	});
+	// The posts store is hydrated globally in +layout.ts/+layout.svelte (ARCH-1),
+	// so the home page no longer needs to populate it on mount.
 </script>
 
 <svelte:head>
