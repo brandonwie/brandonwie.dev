@@ -4,7 +4,7 @@ description: >-
   Auto-start tmux via an iTerm2 Profile Command (`tmux-smart-attach`) with
   numeric
 date: 2026-02-25T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-06-05'
 tags:
   - devops
   - tmux
@@ -21,13 +21,19 @@ references:
   - url: 'https://iterm2.com/documentation-tmux-integration.html'
     title: iTerm2 tmux Integration
     type: official
-source_content_hash: a619956038f0deae97cfbe4ca72244f8a8efab2c40459e125db52dbbb0a51d4c
+source_content_hash: d3450d391ba7ba403e35a6222cd6bfac2ed839237239e4252e6cb1bab153f6eb
 expanded: true
 ---
 
 I wanted every new iTerm2 window (`Cmd+N`) to open with its own tmux session, while reusing detached sessions from closed windows. The obvious approach — putting `tmux new -A -s main` in iTerm2's "Send text at start" — always reattaches to the same `main` session. Every window shows the same panes and content instead of giving you independent workspaces.
 
 The solution went through three iterations before landing on one that works reliably across all contexts.
+
+> **Update (2026-06-05):** In my own setup I no longer auto-start tmux this way —
+> a terminal workspace manager (Herdr) now owns that layer, so I start tmux
+> manually when I need it. The pattern below still holds for standalone
+> iTerm2-style windows, so I'm keeping it here as a reference rather than current
+> daily practice.
 
 ## The Problem with the Obvious Approach
 
@@ -121,6 +127,7 @@ There's a race condition on fast close/open: `Cmd+W` then instant `Cmd+N` can cr
 - You intentionally want all windows in the same tmux session (pair programming, shared view)
 - You use iTerm2's `-CC` control mode (requires iTerm2 to manage the lifecycle)
 - You're on a server where tmux sessions should persist across SSH disconnects (different pattern — no `exec`, use `tmux attach || tmux new`)
+- A terminal workspace manager (Herdr, or similar) already owns the first-level workspace model — auto-starting tmux underneath it adds nesting and can interfere with terminal-level key and mouse handling
 
 ## Takeaway
 
