@@ -66,7 +66,7 @@
 	"system_3b_blog_heading": "블로그 시리즈",
 	"system_3b_status_heading": "스냅샷",
 	"system_3b_nodes_label": "노드",
-	"system_3b_reads_private": "비공개 저장소 접근",
+	"system_3b_reads_private": "비공개 3B 데이터 접근",
 	"system_3b_published": "발행됨",
 	"system_3b_planned": "예정",
 	"system_3b_blog_progress": "{total}개 중 {published}개 발행",
