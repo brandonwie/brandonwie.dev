@@ -1675,3 +1675,23 @@ shapes (previously `{}` passed). Cleaned up the worktree + feature branch.
 
 **Next:** Package-refresh maintenance pass (deps + lockfile + full CI/build), per
 reviewer recommendation.
+
+### Session 14 — 2026-06-07: Blog publish — 5 posts (EN + KO)
+
+**What:** Ran `/blog-publish`. Merged 1 hash-mismatch post
+(`state-invariant-flag-drift-recovery` — grafted the new grep-over-counts lesson
+into the existing expanded narrative, refreshed `source_content_hash` + date, KO
+delta), published 1 ready-gated post (`session-state-merge-vs-overwrite-pattern` —
+flipped `ready`, synced, expanded, KO), and promoted 3 from `review`
+(`claude-plugin-update-reenables-disabled`,
+`git-pre-commit-parallel-session-head-race`,
+`claude-md-byte-budget-generator-gate`). byte-budget was de-3B'd + gained an
+official Claude Code memory-docs reference. Held `parallel-agent-concurrent-commits`
+(3B-internal). `sync:reconcile` cleared the one genuine stale `needs_resync` flag.
+
+**Stats:** 5 EN + 5 KO posts; `validate:dates` clean (145 EN / 145 KO); `build`
+green, Pagefind 290 pages / 39,047 words. 3B sources: flag flips + `status` + refs
+on 5 knowledge entries.
+
+**Next:** Weekly rollup w22 still pending; monitor Cloudflare Pages deploy after
+push.

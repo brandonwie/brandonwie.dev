@@ -2,7 +2,7 @@
 title: State-invariant flag drift — recovery via reconciliation pass
 description: 'A boolean lifecycle flag kept getting stuck on entries that could never reach the code path that clears it. Symptom-only fixes recurred. The durable fix was a third workflow that enforces the invariant the flag implies, independent of how the flag got set.'
 date: 2026-04-25T00:00:00.000Z
-updated: 2026-05-06
+updated: 2026-06-07
 tags:
   - devops
   - sync
@@ -20,7 +20,7 @@ references:
       Patterns of Enterprise Application Architecture — state lifecycle
       discipline
     type: authoritative
-source_content_hash: 50a798db21d63c013f4bd97ffe43f16382da7efd851c3fde25ca14454e8bb69b
+source_content_hash: a475945c106937b2d998c5181e9a28c32b1e7450babba77b85236dc02c00d164
 ---
 
 A boolean lifecycle flag (`needs_resync: true`) was getting stuck on entries that could never reach the code path that clears it. The flag was set by one workflow (`/wrap`) and cleared by another (`sync-from-3b.ts`), but the clearer was gated by a precondition the setter did not check (`ready: true`). Entries with `ready: false` accumulated the flag forever.
@@ -51,11 +51,12 @@ The pass is opt-in. It does not run during normal sync — it is operator-initia
 
 ## What broke during implementation
 
-Three concrete things tripped the first draft:
+Three concrete things tripped the first draft — and a fourth surfaced weeks later, during a routine audit:
 
 - **YAML round-trip serialization corrupted unquoted strings.** The first draft used `stringifyYaml(frontmatter)` to write back. Unquoted strings containing `#` (for example, `context: PR #103 Round 1...`) got truncated at the `#` because YAML treats it as a comment marker. The lesson is documented separately in `general/yaml-serializer-unquoted-hash-corruption.md`.
 - **Surgical regex on the frontmatter substring beat YAML round-trip.** Replacing the round-trip with a scoped regex that flips a single key reduced diff size from 348 lines to 12 lines (1 per file), and body content stayed byte-identical regardless of unquoted special characters. The general principle: when the field set is fixed and small, point edits avoid the round-trip blast radius entirely.
 - **`replace_all: true` matched one of two near-identical write blocks.** The two blocks sat at different nesting depths — 3 tabs vs 4 tabs — and indent-sensitive matching caught one site while silently missing the other. The defense is mechanical: always grep after `replace_all` to verify the expected match count.
+- **Counting the drift by grepping the flag over-counted.** Running `grep -rl "needs_resync: true"` across the knowledge base flagged five files — but four were entries that _describe_ the flag (this post among them), so the string matched their body prose, not any real frontmatter field. Only one was a genuine stuck flag. In a knowledge base that documents its own metadata, a raw string grep can't separate a live field from a sentence about that field; scoping the scan to the frontmatter block — for example `awk '/^---$/{c++; next} c==1'` — before counting is the fix.
 
 ## When this approach helps
 

@@ -5,7 +5,7 @@ description: >-
   fix는 계속 재발했고, 진짜 해결은 setter나 clearer 어느 쪽이 어떻게 set했든 상관없이 flag가 함의하는
   invariant를 강제하는 세 번째 workflow를 추가하는 거였어요.
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-06-07'
 tags:
   - devops
   - sync
@@ -18,8 +18,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: state-invariant-flag-drift-recovery
-source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-10'
+source_updated: '2026-06-07'
+translation_date: '2026-06-07'
 ---
 
 boolean lifecycle flag (`needs_resync: true`)가 그 flag를 클리어하는 코드 경로에 절대 도달할 수 없는 entry들에 계속 끼고 있었어요. flag는 한 workflow(`/wrap`)가 set하고 다른 workflow(`sync-from-3b.ts`)가 클리어하는데, clearer 쪽에는 setter가 체크하지 않는 precondition(`ready: true`)이 걸려 있었거든요. `ready: false`인 entry들에 flag가 영원히 쌓였어요.
@@ -50,11 +50,12 @@ boolean lifecycle flag (`needs_resync: true`)가 그 flag를 클리어하는 코
 
 ## 구현 중에 깨진 것들
 
-첫 번째 draft에서 걸린 세 가지:
+첫 번째 draft에서 걸린 세 가지, 그리고 몇 주 뒤 점검 중에 드러난 네 번째:
 
 - **YAML round-trip serialization이 unquoted string을 손상시켰어요.** 첫 draft는 `stringifyYaml(frontmatter)`로 write back을 했어요. `#`를 포함한 unquoted string(예: `context: PR #103 Round 1...`)이 `#`에서 잘렸어요. YAML이 그걸 comment marker로 취급하거든요. 이 교훈은 `general/yaml-serializer-unquoted-hash-corruption.md`에 따로 정리해뒀어요.
 - **frontmatter substring에 surgical regex가 YAML round-trip을 이겼어요.** round-trip을 키 하나만 flip하는 scoped regex로 바꾸니 diff 사이즈가 348줄에서 12줄(파일당 1줄)로 줄었고, body content는 unquoted special character가 있든 없든 byte-identical했어요. 일반 원칙: 필드셋이 고정되고 작으면, point edit이 round-trip의 blast radius를 완전히 피할 수 있어요.
 - **`replace_all: true`가 두 개의 거의 동일한 write block 중 하나만 매칭됐어요.** 두 block이 다른 nesting depth — 3 tabs vs 4 tabs —에 있어서 indent-sensitive matching이 한 곳만 잡고 다른 한 곳을 조용히 놓쳤어요. 방어법은 기계적이에요: `replace_all` 후에 항상 grep으로 expected match count를 검증해요.
+- **flag를 grep으로 세니 drift가 과다 집계됐어요.** knowledge base 전체에 `grep -rl "needs_resync: true"`를 돌리니 5개 파일이 잡혔는데, 그중 4개는 그 flag를 _설명하는_ entry(이 글도 포함돼요)였어요. 문자열이 frontmatter 필드가 아니라 본문 산문에 매칭된 거죠. 진짜로 끼어 있던 flag는 하나뿐이었어요. 자기 metadata를 스스로 문서화하는 knowledge base에서는 단순 문자열 grep이 살아 있는 필드와 그 필드를 언급하는 문장을 구분하지 못해요. 세기 전에 스캔 범위를 frontmatter block으로 좁히는 것(예: `awk '/^---$/{c++; next} c==1'`)이 해법이에요.
 
 ## 이 접근이 도움 되는 상황
 
