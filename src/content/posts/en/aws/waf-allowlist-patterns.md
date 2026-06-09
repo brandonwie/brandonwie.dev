@@ -2,7 +2,7 @@
 title: WAF Allowlist Patterns
 description: Block-by-default WAF approach using route allowlisting. Stronger security than
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-26'
+updated: '2026-06-09'
 tags:
   - aws
   - waf
@@ -17,7 +17,7 @@ references:
       https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
     title: Creating and managing an IP set in AWS WAF
     type: official
-source_content_hash: be1f0923d004d1ead3be98b1857340524408d9baa1eeb5818c77d66482da5146
+source_content_hash: 2e3297ddc931911739f814e941c9ba9c7b605a3819e4369c243f8ce073a3db43
 ---
 
 I noticed our production API was receiving thousands of requests to paths like `/wp-admin`, `/phpmyadmin`, and `/.env`. Bots scanning for vulnerabilities, hitting every common exploit path they know. Our API returned 404s for all of them, but each request still consumed compute resources, cluttered logs, and occasionally triggered rate limiting for legitimate users.
@@ -168,6 +168,14 @@ Each route category gets its own named rule. API routes are grouped in an `or_st
 
 **Cons:** More rules means higher WAF cost. Each rule is $1/month. For production, the clarity is worth the cost.
 
+## Rule Evaluation: Terminating Allow Skips Later Rules
+
+The `priority` field on each rule is not cosmetic. WAFv2 evaluates rules in ascending priority order, and an `allow {}` action is terminating -- the moment an allowlist rule matches, WAF stops evaluating. Any later rule, including AWS managed rule groups and rate-based rules, never runs for that request.
+
+That carries a security consequence worth calling out: allowlisted routes bypass the managed protections entirely. If you attach the OWASP or SQL-injection managed rule groups at a lower priority than your allow rule, they only ever see traffic that failed the allowlist -- never the routes you explicitly trust. Those trusted routes get lower latency because WAF short-circuits, but they also get zero managed-rule coverage.
+
+For most public API routes that is an acceptable trade: you control the handler, and the allowlist already rejected everything else. It matters most for internal or privileged endpoints like `/internals/*`, where allowlisting means managed rules and rate limiting never apply -- so the application itself has to carry that protection. Factor that into the threat model before adding the allow entry.
+
 ## Path Matching Strategies
 
 WAF offers three positional constraints. Choosing the right one for each path prevents both false positives (blocking legitimate requests) and false negatives (allowing unintended paths).
@@ -259,6 +267,19 @@ Review sampled blocked requests after deployment to make sure you are not accide
 
 I make it a habit to check sampled requests within the first hour after any WAF deployment. Catching a missing allowlist entry in the first hour is a quick fix. Discovering it from a customer support ticket is not.
 
+## Status-Code Triage: Which Layer Rejected the Request?
+
+Once the allowlist is live, a request travels through three layers -- WAF, then the ALB, then the backend (ECS, in our case). When something returns an error, the HTTP status tells you which layer rejected it, which keeps you from debugging the wrong component.
+
+| Status            | Source              | Meaning                                                                                 |
+| ----------------- | ------------------- | --------------------------------------------------------------------------------------- |
+| 403 (custom body) | WAF default action  | Path not in the allowlist, blocked before it reaches the ALB                            |
+| 429               | WAF rate-based rule | Per-IP rate limit exceeded                                                              |
+| 504               | ALB                 | Passed WAF and ALB; the **backend** did not respond within `idle_timeout` (60s default) |
+| 502 / 503         | ALB                 | No healthy target, or the target returned an error                                      |
+
+The non-obvious one is the 504: it is never a WAF block. By the time you see it, the request already cleared the allowlist and reached the backend, so the problem is the handler or its egress -- not the WAF rules. A 403 with your custom block body is the opposite signal: the path is missing from the allowlist, and the fix is to add the corresponding `byte_match` entry (for versioned routes, remember the `/v2/` prefix gotcha above).
+
 ## Cost Optimization
 
 WAF pricing is predictable but adds up with many rules:
@@ -294,7 +315,7 @@ Without the explicit `/v2/spaces` entry, requests silently return 403 in product
 
 ## Key Takeaways
 
-Six principles for WAF allowlist configuration:
+Eight principles for WAF allowlist configuration:
 
 1. **Default to block.** Unknown routes should never reach your application. The allowlist approach handles this automatically.
 2. **Use STARTS_WITH for API routes.** Most routes have query parameters or sub-paths. Exact matching is too restrictive for general API paths.
@@ -302,3 +323,5 @@ Six principles for WAF allowlist configuration:
 4. **Use different patterns for dev and prod.** Regex consolidation saves cost in dev. Explicit rules save debugging time in prod.
 5. **Verify after every deployment.** Use the AWS CLI to confirm rules are active and check sampled requests for false positives.
 6. **Versioned routes need separate entries.** `STARTS_WITH "/spaces"` does not match `/v2/spaces`. Each version prefix requires its own allowlist statement.
+7. **Status codes identify the rejecting layer.** A 403 with your custom block body means a missing allowlist entry; a 429 is WAF rate limiting; a 504 is the backend timing out after the request already passed WAF -- debug the handler, not the rules.
+8. **A terminating `allow {}` skips later rules.** Once an allowlist rule matches, managed rule groups and rate limiting never run for that request, so privileged internal endpoints must carry their own protection.

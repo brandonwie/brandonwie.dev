@@ -4,7 +4,7 @@ description: >-
   라우트 allowlist를 사용한 block-by-default WAF 접근 방식. 알 수 없는 라우트가 자동 차단되어 blocklist보다
   보안이 강해요.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-26'
+updated: '2026-06-09'
 tags:
   - aws
   - waf
@@ -15,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: waf-allowlist-patterns
-source_updated: '2026-03-26'
-translation_date: '2026-03-26'
+source_updated: '2026-06-09'
+translation_date: '2026-06-09'
 references:
   - url: >-
       https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
@@ -154,6 +154,14 @@ resource "aws_wafv2_web_acl" "prod" {
 **장점**: 명확하고 유지보수하기 쉽고 라우트 추가/제거가 간편해요
 **단점**: 규칙이 많아지면 WAF 비용이 높아져요
 
+## 규칙 평가: Terminating Allow는 이후 규칙을 건너뛰어요
+
+각 규칙의 `priority` 필드는 단순 장식이 아니에요. WAFv2는 priority 오름차순으로 규칙을 평가하는데, `allow {}` 액션은 terminating이에요. allowlist 규칙이 매칭되는 순간 WAF는 평가를 멈추고, 그 뒤에 있는 규칙(AWS 관리형 규칙 그룹, rate-based 규칙 등)은 해당 요청에 대해 아예 실행되지 않아요.
+
+여기엔 짚고 넘어갈 보안적 함의가 있어요. allowlist에 포함된 라우트는 관리형 보호를 완전히 우회한다는 점이에요. OWASP나 SQL 인젝션 관리형 규칙 그룹을 allow 규칙보다 낮은 priority(뒤쪽)에 붙이면, 이 규칙들은 allowlist를 통과하지 못한 트래픽만 보게 돼요. 정작 신뢰해서 허용한 라우트는 검사하지 않죠. 신뢰 라우트는 WAF가 단락(short-circuit)되니 지연이 낮지만, 그만큼 관리형 규칙 보호도 전혀 받지 못해요.
+
+대부분의 공개 API 라우트라면 받아들일 만한 트레이드오프예요. 핸들러를 직접 통제하고, allowlist가 이미 나머지를 다 막았으니까요. 문제가 되는 건 `/internals/*` 같은 내부·권한 엔드포인트예요. 이런 경로를 allowlist에 넣으면 관리형 규칙과 rate limiting이 적용되지 않으니, 보호는 애플리케이션 계층이 직접 책임져야 해요. allow 항목을 추가하기 전에 위협 모델에서 한 번 따져볼 부분이에요.
+
 ## 경로 매칭 전략
 
 ### STARTS_WITH
@@ -231,6 +239,19 @@ aws wafv2 get-sampled-requests \
   --max-items 100
 ```
 
+## 상태 코드 트리아지: 어느 계층이 요청을 거부했나요?
+
+allowlist가 적용되면 요청은 세 계층을 거쳐요. WAF, 그다음 ALB, 마지막으로 백엔드(여기서는 ECS)예요. 에러가 났을 때 HTTP 상태 코드를 보면 어느 계층이 거부했는지 알 수 있어서, 엉뚱한 컴포넌트를 디버깅하는 일을 줄여줘요.
+
+| 상태 코드         | 출처                | 의미                                                                       |
+| ----------------- | ------------------- | -------------------------------------------------------------------------- |
+| 403 (커스텀 본문) | WAF 기본 동작       | allowlist에 없는 경로, ALB에 닿기 전에 차단됨                              |
+| 429               | WAF rate-based 규칙 | IP별 요청 한도 초과                                                        |
+| 504               | ALB                 | WAF·ALB는 통과; **백엔드**가 `idle_timeout`(기본 60초) 안에 응답하지 못함  |
+| 502 / 503         | ALB                 | 정상 타겟이 없거나 타겟이 에러를 반환함                                    |
+
+헷갈리기 쉬운 건 504예요. 504는 절대 WAF 차단이 아니에요. 504가 보인다는 건 요청이 이미 allowlist를 통과해 백엔드까지 도달했다는 뜻이라, 문제는 WAF 규칙이 아니라 핸들러나 그 egress에 있어요. 반대로 커스텀 차단 본문과 함께 오는 403은 경로가 allowlist에서 빠졌다는 신호예요. 해당 `byte_match` 항목을 추가하면 되고, 버전 라우트라면 위에서 본 `/v2/` 접두사 함정을 기억하세요.
+
 ## 비용 최적화
 
 | 항목            | 월 비용(약) |
@@ -268,3 +289,5 @@ statement { byte_match_statement { search_string = "/v2/spaces" ... } }
 4. **Dev/Prod가 달라도 괜찮아요** - 비용(dev) vs 명확성(prod) 최적화
 5. **배포 후 검증** - AWS CLI로 규칙이 활성화되었는지 확인하세요
 6. **버전 라우트는 별도 항목이 필요해요** - `STARTS_WITH "/spaces"`는 `/v2/spaces`를 매칭하지 않아요. 각 버전 접두사마다 자체 allowlist statement가 필요해요
+7. **상태 코드로 거부 계층을 구분해요** - 커스텀 본문과 함께 오는 403은 allowlist 누락, 429는 WAF rate limiting, 504는 요청이 WAF를 통과한 뒤 백엔드가 타임아웃된 거예요. 규칙이 아니라 핸들러를 디버깅하세요
+8. **terminating `allow {}`는 이후 규칙을 건너뛰어요** - allowlist 규칙이 매칭되면 관리형 규칙 그룹과 rate limiting이 그 요청에는 실행되지 않으니, 권한 있는 내부 엔드포인트는 자체 보호가 필요해요
