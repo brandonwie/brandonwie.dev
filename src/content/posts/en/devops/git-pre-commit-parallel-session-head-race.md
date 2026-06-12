@@ -2,7 +2,7 @@
 title: 'The pre-commit hook race that put my files in someone else''s commit'
 description: 'Two sessions committing to one repo, a slow pre-commit hook, and `fatal: cannot lock ref HEAD`. The loud failure is the easy one — the quiet failure hands your staged files to the other session''s commit under its message.'
 date: 2026-05-14T00:00:00.000Z
-updated: 2026-06-07
+updated: 2026-06-13
 tags:
   - devops
   - transferable
@@ -14,7 +14,7 @@ references:
   - url: 'https://git-scm.com/docs/git-worktree'
     title: git-worktree — Manage multiple working trees
     type: official
-source_content_hash: fdca579430243cb14d818ed19abc4792ec2ec8dc306a1c520a0889db36ccaeda
+source_content_hash: e78ad38c519086cec0403546cc251526f052716192cd44083236922b2d7b0191
 ---
 
 I had two agent sessions working in the same repository at once, and both tried
@@ -89,6 +89,17 @@ everyone sees the result — but the commit itself never races.
 
 A few things that are worth knowing before you try to "fix" the history:
 
+- **The index is shared too, not just HEAD.** A parallel session's mixed
+  `git reset` can silently unstage your staged set. Check `git diff --cached`
+  before retrying a commit, and re-stage by explicit path if needed.
+- **Unmerged (`UU`) index entries block every commit.** `git commit` fails with
+  "you have unmerged files" even when your pathspec does not touch the conflict.
+  A parallel session's stash-pop or merge conflict can wedge every other session
+  until it is resolved.
+- **`UU` entries can self-resolve.** If another session owns the in-flight
+  operation, check `git ls-files -u <path>` and the worktree for conflict markers
+  before intervening. Resolving its conflict from your session can clobber its
+  work.
 - **Force-push and `--amend` are not recovery options here.** The commit did
   happen — just under the wrong message. Amending the parallel session's commit
   rewrites _their_ history. Don't.

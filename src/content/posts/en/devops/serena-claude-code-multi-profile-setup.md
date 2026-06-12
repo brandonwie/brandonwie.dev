@@ -2,7 +2,7 @@
 title: Serena MCP — Multi-Profile Setup for Claude Code (cpers/cwork)
 description: 'Installing the Serena MCP server across a Claude Code dual-profile setup (cpers/cwork) plus Codex, including the four recommended hooks, the system-prompt override, and the non-obvious "installer writes to default ~/.claude.json, misses profile-specific stores" trap.'
 date: 2026-04-29T00:00:00.000Z
-updated: 2026-05-06
+updated: 2026-06-13
 tags:
   - devops
   - claude-code
@@ -27,7 +27,7 @@ references:
   - url: 'https://docs.claude.com/en/docs/claude-code/cli-reference'
     title: Claude Code CLI reference (--system-prompt / --append-system-prompt)
     type: official
-source_content_hash: 4e1ab4b294629940dbb73e5594468761cde1e47510016ca1df3213b5ee4644b6
+source_content_hash: 2376f57ba949ffb9c4e6ef9274048466875a7f1b66cb282b5e79bc172dad5940
 ---
 
 This is the full procedure for installing the [Serena](https://oraios.github.io/serena/) language-server-backed MCP server across a Claude Code dual-profile setup (`cpers` / `cwork`) plus Codex, including the four recommended hooks and the non-obvious "installer writes to default `~/.claude.json`, misses profile-specific stores" trap that bites multi-profile users on first install.
@@ -183,16 +183,31 @@ function _serena_cc_prompt() {
 
 function cwork() {
   >&2 printf '[claude] profile=work dir=%s cwd=%s\n' "${HOME}/.claude-work" "$PWD"
-  CLAUDE_CONFIG_DIR=~/.claude-work command claude --system-prompt="$(_serena_cc_prompt)" "$@"
+  local sp=""
+  [[ -n "${SERENA_SESSION_ID-}" ]] && sp="$(_serena_cc_prompt)"
+  CLAUDE_CONFIG_DIR=~/.claude-work command claude --system-prompt="$sp" "$@"
 }
 
 function cpers() {
   >&2 printf '[claude] profile=personal dir=%s cwd=%s\n' "${HOME}/.claude" "$PWD"
-  CLAUDE_CONFIG_DIR=~/.claude command claude --system-prompt="$(_serena_cc_prompt)" "$@"
+  local sp=""
+  [[ -n "${SERENA_SESSION_ID-}" ]] && sp="$(_serena_cc_prompt)"
+  CLAUDE_CONFIG_DIR=~/.claude command claude --system-prompt="$sp" "$@"
 }
 ```
 
-Graceful degradation: if `serena` is missing/broken, `_serena_cc_prompt` returns empty → `--system-prompt=""` (no-op). The launcher still works without serena installed.
+Graceful degradation now has two layers. Default `cpers` / `cwork` sessions do
+not receive the Serena-first prompt unless `SERENA_SESSION_ID` is present, which
+keeps the opt-in migration from leaving a stale prompt override behind after the
+MCP server is uninstalled. When a session is launched through the Serena wrapper
+and `serena` is missing or broken, `_serena_cc_prompt` still returns empty →
+`--system-prompt=""` (no-op).
+
+That guard matters because config audits can miss the shell-launcher layer. A
+tooling check may verify MCP configs, hook listeners, and daemons while the
+shell function still injects a Serena-first system prompt into every session.
+The practical lesson is broader than Serena: uninstall or opt-in migrations need
+to sweep every injection point, including launcher prompt overrides.
 
 ### Step 6 — Verify
 

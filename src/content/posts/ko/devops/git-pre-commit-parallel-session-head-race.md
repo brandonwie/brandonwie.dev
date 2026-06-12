@@ -4,7 +4,7 @@ description: >-
   한 저장소에 커밋하는 두 세션, 느린 pre-commit hook, 그리고 `fatal: cannot lock ref HEAD`.
   시끄러운 실패는 쉬운 쪽이에요 — 조용한 실패는 내 staged 파일을 다른 세션의 커밋에 그쪽 메시지로 넘겨버려요.
 date: 2026-05-14T00:00:00.000Z
-updated: '2026-06-07'
+updated: '2026-06-13'
 tags:
   - devops
   - transferable
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: git-pre-commit-parallel-session-head-race
-source_updated: '2026-06-07'
-translation_date: '2026-06-07'
+source_updated: '2026-06-13'
+translation_date: '2026-06-13'
 ---
 
 같은 저장소에서 두 agent 세션이 동시에 작업하고 있었고, 둘 다 거의 같은 순간에 커밋을 시도했어요. 그중 하나가 커밋 도중에 이렇게 죽었어요:
@@ -63,6 +63,18 @@ git -C <main> worktree add <main>/.worktrees/<branch-slug> \
 
 history를 "고치"려 들기 전에 알아둘 만한 것들:
 
+- **공유되는 건 HEAD만이 아니라 index도예요.** 병렬 세션의 mixed
+  `git reset`은 내가 staged해 둔 묶음을 조용히 unstage할 수 있어요. 커밋을
+  다시 시도하기 전에 `git diff --cached`를 확인하고, 필요하면 명시적 path로
+  다시 stage하세요.
+- **Unmerged(`UU`) index entry는 모든 커밋을 막아요.** 내 pathspec이 conflict와
+  무관해도 `git commit`은 "you have unmerged files"로 실패해요. 병렬 세션의
+  stash-pop이나 merge conflict가 해결될 때까지 다른 모든 세션의 커밋을 막을 수
+  있어요.
+- **`UU` entry는 스스로 사라질 수도 있어요.** 진행 중인 작업을 다른 세션이
+  소유하고 있다면, 개입하기 전에 `git ls-files -u <path>`와 워킹 트리의 conflict
+  marker를 확인하세요. 내 세션에서 그 conflict를 대신 풀면 상대 세션의 작업을
+  덮어쓸 수 있어요.
 - **Force-push랑 `--amend`는 여기서 복구 수단이 아니에요.** 커밋은 실제로 일어났어요 — 그냥 잘못된 메시지로요. 병렬 세션의 커밋을 amend하면 _그쪽_ history를 다시 써요. 하지 마세요.
 - **파일이 실제로 어디로 갔는지 확인**하려면 `git ls-files <expected-path>`랑 `git log -- <expected-path>`를 쓰세요. 후자가 걔들이 어느 커밋에 안착했는지 보여줘요.
 - **깔끔한 재커밋은 없어요.** 파일이 이미 다른 커밋에 tracked돼 있으면, 다시 stage하는 건 no-op이에요(`nothing to commit, working tree clean`). 메시지 비대칭은 이제 history에 영구적이에요. attribution이 중요하면, 가장 깔끔한 보정은 의도한 메시지랑 scope를 달고 파일 변경은 없는 후속 커밋 — 본질적으로 로그에 남기는 메모예요.

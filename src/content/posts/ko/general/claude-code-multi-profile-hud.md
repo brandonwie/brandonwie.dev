@@ -4,7 +4,7 @@ description: >-
   Claude Code를 여러 계정(개인 + 업무)으로 운영할 때 HUD 플러그인이 올바른
   계정별 사용량 통계를 표시하도록 설정하는 방법
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-18T00:00:00.000Z
+updated: '2026-06-13'
 tags:
   - general
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-multi-profile-hud
-source_updated: "2026-03-18"
-translation_date: "2026-03-18"
+source_updated: '2026-06-13'
+translation_date: '2026-06-13'
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository
@@ -325,6 +325,12 @@ keychain 삭제 후, 또는 프로필별 토큰과 기본 토큰이 동시에 �
 8. **디렉토리 이름 변경 후 `known_marketplaces.json`을 갱신하세요.** 이 파일이
    marketplace clone의 절대 경로를 저장해요. 프로필 디렉토리 이름을 바꾸면
    플러그인 설치 명령이 조용히 실패해요.
+9. **합성된 statusline row는 명시적으로 구분하세요.** `statusline-wrapper.sh`가
+   Token Optimizer 상태(`CtxQ`, `Eff`, 선택적 duration)를 3B session-state row
+   (`3B claude·<sid> · locks:N`) 앞에 붙인다면, Token Optimizer filter가 trailing
+   newline을 반드시 출력해야 해요. 그렇지 않으면 row가 `Eff:--3B claude...`
+   형태로 이어져요. 이건 `claude-hud-pin-guard.sh`에서 guard하세요. patch-marker
+   check는 통과해도 wrapper에서만 발생하는 row framing 문제는 남아 있을 수 있어요.
 
 ## 왜 이 방식이 효과적인가
 

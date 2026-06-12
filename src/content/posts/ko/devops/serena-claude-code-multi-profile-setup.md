@@ -5,7 +5,7 @@ description: >-
   hook 4개, system-prompt 교체, 그리고 설치 도구가 기본 ~/.claude.json에만 쓰고 프로필별 저장소는 놓치는
   함정까지 다뤄요.
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-06-13'
 tags:
   - devops
   - claude-code
@@ -20,8 +20,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: serena-claude-code-multi-profile-setup
-source_updated: 2026-05-06T00:00:00.000Z
-translation_date: '2026-05-10'
+source_updated: '2026-06-13'
+translation_date: '2026-06-13'
 ---
 
 `cpers`로 Claude Code를 켰는데 `/mcp` 목록에 Serena가 안 보였어요. `serena setup claude-code`는 분명히 성공 메시지를 찍었는데도 그랬어요. 이중 프로필 환경(`cpers` / `cwork`)에 [Serena](https://oraios.github.io/serena/)를 깔면서 만난 함정과, 그걸 피해서 Claude Code 두 프로필 + Codex까지 한 번에 셋업하는 전체 절차를 정리했어요. 권장 hook 4개와 system-prompt 교체도 같이 다뤄요.
@@ -177,16 +177,31 @@ function _serena_cc_prompt() {
 
 function cwork() {
   >&2 printf '[claude] profile=work dir=%s cwd=%s\n' "${HOME}/.claude-work" "$PWD"
-  CLAUDE_CONFIG_DIR=~/.claude-work command claude --system-prompt="$(_serena_cc_prompt)" "$@"
+  local sp=""
+  [[ -n "${SERENA_SESSION_ID-}" ]] && sp="$(_serena_cc_prompt)"
+  CLAUDE_CONFIG_DIR=~/.claude-work command claude --system-prompt="$sp" "$@"
 }
 
 function cpers() {
   >&2 printf '[claude] profile=personal dir=%s cwd=%s\n' "${HOME}/.claude" "$PWD"
-  CLAUDE_CONFIG_DIR=~/.claude command claude --system-prompt="$(_serena_cc_prompt)" "$@"
+  local sp=""
+  [[ -n "${SERENA_SESSION_ID-}" ]] && sp="$(_serena_cc_prompt)"
+  CLAUDE_CONFIG_DIR=~/.claude command claude --system-prompt="$sp" "$@"
 }
 ```
 
-망가져도 안전하게 떨어져요. `serena`가 빠지거나 깨지면 `_serena_cc_prompt`가 빈 문자열을 돌려줘서 `--system-prompt=""`(no-op)이 돼요. Serena가 없어도 런처는 그대로 돌아가요.
+이제 안전장치가 두 겹이에요. 기본 `cpers` / `cwork` 세션은
+`SERENA_SESSION_ID`가 있을 때만 Serena-first prompt를 받아요. 그래서 MCP
+server를 제거한 뒤에도 shell 런처에 남은 prompt override가 모든 세션에 새는
+일을 막을 수 있어요. Serena wrapper로 띄운 세션에서 `serena`가 빠졌거나
+깨졌다면, `_serena_cc_prompt`가 여전히 빈 문자열을 돌려줘서
+`--system-prompt=""`(no-op)이 돼요.
+
+이 guard가 중요한 이유는 config audit이 shell-launcher layer를 놓칠 수 있기
+때문이에요. 어떤 점검은 MCP config, hook listener, daemon까지는 확인하지만,
+shell 함수가 모든 세션에 Serena-first system prompt를 계속 주입하는지는 보지
+못해요. Serena에만 해당하는 이야기는 아니에요. uninstall이나 opt-in migration을
+할 때는 launcher prompt override까지 모든 injection point를 같이 훑어야 해요.
 
 ### Step 6 — 검증
 
