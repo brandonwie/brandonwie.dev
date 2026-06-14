@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: paraglide-i18n
-source_updated: 2026-05-31T00:00:00.000Z
-translation_date: '2026-05-31'
+source_updated: '2026-05-31'
+translation_date: '2026-06-14'
 references:
   - url: 'https://inlang.com/m/gerre34r/library-inlang-paraglideJs'
     title: Paraglide-JS 공식 문서
@@ -171,7 +171,7 @@ SSG에서는 쿠키나 브라우저 감지 대신 라우트 기반 로케일을 
 
 ## Vite 연결
 
-Paraglide는 Vite 플러그인을 통해 SvelteKit과 통합돼요.
+Paraglide는 Vite 플러그인으로 SvelteKit과 붙어요.
 
 ```typescript
 // vite.config.ts
@@ -191,29 +191,28 @@ export default defineConfig({
 코드를 다시 생성해요. `src/lib/paraglide/` 안의 코드는 자동 생성물이라 직접
 손대면 안 돼요.
 
-## URL strategy와 prerendered locale 해석
+## 프리렌더링과 URL 전략으로 로케일 풀어내기
 
-Paraglide의 newer URL strategy를 쓰면 SSG에서 한 가지 중요한 가정이 바뀌어요.
-`adapter-static`으로 만든 `/ko/...` HTML도 base locale로 prerender될 수
-있어요. 정적 파일에는 `<html lang="en">`과 영어 `m.*()` output이 들어가고,
-hydration 이후에 Paraglide가 `/ko` prefix를 읽어서 client 쪽에서 locale을
-한국어로 바꿔요. 그러면 `<title>`과 body text가 그때 한국어로 다시
-render돼요.
+Paraglide의 새 URL 전략을 쓰면 SSG에서 한 가지 중요한 전제가 바뀌어요.
+`adapter-static`으로 만든 `/ko/...` 페이지도 기본 로케일로 미리 렌더링될 수
+있어요. 정적 파일에는 `<html lang="en">`과 영어 메시지가 그대로 들어가고,
+하이드레이션이 끝난 뒤에야 Paraglide가 `/ko` 접두사를 읽어서 브라우저 쪽에서
+로케일을 한국어로 바꿔요. 그러면 제목과 본문이 그때 한국어로 다시 그려져요.
 
-그래서 `build/ko/<route>.html`을 grep해서 한국어 문자열이 없다고 판단하면
-오진이에요. 그 파일에서 base-locale text가 나오는 건 정상일 수 있어요.
-localized output은 browser나 Playwright처럼 hydration 이후 상태를 보는
+그래서 빌드 결과물인 `build/ko/<경로>.html`을 grep해서 한국어 문자열이 없다고
+판단하면 오진이에요. 그 파일에서 기본 로케일 텍스트가 보이는 건 정상일 수
+있어요. 번역된 화면은 브라우저나 Playwright처럼 하이드레이션 이후 상태를 보는
 도구로 확인해야 해요.
 
-실무적으로는 이렇게 나눠 생각하면 편해요.
+실무에서는 이렇게 나눠 생각하면 편해요.
 
-- Message text는 `m.*()` call에 맡겨요. runtime이 URL locale을 resolve한 뒤
-  translation을 처리해요.
-- Locale-aware link href는 explicit `locale` prop을 받고, `basePath`(`/ko`
-  또는 `''`)를 직접 계산하는 편이 안전해요.
-- static-only crawler는 base locale을 보고, JavaScript를 실행하는 crawler는
-  hydrated locale을 봐요. 개인 블로그에서는 받아들일 만한 trade-off였지만,
-  SEO 요구가 강한 프로젝트라면 별도로 판단해야 해요.
+- 화면에 찍히는 문구는 `m.*()` 호출에 맡겨요. URL에서 로케일이 정해지면 런타임이
+  알아서 번역해 줘요.
+- 로케일에 따라 달라지는 링크 주소는 `locale` 값을 직접 받아서, 기본 경로(`/ko`
+  또는 `''`)를 손으로 계산하는 편이 안전해요.
+- 정적 파일만 읽는 크롤러는 기본 로케일을 보고, JavaScript를 실행하는 크롤러는
+  바뀐 로케일을 봐요. 개인 블로그에서는 받아들일 만한 절충이었지만, SEO 요구가
+  빡빡한 프로젝트라면 따로 판단해야 해요.
 
 ```typescript
 // vite.config.ts — url strategy + per-route urlPatterns
@@ -263,7 +262,7 @@ paraglideVitePlugin({
 ## 이런 경우에 사용하세요
 
 - 경량 i18n이 필요한 SvelteKit 프로젝트 (특히 SSG)
-- 번역 키에 대한 타입 안정성이 중요한 프로젝트
+- 번역 키에 타입 안정성이 중요한 프로젝트
 - 소규모에서 중규모 번역 세트 (개인 사이트, 블로그, 포트폴리오)
 - 번들 크기가 중요하고 런타임 오버헤드가 최소여야 할 때
 

@@ -15,12 +15,12 @@ lang: ko
 source_lang: en
 source_slug: rust-async-channels
 source_updated: 2026-06-09T00:00:00.000Z
-translation_date: '2026-06-09'
+translation_date: '2026-06-14'
 ---
 
-Rust에서 async 태스크 사이의 작업을 조율하려면 태스크끼리 타입이 있는 메시지를 주고받아야 해요. 표준 라이브러리에는 `std::sync::mpsc`가 있지만 동기(synchronous)·블로킹 방식이라 async 버전은 없어요. 이 빈자리를 Tokio의 `tokio::sync` 모듈이 채워주는데, 언뜻 보면 서로 바꿔 써도 될 것 같은 세 가지 채널 타입을 제공해요. bounded `mpsc`, unbounded `mpsc`, 그리고 `oneshot`이에요.
+채널을 잘못 골랐을 때 가장 곤란한 건, 그게 곧바로 티가 안 난다는 점이에요. 한참 뒤에야 끝없이 늘어나는 메모리, 사라진 backpressure, 잔뜩 쌓인 boilerplate로 드러나거든요. Rust에서 async 태스크끼리 작업을 조율하려면 타입이 있는 메시지를 주고받아야 하는데, 표준 라이브러리의 `std::sync::mpsc`는 동기(synchronous)·블로킹 방식이라 async 버전이 없어요. 그 빈자리를 Tokio의 `tokio::sync` 모듈이 채워주죠. 언뜻 보면 서로 바꿔 써도 될 것 같은 채널 타입을 셋 제공하는데, bounded `mpsc`, unbounded `mpsc`, `oneshot`이에요.
 
-늘 나오는 질문은 "어느 걸 써야 하지?"예요. 잘못 고르면 요란하게 실패하지 않는다는 게 함정이에요. 나중에 가서야 끝없는 메모리 증가, 사라진 backpressure, 잔뜩 쌓인 보일러플레이트로 드러나거든요. 결국 결정은 한 가지 질문으로 좁혀져요. 이건 메시지 스트림인가요, 아니면 한 번의 핸드오프인가요?
+그래서 늘 "어느 걸 써야 하지?"라는 질문이 따라와요. 그런데 결정은 의외로 한 가지로 좁혀지더라고요. 이건 메시지 스트림인가요, 아니면 한 번의 핸드오프인가요?
 
 ## 왜 틀리기 쉬운가요
 
@@ -34,7 +34,7 @@ Rust에서 async 태스크 사이의 작업을 조율하려면 태스크끼리 �
 
 첫 번째는 요청/응답 쌍에 `mpsc::channel(1)`을 하나 더 쓰는 방식이었어요. 동작은 해요. 요청을 보내고, 워커가 값 하나를 돌려주면 끝이죠. 하지만 모든 호출 지점이 무거워져요. 호출하는 쪽마다 채널을 새로 만들어서 값 하나만 흘려보내거든요. 그건 정확히 `oneshot`이 존재하는 이유예요.
 
-두 번째는 `unbounded_channel`이라는 이름을 믿은 거예요. "백프레셔 걱정할 일 없음"처럼 읽히는데, producer가 consumer를 앞지르기 전까지만 맞는 말이에요. 그 순간부터 큐가 한도 없이 자라서 메모리 누수가 돼요. "unbounded"라는 라벨은 실패 양상을 없애는 게 아니라 가려요.
+두 번째는 `unbounded_channel`이라는 이름을 믿은 거예요. "backpressure 걱정할 일 없음"처럼 읽히는데, producer가 consumer를 앞지르기 전까지만 맞는 말이에요. 그 순간부터 큐가 한도 없이 자라서 메모리 누수가 돼요. "unbounded"라는 라벨은 실패 양상을 없애는 게 아니라 가려요.
 
 좀 더 사소한 함정: 여러 receiver에 대한 `tokio::select!`는 각 브랜치에서 `&mut rx`가 필요해요. receiver를 매크로 안으로 이동(move)시키면 다음 루프 반복에서 "use of moved value"로 컴파일이 안 돼요.
 

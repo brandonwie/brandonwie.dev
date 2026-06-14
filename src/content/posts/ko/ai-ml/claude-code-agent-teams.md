@@ -15,7 +15,7 @@ lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
 source_updated: '2026-05-20'
-translation_date: '2026-05-20'
+translation_date: '2026-06-14'
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Claude Code 세션 팀 조율하기
@@ -26,13 +26,13 @@ references:
     notes: "strings $(which claude) 결과에서 [BackendRegistry] Selected: tmux 로그와 settings.json 바깥에 저장되는 S_()/e_() 매크로(preferTmuxOverIterm2, iterm2It2SetupComplete)를 확인"
 ---
 
-같은 PR에 대해 보안, 성능, test 커버리지 세 가지 독립적인 코드 review를 동시에 돌려야 했어요. 터미널 탭 세 개를 열고 context를 복붙하는 건 Slack으로 인턴 관리하는 느낌이었죠. Agent Teams를 쓰면 하나의 Claude 세션이 리드 역할을 하고, 팀원을 별도 tmux pane에 생성하고, 공유 작업 목록으로 조율할 수 있어요. 아이디어는 매력적이에요. 다만 실행하려면 날카로운 모서리가 어디 있는지 알아야 해요.
+같은 PR 하나를 놓고 보안, 성능, test 커버리지 세 방향으로 독립적인 코드 review를 동시에 돌려야 했어요. 터미널 탭 세 개를 열고 context를 복붙하는 건 Slack으로 인턴 관리하는 느낌이었죠. Agent Teams를 쓰면 하나의 Claude 세션이 리드 역할을 하고, 팀원을 별도 tmux pane에 생성하고, 공유 작업 목록으로 조율해요. 아이디어는 매력적이에요. 다만 실행하려면 날카로운 모서리가 어디 있는지 알아야 해요.
 
 이 글에서는 Agent Teams의 동작 방식, subagent나 solo 세션보다 나은 경우, 그리고 몇 주간 매일 사용하면서 겪은 모든 어려움을 다뤄요 -- 내가 모르는 사이에 셋업을 조용히 망가뜨린 것들까지 포함해서요.
 
 ## Agent Teams란
 
-Agent Teams는 하나의 세션(리드)이 팀을 만들고, 팀원을 생성하고, 공유 인프라를 통해 작업을 조율하는 실험적 Claude Code 기능이에요. 각 팀원은 자체 context window를 가진 독립적인 Claude 인스턴스로 실행돼요.
+Agent Teams는 하나의 세션(리드)이 팀을 만들고, 팀원을 생성하고, 공유 인프라 위에서 작업을 조율하는 실험적 Claude Code 기능이에요. 각 팀원은 자체 context window를 가진 독립적인 Claude 인스턴스로 실행돼요.
 
 조율 프리미티브는 이래요:
 
@@ -84,7 +84,7 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 }
 ```
 
-`"tmux"`와 `"auto"` 모두 `it2` CLI를 통해 iTerm2를 자동 감지하게 되어 있지만, iTerm2 backend는 v2.1.74 기준으로 동작하지 않아요(issue #24301 -- 아래에서 자세히 다뤄요). 실제로 split pane은 tmux 세션 안에서만 작동해요. tmux 없이는 팀원이 에러나 경고 없이 조용히 in-process 모드로 빠져요. **우회 방법:** iTerm2에서 `tmux -CC`(control mode)를 실행하면 tmux backend를 통해 네이티브 iTerm2 pane을 쓸 수 있어요.
+`"tmux"`와 `"auto"` 모두 `it2` CLI로 iTerm2를 자동 감지하게 되어 있지만, iTerm2 backend는 v2.1.74 기준으로 동작하지 않아요(issue #24301 -- 아래에서 자세히 다뤄요). 실제로 split pane은 tmux 세션 안에서만 작동해요. tmux 없이는 팀원이 에러나 경고 없이 조용히 in-process 모드로 빠져요. **우회 방법:** iTerm2에서 `tmux -CC`(control mode)를 실행하면 tmux backend로 네이티브 iTerm2 pane을 띄울 수 있어요.
 
 ## 핵심 패턴
 
@@ -97,7 +97,7 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 
 ## 겪은 어려움들
 
-이 섹션이 이 글이 존재하는 이유예요. 공식 문서는 해피 패스만 다뤄요. 아래 내용은 전부 깨진 세션, 잃어버린 작업, 골치 아픈 debugging을 통해 배운 거예요.
+이 섹션이 이 글이 존재하는 이유예요. 공식 문서는 해피 패스만 다뤄요. 아래 내용은 전부 깨진 세션, 잃어버린 작업, 골치 아픈 debugging을 거치며 배운 거예요.
 
 **실험적이고 문서화되지 않은 edge case.** 이 기능은 experimental로 표시되어 있어요. error 복구, 팀원별 context 한도, 작업 의존성 해결 방식은 시행착오로 배웠어요. 문서가 기본은 다루지만 실패 모드는 안 다뤄요.
 
@@ -109,7 +109,7 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 
 **Git worktree에서 gitignored symlink가 사라져요.** 팀원이 git worktree에서 작업하면 tracked file만 보여요. Gitignored symlink(`CLAUDE.local.md`, `.claude/settings.local.json`, `.claude/skills`)가 없어서 개인 설정과 지침이 worktree 팀원에게 로드되지 않아요. 중요한 환경 변수는 user-level `~/.claude/settings.local.json`에 넣고, spawn prompt에 context를 미리 포함시켜서 우회했어요.
 
-**iTerm2 `ITermBackend`가 동작하지 않아요(known bug #24301).** 바이너리에 `it2 session split` 지원이 포함된 `ITermBackend`가 있지만, backend 선택 로직이 이걸 활성화하지 않아요. `teammateMode: "auto"`나 `"tmux"`를 설정해도 tmux 세션 안이 아니면 Claude Code가 조용히 `in-process`로 빠져요 -- `it2`가 설치되어 있고, Python API가 활성화되어 있고, 모든 iTerm2 환경 변수가 있어도요. v2.1.74에서 여러 번 test해서 확인했어요. `teammateMode` 설정은 세션 시작 시 스냅샷되기 때문에 세션 중간에 `settings.json`을 바꿔도 효과가 없어요. **우회 방법:** `tmux -CC`(iTerm2 control mode)를 쓰면 tmux backend를 통해 네이티브 iTerm2 pane을 쓸 수 있어요.
+**iTerm2 `ITermBackend`가 동작하지 않아요(known bug #24301).** 바이너리에 `it2 session split` 지원이 포함된 `ITermBackend`가 있지만, backend 선택 로직이 이걸 활성화하지 않아요. `teammateMode: "auto"`나 `"tmux"`를 설정해도 tmux 세션 안이 아니면 Claude Code가 조용히 `in-process`로 빠져요 -- `it2`가 설치되어 있고, Python API가 활성화되어 있고, 모든 iTerm2 환경 변수가 있어도요. v2.1.74에서 여러 번 test해서 확인했어요. `teammateMode` 설정은 세션 시작 시 스냅샷되기 때문에 세션 중간에 `settings.json`을 바꿔도 효과가 없어요. **우회 방법:** `tmux -CC`(iTerm2 control mode)를 쓰면 tmux backend로 네이티브 iTerm2 pane을 띄울 수 있어요.
 
 **Backend 선택 매크로가 `settings.json` 바깥에 저장돼요 (v2.1.138 감사).** Claude Code 2.1.138에서 split pane이 여전히 안 뜨는 regression 보고가 와서, 바이너리의 string table을 들여다봤어요. `teammateMode: "tmux"` + `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` + 활성 tmux 세션이 다 갖춰져 있는데도 split이 안 됐거든요. `strings $(which claude)`를 돌리니 바이너리가 `S_()` / `e_()`라고 부르는 getter/setter 쌍이 관리하는 영속 플래그 두 개가 보였어요:
 
@@ -144,7 +144,7 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 - 모든 팀원이 생성 시 리드의 권한 모드 상속
 - Split pane에 tmux 필요 (iTerm2 ITermBackend가 존재하지만 동작하지 않음 -- #24301)
 - tmux 없이는 팀원이 에러 없이 조용히 in-process로 빠짐
-- iTerm2 우회 방법: tmux -CC control mode로 tmux backend를 통해 네이티브 pane 사용
+- iTerm2 우회 방법: tmux -CC control mode로 tmux backend를 띄워 네이티브 pane 사용
 - backend 선택은 `settings.json`의 `teammateMode`가 아니라 runtime detector(`process.env.TMUX`)가 결정함 (`claude --debug` + `[BackendRegistry] Selected:` grep으로 확인)
 - TeamDelete가 참조가 끊긴 tmux pane을 정리하지 않음 (수동 정리 필요)
 - 팀원 3명 이상 동시 spawn 시 race condition 발생 (개별 재시도로 해결)
@@ -165,7 +165,7 @@ reviewers:
 Have them each review and report findings.
 ```
 
-리드가 각 reviewer에게 작업을 할당하고, reviewer들은 각자의 pane에서 독립적으로 작업하고, 발견 사항은 메일박스를 통해 리드에게 전달돼서 종합할 수 있어요.
+리드가 각 reviewer에게 작업을 할당하고, reviewer들은 각자의 pane에서 독립적으로 작업하고, 발견 사항은 메일박스를 거쳐 리드에게 모여 종합돼요.
 
 ## 정리
 

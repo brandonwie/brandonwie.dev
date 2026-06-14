@@ -17,7 +17,7 @@ lang: ko
 source_lang: en
 source_slug: session-state-merge-vs-overwrite-pattern
 source_updated: '2026-06-07'
-translation_date: '2026-06-07'
+translation_date: '2026-06-14'
 ---
 
 세션을 가로질러 작업을 요약해 주는 dashboard가 하나 있어요 — 뭐가 진행 중이고, 뭐가 아직 열려 있고, 최근에 뭐가 끝났는지요. 세션이 끝날 때마다 스크립트가 이 파일을 다시 생성해요. 그 스크립트를 처음 짤 때 저는 뻔한 방법을 골랐어요: 현재 source를 읽고, 파일을 렌더링하고, overwrite. 끝.

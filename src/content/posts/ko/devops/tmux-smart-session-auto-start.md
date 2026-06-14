@@ -15,7 +15,7 @@ lang: ko
 source_lang: en
 source_slug: tmux-smart-session-auto-start
 source_updated: '2026-06-05'
-translation_date: '2026-06-05'
+translation_date: '2026-06-14'
 references:
   - url: 'https://man7.org/linux/man-pages/man1/tmux.1.html'
     title: tmux(1) man page
@@ -27,7 +27,7 @@ references:
 
 새 iTerm2 창(`Cmd+N`)마다 자체 tmux 세션으로 열리되, 닫힌 창의 detach된 세션은 재사용하고 싶었어요. 가장 뻔한 방법 — iTerm2의 "Send text at start"에 `tmux new -A -s main`을 넣는 것 — 은 항상 같은 `main` 세션에 다시 attach돼요. 그러면 모든 창이 독립된 작업 공간 대신 같은 pane과 내용을 보여주죠.
 
-이 해결책은 모든 컨텍스트에서 안정적으로 동작하는 방법에 안착하기까지 세 번의 반복을 거쳤어요.
+모든 컨텍스트에서 안정적으로 동작하는 방법에 안착할 때까지 세 번을 갈아엎었어요.
 
 > **업데이트 (2026-06-05):** 제 환경에서는 이제 이 방식으로 tmux를 자동 시작하지 않아요 — 터미널 워크스페이스 매니저(Herdr)가 그 레이어를 맡게 되면서, 필요할 때만 tmux를 수동으로 띄워요. 아래 패턴은 독립형 iTerm2 스타일 창에서는 여전히 유효해서, 지금의 일상 설정이라기보다 참고용으로 남겨둬요.
 
@@ -96,7 +96,7 @@ fi
 
 창을 닫으면 세션이 kill이 아니라 detach돼요. 다음 `Cmd+N`은 새로 만드는 대신 첫 번째 detached 세션에 다시 연결돼요.
 
-gap-filling 로직 덕분에, 세션 1을 kill하면(`tmux kill-session -t 1`) 세션 0과 2가 남아요. 다음 `Cmd+N`은 세션 3이 아니라 세션 1(빈자리)을 만들어요.
+gap-filling 로직 덕분에 세션 1을 kill하면(`tmux kill-session -t 1`) 세션 0과 2가 남아요. 다음 `Cmd+N`은 세션 3이 아니라 세션 1(빈자리)을 만들어요.
 
 ## 핵심 구현 디테일
 

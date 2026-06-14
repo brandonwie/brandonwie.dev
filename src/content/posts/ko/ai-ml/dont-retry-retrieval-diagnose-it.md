@@ -18,7 +18,7 @@ lang: ko
 source_lang: en
 source_slug: dont-retry-retrieval-diagnose-it
 source_updated: 2026-05-26T00:00:00.000Z
-translation_date: '2026-05-26'
+translation_date: '2026-06-14'
 ---
 
 검색 증강(retrieval-augmented) 시스템이 첫 검색에서 부실한 결과를 내놓으면, 다음 행동은 거의

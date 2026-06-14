@@ -17,7 +17,7 @@ lang: ko
 source_lang: en
 source_slug: claude-code-multi-profile-hud
 source_updated: '2026-06-13'
-translation_date: '2026-06-13'
+translation_date: '2026-06-14'
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository
@@ -40,7 +40,7 @@ Claude Code를 개인 계정과 업무 계정으로 분리해서 운영한다면
 
 ## 왜 중요한가
 
-Claude Code는 `CLAUDE_CONFIG_DIR` 환경 변수를 통해 멀티 프로필을 지원해요.
+Claude Code는 `CLAUDE_CONFIG_DIR` 환경 변수로 멀티 프로필을 지원해요.
 개인용 `~/.claude`와 업무용 `~/.claude-work`를 가질 수 있어요. 각 프로필은
 자체 OAuth 토큰, 설정, 플러그인을 갖죠.
 
@@ -130,7 +130,7 @@ non-null일 때만 트리거돼서(2초 측정 윈도우 때문에 드묾) 발�
 **0-byte lock 파일이 영구적 "busy" 상태를 만들어요.** HUD 프로세스가
 `fs.openSync(lockPath, 'wx')`와 `fs.writeFileSync(fd, timestamp)` 사이에서
 크래시하면, lock 파일은 생성되지만 내용이 비어있어요(0 byte).
-`readLockTimestamp()`가 빈 파일에 대해 `null`을 반환하는데, 오래된 lock 정리
+`readLockTimestamp()`가 빈 파일이면 `null`을 반환하는데, 오래된 lock 정리
 로직이 `if (lockTimestamp != null && ...)`으로 체크해서 `null`인 경우를 절대
 정리하지 않아요. lock이 영구적으로 "busy" 상태로 남고, HUD가 오래된 캐시
 데이터를 계속 반환해요. 업스트림에 수정 PR(#203)을 보냈는데,
@@ -259,7 +259,7 @@ HUD 플러그인에는 알아두면 좋은 설정 옵션이 여러 가지 있어
 **7일 사용량 윈도우 항상 표시.** config에서 `sevenDayThreshold: 0`으로 설정하세요.
 기본값(`80`)은 사용량이 80%를 넘어야만 7일 윈도우를 보여줘요.
 
-**출력 토큰 속도.** `showSpeed`를 활성화하면 `speed-tracker.ts` 모듈을 통해
+**출력 토큰 속도.** `showSpeed`를 활성화하면 `speed-tracker.ts` 모듈이
 출력 토큰 속도(tok/s)를 표시해요.
 
 **컨텍스트 표시 모드.** `contextValue` 옵션으로 compact와 expanded 레이아웃
@@ -285,7 +285,7 @@ HUD 플러그인에는 알아두면 좋은 설정 옵션이 여러 가지 있어
 캐싱으로 넘어가요.
 
 **재설치 워크플로우.** 상황이 꼬이면, 전체 재설치 순서는 이래요:
-`claude plugin uninstall claude-hud@claude-hud` → `claude plugin install claude-hud@claude-hud` → 두 프로필에 대해 `claude-hud-post-patches.sh`를 실행.
+`claude plugin uninstall claude-hud@claude-hud` → `claude plugin install claude-hud@claude-hud` → 두 프로필 모두 `claude-hud-post-patches.sh`를 실행.
 플러그인 설치가 소스를 깨끗한 업스트림으로 덮어쓰고, 스크립트가 커스텀 패치를
 재적용해요. `known_marketplaces.json`이 marketplace clone의 절대 경로를
 저장하므로, 프로필 디렉토리 이름 변경 후에는 이 파일도 갱신해야 해요.
@@ -305,7 +305,7 @@ keychain 삭제 후, 또는 프로필별 토큰과 기본 토큰이 동시에 �
 
 ## 흔한 실수
 
-제가 저질렀던(그리고 여러분은 피해야 할) 실수들이에요:
+제가 저질렀던, 그래서 피하면 좋을 실수들이에요:
 
 1. **keychain 항목 간 토큰을 동기화하지 마세요.** Claude가 프로필별로
    네이티브하게 관리해요. 수동 동기화는 상황을 망가뜨려요.

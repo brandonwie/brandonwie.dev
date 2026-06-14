@@ -17,12 +17,12 @@ lang: ko
 source_lang: en
 source_slug: anthropic-prompt-cache-ttl
 source_updated: 2026-05-31T00:00:00.000Z
-translation_date: '2026-05-31'
+translation_date: '2026-06-14'
 ---
 
 점심 먹고 돌아와서 이어서 질문을 던졌더니, `/usage`의 cache hit 비율이 갑자기 떨어져 있었어요. 별 고민 없이 켜둔 줄 알았는데 그 사이에 cache가 통째로 날아가 있었던 거예요. 알고 보니 Anthropic이 2026년 3월 초쯤 Claude Code의 prompt cache TTL을 1시간에서 5분으로 조용히 줄여뒀어요([issue #46829](https://github.com/anthropics/claude-code/issues/46829)). 이걸 모르고 있으면, 메시지 사이에 5분 이상 비는 순간 cache가 증발하고, 다음 메시지에 **전체 conversation prefix**(system prompt + tools + CLAUDE.md + 이전 turn 전부)를 처음부터 다시 써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요. 200K 토큰짜리 Opus 세션이라면 한 번 이어붙일 때 약 $1.25씩 들어요. 하루 일하다 보면 세션당 비용이 30~60% 더 붙어요.
 
-regression 이전엔 메시지 사이가 1시간 넘게 떠도 세션이 따뜻하게 유지됐어요. 이후엔 자리 비우는 패턴(점심, 미팅, 집중 시간)이 진짜 돈으로 청구돼요. 공지도, release note 한 줄도, 배너도 없었어서 모르고 지나간 사람이 많았어요.
+이 변경 전엔 메시지 사이가 1시간 넘게 떠도 세션이 따뜻하게 유지됐어요. 바뀐 뒤로는 자리 비우는 패턴(점심, 미팅, 집중 시간)이 진짜 돈으로 청구돼요. 공지도, release note 한 줄도, 배너도 없어서 모르고 지나간 사람이 많았어요.
 
 ## 검증된 cache 메커니즘
 
@@ -63,11 +63,11 @@ cache key는 prefix 전체를 순서대로 해시한 값이에요. system prompt
 
 ## Claude Code 디자인이 cache에 강하게 기대는 이유
 
-Claude Code 엔지니어인 Thariq Shihipar의 말로는, prompt caching이 제품 설계의 중심축이에요. cache hit 비율이 떨어지면 SEV를 띄울 정도로요. cache 때문에 일부러 그렇게 만든 설계 결정 몇 개를 보면 이해가 빨라요.
+Claude Code 엔지니어 Thariq Shihipar에 따르면, prompt caching이 제품 설계의 중심축이에요. cache hit 비율이 떨어지면 SEV를 띄울 정도로요. cache 때문에 일부러 그렇게 만든 설계 결정 몇 개를 보면 이해가 빨라요.
 
 1. **세션 시작 때 도구 목록을 잠가둬요.** 세션 중간에 MCP 도구를 추가하면 prefix가 바뀌면서 전부 무효화돼요. 그래서 Claude Code는 시작 이후엔 새 도구 등록을 거부해요.
 2. **plan mode는 도구를 갈아끼우지 않고 더해요.** plan mode를 만들 때 가장 자연스러운 디자인은 "읽기 전용 도구로 교체"였어요. cache를 의식한 디자인은 달랐어요. 도구는 항상 prompt에 다 두고, `EnterPlanMode`와 `ExitPlanMode`를 추가 도구로만 더하고, 모드 전환은 사용자 메시지로 보내요. 그래서 plan mode와 일반 모드 사이에 도구 정의가 바뀌지 않아요.
-3. **compaction은 다시 만드는 게 아니라 갈래를 치는 거예요.** compaction 요청은 지금 대화와 똑같은 prefix(같은 system prompt, 도구, CLAUDE.md)를 써요. 메시지 부분만 요약돼요. prefix의 KV cache는 그대로 재활용돼요.
+3. **compaction은 처음부터 다시 만드는 게 아니라 기존 대화에서 갈라져 나오는 방식이에요.** compaction 요청은 지금 대화와 똑같은 prefix(같은 system prompt, 도구, CLAUDE.md)를 써요. 메시지 부분만 요약돼요. prefix의 KV cache는 그대로 재활용돼요.
 
 prompt caching이 없으면 100 turn짜리 Opus 코딩 세션이 입력 토큰만 \$50~\$100 들 수 있어요. hit 비율이 90%면 \$10~\$19로 떨어져요. 이 경제성이 Claude Code Pro(\$20/월)를 굴러가게 만드는 핵심이에요.
 
