@@ -1,6 +1,6 @@
 {
   "model_generated": "2026-06-11",
-  "snapshot_built_at": "2026-06-14T03:34:13.667Z",
+  "snapshot_built_at": "2026-06-14T06:43:51.683Z",
   "layers": [
     {
       "id": "source-of-truth",
@@ -530,11 +530,11 @@
       "name": "/blog-publish skill"
     },
     {
-      "id": "skill-pr-creator",
+      "id": "skill-pr-create",
       "kind": "runtime",
       "layer": "content-lifecycle",
       "subsystem": "projects-tasks",
-      "name": "/pr-creator skill"
+      "name": "/pr-create skill"
     },
     {
       "id": "skill-system-status",
@@ -973,7 +973,7 @@
     },
     {
       "from": "skill-task-starter",
-      "to": "skill-pr-creator",
+      "to": "skill-pr-create",
       "kind": "triggers",
       "label": "PR after implementation"
     },
