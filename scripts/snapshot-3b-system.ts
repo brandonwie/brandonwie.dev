@@ -370,12 +370,53 @@ function assertClean(snapshot: any): string[] {
 	return errs;
 }
 
+async function countDirectMarkdownFiles(dir: string): Promise<number> {
+	let count = 0;
+	for await (const entry of Deno.readDir(dir)) {
+		if (entry.isFile && entry.name.endsWith('.md')) count++;
+	}
+	return count;
+}
+
+async function countSkillDirectories(dir: string): Promise<number> {
+	let count = 0;
+	for await (const entry of Deno.readDir(dir)) {
+		if (!entry.isDirectory) continue;
+		try {
+			const skill = await Deno.stat(join(dir, entry.name, 'SKILL.md'));
+			if (skill.isFile) count++;
+		} catch {
+			/* not a skill directory */
+		}
+	}
+	return count;
+}
+
+async function countMarkdownFilesRecursive(dir: string): Promise<number> {
+	let count = 0;
+	for await (const entry of walk(dir, { exts: ['.md'], includeDirs: false })) {
+		if (entry.isFile) count++;
+	}
+	return count;
+}
+
+async function countDirectDirectories(dir: string): Promise<number> {
+	let count = 0;
+	for await (const entry of Deno.readDir(dir)) {
+		if (entry.isDirectory) count++;
+	}
+	return count;
+}
+
 // ---------- build ----------
 async function build(): Promise<void> {
 	const HOME = Deno.env.get('HOME')!;
 	THREEB = Deno.env.get('THREEB_PATH') ?? join(HOME, 'dev', 'personal', '3b');
 	const MODEL = join(THREEB, 'projects', '3b', 'architecture', 'model.json');
 	const ADR_INDEX = join(THREEB, 'projects', '3b', 'decisions', '_index.md');
+	const RULES_DIR = join(THREEB, '.agents', 'rules');
+	const SKILLS_DIR = join(THREEB, '.agents', 'skills');
+	const KNOWLEDGE_DIR = join(THREEB, 'knowledge');
 	const model = JSON.parse(await Deno.readTextFile(MODEL));
 	await probeGetPrivacy();
 	if (!GET_PRIVACY_OK) {
@@ -470,7 +511,14 @@ async function build(): Promise<void> {
 
 	const gv = computeGraphValidation(nodes as { id?: unknown; kind?: unknown }[], edges);
 
-	// FROZEN literal allowlist — aggregate only; never per-category / repo / telemetry.
+	const sourceStats = {
+		ruleFiles: await countDirectMarkdownFiles(RULES_DIR),
+		skills: await countSkillDirectories(SKILLS_DIR),
+		knowledgeEntries: await countMarkdownFilesRecursive(KNOWLEDGE_DIR),
+		knowledgeCategories: await countDirectDirectories(KNOWLEDGE_DIR),
+	};
+
+	// Aggregate allowlist only; never per-category / repo / telemetry.
 	const stats = [
 		{ metric: 'Layers', value: String(model.layers.length) },
 		{ metric: 'Architecture nodes', value: String(model.nodes.length) },
@@ -478,10 +526,10 @@ async function build(): Promise<void> {
 		{ metric: 'Documented flows', value: String(model.flows.length) },
 		{ metric: 'Blog series posts', value: String(model.blog_series.length) },
 		{ metric: 'ADRs', value: String(evolution.length) },
-		{ metric: 'Rule files', value: '46' },
-		{ metric: 'Skills', value: '44' },
-		{ metric: 'Knowledge entries', value: '836' },
-		{ metric: 'Knowledge categories', value: '15' },
+		{ metric: 'Rule files', value: String(sourceStats.ruleFiles) },
+		{ metric: 'Skills', value: String(sourceStats.skills) },
+		{ metric: 'Knowledge entries', value: String(sourceStats.knowledgeEntries) },
+		{ metric: 'Knowledge categories', value: String(sourceStats.knowledgeCategories) },
 		{ metric: 'Agent runtimes', value: '3' },
 		{
 			metric: GRAPH_VALIDATION_METRIC,

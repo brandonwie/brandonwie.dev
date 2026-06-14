@@ -1,6 +1,6 @@
 {
-  "model_generated": "2026-06-11",
-  "snapshot_built_at": "2026-06-14T06:43:51.683Z",
+  "model_generated": "2026-06-14",
+  "snapshot_built_at": "2026-06-14T13:39:23.734Z",
   "layers": [
     {
       "id": "source-of-truth",
@@ -1509,15 +1509,15 @@
     },
     {
       "metric": "Rule files",
-      "value": "46"
+      "value": "57"
     },
     {
       "metric": "Skills",
-      "value": "44"
+      "value": "40"
     },
     {
       "metric": "Knowledge entries",
-      "value": "836"
+      "value": "940"
     },
     {
       "metric": "Knowledge categories",
