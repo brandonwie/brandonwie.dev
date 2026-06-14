@@ -1,6 +1,6 @@
 {
-  "model_generated": "2026-05-30",
-  "snapshot_built_at": "2026-05-31T12:11:22.810Z",
+  "model_generated": "2026-06-11",
+  "snapshot_built_at": "2026-06-14T03:34:13.667Z",
   "layers": [
     {
       "id": "source-of-truth",
@@ -30,7 +30,7 @@
     {
       "id": "tooling-mcp-layer",
       "name": "Tooling + MCP",
-      "description": "The external code-intelligence and doc-conversion stack (graphify, code-review-graph, Serena, context-mode, markitdown) plus model-tier routing and the asdf/brew runtime contract."
+      "description": "The external code-intelligence and doc-conversion stack (graphify, code-review-graph, opt-in Serena, context-mode, markitdown) plus model-tier routing and the asdf/brew runtime contract."
     }
   ],
   "subsystems": [
@@ -1131,13 +1131,13 @@
       "from": "serena",
       "to": "runtime-codex",
       "kind": "reads",
-      "label": "shared daemon for"
+      "label": "opt-in daemon for"
     },
     {
       "from": "serena",
       "to": "runtime-agy",
       "kind": "reads",
-      "label": "shared daemon for"
+      "label": "opt-in daemon for"
     },
     {
       "from": "context-mode",
@@ -1353,8 +1353,8 @@
     },
     {
       "id": "ADR-021",
-      "title": "Shared Serena MCP daemon at (HTTP) for Codex + Gemini reuse",
-      "date": "2026-05-01"
+      "title": "Shared Serena MCP daemon at",
+      "date": "2026-06-11"
     },
     {
       "id": "ADR-022",
@@ -1445,6 +1445,41 @@
       "id": "ADR-040",
       "title": "F2 Agent-Managed Memory Layer — split-tier candidate → HITL-promotion → tracked…",
       "date": "2026-05-30"
+    },
+    {
+      "id": "ADR-041",
+      "title": "Forced-Read RAG Data Layer + QMD Reinstatement — ratifies the canonical 5-lane…",
+      "date": "2026-06-01"
+    },
+    {
+      "id": "ADR-042",
+      "title": "Frontmatter-Driven AGY Skill Adapter Projection — adapter eligibility gated on…",
+      "date": "2026-06-02"
+    },
+    {
+      "id": "ADR-043",
+      "title": "Three Workflow Models for /3b:handoff + /3b:check — Solo / Implement+Review /…",
+      "date": "2026-06-05"
+    },
+    {
+      "id": "ADR-044",
+      "title": "Permissions Governance — Catastrophic-Deny Floor + Deny SoT Migration. Amends…",
+      "date": "2026-06-09"
+    },
+    {
+      "id": "ADR-045",
+      "title": "Custom Output Style — render-layer 3B house voice (direct / fact-first / no…",
+      "date": "2026-06-07"
+    },
+    {
+      "id": "ADR-046",
+      "title": "Verifier-Hook Identity — Per-Agent Hook Wrapper. Reads to stamp agent identity,…",
+      "date": "2026-06-09"
+    },
+    {
+      "id": "ADR-047",
+      "title": "Serena On-Demand Per-Workspace Daemons — retire default shared daemon at;…",
+      "date": "2026-06-11"
     }
   ],
   "stats": [
@@ -1470,7 +1505,7 @@
     },
     {
       "metric": "ADRs",
-      "value": "39"
+      "value": "46"
     },
     {
       "metric": "Rule files",
