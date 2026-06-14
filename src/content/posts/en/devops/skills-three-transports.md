@@ -241,23 +241,6 @@ artifacts and the system records how those artifacts relate.
 That distinction is the difference between a multi-agent setup that scales and
 one that becomes a pile of stale mirrors.
 
-## What needs refresh before publication
-
-This draft intentionally follows the 2026-06-14 architecture model. That model
-is the source of truth for the blog series ordering and thesis, but the live
-skills subsystem has continued to move. Before public publication, the post
-needs one freshness pass:
-
-- Recount canonical skills and Codex adapters.
-- Reconcile the AGY hardlink/shared-inode phrasing with the later
-  frontmatter-driven AGY adapter projection model.
-- Decide whether to describe adapter counts as snapshot facts or update the
-  architecture model first.
-
-Those are publication-edit tasks, not reasons to avoid the post. They are the
-same lesson in miniature: when transport facts drift, make the source boundary
-explicit.
-
 ## Same behavior, different physics
 
 The skill system is where 3B's "author once" principle becomes mature. It does
