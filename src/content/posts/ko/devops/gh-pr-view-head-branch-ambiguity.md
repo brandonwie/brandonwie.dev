@@ -2,7 +2,7 @@
 title: '`gh pr view`의 head-branch 모호성(false negative)'
 description: 'PR이 멀쩡히 열려 있고 branch도 정확히 추적되는데, `gh pr view --json number,state`가 "no pull requests found"를 뱉을 수 있어요. 이 빈 결과는 "PR이 없다"가 아니라 "gh의 branch resolution이 못 찾았다"는 뜻이에요.'
 date: 2026-05-05T00:00:00.000Z
-updated: '2026-05-06'
+updated: "2026-06-14"
 tags:
   - devops
   - github-cli
@@ -13,7 +13,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: gh-pr-view-head-branch-ambiguity
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: "2026-06-14"
 translation_date: '2026-05-10'
 ---
 
@@ -102,7 +102,7 @@ PR_NUM=$(gh pr list --head <branch> --json number --jq '.[0].number')
 
 - 행동(open vs update vs skip)을 결정하기 전에 PR 존재를 알아야 하는 CI/CD
   pre-flight check
-- PR 존재 여부로 분기하는 자동화 skill(예: `/crucio-ship`, `/pr-creator`)
+- PR 존재 여부로 분기하는 자동화 skill(예: `/crucio-ship`, `/pr-create`)
 - "PR 없음"이 곧 "PR 만들기"로 이어지는 모든 script(destructive check 문제)
 
 interactive 사용에는 큰 문제가 안 돼요. 직접 작업한 branch에서 `gh pr view`를

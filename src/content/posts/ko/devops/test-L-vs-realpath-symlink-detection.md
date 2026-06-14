@@ -4,7 +4,7 @@ description: >-
   POSIX 함정. `test -L child/leaf`는 상위 디렉토리가 심볼릭 링크일 때 false를 반환해요. 체인 자체는
   건강한데도요. SoT 체인 검증에는 `realpath`를 써야 해요.
 date: 2026-05-01T00:00:00.000Z
-updated: '2026-05-05'
+updated: "2026-06-14"
 tags:
   - devops
   - shell
@@ -17,7 +17,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: test-L-vs-realpath-symlink-detection
-source_updated: 2026-05-05T00:00:00.000Z
+source_updated: "2026-06-14"
 translation_date: '2026-05-05'
 ---
 
@@ -146,5 +146,5 @@ const realPath = fs.realpathSync(mount);
 ## 참고
 
 - POSIX `test(1)` 스펙 — `-L`이 "the file"(단수)을 검사한다고 명시
-- 3B `.agents/skills/check-symlinks/scripts/check-symlinks.sh` — 같은 이유로
+- 3B `.agents/skills/sync-symlink-rectify/scripts/symlink-rectify.sh` — 같은 이유로
   `realpath`를 사용

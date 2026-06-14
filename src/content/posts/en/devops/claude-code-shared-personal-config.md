@@ -2,7 +2,7 @@
 title: "Claude Code: Shared + Personal AI Config Pattern"
 description: Split AI instructions into committed (shared) and gitignored (personal) layers
 date: 2026-02-04T00:00:00.000Z
-updated: '2026-04-18'
+updated: "2026-06-14"
 tags:
   - devops
   - claude-code
@@ -12,7 +12,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 248b0b206475650469306682dd37ca5d96b2593ff291d82299ca0b542db4fb7c
+source_content_hash: b6720e075e07ae460ec02213a9d241bd9d2c7d2941edb055fefd4e54de063c56
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
     title: Claude Code Documentation
@@ -305,7 +305,7 @@ two profiles may already have drifted apart from the SoT, and any user activity
 that happened in the meantime — UI permission toggles, plugin enables — only
 exists in the broken local file.
 
-**Detection.** I run `/check-symlinks`, a slash command that walks all 55
+**Detection.** I run `/sync-symlink-rectify`, a slash command that walks all 55
 expected symlinks across personal, work, and project categories and reports a
 "REPLACED" classification when it finds a regular file where a symlink should
 be. That classification is the telltale failure signature.

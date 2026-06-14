@@ -5,7 +5,7 @@ description: >-
   symlink, even when the resolution chain is healthy. Use `realpath` for
   source-of-truth chain validation.
 date: 2026-05-01T00:00:00.000Z
-updated: 2026-05-05T00:00:00.000Z
+updated: "2026-06-14"
 tags:
   - devops
   - shell
@@ -21,7 +21,7 @@ references:
   - url: 'https://pubs.opengroup.org/onlinepubs/9699919799/utilities/test.html'
     title: POSIX test(1) — file expressions
     type: official
-source_content_hash: f0b203e8bf939e5ead4a265da9f2b22e084fe4e9046fd9c5b44c87e4860a18f9
+source_content_hash: 53f1de2baa45490ee2f65417c11c371f04b526512843ffa8ff3343752b251e6a
 ---
 
 A symlink audit script in my 3B repo almost ran `rm <link> && ln -s` against a
@@ -151,5 +151,5 @@ the near-miss `rm`.
 ## See also
 
 - POSIX `test(1)` spec — explicitly says `-L` checks "the file" (singular)
-- 3B `.agents/skills/check-symlinks/scripts/check-symlinks.sh` — uses `realpath`
+- 3B `.agents/skills/sync-symlink-rectify/scripts/symlink-rectify.sh` — uses `realpath`
   for this reason

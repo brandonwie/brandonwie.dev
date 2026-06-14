@@ -69,7 +69,7 @@ AI Review: "Consider adding checksum verification for the binary download"
 
 - 해당 기능이 있는 줄을 AI에게 알려주세요
 - 기능 근처에 목적을 설명하는 코멘트를 추가하세요
-- `/validate-pr-reviews` 스킬로 체계적으로 리뷰를 검증하세요
+- `/pr-review-rectify` 스킬로 체계적으로 리뷰를 검증하세요
 
 ## 패턴 3: Cross-File Blindness
 

@@ -2,7 +2,7 @@
 title: 'Why your updater keeps re-enabling the Claude plugins you disabled'
 description: 'I kept a couple of plugins deliberately off, ran my updater, and they came back on. The script provably never re-enabled anything — because the re-enable was not the script''s to begin with. Here is the snapshot-and-reassert guard that stopped the toil.'
 date: 2026-06-06T00:00:00.000Z
-updated: 2026-06-07
+updated: "2026-06-14"
 tags:
   - devops
   - claude-code
@@ -15,7 +15,7 @@ references:
   - url: 'https://docs.anthropic.com/en/docs/claude-code/plugins'
     title: Claude Code plugins
     type: official
-source_content_hash: 43dc8415ef7440a784d467e8d2d254b6f2a4bda94b549a22f3e19a9101a67748
+source_content_hash: 1185eae8c322bb2fd43ae0332efd3be77611f225a8d0b6f1324925182cd7e537
 ---
 
 I keep a couple of Claude Code plugins and MCP servers deliberately turned off. I
@@ -110,7 +110,7 @@ guard was doing the right thing rather than papering over a different bug.
 
 ## When this applies
 
-Reach for it when an updater — `/update-all`, a cron job, a setup script — runs
+Reach for it when an updater — `/sync-update-everything`, a cron job, a setup script — runs
 `claude plugin update` or `claude plugin marketplace update` and you keep
 specific plugins or MCP servers intentionally disabled, and you've watched them
 come back on after updates.

@@ -2,7 +2,7 @@
 title: Codex Skill Mirror Pattern
 description: 'When a repository already treats `.agents/skills/` as the canonical skill source, the clean Codex integration is not "replace it with `.codex/skills/`" or "symlink the whole folder wholesale." A mirror layer with selective adapters preserves the canonical source while giving Codex what it needs.'
 date: 2026-04-18T00:00:00.000Z
-updated: 2026-05-06
+updated: "2026-06-14"
 tags:
   - devops
   - codex
@@ -20,7 +20,7 @@ references:
   - url: 'https://developers.openai.com/codex/skills'
     title: OpenAI Codex Skills
     type: official
-source_content_hash: 8f4b07a5fd65c173855d82fece866a8ba33344449c466b3ecf169dc132253643
+source_content_hash: d9794ab60d6d92c1b8a45605daa3b5a47dd07892407bdce4fcf5172fb52f840b
 ---
 
 When a repository already treats `.agents/skills/` as the canonical skill source, the clean Codex integration is not "replace it with `.codex/skills/`" or "symlink the whole folder wholesale." Both shortcuts have failure modes that surface only after install, when the skills look like they work but quietly misbehave. The stable pattern is six steps:
@@ -48,17 +48,17 @@ Introduce a **mirror-with-adapters** layer owned by the target runtime:
 
 ```text
 .agents/skills/                  # canonical Claude source
-  ├── check-symlinks/
+  ├── sync-symlink-rectify/
   ├── task-starter/
   └── wrap/
 
 .codex/skills/                   # repo-local Codex mirror
-  ├── check-symlinks -> ../../.agents/skills/check-symlinks
+  ├── sync-symlink-rectify -> ../../.agents/skills/sync-symlink-rectify
   ├── task-starter/              # real Codex adapter
   └── wrap/                      # real Codex adapter
 
 ~/.codex/skills/                 # global Codex runtime home
-  ├── check-symlinks -> 3b/.codex/skills/check-symlinks
+  ├── sync-symlink-rectify -> 3b/.codex/skills/sync-symlink-rectify
   ├── task-starter -> 3b/.codex/skills/task-starter
   └── wrap -> 3b/.codex/skills/wrap
 ```

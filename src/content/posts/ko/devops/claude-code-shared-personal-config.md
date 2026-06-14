@@ -5,7 +5,7 @@ description: >-
   새 개발자는 즉시 AI 지시사항을 사용하고 기존 개발자는 개인 확장을
   유지하는 패턴입니다.
 date: 2026-02-04T00:00:00.000Z
-updated: '2026-04-18'
+updated: "2026-06-14"
 tags:
   - devops
   - claude-code
@@ -16,7 +16,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-shared-personal-config
-source_updated: '2026-04-18'
+source_updated: "2026-06-14"
 translation_date: '2026-04-18'
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
@@ -292,7 +292,7 @@ audit 스크립트가 깨진 symlink를 잡아내서 체인을 따라가 복구�
 SoT와 어긋나 있을 수 있고, 그 사이에 발생한 사용자 활동 -- UI 권한 토글, 플러그인
 활성화 -- 은 깨진 로컬 파일에만 존재하게 돼요.
 
-**감지.** `/check-symlinks` 슬래시 명령으로 개인, 업무, 프로젝트 카테고리에
+**감지.** `/sync-symlink-rectify` 슬래시 명령으로 개인, 업무, 프로젝트 카테고리에
 걸친 55개의 예상 symlink를 모두 walk하면서 symlink가 있어야 할 자리에 일반
 파일이 발견되면 "REPLACED"로 분류해서 보고해요. 그 분류가 실패의 명확한
 시그니처예요.

@@ -4,7 +4,7 @@ description: >-
   `.agents/skills/`를 정식 skill 출처로 두는 repo에서 Codex를 깔끔하게 붙이는 방법은 통째로 교체하거나 통째로
   심볼릭링크하는 게 아니에요. 정식 출처는 그대로 두고, 필요한 skill에만 어댑터를 다는 mirror 레이어가 답이에요.
 date: 2026-04-18T00:00:00.000Z
-updated: '2026-05-06'
+updated: "2026-06-14"
 tags:
   - devops
   - codex
@@ -16,7 +16,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: codex-skill-mirror-pattern
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: "2026-06-14"
 translation_date: '2026-05-10'
 ---
 
@@ -47,17 +47,17 @@ Claude 쪽 skill은 Codex에 같은 이름이나 의미로는 없는 runtime 기
 
 ```text
 .agents/skills/                  # canonical Claude source
-  ├── check-symlinks/
+  ├── sync-symlink-rectify/
   ├── task-starter/
   └── wrap/
 
 .codex/skills/                   # repo-local Codex mirror
-  ├── check-symlinks -> ../../.agents/skills/check-symlinks
+  ├── sync-symlink-rectify -> ../../.agents/skills/sync-symlink-rectify
   ├── task-starter/              # real Codex adapter
   └── wrap/                      # real Codex adapter
 
 ~/.codex/skills/                 # global Codex runtime home
-  ├── check-symlinks -> 3b/.codex/skills/check-symlinks
+  ├── sync-symlink-rectify -> 3b/.codex/skills/sync-symlink-rectify
   ├── task-starter -> 3b/.codex/skills/task-starter
   └── wrap -> 3b/.codex/skills/wrap
 ```

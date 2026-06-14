@@ -6,7 +6,7 @@ description: >-
   class. With detection signals and the empirical tiebreaker that resolves
   factual disagreements.
 date: 2026-04-08T00:00:00.000Z
-updated: 2026-05-31
+updated: "2026-06-14"
 tags:
   - ai-ml
   - code-review
@@ -19,7 +19,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 2bf6c179019898b93b54dbb3b915cd3f2f791e9f1bfdb12f1c819668ef22afbd
+source_content_hash: b2c0b21c20ea2a9557daafd8ea4946f3243233604ec1e59f0623fcb35fd30883
 references:
   - url: 'https://github.com/brandonwie/crucio/pull/83'
     title: 'crucio PR #83 — Claude vs Codex disagreement on Starlette ordering'
@@ -29,7 +29,7 @@ references:
     type: authoritative
 ---
 
-Recently I started running a `/validate-pr-reviews` workflow that takes every inline comment Claude, Copilot, and Codex leave on a diff and classifies each as valid, invalid, controversial, or good-to-have. The point is to catch real bugs from the signal side while filtering out false positives with structure.
+Recently I started running a `/pr-review-rectify` workflow that takes every inline comment Claude, Copilot, and Codex leave on a diff and classifies each as valid, invalid, controversial, or good-to-have. The point is to catch real bugs from the signal side while filtering out false positives with structure.
 
 Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR (#858) surfaced something different: a *productive* behavior worth amplifying. May added three more failure modes — including the first analyst-side error class — and one PR-body-vs-source-conflation pattern. Mid-May added two more: a cross-reviewer convergence on a phantom formatting bug, and a second productive behavior where the reviewer audits siblings the analyst missed. I can now point at ten failure modes, two productive behaviors, and one analyst-side class, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one to three samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
 
@@ -142,7 +142,7 @@ The first four patterns are all _semantic_ misunderstandings — the reviewer pr
 
 On a Python PR, Copilot inline-commented on a test file flagging a redundant assertion — `assert not any("http" in t for t in tags)` — as brittle to future tags like `"http2"`. The assertion had already been removed a few commits earlier. Copilot's review timestamp was newer than the removing commit, but Copilot's _indexing_ of the PR had happened against an earlier snapshot. Both mirror sites (Ollama and Gemini) were flagged because both had the same pattern at the indexed snapshot.
 
-**Why it happens.** Copilot's review-indexing pass runs 1–5 minutes after the trigger event. During `/validate-pr-reviews` workflows, Round 1 fixes frequently push within that same window. If the fetch timestamp lags HEAD by even a minute, the reviewer reviews the old tree.
+**Why it happens.** Copilot's review-indexing pass runs 1–5 minutes after the trigger event. During `/pr-review-rectify` workflows, Round 1 fixes frequently push within that same window. If the fetch timestamp lags HEAD by even a minute, the reviewer reviews the old tree.
 
 **Detection signal.** The flagged line does not appear in current HEAD. A quick `git log --all -S "<exact quoted claim text>"` usually finds the commit where the flagged code was removed, and its timestamp precedes the review post.
 
@@ -157,7 +157,7 @@ On a Python PR, Copilot inline-commented on a test file flagging a redundant ass
 
 > **One-line definition:** GitHub's `isOutdated=true` flag on a review thread means "GitHub couldn't anchor this comment to a current diff line", not "the concern is resolved".
 
-GitHub marks a review thread `isOutdated` when the flagged line is no longer on the current diff — typically because a subsequent commit touched nearby lines. My validate-pr-reviews skill used to auto-skip these threads on that signal, treating the flag as "no longer applicable". It isn't.
+GitHub marks a review thread `isOutdated` when the flagged line is no longer on the current diff — typically because a subsequent commit touched nearby lines. My pr-review-rectify skill used to auto-skip these threads on that signal, treating the flag as "no longer applicable". It isn't.
 
 On a recent NestJS PR, Copilot raised an empty-string validation concern on a DTO: `""` passing `@IsString()` and hitting a `WHERE IS NOT NULL` partial unique index. The skill auto-skipped the thread because a later commit had reformatted the DTO and GitHub marked the thread outdated. The reformat didn't fix the underlying concern — it just moved the lines. When I looked at the thread manually, the problem was still real, and a Round 2 pass promoted it to a VALID IMPROVEMENT fix.
 
@@ -194,11 +194,11 @@ Pattern 7 emerged on PR #858 (April 28). Across four rounds, the bot kept applyi
 - **After fixing one site, deliberately leave nearby twin code for the next cascade.** Let the bot find it. Triggering `@claude review` on every commit gives it the surface to scan.
 - **Multi-round validation (R1 → R5+) is what surfaces these.** Single-round PRs miss the twins entirely. Plan for multiple rounds when the change shape is likely to repeat.
 
-**Anti-pattern that suppresses Pattern 7.** Marking R4-1-style findings as `DUPLICATE` of R3-1 by location/file alone. They're not duplicates — they're the same shape on a different surface. Dedup rules in `/validate-pr-reviews` Phase 1.5 should distinguish "exact location match" (real duplicate) from "pattern repeat" (twin detection). Mark as RELATED-NOT-DUP and classify as a new finding.
+**Anti-pattern that suppresses Pattern 7.** Marking R4-1-style findings as `DUPLICATE` of R3-1 by location/file alone. They're not duplicates — they're the same shape on a different surface. Dedup rules in `/pr-review-rectify` Phase 1.5 should distinguish "exact location match" (real duplicate) from "pattern repeat" (twin detection). Mark as RELATED-NOT-DUP and classify as a new finding.
 
 ## Pattern 8 — PR Diff Scope Confusion (analyst-side)
 
-> **One-line definition:** The analyst running `/validate-pr-reviews` misverifies PR scope by using local-base diff instead of origin-base diff.
+> **One-line definition:** The analyst running `/pr-review-rectify` misverifies PR scope by using local-base diff instead of origin-base diff.
 
 This pattern is distinct from the rest of the catalog because it's a failure of the analyst (Claude doing the validation), not the reviewer. It's worth aggregating because cross-agent skills may have analysts on multiple sides; the failure mode is symmetric.
 
@@ -230,11 +230,11 @@ On 3B PR #45, the Codex adapter Phase 0.7 contract bullet enumerated only 4 of t
 
 > **One-line definition:** Bots report findings via two distinct GitHub mechanisms; thread-centric classification flow misroutes the issue-comment-summary kind.
 
-AI bots report findings via two distinct GitHub mechanisms: (a) inline review threads tied to specific file:line, (b) issue-comment summaries posted to the PR conversation. `/validate-pr-reviews` Phase 1 fetches both, but the classification flow (Phase 2-3) is thread-centric — designed around per-finding inline threads with thread IDs. Issue-comment summaries with multiple findings inline get treated as a single bag instead of split per-finding.
+AI bots report findings via two distinct GitHub mechanisms: (a) inline review threads tied to specific file:line, (b) issue-comment summaries posted to the PR conversation. `/pr-review-rectify` Phase 1 fetches both, but the classification flow (Phase 2-3) is thread-centric — designed around per-finding inline threads with thread IDs. Issue-comment summaries with multiple findings inline get treated as a single bag instead of split per-finding.
 
 On 3B PR #45 R4, claude bot Round 4 review posted findings as ONE issue-comment summary with 2 findings (R4-1 ACTIVE-STATUS stale, R4-2 output_commitment style). No inline review threads were created. The skill protocol asks for "per-thread reply + resolve" — there were no threads. The round file captured both findings correctly but GitHub-side replies could only happen via new issue-comment, not thread-resolve mutation.
 
-**Prevention.** Refine `/validate-pr-reviews` Phase 1 to explicitly distinguish "inline thread findings" from "issue-comment findings" and route classification + reply differently. Issue-comment findings need: (a) parse finding list out of comment body, (b) reply via new issue-comment referencing original, (c) optional `minimizeComment` mutation on the original. Same classification rules apply; reply mechanism differs.
+**Prevention.** Refine `/pr-review-rectify` Phase 1 to explicitly distinguish "inline thread findings" from "issue-comment findings" and route classification + reply differently. Issue-comment findings need: (a) parse finding list out of comment body, (b) reply via new issue-comment referencing original, (c) optional `minimizeComment` mutation on the original. Same classification rules apply; reply mechanism differs.
 
 **Root cause category.** Skill design assumption. Designed for one mode; bots use both. Symmetric refinement needed.
 

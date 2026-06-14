@@ -2,7 +2,7 @@
 title: Serena MCP — Multi-Profile Setup for Claude Code (cpers/cwork)
 description: 'Installing the Serena MCP server across a Claude Code dual-profile setup (cpers/cwork) plus Codex, including the four recommended hooks, the system-prompt override, and the non-obvious "installer writes to default ~/.claude.json, misses profile-specific stores" trap.'
 date: 2026-04-29T00:00:00.000Z
-updated: 2026-06-13
+updated: "2026-06-14"
 tags:
   - devops
   - claude-code
@@ -27,7 +27,7 @@ references:
   - url: 'https://docs.claude.com/en/docs/claude-code/cli-reference'
     title: Claude Code CLI reference (--system-prompt / --append-system-prompt)
     type: official
-source_content_hash: 2376f57ba949ffb9c4e6ef9274048466875a7f1b66cb282b5e79bc172dad5940
+source_content_hash: 19c72bdaac3fc96c2b3eb6dfdf67e2fbba98e4516a3cf1865c1379f267578613
 ---
 
 This is the full procedure for installing the [Serena](https://oraios.github.io/serena/) language-server-backed MCP server across a Claude Code dual-profile setup (`cpers` / `cwork`) plus Codex, including the four recommended hooks and the non-obvious "installer writes to default `~/.claude.json`, misses profile-specific stores" trap that bites multi-profile users on first install.
@@ -90,7 +90,7 @@ Serena's override is ~7800 chars beginning with `"You are Claude Code, Anthropic
 
 ### 3. Symlink Atomic-Rename Drift
 
-Both `~/.claude/settings.json` and `~/.claude-work/settings.json` are supposed to symlink to `3b/.agents/global-claude-setup/settings.json` (the SoT). In practice, Claude Code's UI atomically rewrites these under load (create-temp-then-rename), silently replacing the symlink inode with a regular file. After install of new hooks in SoT, profile copies stay stale until the symlinks are restored via `/check-symlinks` (or `ln -sf {SoT} ~/.claude/settings.json`). Same bug class that defeated `claude-mem` removal attempts #1 and #2.
+Both `~/.claude/settings.json` and `~/.claude-work/settings.json` are supposed to symlink to `3b/.agents/global-claude-setup/settings.json` (the SoT). In practice, Claude Code's UI atomically rewrites these under load (create-temp-then-rename), silently replacing the symlink inode with a regular file. After install of new hooks in SoT, profile copies stay stale until the symlinks are restored via `/sync-symlink-rectify` (or `ln -sf {SoT} ~/.claude/settings.json`). Same bug class that defeated `claude-mem` removal attempts #1 and #2.
 
 ### 4. Codex MCP Worked Out of the Box
 
@@ -161,7 +161,7 @@ Codex docs explicitly recommend `SessionStart` only — the Codex hook system is
 ### Step 4 — Restore SoT symlinks
 
 ```bash
-# /check-symlinks skill in Claude Code, or manually:
+# /sync-symlink-rectify skill in Claude Code, or manually:
 ln -sf /Users/brandonwie/dev/personal/3b/.agents/global-claude-setup/settings.json /Users/brandonwie/.claude/settings.json
 ln -sf /Users/brandonwie/.claude/settings.json /Users/brandonwie/.claude-work/settings.json
 ```

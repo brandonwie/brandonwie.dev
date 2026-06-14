@@ -2,7 +2,7 @@
 title: '`gh pr view` Head-Branch Ambiguity (False-Negative)'
 description: 'Running `gh pr view --json number,state` on a branch with an open PR can return "no pull requests found" even when the PR exists and the branch is correctly tracked. The empty result means "gh''s branch resolution didn''t find one," not "no PR exists."'
 date: 2026-05-05T00:00:00.000Z
-updated: 2026-05-06
+updated: "2026-06-14"
 tags:
   - devops
   - github-cli
@@ -16,7 +16,7 @@ references:
   - url: 'https://cli.github.com/manual/gh_pr_view'
     title: gh pr view manual
     type: official
-source_content_hash: 84538f535e14696a1a9f4549c91fe5699c38954998d5497eb763779da9b1d1ba
+source_content_hash: a308c62b6abc5dab97a2535a4b10fc3a5f93240948ed8176c7dfd897de7a47fe
 ---
 
 `gh pr view` (no PR number) is documented to find the PR for the current branch. It can fail silently in ways that look like "no PR exists" — and the failure mode burns a chunk of debugging time when it appears in a CI/CD pre-flight check. The original symptom:
@@ -81,7 +81,7 @@ Two things slowed diagnosis:
 Use the workaround for:
 
 - CI/CD pre-flight checks that need to know if a PR exists before taking action (open vs update vs skip).
-- Automation skills (like `/crucio-ship`, `/pr-creator`) that branch on PR existence.
+- Automation skills (like `/crucio-ship`, `/pr-create`) that branch on PR existence.
 - Any script where "no PR found" leads to creating one (the destructive-check problem).
 
 It does not matter for interactive use — when you're running `gh pr view` on your own work, the resolution usually does what you want, and you can spot-check the result. After a fresh `git push -u origin <branch>` from the PR-opening session, gh's resolution is most likely to be correct.
