@@ -14,7 +14,7 @@
 -->
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
-	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
+	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import System3bGraph from '$lib/components/System3bGraph.svelte';
 
 	interface Layer {
@@ -121,7 +121,7 @@
 				brandonwie.dev
 			</a>
 			<div class="flex items-center gap-2">
-				<LanguageToggle />
+				<HeaderControls />
 			</div>
 		</div>
 	</header>

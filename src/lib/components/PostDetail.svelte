@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import type { Component } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
-	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
+	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import Giscus from '$lib/components/Giscus.svelte';
 	import ReadingProgress from '$lib/components/ReadingProgress.svelte';
 	import TableOfContents from '$lib/components/TableOfContents.svelte';
@@ -150,7 +150,7 @@
 				>brandonwie.dev</a
 			>
 			<div class="flex items-center gap-2">
-				<LanguageToggle />
+				<HeaderControls />
 			</div>
 		</div>
 	</header>

@@ -2,26 +2,52 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-	/* Terminal theme colors */
-	--color-terminal-bg-primary: #1a1a1a;
-	--color-terminal-bg-secondary: #2d2d2d;
-	--color-terminal-bg-hover: #353535;
-	--color-terminal-text-primary: #e5e5e5;
-	--color-terminal-text-muted: #888888;
-	--color-terminal-text-dim: #666666;
-	--color-terminal-accent-orange: #a855f7; /* brand: neon violet — repointed so existing accent-orange classes recolor; class rename is a DX-1 follow-up */
-	--color-terminal-accent-violet: #a855f7;
-	--color-terminal-accent-violet-glow: #c084fc;
-	--color-terminal-accent-violet-deep: #7c3aed;
-	--color-terminal-accent-blue: #6b9eff;
-	--color-terminal-accent-green: #7ec699;
-	--color-terminal-accent-yellow: #e5c07b;
-	--color-terminal-accent-purple: #c084fc;
-	--color-terminal-accent-cyan: #56b6c2;
-	--color-terminal-accent-red: #e06c75;
-	--color-terminal-border: #404040;
+	/*
+	  Semantic color tokens map to the runtime CSS variables defined in the
+	  @layer base :root block below. Because those variables flip under
+	  [data-theme="light"], every utility generated here recolors for both
+	  themes with no per-component changes.
+	*/
+	--color-bg: var(--bg);
+	--color-surface: var(--surface);
+	--color-surface-2: var(--surface-2);
+	--color-line: var(--line);
+	--color-ink: var(--ink);
+	--color-muted: var(--muted);
+	--color-faint: var(--faint);
+	--color-accent: var(--accent);
+	--color-accent-strong: var(--accent-strong);
+	--color-ok: var(--ok);
+	--color-warn: var(--warn);
+	--color-crit: var(--crit);
 
-	/* Font family - overrides default mono stack */
+	/*
+	  Legacy terminal-* tokens kept as ALIASES over the semantic vars so the
+	  existing `terminal-bg-primary` / `terminal-accent-orange` / ... utility
+	  classes across the codebase recolor to the new palette automatically.
+	  Renaming those classes is a later DX cleanup.
+	*/
+	--color-terminal-bg-primary: var(--bg);
+	--color-terminal-bg-secondary: var(--surface);
+	--color-terminal-bg-hover: var(--surface-2);
+	--color-terminal-text-primary: var(--ink);
+	--color-terminal-text-muted: var(--muted);
+	--color-terminal-text-dim: var(--faint);
+	--color-terminal-accent-orange: var(--accent);
+	--color-terminal-accent-violet: var(--accent);
+	--color-terminal-accent-violet-glow: var(--accent-strong);
+	--color-terminal-accent-violet-deep: var(--accent-strong);
+	--color-terminal-accent-blue: var(--accent);
+	--color-terminal-accent-green: var(--ok);
+	--color-terminal-accent-yellow: var(--warn);
+	--color-terminal-accent-purple: var(--accent);
+	--color-terminal-accent-cyan: var(--accent);
+	--color-terminal-accent-red: var(--crit);
+	--color-terminal-border: var(--line);
+
+	/* Fonts: Inter for body/UI, JetBrains Mono for identity/metadata/code */
+	--font-sans:
+		'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 	--font-mono:
 		'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono',
 		'Source Code Pro', monospace;
@@ -50,36 +76,79 @@
 	::before,
 	::backdrop,
 	::file-selector-button {
-		border-color: var(--color-gray-200, currentcolor);
+		border-color: var(--line, currentcolor);
 	}
 }
 
 @layer base {
+	/*
+	  Semantic palette. Layout / typography / cards follow herdr.dev; the colors
+	  do not. The default DARK palette is Rosé Pine; LIGHT is a clean off-white
+	  with Rosé Pine Dawn accents. Dark is the default; the no-FOUC script in
+	  app.html toggles [data-theme="light"]. The terminal-* tokens alias these so
+	  existing classes recolor for both themes.
+	*/
 	:root {
-		/* Custom CSS Variables used by terminal-themed utilities below */
-		--bg-primary: #1a1a1a;
-		--bg-secondary: #2d2d2d;
-		--bg-hover: #353535;
-		--text-primary: #e5e5e5;
-		--text-muted: #888888;
-		--text-dim: #666666;
-		--accent-orange: #a855f7; /* brand: neon violet */
-		--accent-violet: #a855f7;
-		--accent-violet-glow: #c084fc;
-		--accent-violet-deep: #7c3aed;
-		--accent-blue: #6b9eff;
-		--accent-green: #7ec699;
-		--accent-yellow: #e5c07b;
-		--accent-purple: #c084fc;
-		--accent-cyan: #56b6c2;
-		--accent-red: #e06c75;
-		--border: #404040;
+		/* Rosé Pine (dark) — herdr.dev role mapping: iris accent, foam = ok,
+		   bright ink, subtle line. The flat herdr look intentionally collapses
+		   surface-2 and accent-strong into the base surface/accent values. */
+		--bg: #191724;
+		--surface: #1f1d2e;
+		--surface-2: #1f1d2e;
+		--line: #312f45;
+		--ink: #f4f0ff;
+		--muted: #908caa;
+		--faint: #6e6a86;
+		--accent: #c4a7e7;
+		--accent-strong: #c4a7e7;
+		--ok: #9ccfd8;
+		--warn: #f6c177;
+		--crit: #eb6f92;
+
+		color-scheme: dark;
+
+		/* Legacy raw vars consumed by the @utility blocks below — aliased. */
+		--bg-primary: var(--bg);
+		--bg-secondary: var(--surface);
+		--bg-hover: var(--surface-2);
+		--text-primary: var(--ink);
+		--text-muted: var(--muted);
+		--text-dim: var(--faint);
+		--accent-orange: var(--accent);
+		--accent-violet: var(--accent);
+		--accent-violet-glow: var(--accent-strong);
+		--accent-violet-deep: var(--accent-strong);
+		--accent-blue: var(--accent);
+		--accent-green: var(--ok);
+		--accent-yellow: var(--warn);
+		--accent-purple: var(--accent);
+		--accent-cyan: var(--accent);
+		--accent-red: var(--crit);
+		--border: var(--line);
+	}
+
+	:root[data-theme='light'] {
+		/* Clean off-white with Rosé Pine Dawn accents */
+		--bg: #faf9f7;
+		--surface: #ffffff;
+		--surface-2: #f1efed;
+		--line: #e4e1de;
+		--ink: #1f1d2e;
+		--muted: #575279;
+		--faint: #797593;
+		--accent: #907aa9;
+		--accent-strong: #907aa9;
+		--ok: #56949f;
+		--warn: #ea9d34;
+		--crit: #b4637a;
+
+		color-scheme: light;
 	}
 
 	html {
-		font-family: 'JetBrains Mono', monospace;
-		background-color: var(--bg-primary);
-		color: var(--text-primary);
+		font-family: var(--font-sans);
+		background-color: var(--bg);
+		color: var(--ink);
 		scrollbar-gutter: stable;
 	}
 
@@ -87,37 +156,37 @@
 		margin: 0;
 		padding: 0;
 		min-height: 100vh;
-		background-color: var(--bg-primary);
+		background-color: var(--bg);
 	}
 
-	/* Custom scrollbar for terminal aesthetic */
+	/* Custom scrollbar */
 	::-webkit-scrollbar {
 		width: 8px;
 		height: 8px;
 	}
 
 	::-webkit-scrollbar-track {
-		background: var(--bg-secondary);
+		background: var(--surface);
 	}
 
 	::-webkit-scrollbar-thumb {
-		background: var(--border);
+		background: var(--line);
 		border-radius: 4px;
 	}
 
 	::-webkit-scrollbar-thumb:hover {
-		background: var(--text-dim);
+		background: var(--muted);
 	}
 
 	/* Selection colors */
 	::selection {
-		background-color: var(--accent-orange);
-		color: var(--bg-primary);
+		background-color: var(--accent);
+		color: var(--bg);
 	}
 
 	/* Code block enhancements */
 	pre {
-		border: 1px solid var(--border);
+		border: 1px solid var(--line);
 		border-radius: 0.375rem;
 	}
 
@@ -132,51 +201,55 @@
 		background-color: transparent !important;
 	}
 
-	code {
-		font-family: 'JetBrains Mono', monospace;
+	/* Monospace for inline + block code regardless of body font */
+	code,
+	kbd,
+	pre,
+	samp {
+		font-family: var(--font-mono);
 	}
 }
 
 /* Terminal prompt styling */
 @utility prompt-user {
-	color: var(--accent-green);
+	color: var(--ok);
 }
 
 @utility prompt-at {
-	color: var(--text-muted);
+	color: var(--muted);
 }
 
 @utility prompt-host {
-	color: var(--accent-blue);
+	color: var(--accent);
 }
 
 @utility prompt-path {
-	color: var(--accent-yellow);
+	color: var(--warn);
 }
 
 @utility prompt-symbol {
-	color: var(--accent-orange);
+	color: var(--accent);
 }
 
 /* Command output colors */
 @utility output-directory {
-	color: var(--accent-yellow);
+	color: var(--warn);
 }
 
 @utility output-file {
-	color: var(--accent-green);
+	color: var(--ok);
 }
 
 @utility output-link {
-	color: var(--accent-cyan);
+	color: var(--accent);
 }
 
 @utility output-error {
-	color: var(--accent-red);
+	color: var(--crit);
 }
 
 @utility output-success {
-	color: var(--accent-green);
+	color: var(--ok);
 }
 
 /* Terminal block cursor */
@@ -185,20 +258,20 @@
 	min-width: 1ch;
 	height: 1.2em;
 	vertical-align: text-bottom;
-	background-color: var(--accent-orange);
-	color: var(--bg-primary);
-	box-shadow: 0 0 8px var(--accent-violet-glow);
+	background-color: var(--accent);
+	color: var(--bg);
+	box-shadow: 0 0 8px var(--accent-strong);
 	animation: blink 1s step-end infinite;
 }
 
 /* Fuzzy finder styling */
 @utility fuzzy-overlay {
-	background-color: rgba(26, 26, 26, 0.95);
+	background-color: color-mix(in srgb, var(--bg) 92%, transparent);
 	backdrop-filter: blur(4px);
 }
 
 @utility fuzzy-match {
-	color: var(--accent-orange);
+	color: var(--accent);
 	font-weight: 600;
 }
 
@@ -210,7 +283,7 @@
 /* Focus visible for accessibility */
 @utility focus-terminal {
 	&:focus-visible {
-		outline: 2px solid var(--accent-orange);
+		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 	}
 }
@@ -224,30 +297,30 @@
 	}
 }
 
-/* Prose terminal theme — sets typography plugin color variables */
+/* Prose theme — sets typography plugin color variables (themed via vars) */
 @utility prose-terminal {
-	--tw-prose-body: #e5e5e5;
-	--tw-prose-headings: #e5e5e5;
-	--tw-prose-lead: #888888;
-	--tw-prose-links: #a855f7;
-	--tw-prose-bold: #e5e5e5;
-	--tw-prose-counters: #888888;
-	--tw-prose-bullets: #888888;
-	--tw-prose-hr: #404040;
-	--tw-prose-quotes: #888888;
-	--tw-prose-quote-borders: #7c3aed;
-	--tw-prose-captions: #888888;
-	--tw-prose-code: #a855f7;
-	--tw-prose-pre-code: #e5e5e5;
-	--tw-prose-pre-bg: #2d2d2d;
-	--tw-prose-th-borders: #404040;
-	--tw-prose-td-borders: #404040;
+	--tw-prose-body: var(--ink);
+	--tw-prose-headings: var(--ink);
+	--tw-prose-lead: var(--muted);
+	--tw-prose-links: var(--accent);
+	--tw-prose-bold: var(--ink);
+	--tw-prose-counters: var(--muted);
+	--tw-prose-bullets: var(--muted);
+	--tw-prose-hr: var(--line);
+	--tw-prose-quotes: var(--muted);
+	--tw-prose-quote-borders: var(--accent);
+	--tw-prose-captions: var(--muted);
+	--tw-prose-code: var(--accent);
+	--tw-prose-pre-code: var(--ink);
+	--tw-prose-pre-bg: var(--surface);
+	--tw-prose-th-borders: var(--line);
+	--tw-prose-td-borders: var(--line);
 	max-width: none;
 }
 
-/* Prose terminal element-level overrides (can't go in @utility) */
+/* Prose element-level overrides (can't go in @utility) */
 .prose-terminal code:not(pre code) {
-	background-color: #2d2d2d;
+	background-color: var(--surface);
 	padding: 0.2em 0.4em;
 	border-radius: 0.25rem;
 	font-weight: 400;
@@ -259,13 +332,13 @@
 }
 
 .prose-terminal pre {
-	background-color: #2d2d2d;
-	border: 1px solid #404040;
+	background-color: var(--surface);
+	border: 1px solid var(--line);
 }
 
 /* Search result highlight (Pagefind <mark> tags) */
 .search-excerpt mark {
-	color: var(--accent-orange);
+	color: var(--accent);
 	font-weight: 600;
 	background-color: transparent;
 }
