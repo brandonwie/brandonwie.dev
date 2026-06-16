@@ -9,6 +9,8 @@
 	"request_translation": "번역 요청하기",
 	"language_switch_to_korean": "한국어로 전환",
 	"language_switch_to_english": "Switch to English",
+	"theme_toggle_to_light": "라이트 테마로 전환",
+	"theme_toggle_to_dark": "다크 테마로 전환",
 	"published": "발행일",
 	"updated": "수정일",
 	"comments_title": "댓글",

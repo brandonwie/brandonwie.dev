@@ -6,6 +6,7 @@
 	 * shape so the two sit together in HeaderControls. Dark is the default.
 	 */
 	import { onMount } from 'svelte';
+	import { m } from '$lib/paraglide/messages';
 	import { theme, toggleTheme, initTheme } from '$lib/stores/theme';
 
 	// The no-FOUC script set <html data-theme> before paint; re-sync the store
@@ -13,14 +14,15 @@
 	onMount(initTheme);
 
 	const isDark = $derived($theme === 'dark');
+	const toggleLabel = $derived(isDark ? m.theme_toggle_to_light() : m.theme_toggle_to_dark());
 </script>
 
 <button
 	type="button"
 	onclick={toggleTheme}
 	class="font-mono text-xs px-2 py-1 bg-bg border border-line rounded-sm text-muted transition-all duration-200 hover:border-accent shrink-0 inline-flex items-center"
-	aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-	title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+	aria-label={toggleLabel}
+	title={toggleLabel}
 >
 	{#if isDark}
 		<!-- Sun: click to go light -->
