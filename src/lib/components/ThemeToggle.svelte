@@ -18,7 +18,7 @@
 <button
 	type="button"
 	onclick={toggleTheme}
-	class="font-mono text-xs px-2 py-1 bg-terminal-bg-primary border border-terminal-border rounded-sm text-terminal-text-muted transition-all duration-200 hover:border-terminal-accent-orange shrink-0 inline-flex items-center"
+	class="font-mono text-xs px-2 py-1 bg-bg border border-line rounded-sm text-muted transition-all duration-200 hover:border-accent shrink-0 inline-flex items-center"
 	aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
 	title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
 >
