@@ -82,24 +82,27 @@
 
 @layer base {
 	/*
-	  Semantic palette derived from herdr.dev. bg/surface/line/ink/muted/accent
-	  use herdr's exact light + dark values; ok/warn/crit use herdr's per-mode
-	  status colors; --faint is a derived dim tier (no herdr equivalent). Dark is
-	  the default; the no-FOUC script in app.html toggles [data-theme="light"].
+	  Semantic palette. Layout / typography / cards follow herdr.dev; the colors
+	  do not. The default DARK palette is Rosé Pine; LIGHT is a clean off-white
+	  with Rosé Pine Dawn accents. Dark is the default; the no-FOUC script in
+	  app.html toggles [data-theme="light"]. The terminal-* tokens alias these so
+	  existing classes recolor for both themes.
 	*/
 	:root {
-		--bg: #0c0c0b;
-		--surface: #131312;
-		--surface-2: #1c1c1a;
-		--line: #252522;
-		--ink: #f0ece0;
-		--muted: #8a8a80;
-		--faint: #6b6b66;
-		--accent: #4a9eff;
-		--accent-strong: #6cb0ff;
-		--ok: #52c97a;
-		--warn: #e6b84a;
-		--crit: #e05a5a;
+		/* Rosé Pine (dark) — herdr.dev role mapping: iris accent, foam = ok,
+		   bright ink, subtle line, elevated surfaces stay at --surface */
+		--bg: #191724;
+		--surface: #1f1d2e;
+		--surface-2: #1f1d2e;
+		--line: #312f45;
+		--ink: #f4f0ff;
+		--muted: #908caa;
+		--faint: #6e6a86;
+		--accent: #c4a7e7;
+		--accent-strong: #c4a7e7;
+		--ok: #9ccfd8;
+		--warn: #f6c177;
+		--crit: #eb6f92;
 
 		color-scheme: dark;
 
@@ -124,18 +127,19 @@
 	}
 
 	:root[data-theme='light'] {
-		--bg: #f0eee9;
-		--surface: #f5f3ee;
-		--surface-2: #eae8e1;
-		--line: #d8d6d0;
-		--ink: #1a1a18;
-		--muted: #6b6b66;
-		--faint: #8a8a80;
-		--accent: #4a9eff;
-		--accent-strong: #2b7fe0;
-		--ok: #2d9f52;
-		--warn: #b8860b;
-		--crit: #c73e3e;
+		/* Clean off-white with Rosé Pine Dawn accents */
+		--bg: #faf9f7;
+		--surface: #ffffff;
+		--surface-2: #f1efed;
+		--line: #e4e1de;
+		--ink: #1f1d2e;
+		--muted: #575279;
+		--faint: #797593;
+		--accent: #907aa9;
+		--accent-strong: #907aa9;
+		--ok: #56949f;
+		--warn: #ea9d34;
+		--crit: #b4637a;
 
 		color-scheme: light;
 	}
@@ -176,7 +180,7 @@
 	/* Selection colors */
 	::selection {
 		background-color: var(--accent);
-		color: #ffffff;
+		color: var(--bg);
 	}
 
 	/* Code block enhancements */
