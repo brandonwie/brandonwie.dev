@@ -1,0 +1,164 @@
+name: rose-pine-neon-website
+description: Semantic website adapter for the 3B-managed Rose Pine Neon palette.
+format: website-semantic-palette
+variant: neon-website-adapter
+updated: 2026-06-17
+canonical_source: ../../../../3b/colors/rose-pine-neon-website.yaml
+sources:
+  rose_pine_neon_terminal: ../../../../3b/colors/rose-pine-neon.yaml
+  rose_pine_dawn_terminal: ../../../../3b/colors/rose-pine-dawn.yaml
+  rose_pine_palette: https://rosepinetheme.com/palette/
+  rose_pine_ingredients: https://rosepinetheme.com/palette/ingredients/
+managed_targets:
+  - repo: brandonwie.dev
+    css: src/app.css
+    local_reference: src/lib/data/rose-pine-neon-palette.yaml
+themes:
+  dark:
+    css_selector: ':root'
+    source_variant: rose-pine-neon
+    source_file: ../../../../3b/colors/rose-pine-neon.yaml
+    tokens:
+      bg:
+        value: '#0d0a18'
+        source: roles.background.hex
+      surface:
+        value: '#191724'
+        source: ansi.normal.black
+      surface_2:
+        value: '#26233a'
+        source: canonical_rose_pine_main.overlay
+      line:
+        value: '#40384f'
+        source: roles.selection_background.hex
+      ink:
+        value: '#e8e3ff'
+        source: roles.foreground.hex
+      muted:
+        value: '#908caa'
+        source: canonical_rose_pine_main.subtle
+      faint:
+        value: '#6e6a86'
+        source: ansi.bright.black
+      love:
+        value: '#ff5f8f'
+        source: ansi.normal.red
+      gold:
+        value: '#ffd166'
+        source: ansi.normal.yellow
+      rose:
+        value: '#ff9bcf'
+        source: ansi.normal.cyan
+      pine:
+        value: '#35f7b8'
+        source: ansi.normal.green
+      foam:
+        value: '#7cf7ff'
+        source: ansi.normal.blue
+      iris:
+        value: '#cba6ff'
+        source: ansi.normal.magenta
+      highlight_low:
+        value: '#21202e'
+        source: canonical_rose_pine_main.highlight_low
+      highlight_med:
+        value: '#40384f'
+        source: roles.selection_background.hex
+      highlight_high:
+        value: '#524f67'
+        source: canonical_rose_pine_main.highlight_high
+      accent:
+        value: '#cba6ff'
+        source: ansi.normal.magenta
+      accent_strong:
+        value: '#ddb7ff'
+        source: ansi.bright.magenta
+      ok:
+        value: '#35f7b8'
+        source: ansi.normal.green
+      warn:
+        value: '#ffd166'
+        source: ansi.normal.yellow
+      crit:
+        value: '#ff5f8f'
+        source: ansi.normal.red
+  light:
+    css_selector: ":root[data-theme='light']"
+    source_variant: rose-pine-dawn-neon-website
+    source_file: ../../../../3b/colors/rose-pine-dawn.yaml
+    note: Website-only light companion; Dawn base surfaces with darkened saturated accents for small text contrast.
+    tokens:
+      bg:
+        value: '#faf4ed'
+        source: canonical_rose_pine_dawn.base
+      surface:
+        value: '#fffaf3'
+        source: canonical_rose_pine_dawn.surface
+      surface_2:
+        value: '#f2e9e1'
+        source: canonical_rose_pine_dawn.overlay
+      line:
+        value: '#dec8f4'
+        source: derived_from.iris
+      ink:
+        value: '#2d204e'
+        source: derived_from.text
+      muted:
+        value: '#655a89'
+        source: derived_from.subtle
+      faint:
+        value: '#8a7baa'
+        source: derived_from.muted
+      love:
+        value: '#b51f62'
+        source: derived_from.love
+      gold:
+        value: '#995000'
+        source: derived_from.gold
+      rose:
+        value: '#aa3f63'
+        source: derived_from.rose
+      pine:
+        value: '#006d8f'
+        source: derived_from.pine
+      foam:
+        value: '#00727a'
+        source: derived_from.foam
+      iris:
+        value: '#7e35cc'
+        source: derived_from.iris
+      highlight_low:
+        value: '#f8eafd'
+        source: derived_from.highlight_low
+      highlight_med:
+        value: '#dec8f4'
+        source: derived_from.highlight_med
+      highlight_high:
+        value: '#c5a7e8'
+        source: derived_from.highlight_high
+      accent:
+        value: '#7e35cc'
+        source: derived_from.iris
+      accent_strong:
+        value: '#a03cff'
+        source: derived_from.iris
+      ok:
+        value: '#00727a'
+        source: derived_from.foam
+      warn:
+        value: '#995000'
+        source: derived_from.gold
+      crit:
+        value: '#b51f62'
+        source: derived_from.love
+legacy_terminal_aliases:
+  orange: gold
+  violet: iris
+  violet_glow: accent_strong
+  violet_deep: iris
+  blue: foam
+  green: pine
+  yellow: gold
+  purple: iris
+  cyan: rose
+  red: love

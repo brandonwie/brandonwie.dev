@@ -20,12 +20,21 @@
 	--color-ok: var(--ok);
 	--color-warn: var(--warn);
 	--color-crit: var(--crit);
+	--color-love: var(--love);
+	--color-gold: var(--gold);
+	--color-rose: var(--rose);
+	--color-pine: var(--pine);
+	--color-foam: var(--foam);
+	--color-iris: var(--iris);
+	--color-highlight-low: var(--highlight-low);
+	--color-highlight-med: var(--highlight-med);
+	--color-highlight-high: var(--highlight-high);
 
 	/*
-	  Legacy terminal-* tokens kept as ALIASES over the semantic vars so the
+	  Legacy terminal-* tokens kept as ALIASES over the semantic/role vars so
 	  existing `terminal-bg-primary` / `terminal-accent-orange` / ... utility
-	  classes across the codebase recolor to the new palette automatically.
-	  Renaming those classes is a later DX cleanup.
+	  classes across the codebase recolor automatically. Renaming those classes
+	  is a later DX cleanup.
 	*/
 	--color-terminal-bg-primary: var(--bg);
 	--color-terminal-bg-secondary: var(--surface);
@@ -33,16 +42,16 @@
 	--color-terminal-text-primary: var(--ink);
 	--color-terminal-text-muted: var(--muted);
 	--color-terminal-text-dim: var(--faint);
-	--color-terminal-accent-orange: var(--accent);
-	--color-terminal-accent-violet: var(--accent);
+	--color-terminal-accent-orange: var(--gold);
+	--color-terminal-accent-violet: var(--iris);
 	--color-terminal-accent-violet-glow: var(--accent-strong);
-	--color-terminal-accent-violet-deep: var(--accent-strong);
-	--color-terminal-accent-blue: var(--accent);
-	--color-terminal-accent-green: var(--ok);
-	--color-terminal-accent-yellow: var(--warn);
-	--color-terminal-accent-purple: var(--accent);
-	--color-terminal-accent-cyan: var(--accent);
-	--color-terminal-accent-red: var(--crit);
+	--color-terminal-accent-violet-deep: var(--iris);
+	--color-terminal-accent-blue: var(--pine);
+	--color-terminal-accent-green: var(--foam);
+	--color-terminal-accent-yellow: var(--gold);
+	--color-terminal-accent-purple: var(--iris);
+	--color-terminal-accent-cyan: var(--foam);
+	--color-terminal-accent-red: var(--love);
 	--color-terminal-border: var(--line);
 
 	/* Fonts: Inter for body/UI, JetBrains Mono for identity/metadata/code */
@@ -82,28 +91,35 @@
 
 @layer base {
 	/*
-	  Semantic palette. Layout / typography / cards follow herdr.dev; the colors
-	  do not. The default DARK palette is Rosé Pine; LIGHT is a clean off-white
-	  with Rosé Pine Dawn accents. Dark is the default; the no-FOUC script in
-	  app.html toggles [data-theme="light"]. The terminal-* tokens alias these so
-	  existing classes recolor for both themes.
+	  Semantic palette. Layout / typography / cards follow herdr.dev; color roles
+	  are derived from Rose Pine and Rose Pine Dawn, then pushed brighter for a
+	  neon terminal feel. Dark is the default; the no-FOUC script in app.html
+	  toggles [data-theme="light"]. Terminal-* aliases map to separate Rose Pine
+	  roles so existing classes gain the neon range without component rewrites.
 	*/
 	:root {
-		/* Rosé Pine (dark) — herdr.dev role mapping: iris accent, foam = ok,
-		   bright ink, subtle line. The flat herdr look intentionally collapses
-		   surface-2 and accent-strong into the base surface/accent values. */
-		--bg: #191724;
-		--surface: #1f1d2e;
-		--surface-2: #1f1d2e;
-		--line: #312f45;
-		--ink: #f4f0ff;
+		/* Rose Pine Neon (dark): semantic adapter over 3b/colors/rose-pine-neon.yaml. */
+		--bg: #0d0a18;
+		--surface: #191724;
+		--surface-2: #26233a;
+		--line: #40384f;
+		--ink: #e8e3ff;
 		--muted: #908caa;
 		--faint: #6e6a86;
-		--accent: #c4a7e7;
-		--accent-strong: #c4a7e7;
-		--ok: #9ccfd8;
-		--warn: #f6c177;
-		--crit: #eb6f92;
+		--love: #ff5f8f;
+		--gold: #ffd166;
+		--rose: #ff9bcf;
+		--pine: #35f7b8;
+		--foam: #7cf7ff;
+		--iris: #cba6ff;
+		--highlight-low: #21202e;
+		--highlight-med: #40384f;
+		--highlight-high: #524f67;
+		--accent: var(--iris);
+		--accent-strong: #ddb7ff;
+		--ok: var(--pine);
+		--warn: var(--gold);
+		--crit: var(--love);
 
 		color-scheme: dark;
 
@@ -114,33 +130,42 @@
 		--text-primary: var(--ink);
 		--text-muted: var(--muted);
 		--text-dim: var(--faint);
-		--accent-orange: var(--accent);
-		--accent-violet: var(--accent);
+		--accent-orange: var(--gold);
+		--accent-violet: var(--iris);
 		--accent-violet-glow: var(--accent-strong);
-		--accent-violet-deep: var(--accent-strong);
-		--accent-blue: var(--accent);
-		--accent-green: var(--ok);
-		--accent-yellow: var(--warn);
-		--accent-purple: var(--accent);
-		--accent-cyan: var(--accent);
-		--accent-red: var(--crit);
+		--accent-violet-deep: var(--iris);
+		--accent-blue: var(--foam);
+		--accent-green: var(--pine);
+		--accent-yellow: var(--gold);
+		--accent-purple: var(--iris);
+		--accent-cyan: var(--rose);
+		--accent-red: var(--love);
 		--border: var(--line);
 	}
 
 	:root[data-theme='light'] {
-		/* Clean off-white with Rosé Pine Dawn accents */
-		--bg: #faf9f7;
-		--surface: #ffffff;
-		--surface-2: #f1efed;
-		--line: #e4e1de;
-		--ink: #1f1d2e;
-		--muted: #575279;
-		--faint: #797593;
-		--accent: #907aa9;
-		--accent-strong: #907aa9;
-		--ok: #56949f;
-		--warn: #ea9d34;
-		--crit: #b4637a;
+		/* Rose Pine Dawn Neon: warm paper base + accessible saturated accents. */
+		--bg: #faf4ed;
+		--surface: #fffaf3;
+		--surface-2: #f2e9e1;
+		--line: #dec8f4;
+		--ink: #2d204e;
+		--muted: #655a89;
+		--faint: #8a7baa;
+		--love: #b51f62;
+		--gold: #995000;
+		--rose: #aa3f63;
+		--pine: #006d8f;
+		--foam: #00727a;
+		--iris: #7e35cc;
+		--highlight-low: #f8eafd;
+		--highlight-med: #dec8f4;
+		--highlight-high: #c5a7e8;
+		--accent: var(--iris);
+		--accent-strong: #a03cff;
+		--ok: var(--foam);
+		--warn: var(--gold);
+		--crit: var(--love);
 
 		color-scheme: light;
 	}
@@ -260,7 +285,9 @@
 	vertical-align: text-bottom;
 	background-color: var(--accent);
 	color: var(--bg);
-	box-shadow: 0 0 8px var(--accent-strong);
+	box-shadow:
+		0 0 8px var(--accent-strong),
+		0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
 	animation: blink 1s step-end infinite;
 }
 
@@ -277,7 +304,9 @@
 
 /* Terminal text effects */
 @utility text-glow {
-	text-shadow: 0 0 10px currentColor;
+	text-shadow:
+		0 0 8px color-mix(in srgb, currentColor 65%, transparent),
+		0 0 18px color-mix(in srgb, currentColor 35%, transparent);
 }
 
 /* Focus visible for accessibility */
@@ -285,6 +314,7 @@
 	&:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
+		box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
 	}
 }
 
