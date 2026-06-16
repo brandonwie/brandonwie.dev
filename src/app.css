@@ -90,7 +90,8 @@
 	*/
 	:root {
 		/* Rosé Pine (dark) — herdr.dev role mapping: iris accent, foam = ok,
-		   bright ink, subtle line, elevated surfaces stay at --surface */
+		   bright ink, subtle line. The flat herdr look intentionally collapses
+		   surface-2 and accent-strong into the base surface/accent values. */
 		--bg: #191724;
 		--surface: #1f1d2e;
 		--surface-2: #1f1d2e;
