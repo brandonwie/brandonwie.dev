@@ -43,11 +43,6 @@ export function initTheme(): void {
 	theme.set(document.documentElement.dataset.theme === 'light' ? 'light' : readStored());
 }
 
-export function setTheme(next: Theme): void {
-	theme.set(next);
-	applyTheme(next);
-}
-
 export function toggleTheme(): void {
 	theme.update((current) => {
 		const next: Theme = current === 'light' ? 'dark' : 'light';
