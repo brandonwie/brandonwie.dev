@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
-	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
+	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import type { PostMetadata } from '$lib/stores/posts';
 	import { formatDateShort, effectiveDate } from '$lib/utils/date';
 
@@ -23,34 +23,34 @@
 		const base = basePath === '/' ? '' : basePath;
 		return `${base}/system/3b`;
 	}
+
+	const searchHref = $derived(`${basePath === '/' ? '' : basePath}/search`);
+	const statsHref = $derived(`${basePath === '/' ? '' : basePath}/stats`);
 </script>
 
-<div class="min-h-screen bg-terminal-bg-primary">
+<div class="min-h-screen bg-bg">
 	<!-- Header -->
-	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
-		<div class="mx-auto flex max-w-2xl items-center justify-between px-4 py-3 sm:px-6">
-			<a
-				href={basePath}
-				class="text-terminal-accent-orange font-semibold text-sm sm:text-base no-underline"
-			>
-				Brandon (Seokhyun) Wie
+	<header class="border-b border-line">
+		<div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+			<a href={basePath} class="font-mono text-sm font-semibold text-ink no-underline sm:text-base">
+				brandonwie.dev
 			</a>
-			<div class="flex items-center gap-2">
+			<nav class="flex items-center gap-3 sm:gap-4">
 				<a
 					href={allPostsHref()}
-					class="font-mono text-xs px-2 py-1 text-terminal-text-muted no-underline transition-colors hover:text-terminal-accent-orange"
+					class="text-sm text-muted no-underline transition-colors hover:text-accent"
 				>
 					{m.posts_title()}
 				</a>
 				<a
-					href="{basePath === '/' ? '' : basePath}/search"
-					class="text-terminal-text-muted no-underline transition-colors hover:text-terminal-accent-orange"
+					href={searchHref}
+					class="text-muted no-underline transition-colors hover:text-accent"
 					aria-label={m.search_title()}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
-						width="14"
-						height="14"
+						width="15"
+						height="15"
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
@@ -63,14 +63,14 @@
 					</svg>
 				</a>
 				<a
-					href="{basePath === '/' ? '' : basePath}/stats"
-					class="text-terminal-text-muted no-underline transition-colors hover:text-terminal-accent-orange"
+					href={statsHref}
+					class="text-muted no-underline transition-colors hover:text-accent"
 					aria-label={m.stats_title()}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
-						width="14"
-						height="14"
+						width="15"
+						height="15"
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
@@ -83,192 +83,169 @@
 						<line x1="6" y1="20" x2="6" y2="14" />
 					</svg>
 				</a>
-				<LanguageToggle />
-			</div>
+				<HeaderControls />
+			</nav>
 		</div>
 	</header>
 
-	<!-- Main Content -->
-	<main class="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-		<!-- Tagline -->
-		<p class="text-terminal-text-muted text-sm mb-3">
-			{m.blog_tagline()}
-		</p>
+	<main class="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+		<!--
+		  Hero / identity area. Kept text-only and self-contained (modular) so a
+		  future top-left identity mark can slot in here without restructuring.
+		-->
+		<section class="mb-14 max-w-2xl">
+			<h1 class="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+				Brandon (Seokhyun) Wie
+			</h1>
+			<p class="mt-3 text-base leading-relaxed text-muted">
+				{m.blog_tagline()}
+			</p>
+			<p class="mt-4 text-sm leading-relaxed text-faint">
+				{m.blog_bio()}
+			</p>
+		</section>
 
-		<!-- Bio (rehomed from the retired terminal `about` command) -->
-		<p class="text-terminal-text-dim text-sm mb-10 leading-relaxed">
-			{m.blog_bio()}
-		</p>
-
-		<!-- Work Section -->
-		<section class="mb-10">
-			<h2 class="text-xs font-semibold uppercase tracking-wider text-terminal-text-dim mb-4">
+		<!-- Work -->
+		<section class="mb-14">
+			<h2 class="mb-4 font-mono text-xs font-semibold uppercase tracking-wider text-faint">
 				{m.work_section()}
 			</h2>
-
-			<!-- Arch Calendar -->
-			<a
-				href="https://www.archcalendar.com"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="group block py-3 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
-			>
-				<span
-					class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors"
+			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				<a
+					href="https://www.archcalendar.com"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="group block rounded border border-line bg-surface p-5 no-underline transition-colors hover:border-accent"
 				>
-					Arch Calendar
-				</span>
-				<span class="text-xs text-terminal-text-dim ml-2">— {m.archcalendar_subtitle()}</span>
-				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· {m.archcalendar_role()}</span
-				>
-				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
-					{m.archcalendar_description()}
-				</p>
-			</a>
+					<div class="flex items-baseline justify-between gap-2">
+						<span class="font-semibold text-ink transition-colors group-hover:text-accent">
+							Arch Calendar
+						</span>
+						<span class="shrink-0 font-mono text-[11px] text-faint">{m.archcalendar_role()}</span>
+					</div>
+					<p class="mt-1 text-xs text-muted">{m.archcalendar_subtitle()}</p>
+					<p class="mt-2 text-xs leading-relaxed text-faint">{m.archcalendar_description()}</p>
+				</a>
 
-			<!-- 3B System -->
-			<a
-				href={systemHref()}
-				class="group block py-3 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
-			>
-				<span
-					class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors"
+				<a
+					href={systemHref()}
+					class="group block rounded border border-line bg-surface p-5 no-underline transition-colors hover:border-accent"
 				>
-					{m.system_3b_title()}
-				</span>
-				<span class="text-xs text-terminal-text-dim ml-2">— {m.system_3b_card_subtitle()}</span>
-				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· /system/3b</span>
-				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
-					{m.system_3b_card_description()}
-				</p>
-			</a>
+					<div class="flex items-baseline justify-between gap-2">
+						<span class="font-semibold text-ink transition-colors group-hover:text-accent">
+							{m.system_3b_title()}
+						</span>
+						<span class="shrink-0 font-mono text-[11px] text-faint">/system/3b</span>
+					</div>
+					<p class="mt-1 text-xs text-muted">{m.system_3b_card_subtitle()}</p>
+					<p class="mt-2 text-xs leading-relaxed text-faint">{m.system_3b_card_description()}</p>
+				</a>
 
-			<!-- Crucio -->
-			<div
-				class="group block py-3 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
-			>
 				<a
 					href="https://crucio.brandonwie.dev"
 					target="_blank"
 					rel="noopener noreferrer"
-					class="text-sm font-semibold text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors no-underline"
+					class="group block rounded border border-line bg-surface p-5 no-underline transition-colors hover:border-accent"
 				>
-					Project Crucio
+					<div class="flex items-baseline justify-between gap-2">
+						<span class="font-semibold text-ink transition-colors group-hover:text-accent">
+							Project Crucio
+						</span>
+						<span class="shrink-0 font-mono text-[11px] text-faint">{m.crucio_role()}</span>
+					</div>
+					<p class="mt-1 text-xs text-muted">{m.portfolio_subtitle()}</p>
+					<p class="mt-2 text-xs leading-relaxed text-faint">{m.portfolio_description()}</p>
 				</a>
-				<span class="text-xs text-terminal-text-dim ml-2">— {m.portfolio_subtitle()}</span>
-				<span class="text-xs text-terminal-text-dim ml-1 opacity-60">· {m.crucio_role()}</span>
-				<p class="text-xs text-terminal-text-dim mt-1 mb-0">
-					{m.portfolio_description()}
-				</p>
 			</div>
 		</section>
 
 		<!-- Recent Posts -->
 		<section>
-			<h2 class="text-xs font-semibold uppercase tracking-wider text-terminal-text-dim mb-6">
-				{m.recent_posts()}
-			</h2>
+			<div class="mb-4 flex items-baseline justify-between gap-4">
+				<h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
+					{m.recent_posts()}
+				</h2>
+				{#if posts.length > 10}
+					<a
+						href={allPostsHref()}
+						class="shrink-0 text-sm text-accent no-underline hover:underline"
+					>
+						{m.see_all_posts({ count: posts.length })} →
+					</a>
+				{/if}
+			</div>
 
 			{#if recentPosts.length === 0}
-				<p class="text-terminal-text-muted">{m.no_posts()}</p>
+				<p class="text-muted">{m.no_posts()}</p>
 			{:else}
-				<div class="space-y-1">
+				<div class="grid gap-4 sm:grid-cols-2">
 					{#each recentPosts as post (post.slug)}
 						<a
 							href={postHref(post.slug)}
-							class="group flex items-baseline gap-4 py-2.5 px-2 -mx-2 rounded-sm no-underline transition-colors hover:bg-terminal-bg-hover"
+							class="group block rounded border border-line bg-surface p-5 no-underline transition-colors hover:border-accent"
 						>
-							<time
-								datetime={effectiveDate(post.date, post.updated)}
-								class="text-xs text-terminal-text-dim shrink-0 w-22 tabular-nums"
-							>
-								{formatDateShort(effectiveDate(post.date, post.updated))}
-							</time>
-							{#if post.updated && post.updated !== post.date}
-								<span
-									class="text-terminal-accent-green text-xs shrink-0"
-									title="{m.updated()} {formatDateShort(post.updated)}">↻</span
+							<div class="mb-2 flex items-center gap-2 font-mono text-xs">
+								<time
+									datetime={effectiveDate(post.date, post.updated)}
+									class="text-faint tabular-nums"
 								>
-							{/if}
-							<div class="min-w-0">
-								<span
-									class="text-sm text-terminal-text-primary group-hover:text-terminal-accent-orange transition-colors"
-								>
-									{post.title}
-								</span>
-								{#if post.description}
-									<span class="text-xs text-terminal-text-dim ml-2 hidden sm:inline">
-										— {post.description}
-									</span>
+									{formatDateShort(effectiveDate(post.date, post.updated))}
+								</time>
+								{#if post.updated && post.updated !== post.date}
+									<span class="text-ok" title="{m.updated()} {formatDateShort(post.updated)}"
+										>↻</span
+									>
 								{/if}
 							</div>
+							<h3
+								class="text-base font-semibold text-ink transition-colors group-hover:text-accent"
+							>
+								{post.title}
+							</h3>
+							{#if post.description}
+								<p class="mt-2 text-sm leading-relaxed text-muted">{post.description}</p>
+							{/if}
+							{#if post.tags?.length}
+								<div class="mt-3 flex flex-wrap gap-1.5 font-mono text-[11px]">
+									{#each post.tags.slice(0, 4) as tag (tag)}
+										<span class="rounded-sm border border-line px-1.5 py-0.5 text-faint">{tag}</span
+										>
+									{/each}
+								</div>
+							{/if}
 						</a>
 					{/each}
-				</div>
-			{/if}
-
-			<!-- See all posts link -->
-			{#if posts.length > 10}
-				<div class="mt-8">
-					<a
-						href={allPostsHref()}
-						class="text-sm text-terminal-accent-orange no-underline hover:underline"
-					>
-						→ {m.see_all_posts({ count: posts.length })}
-					</a>
 				</div>
 			{/if}
 		</section>
 	</main>
 
 	<!-- Footer -->
-	<footer class="border-t border-terminal-border mt-auto">
+	<footer class="mt-8 border-t border-line">
 		<div
-			class="mx-auto max-w-2xl px-4 py-6 sm:px-6 flex items-center justify-between text-xs text-terminal-text-dim"
+			class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-faint sm:px-6"
 		>
 			<span>&copy; Brandon (Seokhyun) Wie</span>
-			<div class="flex items-center gap-4">
+			<div class="flex flex-wrap items-center gap-4">
 				<a
 					href="https://github.com/brandonwie"
-					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors"
+					class="no-underline transition-colors hover:text-ink"
 					target="_blank"
-					rel="noopener noreferrer"
+					rel="noopener noreferrer">GitHub</a
 				>
-					GitHub
-				</a>
 				<a
 					href="https://linkedin.com/in/brandonwie"
-					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors"
+					class="no-underline transition-colors hover:text-ink"
 					target="_blank"
-					rel="noopener noreferrer"
+					rel="noopener noreferrer">LinkedIn</a
 				>
-					LinkedIn
-				</a>
 				<a
 					href="mailto:brandon@brandonwie.dev"
-					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors"
+					class="no-underline transition-colors hover:text-ink">Email</a
 				>
-					Email
-				</a>
-				<a
-					href="https://www.archcalendar.com"
-					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors"
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					Arch Calendar
-				</a>
-				<a
-					href="https://crucio.brandonwie.dev"
-					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors"
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					Crucio
-				</a>
 				<a
 					href={rssHref}
-					class="no-underline text-terminal-text-dim hover:text-terminal-text-muted transition-colors flex items-center gap-1"
+					class="flex items-center gap-1 no-underline transition-colors hover:text-ink"
 					target="_blank"
 					rel="noopener noreferrer"
 				>

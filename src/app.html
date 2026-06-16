@@ -7,9 +7,19 @@
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
-			href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
 			rel="stylesheet"
 		/>
+		<script>
+			// No-FOUC theme init: dark is the default; only opt into light when stored.
+			try {
+				if (localStorage.getItem('theme') === 'light') {
+					document.documentElement.dataset.theme = 'light';
+				}
+			} catch (e) {
+				/* localStorage unavailable (private mode / SSR hydration) — keep dark default */
+			}
+		</script>
 		%sveltekit.head%
 		<script
 			defer

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
-	import LanguageToggle from '$lib/components/LanguageToggle.svelte';
+	import HeaderControls from '$lib/components/HeaderControls.svelte';
 
 	interface Props {
 		locale: 'en' | 'ko';
@@ -158,7 +158,7 @@
 				brandonwie.dev
 			</a>
 			<div class="flex items-center gap-2">
-				<LanguageToggle />
+				<HeaderControls />
 			</div>
 		</div>
 	</header>

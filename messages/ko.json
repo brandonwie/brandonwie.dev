@@ -105,6 +105,7 @@
 	"palette_nav_system": "3B 시스템",
 	"palette_action_about": "Brandon 소개",
 	"palette_action_switch_language": "언어 전환",
+	"palette_action_toggle_theme": "테마 전환",
 	"palette_action_copy_link": "현재 링크 복사",
 	"palette_action_rss": "RSS 피드",
 	"palette_action_github": "GitHub 저장소",

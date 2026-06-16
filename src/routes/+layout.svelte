@@ -178,7 +178,8 @@
   --------------
   - `min-h-screen`: Ensures full viewport height (CSS: min-height: 100vh)
   - `bg-terminal-bg-primary`: Custom Tailwind class defined in app.css
-  - `font-mono`: Monospace font (JetBrains Mono) for terminal aesthetic
+  - Body font is Inter (app.css `--font-sans`); JetBrains Mono is reserved for
+    code blocks and identity/metadata, not applied globally here
 
   {@render children()} - SVELTE 5 RENDER TAG
   ------------------------------------------
@@ -192,7 +193,7 @@
 
   REFERENCE: https://svelte.dev/docs/svelte/snippet#Passing-snippets-to-components
 -->
-<div class="min-h-screen bg-terminal-bg-primary text-terminal-text-primary font-mono">
+<div class="min-h-screen bg-terminal-bg-primary text-terminal-text-primary">
 	{@render children()}
 	<footer class="mx-auto max-w-2xl px-4 py-6 text-right text-xs sm:px-6">
 		<a

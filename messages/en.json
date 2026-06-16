@@ -105,6 +105,7 @@
 	"palette_nav_system": "3B System",
 	"palette_action_about": "About Brandon",
 	"palette_action_switch_language": "Switch language",
+	"palette_action_toggle_theme": "Toggle theme",
 	"palette_action_copy_link": "Copy current link",
 	"palette_action_rss": "RSS feed",
 	"palette_action_github": "GitHub repository",
