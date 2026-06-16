@@ -211,6 +211,11 @@
 										<span class="rounded-sm border border-line px-1.5 py-0.5 text-faint">{tag}</span
 										>
 									{/each}
+									{#if post.tags.length > 4}
+										<span class="rounded-sm border border-line px-1.5 py-0.5 text-faint"
+											>+{post.tags.length - 4}</span
+										>
+									{/if}
 								</div>
 							{/if}
 						</a>

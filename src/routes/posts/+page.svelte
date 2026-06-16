@@ -126,6 +126,11 @@
 												>{tag}</span
 											>
 										{/each}
+										{#if post.tags.length > 5}
+											<span class="rounded-sm border border-line px-1.5 py-0.5 text-faint"
+												>+{post.tags.length - 5}</span
+											>
+										{/if}
 									</div>
 								{/if}
 							</a>
