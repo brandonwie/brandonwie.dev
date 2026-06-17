@@ -13,7 +13,7 @@
 	const backLabel = m.back_to_home();
 
 	// ORPHANED: route deleted; pending Phase C (rebuild on CF GraphQL or delete).
-	const CACHE_KEY = 'umami-stats';
+	const CACHE_KEY = 'stats-cache';
 	const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 	interface StatsData {
