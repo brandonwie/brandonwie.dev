@@ -350,10 +350,12 @@
 
 /* Prose element-level overrides (can't go in @utility) */
 .prose-terminal code:not(pre code) {
-	background-color: var(--surface);
+	background-color: var(--highlight-low);
+	border: 1px solid var(--highlight-med);
 	padding: 0.2em 0.4em;
 	border-radius: 0.25rem;
 	font-weight: 400;
+	box-decoration-break: clone;
 }
 
 .prose-terminal code::before,
