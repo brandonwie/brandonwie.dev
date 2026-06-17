@@ -12,11 +12,8 @@
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
 	const backLabel = m.back_to_home();
 
-	// Umami API config
-	const UMAMI_API_BASE = 'https://api.umami.is';
-	const WEBSITE_ID = '51c33943-f102-44cb-bc76-6774594dc55c';
-	const API_KEY = 'api_rvCQftZqJqXDrrjJM0dPvxRrGOvtn5vJ';
-	const CACHE_KEY = 'umami-stats';
+	// ORPHANED: route deleted; pending Phase C (rebuild on CF GraphQL or delete).
+	const CACHE_KEY = 'stats-cache';
 	const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 	interface StatsData {
@@ -76,45 +73,12 @@
 	}
 
 	async function fetchStats(): Promise<StatsData> {
-		const headers: Record<string, string> = { 'x-umami-api-key': API_KEY };
-		const now = Date.now();
-		const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 		const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-		const params = `startAt=${thirtyDaysAgo}&endAt=${now}&unit=day&timezone=${encodeURIComponent(tz)}`;
-
-		const [activeRes, statsRes, pagesRes, referrersRes] = await Promise.all([
-			fetch(`${UMAMI_API_BASE}/v1/websites/${WEBSITE_ID}/active`, { headers }),
-			fetch(`${UMAMI_API_BASE}/v1/websites/${WEBSITE_ID}/stats?${params}`, { headers }),
-			fetch(`${UMAMI_API_BASE}/v1/websites/${WEBSITE_ID}/metrics?${params}&type=url&limit=10`, {
-				headers,
-			}),
-			fetch(
-				`${UMAMI_API_BASE}/v1/websites/${WEBSITE_ID}/metrics?${params}&type=referrer&limit=10`,
-				{ headers },
-			),
-		]);
-
-		if (!activeRes.ok || !statsRes.ok || !pagesRes.ok || !referrersRes.ok) {
+		const res = await fetch(`/api/stats?tz=${encodeURIComponent(tz)}`);
+		if (!res.ok) {
 			throw new Error('Failed to fetch analytics data');
 		}
-
-		const [activeData, statsData, pagesData, referrersData] = await Promise.all([
-			activeRes.json(),
-			statsRes.json(),
-			pagesRes.json(),
-			referrersRes.json(),
-		]);
-
-		return {
-			active: activeData.visitors ?? 0,
-			pageviews: statsData.pageviews ?? 0,
-			visitors: statsData.visitors ?? 0,
-			visits: statsData.visits ?? 0,
-			bounces: statsData.bounces ?? 0,
-			totaltime: statsData.totaltime ?? 0,
-			topPages: pagesData ?? [],
-			referrers: referrersData ?? [],
-		};
+		return (await res.json()) as StatsData;
 	}
 
 	onMount(async () => {

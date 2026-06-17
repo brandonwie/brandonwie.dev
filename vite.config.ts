@@ -46,13 +46,6 @@ export default defineConfig({
 					],
 				},
 				{
-					pattern: '/stats',
-					localized: [
-						['en', '/stats'],
-						['ko', '/ko/stats'],
-					],
-				},
-				{
 					pattern: '/system',
 					localized: [
 						['en', '/system'],
