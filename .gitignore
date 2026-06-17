@@ -49,6 +49,9 @@ graphify-out/
 # context-mode plugin local sandbox + index (per-repo, rebuild on demand)
 .context-mode/
 
+# Temporary files
+tmp/
+
 # Git worktrees (canonical 3B path, ADR-035 — never committed)
 .worktrees/
 
