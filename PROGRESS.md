@@ -36,6 +36,23 @@
 
 ## Session Log
 
+### 2026-06-17 (Session 25)
+
+**Light-mode post prose contrast follow-up**
+
+- **Fixed:** Inline Markdown code chips in post bodies now use themed highlight
+  tokens instead of the generic surface token. In light mode `--surface`
+  resolved to `#fffaf3` beside `--bg #faf4ed`, which made `{inline_code}` look
+  nearly white-on-paper even though the color scheme was technically applied.
+- **Change:** Updated `.prose-terminal code:not(pre code)` in `src/app.css` to
+  use `--highlight-low`, add a `--highlight-med` border, and preserve wrapped
+  chips with `box-decoration-break: clone`.
+- **Verification:** `corepack pnpm run check` passed with 0 errors / 0 warnings.
+  The push hook passed lint, format, build/Pagefind, Svelte check, and date
+  validation; lint still reports the same 7 existing warnings and 0 errors.
+- **Commit:** `9b60b06 fix: improve inline code prose contrast` pushed to
+  `origin/main`.
+
 ### 2026-05-26 (Session 24)
 
 **Blog publish — `dont-retry-retrieval-diagnose-it` (AI/ML, EN + KO)**
