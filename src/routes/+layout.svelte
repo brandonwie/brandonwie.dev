@@ -35,7 +35,7 @@
 	// Paraglide for i18n
 	import { page } from '$app/state';
 	import { m } from '$lib/paraglide/messages';
-	import { locales, localizeHref } from '$lib/paraglide/runtime';
+	import { locales } from '$lib/paraglide/runtime';
 
 	// View Transitions API - smooth crossfade between pages
 	// Progressive enhancement: unsupported browsers get instant navigation
@@ -116,6 +116,12 @@
 	function handlePaletteSelect(item: PaletteItem) {
 		paletteOpen.set(false);
 		item.run();
+	}
+
+	function localeHref(locale: string): string {
+		const pathname = page.url.pathname;
+		if (locale === 'ko') return pathname.startsWith('/ko') ? pathname : `/ko${pathname}`;
+		return pathname.replace(/^\/ko/, '') || '/';
 	}
 </script>
 
@@ -222,6 +228,6 @@
 <!-- Hidden links for SSG prerendering - allows SvelteKit to crawl all locale versions -->
 <div style="display:none">
 	{#each locales as locale (locale)}
-		<a href={localizeHref(page.url.pathname, { locale })}>{locale}</a>
+		<a href={localeHref(locale)}>{locale}</a>
 	{/each}
 </div>

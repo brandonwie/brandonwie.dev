@@ -44,6 +44,7 @@ export function buildNavItems(pathname: string): PaletteItem[] {
 	});
 	return [
 		nav('home', '/', m.palette_nav_home(), '⌂'),
+		nav('about', '/about', m.palette_nav_about(), '☻'),
 		nav('posts', '/posts', m.palette_nav_posts(), '▤'),
 		nav('search', '/search', m.palette_nav_search(), '⌕'),
 		nav('system', '/system/3b', m.palette_nav_system(), '◆'),
@@ -56,15 +57,6 @@ export function buildNavItems(pathname: string): PaletteItem[] {
 export function buildActionItems(pathname: string): PaletteItem[] {
 	const ko = isKorean(pathname);
 	return [
-		{
-			id: 'action:about',
-			group: 'action',
-			label: m.palette_action_about(),
-			keywords: ['about', 'bio', 'who', 'brandon', 'profile'],
-			icon: '☻',
-			// Bio lives on the home page; jump there.
-			run: () => goto(localePath(pathname, '/')),
-		},
 		{
 			id: 'action:switch-language',
 			group: 'action',

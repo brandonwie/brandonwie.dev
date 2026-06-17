@@ -19,6 +19,11 @@
 		return `${base}/posts`;
 	}
 
+	function aboutHref(): string {
+		const base = basePath === '/' ? '' : basePath;
+		return `${base}/about`;
+	}
+
 	function systemHref(): string {
 		const base = basePath === '/' ? '' : basePath;
 		return `${base}/system/3b`;
@@ -35,6 +40,12 @@
 				brandonwie.dev
 			</a>
 			<nav class="flex items-center gap-3 sm:gap-4">
+				<a
+					href={aboutHref()}
+					class="text-sm text-muted no-underline transition-colors hover:text-accent"
+				>
+					{m.about_title()}
+				</a>
 				<a
 					href={allPostsHref()}
 					class="text-sm text-muted no-underline transition-colors hover:text-accent"
