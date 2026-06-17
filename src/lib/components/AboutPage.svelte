@@ -10,6 +10,10 @@
 	const postsHref = $derived(locale === 'ko' ? '/ko/posts' : '/posts');
 	const searchHref = $derived(locale === 'ko' ? '/ko/search' : '/search');
 	const systemHref = $derived(locale === 'ko' ? '/ko/system/3b' : '/system/3b');
+	const canonicalHref = $derived(
+		locale === 'ko' ? 'https://brandonwie.dev/ko/about' : 'https://brandonwie.dev/about',
+	);
+	const pageTitle = $derived(`${content.metaTitle} | Brandon Wie`);
 
 	const toneClass = {
 		accent: 'text-accent',
@@ -22,6 +26,20 @@
 		return href.startsWith('http');
 	}
 </script>
+
+<svelte:head>
+	<title>{pageTitle}</title>
+	<meta name="description" content={content.metaDescription} />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content={pageTitle} />
+	<meta property="og:description" content={content.metaDescription} />
+	<meta property="og:url" content={canonicalHref} />
+	<meta name="twitter:card" content="summary" />
+	<link rel="canonical" href={canonicalHref} />
+	<link rel="alternate" hreflang="en" href="https://brandonwie.dev/about" />
+	<link rel="alternate" hreflang="ko" href="https://brandonwie.dev/ko/about" />
+	<link rel="alternate" hreflang="x-default" href="https://brandonwie.dev/about" />
+</svelte:head>
 
 <div class="min-h-screen bg-bg">
 	<header class="border-b border-line">
