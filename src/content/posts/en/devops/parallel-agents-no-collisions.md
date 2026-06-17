@@ -2,9 +2,11 @@
 title: 'Parallel Agents Without Collisions: Tasks, Worktrees, and Locks'
 description: >-
   Parallel agent work usually looks like a Git problem. Two sessions edit the
-  same
+  same repository, one lands first, the other gets a conflict, and everyone
+  learns...
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
+expanded: true
 tags:
   - 3b
   - devops
@@ -16,11 +18,8 @@ references:
   - url: 'https://git-scm.com/docs/git-worktree'
     title: git-worktree documentation
     type: official
-source_content_hash: bedab54b9abc1be02baaa311ca81c21010f975cc6a9a20451f47f68a845de635
+source_content_hash: cf1dc2ef047b922fe6f1e4760241c22f7b4305227ee1470d0d4535ada6f3a286
 ---
-
-repository, one lands first, the other gets a conflict, and everyone learns to
-say "check the branch before you start."
 
 That advice is too small for the actual failure mode.
 

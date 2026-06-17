@@ -3,6 +3,7 @@ title: 'The Token Stack: Four Layers of Code Intelligence Without Re-Scanning'
 description: The easy answer to agent context burn is "add memory."
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
+expanded: true
 tags:
   - 3b
   - devops
@@ -92,11 +93,10 @@ This distinction keeps the agent from reading the whole architecture map when it
 only needs the blast radius of one patch. It also keeps code review grounded in
 current changes rather than in a stale mental model of the system.
 
-The current post-10 worktree is a useful reminder not to overclaim tool state:
-the branch exists as a separate worktree, and code-review-graph was not populated
-for that path during this drafting pass. The role is still part of the
-architecture. Live stats are evidence only when the current checkout proves
-them.
+It is also a reminder not to overclaim tool state. A role can be real in the
+architecture even when a given checkout has not populated its graph yet. Live
+stats are evidence only when the current checkout proves them. Until then the
+role is a design intention, not a measured fact.
 
 ## Serena owns symbol-level work
 

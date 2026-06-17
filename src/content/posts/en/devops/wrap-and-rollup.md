@@ -1,8 +1,11 @@
 ---
 title: 'The Session Engine: /wrap, Clean-Slate Rollups, and a Cross-Session Buffer'
-description: Agent work does not fail only because the agent made a bad edit. It also fails
+description: >-
+  Agent work does not fail only because the agent made a bad edit. It also fails
+  because the next session cannot tell what happened.
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
+expanded: true
 tags:
   - 3b
   - devops
@@ -14,10 +17,8 @@ references:
   - url: 'https://git-scm.com/docs/git'
     title: Git documentation
     type: official
-source_content_hash: 327d5928b5142cd3ad5450c102f58f45a85d3010d96c31b3ca6fbea945b02c3f
+source_content_hash: fc6760cc83db2f987a2d469df0045f3b77dca3bd1c31df26f90d59e382792f1b
 ---
-
-because the next session cannot tell what happened.
 
 The previous chat may contain the answer, but the next agent cannot safely treat
 a chat transcript as system state. The transcript may be missing, compacted,

@@ -1,8 +1,11 @@
 ---
 title: 'Three Gates and an Audit Log: HITL for an Agent Harness'
-description: 'The first version of an agent workflow usually has one safety rule: ask before'
+description: >-
+  The first version of an agent workflow usually has one safety rule: ask before
+  doing something risky.
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
+expanded: true
 tags:
   - 3b
   - devops
@@ -14,10 +17,8 @@ references:
   - url: 'https://git-scm.com/docs/githooks'
     title: Git hooks documentation
     type: official
-source_content_hash: d11d6acaf6cd044fb36bd255e7504a2fa39c9df106e73d517ddacf12cb38dab3
+source_content_hash: 8fce938a89229dbbee40744564375be47bb02189d46c9dec76d6b0dbe8f46917
 ---
-
-doing something risky.
 
 That rule is better than nothing, but it does not scale. "Risky" is vague. The
 agent may not recognize the risky surface. The human may approve one thing while

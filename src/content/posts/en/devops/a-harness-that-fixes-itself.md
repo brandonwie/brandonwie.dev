@@ -3,6 +3,7 @@ title: A Harness That Fixes Itself - And Prunes Its Own Fixes
 description: The most expensive agent mistakes are not the dramatic ones.
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
+expanded: true
 tags:
   - 3b
   - devops

@@ -6,6 +6,7 @@ description: >-
   and...
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
+expanded: true
 tags:
   - 3b
   - devops
@@ -28,8 +29,7 @@ Tools may care about those folders, but the policy often lives elsewhere: a
 script has one allow-list, a crawler has another, a publish step has a third,
 and a human remembers the exceptions.
 
-3B treats folder placement as policy. This draft follows the 2026-06-14
-architecture model snapshot for lifecycle counts and matrix sizes.
+3B treats folder placement as policy.
 
 A file's path tells the system what kind of information it probably is, whether
 a machine may index it, and how stale it is allowed to become. That does not
@@ -42,7 +42,7 @@ exception.
 
 ## The lifecycle path
 
-The blog-series model summarizes the lifecycle as:
+The 3B architecture model summarizes the lifecycle as:
 
 ```text
 tmp -> journal -> knowledge -> ADR -> blog

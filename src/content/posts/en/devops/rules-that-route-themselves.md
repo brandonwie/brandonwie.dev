@@ -5,6 +5,7 @@ description: >-
   that decides which agent sees which rule, when, and in what shape.
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
+expanded: true
 tags:
   - 3b
   - devops
