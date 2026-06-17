@@ -12,8 +12,7 @@
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
 	const backLabel = m.back_to_home();
 
-	// Stats come from the same-origin Cloudflare Pages Function at /api/stats,
-	// which holds the Umami API key server-side. No secrets in the client.
+	// ORPHANED: route deleted; pending Phase C (rebuild on CF GraphQL or delete).
 	const CACHE_KEY = 'umami-stats';
 	const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
