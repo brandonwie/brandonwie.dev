@@ -13,6 +13,8 @@
  *   --diff       Show unified diff for a specific post (requires --slug=<slug>).
  *   --reconcile  Clear stale needs_resync flags from 3B source frontmatter.
  *                Writes only to source files; never touches blog posts.
+ *   --rehash     Re-baseline source_content_hash for --allow=<file> posts.
+ *                Writes only to blog post frontmatter; never touches sources.
  *   --dry-run    Preview what would sync (or reconcile) without writing.
  *   --verbose    Show skip / clear / keep reasons for each file.
  *
@@ -523,6 +525,26 @@ function clearNeedsResyncInPlace(content: string): string | null {
 }
 
 /**
+ * Surgically replace the `source_content_hash:` value inside the YAML
+ * frontmatter only, preserving the rest of the file byte-for-byte. Mirrors
+ * clearNeedsResyncInPlace (regex on the frontmatter substring, never
+ * stringifyYaml — see that helper's WHY note). source_content_hash is a
+ * top-level key, so the indent matcher is `[ \t]*` (zero-or-more), not `\s+`.
+ * Returns null if the field is absent (no-op signal to the caller).
+ */
+function setSourceHashInPlace(content: string, newHash: string): string | null {
+	const match = content.match(/^(---\n)([\s\S]*?)(\n---\n)([\s\S]*)$/);
+	if (!match) return null;
+	const [, openDelim, frontmatterRaw, closeDelim, body] = match;
+	const updatedFrontmatter = frontmatterRaw.replace(
+		/(\n[ \t]*source_content_hash:[ \t]*)(['"]?)[0-9a-f]+\2/,
+		`$1${newHash}`,
+	);
+	if (updatedFrontmatter === frontmatterRaw) return null;
+	return `${openDelim}${updatedFrontmatter}${closeDelim}${body}`;
+}
+
+/**
  * --reconcile mode: clear stale needs_resync flags.
  *
  * State invariant: `blog.needs_resync: true` is meaningless in two cases:
@@ -647,6 +669,115 @@ async function reconcileFlags(dryRun: boolean, verbose: boolean) {
 	}
 }
 
+/**
+ * --rehash mode: re-baseline source_content_hash for an allowlist of posts.
+ *
+ * Use case: a cleanBody-neutral reformat upstream (markdown reflow, dash style,
+ * table spacing) changes the cleaned-body bytes and therefore the hash, even
+ * though no real content changed. That produces false-positive HASH MISMATCH
+ * reports against expanded posts. This pass recomputes the authoritative hash
+ * (same cleanBody + computeContentHash the sync uses) and writes ONLY the hash
+ * line back into the blog post frontmatter, for posts named in --allow=<file>
+ * (newline-separated `category/slug.md` paths).
+ *
+ * Safety: skips any allowlisted post that is not expanded:true, and any whose
+ * hash already matches. Never rewrites body or any other frontmatter field.
+ * The allowlist must be audit-verified as format-only; this pass does not
+ * itself distinguish format-only from real content change.
+ */
+async function rehashFormatOnly(allowPath: string, dryRun: boolean, verbose: boolean) {
+	console.log('🔁 Re-baselining source_content_hash (format-only allowlist)...');
+	console.log(`   Mode: ${dryRun ? 'DRY RUN' : 'APPLY'}`);
+	console.log(`   Allowlist: ${allowPath}`);
+	console.log('');
+
+	let allow: Set<string>;
+	try {
+		const raw = await Deno.readTextFile(allowPath);
+		allow = new Set(
+			raw
+				.split('\n')
+				.map((l) => l.trim())
+				.filter(Boolean),
+		);
+	} catch {
+		console.error(`Error: cannot read allowlist file: ${allowPath}`);
+		Deno.exit(1);
+	}
+	console.log(`   Allowlist entries: ${allow.size}`);
+	console.log('');
+
+	let rehashed = 0;
+	let alreadyCurrent = 0;
+	let skippedNotExpanded = 0;
+	let notFound = 0;
+	const seen = new Set<string>();
+
+	for await (const entry of walk(SOURCE_DIR, { exts: ['.md'], includeDirs: false })) {
+		const relativePath = entry.path.replace(SOURCE_DIR + '/', '');
+		if (!allow.has(relativePath)) continue;
+		seen.add(relativePath);
+
+		const category = dirname(relativePath).split('/')[0];
+		const slug = basename(entry.path, '.md');
+		const content = await Deno.readTextFile(entry.path);
+		const { frontmatter, body } = parseFrontmatter(content);
+		if (!frontmatter) {
+			console.log(`⏭️  ${relativePath}: no frontmatter`);
+			continue;
+		}
+
+		const newHash = await computeContentHash(cleanBody(body));
+		const targetPath = join(TARGET_DIR, category, `${slug}.md`);
+		const existing = await readExistingPost(targetPath);
+		if (!existing) {
+			console.log(`⏭️  ${relativePath}: blog post not found`);
+			notFound++;
+			continue;
+		}
+		if (existing.frontmatter?.expanded !== true) {
+			console.log(`⚠️  ${relativePath}: blog post not expanded — skipping (safety)`);
+			skippedNotExpanded++;
+			continue;
+		}
+
+		const oldHash = existing.frontmatter.source_content_hash || '(none)';
+		if (oldHash === newHash) {
+			alreadyCurrent++;
+			if (verbose) console.log(`✅ ${relativePath}: already current`);
+			continue;
+		}
+
+		if (dryRun) {
+			console.log(
+				`🔁 Would rehash: ${relativePath}  ${String(oldHash).slice(0, 12)}… → ${newHash.slice(0, 12)}…`,
+			);
+		} else {
+			const targetRaw = await Deno.readTextFile(targetPath);
+			const updated = setSourceHashInPlace(targetRaw, newHash);
+			if (updated === null) {
+				console.log(`⚠️  ${relativePath}: source_content_hash line not found — skipping`);
+				continue;
+			}
+			await Deno.writeTextFile(targetPath, updated);
+			console.log(`🔁 Rehashed: ${relativePath}`);
+		}
+		rehashed++;
+	}
+
+	const missing = [...allow].filter((r) => !seen.has(r));
+	console.log('');
+	console.log('📊 Rehash Summary');
+	console.log(`   ${dryRun ? 'Would rehash' : 'Rehashed'}: ${rehashed}`);
+	console.log(`   Already current: ${alreadyCurrent}`);
+	console.log(`   Skipped (not expanded): ${skippedNotExpanded}`);
+	console.log(`   Blog post not found: ${notFound}`);
+	if (missing.length) {
+		console.log(`   ⚠️  Allowlist entries not found in source tree: ${missing.length}`);
+		for (const m of missing) console.log(`      - ${m}`);
+	}
+}
+
 async function syncPosts() {
 	const args = Deno.args;
 	const dryRun = args.includes('--dry-run');
@@ -654,7 +785,9 @@ async function syncPosts() {
 	const checkOnly = args.includes('--check');
 	const diffMode = args.includes('--diff');
 	const reconcileMode = args.includes('--reconcile');
+	const rehashMode = args.includes('--rehash');
 	const slugArg = args.find((a) => a.startsWith('--slug='))?.split('=')[1];
+	const allowArg = args.find((a) => a.startsWith('--allow='))?.split('=')[1];
 
 	// --diff mode: early exit to dedicated function
 	if (diffMode) {
@@ -670,6 +803,19 @@ async function syncPosts() {
 	// --reconcile mode: clear stale needs_resync flags, then exit
 	if (reconcileMode) {
 		await reconcileFlags(dryRun, verbose);
+		return;
+	}
+
+	// --rehash mode: re-baseline source_content_hash for an audit-verified
+	// allowlist of format-only posts, then exit
+	if (rehashMode) {
+		if (!allowArg) {
+			console.error(
+				'Error: --rehash requires --allow=<file> (newline-separated category/slug.md paths)',
+			);
+			Deno.exit(1);
+		}
+		await rehashFormatOnly(allowArg, dryRun, verbose);
 		return;
 	}
 
