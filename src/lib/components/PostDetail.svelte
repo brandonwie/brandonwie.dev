@@ -231,7 +231,7 @@
 		</header>
 
 		<!-- Content -->
-		<div class="prose-terminal prose prose-invert max-w-none">
+		<div class="prose-terminal prose max-w-none">
 			{#if content}
 				{@const Content = content}
 				<Content />
