@@ -1,6 +1,9 @@
 ---
 title: 'Folder Is Destiny: A Six-Layer Information Lifecycle'
-description: '_3B lets folder placement decide retrieval, privacy, and staleness most of the'
+description: >-
+  3B lets folder placement decide retrieval, privacy, and staleness most of the
+  time, then uses frontmatter overrides for the cases where physical location
+  and...
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
 tags:
@@ -14,11 +17,8 @@ references:
   - url: 'https://yaml.org/spec/1.2.2/'
     title: YAML 1.2.2 specification
     type: authoritative
-source_content_hash: 570a243b0e6f081a632e8a6bf4fe9993d0eb15f5ae9b379dfa2ba90139615152
+source_content_hash: 6c663c440be2b894eb7ef92949498f6ef46196b8ff3b3538cb1fee0726efd71b
 ---
-
-time, then uses frontmatter overrides for the cases where physical location and
-semantic state disagree._
 
 ## Folders are policy
 

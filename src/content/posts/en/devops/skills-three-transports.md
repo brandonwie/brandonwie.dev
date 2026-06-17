@@ -1,8 +1,9 @@
 ---
 title: 'Same Skill, Three Transport Physics'
 description: >-
-  _A skill can be authored once and still travel differently to each agent:
-  Claude
+  A skill can be authored once and still travel differently to each agent:
+  Claude resolves canonical bytes, Codex reads a pinned adapter, and AGY splits
+  native...
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
 tags:
@@ -19,11 +20,8 @@ references:
   - url: 'https://developers.openai.com/codex/guides/agents-md'
     title: OpenAI Codex AGENTS.md guide
     type: official
-source_content_hash: 746aa9a9d201aec4108a0a27e898bae5ae3e5427be1747afcf1094d08a58fcba
+source_content_hash: 2c1079d7f6bb20830577c0121d68fa851e6262d8adf60e1c40f3257641174107
 ---
-
-resolves canonical bytes, Codex reads a pinned adapter, and AGY splits native
-discovery from plugin runnability._
 
 ## Uniformity is the wrong target
 

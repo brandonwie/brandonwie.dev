@@ -1,8 +1,8 @@
 ---
 title: 'Forward Links Only: A Zettelkasten Where Backlinks Are Computed'
 description: >-
-  _3B stores the link an author can maintain, derives the reverse edge later,
-  and
+  3B stores the link an author can maintain, derives the reverse edge later, and
+  makes the struggle behind a note part of the knowledge itself.
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
 tags:
@@ -16,10 +16,8 @@ references:
   - url: 'https://spec.commonmark.org/'
     title: CommonMark specification
     type: authoritative
-source_content_hash: bd86b8fb4669b80dfd2d8f4125ce690fac9148ca7423d3f60e2f32b7d7e002ed
+source_content_hash: fe22db4d738ce2e3a1010aafbcfb3093ebf730a3afb5cc72e12c14fb1a68d534
 ---
-
-makes the struggle behind a note part of the knowledge itself._
 
 ## The backlink maintenance trap
 

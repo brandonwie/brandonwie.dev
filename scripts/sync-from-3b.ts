@@ -103,29 +103,67 @@ function extractTitle(content: string): string {
 	return 'Untitled';
 }
 
-function extractDescription(content: string): string {
-	// Find first paragraph after frontmatter and H1
+function isPlainParagraphLine(line: string): boolean {
+	const trimmed = line.trim();
+	return (
+		trimmed.length > 0 &&
+		!trimmed.startsWith('#') &&
+		!trimmed.startsWith('```') &&
+		!trimmed.startsWith('>') &&
+		!trimmed.startsWith('-') &&
+		!trimmed.startsWith('---')
+	);
+}
+
+function extractFirstParagraphLines(content: string): string[] {
+	// Find first full paragraph after frontmatter and H1
 	const lines = content.split('\n');
 	let foundHeading = false;
-	let description = '';
+	let foundParagraph = false;
+	const paragraph: string[] = [];
 
 	for (const line of lines) {
 		if (line.startsWith('# ')) {
 			foundHeading = true;
 			continue;
 		}
-		if (
-			foundHeading &&
-			line.trim() &&
-			!line.startsWith('#') &&
-			!line.startsWith('```') &&
-			!line.startsWith('>') &&
-			!line.startsWith('-')
-		) {
-			description = line.trim();
+
+		if (!foundHeading) continue;
+
+		if (!foundParagraph) {
+			if (!line.trim()) continue;
+			if (!isPlainParagraphLine(line)) continue;
+			foundParagraph = true;
+			paragraph.push(line.trim());
+			continue;
+		}
+
+		if (!line.trim() || !isPlainParagraphLine(line)) {
 			break;
 		}
+
+		paragraph.push(line.trim());
 	}
+
+	return paragraph;
+}
+
+function stripWrappingMarkdownEmphasis(text: string): string {
+	const trimmed = text.trim();
+	const singleWrapped =
+		(trimmed.startsWith('_') && trimmed.endsWith('_')) ||
+		(trimmed.startsWith('*') && trimmed.endsWith('*'));
+	const doubleWrapped =
+		(trimmed.startsWith('__') && trimmed.endsWith('__')) ||
+		(trimmed.startsWith('**') && trimmed.endsWith('**'));
+
+	if (doubleWrapped) return trimmed.slice(2, -2).trim();
+	if (singleWrapped) return trimmed.slice(1, -1).trim();
+	return trimmed;
+}
+
+function extractDescription(content: string): string {
+	let description = stripWrappingMarkdownEmphasis(extractFirstParagraphLines(content).join(' '));
 
 	// Truncate to 160 chars for SEO (word-boundary aware)
 	if (description.length > 160) {
@@ -261,6 +299,7 @@ function cleanBody(body: string): string {
 	// Match: first non-empty line that's not a heading, code block, quote, or list
 	const lines = cleaned.split('\n');
 	let foundFirstParagraph = false;
+	let skippingFirstParagraph = false;
 	const filteredLines: string[] = [];
 
 	for (const line of lines) {
@@ -269,18 +308,24 @@ function cleanBody(body: string): string {
 			continue;
 		}
 
-		// Skip the first paragraph line (description)
-		if (
-			!foundFirstParagraph &&
-			line.trim() &&
-			!line.startsWith('#') &&
-			!line.startsWith('```') &&
-			!line.startsWith('>') &&
-			!line.startsWith('-') &&
-			!line.startsWith('---')
-		) {
+		// Skip the whole first paragraph (description), including wrapped lines.
+		if (!foundFirstParagraph && isPlainParagraphLine(line)) {
 			foundFirstParagraph = true;
-			continue; // Skip this line (it's the description)
+			skippingFirstParagraph = true;
+			continue;
+		}
+
+		if (skippingFirstParagraph) {
+			if (line.trim() === '') {
+				skippingFirstParagraph = false;
+				continue;
+			}
+
+			if (isPlainParagraphLine(line)) {
+				continue;
+			}
+
+			skippingFirstParagraph = false;
 		}
 
 		// Keep everything else

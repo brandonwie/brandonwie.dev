@@ -1,8 +1,8 @@
 ---
 title: 'Rules That Route Themselves: Frontmatter as the Loader'
 description: >-
-  _In 3B, YAML frontmatter is not decorative metadata. It is the routing
-  language
+  In 3B, YAML frontmatter is not decorative metadata. It is the routing language
+  that decides which agent sees which rule, when, and in what shape.
 date: 2026-06-15T00:00:00.000Z
 updated: 2026-06-15T00:00:00.000Z
 tags:
@@ -19,10 +19,8 @@ references:
   - url: 'https://docs.claude.com/en/docs/claude-code'
     title: Claude Code documentation
     type: official
-source_content_hash: cb60d6c3d675b223f8e8a48be56e292ee935fb55c30ec68556c55c2200078849
+source_content_hash: 7c5f652ec77fb035f2b1788b1b7126ef408349ded1ac7971f67263c4034aedf3
 ---
-
-that decides which agent sees which rule, when, and in what shape._
 
 ## The false simplicity of one rules folder
 
