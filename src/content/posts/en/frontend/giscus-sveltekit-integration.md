@@ -18,7 +18,7 @@ references:
   - url: 'https://github.com/giscus/giscus'
     title: giscus GitHub repository
     type: official
-source_content_hash: c8d25b6c33a3729b99b71a66b9aab57cc8d87debf0592f46f03418007d987ef5
+source_content_hash: 3e32b805845e34455b71d910a4ac02a23b92b1dc32ec0241165e4eda26edc1c4
 ---
 
 I wanted comments on my blog. The site is statically generated -- no server, no database, no backend. I also did not want to ship a heavy third-party script that tracks users or injects ads. My readers are developers who already have GitHub accounts, so a solution that leverages GitHub infrastructure made sense. That led me to Giscus, and while the core integration was straightforward, the edge cases around multilingual routing and localhost leaking caught me off guard.

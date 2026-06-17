@@ -16,7 +16,7 @@ references:
       https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/
     title: OWASP API Security - Broken Object Level Authorization (BOLA/IDOR)
     type: official
-source_content_hash: cdf1d5b698dffc5e997c32b293c333a38a3c26f5b07acf4dd9ff185426871f26
+source_content_hash: e2de86c527992b0c7e37eea7ffe108c5335a32ab492a6641a20a8de6c4dcd167
 ---
 
 I shipped an IDOR vulnerability to production because of a question mark. Not a missing auth check, not a broken middleware -- a single `?` character in a TypeScript function signature that made `userId` optional instead of required. The code compiled, the tests passed, and for weeks a service endpoint could return any user's data to any authenticated caller who knew the right IDs.

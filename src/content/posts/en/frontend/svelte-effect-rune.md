@@ -21,7 +21,7 @@ references:
   - url: 'https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView'
     title: Element.scrollIntoView() - MDN
     type: official
-source_content_hash: 1966a0485b6ee33502b78a417a2f7029d6ffa7215e0ddf360d9af5446778cbff
+source_content_hash: abb98255c5e0741f666b098aa464ed85f40357596728b1a2d6f689d2bfb360b1
 ---
 
 I was building a FuzzyFinder component -- a Ctrl+P search modal that shows a list of results and lets users arrow-key through them. The selected item needed to auto-scroll into view whenever the selection index changed. In Svelte 4, I would have reached for a reactive statement (`$: { }`), but this project uses Svelte 5, where reactive statements are replaced by runes.

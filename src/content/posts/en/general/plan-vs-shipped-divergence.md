@@ -19,7 +19,7 @@ references:
   - url: 'https://github.com/brandonwie/3b/commit/46e23c05'
     title: Implementation that diverged from plan.md A-G framing
     type: experience
-source_content_hash: 0a9dcc3cfd2296901f35e3b5a63ece8a4e1d664efc0f36389295c9ae78de52c9
+source_content_hash: eaa9652fbf940a0320328fd19be4d47da2e13153e476105c0d0a5187215bdca4
 ---
 
 When resuming a multi-session task, the `plan.md` written at task start may not reflect what's actually shipped now. Implementations evolve mid-flight: design decisions get revised, scope shifts, branches merge. Without a pre-flight check, a resume executes the plan's framing literally — running obsolete tests, restating retired decisions, opening already-merged PRs.

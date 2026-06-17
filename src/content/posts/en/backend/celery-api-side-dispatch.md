@@ -20,7 +20,7 @@ references:
   - url: 'https://docs.celeryq.dev/en/stable/userguide/routing.html'
     title: Celery - Routing Tasks
     type: official
-source_content_hash: b1135b17ad35c3a9b9e281bf1381ed6d707897700b0d993dad581edfc9f260a7
+source_content_hash: 448344f22a84c2828808f0507e50adee0bafb8a46ae20f0d5273f6638e256f5a
 expanded: true
 ---
 

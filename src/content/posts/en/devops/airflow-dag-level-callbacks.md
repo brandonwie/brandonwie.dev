@@ -16,7 +16,7 @@ references:
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/callbacks.html
     title: Callbacks — Airflow Documentation
     type: official
-source_content_hash: 443bf4ed1625c867bfaef42b18ecd29008b2b99709e5ea5817d13720fa3ef464
+source_content_hash: f0bb7669a11d37bd2e35f2e4df8a8cb84f7d9a53a5367c5bbf6fd6c1b12d8fa2
 expanded: true
 ---
 

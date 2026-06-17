@@ -20,7 +20,7 @@ references:
   - url: 'https://github.com/brandonwie/3b/commit/46e23c05'
     title: 'feat(wrap): persist follow-ups across sessions'
     type: experience
-source_content_hash: b72faa0abf8c3e2c2ce238c5d9b4f9c9bc47357de3f211d985dc20e79393d6c3
+source_content_hash: 470857247dee307e9f9cd90991b387fb7386846287eb2e74cd57e3403dd7b922
 ---
 
 I have a dashboard that summarizes work across sessions — what's in progress,

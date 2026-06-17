@@ -18,7 +18,7 @@ references:
   - url: 'https://developer.mozilla.org/en-US/docs/Glossary/Replaced_elements'
     title: Replaced elements — MDN Glossary
     type: authoritative
-source_content_hash: f17fde525577028546db63a19f8732c8a13d24b23e66ebe4ac351b20d697b92a
+source_content_hash: a82d6048ef146b313c36c9bf372e9389d3b1b95289cef026c2708f11bd36afe4
 ---
 
 I was building a chat input component -- a textarea with a microphone button absolutely positioned in the corner. The button should have been vertically centered relative to the textarea. It was not. It sat about 3 pixels too low, and no amount of adjusting `top`, `padding`, or `margin` fixed it.

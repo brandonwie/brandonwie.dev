@@ -12,7 +12,7 @@ category: security
 draft: false
 lang: en
 expanded: true
-source_content_hash: e905fb8570e41cd803b9d800befe86f950215aff079c44a1f46cc8ce0ddb1437
+source_content_hash: f31f5f956e58ca9a8e7601d3d78fa8774b70695d785c41533d1f79903485f442
 references:
   - url: "https://www.cisecurity.org/cis-benchmarks"
     title: CIS Benchmarks

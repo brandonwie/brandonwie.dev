@@ -16,7 +16,7 @@ references:
   - url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html'
     title: using folders.html
     type: official
-source_content_hash: b5211dd0d65f8df31e996e66de81e0646205bcee12ff3745315f98039f3c8793
+source_content_hash: e78604a370af7efd182627905f84d3dda8be5dd1bebc91540b7d331c6088253d
 expanded: true
 ---
 

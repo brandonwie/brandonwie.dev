@@ -15,7 +15,7 @@ references:
   - url: 'https://www.postgresql.org/docs/current/protocol-message-formats.html'
     title: PostgreSQL Protocol Message Formats - Bind Message
     type: official
-source_content_hash: a7279cbb0b2d57d3237cfc9a9dddaac8cde6b8b53ff82a18f7e214905f2b1efa
+source_content_hash: 8eb21c66927f40413f76380e301cb756dc4c93130e1f7c484eb1a36d8d844542
 expanded: true
 ---
 

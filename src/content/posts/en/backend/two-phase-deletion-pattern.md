@@ -12,7 +12,7 @@ category: backend
 draft: false
 lang: en
 expanded: true
-source_content_hash: 1924e9fc14f6ea8335276d2531eb9c70251aa4371993924a58ea7df1e9704808
+source_content_hash: 4dabaca8d6ed67c397a15b33910f1b0d77557f87a3dc2d6c6a16978e51177e4b
 references:
   - url: "https://www.postgresql.org/docs/current/sql-update.html"
     title: UPDATE — PostgreSQL Documentation

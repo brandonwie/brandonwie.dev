@@ -19,7 +19,7 @@ references:
   - url: 'https://github.com/pgvector/pgvector'
     title: pgvector - Open-source vector similarity search for Postgres
     type: official
-source_content_hash: b810baeb1c6d126cff7c1759ae3585731cd67162eeabfb6fec97e6d33572a503
+source_content_hash: 387c1d977abb69c1904812ea1e6229fdd556c14236e942744a35531d48479c42
 ---
 
 I was building a RAG pipeline and kept running into the same frustrating pattern: vector search would find semantically related documents but miss the one that contained the exact keyword the user typed. Searching "kubernetes deployment YAML" returned articles about container orchestration concepts — relevant, but not the specific YAML reference the user wanted. Keyword search had the opposite problem. I needed both, and I needed them to work together.

@@ -26,7 +26,7 @@ references:
   - url: 'https://redis.io/docs/interact/pubsub/'
     title: pubsub
     type: official
-source_content_hash: e438c936065918f3e9eeb50c17c00d7302df6bb1b0d785e3b48220a4b6dd8d84
+source_content_hash: 35bb7bed18cebe5f98372a61c6df8c97b7b005e1dec4e6ae81b6b5cb50db075b
 ---
 
 Our users kept refreshing the page to check if their calendar sync was done. We needed the server to push a "sync complete" notification in real time — but our NestJS backend ran on multiple ECS containers behind an ALB. That raised a fundamental question: if a background job finishes on Container 2, how does User A (connected to Container 1) find out?

@@ -18,7 +18,7 @@ references:
   - url: 'https://en.wikipedia.org/wiki/Optimistic_concurrency_control'
     title: Optimistic Concurrency Control
     type: authoritative
-source_content_hash: e293c3fcf03bf3569645d17db1c21878718f4eb2caab379a06cdf1e63e8a33be
+source_content_hash: 5085cd21e888bd0cc7876773f1eb090ace81ab87ef72af84ddab3f06d6dbc058
 expanded: true
 ---
 

@@ -15,7 +15,7 @@ category: backend
 draft: false
 lang: en
 expanded: true
-source_content_hash: fbf72c82f3ac8a1d3787dfbe15338fcba76dada72b87eadd385a7800f997f916
+source_content_hash: 96b189144346decb8c61404f27f610a62d16c8b7ee88cbd587731ad8a3c35e47
 references:
   - url: 'https://docs.nestjs.com/controllers#headers'
     title: 'NestJS — Controllers: Request object and @Headers'

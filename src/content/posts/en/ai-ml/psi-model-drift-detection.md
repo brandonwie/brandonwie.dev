@@ -22,7 +22,7 @@ references:
   - url: 'https://www.listendata.com/2015/05/population-stability-index.html'
     title: PSI explained with examples
     type: tutorial
-source_content_hash: 067788a3f80a293214d149ac61f3b317dccb5d3bacbf525a2c2e4615a7f968a9
+source_content_hash: c4c8b08ea7c8d4f541141981d1f6e5ca8b6b90f8e7a723b0292a40031fe2c940
 ---
 
 After deploying a classification model, how do you know when the incoming data has shifted away from what the model was trained on? If you wait for accuracy to drop, the damage is already done. You need a leading indicator — something that detects distribution drift before it affects predictions.

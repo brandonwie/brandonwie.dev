@@ -19,7 +19,7 @@ references:
   - url: 'https://github.com/DavidAnson/markdownlint/blob/main/doc/md001.md'
     title: MD001 — heading-increment
     type: official
-source_content_hash: c0f08514f697973803777765c3e2e566619bcf2d1b43bb1da2390ce0711b8d9f
+source_content_hash: 8bcc89b0e2dcc983078c06f8cf88b84a7ec700e482cfa8581c7e498b97f9f18b
 ---
 
 Two markdownlint rules repeatedly block husky pre-commit on newly-created markdown files with YAML frontmatter. Both fire silently — the generator tool (e.g. `code-review-graph init`) writes valid-looking markdown, but the lint rules want a very specific heading shape. The pre-commit hook runs `markdownlint-cli2 --fix` on every staged `*.md` file, and these two rules in particular reject what most generators produce:

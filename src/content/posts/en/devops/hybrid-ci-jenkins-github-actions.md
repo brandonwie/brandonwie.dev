@@ -22,7 +22,7 @@ references:
   - url: 'https://docs.github.com/en/actions/writing-workflows'
     title: GitHub Actions Workflow Syntax
     type: official
-source_content_hash: 0ba1abc2c8b6a38cfefe3ce970931ada04918265a0f3bd440a02f600db6da469
+source_content_hash: 992cbdea640004306cb6d1b7a8a0a7f9ae7631cae9619949c247f341e3d2252a
 ---
 
 For a portfolio project with polyglot services — Python, Go, Rust, and TypeScript — which CI system should you use? The naive answer is "pick one." The better answer is: use both, each for what it was designed for.

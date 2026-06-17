@@ -23,7 +23,7 @@ references:
   - url: 'https://github.com/k3s-io/k3s/issues/5080'
     title: '5080'
     type: official
-source_content_hash: adf9b8f36b899c2928c33cbd271977341b7bf722468fc1dbec26a20b529e1829
+source_content_hash: 689456fe14e054cb033b4b935405126505db86adabe6e7c03e3892329a2ed80a
 expanded: true
 ---
 

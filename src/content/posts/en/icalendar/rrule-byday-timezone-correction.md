@@ -28,7 +28,7 @@ references:
   - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
     title: rfc5545
     type: verified
-source_content_hash: cbec364d2baf3f3558869473982694597e7c7bbd1f243c5eaa9bf0178ca12557
+source_content_hash: 97540fcc8da09b9f8817549cf180cc2d5f4c22f10f5735775647a03d2c1852e1
 ---
 
 A user reported that their Friday recurring event was showing up on Saturday. The event was set for Friday 08:00 KST, which is Thursday 23:00 UTC. When the rrule library expanded the `BYDAY=FR` rule, it interpreted "Friday" as Friday in UTC -- generating occurrences at Friday 23:00 UTC, which is Saturday 08:00 KST. The user saw their Friday meeting on Saturday. That is how I learned the rrule JavaScript library does not handle timezones the way its API suggests.

@@ -16,7 +16,7 @@ references:
   - url: 'https://developers.google.com/workspace/calendar/api/concepts/sharing'
     title: Calendar sharing — Google Calendar
     type: official
-source_content_hash: d29f7528c60d87b01e6396a20820f74dea224ea589c5bde97ca544457ebbd37f
+source_content_hash: b87482d11f0f9c804e693c9df74afa3e4ccf4bc2bca0d05a412fc7d33877f1ca
 ---
 
 I watched a user lose a week of calendar events because our sync logic assumed something that turns out to be wrong: if a recurring event has no parent, it must be an orphan. That assumption holds most of the time. But when Google Calendar silently filters out events a user does not have permission to see, "no parent" does not mean "orphan." It means the user was invited to the series partway through.

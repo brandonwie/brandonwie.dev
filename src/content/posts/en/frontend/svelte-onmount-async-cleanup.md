@@ -19,7 +19,7 @@ references:
   - url: 'https://svelte.dev/docs/svelte/lifecycle-hooks#onDestroy'
     title: Svelte lifecycle hooks — onDestroy
     type: official
-source_content_hash: 97ceb559de048ea5e1954c3939215dbacf169dbf244b07aa00115cf6a554367f
+source_content_hash: 62199619b9166a8b73af27d88da695f07bcf0d90dbb9cae35f5f347388bdd68c
 expanded: true
 ---
 

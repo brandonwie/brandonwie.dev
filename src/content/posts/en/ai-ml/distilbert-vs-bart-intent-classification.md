@@ -23,7 +23,7 @@ references:
   - url: 'https://huggingface.co/facebook/bart-large-mnli'
     title: BART-MNLI zero-shot classification model
     type: official
-source_content_hash: 2bf0b335c371d23388ffe3583cf1113a119b03e93cf50f35c4382db3b265b263
+source_content_hash: ea47a20123c1225c32e01b5d5b17e4ab887696bfb91afd041dbf8590e485af9f
 ---
 
 When building an intent classifier for a new domain, you have no labeled data on day one. How do you ship a working classifier immediately while building toward a domain-specific model? The answer is a two-phase deployment pattern that the industry has converged on.

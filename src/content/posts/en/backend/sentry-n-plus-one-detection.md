@@ -18,7 +18,7 @@ references:
       https://docs.sentry.io/product/issues/issue-details/performance-issues/n-one-queries/
     title: Sentry N+1 Queries Detection
     type: official
-source_content_hash: 9573200010baa7944168145c12e3c0044e5ecebbd90e25933b211b5d4fd5b871
+source_content_hash: 480c0707a21bb460837db0eb3bc237798e0ba6d48ae2d85558933120c39df3c2
 expanded: true
 ---
 

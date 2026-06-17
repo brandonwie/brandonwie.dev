@@ -12,7 +12,7 @@ category: backend
 draft: false
 lang: en
 expanded: true
-source_content_hash: 10a08b13d9d4acb23b6f695a697ef31af5fa46fa52bc63c3c9603375b45414b2
+source_content_hash: e7a60acfed7e209f0a40745f1ca4816ff9fdd56adc510428e06dec11d8b9e931
 references:
   - url: >-
       https://docs.aws.amazon.com/batch/latest/userguide/multi-node-parallel-jobs.html

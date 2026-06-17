@@ -16,7 +16,7 @@ references:
   - url: 'https://en.wikipedia.org/wiki/Locality_of_reference'
     title: Locality of reference - Wikipedia
     type: official
-source_content_hash: dc5b4c35ab431529fae21853f19505fd37f9f2cdb79e619ca26952eb18d39799
+source_content_hash: 8a0864135717077d5e45b987efd21f1cee4d64ffac79f6b59dd3e3242837d3d6
 expanded: true
 ---
 

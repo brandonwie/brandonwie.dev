@@ -18,7 +18,7 @@ references:
   - url: 'https://github.com/jkbrzt/rrule/issues/548'
     title: rrule.js EXDATE with TZID limitation
     type: official
-source_content_hash: ce88c8b526997c5a5e3c8f323a250859fde98716dc5d822168ba47387fbb00f8
+source_content_hash: b48b913f3dcf1aacc88edb6384fc898b633bae0ffc3cfa256d9442093a0aaf8e
 expanded: true
 ---
 

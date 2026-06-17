@@ -17,7 +17,7 @@ references:
   - url: 'https://code.claude.com/docs/en/best-practices'
     title: Claude Code Best Practices
     type: official
-source_content_hash: f147999a54fa5d7975a087ec372c0ad05bc75a4d40f735a226094ac5c06a42d0
+source_content_hash: eb1bda6bbf87c318b2d8db21622d5c212dccc5b76a2b8ad995c31bedb36974fe
 ---
 
 I was halfway through a complex refactoring session when Claude started losing track of files I had just read. The context window was running out, and I could not figure out why — until I ran `/doctor` and saw the numbers.

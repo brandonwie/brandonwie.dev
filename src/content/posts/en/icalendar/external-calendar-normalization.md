@@ -16,7 +16,7 @@ references:
   - url: 'https://datatracker.ietf.org/doc/html/rfc5545'
     title: RFC 5545 — iCalendar Specification
     type: official
-source_content_hash: a239f197e4691e733102981cb29473efa10b3ed1fc86b1082e1162068f224f26
+source_content_hash: db2cefe453f9d6969c3c97d26d0453a435fab4de38cb87b8d2a66c71f0167a92
 ---
 
 The first time I saw `Invalid time zone: GMT+09:00` crash our calendar sync, I assumed it was a one-off data corruption issue. Then I saw `unsupported RRULE parm: X-EVOLUTION-ENDDATE` from a Linux user. Then `Unsupported RFC prop EXDATE` from a Google Calendar event with deleted occurrences. Three different parsing failures, three different external calendar clients, all hitting the same rrule.js parser that expected clean RFC 5545 input.

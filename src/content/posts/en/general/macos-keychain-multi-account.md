@@ -26,7 +26,7 @@ references:
       https://support.apple.com/guide/keychain-access/what-is-keychain-access-kyca1083/mac
     title: Apple Keychain Access Guide
     type: official
-source_content_hash: e70627091aab9490cdf8becca0023cfee4096c8545b78e4fcab6d6d248509ce9
+source_content_hash: bed1be499b85d36ac99c0719b3c878dd23242fa3e1bebd2447b535ab497b3564
 ---
 
 I spent an afternoon debugging why a Claude Code HUD plugin was showing usage stats for the wrong account. The API calls were succeeding -- no errors, no auth failures. The data came back fine. It was the *wrong* data. The plugin was reading credentials from the macOS Keychain, and the Keychain was returning a token for Account A when the plugin expected Account B.

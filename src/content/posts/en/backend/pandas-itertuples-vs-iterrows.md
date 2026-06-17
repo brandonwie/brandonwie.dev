@@ -20,7 +20,7 @@ references:
       https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.iterrows.html
     title: pandas.DataFrame.iterrows
     type: official
-source_content_hash: 5eef4d4388b121d0f74db581300d1d1facfe9e2b62705e597f983d2638d22809
+source_content_hash: 5b3d3c9ead6ecf93428cc8553f66f296fc1e6fd5f6a0aa3396b01af2030c24ac
 expanded: true
 ---
 

@@ -22,7 +22,7 @@ references:
   - url: 'https://www.anthropic.com/research/checklist-prompts'
     title: Anthropic — Prompting Best Practices for Long Instructions
     type: authoritative
-source_content_hash: d860226bb0d8ad1cc843a3a14fb6540349e593b4d6b3894866e2e79c763c60d9
+source_content_hash: ca5171fb85830a6974d29fc960a42275cd1052e617e1c5f25b8ee5bdc5071cb8
 ---
 
 Skills written for Claude Code are markdown text interpreted by the LLM each invocation. Compound preconditions written in prose form (`If A AND B → do X`) get silently misapplied under context pressure. There is no compiler, no type checker, and no test that catches a misread.

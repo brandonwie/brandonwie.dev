@@ -22,7 +22,7 @@ references:
   - url: 'https://docs.anthropic.com/en/docs/claude-code/skills'
     title: Claude Code Skills Documentation
     type: official
-source_content_hash: 617b6ed7341f43addd508d419fa10da811baa14f7854c142e38be19ba0817946
+source_content_hash: 12e2569c2da649958205f1210d0f0e1ab9a2dba5351d0a5a83c8874887064dac
 ---
 
 I was writing a Claude Code SKILL.md file -- a markdown document that defines instructions for Claude's `/wrap` command. The skill worked fine on my colleague's machine. On mine, every invocation printed two lines of errors to stderr before doing anything useful:

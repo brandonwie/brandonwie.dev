@@ -15,7 +15,7 @@ references:
   - url: 'https://developer.hashicorp.com/terraform/cli/state/recover'
     title: Recover state from backup
     type: official
-source_content_hash: 80ce759e6689ff89250d33ba9b8eee691fac1f1bc642f446f6e8a8559f7b0ae5
+source_content_hash: d8b04c23bdcc5706afd145c03074678034d30b9d5b016fdb9ba35c54e9e84a42
 expanded: true
 ---
 

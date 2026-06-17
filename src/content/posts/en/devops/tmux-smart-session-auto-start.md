@@ -21,7 +21,7 @@ references:
   - url: 'https://iterm2.com/documentation-tmux-integration.html'
     title: iTerm2 tmux Integration
     type: official
-source_content_hash: d3450d391ba7ba403e35a6222cd6bfac2ed839237239e4252e6cb1bab153f6eb
+source_content_hash: e3912e2157af204c9b65c18e8081af9706d67e0e64c90158d6af1b22ff73ce0d
 expanded: true
 ---
 

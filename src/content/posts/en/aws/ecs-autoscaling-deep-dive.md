@@ -12,7 +12,7 @@ category: aws
 draft: false
 lang: en
 expanded: true
-source_content_hash: d5236ca4bd6b66e9a3a2a9ec24eeee53bfdbca01cca2a6adec4e0a4dd0d6531b
+source_content_hash: 1a4cbbf9e89bf86753f32fce4c76b7ebfc3965fba77d48a8f57a075b7981922e
 references:
   - url: "https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/"
     title: bestpracticesguide

@@ -17,7 +17,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: dcdf91c124a1ab355715f977e58af59cd36067252380ae24379ed3827e7618b2
+source_content_hash: 8d4ab422a23268ce3295bcdc4af8a9b87a56a10b9252d990d2b6f3b5d1109f32
 references:
   - url: 'https://code.visualstudio.com/docs/terminal/basics'
     title: 'Visual Studio Code — Integrated Terminal docs'

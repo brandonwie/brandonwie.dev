@@ -15,7 +15,7 @@ references:
   - url: 'https://developers.google.com/workspace/calendar/api/guides/sync'
     title: Synchronize resources efficiently — Google Calendar
     type: official
-source_content_hash: ef31da3a3448bd4df39b7561780c057579fcaf2358b545829f2bf3067fda87ec
+source_content_hash: 7a6eb607141f6b9b5d5d285db746062d9ef4718ee8f46eac3be2c869199150bf
 expanded: true
 ---
 

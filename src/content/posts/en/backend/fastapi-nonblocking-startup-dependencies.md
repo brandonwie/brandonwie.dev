@@ -21,7 +21,7 @@ references:
   - url: 'https://docs.python.org/3/library/asyncio-task.html'
     title: Python asyncio Coroutines and Tasks
     type: official
-source_content_hash: 1a77bea19c01d4024774566f8c5e51c39d452a613daaea539e11c2ce8735759c
+source_content_hash: de981162f6c789fe8af46da7f97fe49f1ac1df25cf901e5c092c5f352bd83e71
 ---
 
 FastAPI lifespan code runs before the application starts accepting requests. If startup awaits an optional dependency such as Kafka, Cloud Run cold starts can fail user-facing health checks and E2E probes even when the API could safely serve routes without that dependency. The misleading signal: a Kafka producer failure during startup looks like a service startup failure, even though the actual contract was narrower — note creation should not wait for Kafka when events are best-effort observability.

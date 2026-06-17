@@ -17,7 +17,7 @@ references:
       https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html
     title: Automatically scale your Amazon ECS service
     type: official
-source_content_hash: db41bfacfa5669e916016e70a26fd6da92b9b9ce60b26850dc0df4db64b45664
+source_content_hash: de8f24973da2ce21cdffca7a8fbdabf9bba983941a8b4c9b7aeda567750fa542
 ---
 
 The first time I deployed an ECS service with autoscaling enabled, three containers started simultaneously and all tried to run database migrations at the same time. Two crashed with migration lock conflicts, and the third applied migrations out of order. It took me a full afternoon to untangle the database state.

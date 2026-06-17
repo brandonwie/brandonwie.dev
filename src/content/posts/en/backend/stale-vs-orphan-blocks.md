@@ -14,7 +14,7 @@ references:
   - url: 'https://developers.google.com/calendar/api/guides/sync'
     title: Google Calendar API - Sync Events
     type: official
-source_content_hash: 636f491942fa63855e71c52d15dafedd5a7065181825f5c4759626a3c57e8f21
+source_content_hash: a141b0cc19f2bcdf0251c122f515aa3ae911742b258b6dea3838f554db1fa844
 expanded: true
 ---
 

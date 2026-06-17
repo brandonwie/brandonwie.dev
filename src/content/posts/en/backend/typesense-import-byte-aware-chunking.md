@@ -17,7 +17,7 @@ references:
       https://typesense.org/docs/27.1/api/documents.html#index-multiple-documents
     title: Typesense — Index multiple documents (documents/import)
     type: official
-source_content_hash: 475e23731f77135deef61dfec9a5d05193aaa6ae910af3387190de37457df918
+source_content_hash: e30001ad020655c421f8913a4255af982498b8ada3a25b4276130e0273eeb947
 ---
 
 The contact-bulk-upsert worker shipped with `CHUNK_SIZE = 500` and ran fine

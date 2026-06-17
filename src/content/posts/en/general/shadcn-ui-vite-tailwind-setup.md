@@ -26,7 +26,7 @@ references:
   - url: 'https://tailwindcss.com/docs/installation'
     title: Tailwind CSS Installation Documentation
     type: official
-source_content_hash: c4e3e79e0daa5f25230e203a63275166c268a8813f98b6d814dfc4b6aed364c2
+source_content_hash: 21f1cbf359580edfd38136f7cf8c8cad7c7e769c378f33157685dcdd48ccf652
 ---
 
 I kept running `npx shadcn-ui init` every time I started a new Vite project, watching it scaffold a `components.json`, rearrange my folder structure, and install a dozen packages I did not ask for. Then one day the CLI broke something in my existing Tailwind config and I spent an hour fixing it. That was the last time I used the CLI. Here is how to set up shadcn/ui manually -- and why doing it by hand is worth the five extra minutes.

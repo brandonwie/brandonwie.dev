@@ -17,7 +17,7 @@ references:
       https://developers.google.com/workspace/calendar/api/guides/recurringevents
     title: Recurring events — Google Calendar
     type: official
-source_content_hash: 804fb8d2c0165f4ce2bb71eefd6c67ef330b354e7b0b81799a92ffab07f4242c
+source_content_hash: 1f95df23468ce98bfde368ec0bc276da9afd28c9067efdec2c3fa86646805a2e
 ---
 
 I thought I understood recurring events after reading the Google Calendar API docs. Then I hit production data with half a million edge cases and realized the docs describe the happy path. This post covers the implementation patterns I built for handling `all`, `this`, and `thisAndFollowing` operations -- including the partial invitation edge cases that no documentation warned me about.

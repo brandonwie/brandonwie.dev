@@ -19,7 +19,7 @@ references:
   - url: 'https://amplitude.com/docs/admin/account-management/manage-orgs-projects'
     title: Amplitude Manage Organizations and Projects (Timezone Settings)
     type: official
-source_content_hash: eb50c2b64160c8af77b018c3e6ab37d96b70a03cb8dd615bfd57a5212cc9b2ea
+source_content_hash: 47d1762010dad2af0d79da387a98a93f3f4aeb770ee8ba36683f60372088c0b2
 ---
 
 I spent an entire afternoon arguing with my team about whether our Amplitude ETL pipeline was fetching the wrong day's data. The pipeline ran at 01:00 KST, our users were in Korea, and someone reasonably asked: "Shouldn't we fetch KST-based hours?" It felt like a valid question. It turned out the answer was hiding in the Amplitude project settings, not the API docs.

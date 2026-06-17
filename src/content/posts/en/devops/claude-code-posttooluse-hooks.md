@@ -16,7 +16,7 @@ references:
   - url: 'https://docs.anthropic.com/en/docs/claude-code/hooks'
     title: Claude Code Hooks Documentation
     type: official
-source_content_hash: 8781c7aec08d1ebef536770db6dc89207ec12837f690ddd16d8d7b9f8b52a098
+source_content_hash: 03bd3cc1939877d832d207f665a7b46711297f94dc1bc224d7f8a6dbdaa30e08
 expanded: true
 ---
 

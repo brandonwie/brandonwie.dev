@@ -22,7 +22,7 @@ references:
   - url: 'https://github.com/brandonwie/3b/commit/28ab7012'
     title: 'feat(wrap): durable-source ACTIVE-STATUS generator with parsing fixes'
     type: experience
-source_content_hash: 2aa4f7878531a0b3d3ac795e8923b134312ab6130ece1cd8d3e26c120068d980
+source_content_hash: 94b743d389bb5aa18c4b92817a7fc24f5d9dde6cad40e80ff74b05eacccfd517
 ---
 
 When a session-state dashboard regenerates from a single source (e.g., today's journal), unresolved follow-ups from prior sessions vanish silently on every rebuild. Compounded with single-source discovery and conversation-only mentions, follow-ups disappear three ways at once. The fix is a 4-layer architecture that defends against each loss mode independently.

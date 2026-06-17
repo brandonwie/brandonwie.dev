@@ -23,7 +23,7 @@ references:
   - url: 'https://oauth2-proxy.github.io/oauth2-proxy/'
     title: OAuth2 Proxy Documentation
     type: official
-source_content_hash: 6ec4d533461e2bca09cf54e64d0ea833b46a1ba0c0442546a9ecbf51d5879aca
+source_content_hash: 30ae480315a2c87bbf0bff304149fe40fb3eb8187fd08ccd42bab3a8a8356a75
 ---
 
 We deployed Grafana, an admin panel, and an API server to our Kubernetes cluster — and then realized anyone who knew the URL could walk right in. No authentication, no access control, nothing. The obvious fix was adding login logic to each service, but that meant duplicating auth code everywhere and maintaining it in three different places.

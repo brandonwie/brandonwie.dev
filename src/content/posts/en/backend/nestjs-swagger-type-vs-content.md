@@ -14,7 +14,7 @@ category: backend
 draft: false
 lang: en
 expanded: true
-source_content_hash: 2cf63b4595986ae68efb446ce51dd919c1a34ef77fbd172931d6abb35b7f2450
+source_content_hash: 806cbcd02650576ebe53941ce0be0114ed2d15a465b6ceb14ae33d053f277ba7
 references:
   - url: 'https://docs.nestjs.com/openapi/operations#responses'
     title: 'NestJS Swagger — Operations: Responses'

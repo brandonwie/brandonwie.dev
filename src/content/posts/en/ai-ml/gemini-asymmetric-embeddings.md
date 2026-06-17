@@ -16,7 +16,7 @@ references:
   - url: 'https://ai.google.dev/gemini-api/docs/embeddings'
     title: Gemini API Embeddings Guide
     type: official
-source_content_hash: cdf388f2797e34254605b4ccfba94741e7b21aba28840caa8d4b748858ff1390
+source_content_hash: 4382b37c4535c74008abd96bc30d40f49e1ee79a19494fa1b86ba0c1c36f61f5
 ---
 
 I was building a RAG pipeline and my retrieval quality was mediocre. Queries like "how do I handle database migrations" would return tangentially related documents instead of the ones that directly answered the question. I was using symmetric embeddings — the same encoding for both queries and documents — and it turned out that was the bottleneck.

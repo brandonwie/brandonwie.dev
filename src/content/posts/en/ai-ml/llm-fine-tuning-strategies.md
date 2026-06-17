@@ -28,7 +28,7 @@ references:
   - url: 'https://github.com/arcee-ai/mergekit'
     title: mergekit — Tools for merging pretrained language models
     type: official
-source_content_hash: 35a4ee9a4e640af14c2f0742a83900730e6228781db6a3b995569da0e6e79102
+source_content_hash: 9cdcfe66a5c6355c5d68bd9930878614f82d8a9694c4f9c2b3157b41ce0fedf3
 ---
 
 The instinct when building an LLM-powered feature is to jump straight to fine-tuning. More often than not, that is premature. This post walks through a three-layer progression — from prompt engineering through RAG to LoRA fine-tuning �� and explains when each layer is worth the investment.

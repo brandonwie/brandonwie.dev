@@ -17,7 +17,7 @@ references:
   - url: 'https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html'
     title: Private registry authentication in Amazon ECR
     type: official
-source_content_hash: 84d0b984fef4c50318431f8b0d99ac3f824e4c01b1c2f7253b2847b9c160f516
+source_content_hash: ba6b1f4ef9bbe26415c3c8541a9a1e828bdc81479a9bbb7ba956fb0c2cdb3e45
 expanded: true
 ---
 

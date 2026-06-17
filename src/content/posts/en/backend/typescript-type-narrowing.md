@@ -14,7 +14,7 @@ references:
   - url: 'https://www.typescriptlang.org/docs/handbook/2/narrowing.html'
     title: TypeScript Handbook - Narrowing
     type: official
-source_content_hash: 5fce5f85ff152d1975ef8ed1d86500e0ff70659faaf99b5a351f662ae33376d5
+source_content_hash: 881359f094fa81a8f724ea491e1c85f7c6fb677a61f9998630e01e3723553e85
 expanded: true
 ---
 

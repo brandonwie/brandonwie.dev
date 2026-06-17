@@ -19,7 +19,7 @@ references:
   - url: 'https://github.com/brandonwie/3b/commit/46e23c05'
     title: 'feat(wrap): persist follow-ups across sessions — Tests 4+5 deferred'
     type: experience
-source_content_hash: adfe847c7fcb98ff2aa20ceded2467a18593fbff56ce6cf879fdc843da955eb2
+source_content_hash: 76349e064b41c745d3cce01e24d898a32c3a9326d973fb58d002ae9cc5e72f74
 ---
 
 Some verification tests require a real trigger that can't be unit-mocked: interactive prompts, conversation parsing, AskUserQuestion flows. Three close-out paths exist on these:

@@ -20,7 +20,7 @@ references:
   - url: 'https://svelte.dev/docs/kit/$types'
     title: SvelteKit — generated $types (LayoutLoad)
     type: official
-source_content_hash: 15ce0e89f413961b9717616aa1269853d2c6ce84cc0f7039be01f27063cf94c7
+source_content_hash: 9306ec36476c069f92c00f09935612e4475259a232adf963ba2f303ad60f39db
 expanded: true
 ---
 

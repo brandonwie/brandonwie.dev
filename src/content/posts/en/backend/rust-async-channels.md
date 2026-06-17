@@ -20,7 +20,7 @@ references:
   - url: 'https://docs.rs/tokio/latest/tokio/sync/index.html'
     title: 'tokio::sync module documentation'
     type: official
-source_content_hash: 090c15714538bfa1459345fb14e8299b13018059eb8ff4581a3944a66442919e
+source_content_hash: d9b73d8a1a52fd636c50b0e34968243b63239dea5ecfc4ddd4490c435ef1bda0
 ---
 
 Coordinating work between async tasks in Rust means passing typed messages between them. The standard library gives you `std::sync::mpsc`, but it is synchronous and blocking — there is no async equivalent. Tokio's `tokio::sync` module fills that gap, and it offers three channel types that look interchangeable at first glance: bounded `mpsc`, unbounded `mpsc`, and `oneshot`.

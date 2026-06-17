@@ -19,7 +19,7 @@ references:
       https://github.com/typestack/class-transformer/blob/develop/docs/pages/02-basic-usage.md
     title: class-transformer Basic Usage — plainToInstance
     type: official
-source_content_hash: ecdbb162c694b696a0779cc8d519af1e095e357898cd9f25829376fe369322f7
+source_content_hash: 2be054a01cd4bb23ff9a62b5e53da863e06891189c9b03206155fc569474211d
 expanded: true
 ---
 

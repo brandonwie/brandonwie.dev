@@ -19,7 +19,7 @@ references:
   - url: 'https://www.portaudio.com/'
     title: PortAudio — Portable Cross-Platform Audio I/O
     type: official
-source_content_hash: 12f16a0b0288726118b0f92636298951511c439a9910f24b17fdc3f5b3691a3d
+source_content_hash: 29ba506429fb8aa2e78e1734b42c9f161b0e0888272c425006f14e0ed654d0c5
 ---
 
 My audio transcription daemon had been running for 9 days. It appeared perfectly healthy — start and stop callbacks fired normally, beep sounds played correctly, logs showed no errors. But every recording came back as digital silence. The daemon was transcribing nothing, and it had been doing so silently for days.

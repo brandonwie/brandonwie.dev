@@ -16,7 +16,7 @@ references:
   - url: 'https://www.writethedocs.org/guide/index.html'
     title: Software documentation guide — Write the Docs
     type: authoritative
-source_content_hash: c18edb4bd01e6d6894f157074616bf1c62e67269a1ff2898231a21803de2776f
+source_content_hash: 8c4ff53bed570f7fcd59b64d5123c3d36fcc4344013c4acbbe220b8db6f68df8
 ---
 
 I used to finish a two-hour coding session with Claude, close the terminal, and realize a week later that I had solved a tricky problem during that session but could not remember how. The decision rationale was gone. The debugging insight was gone. The useful API reference I stumbled on -- gone. All of it evaporated the moment the session ended.

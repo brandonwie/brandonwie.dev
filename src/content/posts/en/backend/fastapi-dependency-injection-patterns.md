@@ -19,7 +19,7 @@ references:
       https://fastapi.tiangolo.com/python-types/#type-hints-with-metadata-annotations
     title: FastAPI Type Hints with Metadata Annotations
     type: official
-source_content_hash: aa72f8cae19baa43392565cf81ff068fa987362a17c7a97e3af2ce872092dc62
+source_content_hash: 4e2bb629ca52f2571f44b88d850511a1028596236a8784feb384e9271a9b23a3
 ---
 
 I was reviewing a pull request when I noticed the same `Depends(get_current_user)` call copy-pasted across twelve different router files. Worse, one router was converting `user.sub` to a `UUID` while three others passed it as a raw string — a type mismatch that only surfaced as a database query failure deep in the stack. When we later switched auth providers, every single router file needed updating.

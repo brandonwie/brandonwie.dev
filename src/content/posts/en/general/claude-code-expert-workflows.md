@@ -26,7 +26,7 @@ references:
   - url: 'https://github.com/ykdojo/claude-code-tips'
     title: '45 Claude Code Tips: From Basics to Advanced'
     type: authoritative
-source_content_hash: c49dd2f52a1c7a375ea01d7a4f0cc25489910a634fd4598ecac0080c04d45caf
+source_content_hash: d14ec839502d84ba0b190d4fb7b8316700d27c00dd0f2fe37f9d4ab8feb9a426
 ---
 
 Six months ago I was using Claude Code the way most people start: type a prompt, wait, accept or reject the output, repeat. My sessions were linear and slow. Context windows filled up before the task was done. The code quality varied wildly between sessions. I knew the tool was capable of more but could not figure out the right workflow.

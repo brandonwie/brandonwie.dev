@@ -19,7 +19,7 @@ references:
       https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules-reference.html
     title: security group rules reference.html
     type: official
-source_content_hash: 71afc8514c0fdc1378452e2f5fa10a527736d3f7baf936ebd4ec7bfdd741ff3d
+source_content_hash: 88b5444b017f7b032005907add32fb36251eacd9a193bcfa4e6b06e0dd85bc99
 ---
 
 I spent two hours debugging why my ECS tasks could not reach the RDS database, even though both resources were in the same VPC and the connection string was correct. The application logs showed connection timeouts -- not authentication failures, not DNS resolution errors, timeouts. The root cause was a missing ingress rule on the database security group. I had allowed traffic from the VPC CIDR block, but the ECS tasks were running in a different subnet range than I assumed.

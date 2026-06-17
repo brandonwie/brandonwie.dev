@@ -25,7 +25,7 @@ references:
   - url: 'https://react.dev/learn/reusing-logic-with-custom-hooks'
     title: React Custom Hooks Documentation
     type: official
-source_content_hash: 0385a66578913f81ac112368c867fc137058dde02e570f4be5e4bf1db9c8b76a
+source_content_hash: 87a9466311f45e75547c31782a7df7e53aa96bce9f07deb8af5ba45ec3c5ac74
 ---
 
 I built a dashboard for a portfolio project and deployed it. Then I sent the link to someone and realized: the backend was not running. The dashboard loaded, showed empty charts, and threw network errors in the console. The person saw a broken app. That is the moment I decided every dashboard I build needs a demo mode that works without infrastructure.

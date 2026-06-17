@@ -16,7 +16,7 @@ references:
   - url: 'https://github.com/pgvector/pgvector'
     title: pgvector - Vector similarity search for Postgres
     type: official
-source_content_hash: e767390118af91ca90bd07c0817b75b09cb3ce6ee398b2ca4594218e98f7090d
+source_content_hash: 69f924aa4edbaf1765a51455302c3faa7b628464ae76657b14fba98c043276df
 ---
 
 I needed to add semantic search to a project already running on PostgreSQL. The obvious path was spinning up a dedicated vector database like Pinecone or Weaviate. But adding another service means another connection to manage, another bill to pay, and another thing that can go down at 2 AM. I wanted to know: could PostgreSQL handle this on its own?

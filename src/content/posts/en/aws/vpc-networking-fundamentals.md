@@ -19,7 +19,7 @@ references:
   - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html'
     title: vpc nat gateway.html
     type: official
-source_content_hash: f356f5f3f31c8a7a103be2e364d03e568570373463b263de8c67f5347f67297c
+source_content_hash: 34c84784f05a965dc334bf8b05f59d27e3a37208a5f91447cec53025d2c5b972
 ---
 
 I spent my first week on AWS wondering why my EC2 instance in a "private subnet" was reachable from the internet, and why the NAT Gateway I placed next to my application wasn't doing anything — except costing me $32/month. VPC networking is one of those topics where a small misunderstanding cascades into hours of debugging and unexpected bills.

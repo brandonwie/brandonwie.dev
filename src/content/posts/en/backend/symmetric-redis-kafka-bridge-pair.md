@@ -19,7 +19,7 @@ references:
   - url: 'https://slack.engineering/real-time-messaging/'
     title: Slack Engineering — Real-time messaging architecture
     type: official
-source_content_hash: 1d9406fcdc1667e07d321c5b59744ee9d04d9ace37eaf065c848027319bbb41e
+source_content_hash: ce8e57030eda26dd5b0b9b425f7f02e6949a994d7f8fe15ee62693c9c8da804c
 ---
 
 > When a durable internal event bus (Kafka) and an ephemeral edge bus

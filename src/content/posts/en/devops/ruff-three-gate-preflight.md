@@ -20,7 +20,7 @@ references:
   - url: 'https://docs.astral.sh/ruff/formatter/'
     title: Ruff formatter docs
     type: official
-source_content_hash: dde7cab2b5437331f3a67ed6b06c143a3ece3f65abf108fd74c907d82bde7298
+source_content_hash: 075be95fd90cbaed7958a43002050ddc7d08829ee017df3d9ccd85c55ffa853d
 ---
 
 > Ruff in CI typically runs three independent checks: `ruff check` (lint),

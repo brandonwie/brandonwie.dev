@@ -18,7 +18,7 @@ references:
   - url: 'https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html'
     title: AWS ECR Registry Authentication
     type: official
-source_content_hash: 0ae92be473ea39d9ed99a84e16c51de2033a19f8fe7032339e71c979d5753a4c
+source_content_hash: 16aeae2e6f66b7b3a277dd4a45f9d753433518115d34624bff02a2a567c92550
 expanded: true
 ---
 

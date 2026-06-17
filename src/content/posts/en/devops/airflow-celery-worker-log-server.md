@@ -22,7 +22,7 @@ references:
       https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/executor/celery.html
     title: Airflow Celery Executor
     type: official
-source_content_hash: ef44cc9df6b0d169083f872bc12bc6475f60b103dc0a4eb2eae54d0221ea21d0
+source_content_hash: 13dbd1b1792f619bd49222ebeff5d61d3cfea4a0c35530254460706fc38f72af
 expanded: true
 ---
 

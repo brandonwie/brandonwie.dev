@@ -16,7 +16,7 @@ references:
   - url: 'https://www.postgresql.org/docs/current/explicit-locking.html'
     title: Explicit Locking — PostgreSQL Documentation
     type: official
-source_content_hash: ce731eefb3c4bcf6ff2bf0c77187948689ebaf313a79f953efce5aa3b32d87d1
+source_content_hash: 0a9b78b88bf32db5c0c1302d5ce0d8ae2ed66b215d2b77c1bf738c5e32bcc12a
 ---
 
 We had a calendar sync endpoint that checked if a channel existed, then created it if not. It passed every test. Then two webhooks arrived at the same millisecond, both checked, both found nothing, and both tried to insert — one succeeded, the other threw a duplicate key error that cascaded into a failed sync.

@@ -17,7 +17,7 @@ references:
   - url: 'https://github.com/EventEmitter/EventEmitter2#emitasyncevent--args'
     title: EventEmitter2 emitAsync
     type: official
-source_content_hash: df23296222e90a7046acf85904d9fddb226f9f14dcbb873e1175a95bc48d9e57
+source_content_hash: fb1dfefa937b3984149c5b744a9392284a7cd47b559a396e3d1702cfdc25c410
 ---
 
 `ContactCacheService.refreshFromGoogle` wrote contacts to Postgres, fired

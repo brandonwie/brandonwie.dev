@@ -23,7 +23,7 @@ references:
       Probing-RAG: Self-Probing to Guide Language Models in Selective Document
       Retrieval
     type: authoritative
-source_content_hash: 5a99ce121272fb6639616c7ef456836f106ec05aefcc965f27b1e54cb179867f
+source_content_hash: cc2eb0eb1465d3b7276947a0753d6ae5b632d4ed9cb8c383a4298b2129c0c762
 expanded: true
 ---
 
