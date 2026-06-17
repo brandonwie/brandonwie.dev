@@ -46,7 +46,6 @@ export function buildNavItems(pathname: string): PaletteItem[] {
 		nav('home', '/', m.palette_nav_home(), '⌂'),
 		nav('posts', '/posts', m.palette_nav_posts(), '▤'),
 		nav('search', '/search', m.palette_nav_search(), '⌕'),
-		nav('stats', '/stats', m.palette_nav_stats(), '▦'),
 		nav('system', '/system/3b', m.palette_nav_system(), '◆'),
 	];
 }

@@ -9,6 +9,7 @@
 		"dev": "vite dev",
 		"build": "vite build && pagefind --site build",
 		"preview": "vite preview",
+		"cf:preview": "pnpm build && npx --yes wrangler@latest pages dev build",
 		"search:preview": "corepack pnpm run build && vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
