@@ -4,7 +4,7 @@ description: >-
   라우트 allowlist를 사용한 block-by-default WAF 접근 방식. 알 수 없는 라우트가 자동 차단되어 blocklist보다
   보안이 강해요.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-06-09'
+updated: '2026-06-18'
 tags:
   - aws
   - waf
@@ -15,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: waf-allowlist-patterns
-source_updated: '2026-06-09'
-translation_date: '2026-06-14'
+source_updated: '2026-06-18'
+translation_date: '2026-06-18'
 references:
   - url: >-
       https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
@@ -316,6 +316,20 @@ statement { byte_match_statement { search_string = "/v2/spaces" ... } }
 명시적 `/v2/spaces` 항목이 없으면 프로덕션에서 요청이 조용히 403을 반환해요. 까다로운 점은, dev 환경에서는 regex로 `/v2/*`를 포괄 허용하는 경우가 많다는 거예요. 그래서 dev에서는 완벽하게 돌아가고, 명시적 규칙을 쓰는 prod에서만 실패해요.
 
 **v2 라우트 추가 체크리스트:** 백엔드에 v2 controller를 추가할 때는 항상 `waf/prod_waf.tf`에 대응하는 WAF allowlist 항목도 같이 넣어요. dev WAF는 `/v2/*`를 포괄 허용하니까 거기선 알아서 동작하는데, 바로 그래서 개발 단계에서는 이 문제가 안 잡혀요.
+
+## Terraform Plan 읽기: 규칙 변경 시 Set-Diff
+
+기존 규칙에 `byte_match` 구문을 하나만 추가하고 `terraform plan`을 처음 돌려보면 당황하게 돼요. 깔끔한 한 줄 추가로 표시되지 않거든요. AWS provider는 `rule`과 그 안의 `statement` 블록을 set으로 모델링해서, 규칙 전체가 `- rule { … } -> null` 다음에 `+ rule { … }`로 다시 렌더링돼요. 규칙을 지웠다가 다시 만드는 것처럼 보이죠.
+
+하지만 삭제가 아니에요. set 요소를 교체하는 것뿐이에요. web ACL은 `~ update in-place` 상태를 유지하고, AWS는 `PutWebACL`로 전체 규칙 set을 원자적으로 적용해서 규칙이 빠지는 순간이 없어요.
+
+중요한 건 plan 리뷰예요. `- rule` 줄을 삭제로 읽으면 안 돼요. 대신 새 set이 기존 set에 추가분만 더한 것과 같은지 확인하세요. 제거된 `search_string` 값과 추가된 값을 비교해서, 방금 추가한 경로 하나만 빼고 모두 일치하면 돼요.
+
+```bash
+grep -E "^[[:space:]]*- +search_string" plan.txt | sed -E 's/.*= "//;s/".*//' | sort | uniq -c
+grep -E "^[[:space:]]*\+ +search_string" plan.txt | sed -E 's/.*= "//;s/".*//' | sort | uniq -c
+# 추가한 경로만 빼고 개수가 동일
+```
 
 ## 핵심 교훈
 

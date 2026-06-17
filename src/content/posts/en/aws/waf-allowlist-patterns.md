@@ -2,7 +2,7 @@
 title: WAF Allowlist Patterns
 description: Block-by-default WAF approach using route allowlisting. Stronger security than
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-06-09'
+updated: '2026-06-18'
 tags:
   - aws
   - waf
@@ -17,7 +17,7 @@ references:
       https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
     title: Creating and managing an IP set in AWS WAF
     type: official
-source_content_hash: 2e3297ddc931911739f814e941c9ba9c7b605a3819e4369c243f8ce073a3db43
+source_content_hash: c3231a65f4bcb2a9909bad2aa925f73c7e03e0d91eb878883b891506ee282f01
 ---
 
 I noticed our production API was receiving thousands of requests to paths like `/wp-admin`, `/phpmyadmin`, and `/.env`. Bots scanning for vulnerabilities, hitting every common exploit path they know. Our API returned 404s for all of them, but each request still consumed compute resources, cluttered logs, and occasionally triggered rate limiting for legitimate users.
@@ -312,6 +312,20 @@ statement { byte_match_statement { search_string = "/v2/spaces" ... } }
 Without the explicit `/v2/spaces` entry, requests silently return 403 in production. The tricky part is that dev environments often blanket-allow `/v2/*` via regex, so the route works perfectly in dev and only fails in prod where explicit rules are used.
 
 **Checklist for new v2 routes:** When adding a v2 controller in the backend, always add a corresponding WAF allowlist entry in `waf/prod_waf.tf`. Dev WAF blanket-allows `/v2/*` so it works there automatically -- which is exactly why you will not catch this in development.
+
+## Terraform Plan Review: Reading Set-Diff on Rule Changes
+
+One more gotcha shows up the first time you add a single `byte_match` statement to an existing rule and run `terraform plan`. It does not render as a clean one-line addition. The AWS provider models `rule` (and the nested `statement` blocks) as sets, so the entire rule re-renders as `- rule { … } -> null` followed by `+ rule { … }`. That reads like the rule is being deleted and recreated.
+
+It is not a deletion. This is set-element replacement: the web ACL stays `~ update in-place`, and AWS applies the full rule set atomically through `PutWebACL`, so there is never a window where a rule is missing.
+
+The consequence is in plan review. Do not read the `- rule` lines as removals. Verify instead that the new set equals the old set plus your addition -- diff the removed and added `search_string` values and confirm they match except for the one path you added:
+
+```bash
+grep -E "^[[:space:]]*- +search_string" plan.txt | sed -E 's/.*= "//;s/".*//' | sort | uniq -c
+grep -E "^[[:space:]]*\+ +search_string" plan.txt | sed -E 's/.*= "//;s/".*//' | sort | uniq -c
+# identical counts except the added path
+```
 
 ## Key Takeaways
 
