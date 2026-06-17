@@ -95,7 +95,7 @@
 		-->
 		<section class="mb-14 max-w-2xl">
 			<h1 class="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
-				Brandon (Seokhyun) Wie
+				Brandon Seokhyun Wie
 			</h1>
 			<p class="mt-3 text-base leading-relaxed text-muted">
 				{m.blog_tagline()}
@@ -230,7 +230,7 @@
 		<div
 			class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-faint sm:px-6"
 		>
-			<span>&copy; Brandon (Seokhyun) Wie</span>
+			<span>&copy; Brandon Seokhyun Wie</span>
 			<div class="flex flex-wrap items-center gap-4">
 				<a
 					href="https://github.com/brandonwie"
@@ -243,6 +243,12 @@
 					class="no-underline transition-colors hover:text-ink"
 					target="_blank"
 					rel="noopener noreferrer">LinkedIn</a
+				>
+				<a
+					href="https://x.com/BrandonWie"
+					class="no-underline transition-colors hover:text-ink"
+					target="_blank"
+					rel="noopener noreferrer">X</a
 				>
 				<a
 					href="mailto:brandon@brandonwie.dev"
