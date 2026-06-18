@@ -1,28 +1,45 @@
 #!/bin/sh
 
-# Pre-push hook: runs the same checks as CI (.github/workflows/ci.yml)
+# Pre-push hook: runs the same checks as CI (.github/workflows/ci.yml),
+# plus a local-only deno.lock drift guard (step 1, not in CI).
 # Blocks push if any check fails.
 
 echo "Running pre-push checks..."
 echo ""
 
-echo "1/5 Linting..."
+echo "1/6 Deno lockfile sync check..."
+# deno.lock mirrors package.json's npm deps (nodeModulesDir "auto"). It silently
+# drifts whenever deps change via pnpm but no deno command regenerates it. Catch
+# that here. --node-modules-dir=none verifies the lock only and never touches
+# pnpm's node_modules; --frozen exits nonzero instead of rewriting on drift.
+if command -v deno >/dev/null 2>&1; then
+	deno install --frozen --node-modules-dir=none --quiet || {
+		echo "  deno.lock is out of sync with package.json." >&2
+		echo "  Fix: run 'deno install', then commit the updated deno.lock." >&2
+		exit 1
+	}
+else
+	echo "  (deno not on PATH — skipping lockfile check)"
+fi
+
+echo ""
+echo "2/6 Linting..."
 corepack pnpm run lint || exit 1
 
 echo ""
-echo "2/5 Format check..."
+echo "3/6 Format check..."
 corepack pnpm run format:check || exit 1
 
 echo ""
-echo "3/5 Building (includes Pagefind)..."
+echo "4/6 Building (includes Pagefind)..."
 corepack pnpm run build || exit 1
 
 echo ""
-echo "4/5 Svelte check..."
+echo "5/6 Svelte check..."
 corepack pnpm run check || exit 1
 
 echo ""
-echo "5/5 Frontmatter date validation..."
+echo "6/6 Frontmatter date validation..."
 corepack pnpm run validate:dates || exit 1
 
 echo ""
