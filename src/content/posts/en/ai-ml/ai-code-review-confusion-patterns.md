@@ -19,7 +19,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: b2c0b21c20ea2a9557daafd8ea4946f3243233604ec1e59f0623fcb35fd30883
+source_content_hash: f75da1cbffe4bd2b9c14344b729aae106af0efa7907266174f8c6169ec312537
 references:
   - url: 'https://github.com/brandonwie/crucio/pull/83'
     title: 'crucio PR #83 — Claude vs Codex disagreement on Starlette ordering'

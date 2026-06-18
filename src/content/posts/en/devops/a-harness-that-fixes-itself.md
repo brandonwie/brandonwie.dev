@@ -15,7 +15,7 @@ references:
   - url: 'https://nodejs.org/api/cli.html'
     title: Node.js CLI documentation
     type: official
-source_content_hash: 324d4a676c8ae93bc9c3a170c3652d03534a0de8758ea242cdf0ec0c6e8bdbfc
+source_content_hash: 32bd93b9fd0517fe1c08935393d8c870fa713cd6eddd2e74e9e0e4d4da4b9e83
 ---
 
 They are the repeat mistakes: the wrong command shape, the stale instruction, the

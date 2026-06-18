@@ -20,7 +20,7 @@ references:
   - url: 'https://developers.openai.com/codex/skills'
     title: OpenAI Codex Skills
     type: official
-source_content_hash: d9794ab60d6d92c1b8a45605daa3b5a47dd07892407bdce4fcf5172fb52f840b
+source_content_hash: 0933c96b3d0d619a465074961063a41516034d120bc3895612b1f94584fc02f9
 ---
 
 When a repository already treats `.agents/skills/` as the canonical skill source, the clean Codex integration is not "replace it with `.codex/skills/`" or "symlink the whole folder wholesale." Both shortcuts have failure modes that surface only after install, when the skills look like they work but quietly misbehave. The stable pattern is six steps:

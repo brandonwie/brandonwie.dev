@@ -15,7 +15,7 @@ references:
   - url: 'https://docs.anthropic.com/en/docs/claude-code/plugins'
     title: Claude Code plugins
     type: official
-source_content_hash: 1185eae8c322bb2fd43ae0332efd3be77611f225a8d0b6f1324925182cd7e537
+source_content_hash: b50f459c3c0ce287568e0cfb090d5d8b44736fc32c82a35b01f77ede27807a26
 ---
 
 I keep a couple of Claude Code plugins and MCP servers deliberately turned off. I

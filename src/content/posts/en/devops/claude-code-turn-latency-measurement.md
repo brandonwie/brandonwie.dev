@@ -18,7 +18,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 82749304bdc27bde1bdda840f6385eb64c858abb99e21154e2e9af41051bde4c
+source_content_hash: 8df0c8372db579c12bfcdfd02f8994af9ba461562f0f52fd73d65e904cefbc04
 references:
   - url: 'https://docs.python.org/3/library/sqlite3.html'
     title: Python sqlite3 — DB-API 2.0 interface

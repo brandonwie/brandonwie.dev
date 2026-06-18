@@ -31,7 +31,7 @@ references:
       https://www.claudecodecamp.com/p/how-prompt-caching-actually-works-in-claude-code
     title: How Prompt Caching Actually Works in Claude Code
     type: authoritative
-source_content_hash: 2bdb47c95c7ca619ee004445ad8752cf28b6be9e26940a1f29d9dbcdb0ec261e
+source_content_hash: 6116082c4c042f9464a0f578000c0116bd1411030072e3afad9ea860327cb6da
 ---
 
 Anthropic silently dropped Claude Code's prompt-cache TTL from 1 hour to 5 minutes around early March 2026 ([issue #46829](https://github.com/anthropics/claude-code/issues/46829)). Without explicit awareness, idle gaps ≥5 min between messages evaporate the cache and force a full cold cache-write on the next message — pricing it at 1.25× base input on the **entire conversation prefix** (system prompt + tools + CLAUDE.md + every prior turn). On a 200K-token Opus session that's ~$1.25 per resume; across a working day this can raise per-session cost 30–60%.

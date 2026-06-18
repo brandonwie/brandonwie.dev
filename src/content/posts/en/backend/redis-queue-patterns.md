@@ -13,7 +13,7 @@ category: backend
 draft: false
 lang: en
 expanded: true
-source_content_hash: f4754b27075a88ba21bef4456766e23d4b80e58cb6f50389da3075bf136ac0e1
+source_content_hash: f9e5e35a9b396a5685545bedf875303e28f66c9b4ba8b0c2253c8fbbf55330b9
 references:
   - url: "https://docs.bullmq.io/"
     title: docs.bullmq.io

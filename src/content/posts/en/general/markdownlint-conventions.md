@@ -32,7 +32,7 @@ references:
   - url: 'https://github.com/github/markdownlint-github'
     title: 'GitHub''s markdownlint preset (accessibility-focused)'
     type: official
-source_content_hash: 3d848f0000ca9b1a2362b7ef1ad24b548f0bbb3f22ffc83a60ede840e9c1e89b
+source_content_hash: 825b1e4db8ec013c222bdef69255a781d388d636b2a641093fb56219d7e2efc9
 ---
 
 I ran markdownlint on a knowledge base with about 200 markdown files and got back 7,500 errors. Seven thousand five hundred. The repository had accumulated formatting debt over months — missing blank lines around lists, code blocks without language specifiers, duplicate headings, inconsistent table spacing. Every contributor applied their own conventions, and the result was a codebase where diffs were noisy, GitHub rendering was unpredictable, and no one could tell "correct" formatting from "works on my machine" formatting.

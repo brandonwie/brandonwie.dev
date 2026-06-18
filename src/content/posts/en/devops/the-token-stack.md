@@ -21,7 +21,7 @@ references:
   - url: 'https://github.com/mksglu/context-mode'
     title: context-mode repository
     type: official
-source_content_hash: 00b2f397df4050fa75d880425f7f019075808060838d6abac2c439856a1e4745
+source_content_hash: ea1d073e3fc02d83c6b569679c5161534b53d25f59668850b1f6a76bf68a6595
 ---
 
 That answer is usually too vague to help. Agents waste context in different

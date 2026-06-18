@@ -21,7 +21,7 @@ references:
   - url: 'https://pubs.opengroup.org/onlinepubs/9699919799/utilities/test.html'
     title: POSIX test(1) — file expressions
     type: official
-source_content_hash: 53f1de2baa45490ee2f65417c11c371f04b526512843ffa8ff3343752b251e6a
+source_content_hash: 252cc149284dcee61da5f68aecaf3c69f5d2df061481900c1a486c9d54ef47a2
 ---
 
 A symlink audit script in my 3B repo almost ran `rm <link> && ln -s` against a

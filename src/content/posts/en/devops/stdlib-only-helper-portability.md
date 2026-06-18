@@ -28,7 +28,7 @@ references:
   - url: 'https://pubs.opengroup.org/onlinepubs/9699919799/'
     title: POSIX.1-2024
     type: official
-source_content_hash: 036a8ad2a259efff48f5496dc29091d2c0f350c556b306ac6aea6891c28f8285
+source_content_hash: 2c729b3f3bd8a7cf058f24a6568853ee49e1ebd262f51e69a125fad0c14f555b
 ---
 
 I shipped a helper script to a skill, ran it locally, watched the output, called

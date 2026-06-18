@@ -27,7 +27,7 @@ references:
   - url: 'https://docs.claude.com/en/docs/claude-code/cli-reference'
     title: Claude Code CLI reference (--system-prompt / --append-system-prompt)
     type: official
-source_content_hash: 19c72bdaac3fc96c2b3eb6dfdf67e2fbba98e4516a3cf1865c1379f267578613
+source_content_hash: b098e026be132d3b23f7f646b3110513e980494709e785365cf17837e36672a0
 ---
 
 This is the full procedure for installing the [Serena](https://oraios.github.io/serena/) language-server-backed MCP server across a Claude Code dual-profile setup (`cpers` / `cwork`) plus Codex, including the four recommended hooks and the non-obvious "installer writes to default `~/.claude.json`, misses profile-specific stores" trap that bites multi-profile users on first install.

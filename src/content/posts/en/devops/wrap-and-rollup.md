@@ -17,7 +17,7 @@ references:
   - url: 'https://git-scm.com/docs/git'
     title: Git documentation
     type: official
-source_content_hash: fc6760cc83db2f987a2d469df0045f3b77dca3bd1c31df26f90d59e382792f1b
+source_content_hash: b02715c3c725b3c78d7521242cf304b878273899fde1e6f0d89723800fc5bfd3
 ---
 
 The previous chat may contain the answer, but the next agent cannot safely treat

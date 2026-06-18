@@ -12,7 +12,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 8fcf09a87193287adf1dc61f8d685a54b84a712ca8c8cf708539dede494c7c2b
+source_content_hash: be9eddf35c050011b06b6573b6349fef5f36ba2ce6a9fc0b4acc4e65eeed5cd3
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions

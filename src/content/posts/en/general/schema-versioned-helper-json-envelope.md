@@ -23,7 +23,7 @@ references:
   - url: 'https://semver.org/'
     title: Semantic Versioning 2.0.0
     type: official
-source_content_hash: f99913ee7d72bc3820b1d8ea1508e7d30932cb24cfb1a6188e912441c0e3195e
+source_content_hash: 411a81d89aec84e6b812e5985fb9bd8f496c7122f74da2739f41a669471b7c07
 ---
 
 The first version of `triage-gather.js` emitted a bare JSON object. Add a field

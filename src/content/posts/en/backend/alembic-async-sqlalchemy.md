@@ -13,7 +13,7 @@ category: backend
 draft: false
 lang: en
 expanded: true
-source_content_hash: aba3b8549b93dfe1bab71b16e6c10fc0b1312bb7e3f40d78eacbb5404d679010
+source_content_hash: d81da95a14544bceb78b762bceb54de0a005c94ca9b4c6cd7f18f2ea33643fa4
 references:
   - url: >-
       https://alembic.sqlalchemy.org/en/latest/cookbook.html#using-asyncio-with-alembic

@@ -11,7 +11,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: ed8d9b7c77aec6908f3e0cc1b48a75bb2bfdbc1081e6a9e983c3f042f05319c2
+source_content_hash: 75ca09218a401a0f9e19c9cfc881702ee52c90b923c374628c0c8f29dcfd0fff
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs

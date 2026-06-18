@@ -14,7 +14,7 @@ references:
   - url: 'https://git-scm.com/docs/git-worktree'
     title: git-worktree — Manage multiple working trees
     type: official
-source_content_hash: e78ad38c519086cec0403546cc251526f052716192cd44083236922b2d7b0191
+source_content_hash: e4c5595da8cf398dc3292f64236a287bdd04c8c1c13b0293ff548fd8ef4182ac
 ---
 
 I had two agent sessions working in the same repository at once, and both tried

@@ -20,7 +20,7 @@ references:
       Patterns of Enterprise Application Architecture — state lifecycle
       discipline
     type: authoritative
-source_content_hash: a475945c106937b2d998c5181e9a28c32b1e7450babba77b85236dc02c00d164
+source_content_hash: a89d45272b059b35f99b910439bfe9479694c1b2fbbedb77a30f85a96a219d1f
 ---
 
 A boolean lifecycle flag (`needs_resync: true`) was getting stuck on entries that could never reach the code path that clears it. The flag was set by one workflow (`/wrap`) and cleared by another (`sync-from-3b.ts`), but the clearer was gated by a precondition the setter did not check (`ready: true`). Entries with `ready: false` accumulated the flag forever.

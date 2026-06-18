@@ -23,7 +23,7 @@ references:
   - url: 'https://modelcontextprotocol.io/specification'
     title: Model Context Protocol Specification
     type: official
-source_content_hash: d720af94f9fcc120e9e407ecf3eaf4f2f80f1725f4f94af6deb6dbaedc06490c
+source_content_hash: 47934c6ae14814bff89c32e575ace38436a17d2414ccb6f650654bac88c27c8c
 ---
 
 A skill I shipped under 3B's `.agents/skills/` directory worked fine under

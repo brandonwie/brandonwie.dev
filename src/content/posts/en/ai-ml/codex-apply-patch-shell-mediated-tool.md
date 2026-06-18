@@ -22,7 +22,7 @@ references:
   - url: 'https://github.com/openai/codex'
     title: Codex CLI repository
     type: official
-source_content_hash: 41f6e660bfc6a585904f2d5e0a88b4a8535972e90521b54995db1e5f76f24ec6
+source_content_hash: d011b9be3a8b0a04b147e2596f7e02d55ba2f667e36b5a1520071914bedefc48
 ---
 
 I started PR #43 with a plan: take the existing Claude `PostToolUse` hook

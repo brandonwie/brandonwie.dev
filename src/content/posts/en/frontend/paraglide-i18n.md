@@ -19,7 +19,7 @@ references:
   - url: 'https://svelte.dev/docs/kit/routing'
     title: SvelteKit Routing
     type: official
-source_content_hash: 1b4ffe901e8466db18cb7b3edf8e4debcf5c9957a241325dbef87a4bbbc26692
+source_content_hash: 82c82ff13d6e82470f39057352a6e264ba2f399aaa564764cddb333424e7fc36
 ---
 
 I wanted to add Korean translations to my SvelteKit blog. The site is statically generated and deployed to Cloudflare Pages, so the i18n solution needed to resolve translations at build time -- not ship a runtime parser to the browser. I spent a day evaluating options and fighting with SSG compatibility before landing on Paraglide-JS. Here is everything I learned, including the gotchas the docs do not cover.

@@ -18,7 +18,7 @@ references:
   - url: 'https://git-scm.com/docs/git-worktree'
     title: git-worktree documentation
     type: official
-source_content_hash: cf1dc2ef047b922fe6f1e4760241c22f7b4305227ee1470d0d4535ada6f3a286
+source_content_hash: 3bb7666d8c45c88b5b425aa58963af26d3dc9e53802082deda238c60624456f0
 ---
 
 That advice is too small for the actual failure mode.

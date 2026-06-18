@@ -18,7 +18,7 @@ references:
   - url: 'https://docs.docker.com/compose/how-tos/production/'
     title: Use Compose in production — Docker Docs
     type: official
-source_content_hash: 1475ce04faea09a615a076be2aa16745a34343edbb5aa075df8d4105357ded73
+source_content_hash: fa8c868257478997a878f05f1078327f88726f338eaed752f6613b3a783cbb36
 ---
 
 Our CI/CD pipeline ran `docker-compose pull` and then `docker-compose up -d` on the production server. The logs showed success, but the container was running an old image built locally — not the fresh one we'd just pushed to ECR. The culprit? Our `docker-compose.yml` used `build:` instead of `image:`, so `pull` silently did nothing.
