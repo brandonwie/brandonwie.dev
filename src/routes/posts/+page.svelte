@@ -15,6 +15,7 @@
 	import CategorySidebar from '$lib/components/CategorySidebar.svelte';
 	import { getCategoriesWithCounts } from '$lib/stores/posts';
 	import { formatDateShort, effectiveDate } from '$lib/utils/date';
+	import { absoluteUrl, DEFAULT_OG_IMAGE, localeCode, SITE_NAME } from '$lib/seo';
 
 	let { data }: { data: PageData } = $props();
 
@@ -26,6 +27,19 @@
 	const filteredPosts = $derived(
 		activeCategory ? data.posts.filter((p) => p.category === activeCategory) : data.posts,
 	);
+	const pageTitle = $derived(`${m.posts_title()} | Brandon Wie`);
+	const pageDescription = $derived(m.posts_description());
+	const canonicalHref = absoluteUrl('/posts');
+	const jsonLd = $derived(
+		JSON.stringify({
+			'@context': 'https://schema.org',
+			'@type': 'CollectionPage',
+			name: pageTitle,
+			description: pageDescription,
+			url: canonicalHref,
+			inLanguage: 'en-US',
+		}),
+	);
 
 	function handleCategorySelect(category: string | null) {
 		activeCategory = category;
@@ -33,8 +47,28 @@
 </script>
 
 <svelte:head>
-	<title>{m.posts_title()} | Brandon Wie</title>
-	<meta name="description" content={m.posts_description()} />
+	<title>{pageTitle}</title>
+	<meta name="description" content={pageDescription} />
+	<link rel="canonical" href={canonicalHref} />
+	<link rel="alternate" hreflang="en" href={absoluteUrl('/posts')} />
+	<link rel="alternate" hreflang="ko" href={absoluteUrl('/ko/posts')} />
+	<link rel="alternate" hreflang="x-default" href={absoluteUrl('/posts')} />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content={SITE_NAME} />
+	<meta property="og:title" content={pageTitle} />
+	<meta property="og:description" content={pageDescription} />
+	<meta property="og:url" content={canonicalHref} />
+	<meta property="og:image" content={DEFAULT_OG_IMAGE} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:locale" content={localeCode('en')} />
+	<meta property="og:locale:alternate" content={localeCode('ko')} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={pageTitle} />
+	<meta name="twitter:description" content={pageDescription} />
+	<meta name="twitter:image" content={DEFAULT_OG_IMAGE} />
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+	{@html `<script type="application/ld+json">${jsonLd}\x3C/script>`}
 </svelte:head>
 
 <div class="min-h-screen bg-bg">
@@ -69,6 +103,8 @@
 						stroke-width="2"
 						stroke-linecap="round"
 						stroke-linejoin="round"
+						aria-hidden="true"
+						focusable="false"
 					>
 						<circle cx="11" cy="11" r="8" />
 						<path d="m21 21-4.3-4.3" />
@@ -80,7 +116,7 @@
 	</header>
 
 	<!-- Posts List -->
-	<main class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+	<main id="main-content" class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
 		<h1 class="mb-8 text-2xl font-semibold tracking-tight text-ink">{m.posts_title()}</h1>
 
 		<div class="lg:flex lg:gap-8">

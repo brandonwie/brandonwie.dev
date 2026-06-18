@@ -5,4 +5,10 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<PostDetail meta={data.meta} content={data.content} locale="en" headings={data.headings} />
+<PostDetail
+	meta={data.meta}
+	content={data.content}
+	locale="en"
+	headings={data.headings}
+	hasKoreanTranslation={data.hasKoreanTranslation}
+/>

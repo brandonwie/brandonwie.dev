@@ -56,6 +56,7 @@
 			{#each headings as heading (heading.id)}
 				<li>
 					<button
+						type="button"
 						onclick={() => scrollTo(heading.id)}
 						class="block w-full text-left text-sm leading-relaxed transition-colors duration-150
 							{heading.depth === 3 ? 'pl-5' : 'pl-3'}
@@ -85,6 +86,7 @@
 		{#each headings as heading (heading.id)}
 			<li>
 				<button
+					type="button"
 					onclick={() => scrollTo(heading.id)}
 					class="block w-full text-left text-sm py-0.5 transition-colors
 						{heading.depth === 3 ? 'pl-4' : 'pl-0'}

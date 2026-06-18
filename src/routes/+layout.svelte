@@ -36,6 +36,7 @@
 	import { page } from '$app/state';
 	import { m } from '$lib/paraglide/messages';
 	import { locales } from '$lib/paraglide/runtime';
+	import { SITE_AUTHOR } from '$lib/seo';
 
 	// View Transitions API - smooth crossfade between pages
 	// Progressive enhancement: unsupported browsers get instant navigation
@@ -140,30 +141,12 @@
 <svelte:window onkeydown={handleGlobalKeyDown} />
 
 <svelte:head>
-	<title>Brandon Wie | Software Engineer</title>
-	<meta
-		name="description"
-		content="Brandon Wie's personal blog - Software engineering insights, tutorials, and learnings"
-	/>
-	<!-- Open Graph tags for social media previews (Facebook, LinkedIn) -->
-	<meta property="og:title" content="Brandon Wie | Software Engineer" />
-	<meta
-		property="og:description"
-		content="Software engineering insights, tutorials, and learnings"
-	/>
-	<meta property="og:type" content="website" />
-	<meta property="og:url" content="https://brandonwie.dev" />
-	<meta property="og:image" content="https://brandonwie.dev/og/default.png" />
-	<meta property="og:image:width" content="1200" />
-	<meta property="og:image:height" content="630" />
-	<!-- Twitter Card tags for Twitter previews -->
-	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="Brandon Wie | Software Engineer" />
-	<meta
-		name="twitter:description"
-		content="Software engineering insights, tutorials, and learnings"
-	/>
-	<meta name="twitter:image" content="https://brandonwie.dev/og/default.png" />
+	<meta name="author" content={SITE_AUTHOR} />
+	<meta name="creator" content={SITE_AUTHOR} />
+	<meta name="publisher" content={SITE_AUTHOR} />
+	<link rel="author" href="https://github.com/brandonwie" />
+	<link rel="me" href="https://github.com/brandonwie" />
+	<link rel="me" href="https://linkedin.com/in/brandonwie" />
 	<!-- RSS Feeds -->
 	<link
 		rel="alternate"
@@ -200,15 +183,24 @@
   REFERENCE: https://svelte.dev/docs/svelte/snippet#Passing-snippets-to-components
 -->
 <div class="min-h-screen bg-terminal-bg-primary text-terminal-text-primary">
+	<a
+		href="#main-content"
+		class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded focus:border focus:border-line focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:text-ink focus:no-underline"
+	>
+		{m.skip_to_content()}
+	</a>
 	{@render children()}
-	<footer class="mx-auto max-w-2xl px-4 py-6 text-right text-xs sm:px-6">
+	<nav
+		class="mx-auto max-w-2xl px-4 py-6 text-right text-xs sm:px-6"
+		aria-label={m.system_3b_title()}
+	>
 		<a
 			href={systemHref}
 			class="text-terminal-text-muted no-underline transition-colors hover:text-terminal-accent-orange"
 		>
 			{m.system_3b_title()}
 		</a>
-	</footer>
+	</nav>
 </div>
 
 <!--

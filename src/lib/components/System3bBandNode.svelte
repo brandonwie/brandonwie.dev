@@ -29,7 +29,7 @@
 		font-size: 11px;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
-		color: #666666;
+		color: var(--faint);
 		white-space: nowrap;
 	}
 </style>

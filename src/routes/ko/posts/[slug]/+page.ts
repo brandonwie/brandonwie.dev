@@ -45,6 +45,7 @@ export const load: PageLoad = async ({ params }) => {
 				},
 				headings: headings ?? [],
 				isFallback: false,
+				hasKoreanTranslation: true,
 				requestedLang: 'ko',
 			};
 		}
@@ -64,6 +65,7 @@ export const load: PageLoad = async ({ params }) => {
 				},
 				headings: enHeadings ?? [],
 				isFallback: true,
+				hasKoreanTranslation: false,
 				requestedLang: 'ko',
 			};
 		}

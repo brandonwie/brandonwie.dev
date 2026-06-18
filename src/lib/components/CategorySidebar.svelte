@@ -22,6 +22,7 @@
 	<ul class="space-y-0.5">
 		<li>
 			<button
+				type="button"
 				onclick={() => onSelect(null)}
 				class="w-full text-left px-2 py-1.5 rounded text-sm transition-colors {activeCategory ===
 				null
@@ -35,6 +36,7 @@
 		{#each categories as cat (cat.name)}
 			<li>
 				<button
+					type="button"
 					onclick={() => onSelect(cat.name)}
 					class="w-full text-left px-2 py-1.5 rounded text-sm transition-colors {activeCategory ===
 					cat.name
@@ -56,6 +58,7 @@
 	aria-label={m.category_filter()}
 >
 	<button
+		type="button"
 		onclick={() => onSelect(null)}
 		role="tab"
 		aria-selected={activeCategory === null}
@@ -68,6 +71,7 @@
 	</button>
 	{#each categories as cat (cat.name)}
 		<button
+			type="button"
 			onclick={() => onSelect(cat.name)}
 			role="tab"
 			aria-selected={activeCategory === cat.name}

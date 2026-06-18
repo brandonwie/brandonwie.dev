@@ -16,6 +16,7 @@
 	import { m } from '$lib/paraglide/messages';
 	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import System3bGraph from '$lib/components/System3bGraph.svelte';
+	import { absoluteUrl, DEFAULT_OG_IMAGE, localeCode, SITE_NAME } from '$lib/seo';
 
 	interface Layer {
 		id: string;
@@ -82,6 +83,10 @@
 
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
 	const backLabel = m.back_to_home();
+	const canonicalHref = $derived(absoluteUrl(locale === 'ko' ? '/ko/system/3b' : '/system/3b'));
+	const pageTitle = $derived(`${m.system_3b_title()} | Brandon Wie`);
+	const pageDescription = $derived(m.system_3b_meta_description());
+	const evolutionHeadingId = 'system-3b-evolution-heading';
 
 	// Node count per layer, derived from the snapshot so the diagram + badges
 	// stay accurate across snapshot regenerations.
@@ -100,8 +105,26 @@
 </script>
 
 <svelte:head>
-	<title>{m.system_3b_title()} | Brandon Wie</title>
-	<meta name="description" content={m.system_3b_meta_description()} />
+	<title>{pageTitle}</title>
+	<meta name="description" content={pageDescription} />
+	<link rel="canonical" href={canonicalHref} />
+	<link rel="alternate" hreflang="en" href={absoluteUrl('/system/3b')} />
+	<link rel="alternate" hreflang="ko" href={absoluteUrl('/ko/system/3b')} />
+	<link rel="alternate" hreflang="x-default" href={absoluteUrl('/system/3b')} />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content={SITE_NAME} />
+	<meta property="og:title" content={pageTitle} />
+	<meta property="og:description" content={pageDescription} />
+	<meta property="og:url" content={canonicalHref} />
+	<meta property="og:image" content={DEFAULT_OG_IMAGE} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:locale" content={localeCode(locale)} />
+	<meta property="og:locale:alternate" content={localeCode(locale === 'ko' ? 'en' : 'ko')} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={pageTitle} />
+	<meta name="twitter:description" content={pageDescription} />
+	<meta name="twitter:image" content={DEFAULT_OG_IMAGE} />
 </svelte:head>
 
 <div class="min-h-screen bg-terminal-bg-primary">
@@ -126,7 +149,9 @@
 		</div>
 	</header>
 
-	<main class="mx-auto max-w-5xl space-y-12 px-4 py-10 sm:px-6">
+	<main id="main-content" class="mx-auto max-w-5xl space-y-12 px-4 py-10 sm:px-6">
+		<h1 class="sr-only">{m.system_3b_title()}</h1>
+
 		<!-- Intro -->
 		<section>
 			<div class="mb-2">
@@ -217,11 +242,19 @@
 
 		<!-- Decision history (ADRs) -->
 		<section>
-			<h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim">
+			<h2
+				id={evolutionHeadingId}
+				class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim"
+			>
 				{m.system_3b_evolution_heading()}
 			</h2>
+			<!-- axe requires keyboard focus for this scrollable region. -->
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 			<div
 				class="max-h-96 overflow-y-auto rounded-lg border border-terminal-border bg-terminal-bg-secondary"
+				role="region"
+				tabindex="0"
+				aria-labelledby={evolutionHeadingId}
 			>
 				<ul class="divide-y divide-terminal-border">
 					{#each evolution as adr (adr.id)}

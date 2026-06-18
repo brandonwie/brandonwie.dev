@@ -77,7 +77,7 @@
 		margin: 0 0 12px;
 		font-family: 'JetBrains Mono', ui-monospace, monospace;
 		font-size: 12px;
-		color: #666666;
+		color: var(--faint);
 	}
 	.s3b-fallback.failed .note {
 		color: #e5c07b;
@@ -96,7 +96,7 @@
 		gap: 8px;
 	}
 	.idx {
-		color: #666666;
+		color: var(--faint);
 		font-variant-numeric: tabular-nums;
 	}
 	.name {

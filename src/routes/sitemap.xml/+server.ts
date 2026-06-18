@@ -25,8 +25,11 @@ export const GET: RequestHandler = async () => {
 	const posts: { slug: string; metadata: PostModule['metadata']; hasKorean: boolean }[] = [];
 	const koSlugs = new Set<string>();
 
-	// First pass: collect Korean slugs
-	for (const [path] of Object.entries(koModules)) {
+	// First pass: collect published Korean slugs
+	for (const [path, resolver] of Object.entries(koModules)) {
+		const post = (await resolver()) as PostModule;
+		if (post.metadata.draft) continue;
+
 		const slug = path.split('/').pop()?.replace('.md', '') ?? '';
 		koSlugs.add(slug);
 	}
@@ -84,12 +87,18 @@ export const GET: RequestHandler = async () => {
   <url>
     <loc>${siteUrl}/posts/${post.slug}</loc>
     <xhtml:link rel="alternate" hreflang="en" href="${siteUrl}/posts/${post.slug}"/>
-    <xhtml:link rel="alternate" hreflang="ko" href="${siteUrl}/ko/posts/${post.slug}"/>
+    ${
+			post.hasKorean
+				? `<xhtml:link rel="alternate" hreflang="ko" href="${siteUrl}/ko/posts/${post.slug}"/>`
+				: ''
+		}
     <xhtml:link rel="alternate" hreflang="x-default" href="${siteUrl}/posts/${post.slug}"/>
     <lastmod>${post.metadata.updated || post.metadata.date}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
-  </url>
+  </url>${
+		post.hasKorean
+			? `
   <url>
     <loc>${siteUrl}/ko/posts/${post.slug}</loc>
     <xhtml:link rel="alternate" hreflang="en" href="${siteUrl}/posts/${post.slug}"/>
@@ -98,7 +107,9 @@ export const GET: RequestHandler = async () => {
     <lastmod>${post.metadata.updated || post.metadata.date}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
-  </url>`,
+  </url>`
+			: ''
+	}`,
 		)
 		.join('')}
 </urlset>`;

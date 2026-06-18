@@ -3,11 +3,52 @@
 	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import type { PostMetadata } from '$lib/stores/posts';
 	import { formatDateShort, effectiveDate } from '$lib/utils/date';
+	import {
+		absoluteUrl,
+		DEFAULT_OG_IMAGE,
+		localeCode,
+		SITE_AUTHOR,
+		SITE_NAME,
+		SITE_URL,
+	} from '$lib/seo';
 
 	let { posts, basePath = '/' }: { posts: PostMetadata[]; basePath?: string } = $props();
 
 	const recentPosts = $derived(posts.slice(0, 10));
 	const rssHref = $derived(basePath === '/' ? '/rss.xml' : `${basePath}/rss.xml`);
+	const locale = $derived(basePath === '/ko' ? 'ko' : 'en');
+	const canonicalHref = $derived(absoluteUrl(locale === 'ko' ? '/ko' : '/'));
+	const pageTitle = $derived(m.site_title());
+	const pageDescription = $derived(m.site_description());
+	const jsonLd = $derived(
+		JSON.stringify([
+			{
+				'@context': 'https://schema.org',
+				'@type': 'WebSite',
+				name: SITE_NAME,
+				url: SITE_URL,
+				description: pageDescription,
+				inLanguage: locale === 'ko' ? 'ko-KR' : 'en-US',
+				publisher: {
+					'@type': 'Person',
+					name: SITE_AUTHOR,
+					url: SITE_URL,
+				},
+			},
+			{
+				'@context': 'https://schema.org',
+				'@type': 'Person',
+				name: SITE_AUTHOR,
+				url: SITE_URL,
+				jobTitle: 'Software Engineer',
+				sameAs: [
+					'https://github.com/brandonwie',
+					'https://linkedin.com/in/brandonwie',
+					'https://x.com/BrandonWie',
+				],
+			},
+		]),
+	);
 
 	function postHref(slug: string): string {
 		const base = basePath === '/' ? '' : basePath;
@@ -32,6 +73,32 @@
 	const searchHref = $derived(`${basePath === '/' ? '' : basePath}/search`);
 </script>
 
+<svelte:head>
+	<title>{pageTitle}</title>
+	<meta name="description" content={pageDescription} />
+	<link rel="canonical" href={canonicalHref} />
+	<link rel="alternate" hreflang="en" href={absoluteUrl('/')} />
+	<link rel="alternate" hreflang="ko" href={absoluteUrl('/ko')} />
+	<link rel="alternate" hreflang="x-default" href={absoluteUrl('/')} />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content={SITE_NAME} />
+	<meta property="og:title" content={pageTitle} />
+	<meta property="og:description" content={pageDescription} />
+	<meta property="og:url" content={canonicalHref} />
+	<meta property="og:image" content={DEFAULT_OG_IMAGE} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:locale" content={localeCode(locale)} />
+	<meta property="og:locale:alternate" content={localeCode(locale === 'ko' ? 'en' : 'ko')} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={pageTitle} />
+	<meta name="twitter:description" content={pageDescription} />
+	<meta name="twitter:image" content={DEFAULT_OG_IMAGE} />
+	<meta name="twitter:creator" content="@BrandonWie" />
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+	{@html `<script type="application/ld+json">${jsonLd}\x3C/script>`}
+</svelte:head>
+
 <div class="min-h-screen bg-bg">
 	<!-- Header -->
 	<header class="border-b border-line">
@@ -39,7 +106,7 @@
 			<a href={basePath} class="font-mono text-sm font-semibold text-ink no-underline sm:text-base">
 				brandonwie.dev
 			</a>
-			<nav class="flex items-center gap-3 sm:gap-4">
+			<nav class="flex items-center gap-3 sm:gap-4" aria-label={m.primary_navigation()}>
 				<a
 					href={aboutHref()}
 					class="text-sm text-muted no-underline transition-colors hover:text-accent"
@@ -67,6 +134,8 @@
 						stroke-width="2"
 						stroke-linecap="round"
 						stroke-linejoin="round"
+						aria-hidden="true"
+						focusable="false"
 					>
 						<circle cx="11" cy="11" r="8" />
 						<path d="m21 21-4.3-4.3" />
@@ -77,7 +146,7 @@
 		</div>
 	</header>
 
-	<main class="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+	<main id="main-content" class="mx-auto max-w-5xl px-4 py-12 sm:px-6">
 		<!--
 		  Hero / identity area. Kept text-only and self-contained (modular) so a
 		  future top-left identity mark can slot in here without restructuring.
@@ -259,6 +328,8 @@
 						stroke-width="2"
 						stroke-linecap="round"
 						stroke-linejoin="round"
+						aria-hidden="true"
+						focusable="false"
 						><path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle
 							cx="5"
 							cy="19"

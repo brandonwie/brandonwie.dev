@@ -217,7 +217,7 @@
 		flex: 1;
 	}
 	.hint {
-		color: #666666;
+		color: #9a95b7;
 	}
 	.btn {
 		background: #1a1a1a;
@@ -253,7 +253,7 @@
 		gap: 10px;
 	}
 	.legend-head {
-		color: #666666;
+		color: #9a95b7;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		min-width: 64px;
@@ -262,7 +262,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 5px;
-		color: #888888;
+		color: #9a95b7;
 	}
 	.swatch {
 		width: 9px;

@@ -2,6 +2,7 @@
 	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import { getAboutContent, type AboutLocale } from '$lib/data/about';
 	import { m } from '$lib/paraglide/messages';
+	import { DEFAULT_OG_IMAGE, localeCode, SITE_NAME } from '$lib/seo';
 
 	let { locale = 'en' }: { locale?: AboutLocale } = $props();
 
@@ -31,10 +32,19 @@
 	<title>{pageTitle}</title>
 	<meta name="description" content={content.metaDescription} />
 	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content={SITE_NAME} />
 	<meta property="og:title" content={pageTitle} />
 	<meta property="og:description" content={content.metaDescription} />
 	<meta property="og:url" content={canonicalHref} />
+	<meta property="og:image" content={DEFAULT_OG_IMAGE} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:locale" content={localeCode(locale)} />
+	<meta property="og:locale:alternate" content={localeCode(locale === 'ko' ? 'en' : 'ko')} />
 	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:title" content={pageTitle} />
+	<meta name="twitter:description" content={content.metaDescription} />
+	<meta name="twitter:image" content={DEFAULT_OG_IMAGE} />
 	<link rel="canonical" href={canonicalHref} />
 	<link rel="alternate" hreflang="en" href="https://brandonwie.dev/about" />
 	<link rel="alternate" hreflang="ko" href="https://brandonwie.dev/ko/about" />
@@ -47,7 +57,7 @@
 			<a href={homeHref} class="font-mono text-sm font-semibold text-ink no-underline sm:text-base">
 				brandonwie.dev
 			</a>
-			<nav class="flex items-center gap-3 text-sm sm:gap-4">
+			<nav class="flex items-center gap-3 text-sm sm:gap-4" aria-label={m.primary_navigation()}>
 				<a href={postsHref} class="text-muted no-underline transition-colors hover:text-accent">
 					{m.posts_title()}
 				</a>
@@ -66,7 +76,7 @@
 		</div>
 	</header>
 
-	<main class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
+	<main id="main-content" class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
 		<section class="grid gap-10 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] lg:items-end">
 			<div>
 				<p class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">

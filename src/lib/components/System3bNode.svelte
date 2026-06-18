@@ -24,6 +24,7 @@
 	}
 </script>
 
+<Handle type="target" position={Position.Top} style="opacity:0;width:6px;height:6px;border:0" />
 <button
 	type="button"
 	class="s3b-node"
@@ -36,16 +37,11 @@
 	aria-disabled={!expandable}
 	title={expandable ? `${m.system_3b_graph_expand()} ${data.name}` : String(data.name)}
 >
-	<Handle type="target" position={Position.Top} style="opacity:0;width:6px;height:6px;border:0" />
 	<span class="dot"></span>
 	<span class="label">{data.name}</span>
 	{#if expandable}<span class="chev" aria-hidden="true">+</span>{/if}
-	<Handle
-		type="source"
-		position={Position.Bottom}
-		style="opacity:0;width:6px;height:6px;border:0"
-	/>
 </button>
+<Handle type="source" position={Position.Bottom} style="opacity:0;width:6px;height:6px;border:0" />
 
 <style>
 	.s3b-node {

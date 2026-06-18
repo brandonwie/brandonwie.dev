@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
 	import HeaderControls from '$lib/components/HeaderControls.svelte';
+	import { absoluteUrl, DEFAULT_OG_IMAGE, localeCode, SITE_NAME } from '$lib/seo';
 
 	interface Props {
 		locale: 'en' | 'ko';
@@ -11,6 +12,9 @@
 
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
 	const backLabel = m.back_to_home();
+	const canonicalHref = $derived(absoluteUrl(locale === 'ko' ? '/ko/search' : '/search'));
+	const pageTitle = $derived(`${m.search_title()} | Brandon Wie`);
+	const pageDescription = $derived(m.site_description());
 
 	let query = $state('');
 	let results = $state<SearchResult[]>([]);
@@ -86,7 +90,27 @@
 </script>
 
 <svelte:head>
-	<title>{m.search_title()} | Brandon Wie</title>
+	<title>{pageTitle}</title>
+	<meta name="description" content={pageDescription} />
+	<meta name="robots" content="noindex,follow" />
+	<link rel="canonical" href={canonicalHref} />
+	<link rel="alternate" hreflang="en" href={absoluteUrl('/search')} />
+	<link rel="alternate" hreflang="ko" href={absoluteUrl('/ko/search')} />
+	<link rel="alternate" hreflang="x-default" href={absoluteUrl('/search')} />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content={SITE_NAME} />
+	<meta property="og:title" content={pageTitle} />
+	<meta property="og:description" content={pageDescription} />
+	<meta property="og:url" content={canonicalHref} />
+	<meta property="og:image" content={DEFAULT_OG_IMAGE} />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:locale" content={localeCode(locale)} />
+	<meta property="og:locale:alternate" content={localeCode(locale === 'ko' ? 'en' : 'ko')} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={pageTitle} />
+	<meta name="twitter:description" content={pageDescription} />
+	<meta name="twitter:image" content={DEFAULT_OG_IMAGE} />
 </svelte:head>
 
 <div class="min-h-screen bg-terminal-bg-primary">
@@ -112,7 +136,7 @@
 	</header>
 
 	<!-- Search -->
-	<main class="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+	<main id="main-content" class="mx-auto max-w-2xl px-4 py-10 sm:px-6">
 		<h1 class="mb-6 text-2xl font-bold text-terminal-text-primary">{m.search_title()}</h1>
 
 		{#if isDevMode}
@@ -123,52 +147,58 @@
 			</div>
 		{:else}
 			<!-- Search Input -->
-			<div class="mb-8 flex items-center gap-2 border-b border-terminal-border pb-2">
-				<span class="text-terminal-accent-orange font-bold">&gt;</span>
+			<div class="mb-8 flex items-center gap-2 border-b border-terminal-border pb-2" role="search">
+				<span class="text-terminal-accent-orange font-bold" aria-hidden="true">&gt;</span>
+				<label for="site-search" class="sr-only">{m.search_title()}</label>
 				<!-- svelte-ignore a11y_autofocus -->
 				<input
-					type="text"
+					id="site-search"
+					type="search"
 					bind:value={query}
 					oninput={handleInput}
 					placeholder={m.search_placeholder()}
 					class="flex-1 bg-transparent text-terminal-text-primary placeholder:text-terminal-text-dim outline-none"
 					autofocus
+					autocomplete="off"
+					spellcheck="false"
 				/>
 			</div>
 
 			<!-- Results -->
-			{#if isLoading}
-				<p class="text-terminal-text-muted text-sm">{m.search_loading()}</p>
-			{:else if hasSearched && results.length === 0}
-				<p class="text-terminal-text-muted text-sm">{m.search_no_results({ query })}</p>
-			{:else if results.length > 0}
-				<p class="text-terminal-text-dim text-xs mb-6">
-					{m.search_results_count({ count: resultCount })}
-				</p>
+			<section aria-label={m.search_results_status()} aria-live="polite" aria-busy={isLoading}>
+				{#if isLoading}
+					<p class="text-terminal-text-muted text-sm">{m.search_loading()}</p>
+				{:else if hasSearched && results.length === 0}
+					<p class="text-terminal-text-muted text-sm">{m.search_no_results({ query })}</p>
+				{:else if results.length > 0}
+					<p class="text-terminal-text-dim text-xs mb-6" role="status">
+						{m.search_results_count({ count: resultCount })}
+					</p>
 
-				<div class="space-y-4">
-					{#each results as result (result.url)}
-						<a
-							href={result.url}
-							class="block rounded-lg border border-terminal-border bg-terminal-bg-secondary p-4 transition-colors hover:border-terminal-accent-orange no-underline"
-						>
-							{#if result.category}
-								<span
-									class="rounded-sm bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow mb-2 inline-block"
-								>
-									{result.category}
-								</span>
-							{/if}
-							<h2 class="text-base font-semibold text-terminal-text-primary mb-1">
-								{result.title}
-							</h2>
-							<p class="text-sm text-terminal-text-muted search-excerpt">
-								{@html result.excerpt}
-							</p>
-						</a>
-					{/each}
-				</div>
-			{/if}
+					<div class="space-y-4">
+						{#each results as result (result.url)}
+							<a
+								href={result.url}
+								class="block rounded-lg border border-terminal-border bg-terminal-bg-secondary p-4 transition-colors hover:border-terminal-accent-orange no-underline"
+							>
+								{#if result.category}
+									<span
+										class="rounded-sm bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow mb-2 inline-block"
+									>
+										{result.category}
+									</span>
+								{/if}
+								<h2 class="text-base font-semibold text-terminal-text-primary mb-1">
+									{result.title}
+								</h2>
+								<p class="text-sm text-terminal-text-muted search-excerpt">
+									{@html result.excerpt}
+								</p>
+							</a>
+						{/each}
+					</div>
+				{/if}
+			</section>
 		{/if}
 	</main>
 </div>

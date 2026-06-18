@@ -1,0 +1,19 @@
+{
+	"name": "Brandon Wie",
+	"short_name": "brandonwie.dev",
+	"description": "Software engineering notes on backend systems, DevOps, and production product work.",
+	"lang": "en",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"background_color": "#0d0a18",
+	"theme_color": "#0d0a18",
+	"icons": [
+		{
+			"src": "/favicon.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "any maskable"
+		}
+	]
+}

@@ -24,8 +24,13 @@ interface PostModule {
 
 // Pre-load English post modules
 const modules = import.meta.glob('../../../content/posts/en/**/*.md');
+const koModules = import.meta.glob('../../../content/posts/ko/**/*.md');
 
 export const load: PageLoad = async ({ params }) => {
+	const hasKoreanTranslation = Object.keys(koModules).some((path) =>
+		path.endsWith(`/${params.slug}.md`),
+	);
+
 	// Find the matching post by slug
 	for (const [path, resolver] of Object.entries(modules)) {
 		if (path.endsWith(`/${params.slug}.md`)) {
@@ -38,6 +43,7 @@ export const load: PageLoad = async ({ params }) => {
 					slug: params.slug,
 				},
 				headings: headings ?? [],
+				hasKoreanTranslation,
 			};
 		}
 	}

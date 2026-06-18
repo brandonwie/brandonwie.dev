@@ -11,4 +11,5 @@
 	locale="ko"
 	isFallback={data.isFallback}
 	headings={data.headings}
+	hasKoreanTranslation={data.hasKoreanTranslation}
 />
