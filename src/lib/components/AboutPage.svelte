@@ -12,7 +12,6 @@
 	const studyHref = $derived(locale === 'ko' ? '/ko/study' : '/study');
 	const searchHref = $derived(locale === 'ko' ? '/ko/search' : '/search');
 	const systemHref = $derived(locale === 'ko' ? '/ko/system/3b' : '/system/3b');
-	const studyLabel = $derived(locale === 'ko' ? '스터디' : 'Study');
 	const canonicalHref = $derived(
 		locale === 'ko' ? 'https://brandonwie.dev/ko/about' : 'https://brandonwie.dev/about',
 	);
@@ -64,7 +63,7 @@
 					{m.posts_title()}
 				</a>
 				<a href={studyHref} class="text-muted no-underline transition-colors hover:text-accent">
-					{studyLabel}
+					{m.study_title()}
 				</a>
 				<a href={systemHref} class="text-muted no-underline transition-colors hover:text-accent">
 					3B

@@ -94,12 +94,12 @@
 				<p class="font-mono text-xs uppercase tracking-wider text-faint">Stack / LIFO</p>
 				<div class="flex flex-wrap gap-2">
 					<button
-						class="border border-line bg-bg px-3 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 						type="button"
 						onclick={addStack}>+ {pushLabel}</button
 					>
 					<button
-						class="border border-line bg-bg px-3 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 						type="button"
 						onclick={popStack}>- {popLabel}</button
 					>
@@ -127,12 +127,12 @@
 				<p class="font-mono text-xs uppercase tracking-wider text-faint">Queue / FIFO</p>
 				<div class="flex flex-wrap gap-2">
 					<button
-						class="border border-line bg-bg px-3 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 						type="button"
 						onclick={enqueue}>+ {enqueueLabel}</button
 					>
 					<button
-						class="border border-line bg-bg px-3 py-2 text-sm text-muted hover:border-accent hover:text-accent"
+						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 						type="button"
 						onclick={dequeue}>- {dequeueLabel}</button
 					>
