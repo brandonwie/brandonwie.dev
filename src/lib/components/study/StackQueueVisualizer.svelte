@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { StackQueueVisualizerCopy } from '$lib/data/study';
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { fly } from 'svelte/transition';
@@ -8,19 +9,7 @@
 		label: string;
 	}
 
-	let {
-		pushLabel = 'Push',
-		popLabel = 'Pop',
-		enqueueLabel = 'Enqueue',
-		dequeueLabel = 'Dequeue',
-		resetLabel = 'Reset',
-	}: {
-		pushLabel?: string;
-		popLabel?: string;
-		enqueueLabel?: string;
-		dequeueLabel?: string;
-		resetLabel?: string;
-	} = $props();
+	let { copy }: { copy: StackQueueVisualizerCopy } = $props();
 
 	let stackItems = $state(['A', 'B', 'C']);
 	let queueItems = $state<QueueItem[]>([
@@ -74,34 +63,32 @@
 <article class="min-w-0 border border-line bg-surface p-5 lg:col-span-2">
 	<div class="flex flex-wrap items-center justify-between gap-4">
 		<div>
-			<h3 class="text-lg font-semibold text-ink">Stack / Queue ADTs</h3>
-			<p class="mt-2 text-sm leading-6 text-muted">
-				Stack changes happen at one top end; queue changes enter at back and leave from front.
-			</p>
+			<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
+			<p class="mt-2 text-sm leading-6 text-muted">{copy.description}</p>
 		</div>
 		<button
 			class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 			type="button"
 			onclick={reset}
 		>
-			↺ {resetLabel}
+			↺ {copy.resetLabel}
 		</button>
 	</div>
 
 	<div class="mt-5 grid gap-5 md:grid-cols-2">
 		<div>
 			<div class="flex flex-wrap items-center justify-between gap-3">
-				<p class="font-mono text-xs uppercase tracking-wider text-faint">Stack / LIFO</p>
+				<p class="font-mono text-xs uppercase tracking-wider text-faint">{copy.stackLabel}</p>
 				<div class="flex flex-wrap gap-2">
 					<button
 						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 						type="button"
-						onclick={addStack}>+ {pushLabel}</button
+						onclick={addStack}>+ {copy.pushLabel}</button
 					>
 					<button
 						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 						type="button"
-						onclick={popStack}>- {popLabel}</button
+						onclick={popStack}>- {copy.popLabel}</button
 					>
 				</div>
 			</div>
@@ -114,7 +101,7 @@
 						class="border border-accent px-3 py-2 text-center font-mono text-sm text-accent"
 					>
 						<span class="mr-2 text-[10px] uppercase text-faint">
-							{index === stackItems.length - 1 ? 'top' : 'held'}
+							{index === stackItems.length - 1 ? copy.stackRoles.top : copy.stackRoles.held}
 						</span>
 						{item}
 					</div>
@@ -124,17 +111,17 @@
 
 		<div>
 			<div class="flex flex-wrap items-center justify-between gap-3">
-				<p class="font-mono text-xs uppercase tracking-wider text-faint">Queue / FIFO</p>
+				<p class="font-mono text-xs uppercase tracking-wider text-faint">{copy.queueLabel}</p>
 				<div class="flex flex-wrap gap-2">
 					<button
 						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 						type="button"
-						onclick={enqueue}>+ {enqueueLabel}</button
+						onclick={enqueue}>+ {copy.enqueueLabel}</button
 					>
 					<button
 						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 						type="button"
-						onclick={dequeue}>- {dequeueLabel}</button
+						onclick={dequeue}>- {copy.dequeueLabel}</button
 					>
 				</div>
 			</div>
@@ -149,7 +136,11 @@
 						class="min-w-16 border border-foam px-3 py-2 text-center font-mono text-sm text-foam"
 					>
 						<span class="block text-[10px] uppercase text-faint">
-							{index === 0 ? 'front' : index === queueItems.length - 1 ? 'back' : 'wait'}
+							{index === 0
+								? copy.queueRoles.front
+								: index === queueItems.length - 1
+									? copy.queueRoles.back
+									: copy.queueRoles.wait}
 						</span>
 						{item.label}
 					</div>

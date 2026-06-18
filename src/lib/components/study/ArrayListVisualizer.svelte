@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ArrayListVisualizerCopy } from '$lib/data/study';
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { scale } from 'svelte/transition';
@@ -9,11 +10,13 @@
 		label: string;
 		status: ItemStatus;
 	}
+	type MessageState =
+		| { kind: 'initial' }
+		| { kind: 'resize'; count: number; capacity: number }
+		| { kind: 'insert'; index: number }
+		| { kind: 'remove'; index: number };
 
-	let {
-		operationLabel = 'Operation',
-		indexLabel = 'Index',
-	}: { operationLabel?: string; indexLabel?: string } = $props();
+	let { copy }: { copy: ArrayListVisualizerCopy } = $props();
 
 	let items = $state<Item[]>([
 		{ id: 'a', label: 'A', status: 'stable' },
@@ -26,10 +29,16 @@
 	let index = $state(2);
 	let nextId = $state(0);
 	let copyRun = $state(0);
-	let message = $state('Pick an operation, then apply it to watch positions change.');
+	let message = $state<MessageState>({ kind: 'initial' });
 	let reduceMotion = $state(false);
 
 	const emptySlots = $derived(Math.max(capacity - items.length, 0));
+	const messageText = $derived.by(() => {
+		if (message.kind === 'resize') return copy.messages.resize(message.count, message.capacity);
+		if (message.kind === 'insert') return copy.messages.insert(message.index);
+		if (message.kind === 'remove') return copy.messages.remove(message.index);
+		return copy.messages.initial;
+	});
 
 	onMount(() => {
 		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -48,7 +57,7 @@
 				id: `${item.id}-copy-${copyRun}-${itemIndex}`,
 				status: 'copied',
 			}));
-			message = `Resize: copy ${items.length} items into a capacity-${capacity} backing array.`;
+			message = { kind: 'resize', count: items.length, capacity };
 			return;
 		}
 
@@ -62,7 +71,7 @@
 				inserted,
 				...clean(items.slice(safeIndex)).map((item) => ({ ...item, status: 'shifted' as const })),
 			];
-			message = `Insert at index ${safeIndex}: new item lands, old items at and after the index shift right.`;
+			message = { kind: 'insert', index: safeIndex };
 			return;
 		}
 
@@ -74,7 +83,7 @@
 				status: itemIndex >= removeIndex ? 'shifted' : 'stable',
 			}),
 		);
-		message = `Remove at index ${removeIndex}: later items shift left to close the gap.`;
+		message = { kind: 'remove', index: removeIndex };
 	}
 
 	function reset() {
@@ -87,14 +96,14 @@
 			{ id: 'c', label: 'C', status: 'stable' },
 			{ id: 'd', label: 'D', status: 'stable' },
 		];
-		message = 'Pick an operation, then apply it to watch positions change.';
+		message = { kind: 'initial' };
 	}
 
 	function statusLabel(status: ItemStatus): string {
-		if (status === 'inserted') return 'new';
-		if (status === 'shifted') return 'shift';
-		if (status === 'copied') return 'copy';
-		return 'keep';
+		if (status === 'inserted') return copy.status.inserted;
+		if (status === 'shifted') return copy.status.shifted;
+		if (status === 'copied') return copy.status.copied;
+		return copy.status.stable;
 	}
 
 	function statusClass(status: ItemStatus): string {
@@ -106,27 +115,27 @@
 </script>
 
 <article class="min-w-0 border border-line bg-surface p-5">
-	<h3 class="text-lg font-semibold text-ink">ArrayList backing array</h3>
-	<p class="mt-2 text-sm leading-6 text-muted">{message}</p>
+	<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
+	<p class="mt-2 text-sm leading-6 text-muted">{messageText}</p>
 
 	<div class="mt-5 grid gap-4 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
 		<div>
 			<label class="font-mono text-xs uppercase tracking-wider text-faint" for="array-operation">
-				{operationLabel}
+				{copy.operationLabel}
 			</label>
 			<select
 				id="array-operation"
 				class="mt-2 w-full border border-line bg-bg px-3 py-2 text-sm text-ink"
 				bind:value={operation}
 			>
-				<option value="insert">addAtIndex</option>
-				<option value="remove">removeAtIndex</option>
-				<option value="resize">resize copy</option>
+				<option value="insert">{copy.options.insert}</option>
+				<option value="remove">{copy.options.remove}</option>
+				<option value="resize">{copy.options.resize}</option>
 			</select>
 		</div>
 		<div>
 			<label class="font-mono text-xs uppercase tracking-wider text-faint" for="array-index">
-				{indexLabel}: {index}
+				{copy.indexLabel}: {index}
 			</label>
 			<input
 				id="array-index"
@@ -144,14 +153,14 @@
 			class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 			onclick={applyOperation}
 		>
-			Apply
+			{copy.applyLabel}
 		</button>
 		<button
 			type="button"
 			class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
 			onclick={reset}
 		>
-			Reset
+			{copy.resetLabel}
 		</button>
 	</div>
 
@@ -166,15 +175,17 @@
 					in:scale={{ duration: reduceMotion ? 0 : 160 }}
 					class={`min-h-16 border bg-bg p-1 text-center font-mono text-sm motion-reduce:transition-none ${statusClass(item.status)}`}
 				>
-					<span class="block text-[10px] text-faint">index {slot}</span>
+					<span class="block text-[10px] text-faint">{copy.indexPrefix} {slot}</span>
 					<span class="block text-[10px] uppercase">{statusLabel(item.status)}</span>
 					<span>{item.label}</span>
 				</div>
 			{/each}
 			{#each Array.from({ length: emptySlots }) as _, offset (`empty-${offset}`)}
 				<div class="min-h-16 border border-line bg-bg p-1 text-center">
-					<span class="block font-mono text-[10px] text-faint">index {items.length + offset}</span>
-					<span class="mt-3 block font-mono text-xs text-faint">empty</span>
+					<span class="block font-mono text-[10px] text-faint"
+						>{copy.indexPrefix} {items.length + offset}</span
+					>
+					<span class="mt-3 block font-mono text-xs text-faint">{copy.emptyLabel}</span>
 				</div>
 			{/each}
 		</div>

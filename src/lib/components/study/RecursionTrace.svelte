@@ -1,48 +1,13 @@
 <script lang="ts">
+	import type { RecursionTraceCopy } from '$lib/data/study';
 	import { onMount } from 'svelte';
 	import { fly, scale } from 'svelte/transition';
 
-	let { title = 'Call stack' }: { title?: string } = $props();
-
-	const steps = [
-		{ mode: 'descend', frames: ['factorial(4)'], note: 'Call factorial(4); it must wait.' },
-		{ mode: 'descend', frames: ['factorial(4)', 'factorial(3)'], note: '4 calls 3.' },
-		{
-			mode: 'descend',
-			frames: ['factorial(4)', 'factorial(3)', 'factorial(2)'],
-			note: '3 calls 2.',
-		},
-		{
-			mode: 'descend',
-			frames: ['factorial(4)', 'factorial(3)', 'factorial(2)', 'factorial(1)'],
-			note: '1 still needs the base case.',
-		},
-		{
-			mode: 'base',
-			frames: ['factorial(4)', 'factorial(3)', 'factorial(2)', 'factorial(1)', 'factorial(0) = 1'],
-			note: 'Base case returns 1.',
-		},
-		{
-			mode: 'unwind',
-			frames: ['factorial(4)', 'factorial(3)', 'factorial(2)', 'factorial(1) = 1'],
-			note: 'Unwind: 1 x 1 = 1.',
-		},
-		{
-			mode: 'unwind',
-			frames: ['factorial(4)', 'factorial(3)', 'factorial(2) = 2'],
-			note: 'Unwind: 2 x 1 = 2.',
-		},
-		{ mode: 'unwind', frames: ['factorial(4)', 'factorial(3) = 6'], note: 'Unwind: 3 x 2 = 6.' },
-		{
-			mode: 'done',
-			frames: ['factorial(4) = 24'],
-			note: 'Return to the original caller: 4 x 6 = 24.',
-		},
-	];
+	let { copy }: { copy: RecursionTraceCopy } = $props();
 
 	let step = $state(0);
 	let reduceMotion = $state(false);
-	const current = $derived(steps[step]);
+	const current = $derived(copy.steps[step]);
 
 	onMount(() => {
 		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -53,7 +18,7 @@
 	}
 
 	function next() {
-		step = Math.min(steps.length - 1, step + 1);
+		step = Math.min(copy.steps.length - 1, step + 1);
 	}
 
 	function reset() {
@@ -64,10 +29,10 @@
 <article class="min-w-0 border border-line bg-surface p-5">
 	<div class="flex items-center justify-between gap-4">
 		<div>
-			<h3 class="text-lg font-semibold text-ink">{title}</h3>
+			<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
 			<p class="mt-2 text-sm leading-6 text-muted">{current.note}</p>
 		</div>
-		<span class="font-mono text-xs text-faint">{step + 1}/{steps.length}</span>
+		<span class="font-mono text-xs text-faint">{step + 1}/{copy.steps.length}</span>
 	</div>
 
 	<div class="mt-4 flex gap-2">
@@ -75,25 +40,25 @@
 			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
 			type="button"
 			onclick={previous}
-			aria-label="Previous recursion step"
+			aria-label={copy.previousAriaLabel}
 		>
-			← Prev
+			← {copy.previousLabel}
 		</button>
 		<button
 			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
 			type="button"
 			onclick={next}
-			aria-label="Next recursion step"
+			aria-label={copy.nextAriaLabel}
 		>
-			Next →
+			{copy.nextLabel} →
 		</button>
 		<button
 			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
 			type="button"
 			onclick={reset}
-			aria-label="Reset recursion trace"
+			aria-label={copy.resetAriaLabel}
 		>
-			↺ Reset
+			↺ {copy.resetLabel}
 		</button>
 	</div>
 
@@ -111,7 +76,9 @@
 				}`}
 			>
 				<span class="mr-2 text-[10px] uppercase text-faint">
-					{current.mode === 'unwind' || current.mode === 'done' ? 'return' : 'call'}
+					{current.mode === 'unwind' || current.mode === 'done'
+						? copy.frameLabels.return
+						: copy.frameLabels.call}
 				</span>
 				{frame}
 			</div>

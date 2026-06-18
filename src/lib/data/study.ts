@@ -59,6 +59,121 @@ export interface DsaConceptCard {
 	source: string;
 }
 
+export interface BigOVisualizerCopy {
+	title: string;
+	description: string;
+	inputSizeLabel: string;
+	logScaleLabel: string;
+	chartAriaLabel: string;
+	operationsAxisLabel: string;
+	inputAxisLabel: string;
+}
+
+export interface ArrayListVisualizerCopy {
+	title: string;
+	operationLabel: string;
+	indexLabel: string;
+	applyLabel: string;
+	resetLabel: string;
+	indexPrefix: string;
+	emptyLabel: string;
+	options: {
+		insert: string;
+		remove: string;
+		resize: string;
+	};
+	status: {
+		inserted: string;
+		shifted: string;
+		copied: string;
+		stable: string;
+	};
+	messages: {
+		initial: string;
+		resize: (count: number, capacity: number) => string;
+		insert: (index: number) => string;
+		remove: (index: number) => string;
+	};
+}
+
+export interface RecursionTraceCopy {
+	title: string;
+	previousLabel: string;
+	nextLabel: string;
+	resetLabel: string;
+	previousAriaLabel: string;
+	nextAriaLabel: string;
+	resetAriaLabel: string;
+	frameLabels: {
+		call: string;
+		return: string;
+	};
+	steps: {
+		mode: 'descend' | 'base' | 'unwind' | 'done';
+		frames: string[];
+		note: string;
+	}[];
+}
+
+export interface BinarySearchVisualizerCopy {
+	title: string;
+	targetLabel: string;
+	previousLabel: string;
+	nextLabel: string;
+	resetLabel: string;
+	previousAriaLabel: string;
+	nextAriaLabel: string;
+	resetAriaLabel: string;
+	traceLabels: {
+		low: string;
+		mid: string;
+		high: string;
+	};
+	stateLabels: {
+		found: string;
+		mid: string;
+		low: string;
+		high: string;
+		window: string;
+		eliminated: string;
+	};
+	frames: {
+		low: number;
+		mid: number;
+		high: number;
+		note: string;
+	}[];
+}
+
+export interface StackQueueVisualizerCopy {
+	title: string;
+	description: string;
+	stackLabel: string;
+	queueLabel: string;
+	pushLabel: string;
+	popLabel: string;
+	enqueueLabel: string;
+	dequeueLabel: string;
+	resetLabel: string;
+	stackRoles: {
+		top: string;
+		held: string;
+	};
+	queueRoles: {
+		front: string;
+		back: string;
+		wait: string;
+	};
+}
+
+export interface DsaVisualsCopy {
+	bigO: BigOVisualizerCopy;
+	arrayList: ArrayListVisualizerCopy;
+	recursion: RecursionTraceCopy;
+	binarySearch: BinarySearchVisualizerCopy;
+	stackQueue: StackQueueVisualizerCopy;
+}
+
 export interface DsaIContent {
 	metaTitle: string;
 	metaDescription: string;
@@ -92,7 +207,9 @@ export interface DsaIContent {
 		enqueue: string;
 		dequeue: string;
 		reset: string;
+		sourceFiles: string;
 	};
+	visuals: DsaVisualsCopy;
 }
 
 export const DSA_I_SOURCE_ROOT_LABEL = 'personal/study/gt-dsa/dsa-i';
@@ -389,6 +506,153 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 			enqueue: 'Enqueue',
 			dequeue: 'Dequeue',
 			reset: 'Reset',
+			sourceFiles: 'source files',
+		},
+		visuals: {
+			bigO: {
+				title: 'Big-O growth',
+				description: 'Line shape shows growth; the cursor reads the selected input size.',
+				inputSizeLabel: 'Input size',
+				logScaleLabel: 'log scale',
+				chartAriaLabel: 'Line chart comparing Big-O growth curves',
+				operationsAxisLabel: 'ops',
+				inputAxisLabel: 'n',
+			},
+			arrayList: {
+				title: 'ArrayList backing array',
+				operationLabel: 'Operation',
+				indexLabel: 'Index',
+				applyLabel: 'Apply',
+				resetLabel: 'Reset',
+				indexPrefix: 'index',
+				emptyLabel: 'empty',
+				options: {
+					insert: 'addAtIndex',
+					remove: 'removeAtIndex',
+					resize: 'resize copy',
+				},
+				status: {
+					inserted: 'new',
+					shifted: 'shift',
+					copied: 'copy',
+					stable: 'keep',
+				},
+				messages: {
+					initial: 'Pick an operation, then apply it to watch positions change.',
+					resize: (count, capacity) =>
+						`Resize: copy ${count} items into a capacity-${capacity} backing array.`,
+					insert: (index) =>
+						`Insert at index ${index}: new item lands, old items at and after the index shift right.`,
+					remove: (index) => `Remove at index ${index}: later items shift left to close the gap.`,
+				},
+			},
+			recursion: {
+				title: 'Call stack',
+				previousLabel: 'Prev',
+				nextLabel: 'Next',
+				resetLabel: 'Reset',
+				previousAriaLabel: 'Previous recursion step',
+				nextAriaLabel: 'Next recursion step',
+				resetAriaLabel: 'Reset recursion trace',
+				frameLabels: {
+					call: 'call',
+					return: 'return',
+				},
+				steps: [
+					{ mode: 'descend', frames: ['factorial(4)'], note: 'Call factorial(4); it must wait.' },
+					{ mode: 'descend', frames: ['factorial(4)', 'factorial(3)'], note: '4 calls 3.' },
+					{
+						mode: 'descend',
+						frames: ['factorial(4)', 'factorial(3)', 'factorial(2)'],
+						note: '3 calls 2.',
+					},
+					{
+						mode: 'descend',
+						frames: ['factorial(4)', 'factorial(3)', 'factorial(2)', 'factorial(1)'],
+						note: '1 still needs the base case.',
+					},
+					{
+						mode: 'base',
+						frames: [
+							'factorial(4)',
+							'factorial(3)',
+							'factorial(2)',
+							'factorial(1)',
+							'factorial(0) = 1',
+						],
+						note: 'Base case returns 1.',
+					},
+					{
+						mode: 'unwind',
+						frames: ['factorial(4)', 'factorial(3)', 'factorial(2)', 'factorial(1) = 1'],
+						note: 'Unwind: 1 x 1 = 1.',
+					},
+					{
+						mode: 'unwind',
+						frames: ['factorial(4)', 'factorial(3)', 'factorial(2) = 2'],
+						note: 'Unwind: 2 x 1 = 2.',
+					},
+					{
+						mode: 'unwind',
+						frames: ['factorial(4)', 'factorial(3) = 6'],
+						note: 'Unwind: 3 x 2 = 6.',
+					},
+					{
+						mode: 'done',
+						frames: ['factorial(4) = 24'],
+						note: 'Return to the original caller: 4 x 6 = 24.',
+					},
+				],
+			},
+			binarySearch: {
+				title: 'Binary search',
+				targetLabel: 'Target',
+				previousLabel: 'Prev',
+				nextLabel: 'Next',
+				resetLabel: 'Reset',
+				previousAriaLabel: 'Previous binary search step',
+				nextAriaLabel: 'Next binary search step',
+				resetAriaLabel: 'Reset binary search',
+				traceLabels: {
+					low: 'low',
+					mid: 'mid',
+					high: 'high',
+				},
+				stateLabels: {
+					found: 'found',
+					mid: 'mid',
+					low: 'low',
+					high: 'high',
+					window: 'window',
+					eliminated: 'out',
+				},
+				frames: [
+					{ low: 0, mid: 3, high: 6, note: '19 > 13, eliminate the left half through mid.' },
+					{ low: 4, mid: 5, high: 6, note: '19 < 21, eliminate the right half after mid.' },
+					{ low: 4, mid: 4, high: 4, note: '19 found at index 4.' },
+				],
+			},
+			stackQueue: {
+				title: 'Stack / Queue ADTs',
+				description:
+					'Stack changes happen at one top end; queue changes enter at back and leave from front.',
+				stackLabel: 'Stack / LIFO',
+				queueLabel: 'Queue / FIFO',
+				pushLabel: 'Push',
+				popLabel: 'Pop',
+				enqueueLabel: 'Enqueue',
+				dequeueLabel: 'Dequeue',
+				resetLabel: 'Reset',
+				stackRoles: {
+					top: 'top',
+					held: 'held',
+				},
+				queueRoles: {
+					front: 'front',
+					back: 'back',
+					wait: 'wait',
+				},
+			},
 		},
 	},
 	ko: {
@@ -508,6 +772,160 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 			enqueue: 'Enqueue',
 			dequeue: 'Dequeue',
 			reset: 'Reset',
+			sourceFiles: '개 원본 파일',
+		},
+		visuals: {
+			bigO: {
+				title: 'Big-O 증가율',
+				description: '선의 모양은 증가율을 보여주고, 커서는 선택한 입력 크기의 값을 읽습니다.',
+				inputSizeLabel: '입력 크기',
+				logScaleLabel: '로그 스케일',
+				chartAriaLabel: 'Big-O 증가 곡선을 비교하는 선 그래프',
+				operationsAxisLabel: '연산',
+				inputAxisLabel: 'n',
+			},
+			arrayList: {
+				title: 'ArrayList backing array',
+				operationLabel: '연산',
+				indexLabel: '인덱스',
+				applyLabel: '적용',
+				resetLabel: '초기화',
+				indexPrefix: '인덱스',
+				emptyLabel: '비어 있음',
+				options: {
+					insert: 'addAtIndex',
+					remove: 'removeAtIndex',
+					resize: 'resize copy',
+				},
+				status: {
+					inserted: '새 값',
+					shifted: '이동',
+					copied: '복사',
+					stable: '유지',
+				},
+				messages: {
+					initial: '연산을 고른 뒤 적용하면 위치 변화가 보입니다.',
+					resize: (count, capacity) =>
+						`Resize: ${count}개 원소를 capacity ${capacity}인 backing array로 복사합니다.`,
+					insert: (index) =>
+						`인덱스 ${index}에 삽입합니다. 새 원소가 들어가고 해당 위치 이후 원소는 오른쪽으로 밀립니다.`,
+					remove: (index) => `인덱스 ${index}를 삭제합니다. 뒤쪽 원소가 왼쪽으로 당겨집니다.`,
+				},
+			},
+			recursion: {
+				title: 'Call stack',
+				previousLabel: '이전',
+				nextLabel: '다음',
+				resetLabel: '초기화',
+				previousAriaLabel: '이전 재귀 단계',
+				nextAriaLabel: '다음 재귀 단계',
+				resetAriaLabel: '재귀 추적 초기화',
+				frameLabels: {
+					call: '호출',
+					return: '반환',
+				},
+				steps: [
+					{
+						mode: 'descend',
+						frames: ['factorial(4)'],
+						note: 'factorial(4)를 호출하고 반환을 기다립니다.',
+					},
+					{
+						mode: 'descend',
+						frames: ['factorial(4)', 'factorial(3)'],
+						note: '4가 3을 호출합니다.',
+					},
+					{
+						mode: 'descend',
+						frames: ['factorial(4)', 'factorial(3)', 'factorial(2)'],
+						note: '3이 2를 호출합니다.',
+					},
+					{
+						mode: 'descend',
+						frames: ['factorial(4)', 'factorial(3)', 'factorial(2)', 'factorial(1)'],
+						note: '1도 아직 base case가 필요합니다.',
+					},
+					{
+						mode: 'base',
+						frames: [
+							'factorial(4)',
+							'factorial(3)',
+							'factorial(2)',
+							'factorial(1)',
+							'factorial(0) = 1',
+						],
+						note: 'Base case가 1을 반환합니다.',
+					},
+					{
+						mode: 'unwind',
+						frames: ['factorial(4)', 'factorial(3)', 'factorial(2)', 'factorial(1) = 1'],
+						note: 'Unwind: 1 x 1 = 1.',
+					},
+					{
+						mode: 'unwind',
+						frames: ['factorial(4)', 'factorial(3)', 'factorial(2) = 2'],
+						note: 'Unwind: 2 x 1 = 2.',
+					},
+					{
+						mode: 'unwind',
+						frames: ['factorial(4)', 'factorial(3) = 6'],
+						note: 'Unwind: 3 x 2 = 6.',
+					},
+					{
+						mode: 'done',
+						frames: ['factorial(4) = 24'],
+						note: '처음 호출자로 돌아가 4 x 6 = 24를 반환합니다.',
+					},
+				],
+			},
+			binarySearch: {
+				title: 'Binary search',
+				targetLabel: '목표값',
+				previousLabel: '이전',
+				nextLabel: '다음',
+				resetLabel: '초기화',
+				previousAriaLabel: '이전 이진 탐색 단계',
+				nextAriaLabel: '다음 이진 탐색 단계',
+				resetAriaLabel: '이진 탐색 초기화',
+				traceLabels: {
+					low: 'low',
+					mid: 'mid',
+					high: 'high',
+				},
+				stateLabels: {
+					found: '찾음',
+					mid: 'mid',
+					low: 'low',
+					high: 'high',
+					window: '범위',
+					eliminated: '제외',
+				},
+				frames: [
+					{ low: 0, mid: 3, high: 6, note: '19 > 13이므로 mid까지의 왼쪽 절반을 제외합니다.' },
+					{ low: 4, mid: 5, high: 6, note: '19 < 21이므로 mid 뒤의 오른쪽 절반을 제외합니다.' },
+					{ low: 4, mid: 4, high: 4, note: '19를 인덱스 4에서 찾았습니다.' },
+				],
+			},
+			stackQueue: {
+				title: 'Stack / Queue ADT',
+				description: 'Stack은 한쪽 top에서만 변하고, Queue는 back으로 들어가 front에서 나갑니다.',
+				stackLabel: 'Stack / LIFO',
+				queueLabel: 'Queue / FIFO',
+				pushLabel: 'Push',
+				popLabel: 'Pop',
+				enqueueLabel: 'Enqueue',
+				dequeueLabel: 'Dequeue',
+				resetLabel: '초기화',
+				stackRoles: {
+					top: 'top',
+					held: '대기',
+				},
+				queueRoles: {
+					front: 'front',
+					back: 'back',
+					wait: '대기',
+				},
+			},
 		},
 	},
 };

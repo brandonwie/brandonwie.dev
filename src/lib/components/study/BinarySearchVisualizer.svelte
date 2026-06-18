@@ -1,20 +1,17 @@
 <script lang="ts">
+	import type { BinarySearchVisualizerCopy } from '$lib/data/study';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
-	let { title = 'Binary search' }: { title?: string } = $props();
+	let { copy }: { copy: BinarySearchVisualizerCopy } = $props();
 
 	const values = [2, 5, 8, 13, 19, 21, 34];
 	const target = 19;
-	const frames = [
-		{ low: 0, mid: 3, high: 6, note: '19 > 13, eliminate the left half through mid.' },
-		{ low: 4, mid: 5, high: 6, note: '19 < 21, eliminate the right half after mid.' },
-		{ low: 4, mid: 4, high: 4, note: '19 found at index 4.' },
-	];
 
 	let step = $state(0);
 	let reduceMotion = $state(false);
-	const current = $derived(frames[step]);
+	const current = $derived(copy.frames[step]);
+	type CellState = keyof BinarySearchVisualizerCopy['stateLabels'];
 
 	onMount(() => {
 		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -25,14 +22,14 @@
 	}
 
 	function next() {
-		step = Math.min(frames.length - 1, step + 1);
+		step = Math.min(copy.frames.length - 1, step + 1);
 	}
 
 	function reset() {
 		step = 0;
 	}
 
-	function cellState(index: number, value: number): string {
+	function cellState(index: number, value: number): CellState {
 		if (index === current.mid && value === target) return 'found';
 		if (index === current.mid) return 'mid';
 		if (index === current.low) return 'low';
@@ -41,7 +38,7 @@
 		return 'eliminated';
 	}
 
-	function cellClass(state: string): string {
+	function cellClass(state: CellState): string {
 		if (state === 'found') return 'border-accent bg-highlight-med text-accent';
 		if (state === 'mid') return 'border-gold border-dashed text-gold';
 		if (state === 'low' || state === 'high') return 'border-foam text-foam';
@@ -53,10 +50,12 @@
 <article class="min-w-0 border border-line bg-surface p-5">
 	<div class="flex items-center justify-between gap-4">
 		<div>
-			<h3 class="text-lg font-semibold text-ink">{title}</h3>
-			<p class="mt-2 text-sm leading-6 text-muted">Target: {target}. {current.note}</p>
+			<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
+			<p class="mt-2 text-sm leading-6 text-muted">
+				{copy.targetLabel}: {target}. {current.note}
+			</p>
 		</div>
-		<span class="font-mono text-xs text-faint">{step + 1}/{frames.length}</span>
+		<span class="font-mono text-xs text-faint">{step + 1}/{copy.frames.length}</span>
 	</div>
 
 	<div class="mt-4 flex gap-2">
@@ -64,25 +63,25 @@
 			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
 			type="button"
 			onclick={previous}
-			aria-label="Previous binary search step"
+			aria-label={copy.previousAriaLabel}
 		>
-			← Prev
+			← {copy.previousLabel}
 		</button>
 		<button
 			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
 			type="button"
 			onclick={next}
-			aria-label="Next binary search step"
+			aria-label={copy.nextAriaLabel}
 		>
-			Next →
+			{copy.nextLabel} →
 		</button>
 		<button
 			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
 			type="button"
 			onclick={reset}
-			aria-label="Reset binary search"
+			aria-label={copy.resetAriaLabel}
 		>
-			↺ Reset
+			↺ {copy.resetLabel}
 		</button>
 	</div>
 
@@ -95,7 +94,7 @@
 					class={`border p-2 text-center font-mono text-sm transition-all duration-200 motion-reduce:transition-none ${cellClass(state)}`}
 				>
 					<span class="block text-[10px] text-faint">{index}</span>
-					<span class="block text-[10px] uppercase">{state}</span>
+					<span class="block text-[10px] uppercase">{copy.stateLabels[state]}</span>
 					<span>{value}</span>
 				</div>
 			{/each}
@@ -103,9 +102,13 @@
 	</div>
 
 	<div class="mt-5 grid gap-2">
-		{#each frames.slice(0, step + 1) as frame, index (`${frame.low}-${frame.mid}-${frame.high}`)}
+		{#each copy.frames.slice(0, step + 1) as frame, index (`${frame.low}-${frame.mid}-${frame.high}`)}
 			<p class="border-l border-accent bg-bg px-3 py-2 text-sm leading-6 text-muted">
-				{index + 1}. low {frame.low}, mid {frame.mid}, high {frame.high}: {frame.note}
+				{index + 1}. {copy.traceLabels.low}
+				{frame.low}, {copy.traceLabels.mid}
+				{frame.mid},
+				{copy.traceLabels.high}
+				{frame.high}: {frame.note}
 			</p>
 		{/each}
 	</div>

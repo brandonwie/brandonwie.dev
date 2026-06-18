@@ -96,20 +96,11 @@
 				{content.sections.lab}
 			</h2>
 			<div class="mt-5 grid min-w-0 gap-5 lg:grid-cols-2">
-				<BigOExplorer inputSizeLabel={content.labels.inputSize} />
-				<ArrayListVisualizer
-					operationLabel={content.labels.operation}
-					indexLabel={content.labels.index}
-				/>
-				<RecursionTrace title={content.labels.callStack} />
-				<BinarySearchVisualizer title={content.labels.binarySearch} />
-				<StackQueueVisualizer
-					pushLabel={content.labels.push}
-					popLabel={content.labels.pop}
-					enqueueLabel={content.labels.enqueue}
-					dequeueLabel={content.labels.dequeue}
-					resetLabel={content.labels.reset}
-				/>
+				<BigOExplorer copy={content.visuals.bigO} />
+				<ArrayListVisualizer copy={content.visuals.arrayList} />
+				<RecursionTrace copy={content.visuals.recursion} />
+				<BinarySearchVisualizer copy={content.visuals.binarySearch} />
+				<StackQueueVisualizer copy={content.visuals.stackQueue} />
 			</div>
 		</section>
 
@@ -141,7 +132,8 @@
 			</div>
 			<div class="border border-line bg-surface p-5">
 				<p class="font-mono text-xs uppercase tracking-wider text-faint">
-					{DSA_I_SOURCE_FILES.length} source files
+					{DSA_I_SOURCE_FILES.length}
+					{content.labels.sourceFiles}
 				</p>
 				<div class="mt-4 grid max-h-72 gap-2 overflow-y-auto pr-2">
 					{#each DSA_I_SOURCE_FILES as source (source.path)}

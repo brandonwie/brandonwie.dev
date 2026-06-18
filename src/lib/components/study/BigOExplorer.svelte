@@ -1,8 +1,9 @@
 <script lang="ts">
+	import type { BigOVisualizerCopy } from '$lib/data/study';
 	import { curveMonotoneX, line } from 'd3-shape';
 	import { Tween } from 'svelte/motion';
 
-	let { inputSizeLabel = 'Input size' }: { inputSizeLabel?: string } = $props();
+	let { copy }: { copy: BigOVisualizerCopy } = $props();
 
 	const series = [
 		{ label: 'O(1)', tone: 'var(--color-muted)', dash: '', value: (_n: number) => 1 },
@@ -80,19 +81,17 @@
 <article class="min-w-0 border border-line bg-surface p-5">
 	<div class="flex flex-wrap items-start justify-between gap-4">
 		<div>
-			<h3 class="text-lg font-semibold text-ink">Big-O growth</h3>
-			<p class="mt-2 text-sm leading-6 text-muted">
-				Line shape shows growth; the cursor reads the selected input size.
-			</p>
+			<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
+			<p class="mt-2 text-sm leading-6 text-muted">{copy.description}</p>
 		</div>
 		<label class="flex items-center gap-2 font-mono text-xs text-faint">
 			<input type="checkbox" bind:checked={useLogScale} class="accent-current" />
-			log scale
+			{copy.logScaleLabel}
 		</label>
 	</div>
 
 	<label class="mt-5 block font-mono text-xs uppercase tracking-wider text-faint" for="big-o-input">
-		{inputSizeLabel}: {Math.round(displayInputSize)}
+		{copy.inputSizeLabel}: {Math.round(displayInputSize)}
 	</label>
 	<input
 		id="big-o-input"
@@ -110,7 +109,7 @@
 			viewBox={`0 0 ${chartWidth} ${chartHeight}`}
 			class="w-full min-w-[28rem]"
 			role="img"
-			aria-label="Line chart comparing Big-O growth curves"
+			aria-label={copy.chartAriaLabel}
 		>
 			<line
 				x1={pad.left}
@@ -171,7 +170,7 @@
 				text-anchor="end"
 				class="fill-faint font-mono text-[10px]"
 			>
-				ops
+				{copy.operationsAxisLabel}
 			</text>
 			<text
 				x={pad.left + plotWidth}
@@ -179,7 +178,7 @@
 				text-anchor="end"
 				class="fill-faint font-mono text-[10px]"
 			>
-				n
+				{copy.inputAxisLabel}
 			</text>
 		</svg>
 	</div>
