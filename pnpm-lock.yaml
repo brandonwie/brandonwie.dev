@@ -23,6 +23,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      d3-shape:
+        specifier: ^3.2.0
+        version: 3.2.0
       fuse.js:
         specifier: ^7.0.0
         version: 7.3.0
@@ -48,6 +51,9 @@ importers:
       '@tailwindcss/typography':
         specifier: ^0.5.16
         version: 0.5.19(tailwindcss@4.2.2)
+      '@types/d3-shape':
+        specifier: ^3.1.8
+        version: 3.1.8
       '@types/mdast':
         specifier: ^4.0.4
         version: 4.0.4

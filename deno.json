@@ -5,6 +5,7 @@
 		"preview": "pnpm preview",
 		"check": "pnpm check",
 		"sync": "deno run --allow-read --allow-write scripts/sync-from-3b.ts",
+		"study:check": "deno run --allow-read --allow-env scripts/validate-study-sources.ts",
 		"snapshot:3b": "deno run --allow-read --allow-write --allow-run --allow-env scripts/snapshot-3b-system.ts",
 		"snapshot:3b:check": "deno run --allow-read scripts/snapshot-3b-system.ts --check"
 	},

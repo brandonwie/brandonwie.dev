@@ -9,8 +9,10 @@
 	const content = $derived(getAboutContent(locale));
 	const homeHref = $derived(locale === 'ko' ? '/ko' : '/');
 	const postsHref = $derived(locale === 'ko' ? '/ko/posts' : '/posts');
+	const studyHref = $derived(locale === 'ko' ? '/ko/study' : '/study');
 	const searchHref = $derived(locale === 'ko' ? '/ko/search' : '/search');
 	const systemHref = $derived(locale === 'ko' ? '/ko/system/3b' : '/system/3b');
+	const studyLabel = $derived(locale === 'ko' ? '스터디' : 'Study');
 	const canonicalHref = $derived(
 		locale === 'ko' ? 'https://brandonwie.dev/ko/about' : 'https://brandonwie.dev/about',
 	);
@@ -60,6 +62,9 @@
 			<nav class="flex items-center gap-3 text-sm sm:gap-4" aria-label={m.primary_navigation()}>
 				<a href={postsHref} class="text-muted no-underline transition-colors hover:text-accent">
 					{m.posts_title()}
+				</a>
+				<a href={studyHref} class="text-muted no-underline transition-colors hover:text-accent">
+					{studyLabel}
 				</a>
 				<a href={systemHref} class="text-muted no-underline transition-colors hover:text-accent">
 					3B
