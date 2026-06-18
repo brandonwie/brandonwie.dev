@@ -55,6 +55,10 @@
 	function next() {
 		step = Math.min(steps.length - 1, step + 1);
 	}
+
+	function reset() {
+		step = 0;
+	}
 </script>
 
 <article class="min-w-0 border border-line bg-surface p-5">
@@ -82,6 +86,14 @@
 			aria-label="Next recursion step"
 		>
 			Next →
+		</button>
+		<button
+			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
+			type="button"
+			onclick={reset}
+			aria-label="Reset recursion trace"
+		>
+			↺ Reset
 		</button>
 	</div>
 

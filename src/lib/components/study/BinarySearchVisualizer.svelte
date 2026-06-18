@@ -28,6 +28,10 @@
 		step = Math.min(frames.length - 1, step + 1);
 	}
 
+	function reset() {
+		step = 0;
+	}
+
 	function cellState(index: number, value: number): string {
 		if (index === current.mid && value === target) return 'found';
 		if (index === current.mid) return 'mid';
@@ -71,6 +75,14 @@
 			aria-label="Next binary search step"
 		>
 			Next →
+		</button>
+		<button
+			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
+			type="button"
+			onclick={reset}
+			aria-label="Reset binary search"
+		>
+			↺ Reset
 		</button>
 	</div>
 
