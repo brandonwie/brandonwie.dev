@@ -506,7 +506,7 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 			enqueue: 'Enqueue',
 			dequeue: 'Dequeue',
 			reset: 'Reset',
-			sourceFiles: 'source files',
+			sourceFiles: `${DSA_I_SOURCE_FILES.length} source files`,
 		},
 		visuals: {
 			bigO: {
@@ -772,7 +772,7 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 			enqueue: 'Enqueue',
 			dequeue: 'Dequeue',
 			reset: 'Reset',
-			sourceFiles: '개 원본 파일',
+			sourceFiles: `${DSA_I_SOURCE_FILES.length}개 원본 파일`,
 		},
 		visuals: {
 			bigO: {

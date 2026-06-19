@@ -132,7 +132,6 @@
 			</div>
 			<div class="border border-line bg-surface p-5">
 				<p class="font-mono text-xs uppercase tracking-wider text-faint">
-					{DSA_I_SOURCE_FILES.length}
 					{content.labels.sourceFiles}
 				</p>
 				<div class="mt-4 grid max-h-72 gap-2 overflow-y-auto pr-2">
