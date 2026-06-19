@@ -72,6 +72,7 @@
 	});
 
 	const systemHref = $derived(page.url.pathname.startsWith('/ko') ? '/ko/system/3b' : '/system/3b');
+	const studyHref = $derived(page.url.pathname.startsWith('/ko') ? '/ko/study' : '/study');
 
 	// Full palette item set (nav + actions + posts) for the current route.
 	// Rebuilds on navigation (locale-aware) and when the posts store hydrates.
@@ -191,9 +192,15 @@
 	</a>
 	{@render children()}
 	<nav
-		class="mx-auto max-w-2xl px-4 py-6 text-right text-xs sm:px-6"
-		aria-label={m.system_3b_title()}
+		class="mx-auto flex max-w-2xl justify-end gap-4 px-4 py-6 text-xs sm:px-6"
+		aria-label="Footer"
 	>
+		<a
+			href={studyHref}
+			class="text-terminal-text-muted no-underline transition-colors hover:text-terminal-accent-orange"
+		>
+			{m.study_title()}
+		</a>
 		<a
 			href={systemHref}
 			class="text-terminal-text-muted no-underline transition-colors hover:text-terminal-accent-orange"

@@ -18,6 +18,7 @@
 		"sync:diff": "deno run --allow-read --allow-write --allow-env --allow-run scripts/sync-from-3b.ts --diff",
 		"sync:reconcile": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts --reconcile",
 		"sync:rehash": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts --rehash",
+		"study:check": "deno run --allow-read --allow-env scripts/validate-study-sources.ts",
 		"hash": "deno run --allow-read --allow-env scripts/compute-content-hash.ts",
 		"translation:status": "tsx scripts/translation-status.ts",
 		"translation:create": "tsx scripts/translation-create.ts",
@@ -37,6 +38,7 @@
 		"@sveltejs/kit": "^2.59.1",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/typography": "^0.5.16",
+		"@types/d3-shape": "^3.1.8",
 		"@types/mdast": "^4.0.4",
 		"@types/node": "^24.12.0",
 		"eslint": "^10.0.3",
@@ -72,6 +74,7 @@
 		"@tailwindcss/vite": "^4.2.1",
 		"@xyflow/svelte": "^1.6.0",
 		"clsx": "^2.1.1",
+		"d3-shape": "^3.2.0",
 		"fuse.js": "^7.0.0",
 		"mermaid": "^11.12.2"
 	}

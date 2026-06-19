@@ -65,6 +65,11 @@
 		return `${base}/about`;
 	}
 
+	function studyHref(): string {
+		const base = basePath === '/' ? '' : basePath;
+		return `${base}/study`;
+	}
+
 	function systemHref(): string {
 		const base = basePath === '/' ? '' : basePath;
 		return `${base}/system/3b`;
@@ -118,6 +123,12 @@
 					class="text-sm text-muted no-underline transition-colors hover:text-accent"
 				>
 					{m.posts_title()}
+				</a>
+				<a
+					href={studyHref()}
+					class="text-sm text-muted no-underline transition-colors hover:text-accent"
+				>
+					{m.study_title()}
 				</a>
 				<a
 					href={searchHref}

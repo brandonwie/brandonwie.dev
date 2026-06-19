@@ -39,10 +39,31 @@ export default defineConfig({
 					],
 				},
 				{
+					pattern: '/about',
+					localized: [
+						['en', '/about'],
+						['ko', '/ko/about'],
+					],
+				},
+				{
 					pattern: '/search',
 					localized: [
 						['en', '/search'],
 						['ko', '/ko/search'],
+					],
+				},
+				{
+					pattern: '/study',
+					localized: [
+						['en', '/study'],
+						['ko', '/ko/study'],
+					],
+				},
+				{
+					pattern: '/study/dsa-i',
+					localized: [
+						['en', '/study/dsa-i'],
+						['ko', '/ko/study/dsa-i'],
 					],
 				},
 				{
