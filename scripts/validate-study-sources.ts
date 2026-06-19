@@ -1,7 +1,7 @@
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { DSA_I_SOURCE_FILES, DSA_I_SOURCE_ROOT_LABEL } from '../src/lib/data/study.ts';
+import { DSA_I_SOURCE_FILES, DSA_I_SOURCE_ROOT_LABEL } from '../src/lib/data/study-sources.ts';
 
 async function exists(path: string): Promise<boolean> {
 	try {
