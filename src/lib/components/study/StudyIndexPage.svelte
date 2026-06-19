@@ -24,10 +24,10 @@
 		</div>
 		<aside class="study-card p-5">
 			<p class="font-mono text-xs uppercase tracking-wider text-faint">
-				{content.sections.workflow}
+				{content.sections.approach}
 			</p>
-			<h2 class="mt-3 text-xl font-semibold text-ink">{content.workflow.title}</h2>
-			<p class="mt-3 text-sm leading-7 text-muted">{content.workflow.body}</p>
+			<h2 class="mt-3 text-xl font-semibold text-ink">{content.approach.title}</h2>
+			<p class="mt-3 text-sm leading-7 text-muted">{content.approach.body}</p>
 		</aside>
 	</section>
 
@@ -67,7 +67,7 @@
 							</div>
 						{/each}
 					</div>
-					<p class="mt-5 font-mono text-xs text-faint">{course.sourceCount}</p>
+					<p class="mt-5 font-mono text-xs text-faint">{course.meta}</p>
 				</a>
 			{/each}
 		</div>
@@ -75,7 +75,7 @@
 
 	<section class="mt-16 study-card p-6">
 		<ul class="grid gap-3 md:grid-cols-3">
-			{#each content.workflow.items as item (item)}
+			{#each content.approach.items as item (item)}
 				<li class="text-sm leading-7 text-muted">
 					<span class="mr-2 font-mono text-accent">/</span>{item}
 				</li>

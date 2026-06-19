@@ -5,19 +5,25 @@
 	import RecursionTrace from '$lib/components/study/RecursionTrace.svelte';
 	import StackQueueVisualizer from '$lib/components/study/StackQueueVisualizer.svelte';
 	import StudyPageShell from '$lib/components/study/StudyPageShell.svelte';
+	import StudyRoadmap from '$lib/components/study/StudyRoadmap.svelte';
 	import StudySeoHead from '$lib/components/study/StudySeoHead.svelte';
-	import { DSA_I_SOURCE_FILES, getDsaIContent, type StudyLocale } from '$lib/data/study';
+	import { getDsaIContent, type StudyLocale } from '$lib/data/study';
 
 	let { locale = 'en' }: { locale?: StudyLocale } = $props();
 
 	const content = $derived(getDsaIContent(locale));
 	const pageTitle = $derived(`${content.metaTitle} | Brandon Wie`);
+	const insideLinks = $derived([
+		{ href: '#map', label: content.sections.map },
+		{ href: '#lab', label: content.sections.lab },
+		{ href: '#recall', label: content.sections.recall },
+	]);
 </script>
 
 <StudySeoHead {pageTitle} description={content.metaDescription} basePath="/study/dsa-i" {locale} />
 
 <StudyPageShell {locale} nav={content.nav}>
-	<section class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-end">
+	<section class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
 		<div>
 			<p class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
 				{content.eyebrow}
@@ -29,40 +35,39 @@
 		</div>
 		<aside class="study-card p-5">
 			<p class="font-mono text-xs uppercase tracking-wider text-faint">
-				{content.sections.source}
+				{content.sections.inside}
 			</p>
-			<p class="mt-3 font-mono text-sm text-accent">{content.source.rootLabel}</p>
-			<p class="mt-3 text-sm leading-7 text-muted">{content.source.body}</p>
+			<ul class="mt-4 grid gap-2">
+				{#each insideLinks as link (link.href)}
+					<li>
+						<a
+							href={link.href}
+							class="flex items-center gap-2 font-mono text-sm text-muted no-underline transition-colors hover:text-accent"
+						>
+							<span class="text-accent">▸</span>{link.label}
+						</a>
+					</li>
+				{/each}
+			</ul>
 		</aside>
 	</section>
 
-	<section class="mt-12 grid gap-3 md:grid-cols-5">
+	<section class="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 		{#each content.coverage as item (item)}
 			<div class="study-card p-4 text-sm leading-6 text-muted">{item}</div>
 		{/each}
 	</section>
 
-	<section class="mt-16">
+	<section id="map" class="mt-16 scroll-mt-24">
 		<h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
 			{content.sections.map}
 		</h2>
-		<div class="mt-5 grid gap-4 lg:grid-cols-5">
-			{#each content.modules as module (module.title)}
-				<article class="study-card p-5">
-					<p class="font-mono text-xs uppercase tracking-wider text-accent">{module.kicker}</p>
-					<h3 class="mt-3 text-lg font-semibold text-ink">{module.title}</h3>
-					<p class="mt-3 text-sm leading-7 text-muted">{module.summary}</p>
-					<ul class="mt-4 grid gap-2">
-						{#each module.points as point (point)}
-							<li class="text-xs leading-6 text-faint">/ {point}</li>
-						{/each}
-					</ul>
-				</article>
-			{/each}
+		<div class="mt-6">
+			<StudyRoadmap modules={content.modules} ariaLabel={content.sections.map} />
 		</div>
 	</section>
 
-	<section class="mt-16">
+	<section id="lab" class="mt-16 scroll-mt-24">
 		<h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
 			{content.sections.lab}
 		</h2>
@@ -90,31 +95,25 @@
 		</div>
 	</section>
 
-	<section class="mt-16 grid gap-5 lg:grid-cols-[1fr_1fr]">
-		<div class="study-card p-5">
-			<h2 class="text-xl font-semibold text-ink">{content.source.title}</h2>
-			<ul class="mt-5 grid gap-3">
-				{#each content.source.policy as item (item)}
-					<li class="text-sm leading-7 text-muted">
-						<span class="mr-2 text-accent">/</span>{item}
-					</li>
-				{/each}
-			</ul>
-		</div>
-		<div class="study-card p-5">
-			<p class="font-mono text-xs uppercase tracking-wider text-faint">
-				{content.labels.sourceFiles}
-			</p>
-			<div class="mt-4 grid max-h-72 gap-2 overflow-y-auto pr-2">
-				{#each DSA_I_SOURCE_FILES as source (source.path)}
-					<div class="grid grid-cols-[1fr_5rem] gap-3 border border-line bg-bg px-3 py-2">
-						<span class="truncate font-mono text-xs text-muted">{source.path}</span>
-						<span class="text-right font-mono text-[10px] text-faint"
-							>{source.sha256.slice(0, 8)}</span
-						>
+	<section id="recall" class="mt-16 scroll-mt-24">
+		<h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
+			{content.sections.recall}
+		</h2>
+		<div class="mt-5 grid gap-4 lg:grid-cols-2">
+			{#each content.modules as module, index (index)}
+				<div class="study-card p-5">
+					<p class="font-mono text-xs uppercase tracking-wider text-accent">{module.kicker}</p>
+					<h3 class="mt-2 text-base font-semibold text-ink">{module.title}</h3>
+					<div class="mt-4 grid gap-2">
+						{#each module.recall as prompt (prompt.q)}
+							<details class="study-recall">
+								<summary>{prompt.q}</summary>
+								<p class="px-3 pb-3 text-sm leading-7 text-muted">{prompt.a}</p>
+							</details>
+						{/each}
 					</div>
-				{/each}
-			</div>
+				</div>
+			{/each}
 		</div>
 	</section>
 </StudyPageShell>

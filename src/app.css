@@ -350,6 +350,37 @@
 	background-color: var(--surface);
 }
 
+/* Self-check reveal — native <details> styled as a terminal disclosure row. */
+@utility study-recall {
+	border: 1px solid var(--line);
+	background-color: var(--bg);
+	& > summary {
+		display: flex;
+		gap: 0.5rem;
+		align-items: baseline;
+		cursor: pointer;
+		padding: 0.625rem 0.75rem;
+		font-size: 0.875rem;
+		line-height: 1.5rem;
+		color: var(--ink);
+		list-style: none;
+		transition: color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+	& > summary::-webkit-details-marker {
+		display: none;
+	}
+	& > summary::before {
+		content: '▸';
+		color: var(--accent);
+	}
+	&[open] > summary::before {
+		content: '▾';
+	}
+	& > summary:hover {
+		color: var(--accent);
+	}
+}
+
 /* Prose theme — sets typography plugin color variables (themed via vars) */
 @utility prose-terminal {
 	--tw-prose-body: var(--ink);

@@ -1,11 +1,5 @@
 export type StudyLocale = 'en' | 'ko';
 
-export interface StudySourceFile {
-	path: string;
-	sha256: string;
-	role: 'index' | 'primary-note' | 'slide-summary';
-}
-
 export interface StudyNavLabels {
 	home: string;
 	about: string;
@@ -23,7 +17,7 @@ export interface StudyIndexCourse {
 	summary: string;
 	learned: string[];
 	modules: string[];
-	sourceCount: string;
+	meta: string;
 	updated: string;
 }
 
@@ -36,21 +30,26 @@ export interface StudyIndexContent {
 	nav: StudyNavLabels;
 	sections: {
 		courses: string;
-		workflow: string;
+		approach: string;
 	};
 	courses: StudyIndexCourse[];
-	workflow: {
+	approach: {
 		title: string;
 		body: string;
 		items: string[];
 	};
 }
 
+export interface DsaRecallPrompt {
+	q: string;
+	a: string;
+}
+
 export interface DsaModule {
 	kicker: string;
 	title: string;
 	summary: string;
-	points: string[];
+	recall: DsaRecallPrompt[];
 }
 
 export interface DsaConceptCard {
@@ -182,17 +181,12 @@ export interface DsaIContent {
 		map: string;
 		lab: string;
 		notes: string;
-		source: string;
+		recall: string;
+		inside: string;
 	};
 	coverage: string[];
 	modules: DsaModule[];
 	concepts: DsaConceptCard[];
-	source: {
-		title: string;
-		body: string;
-		rootLabel: string;
-		policy: string[];
-	};
 	labels: {
 		inputSize: string;
 		operation: string;
@@ -204,90 +198,9 @@ export interface DsaIContent {
 		enqueue: string;
 		dequeue: string;
 		reset: string;
-		sourceFiles: string;
 	};
 	visuals: DsaVisualsCopy;
 }
-
-export const DSA_I_SOURCE_ROOT_LABEL = 'personal/study/gt-dsa/dsa-i';
-
-export const DSA_I_SOURCE_FILES: StudySourceFile[] = [
-	{
-		path: '_index.md',
-		sha256: '73d4f27cd7f83f628bd2cbb5693abb9365bca62066fa72f0898c6a4f66bee595',
-		role: 'index',
-	},
-	{
-		path: 'm0-java-review.md',
-		sha256: 'f27c8973edcbbc6edd6f05f68edb30407dbb830a832a465c6002ce61b8800434',
-		role: 'primary-note',
-	},
-	{
-		path: 'm0-iterable-comparable.md',
-		sha256: 'b282186381e2a2823adc491d18f5efce82ec3854e477b20bf21665676f1b1d62',
-		role: 'primary-note',
-	},
-	{
-		path: 'm0-big-o-concepts.md',
-		sha256: '90226695deeac36e4976f8536fb8265e3f93beb48e49b23de4151ec9677b57f9',
-		role: 'primary-note',
-	},
-	{
-		path: 'm1-arrays-and-arraylists.md',
-		sha256: 'bfdeb22d06e9060adf1830fbd460b507cadfde776adf6694594d48eccf4f647d',
-		role: 'primary-note',
-	},
-	{
-		path: 'm1-recursion.md',
-		sha256: 'f7f474841026693451544d2e213c5547193507df55b3f52b8eca4db3bd5f062f',
-		role: 'primary-note',
-	},
-	{
-		path: 'm2-linked-lists.md',
-		sha256: '10e2ac72639a0d12e4fcd41004c5eaad3ae341a2cf56483d466169efe599af84',
-		role: 'primary-note',
-	},
-	{
-		path: 'm3-stacks-and-queues.md',
-		sha256: '7ac6c8ec14bc3f9a893ad01c5049e84267fc4d2291b37513f3d1f14bf1a8f6c6',
-		role: 'primary-note',
-	},
-	{
-		path: 'refs/m0-analysis-of-algorithms-summary.md',
-		sha256: 'e5177c1629647fa637488eafb9f7ee8b57304ae175ef341afe1d2c2d59398568',
-		role: 'slide-summary',
-	},
-	{
-		path: 'refs/m0-iterators-summary.md',
-		sha256: 'd3af23e0bc26e52cf7b2ec5ba0fe124eae68e7bbe32f760bd3449b85ffa4623e',
-		role: 'slide-summary',
-	},
-	{
-		path: 'refs/m1-arrays-arraylist-summary.md',
-		sha256: 'c69c36c0cedc15e679719b6e808ff5354e3d1f0b51931189f04ea498698c403e',
-		role: 'slide-summary',
-	},
-	{
-		path: 'refs/m1-recursion-summary.md',
-		sha256: '716d4a7ba95648d607b6d99009f961a0f7cea85086e9eb75af39b8b345b3101f',
-		role: 'slide-summary',
-	},
-	{
-		path: 'refs/m2-iterators-summary.md',
-		sha256: 'f20d6a73a10d0a60d3166fc1bd96de7dfbe771787706b77d787d829ba09471c4',
-		role: 'slide-summary',
-	},
-	{
-		path: 'refs/m2-linked-list-variations-summary.md',
-		sha256: '1ce8d2a3bcf9d4d9d8b78280b561686e912fde48bca2a325444011f295a9e04b',
-		role: 'slide-summary',
-	},
-	{
-		path: 'refs/m2-singly-linked-lists-summary.md',
-		sha256: '8b70103d86ad5dbb6ed95d9efa48d8995671e314e1335e461651ae0dc410d39f',
-		role: 'slide-summary',
-	},
-];
 
 const nav: Record<StudyLocale, StudyNavLabels> = {
 	en: {
@@ -316,11 +229,11 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 		eyebrow: 'Study',
 		title: 'A public study shelf for material I have actually worked through.',
 		subtitle:
-			'The first section turns my Georgia Tech DSA I notes into inspectable examples, with source tracking back to 3B so the public page does not drift from what I learned.',
+			'The first section turns my Georgia Tech DSA I notes into inspectable, interactive examples — visual demos plus quick recall prompts to keep the material in long-term memory.',
 		nav: nav.en,
 		sections: {
 			courses: 'current courses',
-			workflow: 'how this stays synced',
+			approach: 'the approach',
 		},
 		courses: [
 			{
@@ -332,17 +245,17 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 					'ArrayLists, LinkedLists, stacks, queues, recursion, binary search, iterators, comparators, and Big-O from the DSA I study folder.',
 				learned: ['Big-O scaling', 'Array-backed lists', 'Recursive traces', 'Pointer updates'],
 				modules: ['Module 0', 'Module 1', 'Module 2', 'Module 3'],
-				sourceCount: `${DSA_I_SOURCE_FILES.length} tracked files`,
+				meta: 'Modules 0–3 · 5 interactive demos',
 				updated: '2026-06-18',
 			},
 		],
-		workflow: {
-			title: '3B remains the source of truth.',
-			body: 'The public page is curated from a source registry instead of becoming a second notebook. When files in 3B change, the drift check flags the page for review before the study section grows.',
+		approach: {
+			title: 'Notes turned into things you can poke at.',
+			body: 'Each course starts from notes I actually worked through, then becomes interactive demos you can step through plus a few prompts to test what stuck.',
 			items: [
-				'Raw study notes live in 3B under personal/study/gt-dsa/dsa-i.',
-				'The site keeps a small curated data model and source hashes.',
-				'Future courses can add one registry entry, one page, and one validation row.',
+				'Visual demos you can step through',
+				'A module roadmap for each course',
+				'Quick self-check prompts to fight forgetting',
 			],
 		},
 	},
@@ -353,11 +266,11 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 		eyebrow: 'Study',
 		title: '실제로 공부한 내용만 공개 학습 페이지로 정리합니다.',
 		subtitle:
-			'첫 섹션은 Georgia Tech DSA I 노트를 시각 예제로 바꾼 것입니다. 3B 원본과 해시를 함께 추적해 공개 페이지가 학습 기록에서 벗어나지 않게 합니다.',
+			'첫 섹션은 Georgia Tech DSA I 노트를 직접 다뤄볼 수 있는 인터랙티브 예제로 바꾼 것입니다. 시각 데모와 짧은 복습 질문으로 내용을 오래 기억하도록 돕습니다.',
 		nav: nav.ko,
 		sections: {
 			courses: '현재 과정',
-			workflow: '동기화 방식',
+			approach: '진행 방식',
 		},
 		courses: [
 			{
@@ -369,17 +282,17 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 					'DSA I 폴더에서 정리한 ArrayList, LinkedList, Stack, Queue, Recursion, Binary Search, Iterator, Comparator, Big-O 내용입니다.',
 				learned: ['Big-O 스케일', '배열 기반 리스트', '재귀 추적', '포인터 갱신'],
 				modules: ['Module 0', 'Module 1', 'Module 2', 'Module 3'],
-				sourceCount: `${DSA_I_SOURCE_FILES.length}개 파일 추적`,
+				meta: 'Module 0–3 · 인터랙티브 데모 5개',
 				updated: '2026-06-18',
 			},
 		],
-		workflow: {
-			title: '3B가 원본입니다.',
-			body: '공개 페이지를 또 하나의 노트로 만들지 않고, 원본 파일 목록과 해시 위에 얇은 큐레이션 레이어로 둡니다. 3B 파일이 바뀌면 drift check가 먼저 알려줍니다.',
+		approach: {
+			title: '직접 만져볼 수 있는 노트로.',
+			body: '각 과정은 실제로 공부한 노트에서 시작해, 단계별로 따라가는 인터랙티브 데모와 기억을 점검하는 짧은 질문으로 이어집니다.',
 			items: [
-				'원본 학습 노트는 3B의 personal/study/gt-dsa/dsa-i에 둡니다.',
-				'사이트는 공개용 데이터 모델과 소스 해시만 유지합니다.',
-				'다음 과정은 registry, page, validation row를 추가하는 방식으로 확장합니다.',
+				'단계별로 따라가는 시각 데모',
+				'과정마다 제공하는 학습 로드맵',
+				'복습을 돕는 셀프 체크 질문',
 			],
 		},
 	},
@@ -398,8 +311,9 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 		sections: {
 			map: 'learning map',
 			lab: 'visual lab',
-			notes: 'source-backed notes',
-			source: 'source control',
+			notes: 'concept notes',
+			recall: 'test yourself',
+			inside: "what's inside",
 		},
 		coverage: [
 			'Worst-case Big-O and primitive operation counting',
@@ -410,25 +324,35 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 		],
 		modules: [
 			{
-				kicker: 'Module 0',
+				kicker: 'Module 0 · Foundations',
 				title: 'Foundations and Java review',
 				summary:
 					'The notes start by translating Java syntax, generics, wrapper types, Iterable, Iterator, Comparable, and Comparator into concepts familiar from JS/TS.',
-				points: [
-					'Enhanced for loops use iterators',
-					'Comparable owns natural order',
-					'Comparator is an external ordering rule',
+				recall: [
+					{
+						q: 'What does an enhanced for loop use under the hood?',
+						a: 'An Iterator — hasNext() / next(). Implementing Iterable is what lets a type work with it.',
+					},
+					{
+						q: 'Comparable vs Comparator?',
+						a: 'Comparable defines the natural order of a type (compareTo); Comparator is an external, swappable ordering rule.',
+					},
 				],
 			},
 			{
-				kicker: 'Module 0',
+				kicker: 'Module 0 · Big-O',
 				title: 'Big-O and primitive operations',
 				summary:
 					'Big-O is treated as the tightest reasonable upper bound for worst-case growth, after dropping constants and lower-order terms.',
-				points: [
-					'Count primitive operations',
-					'Use the tightest bound',
-					'Constants can still matter in practice',
+				recall: [
+					{
+						q: 'What exactly does Big-O capture here?',
+						a: 'The tightest reasonable upper bound on worst-case growth, after dropping constants and lower-order terms.',
+					},
+					{
+						q: 'If two algorithms are both O(n), are they equally fast?',
+						a: 'Not necessarily — constants and lower-order terms are dropped from Big-O but can still matter in practice.',
+					},
 				],
 			},
 			{
@@ -436,10 +360,15 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 				title: 'Arrays, ArrayLists, recursion',
 				summary:
 					'ArrayLists use a backing array, shift elements for middle insert/remove, and resize by copying into a larger array. Recursion needs a base case and progress toward it.',
-				points: [
-					'addToBack is amortized O(1)',
-					'addAtIndex shifts right',
-					'Binary search halves the window',
+				recall: [
+					{
+						q: 'Why is ArrayList addToBack amortized O(1) but addAtIndex O(n)?',
+						a: 'addToBack only resizes occasionally; addAtIndex must shift every later element one slot to the right.',
+					},
+					{
+						q: 'What must every recursion have, and how does binary search use it?',
+						a: 'A base case plus progress toward it. Binary search halves the search window each step until it is empty.',
+					},
 				],
 			},
 			{
@@ -447,10 +376,15 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 				title: 'Linked lists',
 				summary:
 					'Linked lists trade random access for pointer updates. The notes compare SLL, DLL, and CLL edge cases and operation costs.',
-				points: [
-					'SLL removeFromBack is O(n)',
-					'DLL tail.prev makes back removal O(1)',
-					'CLL can add to both ends with a data swap trick',
+				recall: [
+					{
+						q: 'Why is removeFromBack O(n) for an SLL but O(1) for a DLL?',
+						a: 'An SLL must walk from head to find the new tail; a DLL reads tail.prev directly.',
+					},
+					{
+						q: 'How can a circular linked list add to both ends in O(1)?',
+						a: 'Keep one pointer to the head and use a data-swap trick so the front and back are both reachable in O(1).',
+					},
 				],
 			},
 			{
@@ -458,10 +392,15 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 				title: 'Stacks and queues',
 				summary:
 					'Stacks restrict work to one end. Queues add at the back and remove at the front. ArrayQueue uses a circular array and unwraps on resize.',
-				points: [
-					'Stack is LIFO',
-					'Queue is FIFO',
-					'ArrayQueue enqueue index is (front + size) % capacity',
+				recall: [
+					{
+						q: 'Stack vs queue ordering?',
+						a: 'Stack is LIFO and works at one end; queue is FIFO — add at the back, remove from the front.',
+					},
+					{
+						q: 'Where does an ArrayQueue enqueue land?',
+						a: 'At index (front + size) % capacity — a circular array that unwraps into a larger one on resize.',
+					},
 				],
 			},
 		],
@@ -469,29 +408,19 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 			{
 				title: 'ArrayList resize',
 				body: 'When the backing array is full, the implementation creates a larger array and copies existing elements before adding new data.',
-				source: 'm1-arrays-and-arraylists.md',
+				source: 'Module 1 · ArrayLists',
 			},
 			{
 				title: 'Recursion trace',
 				body: 'Each recursive call waits on a smaller call until the base case returns, then results unwind back up the call stack.',
-				source: 'm1-recursion.md + refs/m1-recursion-summary.md',
+				source: 'Module 1 · Recursion',
 			},
 			{
 				title: 'Circular queue',
 				body: 'ArrayQueue keeps a front index. Enqueue lands at (front + size) % capacity; dequeue advances front by one modulo capacity.',
-				source: 'm3-stacks-and-queues.md',
+				source: 'Module 3 · Stacks & Queues',
 			},
 		],
-		source: {
-			title: 'Managed as a curated projection, not a second notebook.',
-			body: 'The page is intentionally smaller than the study folder. It should publish only stable learning checkpoints and visual examples that can be traced back to 3B.',
-			rootLabel: DSA_I_SOURCE_ROOT_LABEL,
-			policy: [
-				'Add new topics only after they exist in the 3B study notes.',
-				'Run pnpm study:check before shipping study-page changes.',
-				'When hashes drift, review the source notes and update the public model deliberately.',
-			],
-		},
 		labels: {
 			inputSize: 'Input size',
 			operation: 'Operation',
@@ -503,7 +432,6 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 			enqueue: 'Enqueue',
 			dequeue: 'Dequeue',
 			reset: 'Reset',
-			sourceFiles: `${DSA_I_SOURCE_FILES.length} source files`,
 		},
 		visuals: {
 			bigO: {
@@ -664,8 +592,9 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 		sections: {
 			map: '학습 지도',
 			lab: '시각 실험실',
-			notes: '원본 기반 노트',
-			source: '원본 관리',
+			notes: '개념 노트',
+			recall: '스스로 점검',
+			inside: '구성',
 		},
 		coverage: [
 			'worst-case Big-O와 primitive operation 세기',
@@ -676,25 +605,35 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 		],
 		modules: [
 			{
-				kicker: 'Module 0',
+				kicker: 'Module 0 · 기초',
 				title: '기초와 Java review',
 				summary:
 					'Java 문법, generics, wrapper type, Iterable, Iterator, Comparable, Comparator를 JS/TS와 연결해 정리했습니다.',
-				points: [
-					'Enhanced for loop는 iterator를 사용합니다',
-					'Comparable은 자연 정렬입니다',
-					'Comparator는 외부 정렬 규칙입니다',
+				recall: [
+					{
+						q: 'Enhanced for loop는 내부적으로 무엇을 사용하나요?',
+						a: 'Iterator(hasNext/next)를 사용합니다. Iterable을 구현해야 enhanced for loop에서 동작합니다.',
+					},
+					{
+						q: 'Comparable과 Comparator의 차이는?',
+						a: 'Comparable은 타입의 자연 정렬(compareTo)을 정의하고, Comparator는 외부에서 교체 가능한 정렬 규칙입니다.',
+					},
 				],
 			},
 			{
-				kicker: 'Module 0',
+				kicker: 'Module 0 · Big-O',
 				title: 'Big-O와 primitive operations',
 				summary:
 					'Big-O는 worst-case growth에 대한 가장 타이트한 upper bound로 사용하고, 상수와 낮은 차수 항은 제거합니다.',
-				points: [
-					'primitive operation을 셉니다',
-					'가능한 가장 타이트한 bound를 씁니다',
-					'실무에서는 상수도 체감될 수 있습니다',
+				recall: [
+					{
+						q: 'Big-O는 정확히 무엇을 나타내나요?',
+						a: 'worst-case growth에 대한 가장 타이트한 upper bound입니다. 상수와 낮은 차수 항은 제거합니다.',
+					},
+					{
+						q: '둘 다 O(n)이면 속도가 같나요?',
+						a: '꼭 그렇지는 않습니다. Big-O에서는 상수와 낮은 차수 항을 버리지만 실무에서는 체감될 수 있습니다.',
+					},
 				],
 			},
 			{
@@ -702,10 +641,15 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 				title: 'Arrays, ArrayLists, recursion',
 				summary:
 					'ArrayList는 backing array를 사용하고, 중간 삽입/삭제에서 원소를 shift하며, 꽉 차면 더 큰 배열로 복사합니다. 재귀는 base case와 base case로 향하는 변화가 필요합니다.',
-				points: [
-					'addToBack은 amortized O(1)',
-					'addAtIndex는 오른쪽으로 shift',
-					'Binary search는 탐색 범위를 절반으로 줄입니다',
+				recall: [
+					{
+						q: 'ArrayList addToBack은 amortized O(1)인데 addAtIndex는 왜 O(n)인가요?',
+						a: 'addToBack은 가끔만 resize하지만, addAtIndex는 뒤쪽 원소를 모두 한 칸씩 오른쪽으로 밀어야 합니다.',
+					},
+					{
+						q: '모든 재귀에 필요한 것과 binary search의 관계는?',
+						a: 'base case와 그쪽으로 향하는 진행이 필요합니다. Binary search는 매 단계 탐색 범위를 절반으로 줄입니다.',
+					},
 				],
 			},
 			{
@@ -713,10 +657,15 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 				title: 'Linked lists',
 				summary:
 					'LinkedList는 random access를 포기하는 대신 포인터 갱신으로 데이터를 조작합니다. SLL, DLL, CLL의 edge case와 비용을 비교했습니다.',
-				points: [
-					'SLL removeFromBack은 O(n)',
-					'DLL은 tail.prev로 뒤 삭제가 O(1)',
-					'CLL은 data-swap trick으로 양끝 삽입을 처리합니다',
+				recall: [
+					{
+						q: 'removeFromBack이 SLL에서는 O(n), DLL에서는 O(1)인 이유는?',
+						a: 'SLL은 head부터 걸어가 새 tail을 찾아야 하지만, DLL은 tail.prev를 바로 읽습니다.',
+					},
+					{
+						q: 'CLL은 어떻게 양끝 삽입을 O(1)로 처리하나요?',
+						a: 'head 포인터 하나만 유지하고 data-swap trick으로 front와 back을 모두 O(1)에 접근합니다.',
+					},
 				],
 			},
 			{
@@ -724,10 +673,15 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 				title: 'Stacks and queues',
 				summary:
 					'Stack은 한쪽 끝만 사용하고, Queue는 뒤에 넣고 앞에서 뺍니다. ArrayQueue는 circular array를 쓰며 resize 때 unwrap합니다.',
-				points: [
-					'Stack은 LIFO',
-					'Queue는 FIFO',
-					'ArrayQueue enqueue 위치는 (front + size) % capacity',
+				recall: [
+					{
+						q: 'Stack과 Queue의 순서 규칙은?',
+						a: 'Stack은 LIFO로 한쪽 끝만 쓰고, Queue는 FIFO로 back에 넣고 front에서 뺍니다.',
+					},
+					{
+						q: 'ArrayQueue의 enqueue 위치는?',
+						a: '(front + size) % capacity입니다. circular array이고 resize 때 더 큰 배열로 unwrap합니다.',
+					},
 				],
 			},
 		],
@@ -735,29 +689,19 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 			{
 				title: 'ArrayList resize',
 				body: 'backing array가 가득 차면 더 큰 배열을 만들고 기존 원소를 복사한 뒤 새 데이터를 넣습니다.',
-				source: 'm1-arrays-and-arraylists.md',
+				source: 'Module 1 · ArrayList',
 			},
 			{
 				title: 'Recursion trace',
 				body: '각 recursive call은 더 작은 call을 기다립니다. base case가 반환되면 call stack이 거꾸로 풀립니다.',
-				source: 'm1-recursion.md + refs/m1-recursion-summary.md',
+				source: 'Module 1 · Recursion',
 			},
 			{
 				title: 'Circular queue',
 				body: 'ArrayQueue는 front index를 유지합니다. Enqueue는 (front + size) % capacity에 들어가고, dequeue는 front를 modulo로 한 칸 이동합니다.',
-				source: 'm3-stacks-and-queues.md',
+				source: 'Module 3 · Stack & Queue',
 			},
 		],
-		source: {
-			title: '두 번째 노트가 아니라 공개용 projection으로 관리합니다.',
-			body: '스터디 폴더 전체를 그대로 공개하지 않고, 안정된 학습 checkpoint와 시각 예제만 골라 3B 원본에 연결합니다.',
-			rootLabel: DSA_I_SOURCE_ROOT_LABEL,
-			policy: [
-				'새 주제는 먼저 3B study note에 존재해야 합니다.',
-				'스터디 페이지 변경 전 pnpm study:check를 실행합니다.',
-				'해시가 바뀌면 원본 노트를 검토하고 공개 모델을 의도적으로 갱신합니다.',
-			],
-		},
 		labels: {
 			inputSize: '입력 크기',
 			operation: '연산',
@@ -769,7 +713,6 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 			enqueue: 'Enqueue',
 			dequeue: 'Dequeue',
 			reset: 'Reset',
-			sourceFiles: `${DSA_I_SOURCE_FILES.length}개 원본 파일`,
 		},
 		visuals: {
 			bigO: {
