@@ -1,6 +1,7 @@
 <script lang="ts">
+	import Stepper from '$lib/components/study/Stepper.svelte';
 	import type { BinarySearchVisualizerCopy } from '$lib/data/study';
-	import { onMount } from 'svelte';
+	import { useReducedMotion } from '$lib/useReducedMotion.svelte';
 	import { fade } from 'svelte/transition';
 
 	let { copy }: { copy: BinarySearchVisualizerCopy } = $props();
@@ -9,25 +10,9 @@
 	const target = 19;
 
 	let step = $state(0);
-	let reduceMotion = $state(false);
+	const motion = useReducedMotion();
 	const current = $derived(copy.frames[step]);
 	type CellState = keyof BinarySearchVisualizerCopy['stateLabels'];
-
-	onMount(() => {
-		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-	});
-
-	function previous() {
-		step = Math.max(0, step - 1);
-	}
-
-	function next() {
-		step = Math.min(copy.frames.length - 1, step + 1);
-	}
-
-	function reset() {
-		step = 0;
-	}
 
 	function cellState(index: number, value: number): CellState {
 		if (index === current.mid && value === target) return 'found';
@@ -47,7 +32,7 @@
 	}
 </script>
 
-<article class="min-w-0 border border-line bg-surface p-5">
+<article class="study-card min-w-0 p-5">
 	<div class="flex items-center justify-between gap-4">
 		<div>
 			<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
@@ -58,39 +43,14 @@
 		<span class="font-mono text-xs text-faint">{step + 1}/{copy.frames.length}</span>
 	</div>
 
-	<div class="mt-4 flex gap-2">
-		<button
-			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
-			type="button"
-			onclick={previous}
-			aria-label={copy.previousAriaLabel}
-		>
-			← {copy.previousLabel}
-		</button>
-		<button
-			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
-			type="button"
-			onclick={next}
-			aria-label={copy.nextAriaLabel}
-		>
-			{copy.nextLabel} →
-		</button>
-		<button
-			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
-			type="button"
-			onclick={reset}
-			aria-label={copy.resetAriaLabel}
-		>
-			↺ {copy.resetLabel}
-		</button>
-	</div>
+	<Stepper length={copy.frames.length} bind:step labels={copy} />
 
 	<div class="mt-5 overflow-x-auto">
 		<div class="grid min-w-[26rem] grid-cols-7 gap-2">
 			{#each values as value, index (value)}
 				{@const state = cellState(index, value)}
 				<div
-					in:fade={{ duration: reduceMotion ? 0 : 120 }}
+					in:fade={{ duration: motion.current ? 0 : 120 }}
 					class={`border p-2 text-center font-mono text-sm transition-all duration-200 motion-reduce:transition-none ${cellClass(state)}`}
 				>
 					<span class="block text-[10px] text-faint">{index}</span>

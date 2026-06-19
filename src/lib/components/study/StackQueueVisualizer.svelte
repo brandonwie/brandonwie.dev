@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { StackQueueVisualizerCopy } from '$lib/data/study';
-	import { onMount } from 'svelte';
+	import { useReducedMotion } from '$lib/useReducedMotion.svelte';
 	import { flip } from 'svelte/animate';
 	import { fly } from 'svelte/transition';
 
@@ -21,11 +21,7 @@
 	let nextStackId = $state(3);
 	let queueItems = $state<Item[]>(initialItems());
 	let nextQueueId = $state(3);
-	let reduceMotion = $state(false);
-
-	onMount(() => {
-		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-	});
+	const motion = useReducedMotion();
 
 	function nextLabel(length: number): string {
 		const letter = String.fromCharCode(65 + (length % 26));
@@ -63,17 +59,13 @@
 	}
 </script>
 
-<article class="min-w-0 border border-line bg-surface p-5 lg:col-span-2">
+<article class="study-card min-w-0 p-5 lg:col-span-2">
 	<div class="flex flex-wrap items-center justify-between gap-4">
 		<div>
 			<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
 			<p class="mt-2 text-sm leading-6 text-muted">{copy.description}</p>
 		</div>
-		<button
-			class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
-			type="button"
-			onclick={reset}
-		>
+		<button class="study-btn" type="button" onclick={reset}>
 			↺ {copy.resetLabel}
 		</button>
 	</div>
@@ -83,24 +75,16 @@
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<p class="font-mono text-xs uppercase tracking-wider text-faint">{copy.stackLabel}</p>
 				<div class="flex flex-wrap gap-2">
-					<button
-						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
-						type="button"
-						onclick={addStack}>+ {copy.pushLabel}</button
-					>
-					<button
-						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
-						type="button"
-						onclick={popStack}>- {copy.popLabel}</button
-					>
+					<button class="study-btn" type="button" onclick={addStack}>+ {copy.pushLabel}</button>
+					<button class="study-btn" type="button" onclick={popStack}>- {copy.popLabel}</button>
 				</div>
 			</div>
 			<div class="mt-3 flex min-h-28 flex-col-reverse gap-2 border border-line bg-bg p-3">
 				{#each stackItems as item, index (item.id)}
 					<div
-						animate:flip={{ duration: reduceMotion ? 0 : 180 }}
-						in:fly={{ y: -12, duration: reduceMotion ? 0 : 160 }}
-						out:fly={{ y: -12, duration: reduceMotion ? 0 : 120 }}
+						animate:flip={{ duration: motion.current ? 0 : 180 }}
+						in:fly={{ y: -12, duration: motion.current ? 0 : 160 }}
+						out:fly={{ y: -12, duration: motion.current ? 0 : 120 }}
 						class="border border-accent px-3 py-2 text-center font-mono text-sm text-accent"
 					>
 						<span class="mr-2 text-[10px] uppercase text-faint">
@@ -116,16 +100,8 @@
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<p class="font-mono text-xs uppercase tracking-wider text-faint">{copy.queueLabel}</p>
 				<div class="flex flex-wrap gap-2">
-					<button
-						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
-						type="button"
-						onclick={enqueue}>+ {copy.enqueueLabel}</button
-					>
-					<button
-						class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
-						type="button"
-						onclick={dequeue}>- {copy.dequeueLabel}</button
-					>
+					<button class="study-btn" type="button" onclick={enqueue}>+ {copy.enqueueLabel}</button>
+					<button class="study-btn" type="button" onclick={dequeue}>- {copy.dequeueLabel}</button>
 				</div>
 			</div>
 			<div
@@ -133,9 +109,9 @@
 			>
 				{#each queueItems as item, index (item.id)}
 					<div
-						animate:flip={{ duration: reduceMotion ? 0 : 180 }}
-						in:fly={{ x: 14, duration: reduceMotion ? 0 : 160 }}
-						out:fly={{ x: -14, duration: reduceMotion ? 0 : 120 }}
+						animate:flip={{ duration: motion.current ? 0 : 180 }}
+						in:fly={{ x: 14, duration: motion.current ? 0 : 160 }}
+						out:fly={{ x: -14, duration: motion.current ? 0 : 120 }}
 						class="min-w-16 border border-foam px-3 py-2 text-center font-mono text-sm text-foam"
 					>
 						<span class="block text-[10px] uppercase text-faint">

@@ -327,6 +327,28 @@
 	}
 }
 
+/* Study section — shared button + card primitives. Study-scoped names avoid a
+   global `btn`/`card` collision (e.g. System3bFlow already uses `class="btn"`). */
+@utility study-btn {
+	border: 1px solid var(--line);
+	background-color: var(--bg);
+	padding: 0.5rem 0.75rem;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--muted);
+	transition-property: color, background-color, border-color;
+	transition-duration: 150ms;
+	&:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+}
+
+@utility study-card {
+	border: 1px solid var(--line);
+	background-color: var(--surface);
+}
+
 /* Prose theme — sets typography plugin color variables (themed via vars) */
 @utility prose-terminal {
 	--tw-prose-body: var(--ink);
