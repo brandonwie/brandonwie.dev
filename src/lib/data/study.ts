@@ -336,7 +336,7 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 				learned: ['Big-O scaling', 'Array-backed lists', 'Recursive traces', 'Pointer updates'],
 				modules: ['Module 0', 'Module 1', 'Module 2', 'Module 3'],
 				sourceCount: `${DSA_I_SOURCE_FILES.length} tracked files`,
-				updated: '2026-06-19',
+				updated: '2026-06-18',
 			},
 		],
 		workflow: {
@@ -373,7 +373,7 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 				learned: ['Big-O 스케일', '배열 기반 리스트', '재귀 추적', '포인터 갱신'],
 				modules: ['Module 0', 'Module 1', 'Module 2', 'Module 3'],
 				sourceCount: `${DSA_I_SOURCE_FILES.length}개 파일 추적`,
-				updated: '2026-06-19',
+				updated: '2026-06-18',
 			},
 		],
 		workflow: {
