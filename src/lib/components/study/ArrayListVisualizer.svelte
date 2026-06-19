@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ArrayListVisualizerCopy } from '$lib/data/study';
-	import { onMount } from 'svelte';
+	import { useReducedMotion } from '$lib/useReducedMotion.svelte';
 	import { flip } from 'svelte/animate';
 	import { scale } from 'svelte/transition';
 
@@ -30,7 +30,7 @@
 	let nextId = $state(0);
 	let copyRun = $state(0);
 	let message = $state<MessageState>({ kind: 'initial' });
-	let reduceMotion = $state(false);
+	const motion = useReducedMotion();
 
 	const emptySlots = $derived(Math.max(capacity - items.length, 0));
 	const messageText = $derived.by(() => {
@@ -38,10 +38,6 @@
 		if (message.kind === 'insert') return copy.messages.insert(message.index);
 		if (message.kind === 'remove') return copy.messages.remove(message.index);
 		return copy.messages.initial;
-	});
-
-	onMount(() => {
-		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 	});
 
 	function clean(itemsToClean = items): Item[] {
@@ -120,7 +116,7 @@
 	}
 </script>
 
-<article class="min-w-0 border border-line bg-surface p-5">
+<article class="study-card min-w-0 p-5">
 	<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
 	<p class="mt-2 text-sm leading-6 text-muted">{messageText}</p>
 
@@ -154,18 +150,10 @@
 				disabled={operation === 'resize'}
 			/>
 		</div>
-		<button
-			type="button"
-			class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
-			onclick={applyOperation}
-		>
+		<button type="button" class="study-btn" onclick={applyOperation}>
 			{copy.applyLabel}
 		</button>
-		<button
-			type="button"
-			class="border border-line bg-bg px-3 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
-			onclick={reset}
-		>
+		<button type="button" class="study-btn" onclick={reset}>
 			{copy.resetLabel}
 		</button>
 	</div>
@@ -177,8 +165,8 @@
 		>
 			{#each items as item, slot (item.id)}
 				<div
-					animate:flip={{ duration: reduceMotion ? 0 : 220 }}
-					in:scale={{ duration: reduceMotion ? 0 : 160 }}
+					animate:flip={{ duration: motion.current ? 0 : 220 }}
+					in:scale={{ duration: motion.current ? 0 : 160 }}
 					class={`min-h-16 border bg-bg p-1 text-center font-mono text-sm motion-reduce:transition-none ${statusClass(item.status)}`}
 				>
 					<span class="block text-[10px] text-faint">{copy.indexPrefix} {slot}</span>

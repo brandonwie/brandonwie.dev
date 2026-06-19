@@ -81,7 +81,7 @@
 	}
 </script>
 
-<article class="min-w-0 border border-line bg-surface p-5">
+<article class="study-card min-w-0 p-5">
 	<div class="flex flex-wrap items-start justify-between gap-4">
 		<div>
 			<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>

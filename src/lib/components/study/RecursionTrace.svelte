@@ -1,32 +1,17 @@
 <script lang="ts">
+	import Stepper from '$lib/components/study/Stepper.svelte';
 	import type { RecursionTraceCopy } from '$lib/data/study';
-	import { onMount } from 'svelte';
+	import { useReducedMotion } from '$lib/useReducedMotion.svelte';
 	import { fly, scale } from 'svelte/transition';
 
 	let { copy }: { copy: RecursionTraceCopy } = $props();
 
 	let step = $state(0);
-	let reduceMotion = $state(false);
+	const motion = useReducedMotion();
 	const current = $derived(copy.steps[step]);
-
-	onMount(() => {
-		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-	});
-
-	function previous() {
-		step = Math.max(0, step - 1);
-	}
-
-	function next() {
-		step = Math.min(copy.steps.length - 1, step + 1);
-	}
-
-	function reset() {
-		step = 0;
-	}
 </script>
 
-<article class="min-w-0 border border-line bg-surface p-5">
+<article class="study-card min-w-0 p-5">
 	<div class="flex items-center justify-between gap-4">
 		<div>
 			<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
@@ -35,38 +20,13 @@
 		<span class="font-mono text-xs text-faint">{step + 1}/{copy.steps.length}</span>
 	</div>
 
-	<div class="mt-4 flex gap-2">
-		<button
-			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
-			type="button"
-			onclick={previous}
-			aria-label={copy.previousAriaLabel}
-		>
-			← {copy.previousLabel}
-		</button>
-		<button
-			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
-			type="button"
-			onclick={next}
-			aria-label={copy.nextAriaLabel}
-		>
-			{copy.nextLabel} →
-		</button>
-		<button
-			class="border border-line bg-bg px-3 py-2 font-mono text-xs text-muted transition-colors hover:border-accent hover:text-accent"
-			type="button"
-			onclick={reset}
-			aria-label={copy.resetAriaLabel}
-		>
-			↺ {copy.resetLabel}
-		</button>
-	</div>
+	<Stepper length={copy.steps.length} bind:step labels={copy} />
 
 	<div class="mt-5 grid gap-2">
 		{#each current.frames as frame, index (frame)}
 			<div
-				in:fly={{ y: -10, duration: reduceMotion ? 0 : 180 }}
-				out:scale={{ duration: reduceMotion ? 0 : 120 }}
+				in:fly={{ y: -10, duration: motion.current ? 0 : 180 }}
+				out:scale={{ duration: motion.current ? 0 : 120 }}
 				class={`border px-3 py-2 font-mono text-sm ${
 					current.mode === 'unwind' || current.mode === 'done'
 						? 'border-gold border-dashed text-gold'

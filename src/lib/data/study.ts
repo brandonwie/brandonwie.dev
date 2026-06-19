@@ -96,14 +96,17 @@ export interface ArrayListVisualizerCopy {
 	};
 }
 
-export interface RecursionTraceCopy {
-	title: string;
+export interface StepperCopy {
 	previousLabel: string;
 	nextLabel: string;
 	resetLabel: string;
 	previousAriaLabel: string;
 	nextAriaLabel: string;
 	resetAriaLabel: string;
+}
+
+export interface RecursionTraceCopy extends StepperCopy {
+	title: string;
 	frameLabels: {
 		call: string;
 		return: string;
@@ -115,15 +118,9 @@ export interface RecursionTraceCopy {
 	}[];
 }
 
-export interface BinarySearchVisualizerCopy {
+export interface BinarySearchVisualizerCopy extends StepperCopy {
 	title: string;
 	targetLabel: string;
-	previousLabel: string;
-	nextLabel: string;
-	resetLabel: string;
-	previousAriaLabel: string;
-	nextAriaLabel: string;
-	resetAriaLabel: string;
 	traceLabels: {
 		low: string;
 		mid: string;
