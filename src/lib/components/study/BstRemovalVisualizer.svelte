@@ -77,7 +77,6 @@
 				return id === 'n4' ? 'target' : null;
 			case 1:
 				if (id === 'n4') return 'target';
-				if (id === 'n2' || id === 'n6') return 'successor';
 				return null;
 			case 2:
 				if (id === 'n4') return 'target';
