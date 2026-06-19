@@ -324,7 +324,7 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 		],
 		modules: [
 			{
-				kicker: 'Module 0',
+				kicker: 'Module 0 · Foundations',
 				title: 'Foundations and Java review',
 				summary:
 					'The notes start by translating Java syntax, generics, wrapper types, Iterable, Iterator, Comparable, and Comparator into concepts familiar from JS/TS.',
@@ -340,7 +340,7 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 				],
 			},
 			{
-				kicker: 'Module 0',
+				kicker: 'Module 0 · Big-O',
 				title: 'Big-O and primitive operations',
 				summary:
 					'Big-O is treated as the tightest reasonable upper bound for worst-case growth, after dropping constants and lower-order terms.',
@@ -605,7 +605,7 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 		],
 		modules: [
 			{
-				kicker: 'Module 0',
+				kicker: 'Module 0 · 기초',
 				title: '기초와 Java review',
 				summary:
 					'Java 문법, generics, wrapper type, Iterable, Iterator, Comparable, Comparator를 JS/TS와 연결해 정리했습니다.',
@@ -621,7 +621,7 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 				],
 			},
 			{
-				kicker: 'Module 0',
+				kicker: 'Module 0 · Big-O',
 				title: 'Big-O와 primitive operations',
 				summary:
 					'Big-O는 worst-case growth에 대한 가장 타이트한 upper bound로 사용하고, 상수와 낮은 차수 항은 제거합니다.',
