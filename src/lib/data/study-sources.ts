@@ -95,3 +95,53 @@ export const DSA_I_SOURCE_FILES: StudySourceFile[] = [
 		role: 'slide-summary',
 	},
 ];
+
+export const DSA_II_SOURCE_ROOT_LABEL = 'personal/study/gt-dsa/dsa-ii';
+
+export const DSA_II_SOURCE_FILES: StudySourceFile[] = [
+	{
+		path: '_index.md',
+		sha256: 'e7b7d633685a807232b08a203f141b06a12c9f58197d045cb37189a5dd903af9',
+		role: 'index',
+	},
+	{
+		path: 'm0-intro-and-review.md',
+		sha256: '1630ece008cea1b6e753ff8f7d2285d8c0689b0d25868cfe6406d1517a7dca46',
+		role: 'primary-note',
+	},
+	{
+		path: 'm4-bst-introduction.md',
+		sha256: '0a9d4560d43c76212bb8c690e5c860761b9f889aea03dda456f3a8707a031fa3',
+		role: 'primary-note',
+	},
+	{
+		path: 'm5-bst-operations-and-skiplists.md',
+		sha256: '34950b50066fcbbc449f3e2ce1350ce24d2cffb5f0ca01225c20d75b48ba9c50',
+		role: 'primary-note',
+	},
+	{
+		path: 'm6-heaps.md',
+		sha256: '01d3779798deb4b5d905bc80631da682859d3c936fc7dab9601a11565b595e17',
+		role: 'primary-note',
+	},
+	{
+		path: 'm7-hashmaps.md',
+		sha256: '07714ac64bdacc5c28f3b5b84ab2c73159dda2133444dd37315e304285f6254d',
+		role: 'primary-note',
+	},
+	{
+		path: 'refs/m4-trees-summary.md',
+		sha256: '15ac22b3a2c31d38832ad8a3b79742378eb862c70b55c3f15f08e357cc9953c6',
+		role: 'slide-summary',
+	},
+	{
+		path: 'refs/m6-buildheap-summary.md',
+		sha256: 'd31ce149fe5d40b77186135dea980cd814aab550432fa630dfe240bc14e7f170',
+		role: 'slide-summary',
+	},
+	{
+		path: 'refs/m6-heaps-priority-queues-summary.md',
+		sha256: 'fb4674d11d1afab5b82cc22a2a121ef881de9facbac69f450792a6b1a4b8081c',
+		role: 'slide-summary',
+	},
+];
