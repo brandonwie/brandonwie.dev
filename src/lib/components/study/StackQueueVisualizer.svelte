@@ -4,19 +4,22 @@
 	import { flip } from 'svelte/animate';
 	import { fly } from 'svelte/transition';
 
-	interface QueueItem {
+	interface Item {
 		id: number;
 		label: string;
 	}
 
 	let { copy }: { copy: StackQueueVisualizerCopy } = $props();
 
-	let stackItems = $state(['A', 'B', 'C']);
-	let queueItems = $state<QueueItem[]>([
+	const initialItems = (): Item[] => [
 		{ id: 0, label: 'A' },
 		{ id: 1, label: 'B' },
 		{ id: 2, label: 'C' },
-	]);
+	];
+
+	let stackItems = $state<Item[]>(initialItems());
+	let nextStackId = $state(3);
+	let queueItems = $state<Item[]>(initialItems());
 	let nextQueueId = $state(3);
 	let reduceMotion = $state(false);
 
@@ -31,7 +34,10 @@
 	}
 
 	function addStack() {
-		if (stackItems.length < 6) stackItems = [...stackItems, nextLabel(stackItems.length)];
+		if (stackItems.length < 6) {
+			stackItems = [...stackItems, { id: nextStackId, label: nextLabel(stackItems.length) }];
+			nextStackId += 1;
+		}
 	}
 
 	function popStack() {
@@ -50,12 +56,9 @@
 	}
 
 	function reset() {
-		stackItems = ['A', 'B', 'C'];
-		queueItems = [
-			{ id: 0, label: 'A' },
-			{ id: 1, label: 'B' },
-			{ id: 2, label: 'C' },
-		];
+		stackItems = initialItems();
+		nextStackId = 3;
+		queueItems = initialItems();
 		nextQueueId = 3;
 	}
 </script>
@@ -93,7 +96,7 @@
 				</div>
 			</div>
 			<div class="mt-3 flex min-h-28 flex-col-reverse gap-2 border border-line bg-bg p-3">
-				{#each stackItems as item, index (item)}
+				{#each stackItems as item, index (item.id)}
 					<div
 						animate:flip={{ duration: reduceMotion ? 0 : 180 }}
 						in:fly={{ y: -12, duration: reduceMotion ? 0 : 160 }}
@@ -103,7 +106,7 @@
 						<span class="mr-2 text-[10px] uppercase text-faint">
 							{index === stackItems.length - 1 ? copy.stackRoles.top : copy.stackRoles.held}
 						</span>
-						{item}
+						{item.label}
 					</div>
 				{/each}
 			</div>

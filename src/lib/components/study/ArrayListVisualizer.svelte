@@ -48,6 +48,12 @@
 		return itemsToClean.map((item) => ({ ...item, status: 'stable' }));
 	}
 
+	/**
+	 * Applies the selected operation to the backing array:
+	 * - `resize`: doubles capacity and re-ids every item so the copy animates as an insertion
+	 * - `insert`: inserts a new item at the clamped index, shifting later items right; auto-resizes when full
+	 * - `remove`: removes the item at the clamped index, shifting later items left to close the gap
+	 */
 	function applyOperation() {
 		if (operation === 'resize') {
 			capacity *= 2;

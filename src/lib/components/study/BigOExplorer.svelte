@@ -39,17 +39,20 @@
 	);
 	const yMax = $derived(useLogScale ? Math.log10(maxLinear + 1) : maxLinear);
 
+	/** Maps an input size `n` to an x pixel coordinate within the plot area. */
 	function x(n: number): number {
 		const min = sampleNs[0];
 		const max = sampleNs[sampleNs.length - 1];
 		return pad.left + ((n - min) / (max - min)) * plotWidth;
 	}
 
+	/** Maps a raw operation count to a y pixel coordinate, honoring the linear/log scale toggle. */
 	function y(raw: number): number {
 		const value = useLogScale ? Math.log10(raw + 1) : raw;
 		return pad.top + plotHeight - (value / yMax) * plotHeight;
 	}
 
+	/** Builds the SVG path `d` for one Big-O series across the sample input sizes. */
 	function linePath(row: (typeof series)[number]): string {
 		const points = sampleNs.map((n) => ({ n, value: row.value(n) }));
 		return (
