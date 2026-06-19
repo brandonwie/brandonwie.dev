@@ -1,7 +1,12 @@
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { DSA_I_SOURCE_FILES, DSA_I_SOURCE_ROOT_LABEL } from '../src/lib/data/study-sources.ts';
+import {
+	DSA_I_SOURCE_FILES,
+	DSA_I_SOURCE_ROOT_LABEL,
+	DSA_II_SOURCE_FILES,
+	DSA_II_SOURCE_ROOT_LABEL,
+} from '../src/lib/data/study-sources.ts';
 
 async function exists(path: string): Promise<boolean> {
 	try {
@@ -41,30 +46,38 @@ async function sha256(path: string): Promise<string> {
 }
 
 const threeBRoot = await findThreeBRoot();
-const sourceRoot = join(threeBRoot, DSA_I_SOURCE_ROOT_LABEL);
+
+const groups = [
+	{ label: DSA_I_SOURCE_ROOT_LABEL, files: DSA_I_SOURCE_FILES },
+	{ label: DSA_II_SOURCE_ROOT_LABEL, files: DSA_II_SOURCE_FILES },
+];
+
 const mismatches: string[] = [];
+let verifiedCount = 0;
 
-for (const source of DSA_I_SOURCE_FILES) {
-	const path = join(sourceRoot, source.path);
-	if (!(await exists(path))) {
-		mismatches.push(`${source.path}: missing`);
-		continue;
-	}
+for (const group of groups) {
+	const sourceRoot = join(threeBRoot, group.label);
+	for (const source of group.files) {
+		const path = join(sourceRoot, source.path);
+		if (!(await exists(path))) {
+			mismatches.push(`${group.label}/${source.path}: missing`);
+			continue;
+		}
 
-	const actual = await sha256(path);
-	if (actual !== source.sha256) {
-		mismatches.push(
-			`${source.path}: expected ${source.sha256.slice(0, 12)}, got ${actual.slice(0, 12)}`,
-		);
+		const actual = await sha256(path);
+		if (actual !== source.sha256) {
+			mismatches.push(
+				`${group.label}/${source.path}: expected ${source.sha256.slice(0, 12)}, got ${actual.slice(0, 12)}`,
+			);
+		}
 	}
+	verifiedCount += group.files.length;
 }
 
 if (mismatches.length > 0) {
-	console.error(`Study source drift detected in ${DSA_I_SOURCE_ROOT_LABEL}:`);
+	console.error('Study source drift detected:');
 	for (const mismatch of mismatches) console.error(`- ${mismatch}`);
 	Deno.exit(1);
 }
 
-console.log(
-	`Study sources verified: ${DSA_I_SOURCE_FILES.length} files under ${DSA_I_SOURCE_ROOT_LABEL}`,
-);
+console.log(`Study sources verified: ${verifiedCount} files across ${groups.length} courses`);

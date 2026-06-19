@@ -202,6 +202,110 @@ export interface DsaIContent {
 	visuals: DsaVisualsCopy;
 }
 
+export interface BstTraversalCopy extends StepperCopy {
+	title: string;
+	description: string;
+	orderLabel: string;
+	outputLabel: string;
+	builtFromLabel: string;
+	modes: {
+		inorder: { label: string; note: string };
+		preorder: { label: string; note: string };
+		postorder: { label: string; note: string };
+	};
+}
+
+export interface BstRemovalCopy extends StepperCopy {
+	title: string;
+	description: string;
+	/** One localized note per removal step (component owns the tree geometry + mutation). */
+	steps: string[];
+	roleLabels: {
+		target: string;
+		successor: string;
+		promoted: string;
+		removed: string;
+	};
+}
+
+export interface HeapVisualizerCopy {
+	title: string;
+	description: string;
+	addLabel: string;
+	removeLabel: string;
+	resetLabel: string;
+	arrayLabel: string;
+	treeLabel: string;
+	minLabel: string;
+	emptyLabel: string;
+	statusLabels: {
+		inserted: string;
+		swapped: string;
+		root: string;
+		settled: string;
+	};
+	messages: {
+		initial: string;
+		add: (value: number) => string;
+		removeMin: (value: number) => string;
+		empty: string;
+	};
+}
+
+export interface HashMapVisualizerCopy {
+	title: string;
+	description: string;
+	insertLabel: string;
+	resetLabel: string;
+	strategyLabel: string;
+	loadFactorLabel: string;
+	emptyLabel: string;
+	strategies: {
+		chaining: string;
+		probing: string;
+	};
+	statusLabels: {
+		placed: string;
+		collision: string;
+		probed: string;
+	};
+	messages: {
+		initial: string;
+		place: (key: number, index: number) => string;
+		collide: (key: number, index: number) => string;
+		probe: (key: number, from: number, to: number) => string;
+		resize: (capacity: number) => string;
+		full: string;
+	};
+}
+
+export interface DsaIIVisualsCopy {
+	bstTraversal: BstTraversalCopy;
+	bstRemoval: BstRemovalCopy;
+	heap: HeapVisualizerCopy;
+	hashMap: HashMapVisualizerCopy;
+}
+
+export interface DsaIIContent {
+	metaTitle: string;
+	metaDescription: string;
+	eyebrow: string;
+	title: string;
+	subtitle: string;
+	nav: StudyNavLabels;
+	sections: {
+		map: string;
+		lab: string;
+		notes: string;
+		recall: string;
+		inside: string;
+	};
+	coverage: string[];
+	modules: DsaModule[];
+	concepts: DsaConceptCard[];
+	visuals: DsaIIVisualsCopy;
+}
+
 const nav: Record<StudyLocale, StudyNavLabels> = {
 	en: {
 		home: 'Home',
@@ -248,6 +352,18 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 				meta: 'Modules 0–3 · 5 interactive demos',
 				updated: '2026-06-18',
 			},
+			{
+				slug: 'dsa-ii',
+				title: 'Data Structures & Algorithms II',
+				status: 'active notes',
+				href: '/study/dsa-ii',
+				summary:
+					'Binary search trees and traversals, BST removal, SkipLists, binary heaps and priority queues, and HashMaps with collisions and load factor, from the DSA II study folder.',
+				learned: ['BST traversals', 'BST removal', 'Heap sift', 'Hash collisions'],
+				modules: ['Module 4', 'Module 5', 'Module 6', 'Module 7'],
+				meta: 'Modules 4-7 · 4 interactive demos',
+				updated: '2026-06-19',
+			},
 		],
 		approach: {
 			title: 'Notes turned into things you can poke at.',
@@ -284,6 +400,18 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 				modules: ['Module 0', 'Module 1', 'Module 2', 'Module 3'],
 				meta: 'Module 0–3 · 인터랙티브 데모 5개',
 				updated: '2026-06-18',
+			},
+			{
+				slug: 'dsa-ii',
+				title: 'Data Structures & Algorithms II',
+				status: 'active notes',
+				href: '/ko/study/dsa-ii',
+				summary:
+					'DSA II 폴더에서 정리한 BST와 traversal, BST removal, SkipList, binary heap과 priority queue, 그리고 collision과 load factor를 다루는 HashMap 내용입니다.',
+				learned: ['BST traversal', 'BST removal', 'Heap sift', 'Hash collision'],
+				modules: ['Module 4', 'Module 5', 'Module 6', 'Module 7'],
+				meta: 'Module 4-7 · 인터랙티브 데모 4개',
+				updated: '2026-06-19',
 			},
 		],
 		approach: {
@@ -876,4 +1004,462 @@ export function getStudyIndexContent(locale: StudyLocale): StudyIndexContent {
 
 export function getDsaIContent(locale: StudyLocale): DsaIContent {
 	return dsaIContent[locale];
+}
+
+const dsaIIContent: Record<StudyLocale, DsaIIContent> = {
+	en: {
+		metaTitle: 'Data Structures & Algorithms II',
+		metaDescription:
+			'Interactive DSA II learning notes covering binary search trees and traversals, BST removal, SkipLists, binary heaps, and hashmaps.',
+		eyebrow: 'Data Structures & Algorithms',
+		title: 'DSA II as the structures that keep data ordered and findable.',
+		subtitle:
+			'This page picks up where DSA I left off and only covers what is in my DSA II notes: binary search trees and their traversals, BST removal and SkipLists, binary heaps behind the priority queue, and HashMaps with collisions and load factor.',
+		nav: nav.en,
+		sections: {
+			map: 'learning map',
+			lab: 'visual lab',
+			notes: 'concept notes',
+			recall: 'test yourself',
+			inside: "what's inside",
+		},
+		coverage: [
+			'A Java and Big-O review carried over from DSA I: Iterable/Iterator, Comparable vs Comparator, and worst-case growth',
+			'Binary search trees: the left < node < right invariant, and how insertion order decides O(log n) vs a degenerate O(n) chain',
+			'BST removal across the leaf, one-child, and two-child cases, plus SkipLists reaching O(log n) by coin flips',
+			'Binary heaps as an array-backed priority queue: O(1) peek, O(log n) add and remove',
+			'HashMaps: hashing a key to a bucket, then resolving collisions by chaining or probing under a load factor',
+		],
+		modules: [
+			{
+				kicker: 'Module 4 · BST',
+				title: 'Binary Search Trees',
+				summary:
+					'A BST is a binary tree with one ordering rule: for every node, everything in the left subtree is smaller and everything in the right is larger. That invariant is what turns a tree into something you can search in O(log n).',
+				recall: [
+					{
+						q: 'What is the BST ordering invariant?',
+						a: 'For every node, all data in its left subtree is less than the node and all data in its right subtree is greater. It holds recursively at every node, not just the root.',
+					},
+					{
+						q: 'Why are BST operations O(log n) on average but O(n) in the worst case?',
+						a: 'On a balanced tree each comparison drops half the remaining nodes, so you walk a path of height about log n. But shape depends on insertion order. Inserting already-sorted values builds a one-sided chain that behaves like a linked list, so it degrades to O(n).',
+					},
+				],
+			},
+			{
+				kicker: 'Module 5 · BST ops + SkipLists',
+				title: 'Removing from a BST, and SkipLists',
+				summary:
+					'I worked through the three BST removal cases: leaf, one-child, and the tricky two-child case that swaps in an in-order successor (the GT course convention). Then SkipLists, which reach the same O(log n) by stacking sorted linked lists and promoting nodes with coin flips.',
+				recall: [
+					{
+						q: 'Removing a BST node with two children: why not just detach it, and what does the course do instead?',
+						a: 'Detaching would drop a whole subtree. Instead you keep the node position and overwrite only its data with a replacement, then remove that replacement (which has 0 or 1 child). The course uses the in-order successor: step right once, then go all the way left.',
+					},
+					{
+						q: 'How does a SkipList get O(log n) expected search from plain linked lists?',
+						a: 'It stacks sorted lists; level 0 holds everything and each higher level keeps a coin-flip-promoted subset, P(level i) = (1/2)^i. Upper levels are express lanes: walk right until the next node would overshoot, then drop down, which halves the search space like binary search.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 6 · Heaps',
+				title: 'Heaps and the Priority Queue',
+				summary:
+					'Heaps are the BST cousin in the binary-tree family: a complete tree that pins the min (or max) at the root for O(1) peek and O(log n) add/remove. The order property is parent-vs-child only, so siblings stay unordered, and a plain 1-indexed array with i/2, 2i, 2i+1 arithmetic backs the whole thing without pointers.',
+				recall: [
+					{
+						q: 'In a 1-indexed array heap, how do you reach the parent, left child, and right child of index i?',
+						a: 'parent = i/2 (integer floor), left child = 2*i, right child = 2*i + 1. Index 0 is left null, so the root sits at index 1 and every move is plain arithmetic, with no node pointers.',
+					},
+					{
+						q: 'Why does add bubble up while removeMin bubbles down?',
+						a: 'add appends at the next leaf and swims up against its parent only, until it is no longer smaller. removeMin moves the last element to the root, then sinks down, each level swapping with the smaller of the two children. Each walks one path in one direction.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 7 · HashMaps',
+				title: 'HashMaps: O(1) average by hashing',
+				summary:
+					'This is where I stopped climbing a comparison tree and started computing the index straight from the key. The whole module is really about one unavoidable consequence, collisions, and the strategies for handling them.',
+				recall: [
+					{
+						q: 'What are the two families of collision resolution?',
+						a: 'Closed addressing keeps colliding keys at the original index in a chain. That is External or Separate Chaining, a linked list per bucket. Open addressing puts them elsewhere via probing: linear, quadratic, or double hashing. The notes lean hardest on External Chaining.',
+					},
+					{
+						q: 'What is the load factor, and what happens when it crosses the threshold?',
+						a: 'Load factor = size / capacity. When it crosses the threshold (typically 0.67 to 0.75), the table resizes: a larger backing array, and every live entry is rehashed with the new capacity. Resize is O(n).',
+					},
+				],
+			},
+		],
+		concepts: [
+			{
+				title: 'The BST ordering invariant',
+				body: 'For every node, all data in the left subtree is less than the node and all data in the right is greater. At each step you can discard half the candidates, which is what makes O(log n) search possible.',
+				source: 'Module 4 · BST',
+			},
+			{
+				title: 'SkipList express lanes',
+				body: 'A SkipList stacks sorted linked lists; level 0 has every element and each insert flips a coin to promote a node up a level, P(level i) = (1/2)^i. Search moves right while the next node is smaller than the target and drops down when it would overshoot. The upper levels skip over data for O(log n) on average.',
+				source: 'Module 5 · SkipLists',
+			},
+			{
+				title: 'The heap is just an array',
+				body: 'Because a heap is a complete binary tree, it fits a 1-indexed array with no gaps: the node at i has parent i/2 and children 2i and 2i+1. Completeness is exactly what makes that index arithmetic always land on a real node.',
+				source: 'Module 6 · Heaps',
+			},
+			{
+				title: 'Load factor and resize',
+				body: 'Load factor = size / capacity, and crossing the threshold (typically 0.67 to 0.75) triggers a resize: a fresh, larger table where every entry is rehashed with the new capacity, an O(n) operation. Lower thresholds mean fewer collisions but more memory.',
+				source: 'Module 7 · HashMaps',
+			},
+		],
+		visuals: {
+			bstTraversal: {
+				title: 'BST traversals',
+				description:
+					'A fixed BST, built by inserting 13, 7, 29, 5, 11, 19. Pick a traversal and step through the visit order.',
+				orderLabel: 'Traversal',
+				outputLabel: 'Visit order',
+				builtFromLabel: 'Built by inserting',
+				modes: {
+					inorder: {
+						label: 'in-order',
+						note: 'Left, node, right. On a BST this always comes out sorted: 5, 7, 11, 13, 19, 29.',
+					},
+					preorder: {
+						label: 'pre-order',
+						note: 'Node, left, right. Visits a node before its children, which is handy for copying a tree.',
+					},
+					postorder: {
+						label: 'post-order',
+						note: 'Left, right, node. Visits a node after both children, which is handy for deleting a tree.',
+					},
+				},
+				previousLabel: 'Prev',
+				nextLabel: 'Next',
+				resetLabel: 'Reset',
+				previousAriaLabel: 'Previous traversal step',
+				nextAriaLabel: 'Next traversal step',
+				resetAriaLabel: 'Reset traversal',
+			},
+			bstRemoval: {
+				title: 'BST removal (two-child)',
+				description:
+					'Removing 4 (the root) from a 7-node BST using the in-order successor, the GT course convention.',
+				steps: [
+					'Start at the root: 4 is the target, so the node to remove is the root itself.',
+					'The target has two children (2 and 6), so it cannot just be detached, because that would drop a whole subtree.',
+					'Find the in-order successor: step right to 6, then all the way left to 5. 5 has no left child, so it is the successor.',
+					'Overwrite the target data with the successor: the root becomes 5. The node stays in place; only its value changes.',
+					'Remove the old successor node 5 from its slot. It was a leaf, so its parent 6 just drops the link.',
+					'Done: removal returned the original 4, and the tree is still a valid BST with 5 at the root.',
+				],
+				roleLabels: {
+					target: 'target',
+					successor: 'successor',
+					promoted: 'promoted',
+					removed: 'removed',
+				},
+				previousLabel: 'Prev',
+				nextLabel: 'Next',
+				resetLabel: 'Reset',
+				previousAriaLabel: 'Previous removal step',
+				nextAriaLabel: 'Next removal step',
+				resetAriaLabel: 'Reset removal',
+			},
+			heap: {
+				title: 'Min-heap sift',
+				description:
+					'A 1-indexed min-heap. Add swims a value up; remove-min sinks the last leaf down. The array and tree stay in sync.',
+				addLabel: 'Add',
+				removeLabel: 'Remove min',
+				resetLabel: 'Reset',
+				arrayLabel: 'Backing array (1-indexed)',
+				treeLabel: 'Complete tree',
+				minLabel: 'min',
+				emptyLabel: 'empty',
+				statusLabels: {
+					inserted: 'new',
+					swapped: 'swap',
+					root: 'min',
+					settled: 'set',
+				},
+				messages: {
+					initial: 'Add values to watch them swim up; remove the min to watch the last leaf sink.',
+					add: (value) =>
+						`Add ${value} at the next leaf, then swim up while it is smaller than its parent.`,
+					removeMin: (value) =>
+						`Remove min ${value}: move the last leaf to the root, then sink it past the smaller child.`,
+					empty: 'The heap is empty. Add a value first.',
+				},
+			},
+			hashMap: {
+				title: 'HashMap collisions',
+				description:
+					'index = key mod capacity. Keys 5, 12, 19 all hash to bucket 5. Watch chaining vs linear probing resolve it, and a resize when the load factor crosses 0.75.',
+				insertLabel: 'Insert',
+				resetLabel: 'Reset',
+				strategyLabel: 'Collision strategy',
+				loadFactorLabel: 'Load factor',
+				emptyLabel: 'empty',
+				strategies: {
+					chaining: 'separate chaining',
+					probing: 'linear probing',
+				},
+				statusLabels: {
+					placed: 'placed',
+					collision: 'chained',
+					probed: 'probed',
+				},
+				messages: {
+					initial:
+						'Insert keys to watch collisions resolve. Each key is its own hash; index = key mod capacity.',
+					place: (key, index) =>
+						`${key} mod capacity = ${index}: bucket ${index} is empty, so place it there.`,
+					collide: (key, index) =>
+						`${key} also maps to bucket ${index}, so separate chaining appends it to that bucket list.`,
+					probe: (key, from, to) =>
+						`${key} maps to ${from}, which is taken, so linear probing lands it at ${to}.`,
+					resize: (capacity) =>
+						`Load factor crossed the threshold, so resize and rehash every entry into a capacity-${capacity} table.`,
+					full: 'The demo table is full. Reset to start over.',
+				},
+			},
+		},
+	},
+	ko: {
+		metaTitle: 'Data Structures & Algorithms II',
+		metaDescription:
+			'BST와 traversal, BST removal, SkipList, heap, HashMap을 다루는 인터랙티브 DSA II 학습 노트입니다.',
+		eyebrow: 'Data Structures & Algorithms',
+		title: 'DSA II를 정렬과 탐색을 지탱하는 구조로 뜯어봅니다.',
+		subtitle:
+			'이 페이지는 DSA I에서 이어지며, DSA II 노트에 있는 내용만 다룹니다. binary search tree와 traversal, BST removal과 SkipList, priority queue를 떠받치는 binary heap, 그리고 collision과 load factor를 다루는 HashMap입니다.',
+		nav: nav.ko,
+		sections: {
+			map: '학습 지도',
+			lab: '시각 실험실',
+			notes: '개념 노트',
+			recall: '스스로 점검',
+			inside: '구성',
+		},
+		coverage: [
+			'DSA I에서 이어지는 Java와 Big-O 복습: Iterable/Iterator, Comparable과 Comparator, worst-case 증가율',
+			'Binary search tree: left < node < right invariant과, 삽입 순서가 O(log n)이냐 한쪽으로 치우친 O(n) chain이냐를 가르는 점',
+			'BST removal의 leaf / one-child / two-child 케이스, 그리고 coin flip으로 O(log n)에 도달하는 SkipList',
+			'array 기반 priority queue로서의 binary heap: O(1) peek, O(log n) add와 remove',
+			'HashMap: key를 bucket index로 hashing한 뒤, load factor 아래에서 chaining이나 probing으로 collision을 푸는 방식',
+		],
+		modules: [
+			{
+				kicker: 'Module 4 · BST',
+				title: 'Binary Search Trees',
+				summary:
+					'BST는 정렬 규칙 하나가 붙은 binary tree입니다. 모든 노드에서 왼쪽 subtree는 더 작고 오른쪽은 더 크다는 invariant가, 트리를 O(log n)으로 검색할 수 있게 만드는 핵심입니다.',
+				recall: [
+					{
+						q: 'BST의 ordering invariant는 무엇인가요?',
+						a: '모든 노드에서 왼쪽 subtree의 데이터는 노드보다 작고, 오른쪽 subtree는 노드보다 큽니다. root뿐 아니라 모든 노드에서 재귀적으로 성립합니다.',
+					},
+					{
+						q: 'BST 연산이 평균은 O(log n)인데 worst-case는 왜 O(n)인가요?',
+						a: '균형 잡힌 트리에서는 비교마다 남은 노드의 절반이 떨어져 나가므로, 높이 약 log n인 경로만 따라가면 됩니다. 다만 모양이 삽입 순서에 달려 있어서, 이미 정렬된 값을 넣으면 한쪽으로 늘어진 chain이 되어 linked list처럼 동작하고 검색이 O(n)으로 떨어집니다.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 5 · BST ops + SkipLists',
+				title: 'BST removal과 SkipList',
+				summary:
+					'BST removal의 세 가지 케이스를 직접 따라가 봤습니다. leaf, one-child, 그리고 까다로운 two-child 케이스인데, two-child는 in-order successor를 끌어올리는 GT 강의 기본 방식을 씁니다. 이어지는 SkipList는 트리 모양 대신 정렬된 linked list를 쌓고 coin flip으로 노드를 promote 하면서 같은 O(log n)에 도달합니다.',
+				recall: [
+					{
+						q: '두 자식이 있는 BST 노드를 지울 때 왜 그냥 떼면 안 되고, 강의는 대신 무엇을 하나요?',
+						a: '그냥 떼면 subtree 하나가 통째로 날아갑니다. 대신 노드 위치는 그대로 두고 데이터만 replacement로 덮어쓴 다음, 그 replacement 노드(자식이 0개나 1개)를 지웁니다. 강의는 in-order successor를 쓰는데, 오른쪽으로 한 칸 간 뒤 왼쪽 끝까지 내려가면 successor입니다.',
+					},
+					{
+						q: 'SkipList는 평범한 linked list로 어떻게 O(log n) 기대 탐색을 얻나요?',
+						a: '정렬된 list를 층층이 쌓습니다. level 0는 전부 갖고, 위 level마다 coin flip으로 promote된 부분집합만 둡니다(P(level i) = (1/2)^i). 위층은 express lane이라, 다음 노드가 target을 넘어설 때까지 오른쪽으로 가다가 넘칠 것 같으면 한 층 내려갑니다. binary search처럼 탐색 공간이 절반씩 줄어듭니다.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 6 · Heaps',
+				title: 'Heap과 Priority Queue',
+				summary:
+					'heap은 binary-tree 집안에서 BST의 사촌 격입니다. min(또는 max)을 root에 박아두는 complete tree라 peek은 O(1), add/remove는 O(log n)입니다. 순서 규칙이 parent와 child 사이에만 있어서 sibling끼리는 정렬되지 않고, 그래서 1-indexed array에 i/2, 2i, 2i+1 산술만으로 전체를 깔 수 있습니다. pointer가 필요 없습니다.',
+				recall: [
+					{
+						q: '1-indexed array heap에서 index i의 parent, left child, right child는 어떻게 구하나요?',
+						a: 'parent = i/2(정수 내림), left child = 2*i, right child = 2*i + 1입니다. index 0은 비워 두므로 root는 index 1에 있고, 모든 이동이 pointer 없이 산술로 끝납니다.',
+					},
+					{
+						q: 'add는 위로, removeMin은 아래로 가는 이유는?',
+						a: 'add는 다음 leaf에 붙인 뒤 parent하고만 비교하며 더 작은 동안 위로 swim 합니다. removeMin은 마지막 원소를 root로 옮기고 아래로 sink 하는데, 매 층에서 더 작은 child와 swap 합니다. 둘 다 한 방향으로 한 경로만 따라갑니다.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 7 · HashMaps',
+				title: 'HashMap: hashing으로 평균 O(1)',
+				summary:
+					'여기서부터는 comparison tree를 타고 내려가는 대신, key에서 바로 index를 계산하는 방식으로 넘어왔습니다. 모듈 전체가 사실상 하나의 피할 수 없는 결과인 collision, 그리고 그것을 어떻게 처리하느냐에 대한 이야기였습니다.',
+				recall: [
+					{
+						q: 'collision resolution의 두 갈래는 무엇인가요?',
+						a: 'closed addressing은 충돌한 key를 원래 index의 chain에 그대로 둡니다. bucket마다 linked list를 두는 External/Separate Chaining입니다. open addressing은 probing으로 다른 index에 두는데, linear, quadratic, double hashing이 있습니다. 노트는 External Chaining을 가장 비중 있게 다룹니다.',
+					},
+					{
+						q: 'load factor는 무엇이고, threshold를 넘으면 어떻게 되나요?',
+						a: 'load factor = size / capacity입니다. threshold(보통 0.67~0.75)를 넘으면 table을 resize 합니다. 더 큰 backing array를 만들고 살아 있는 entry를 전부 새 capacity로 rehash 합니다. resize는 O(n)입니다.',
+					},
+				],
+			},
+		],
+		concepts: [
+			{
+				title: 'BST ordering invariant',
+				body: '모든 노드에서 왼쪽 subtree는 노드보다 작고 오른쪽은 큽니다. 매 단계마다 후보의 절반을 버릴 수 있고, 이것이 O(log n) 검색을 가능하게 합니다.',
+				source: 'Module 4 · BST',
+			},
+			{
+				title: 'SkipList express lane',
+				body: 'SkipList는 정렬된 linked list를 쌓습니다. level 0는 모든 원소를 갖고, 삽입마다 coin flip으로 노드를 한 층 promote 합니다(P(level i) = (1/2)^i). 탐색은 다음 노드가 target보다 작은 동안 오른쪽으로 가다가 넘칠 것 같으면 내려갑니다. 위층이 데이터를 건너뛰므로 평균 O(log n)이 나옵니다.',
+				source: 'Module 5 · SkipLists',
+			},
+			{
+				title: 'heap은 결국 array',
+				body: 'heap은 complete binary tree라 빈칸 없는 1-indexed array에 딱 맞습니다. index i의 parent는 i/2, child는 2i와 2i+1입니다. completeness 덕분에 이 index 산술이 항상 실제 노드를 가리킵니다.',
+				source: 'Module 6 · Heaps',
+			},
+			{
+				title: 'load factor와 resize',
+				body: 'load factor = size / capacity이고, threshold(보통 0.67~0.75)를 넘으면 resize가 일어납니다. 더 큰 table을 새로 만들고 모든 entry를 새 capacity로 rehash하는 O(n) 작업입니다. threshold가 낮을수록 collision은 줄지만 메모리는 더 씁니다.',
+				source: 'Module 7 · HashMaps',
+			},
+		],
+		visuals: {
+			bstTraversal: {
+				title: 'BST traversal',
+				description:
+					'13, 7, 29, 5, 11, 19를 삽입해 만든 고정 BST입니다. traversal을 고르면 방문 순서를 단계별로 따라갈 수 있습니다.',
+				orderLabel: 'Traversal',
+				outputLabel: '방문 순서',
+				builtFromLabel: '삽입 순서',
+				modes: {
+					inorder: {
+						label: 'in-order',
+						note: 'Left, node, right. BST에서는 항상 정렬된 순서로 나옵니다: 5, 7, 11, 13, 19, 29.',
+					},
+					preorder: {
+						label: 'pre-order',
+						note: 'Node, left, right. 자식보다 노드를 먼저 방문하므로 트리 복사에 쓰기 좋습니다.',
+					},
+					postorder: {
+						label: 'post-order',
+						note: 'Left, right, node. 두 자식을 모두 본 뒤 노드를 방문하므로 트리 삭제에 쓰기 좋습니다.',
+					},
+				},
+				previousLabel: '이전',
+				nextLabel: '다음',
+				resetLabel: '초기화',
+				previousAriaLabel: '이전 traversal 단계',
+				nextAriaLabel: '다음 traversal 단계',
+				resetAriaLabel: 'traversal 초기화',
+			},
+			bstRemoval: {
+				title: 'BST removal (two-child)',
+				description:
+					'in-order successor(GT 강의 기본 방식)로 7개 노드 BST에서 root인 4를 지웁니다.',
+				steps: [
+					'root에서 시작합니다. 4가 target이므로, 지울 노드는 root 자신입니다.',
+					'target에는 자식이 둘(2와 6) 있어서 그냥 뗄 수 없습니다. 떼면 subtree가 통째로 날아가기 때문입니다.',
+					'in-order successor를 찾습니다. 오른쪽 6으로 갔다가 왼쪽 끝 5까지 내려갑니다. 5는 왼쪽 자식이 없으니 이것이 successor입니다.',
+					'target 데이터를 successor로 덮어씁니다. root가 5가 됩니다. 노드는 그대로 있고 값만 바뀝니다.',
+					'원래 successor였던 노드 5를 자리에서 지웁니다. leaf라서 parent인 6이 링크만 끊으면 됩니다.',
+					'끝났습니다. removal은 원래 값 4를 돌려주고, 트리는 root가 5인 정상 BST로 남습니다.',
+				],
+				roleLabels: {
+					target: 'target',
+					successor: 'successor',
+					promoted: '승격',
+					removed: '삭제',
+				},
+				previousLabel: '이전',
+				nextLabel: '다음',
+				resetLabel: '초기화',
+				previousAriaLabel: '이전 removal 단계',
+				nextAriaLabel: '다음 removal 단계',
+				resetAriaLabel: 'removal 초기화',
+			},
+			heap: {
+				title: 'Min-heap sift',
+				description:
+					'1-indexed min-heap입니다. add는 값을 위로 swim 시키고, remove min은 마지막 leaf를 아래로 sink 시킵니다. array와 tree가 같이 움직입니다.',
+				addLabel: '추가',
+				removeLabel: 'min 제거',
+				resetLabel: '초기화',
+				arrayLabel: 'backing array (1-indexed)',
+				treeLabel: 'complete tree',
+				minLabel: 'min',
+				emptyLabel: '비어 있음',
+				statusLabels: {
+					inserted: '새 값',
+					swapped: 'swap',
+					root: 'min',
+					settled: '고정',
+				},
+				messages: {
+					initial:
+						'값을 추가하면 위로 swim 하는 모습을, min을 제거하면 마지막 leaf가 내려가는 모습을 볼 수 있습니다.',
+					add: (value) =>
+						`${value}를 다음 leaf에 추가한 뒤, parent보다 작은 동안 위로 swim 합니다.`,
+					removeMin: (value) =>
+						`min ${value} 제거: 마지막 leaf를 root로 옮기고, 더 작은 child를 지나 아래로 sink 합니다.`,
+					empty: 'heap이 비어 있습니다. 먼저 값을 추가해야 합니다.',
+				},
+			},
+			hashMap: {
+				title: 'HashMap collision',
+				description:
+					'index = key mod capacity입니다. key 5, 12, 19가 모두 bucket 5로 갑니다. chaining과 linear probing이 각각 이를 어떻게 푸는지, 그리고 load factor가 0.75를 넘을 때의 resize를 볼 수 있습니다.',
+				insertLabel: '삽입',
+				resetLabel: '초기화',
+				strategyLabel: 'collision 전략',
+				loadFactorLabel: 'load factor',
+				emptyLabel: '비어 있음',
+				strategies: {
+					chaining: 'separate chaining',
+					probing: 'linear probing',
+				},
+				statusLabels: {
+					placed: '배치',
+					collision: 'chain',
+					probed: 'probe',
+				},
+				messages: {
+					initial:
+						'key를 삽입하면 collision이 풀리는 과정을 볼 수 있습니다. 각 key가 곧 hash이고, index = key mod capacity입니다.',
+					place: (key, index) =>
+						`${key} mod capacity = ${index}: bucket ${index}이 비어 있어 거기에 둡니다.`,
+					collide: (key, index) =>
+						`${key}도 bucket ${index}으로 가므로, separate chaining은 그 bucket 리스트에 이어 붙입니다.`,
+					probe: (key, from, to) =>
+						`${key}는 ${from}으로 가는데 차 있으므로, linear probing이 ${to}에 둡니다.`,
+					resize: (capacity) =>
+						`load factor가 threshold를 넘었으므로, capacity ${capacity} table로 resize 하고 전부 rehash 합니다.`,
+					full: '데모 table이 가득 찼습니다. 초기화하면 처음부터 다시 시작할 수 있습니다.',
+				},
+			},
+		},
+	},
+};
+
+export function getDsaIIContent(locale: StudyLocale): DsaIIContent {
+	return dsaIIContent[locale];
 }
