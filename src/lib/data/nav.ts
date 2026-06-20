@@ -40,6 +40,17 @@ export function base(locale: Locale): string {
 	return locale === 'ko' ? '/ko' : '';
 }
 
+/** Remove a locale prefix from a pathname while preserving full path segments. */
+export function stripLocale(pathname: string): string {
+	return pathname.replace(KO_PREFIX, '/') || '/';
+}
+
+/** Convert the current pathname to the requested locale. */
+export function pathForLocale(pathname: string, locale: Locale): string {
+	const path = stripLocale(pathname);
+	return `${base(locale)}${path === '/' ? '' : path}` || '/';
+}
+
 /** Locale-aware href for a nav item. */
 export function hrefFor(item: NavItem, locale: Locale): string {
 	return `${base(locale)}${item.path}`;
@@ -67,7 +78,7 @@ export function searchHref(locale: Locale): string {
  * unrelated routes (`/postscript`, `/studyguide`) do not match. Home/search → null.
  */
 export function activeKey(pathname: string): NavKey | null {
-	const p = pathname.replace(/^\/ko(?=\/|$)/, '') || '/';
+	const p = stripLocale(pathname);
 	if (/^\/posts(?:\/|$)/.test(p)) return 'posts';
 	if (/^\/study(?:\/|$)/.test(p)) return 'study';
 	if (/^\/system(?:\/|$)/.test(p)) return 'system';

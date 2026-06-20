@@ -45,6 +45,14 @@
 	import { paletteOpen } from '$lib/stores/palette';
 	import FuzzyFinder from '$lib/components/palette/FuzzyFinder.svelte';
 	import SiteHeader from '$lib/components/SiteHeader.svelte';
+	import {
+		hrefFor,
+		localeOf,
+		NAV_ITEMS,
+		pathForLocale,
+		searchHref,
+		type Locale,
+	} from '$lib/data/nav';
 	import { buildPaletteItems, type PaletteItem } from '$lib/palette/items';
 
 	onNavigate((navigation) => {
@@ -72,8 +80,11 @@
 		posts.set(data.posts);
 	});
 
-	const systemHref = $derived(page.url.pathname.startsWith('/ko') ? '/ko/system/3b' : '/system/3b');
-	const studyHref = $derived(page.url.pathname.startsWith('/ko') ? '/ko/study' : '/study');
+	const studyItem = NAV_ITEMS.find((item) => item.key === 'study')!;
+	const systemItem = NAV_ITEMS.find((item) => item.key === 'system')!;
+	const currentLocale = $derived(localeOf(page.url.pathname));
+	const systemHref = $derived(hrefFor(systemItem, currentLocale));
+	const studyHref = $derived(hrefFor(studyItem, currentLocale));
 
 	// Full palette item set (nav + actions + posts) for the current route.
 	// Rebuilds on navigation (locale-aware) and when the posts store hydrates.
@@ -94,8 +105,7 @@
 			return;
 
 		event.preventDefault();
-		const isKorean = pathname.startsWith('/ko');
-		goto(isKorean ? '/ko/search' : '/search');
+		goto(searchHref(localeOf(pathname)));
 	}
 
 	// Command palette: Cmd/Ctrl+K (primary) or Cmd/Ctrl+P (alias). Works on every
@@ -122,9 +132,7 @@
 	}
 
 	function localeHref(locale: string): string {
-		const pathname = page.url.pathname;
-		if (locale === 'ko') return pathname.startsWith('/ko') ? pathname : `/ko${pathname}`;
-		return pathname.replace(/^\/ko/, '') || '/';
+		return pathForLocale(page.url.pathname, locale as Locale);
 	}
 </script>
 

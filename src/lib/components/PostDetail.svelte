@@ -261,7 +261,7 @@
 	</main>
 
 	<!-- Footer -->
-	<footer class="border-t border-terminal-border py-8">
+	<footer class="border-t border-line py-8">
 		<div class="mx-auto max-w-4xl px-6 text-center">
 			<BackToPosts {locale} />
 		</div>
