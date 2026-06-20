@@ -27,9 +27,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
 	{ key: 'system', label: () => m.nav_system(), path: '/system/3b' },
 ];
 
-/** Locale inferred from a pathname (`/ko` prefix → ko, else en). */
+/** Matches `/ko` as a path segment, so `/koala` is not treated as Korean. */
+const KO_PREFIX = /^\/ko(?:\/|$)/;
+
+/** Locale inferred from a pathname (`/ko` segment → ko, else en). */
 export function localeOf(pathname: string): Locale {
-	return pathname.startsWith('/ko') ? 'ko' : 'en';
+	return KO_PREFIX.test(pathname) ? 'ko' : 'en';
 }
 
 /** Path prefix for a locale: '' for en, '/ko' for ko. */
@@ -58,15 +61,16 @@ export function searchHref(locale: Locale): string {
 }
 
 /**
- * Active nav section for a path. Locale-stripped, prefix-matched so list +
- * detail routes share a section (`/posts` and `/posts/x` → posts; `/study/*` →
- * study; `/system` and `/system/3b` → system). Home and search → null.
+ * Active nav section for a path. Locale-stripped, then matched on full path
+ * segments so list + detail routes share a section (`/posts` and `/posts/x` →
+ * posts; `/study/*` → study; `/system` and `/system/3b` → system) while
+ * unrelated routes (`/postscript`, `/studyguide`) do not match. Home/search → null.
  */
 export function activeKey(pathname: string): NavKey | null {
-	const p = pathname.replace(/^\/ko/, '') || '/';
-	if (p.startsWith('/posts')) return 'posts';
-	if (p.startsWith('/study')) return 'study';
-	if (p.startsWith('/system')) return 'system';
-	if (p.startsWith('/about')) return 'about';
+	const p = pathname.replace(/^\/ko(?=\/|$)/, '') || '/';
+	if (/^\/posts(?:\/|$)/.test(p)) return 'posts';
+	if (/^\/study(?:\/|$)/.test(p)) return 'study';
+	if (/^\/system(?:\/|$)/.test(p)) return 'system';
+	if (/^\/about(?:\/|$)/.test(p)) return 'about';
 	return null;
 }
