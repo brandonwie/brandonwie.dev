@@ -21,10 +21,10 @@
 
 <a
 	href={toggleUrl}
-	class="font-mono text-xs px-2 py-1 bg-terminal-bg-primary border border-terminal-border rounded-sm text-terminal-text-muted no-underline transition-all duration-200 hover:border-terminal-accent-orange shrink-0"
+	class="shrink-0 rounded-sm border border-line bg-bg px-2 py-1 font-mono text-xs text-muted no-underline transition-all duration-200 hover:border-accent"
 	aria-label={isKorean ? m.language_switch_to_english() : m.language_switch_to_korean()}
 >
-	<span class={!isKorean ? 'text-terminal-accent-orange font-semibold' : ''}>EN</span>
+	<span class={!isKorean ? 'text-accent font-semibold' : ''}>EN</span>
 	<span class="mx-0.5 opacity-50">/</span>
-	<span class={isKorean ? 'text-terminal-accent-orange font-semibold' : ''}>KR</span>
+	<span class={isKorean ? 'text-accent font-semibold' : ''}>KR</span>
 </a>
