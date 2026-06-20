@@ -197,7 +197,7 @@
 		href="#main-content"
 		class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded focus:border focus:border-line focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:text-ink focus:no-underline"
 	>
-		{m.skip_to_content()}
+		{m.skip_to_content({}, { locale: currentLocale })}
 	</a>
 	<SiteHeader />
 	{@render children()}

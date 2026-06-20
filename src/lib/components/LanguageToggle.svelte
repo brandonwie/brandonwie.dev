@@ -22,7 +22,9 @@
 <a
 	href={toggleUrl}
 	class="shrink-0 rounded-sm border border-line bg-bg px-2 py-1 font-mono text-xs text-muted no-underline transition-all duration-200 hover:border-accent"
-	aria-label={isKorean ? m.language_switch_to_english() : m.language_switch_to_korean()}
+	aria-label={isKorean
+		? m.language_switch_to_english({}, { locale })
+		: m.language_switch_to_korean({}, { locale })}
 >
 	<span class={!isKorean ? 'text-accent font-semibold' : ''}>EN</span>
 	<span class="mx-0.5 opacity-50">/</span>

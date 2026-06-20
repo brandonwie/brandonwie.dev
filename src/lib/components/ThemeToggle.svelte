@@ -6,15 +6,22 @@
 	 * shape so the two sit together in HeaderControls. Dark is the default.
 	 */
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { m } from '$lib/paraglide/messages';
+	import { localeOf } from '$lib/data/nav';
 	import { theme, toggleTheme, initTheme } from '$lib/stores/theme';
 
 	// The no-FOUC script set <html data-theme> before paint; re-sync the store
 	// on mount so the icon reflects the real persisted theme after hydration.
 	onMount(initTheme);
 
+	// Locale from the URL (not ambient getLocale()), so the a11y label/title stay
+	// in the route's language even when a persisted locale cookie says otherwise.
+	const locale = $derived(localeOf(page.url.pathname));
 	const isDark = $derived($theme === 'dark');
-	const toggleLabel = $derived(isDark ? m.theme_toggle_to_light() : m.theme_toggle_to_dark());
+	const toggleLabel = $derived(
+		isDark ? m.theme_toggle_to_light({}, { locale }) : m.theme_toggle_to_dark({}, { locale }),
+	);
 </script>
 
 <button
