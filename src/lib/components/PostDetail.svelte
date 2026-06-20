@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import type { Component } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
 	import BackToPosts from '$lib/components/BackToPosts.svelte';
@@ -61,7 +61,7 @@
 	let copied = $state(false);
 
 	async function copyLink() {
-		await navigator.clipboard.writeText($page.url.href);
+		await navigator.clipboard.writeText(page.url.href);
 		copied = true;
 		setTimeout(() => (copied = false), 2000);
 	}
@@ -163,7 +163,7 @@
 	{@html `<script type="application/ld+json">${jsonLd}\x3C/script>`}
 </svelte:head>
 
-<div class="min-h-screen bg-terminal-bg-primary">
+<div class="min-h-screen bg-bg">
 	<!-- Article -->
 	<main id="main-content" class="relative mx-auto max-w-4xl px-6 py-12">
 		<div class="mb-8" data-pagefind-ignore>
