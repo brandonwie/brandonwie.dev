@@ -1,0 +1,72 @@
+/**
+ * nav.ts — single source of truth for top-level site navigation.
+ *
+ * Drives the global `SiteHeader` (and footer): the canonical link set, their
+ * locale-aware hrefs, and the active-section matcher. Keeping hrefs + active
+ * state here means every route inherits the same chrome from one place instead
+ * of each page hand-rolling its own header.
+ */
+import { m } from '$lib/paraglide/messages';
+
+export type Locale = 'en' | 'ko';
+export type NavKey = 'about' | 'posts' | 'study' | 'system';
+
+export interface NavItem {
+	key: NavKey;
+	/** Label getter — paraglide message, resolves to the active locale. */
+	label: () => string;
+	/** Canonical (en) path, without the locale prefix. */
+	path: string;
+}
+
+/** Canonical nav, in bar order. `system` points at the real 3B destination. */
+export const NAV_ITEMS: readonly NavItem[] = [
+	{ key: 'about', label: () => m.nav_about(), path: '/about' },
+	{ key: 'posts', label: () => m.nav_posts(), path: '/posts' },
+	{ key: 'study', label: () => m.nav_study(), path: '/study' },
+	{ key: 'system', label: () => m.nav_system(), path: '/system/3b' },
+];
+
+/** Locale inferred from a pathname (`/ko` prefix → ko, else en). */
+export function localeOf(pathname: string): Locale {
+	return pathname.startsWith('/ko') ? 'ko' : 'en';
+}
+
+/** Path prefix for a locale: '' for en, '/ko' for ko. */
+export function base(locale: Locale): string {
+	return locale === 'ko' ? '/ko' : '';
+}
+
+/** Locale-aware href for a nav item. */
+export function hrefFor(item: NavItem, locale: Locale): string {
+	return `${base(locale)}${item.path}`;
+}
+
+/** Locale-aware home href (logo target). */
+export function homeHref(locale: Locale): string {
+	return base(locale) || '/';
+}
+
+/** Locale-aware posts-list href (in-page back affordance). */
+export function postsHref(locale: Locale): string {
+	return `${base(locale)}/posts`;
+}
+
+/** Locale-aware search href (header action). */
+export function searchHref(locale: Locale): string {
+	return `${base(locale)}/search`;
+}
+
+/**
+ * Active nav section for a path. Locale-stripped, prefix-matched so list +
+ * detail routes share a section (`/posts` and `/posts/x` → posts; `/study/*` →
+ * study; `/system` and `/system/3b` → system). Home and search → null.
+ */
+export function activeKey(pathname: string): NavKey | null {
+	const p = pathname.replace(/^\/ko/, '') || '/';
+	if (p.startsWith('/posts')) return 'posts';
+	if (p.startsWith('/study')) return 'study';
+	if (p.startsWith('/system')) return 'system';
+	if (p.startsWith('/about')) return 'about';
+	return null;
+}

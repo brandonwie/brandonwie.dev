@@ -44,6 +44,7 @@
 	import { posts } from '$lib/stores/posts';
 	import { paletteOpen } from '$lib/stores/palette';
 	import FuzzyFinder from '$lib/components/palette/FuzzyFinder.svelte';
+	import SiteHeader from '$lib/components/SiteHeader.svelte';
 	import { buildPaletteItems, type PaletteItem } from '$lib/palette/items';
 
 	onNavigate((navigation) => {
@@ -183,28 +184,23 @@
 
   REFERENCE: https://svelte.dev/docs/svelte/snippet#Passing-snippets-to-components
 -->
-<div class="min-h-screen bg-terminal-bg-primary text-terminal-text-primary">
+<div class="min-h-screen bg-bg text-ink">
 	<a
 		href="#main-content"
 		class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded focus:border focus:border-line focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:text-ink focus:no-underline"
 	>
 		{m.skip_to_content()}
 	</a>
+	<SiteHeader />
 	{@render children()}
 	<nav
 		class="mx-auto flex max-w-2xl justify-end gap-4 px-4 py-6 text-xs sm:px-6"
 		aria-label="Footer"
 	>
-		<a
-			href={studyHref}
-			class="text-terminal-text-muted no-underline transition-colors hover:text-terminal-accent-orange"
-		>
+		<a href={studyHref} class="text-muted no-underline transition-colors hover:text-accent">
 			{m.study_title()}
 		</a>
-		<a
-			href={systemHref}
-			class="text-terminal-text-muted no-underline transition-colors hover:text-terminal-accent-orange"
-		>
+		<a href={systemHref} class="text-muted no-underline transition-colors hover:text-accent">
 			{m.system_3b_title()}
 		</a>
 	</nav>

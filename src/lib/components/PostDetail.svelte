@@ -3,7 +3,8 @@
 	import { page } from '$app/stores';
 	import type { Component } from 'svelte';
 	import { m } from '$lib/paraglide/messages';
-	import HeaderControls from '$lib/components/HeaderControls.svelte';
+	import BackToPosts from '$lib/components/BackToPosts.svelte';
+	import { postsHref } from '$lib/data/nav';
 	import Giscus from '$lib/components/Giscus.svelte';
 	import ReadingProgress from '$lib/components/ReadingProgress.svelte';
 	import TableOfContents from '$lib/components/TableOfContents.svelte';
@@ -48,7 +49,6 @@
 
 	const showToc = $derived(headings.length >= 3);
 
-	const basePath = $derived(locale === 'ko' ? '/ko' : '');
 	const englishPostUrl = $derived(absoluteUrl(`/posts/${meta.slug}`));
 	const koreanPostUrl = $derived(absoluteUrl(`/ko/posts/${meta.slug}`));
 	const postUrl = $derived(
@@ -57,7 +57,6 @@
 	const contentLocale = $derived(isFallback ? 'en' : locale);
 	const contentLanguage = $derived(contentLocale === 'ko' ? 'ko-KR' : 'en-US');
 	const ogImageUrl = $derived(`${SITE_URL}/og/${meta.slug}.png`);
-	const backLabel = m.back_to_home();
 
 	let copied = $state(false);
 
@@ -68,7 +67,7 @@
 	}
 
 	function goBack() {
-		goto(basePath || '/');
+		goto(postsHref(locale));
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -165,30 +164,11 @@
 </svelte:head>
 
 <div class="min-h-screen bg-terminal-bg-primary">
-	<!-- Header -->
-	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
-		<div
-			class="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6"
-		>
-			<button
-				type="button"
-				onclick={goBack}
-				class="flex items-center gap-1 text-xs text-terminal-text-muted transition-colors hover:text-terminal-accent-orange shrink-0 sm:gap-2 sm:text-sm"
-			>
-				<span>←</span>
-				<span>{backLabel}</span>
-			</button>
-			<a href={basePath || '/'} class="text-terminal-accent-orange text-xs truncate sm:text-base"
-				>brandonwie.dev</a
-			>
-			<div class="flex items-center gap-2">
-				<HeaderControls />
-			</div>
-		</div>
-	</header>
-
 	<!-- Article -->
 	<main id="main-content" class="relative mx-auto max-w-4xl px-6 py-12">
+		<div class="mb-8" data-pagefind-ignore>
+			<BackToPosts {locale} />
+		</div>
 		<article data-pagefind-body>
 			<span data-pagefind-filter="lang" class="hidden">{isFallback ? 'en' : locale}</span>
 			<!-- Desktop ToC: positioned in right margin -->
@@ -283,13 +263,7 @@
 	<!-- Footer -->
 	<footer class="border-t border-terminal-border py-8">
 		<div class="mx-auto max-w-4xl px-6 text-center">
-			<button
-				type="button"
-				onclick={goBack}
-				class="text-terminal-text-muted transition-colors hover:text-terminal-accent-orange"
-			>
-				← {backLabel}
-			</button>
+			<BackToPosts {locale} />
 		</div>
 	</footer>
 </div>

@@ -11,15 +11,12 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { m } from '$lib/paraglide/messages';
-	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import CategorySidebar from '$lib/components/CategorySidebar.svelte';
 	import { getCategoriesWithCounts } from '$lib/stores/posts';
 	import { formatDateShort, effectiveDate } from '$lib/utils/date';
 	import { absoluteUrl, DEFAULT_OG_IMAGE, localeCode, SITE_NAME } from '$lib/seo';
 
 	let { data }: { data: PageData } = $props();
-
-	const backLabel = m.back_to_home();
 
 	// Category filtering
 	let activeCategory: string | null = $state(null);
@@ -72,49 +69,6 @@
 </svelte:head>
 
 <div class="min-h-screen bg-bg">
-	<!-- Header with back navigation -->
-	<header class="border-b border-line">
-		<div
-			class="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6"
-		>
-			<a
-				href="/"
-				class="flex shrink-0 items-center gap-1 text-xs text-muted transition-colors hover:text-accent sm:gap-2 sm:text-sm"
-			>
-				<span>←</span>
-				<span>{backLabel}</span>
-			</a>
-			<a href="/" class="truncate font-mono text-xs font-semibold text-ink sm:text-base">
-				brandonwie.dev
-			</a>
-			<div class="flex items-center gap-2">
-				<a
-					href="/search"
-					class="text-muted no-underline transition-colors hover:text-accent"
-					aria-label={m.search_title()}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"
-						focusable="false"
-					>
-						<circle cx="11" cy="11" r="8" />
-						<path d="m21 21-4.3-4.3" />
-					</svg>
-				</a>
-				<HeaderControls />
-			</div>
-		</div>
-	</header>
-
 	<!-- Posts List -->
 	<main id="main-content" class="mx-auto max-w-6xl px-4 py-12 sm:px-6">
 		<h1 class="mb-8 text-2xl font-semibold tracking-tight text-ink">{m.posts_title()}</h1>

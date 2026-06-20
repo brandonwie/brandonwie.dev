@@ -1,14 +1,5 @@
 export type StudyLocale = 'en' | 'ko';
 
-export interface StudyNavLabels {
-	home: string;
-	about: string;
-	posts: string;
-	study: string;
-	search: string;
-	system: string;
-}
-
 export interface StudyIndexCourse {
 	slug: string;
 	title: string;
@@ -27,7 +18,6 @@ export interface StudyIndexContent {
 	eyebrow: string;
 	title: string;
 	subtitle: string;
-	nav: StudyNavLabels;
 	sections: {
 		courses: string;
 		approach: string;
@@ -176,7 +166,6 @@ export interface DsaIContent {
 	eyebrow: string;
 	title: string;
 	subtitle: string;
-	nav: StudyNavLabels;
 	sections: {
 		map: string;
 		lab: string;
@@ -292,7 +281,6 @@ export interface DsaIIContent {
 	eyebrow: string;
 	title: string;
 	subtitle: string;
-	nav: StudyNavLabels;
 	sections: {
 		map: string;
 		lab: string;
@@ -306,25 +294,6 @@ export interface DsaIIContent {
 	visuals: DsaIIVisualsCopy;
 }
 
-const nav: Record<StudyLocale, StudyNavLabels> = {
-	en: {
-		home: 'Home',
-		about: 'About',
-		posts: 'Posts',
-		study: 'Study',
-		search: 'Search',
-		system: '3B',
-	},
-	ko: {
-		home: '홈',
-		about: '소개',
-		posts: '글',
-		study: '스터디',
-		search: '검색',
-		system: '3B',
-	},
-};
-
 const indexContent: Record<StudyLocale, StudyIndexContent> = {
 	en: {
 		metaTitle: 'Study',
@@ -334,7 +303,6 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 		title: 'A public study shelf for material I have actually worked through.',
 		subtitle:
 			'The first section turns my Georgia Tech DSA I notes into inspectable, interactive examples — visual demos plus quick recall prompts to keep the material in long-term memory.',
-		nav: nav.en,
 		sections: {
 			courses: 'current courses',
 			approach: 'the approach',
@@ -383,7 +351,6 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 		title: '실제로 공부한 내용만 공개 학습 페이지로 정리합니다.',
 		subtitle:
 			'첫 섹션은 Georgia Tech DSA I 노트를 직접 다뤄볼 수 있는 인터랙티브 예제로 바꾼 것입니다. 시각 데모와 짧은 복습 질문으로 내용을 오래 기억하도록 돕습니다.',
-		nav: nav.ko,
 		sections: {
 			courses: '현재 과정',
 			approach: '진행 방식',
@@ -435,7 +402,6 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 		title: 'DSA I as small systems you can inspect.',
 		subtitle:
 			'This page only covers the material present in my DSA I notes: Java review, iterator/comparator basics, Big-O, ArrayLists, recursion and binary search, linked lists, stacks, and queues.',
-		nav: nav.en,
 		sections: {
 			map: 'learning map',
 			lab: 'visual lab',
@@ -716,7 +682,6 @@ const dsaIContent: Record<StudyLocale, DsaIContent> = {
 		title: 'DSA I를 작은 시스템처럼 뜯어봅니다.',
 		subtitle:
 			'이 페이지는 DSA I 노트에 있는 내용만 다룹니다. Java review, Iterator/Comparator, Big-O, ArrayList, Recursion과 Binary Search, LinkedList, Stack, Queue입니다.',
-		nav: nav.ko,
 		sections: {
 			map: '학습 지도',
 			lab: '시각 실험실',
@@ -1015,7 +980,6 @@ const dsaIIContent: Record<StudyLocale, DsaIIContent> = {
 		title: 'DSA II as the structures that keep data ordered and findable.',
 		subtitle:
 			'This page picks up where DSA I left off and only covers what is in my DSA II notes: binary search trees and their traversals, BST removal and SkipLists, binary heaps behind the priority queue, and HashMaps with collisions and load factor.',
-		nav: nav.en,
 		sections: {
 			map: 'learning map',
 			lab: 'visual lab',
@@ -1240,7 +1204,6 @@ const dsaIIContent: Record<StudyLocale, DsaIIContent> = {
 		title: 'DSA II를 정렬과 탐색을 지탱하는 구조로 뜯어봅니다.',
 		subtitle:
 			'이 페이지는 DSA I에서 이어지며, DSA II 노트에 있는 내용만 다룹니다. binary search tree와 traversal, BST removal과 SkipList, priority queue를 떠받치는 binary heap, 그리고 collision과 load factor를 다루는 HashMap입니다.',
-		nav: nav.ko,
 		sections: {
 			map: '학습 지도',
 			lab: '시각 실험실',

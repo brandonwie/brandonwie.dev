@@ -11,7 +11,7 @@
 
 <StudySeoHead {pageTitle} description={content.metaDescription} basePath="/study" {locale} />
 
-<StudyPageShell {locale} nav={content.nav}>
+<StudyPageShell>
 	<section class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
 		<div>
 			<p class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
