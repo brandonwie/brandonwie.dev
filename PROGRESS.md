@@ -33,8 +33,32 @@
 - [x] 3 hash-mismatch merges — shared-personal-config (Revert Loop), distilbert-vs-bart (HF truncation gotcha), ai-code-review-confusion-patterns (Patterns 5+6) (EN + KO)
 - [x] AI PR review validation post refreshed — 3b-forge four-reviewer example added (EN + KO)
 - [x] Cloudflare build fix — dropped stale `package-lock.json`, added `packageManager: pnpm@10.32.1`, switched CI + husky pre-push to pnpm
+- [x] Header i18n root-cause fix — locale resolved from the URL only (dropped `cookie` strategy + `setLocale` pin)
 
 ## Session Log
+
+### 2026-06-20 (Session 26)
+
+**Header i18n drift — root-cause fix (locale from URL only)**
+
+- **Bug:** After the PR #23 header unification, the layout-owned `SiteHeader`
+  rendered Korean nav labels on English routes. Labels resolved via Paraglide's
+  ambient `getLocale()` (strategy `['url','cookie','baseLocale']`); EN routes
+  carry no path locale, so resolution fell through to a `ko` cookie that
+  `/ko/+layout.svelte`'s `setLocale('ko')` had persisted. Hrefs stayed correct
+  (they use `localeOf(pathname)`), so links worked but text was Korean.
+- **Fix arc (3 commits):** `293750f` thread `{ locale }` into nav/footer labels;
+  `c86ca3d` same for header-control + skip-link aria-labels (after a reviewer
+  REVISE on an over-claimed a11y fix); `255cb73` **root cause** — strategy
+  `['url','baseLocale']` (dropped `cookie`) + deleted the `setLocale('ko')`
+  writer, making `getLocale()` a pure function of the URL.
+- **Verification:** Behavioral proof on `vite preview` with a real stale `ko`
+  cookie — un-threaded ambient dates rendered English on `/posts`, Korean on
+  `/ko/posts`, correct across SPA client nav. Static: generated runtime
+  `strategy = ["url","baseLocale"]`, `TREE_SHAKE_COOKIE_STRATEGY_USED = false`.
+  Full pre-push CI green on all three pushes.
+- **Knowledge:** `3b/knowledge/frontend/paraglide-ssg-url-locale-strategy.md`
+  (NEW, blog-review).
 
 ### 2026-06-17 (Session 25)
 
