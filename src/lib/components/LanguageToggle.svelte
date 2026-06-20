@@ -8,22 +8,15 @@
 	 * Uses URL path to detect locale (works with SSG).
 	 */
 	import { page } from '$app/state';
+	import { localeOf, pathForLocale } from '$lib/data/nav';
 	import { m } from '$lib/paraglide/messages';
 
 	// Detect locale from URL path (works during SSG)
-	const isKorean = $derived(page.url.pathname.startsWith('/ko'));
+	const locale = $derived(localeOf(page.url.pathname));
+	const isKorean = $derived(locale === 'ko');
 
 	// Get toggle URL based on current path
-	const toggleUrl = $derived.by(() => {
-		const path = page.url.pathname;
-		if (isKorean) {
-			// /ko/posts/slug → /posts/slug
-			return path.replace(/^\/ko/, '') || '/';
-		} else {
-			// /posts/slug → /ko/posts/slug
-			return '/ko' + path;
-		}
-	});
+	const toggleUrl = $derived(pathForLocale(page.url.pathname, isKorean ? 'en' : 'ko'));
 </script>
 
 <a
