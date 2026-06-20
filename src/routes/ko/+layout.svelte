@@ -1,19 +1,14 @@
 <script lang="ts">
 	/**
-	 * Korean Layout - Sets the locale context for Korean routes
+	 * Korean Layout — wraps all /ko/* routes.
 	 *
-	 * This layout wraps all /ko/* routes and ensures the correct
-	 * locale is set for Paraglide message functions.
+	 * Locale is resolved purely from the URL via Paraglide's `url` strategy
+	 * (see vite.config.ts urlPatterns), so this layout no longer calls
+	 * setLocale(). Pinning it here used to persist a `ko` cookie that leaked onto
+	 * English routes; with strategy ['url', 'baseLocale'] the URL is the only
+	 * source of truth and no cookie can override it.
 	 */
-	import { setLocale } from '$lib/paraglide/runtime';
-	import { onMount } from 'svelte';
-
 	let { children } = $props();
-
-	// Set Korean locale on mount (client-side)
-	onMount(() => {
-		setLocale('ko', { reload: false });
-	});
 </script>
 
 {@render children()}

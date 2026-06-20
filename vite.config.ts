@@ -14,7 +14,11 @@ export default defineConfig({
 		paraglideVitePlugin({
 			project: './project.inlang',
 			outdir: './src/lib/paraglide',
-			strategy: ['url', 'cookie', 'baseLocale'],
+			// URL is the single source of truth for locale (see urlPatterns below).
+			// No `cookie`: a persisted cookie would let EN routes (which carry no
+			// locale in the path) fall through to a stale `ko` and render Korean.
+			// `baseLocale` (en) is only the fallback when the URL yields nothing.
+			strategy: ['url', 'baseLocale'],
 			urlPatterns: [
 				// English routes (default, no prefix)
 				{
