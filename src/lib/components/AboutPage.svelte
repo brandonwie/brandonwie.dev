@@ -1,17 +1,10 @@
 <script lang="ts">
-	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import { getAboutContent, type AboutLocale } from '$lib/data/about';
-	import { m } from '$lib/paraglide/messages';
 	import { DEFAULT_OG_IMAGE, localeCode, SITE_NAME } from '$lib/seo';
 
 	let { locale = 'en' }: { locale?: AboutLocale } = $props();
 
 	const content = $derived(getAboutContent(locale));
-	const homeHref = $derived(locale === 'ko' ? '/ko' : '/');
-	const postsHref = $derived(locale === 'ko' ? '/ko/posts' : '/posts');
-	const studyHref = $derived(locale === 'ko' ? '/ko/study' : '/study');
-	const searchHref = $derived(locale === 'ko' ? '/ko/search' : '/search');
-	const systemHref = $derived(locale === 'ko' ? '/ko/system/3b' : '/system/3b');
 	const canonicalHref = $derived(
 		locale === 'ko' ? 'https://brandonwie.dev/ko/about' : 'https://brandonwie.dev/about',
 	);
@@ -53,33 +46,6 @@
 </svelte:head>
 
 <div class="min-h-screen bg-bg">
-	<header class="border-b border-line">
-		<div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-			<a href={homeHref} class="font-mono text-sm font-semibold text-ink no-underline sm:text-base">
-				brandonwie.dev
-			</a>
-			<nav class="flex items-center gap-3 text-sm sm:gap-4" aria-label={m.primary_navigation()}>
-				<a href={postsHref} class="text-muted no-underline transition-colors hover:text-accent">
-					{m.posts_title()}
-				</a>
-				<a href={studyHref} class="text-muted no-underline transition-colors hover:text-accent">
-					{m.study_title()}
-				</a>
-				<a href={systemHref} class="text-muted no-underline transition-colors hover:text-accent">
-					3B
-				</a>
-				<a
-					href={searchHref}
-					class="text-muted no-underline transition-colors hover:text-accent"
-					aria-label={m.search_title()}
-				>
-					⌕
-				</a>
-				<HeaderControls />
-			</nav>
-		</div>
-	</header>
-
 	<main id="main-content" class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
 		<section class="grid gap-10 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] lg:items-end">
 			<div>

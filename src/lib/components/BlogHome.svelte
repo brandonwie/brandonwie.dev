@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
-	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import type { PostMetadata } from '$lib/stores/posts';
 	import { formatDateShort, effectiveDate } from '$lib/utils/date';
 	import {
@@ -60,22 +59,10 @@
 		return `${base}/posts`;
 	}
 
-	function aboutHref(): string {
-		const base = basePath === '/' ? '' : basePath;
-		return `${base}/about`;
-	}
-
-	function studyHref(): string {
-		const base = basePath === '/' ? '' : basePath;
-		return `${base}/study`;
-	}
-
 	function systemHref(): string {
 		const base = basePath === '/' ? '' : basePath;
 		return `${base}/system/3b`;
 	}
-
-	const searchHref = $derived(`${basePath === '/' ? '' : basePath}/search`);
 </script>
 
 <svelte:head>
@@ -105,58 +92,6 @@
 </svelte:head>
 
 <div class="min-h-screen bg-bg">
-	<!-- Header -->
-	<header class="border-b border-line">
-		<div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-			<a href={basePath} class="font-mono text-sm font-semibold text-ink no-underline sm:text-base">
-				brandonwie.dev
-			</a>
-			<nav class="flex items-center gap-3 sm:gap-4" aria-label={m.primary_navigation()}>
-				<a
-					href={aboutHref()}
-					class="text-sm text-muted no-underline transition-colors hover:text-accent"
-				>
-					{m.about_title()}
-				</a>
-				<a
-					href={allPostsHref()}
-					class="text-sm text-muted no-underline transition-colors hover:text-accent"
-				>
-					{m.posts_title()}
-				</a>
-				<a
-					href={studyHref()}
-					class="text-sm text-muted no-underline transition-colors hover:text-accent"
-				>
-					{m.study_title()}
-				</a>
-				<a
-					href={searchHref}
-					class="text-muted no-underline transition-colors hover:text-accent"
-					aria-label={m.search_title()}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="15"
-						height="15"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"
-						focusable="false"
-					>
-						<circle cx="11" cy="11" r="8" />
-						<path d="m21 21-4.3-4.3" />
-					</svg>
-				</a>
-				<HeaderControls />
-			</nav>
-		</div>
-	</header>
-
 	<main id="main-content" class="mx-auto max-w-5xl px-4 py-12 sm:px-6">
 		<!--
 		  Hero / identity area. Kept text-only and self-contained (modular) so a

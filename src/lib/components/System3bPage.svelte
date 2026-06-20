@@ -14,7 +14,6 @@
 -->
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
-	import HeaderControls from '$lib/components/HeaderControls.svelte';
 	import System3bGraph from '$lib/components/System3bGraph.svelte';
 	import { absoluteUrl, DEFAULT_OG_IMAGE, localeCode, SITE_NAME } from '$lib/seo';
 
@@ -82,7 +81,6 @@
 	let { locale, snapshot }: Props = $props();
 
 	const basePath = $derived(locale === 'ko' ? '/ko' : '');
-	const backLabel = m.back_to_home();
 	const canonicalHref = $derived(absoluteUrl(locale === 'ko' ? '/ko/system/3b' : '/system/3b'));
 	const pageTitle = $derived(`${m.system_3b_title()} | Brandon Wie`);
 	const pageDescription = $derived(m.system_3b_meta_description());
@@ -128,27 +126,6 @@
 </svelte:head>
 
 <div class="min-h-screen bg-terminal-bg-primary">
-	<!-- Header -->
-	<header class="border-b border-terminal-border bg-terminal-bg-secondary">
-		<div
-			class="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6"
-		>
-			<a
-				href={basePath || '/'}
-				class="flex shrink-0 items-center gap-1 text-xs text-terminal-text-muted transition-colors hover:text-terminal-accent-orange sm:gap-2 sm:text-sm"
-			>
-				<span>&larr;</span>
-				<span>{backLabel}</span>
-			</a>
-			<a href={basePath || '/'} class="truncate text-xs text-terminal-accent-orange sm:text-base">
-				brandonwie.dev
-			</a>
-			<div class="flex items-center gap-2">
-				<HeaderControls />
-			</div>
-		</div>
-	</header>
-
 	<main id="main-content" class="mx-auto max-w-5xl space-y-12 px-4 py-10 sm:px-6">
 		<h1 class="sr-only">{m.system_3b_title()}</h1>
 

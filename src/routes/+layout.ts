@@ -1,4 +1,5 @@
 import type { LayoutLoad } from './$types';
+import { localeOf } from '$lib/data/nav';
 import type { PostMetadata } from '$lib/stores/posts';
 import { effectiveDate } from '$lib/utils/date';
 
@@ -42,6 +43,6 @@ function collectPosts(modules: Record<string, PostMetadata>): PostMetadata[] {
 // Hydrate the posts store site-wide so the command palette works on every route,
 // not just the home page (folds ARCH-1). Locale-aware: /ko routes get Korean posts.
 export const load: LayoutLoad = ({ url }) => {
-	const posts = collectPosts(url.pathname.startsWith('/ko') ? koModules : enModules);
+	const posts = collectPosts(localeOf(url.pathname) === 'ko' ? koModules : enModules);
 	return { posts };
 };
