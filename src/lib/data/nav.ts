@@ -13,18 +13,24 @@ export type NavKey = 'about' | 'posts' | 'study' | 'system';
 
 export interface NavItem {
 	key: NavKey;
-	/** Label getter — paraglide message, resolves to the active locale. */
-	label: () => string;
+	/**
+	 * Label for an explicit locale. The locale is passed in (from `localeOf` on the
+	 * pathname) instead of read from Paraglide's ambient `getLocale()`, so nav text
+	 * follows the URL. On a static site a persisted language cookie can pin
+	 * `getLocale()` to the wrong locale, which would render the bar in the wrong
+	 * language even though the route is correct.
+	 */
+	label: (locale: Locale) => string;
 	/** Canonical (en) path, without the locale prefix. */
 	path: string;
 }
 
 /** Canonical nav, in bar order. `system` points at the real 3B destination. */
 export const NAV_ITEMS: readonly NavItem[] = [
-	{ key: 'about', label: () => m.nav_about(), path: '/about' },
-	{ key: 'posts', label: () => m.nav_posts(), path: '/posts' },
-	{ key: 'study', label: () => m.nav_study(), path: '/study' },
-	{ key: 'system', label: () => m.nav_system(), path: '/system/3b' },
+	{ key: 'about', label: (locale) => m.nav_about({}, { locale }), path: '/about' },
+	{ key: 'posts', label: (locale) => m.nav_posts({}, { locale }), path: '/posts' },
+	{ key: 'study', label: (locale) => m.nav_study({}, { locale }), path: '/study' },
+	{ key: 'system', label: (locale) => m.nav_system({}, { locale }), path: '/system/3b' },
 ];
 
 /** Matches `/ko` as a path segment, so `/koala` is not treated as Korean. */

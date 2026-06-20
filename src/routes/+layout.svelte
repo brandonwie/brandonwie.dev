@@ -206,10 +206,10 @@
 		aria-label="Footer"
 	>
 		<a href={studyHref} class="text-muted no-underline transition-colors hover:text-accent">
-			{m.study_title()}
+			{m.study_title({}, { locale: currentLocale })}
 		</a>
 		<a href={systemHref} class="text-muted no-underline transition-colors hover:text-accent">
-			{m.system_3b_title()}
+			{m.system_3b_title({}, { locale: currentLocale })}
 		</a>
 	</nav>
 </div>

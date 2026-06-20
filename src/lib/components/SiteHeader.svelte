@@ -45,15 +45,15 @@
 		</a>
 		<nav
 			class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-2 text-sm sm:gap-x-4"
-			aria-label={m.primary_navigation()}
+			aria-label={m.primary_navigation({}, { locale })}
 		>
 			{#each NAV_ITEMS as item (item.key)}
-				<a href={hrefFor(item, locale)} class={navClass(item.key)}>{item.label()}</a>
+				<a href={hrefFor(item, locale)} class={navClass(item.key)}>{item.label(locale)}</a>
 			{/each}
 			<a
 				href={searchHref(locale)}
 				class="text-muted no-underline transition-colors hover:text-accent"
-				aria-label={m.search_title()}
+				aria-label={m.search_title({}, { locale })}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
