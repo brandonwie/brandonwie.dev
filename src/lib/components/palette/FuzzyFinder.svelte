@@ -7,6 +7,9 @@
   WHY:  One Cmd/Ctrl+K surface for jumping anywhere and running quick actions.
   HOW:  Fuse.js over PaletteItem[]; each item self-executes via item.run().
 
+  STYLING: terminal redesign `.cmdk` look — scoped styles (no global leak). Only
+  the markup + styles changed in the redesign; the script/logic/a11y are intact.
+
   KEYBOARD:
   - ↑/↓: navigate (across section boundaries)  - Enter: select  - Escape: close
 -->
@@ -177,7 +180,7 @@
 
 <div
 	bind:this={dialogRef}
-	class="fuzzy-overlay fixed inset-0 z-50 flex items-start justify-center pt-24"
+	class="cmdk-overlay"
 	onclick={(e) => e.target === e.currentTarget && onClose()}
 	onkeydown={(e) => e.key === 'Escape' && onClose()}
 	role="dialog"
@@ -185,12 +188,10 @@
 	aria-label="Command palette"
 	tabindex="-1"
 >
-	<div
-		class="w-full max-w-2xl rounded-lg border border-terminal-border bg-terminal-bg-secondary shadow-2xl"
-	>
+	<div class="cmdk-panel">
 		<!-- SEARCH INPUT HEADER -->
-		<div class="flex items-center gap-3 border-b border-terminal-border p-4">
-			<span class="text-terminal-accent-orange">❯</span>
+		<div class="cmdk-ibar">
+			<span class="cmdk-prompt" aria-hidden="true">$</span>
 			<input
 				bind:this={inputRef}
 				bind:value={query}
@@ -198,35 +199,27 @@
 				onkeydown={handleKeyDown}
 				type="text"
 				placeholder={m.palette_placeholder()}
-				class="flex-1 border-none bg-transparent text-terminal-text-primary placeholder-terminal-text-dim outline-hidden"
+				class="cmdk-input"
 				spellcheck="false"
 			/>
-			<kbd class="rounded-sm bg-terminal-bg-primary px-2 py-1 text-xs text-terminal-text-muted"
-				>esc</kbd
-			>
+			<kbd class="cmdk-esc">esc</kbd>
 		</div>
 
-		<!-- RESULTS LIST (max-h-96 + scroll). Rows carry data-result-index; section
+		<!-- RESULTS LIST (max-h + scroll). Rows carry data-result-index; section
 		     headers are interleaved but non-selectable. -->
-		<div bind:this={resultsContainerRef} class="max-h-96 overflow-y-auto">
+		<div bind:this={resultsContainerRef} class="cmdk-results">
 			{#if results.length === 0}
-				<div class="p-4 text-center text-terminal-text-muted">{m.palette_no_results()}</div>
+				<div class="cmdk-empty">{m.palette_no_results()}</div>
 			{:else}
 				{#each results as result, i (result.item.id)}
 					{@const showHeader = i === 0 || results[i - 1].item.group !== result.item.group}
 					{#if showHeader}
-						<div
-							class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim"
-						>
-							{groupLabel(result.item.group)}
-						</div>
+						<div class="cmdk-grp">{groupLabel(result.item.group)}</div>
 					{/if}
 					<div
 						data-result-index={i}
-						class="cursor-pointer border-b border-terminal-border/50 py-3 last:border-b-0 {i ===
-						selectedIndex
-							? 'border-l-2 border-l-terminal-accent-orange bg-terminal-accent-orange/10 pl-3.5 pr-4'
-							: 'px-4'}"
+						class="cmdk-item"
+						class:is-selected={i === selectedIndex}
 						onclick={() => onSelect(result.item)}
 						onkeydown={(e) => e.key === 'Enter' && onSelect(result.item)}
 						role="option"
@@ -235,61 +228,43 @@
 					>
 						{#if result.item.group === 'post'}
 							<!-- POST ROW (rich: title, description, category/tags/date) -->
-							<div class="flex items-start justify-between gap-4">
-								<div class="min-w-0 flex-1">
-									<div class="truncate font-medium text-terminal-text-primary">
+							<div class="cmdk-post">
+								<div class="cmdk-post__main">
+									<div class="cmdk-tt cmdk-truncate">
 										{#each getHighlightedLabel(result) as segment, si (si)}
-											{#if segment.highlighted}
-												<span class="fuzzy-match">{segment.text}</span>
-											{:else}{segment.text}{/if}
+											{#if segment.highlighted}<span class="fuzzy-match">{segment.text}</span
+												>{:else}{segment.text}{/if}
 										{/each}
 									</div>
 									{#if result.item.description}
-										<div class="mt-1 truncate text-sm text-terminal-text-muted">
-											{result.item.description}
-										</div>
+										<div class="cmdk-post__desc cmdk-truncate">{result.item.description}</div>
 									{/if}
-									<div class="mt-2 flex flex-wrap gap-2">
+									<div class="cmdk-post__meta">
 										{#if result.item.meta?.category}
-											<span
-												class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-accent-yellow"
-											>
-												{result.item.meta.category}
-											</span>
+											<span class="cmdk-cat">{result.item.meta.category}</span>
 										{/if}
 										{#each (result.item.meta?.tags ?? []).slice(0, 3) as tag (tag)}
-											<span
-												class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-muted"
-											>
-												{tag}
-											</span>
+											<span class="cmdk-tag">{tag}</span>
 										{/each}
 									</div>
 								</div>
 								{#if result.item.meta?.date}
-									<div class="text-xs text-terminal-text-dim">{result.item.meta.date}</div>
+									<div class="cmdk-ds">{result.item.meta.date}</div>
 								{/if}
 							</div>
 						{:else}
-							<!-- NAV / ACTION ROW (icon + label + dim hint) -->
-							<div class="flex items-center gap-3">
-								<span class="w-4 shrink-0 text-center text-terminal-accent-orange">
-									{result.item.icon ?? '›'}
-								</span>
-								<div class="min-w-0 flex-1">
-									<div class="truncate font-medium text-terminal-text-primary">
-										{#each getHighlightedLabel(result) as segment, si (si)}
-											{#if segment.highlighted}
-												<span class="fuzzy-match">{segment.text}</span>
-											{:else}{segment.text}{/if}
-										{/each}
-									</div>
-									{#if result.item.description}
-										<div class="truncate text-xs text-terminal-text-dim">
-											{result.item.description}
-										</div>
-									{/if}
+							<!-- NAV / ACTION ROW (icon box + label + dim hint) -->
+							<span class="cmdk-ic" aria-hidden="true">{result.item.icon ?? '›'}</span>
+							<div class="cmdk-row__main">
+								<div class="cmdk-tt cmdk-truncate">
+									{#each getHighlightedLabel(result) as segment, si (si)}
+										{#if segment.highlighted}<span class="fuzzy-match">{segment.text}</span
+											>{:else}{segment.text}{/if}
+									{/each}
 								</div>
+								{#if result.item.description}
+									<div class="cmdk-ds cmdk-truncate">{result.item.description}</div>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -298,13 +273,11 @@
 		</div>
 
 		<!-- FOOTER - keyboard hints + result count -->
-		<div
-			class="flex items-center justify-between border-t border-terminal-border px-4 py-2 text-xs text-terminal-text-muted"
-		>
-			<div class="flex gap-4">
-				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↑↓</kbd> navigate</span>
-				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">↵</kbd> select</span>
-				<span><kbd class="rounded-sm bg-terminal-bg-primary px-1">esc</kbd> close</span>
+		<div class="cmdk-foot">
+			<div class="cmdk-foot__hints">
+				<span><kbd>↑↓</kbd>navigate</span>
+				<span><kbd>↵</kbd>select</span>
+				<span><kbd>esc</kbd>close</span>
 			</div>
 			<div>
 				{results.length} result{results.length === 1 ? '' : 's'}
@@ -312,3 +285,212 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.cmdk-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		display: flex;
+		align-items: flex-start;
+		justify-content: center;
+		padding: 14vh 20px 20px;
+		background: color-mix(in srgb, #08070c 66%, transparent);
+		backdrop-filter: blur(4px);
+		animation: cmdk-fade 0.18s ease;
+	}
+	@keyframes cmdk-fade {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+	.cmdk-panel {
+		width: min(620px, 100%);
+		overflow: hidden;
+		border: 1px solid var(--line2);
+		border-radius: 14px;
+		background: linear-gradient(180deg, var(--bg2), #15131f);
+		box-shadow: 0 50px 120px -30px rgba(0, 0, 0, 0.8);
+		animation: cmdk-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	@keyframes cmdk-pop {
+		from {
+			transform: translateY(-10px) scale(0.98);
+		}
+		to {
+			transform: none;
+		}
+	}
+	.cmdk-ibar {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 16px 18px;
+		border-bottom: 1px solid var(--line);
+	}
+	.cmdk-prompt {
+		font-family: var(--font-mono);
+		font-size: 14px;
+		color: var(--foam);
+	}
+	.cmdk-input {
+		flex: 1;
+		min-width: 0;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: var(--ink);
+		font-family: var(--font-mono);
+		font-size: 15px;
+	}
+	.cmdk-input::placeholder {
+		color: var(--muted);
+	}
+	.cmdk-esc {
+		padding: 2px 7px;
+		border: 1px solid var(--line2);
+		border-radius: 4px;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--muted);
+	}
+	.cmdk-results {
+		max-height: 48vh;
+		overflow-y: auto;
+		padding: 8px;
+	}
+	.cmdk-grp {
+		padding: 12px 12px 6px;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+	.cmdk-item {
+		display: flex;
+		gap: 13px;
+		padding: 11px 12px;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: background-color 0.12s;
+	}
+	.cmdk-item.is-selected,
+	.cmdk-item:hover {
+		background: var(--overlay);
+	}
+	.cmdk-ic {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		width: 26px;
+		height: 26px;
+		border: 1px solid var(--line2);
+		border-radius: 6px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--foam);
+	}
+	.cmdk-item.is-selected .cmdk-ic {
+		border-color: var(--foam);
+	}
+	.cmdk-row__main {
+		min-width: 0;
+		flex: 1;
+	}
+	.cmdk-post {
+		display: flex;
+		flex: 1;
+		min-width: 0;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+	}
+	.cmdk-post__main {
+		min-width: 0;
+		flex: 1;
+	}
+	.cmdk-tt {
+		font-family: var(--font-sans);
+		font-size: 15px;
+		font-weight: 500;
+		color: var(--ink);
+	}
+	.cmdk-post__desc {
+		margin-top: 4px;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--muted);
+	}
+	.cmdk-post__meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-top: 8px;
+	}
+	.cmdk-cat {
+		padding: 3px 7px;
+		border: 1px solid var(--line);
+		border-radius: 5px;
+		font-size: 10px;
+		color: var(--gold);
+	}
+	.cmdk-tag {
+		padding: 3px 7px;
+		border: 1px solid var(--line);
+		border-radius: 5px;
+		font-size: 10px;
+		color: var(--muted);
+	}
+	.cmdk-ds {
+		margin-top: 2px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--muted);
+		white-space: nowrap;
+	}
+	.cmdk-truncate {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.cmdk-empty {
+		padding: 30px 14px;
+		text-align: center;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		color: var(--muted);
+	}
+	.cmdk-foot {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 18px;
+		padding: 11px 16px;
+		border-top: 1px solid var(--line);
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--muted);
+	}
+	.cmdk-foot__hints {
+		display: flex;
+		gap: 18px;
+	}
+	.cmdk-foot kbd {
+		margin-right: 5px;
+		padding: 1px 6px;
+		border: 1px solid var(--line2);
+		border-radius: 4px;
+		background: var(--overlay);
+		font-family: var(--font-mono);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.cmdk-overlay,
+		.cmdk-panel {
+			animation: none;
+		}
+	}
+</style>

@@ -45,15 +45,9 @@
 	import { paletteOpen } from '$lib/stores/palette';
 	import FuzzyFinder from '$lib/components/palette/FuzzyFinder.svelte';
 	import SiteHeader from '$lib/components/SiteHeader.svelte';
-	import {
-		hrefFor,
-		localeOf,
-		NAV_ITEMS,
-		pathForLocale,
-		searchHref,
-		type Locale,
-	} from '$lib/data/nav';
+	import { localeOf, pathForLocale, searchHref, type Locale } from '$lib/data/nav';
 	import { buildPaletteItems, type PaletteItem } from '$lib/palette/items';
+	import Footer from '$lib/components/Footer.svelte';
 
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
@@ -80,11 +74,7 @@
 		posts.set(data.posts);
 	});
 
-	const studyItem = NAV_ITEMS.find((item) => item.key === 'study')!;
-	const systemItem = NAV_ITEMS.find((item) => item.key === 'system')!;
 	const currentLocale = $derived(localeOf(page.url.pathname));
-	const systemHref = $derived(hrefFor(systemItem, currentLocale));
-	const studyHref = $derived(hrefFor(studyItem, currentLocale));
 
 	// Full palette item set (nav + actions + posts) for the current route.
 	// Rebuilds on navigation (locale-aware) and when the posts store hydrates.
@@ -201,17 +191,7 @@
 	</a>
 	<SiteHeader />
 	{@render children()}
-	<nav
-		class="mx-auto flex max-w-2xl justify-end gap-4 px-4 py-6 text-xs sm:px-6"
-		aria-label="Footer"
-	>
-		<a href={studyHref} class="text-muted no-underline transition-colors hover:text-accent">
-			{m.study_title({}, { locale: currentLocale })}
-		</a>
-		<a href={systemHref} class="text-muted no-underline transition-colors hover:text-accent">
-			{m.system_3b_title({}, { locale: currentLocale })}
-		</a>
-	</nav>
+	<Footer />
 </div>
 
 <!--
