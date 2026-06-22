@@ -45,6 +45,11 @@
 		symlink: m.system_3b_edge_symlink,
 	};
 
+	const FLOW_BG = '#13111c'; // --bg
+	const FLOW_BG2 = '#191724'; // --bg2
+	const FLOW_OVERLAY = '#26233a'; // --overlay
+	const FLOW_MASK = 'rgba(19, 17, 28, 0.6)'; // --bg @ 0.6 opacity
+
 	interface Props {
 		nodes: SnapNode[];
 		edges: SnapEdge[];
@@ -155,15 +160,9 @@
 			maxZoom={1.6}
 			proOptions={{ hideAttribution: true }}
 		>
-			<Background bgColor="#13111c" patternColor="#26233a" gap={22} />
+			<Background bgColor={FLOW_BG} patternColor={FLOW_OVERLAY} gap={22} />
 			<Controls showLock={false} />
-			<MiniMap
-				pannable
-				zoomable
-				nodeColor={mmColor}
-				maskColor="rgba(19,17,28,0.6)"
-				bgColor="#191724"
-			/>
+			<MiniMap pannable zoomable nodeColor={mmColor} maskColor={FLOW_MASK} bgColor={FLOW_BG2} />
 			<FitView trigger={expandedSubKey} />
 		</SvelteFlow>
 	</div>
