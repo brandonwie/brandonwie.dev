@@ -25,7 +25,7 @@
 		position: absolute;
 		top: 6px;
 		left: 10px;
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-family: var(--font-mono);
 		font-size: 11px;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;

@@ -40,7 +40,7 @@
 		overflow: hidden;
 		border: 1px solid var(--line2);
 		border-radius: 12px;
-		background: linear-gradient(180deg, var(--bg2), #15131f);
+		background: linear-gradient(180deg, var(--bg2), var(--panel));
 		box-shadow:
 			0 40px 120px -40px rgba(0, 0, 0, 0.7),
 			0 0 0 1px rgba(255, 255, 255, 0.02) inset;
