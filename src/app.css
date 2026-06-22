@@ -8,9 +8,13 @@
 	  every generated utility from a single :root with no per-component changes.
 	*/
 	--color-bg: var(--bg);
+	--color-bg2: var(--bg2);
 	--color-surface: var(--surface);
 	--color-surface-2: var(--surface-2);
+	--color-panel: var(--panel);
+	--color-overlay: var(--overlay);
 	--color-line: var(--line);
+	--color-line2: var(--line2);
 	--color-ink: var(--ink);
 	--color-muted: var(--muted);
 	--color-faint: var(--faint);
