@@ -7,46 +7,65 @@
 
 	const content = $derived(getStudyIndexContent(locale));
 	const pageTitle = $derived(`${content.metaTitle} | Brandon Wie`);
+	const basePath = $derived(locale === 'ko' ? '/ko' : '');
 </script>
 
 <StudySeoHead {pageTitle} description={content.metaDescription} basePath="/study" {locale} />
 
+{#snippet secHead(label: string)}
+	<div class="mb-5 flex items-center gap-3.5">
+		<span class="font-mono font-bold text-foam">#</span>
+		<h2 class="font-sans text-xl font-semibold tracking-tight text-ink">{label}</h2>
+		<span class="h-px flex-1 bg-line2"></span>
+	</div>
+{/snippet}
+
 <StudyPageShell>
+	<div
+		class="mb-8 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-faint"
+	>
+		<a href={basePath || '/'} class="transition-colors hover:text-foam">~</a>
+		<span class="text-line2">/</span>
+		<span>study</span>
+	</div>
+
 	<section class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
 		<div>
 			<p class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
 				{content.eyebrow}
 			</p>
-			<h1 class="mt-4 max-w-4xl text-3xl font-semibold leading-tight text-ink sm:text-5xl">
+			<h1
+				class="mt-4 max-w-4xl font-sans text-3xl font-bold leading-tight tracking-tight text-ink sm:text-5xl"
+			>
 				{content.title}
 			</h1>
-			<p class="mt-6 max-w-2xl text-lg leading-8 text-muted">{content.subtitle}</p>
+			<p class="mt-6 max-w-2xl font-sans text-lg leading-8 text-muted">{content.subtitle}</p>
 		</div>
 		<aside class="study-card p-5">
 			<p class="font-mono text-xs uppercase tracking-wider text-faint">
 				{content.sections.approach}
 			</p>
-			<h2 class="mt-3 text-xl font-semibold text-ink">{content.approach.title}</h2>
+			<h2 class="mt-3 font-sans text-xl font-semibold text-ink">{content.approach.title}</h2>
 			<p class="mt-3 text-sm leading-7 text-muted">{content.approach.body}</p>
 		</aside>
 	</section>
 
 	<section class="mt-16">
-		<h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
-			{content.sections.courses}
-		</h2>
+		{@render secHead(content.sections.courses)}
 		<div class="mt-5 grid gap-4 lg:grid-cols-2">
 			{#each content.courses as course (course.slug)}
 				<a
 					href={course.href}
-					class="group block study-card p-6 text-ink no-underline transition-colors hover:border-accent"
+					class="group block study-card p-6 text-ink no-underline transition-colors hover:border-foam"
 				>
 					<div class="flex flex-wrap items-start justify-between gap-3">
 						<div>
-							<p class="font-mono text-xs uppercase tracking-wider text-accent">
+							<p class="font-mono text-xs uppercase tracking-wider text-foam">
 								{course.status}
 							</p>
-							<h3 class="mt-3 text-2xl font-semibold transition-colors group-hover:text-accent">
+							<h3
+								class="mt-3 font-sans text-2xl font-semibold transition-colors group-hover:text-foam"
+							>
 								{course.title}
 							</h3>
 						</div>
@@ -62,7 +81,7 @@
 					</div>
 					<div class="mt-6 grid gap-3 sm:grid-cols-2">
 						{#each course.modules as module (module)}
-							<div class="border-l border-accent bg-bg px-3 py-2 text-sm text-muted">
+							<div class="border-l border-foam bg-bg px-3 py-2 text-sm text-muted">
 								{module}
 							</div>
 						{/each}
@@ -77,7 +96,7 @@
 		<ul class="grid gap-3 md:grid-cols-3">
 			{#each content.approach.items as item (item)}
 				<li class="text-sm leading-7 text-muted">
-					<span class="mr-2 font-mono text-accent">/</span>{item}
+					<span class="mr-2 font-mono text-foam">/</span>{item}
 				</li>
 			{/each}
 		</ul>

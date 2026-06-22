@@ -125,197 +125,189 @@
 	<meta name="twitter:image" content={DEFAULT_OG_IMAGE} />
 </svelte:head>
 
-<div class="min-h-screen bg-terminal-bg-primary">
-	<main id="main-content" class="mx-auto max-w-5xl space-y-12 px-4 py-10 sm:px-6">
-		<h1 class="sr-only">{m.system_3b_title()}</h1>
+{#snippet secHead(label: string, id?: string)}
+	<div class="mb-5 flex items-center gap-3.5">
+		<span class="font-mono font-bold text-foam">#</span>
+		<h2 {id} class="font-sans text-xl font-semibold tracking-tight text-ink">{label}</h2>
+		<span class="h-px flex-1 bg-line2"></span>
+	</div>
+{/snippet}
 
-		<!-- Intro -->
-		<section>
-			<div class="mb-2">
-				<span class="font-bold text-terminal-accent-orange">&gt;</span>
-				<span class="ml-2 text-terminal-text-primary">{m.system_3b_subtitle()}</span>
-			</div>
-			<p class="max-w-3xl text-sm leading-relaxed text-terminal-text-muted">
-				{m.system_3b_intro()}
-			</p>
-		</section>
+<main id="main-content" class="mx-auto max-w-6xl px-6 py-12 lg:py-16">
+	<!-- Header -->
+	<section class="max-w-3xl">
+		<div
+			class="mb-5 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-faint"
+		>
+			<a href={basePath || '/'} class="transition-colors hover:text-foam">~</a>
+			<span class="text-line2">/</span>
+			<span>system</span>
+			<span class="text-line2">/</span>
+			<span>3b</span>
+		</div>
+		<p class="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-foam">
+			{m.system_3b_subtitle()}
+		</p>
+		<h1 class="mt-4 font-sans text-4xl font-bold leading-tight tracking-tight text-ink sm:text-5xl">
+			{m.system_3b_title()}
+		</h1>
+		<p class="mt-6 font-sans text-lg leading-8 text-muted">
+			{m.system_3b_intro()}
+		</p>
+	</section>
 
-		<!-- Overview / stats grid -->
-		<section>
-			<h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim">
-				{m.system_3b_overview_heading()}
-			</h2>
-			<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-				{#each snapshot.stats as stat (stat.metric)}
-					<div class="rounded-lg border border-terminal-border bg-terminal-bg-secondary p-4">
-						<div class="text-2xl font-bold tabular-nums text-terminal-accent-orange">
-							{stat.value}
-						</div>
-						<div class="mt-1 text-xs text-terminal-text-muted">{stat.metric}</div>
+	<!-- Overview / stats grid -->
+	<section class="mt-14">
+		{@render secHead(m.system_3b_overview_heading())}
+		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+			{#each snapshot.stats as stat (stat.metric)}
+				<div
+					class="rounded-lg border border-line2 bg-surface p-4 transition-colors hover:border-foam"
+				>
+					<div class="font-sans text-2xl font-bold tabular-nums text-foam">{stat.value}</div>
+					<div class="mt-1 font-mono text-xs text-muted">{stat.metric}</div>
+				</div>
+			{/each}
+		</div>
+	</section>
+
+	<!-- Architecture map -->
+	<section class="mt-16">
+		{@render secHead(m.system_3b_map_heading())}
+		<System3bGraph nodes={snapshot.nodes} edges={snapshot.edges} layers={snapshot.layers} />
+	</section>
+
+	<!-- Layers -->
+	<section class="mt-16">
+		{@render secHead(m.system_3b_layers_heading())}
+		<div class="grid gap-4 lg:grid-cols-2">
+			{#each snapshot.layers as layer, i (layer.id)}
+				<article
+					class="rounded-lg border border-line2 bg-surface p-5 transition-colors hover:border-foam"
+				>
+					<div class="flex items-start justify-between gap-3">
+						<h3 class="font-sans text-base font-semibold text-ink">
+							<span class="font-mono tabular-nums text-faint">{i + 1}.</span>
+							{layer.name}
+						</h3>
+						<span
+							class="shrink-0 rounded border border-line2 px-2 py-0.5 font-mono text-xs text-foam"
+						>
+							{countByLayer[layer.id] ?? 0}
+							{m.system_3b_nodes_label()}
+						</span>
 					</div>
-				{/each}
-			</div>
-		</section>
+					<p class="mt-3 font-sans text-sm leading-7 text-muted">{layer.description}</p>
+				</article>
+			{/each}
+		</div>
+	</section>
 
-		<!-- Architecture map -->
-		<section>
-			<h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim">
-				{m.system_3b_map_heading()}
-			</h2>
-			<System3bGraph nodes={snapshot.nodes} edges={snapshot.edges} layers={snapshot.layers} />
-		</section>
-
-		<!-- Layers -->
-		<section>
-			<h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim">
-				{m.system_3b_layers_heading()}
-			</h2>
-			<div class="space-y-3">
-				{#each snapshot.layers as layer, i (layer.id)}
-					<div class="rounded-lg border border-terminal-border bg-terminal-bg-secondary p-4">
-						<div class="flex items-start justify-between gap-3">
-							<h3 class="font-semibold text-terminal-text-primary">
-								<span class="tabular-nums text-terminal-text-dim">{i + 1}.</span>
-								{layer.name}
-							</h3>
-							<span
-								class="shrink-0 rounded-sm bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow"
-							>
-								{countByLayer[layer.id] ?? 0}
-								{m.system_3b_nodes_label()}
+	<!-- Subsystems -->
+	<section class="mt-16">
+		{@render secHead(m.system_3b_subsystems_heading())}
+		<div class="grid gap-3 lg:grid-cols-2">
+			{#each snapshot.subsystems as sub (sub.key)}
+				<article
+					class="rounded-lg border border-line2 bg-surface p-4 transition-colors hover:border-foam"
+				>
+					<div class="flex flex-wrap items-center gap-2">
+						<h3 class="font-sans text-sm font-semibold text-ink">{sub.name}</h3>
+						{#if !sub.public_safe}
+							<span class="rounded border border-line2 px-2 py-0.5 font-mono text-xs text-faint">
+								{m.system_3b_reads_private()}
 							</span>
-						</div>
-						<p class="mt-2 text-sm leading-relaxed text-terminal-text-muted">
-							{layer.description}
-						</p>
+						{/if}
 					</div>
-				{/each}
-			</div>
-		</section>
+					<p class="mt-2 font-sans text-sm leading-7 text-muted">{sub.display_one_liner}</p>
+				</article>
+			{/each}
+		</div>
+	</section>
 
-		<!-- Subsystems -->
-		<section>
-			<h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim">
-				{m.system_3b_subsystems_heading()}
-			</h2>
-			<div class="space-y-2">
-				{#each snapshot.subsystems as sub (sub.key)}
-					<div class="rounded-lg border border-terminal-border bg-terminal-bg-secondary p-3">
-						<div class="flex flex-wrap items-center gap-2">
-							<h3 class="text-sm font-semibold text-terminal-text-primary">{sub.name}</h3>
-							{#if !sub.public_safe}
-								<span
-									class="rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-dim"
-								>
-									{m.system_3b_reads_private()}
-								</span>
-							{/if}
-						</div>
-						<p class="mt-1 text-sm text-terminal-text-muted">{sub.display_one_liner}</p>
-					</div>
-				{/each}
-			</div>
-		</section>
-
-		<!-- Decision history (ADRs) -->
-		<section>
-			<h2
-				id={evolutionHeadingId}
-				class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim"
-			>
-				{m.system_3b_evolution_heading()}
-			</h2>
-			<!-- axe requires keyboard focus for this scrollable region. -->
-			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-			<div
-				class="max-h-96 overflow-y-auto rounded-lg border border-terminal-border bg-terminal-bg-secondary"
-				role="region"
-				tabindex="0"
-				aria-labelledby={evolutionHeadingId}
-			>
-				<ul class="divide-y divide-terminal-border">
-					{#each evolution as adr (adr.id)}
-						<li class="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2">
-							<span class="shrink-0 font-mono text-xs tabular-nums text-terminal-text-dim">
-								{adr.date}
-							</span>
-							<span class="shrink-0 font-mono text-xs text-terminal-accent-green">{adr.id}</span>
-							<span class="min-w-0 text-sm text-terminal-text-muted">{adr.title}</span>
-						</li>
-					{/each}
-				</ul>
-			</div>
-		</section>
-
-		<!-- Blog series progress -->
-		<section>
-			<h2 class="mb-2 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim">
-				{m.system_3b_blog_heading()}
-			</h2>
-			<p class="mb-4 text-xs text-terminal-text-dim">
-				{m.system_3b_blog_progress({
-					published: publishedCount,
-					total: snapshot.blog_series.length,
-				})}
-			</p>
-			<ol class="space-y-2">
-				{#each snapshot.blog_series as post (post.slug)}
-					<li class="rounded-lg border border-terminal-border bg-terminal-bg-secondary p-3">
-						<div class="flex items-start justify-between gap-3">
-							<div class="min-w-0">
-								<span class="tabular-nums text-terminal-text-dim">{post.order}.</span>
-								{#if post.status === 'published'}
-									<a
-										href="{basePath}/posts/{post.slug}"
-										class="text-sm font-medium text-terminal-accent-orange hover:underline"
-									>
-										{post.title}
-									</a>
-								{:else}
-									<span class="text-sm font-medium text-terminal-text-muted">{post.title}</span>
-								{/if}
-							</div>
-							{#if post.status === 'published'}
-								<span
-									class="shrink-0 rounded-sm bg-terminal-accent-green/20 px-2 py-0.5 text-xs text-terminal-accent-green"
-								>
-									{m.system_3b_published()}
-								</span>
-							{:else}
-								<span
-									class="shrink-0 rounded-sm bg-terminal-bg-primary px-2 py-0.5 text-xs text-terminal-text-dim"
-								>
-									{m.system_3b_planned()}
-								</span>
-							{/if}
-						</div>
+	<!-- Decision history (ADRs) -->
+	<section class="mt-16">
+		{@render secHead(m.system_3b_evolution_heading(), evolutionHeadingId)}
+		<!-- axe requires keyboard focus for this scrollable region. -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+		<div
+			class="max-h-96 overflow-y-auto rounded-lg border border-line2 bg-surface"
+			role="region"
+			tabindex="0"
+			aria-labelledby={evolutionHeadingId}
+		>
+			<ul class="divide-y divide-line">
+				{#each evolution as adr (adr.id)}
+					<li class="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5">
+						<span class="shrink-0 font-mono text-xs tabular-nums text-faint">{adr.date}</span>
+						<span class="shrink-0 font-mono text-xs text-foam">{adr.id}</span>
+						<span class="min-w-0 font-sans text-sm text-muted">{adr.title}</span>
 					</li>
 				{/each}
-			</ol>
-		</section>
+			</ul>
+		</div>
+	</section>
 
-		<!-- Snapshot status -->
-		<section>
-			<h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-terminal-text-dim">
-				{m.system_3b_status_heading()}
-			</h2>
-			<div class="rounded-lg border border-terminal-border bg-terminal-bg-secondary p-4">
-				<div class="flex items-baseline justify-between gap-4">
-					<span class="text-sm text-terminal-text-muted">{m.system_3b_model_generated()}</span>
-					<span class="font-mono text-sm tabular-nums text-terminal-text-primary">
-						{snapshot.model_generated}
-					</span>
-				</div>
-				<div class="mt-1 flex items-baseline justify-between gap-4">
-					<span class="text-sm text-terminal-text-muted">{m.system_3b_snapshot_built()}</span>
-					<span class="font-mono text-sm tabular-nums text-terminal-text-primary">
-						{snapshot.snapshot_built_at}
-					</span>
-				</div>
-				<p class="mt-3 text-xs leading-relaxed text-terminal-text-dim">
-					{m.system_3b_status_note()}
-				</p>
+	<!-- Blog series progress -->
+	<section class="mt-16">
+		{@render secHead(m.system_3b_blog_heading())}
+		<p class="mb-4 font-mono text-xs text-faint">
+			{m.system_3b_blog_progress({
+				published: publishedCount,
+				total: snapshot.blog_series.length,
+			})}
+		</p>
+		<ol class="grid gap-3 lg:grid-cols-2">
+			{#each snapshot.blog_series as post (post.slug)}
+				<li
+					class="rounded-lg border border-line2 bg-surface p-4 transition-colors hover:border-foam"
+				>
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<span class="font-mono tabular-nums text-faint">{post.order}.</span>
+							{#if post.status === 'published'}
+								<a
+									href="{basePath}/posts/{post.slug}"
+									class="font-sans text-sm font-medium text-foam hover:underline"
+								>
+									{post.title}
+								</a>
+							{:else}
+								<span class="font-sans text-sm font-medium text-muted">{post.title}</span>
+							{/if}
+						</div>
+						{#if post.status === 'published'}
+							<span
+								class="shrink-0 rounded border border-line2 px-2 py-0.5 font-mono text-xs text-foam"
+							>
+								{m.system_3b_published()}
+							</span>
+						{:else}
+							<span
+								class="shrink-0 rounded border border-line2 px-2 py-0.5 font-mono text-xs text-faint"
+							>
+								{m.system_3b_planned()}
+							</span>
+						{/if}
+					</div>
+				</li>
+			{/each}
+		</ol>
+	</section>
+
+	<!-- Snapshot status -->
+	<section class="mt-16">
+		{@render secHead(m.system_3b_status_heading())}
+		<div class="rounded-lg border border-line2 bg-surface p-5">
+			<div class="flex items-baseline justify-between gap-4">
+				<span class="font-sans text-sm text-muted">{m.system_3b_model_generated()}</span>
+				<span class="font-mono text-sm tabular-nums text-ink">{snapshot.model_generated}</span>
 			</div>
-		</section>
-	</main>
-</div>
+			<div class="mt-2 flex items-baseline justify-between gap-4">
+				<span class="font-sans text-sm text-muted">{m.system_3b_snapshot_built()}</span>
+				<span class="font-mono text-sm tabular-nums text-ink">{snapshot.snapshot_built_at}</span>
+			</div>
+			<p class="mt-3 font-mono text-xs leading-relaxed text-faint">{m.system_3b_status_note()}</p>
+		</div>
+	</section>
+</main>

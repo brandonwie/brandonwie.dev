@@ -4,14 +4,17 @@
 @theme {
 	/*
 	  Semantic color tokens map to the runtime CSS variables defined in the
-	  @layer base :root block below. Because those variables flip under
-	  [data-theme="light"], every utility generated here recolors for both
-	  themes with no per-component changes.
+	  @layer base :root block below. The redesign is dark-only, so these recolor
+	  every generated utility from a single :root with no per-component changes.
 	*/
 	--color-bg: var(--bg);
+	--color-bg2: var(--bg2);
 	--color-surface: var(--surface);
 	--color-surface-2: var(--surface-2);
+	--color-panel: var(--panel);
+	--color-overlay: var(--overlay);
 	--color-line: var(--line);
+	--color-line2: var(--line2);
 	--color-ink: var(--ink);
 	--color-muted: var(--muted);
 	--color-faint: var(--faint);
@@ -54,9 +57,11 @@
 	--color-terminal-accent-red: var(--love);
 	--color-terminal-border: var(--line);
 
-	/* Fonts: Inter for body/UI, JetBrains Mono for identity/metadata/code */
+	/* Fonts: JetBrains Mono is the body/UI default (terminal look); Space Grotesk
+	   is reserved for display/prose headings. Inline + block code stays mono. */
 	--font-sans:
-		'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		'Space Grotesk', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+		sans-serif;
 	--font-mono:
 		'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono',
 		'Source Code Pro', monospace;
@@ -91,33 +96,37 @@
 
 @layer base {
 	/*
-	  Semantic palette. Layout / typography / cards follow herdr.dev; color roles
-	  are derived from Rose Pine and Rose Pine Dawn, then pushed brighter for a
-	  neon terminal feel. Dark is the default; the no-FOUC script in app.html
-	  toggles [data-theme="light"]. Terminal-* aliases map to separate Rose Pine
-	  roles so existing classes gain the neon range without component rewrites.
+	  Semantic palette — Rosé Pine terminal aesthetic (dark only). Page base is a
+	  custom extra-dark (#13111c); surfaces and accents use official Rosé Pine
+	  MAIN role values. Foam is the primary accent. Light mode was removed in the
+	  terminal redesign. Design vars (--bg2 / --panel / --overlay / --line2) feed
+	  the terminal chrome components; terminal-* aliases keep recoloring for free.
 	*/
 	:root {
-		/* Rose Pine Neon (dark): semantic adapter over 3b/colors/rose-pine-neon.yaml. */
-		--bg: #0d0a18;
-		--surface: #191724;
+		/* Rosé Pine main roles + custom dark base — see redesign plan token table. */
+		--bg: #13111c;
+		--bg2: #191724;
+		--panel: #1f1d2e;
+		--overlay: #26233a;
+		--surface: #1f1d2e;
 		--surface-2: #26233a;
-		--line: #40384f;
-		--ink: #e8e3ff;
+		--line: #26233a;
+		--line2: #322f47;
+		--ink: #e0def4;
 		--muted: #908caa;
-		--faint: #8984a8;
-		--love: #ff5f8f;
-		--gold: #ffd166;
-		--rose: #ff9bcf;
-		--pine: #35f7b8;
-		--foam: #7cf7ff;
-		--iris: #cba6ff;
-		--highlight-low: #21202e;
-		--highlight-med: #40384f;
-		--highlight-high: #524f67;
-		--accent: var(--iris);
-		--accent-strong: #ddb7ff;
-		--ok: var(--pine);
+		--faint: #6e6a86;
+		--love: #eb6f92;
+		--gold: #f6c177;
+		--rose: #ebbcba;
+		--pine: #31748f;
+		--foam: #9ccfd8;
+		--iris: #c4a7e7;
+		--highlight-low: #1f1d2e;
+		--highlight-med: #26233a;
+		--highlight-high: #322f47;
+		--accent: var(--foam);
+		--accent-strong: #b8e8ef;
+		--ok: var(--foam);
 		--warn: var(--gold);
 		--crit: var(--love);
 
@@ -138,40 +147,13 @@
 		--accent-green: var(--pine);
 		--accent-yellow: var(--gold);
 		--accent-purple: var(--iris);
-		--accent-cyan: var(--rose);
+		--accent-cyan: var(--foam);
 		--accent-red: var(--love);
 		--border: var(--line);
 	}
 
-	:root[data-theme='light'] {
-		/* Rose Pine Dawn Neon: warm paper base + accessible saturated accents. */
-		--bg: #faf4ed;
-		--surface: #fffaf3;
-		--surface-2: #f2e9e1;
-		--line: #dec8f4;
-		--ink: #2d204e;
-		--muted: #655a89;
-		--faint: #8a7baa;
-		--love: #b51f62;
-		--gold: #995000;
-		--rose: #aa3f63;
-		--pine: #006d8f;
-		--foam: #00727a;
-		--iris: #7e35cc;
-		--highlight-low: #f8eafd;
-		--highlight-med: #dec8f4;
-		--highlight-high: #c5a7e8;
-		--accent: var(--iris);
-		--accent-strong: #a03cff;
-		--ok: var(--foam);
-		--warn: var(--gold);
-		--crit: var(--love);
-
-		color-scheme: light;
-	}
-
 	html {
-		font-family: var(--font-sans);
+		font-family: var(--font-mono);
 		background-color: var(--bg);
 		color: var(--ink);
 		scrollbar-gutter: stable;
@@ -182,6 +164,11 @@
 		padding: 0;
 		min-height: 100vh;
 		background-color: var(--bg);
+		/* Faint iris grid backdrop — signature of the terminal design. */
+		background-image:
+			linear-gradient(color-mix(in srgb, var(--iris) 3%, transparent) 1px, transparent 1px),
+			linear-gradient(90deg, color-mix(in srgb, var(--iris) 3%, transparent) 1px, transparent 1px);
+		background-size: 46px 46px;
 	}
 
 	/* Custom scrollbar */
@@ -399,6 +386,8 @@
 	--tw-prose-pre-bg: var(--surface);
 	--tw-prose-th-borders: var(--line);
 	--tw-prose-td-borders: var(--line);
+	/* Long-form prose uses Space Grotesk (display), not the mono body default. */
+	font-family: var(--font-sans);
 	max-width: none;
 }
 

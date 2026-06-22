@@ -16,16 +16,16 @@
 
 <style>
 	.s3b-band {
-		border: 1px dashed #353535;
+		border: 1px dashed var(--line2);
 		border-radius: 10px;
-		background: rgba(45, 45, 45, 0.18);
+		background: color-mix(in srgb, var(--panel) 30%, transparent);
 		pointer-events: none;
 	}
 	.lane-label {
 		position: absolute;
 		top: 6px;
 		left: 10px;
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-family: var(--font-mono);
 		font-size: 11px;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;

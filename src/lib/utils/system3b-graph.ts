@@ -52,14 +52,14 @@ export interface KindStyle {
 	label: string;
 }
 export const KIND_STYLE: Record<string, KindStyle> = {
-	subsystem: { color: '#a855f7', label: 'subsystem' }, // neon violet (headline/brand)
-	generator: { color: '#6b9eff', label: 'generator' }, // accent-blue
-	runtime: { color: '#56b6c2', label: 'runtime' }, // accent-cyan
-	store: { color: '#e5c07b', label: 'store' }, // accent-yellow
-	doc: { color: '#c678dd', label: 'doc' }, // accent-purple
-	gate: { color: '#e06c75', label: 'gate' }, // accent-red
+	subsystem: { color: '#c4a7e7', label: 'subsystem' }, // iris
+	generator: { color: '#31748f', label: 'generator' }, // pine
+	runtime: { color: '#9ccfd8', label: 'runtime' }, // foam
+	store: { color: '#f6c177', label: 'store' }, // gold
+	doc: { color: '#ebbcba', label: 'doc' }, // rose
+	gate: { color: '#eb6f92', label: 'gate' }, // love
 };
-export const KIND_FALLBACK: KindStyle = { color: '#888888', label: 'node' };
+export const KIND_FALLBACK: KindStyle = { color: '#908caa', label: 'node' };
 export function kindStyle(kind: string): KindStyle {
 	return KIND_STYLE[kind] ?? KIND_FALLBACK;
 }
@@ -72,15 +72,15 @@ export interface EdgeStyle {
 	label: string;
 }
 export const EDGE_STYLE: Record<string, EdgeStyle> = {
-	dependency: { color: '#888888', animated: false, label: 'depends on' },
-	reads: { color: '#7ec699', dash: '6 4', animated: false, label: 'reads' },
-	writes: { color: '#a855f7', animated: false, label: 'writes' },
-	generates: { color: '#6b9eff', animated: false, label: 'generates' },
-	triggers: { color: '#c678dd', dash: '2 4', animated: true, label: 'triggers' },
-	dataflow: { color: '#56b6c2', animated: true, label: 'data flow' },
-	symlink: { color: '#e5c07b', dash: '1 5', animated: false, label: 'symlink' },
+	dependency: { color: '#6e6a86', animated: false, label: 'depends on' },
+	reads: { color: '#9ccfd8', dash: '6 4', animated: false, label: 'reads' },
+	writes: { color: '#c4a7e7', animated: false, label: 'writes' },
+	generates: { color: '#31748f', animated: false, label: 'generates' },
+	triggers: { color: '#ebbcba', dash: '2 4', animated: true, label: 'triggers' },
+	dataflow: { color: '#9ccfd8', animated: true, label: 'data flow' },
+	symlink: { color: '#f6c177', dash: '1 5', animated: false, label: 'symlink' },
 };
-export const EDGE_FALLBACK: EdgeStyle = { color: '#666666', animated: false, label: '' };
+export const EDGE_FALLBACK: EdgeStyle = { color: '#6e6a86', animated: false, label: '' };
 export function edgeStyle(kind: string): EdgeStyle {
 	return EDGE_STYLE[kind] ?? EDGE_FALLBACK;
 }

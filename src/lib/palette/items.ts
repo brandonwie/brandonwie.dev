@@ -1,7 +1,6 @@
 import { goto } from '$app/navigation';
 import { m } from '$lib/paraglide/messages';
 import type { PostMetadata } from '$lib/stores/posts';
-import { toggleTheme } from '$lib/stores/theme';
 
 const GITHUB_REPO_URL = 'https://github.com/brandonwie/brandonwie.dev';
 const LINKEDIN_URL = 'https://linkedin.com/in/brandonwie';
@@ -47,6 +46,9 @@ export function buildNavItems(pathname: string): PaletteItem[] {
 		nav('about', '/about', m.palette_nav_about(), '☻'),
 		nav('study', '/study', m.palette_nav_study(), '◫'),
 		nav('posts', '/posts', m.palette_nav_posts(), '▤'),
+		nav('tags', '/tags', m.palette_nav_tags(), '#'),
+		nav('projects', '/projects', m.palette_nav_projects(), '◇'),
+		nav('contact', '/contact', m.palette_nav_contact(), '✉'),
 		nav('search', '/search', m.palette_nav_search(), '⌕'),
 		nav('system', '/system/3b', m.palette_nav_system(), '◆'),
 	];
@@ -66,15 +68,6 @@ export function buildActionItems(pathname: string): PaletteItem[] {
 			icon: '⇆',
 			// Mirror LanguageToggle: strip or add the /ko prefix on the current path.
 			run: () => goto(ko ? pathname.replace(/^\/ko/, '') || '/' : `/ko${pathname}`),
-		},
-		{
-			id: 'action:toggle-theme',
-			group: 'action',
-			label: m.palette_action_toggle_theme(),
-			keywords: ['theme', 'dark', 'light', 'mode', 'appearance', '테마', '다크', '라이트'],
-			icon: '◐',
-			// Mirror ThemeToggle: flip dark/light and persist.
-			run: toggleTheme,
 		},
 		{
 			id: 'action:copy-link',
