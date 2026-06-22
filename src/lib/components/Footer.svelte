@@ -8,11 +8,10 @@
 	 * are component-scoped so the mockup's bare `.foot`/`.ch`/`.copy` selectors
 	 * cannot leak.
 	 *
-	 * Gated links (Projects, Uses, Now, Contact) are intentionally omitted until
-	 * those pages exist (Phase 4); only built routes + external links appear. Tags
-	 * ships in the Phase-4 slice, so it is linked here (and kept out of the lean
-	 * top nav). The /tags href is built from the locale base rather than NAV_ITEMS,
-	 * which stays scoped to the four header destinations.
+	 * Uses + Now remain gated (no source yet) and are intentionally omitted. Tags,
+	 * Projects, and Contact ship in the Phase-4 slice and are linked here, kept out
+	 * of the lean top nav. Their hrefs are built from the locale base rather than
+	 * NAV_ITEMS, which stays scoped to the four header destinations.
 	 */
 	import { page } from '$app/state';
 	import { m } from '$lib/paraglide/messages';
@@ -49,10 +48,12 @@
 				<div class="site-footer__col">
 					<div class="site-footer__ch">{m.footer_col_more({}, { locale })}</div>
 					<a href={navHref('system')}>{navLabel('system')}</a>
+					<a href="{base(locale)}/projects">{m.nav_projects({}, { locale })}</a>
 					<a href="{base(locale)}/tags">{m.nav_tags({}, { locale })}</a>
 				</div>
 				<div class="site-footer__col">
 					<div class="site-footer__ch">{m.footer_col_connect({}, { locale })}</div>
+					<a href="{base(locale)}/contact">{m.nav_contact({}, { locale })}</a>
 					<a href="https://github.com/brandonwie" target="_blank" rel="noopener noreferrer">
 						GitHub ↗
 					</a>
