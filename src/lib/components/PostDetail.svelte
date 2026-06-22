@@ -163,107 +163,206 @@
 	{@html `<script type="application/ld+json">${jsonLd}\x3C/script>`}
 </svelte:head>
 
-<div class="min-h-screen bg-bg">
-	<!-- Article -->
-	<main id="main-content" class="relative mx-auto max-w-4xl px-6 py-12">
-		<div class="mb-8" data-pagefind-ignore>
-			<BackToPosts {locale} />
-		</div>
-		<article data-pagefind-body>
-			<span data-pagefind-filter="lang" class="hidden">{isFallback ? 'en' : locale}</span>
-			<!-- Desktop ToC: positioned in right margin -->
-			{#if showToc}
-				<div data-pagefind-ignore>
-					<TableOfContents {headings} />
-				</div>
-			{/if}
+<main id="main-content" class="post">
+	<div class="post__back" data-pagefind-ignore>
+		<BackToPosts {locale} />
+	</div>
+	<article data-pagefind-body>
+		<span data-pagefind-filter="lang" class="hidden">{isFallback ? 'en' : locale}</span>
+		<!-- Desktop ToC: positioned in right margin -->
+		{#if showToc}
+			<div data-pagefind-ignore>
+				<TableOfContents {headings} />
+			</div>
+		{/if}
 
-			<!-- Fallback Notice (Korean page showing English content) -->
-			{#if isFallback}
-				<div
-					data-pagefind-ignore
-					class="mb-8 rounded-lg border border-terminal-accent-yellow/30 bg-terminal-accent-yellow/10 p-4"
+		<!-- Fallback Notice (Korean page showing English content) -->
+		{#if isFallback}
+			<div class="post__fallback" data-pagefind-ignore>
+				<p>{m.translation_notice()}</p>
+				<a href="/posts/{meta.slug}">{m.view_in_english()}</a>
+			</div>
+		{/if}
+
+		<!-- Meta Header -->
+		<header class="post__head">
+			<div class="crumb">
+				<a href={postsHref(locale)}>~/posts</a><span class="crumb__sep">/</span><span
+					data-pagefind-filter="category">{meta.category}</span
 				>
-					<p class="text-terminal-accent-yellow">
-						{m.translation_notice()}
-					</p>
-					<a
-						href="/posts/{meta.slug}"
-						class="mt-2 inline-block text-sm text-terminal-text-muted underline hover:text-terminal-accent-orange"
-					>
-						{m.view_in_english()}
-					</a>
-				</div>
-			{/if}
+			</div>
 
-			<!-- Meta Header -->
-			<header class="mb-8">
-				<div class="mb-4 flex flex-wrap items-center gap-3">
-					<span
-						data-pagefind-filter="category"
-						class="rounded-sm bg-terminal-accent-yellow/20 px-2 py-1 text-sm text-terminal-accent-yellow"
-					>
-						{meta.category}
-					</span>
+			<h1 class="post__title">{meta.title}</h1>
+
+			<p class="post__lede">{meta.description}</p>
+
+			<div class="post__meta">
+				<time data-pagefind-sort="date[datetime]" datetime={meta.date}>
+					{formatDateLong(meta.date)}
+				</time>
+				{#if meta.updated && meta.updated !== meta.date}
+					<span class="post__sep">·</span>
+					<span>{m.updated()} {formatDateLong(meta.updated)}</span>
+				{/if}
+				{#if meta.readingTime}
+					<span class="post__sep">·</span>
+					<span>{m.reading_time({ minutes: meta.readingTime })}</span>
+				{/if}
+				<button
+					type="button"
+					class="post__copy"
+					onclick={copyLink}
+					aria-label={copied ? m.copied() : m.copy_link()}
+				>
+					{copied ? m.copied() : m.copy_link()}
+				</button>
+			</div>
+
+			{#if meta.tags.length}
+				<div class="post__tags">
 					{#each meta.tags as tag (tag)}
-						<span
-							class="rounded-sm bg-terminal-bg-secondary px-2 py-1 text-sm text-terminal-text-muted"
-						>
-							{tag}
-						</span>
+						<span class="post__tag">{tag}</span>
 					{/each}
 				</div>
+			{/if}
+		</header>
 
-				<h1 class="mb-4 text-3xl font-bold text-terminal-text-primary md:text-4xl">
-					{meta.title}
-				</h1>
-
-				<p class="mb-4 text-lg text-terminal-text-muted">
-					{meta.description}
-				</p>
-
-				<div class="flex flex-wrap items-center gap-4 text-sm text-terminal-text-dim">
-					<time data-pagefind-sort="date[datetime]" datetime={meta.date}>
-						{formatDateLong(meta.date)}
-					</time>
-					{#if meta.updated && meta.updated !== meta.date}
-						<span>•</span>
-						<span>{m.updated()} {formatDateLong(meta.updated)}</span>
-					{/if}
-					{#if meta.readingTime}
-						<span>•</span>
-						<span>{m.reading_time({ minutes: meta.readingTime })}</span>
-					{/if}
-					<button
-						type="button"
-						onclick={copyLink}
-						aria-label={copied ? m.copied() : m.copy_link()}
-						class="ml-auto text-terminal-text-dim transition-colors hover:text-terminal-accent-orange"
-					>
-						{copied ? m.copied() : m.copy_link()}
-					</button>
-				</div>
-			</header>
-
-			<!-- Content -->
-			<div class="prose-terminal prose max-w-none">
-				{#if content}
-					{@const Content = content}
-					<Content />
-				{/if}
-			</div>
-
-			<!-- Comments -->
-			<div data-pagefind-ignore>
-				<Giscus slug={meta.slug} lang={locale} />
-			</div>
-		</article>
-	</main>
-
-	<!-- Footer -->
-	<footer class="border-t border-line py-8">
-		<div class="mx-auto max-w-4xl px-6 text-center">
-			<BackToPosts {locale} />
+		<!-- Content -->
+		<div class="prose-terminal prose post__content">
+			{#if content}
+				{@const Content = content}
+				<Content />
+			{/if}
 		</div>
-	</footer>
-</div>
+
+		<!-- Comments -->
+		<div data-pagefind-ignore>
+			<Giscus slug={meta.slug} lang={locale} />
+		</div>
+	</article>
+
+	<!-- Bottom back link (not a footer — the layout owns the global footer) -->
+	<div class="post__bottom" data-pagefind-ignore>
+		<BackToPosts {locale} />
+	</div>
+</main>
+
+<style>
+	.post {
+		position: relative;
+		max-width: 56rem;
+		margin: 0 auto;
+		padding: 40px 1.5rem 0;
+	}
+	.post__back {
+		margin-bottom: 24px;
+	}
+	.post__fallback {
+		margin-bottom: 32px;
+		padding: 14px 18px;
+		border: 1px dashed color-mix(in srgb, var(--gold) 40%, transparent);
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--gold) 8%, transparent);
+	}
+	.post__fallback p {
+		margin: 0;
+		color: var(--gold);
+	}
+	.post__fallback a {
+		display: inline-block;
+		margin-top: 6px;
+		font-size: 13px;
+		color: var(--muted);
+		text-decoration: underline;
+	}
+	.post__fallback a:hover {
+		color: var(--foam);
+	}
+	.post__head {
+		margin-bottom: 36px;
+		padding-bottom: 28px;
+		border-bottom: 1px solid var(--line);
+	}
+	.crumb {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 18px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--faint);
+	}
+	.crumb a {
+		color: var(--faint);
+		text-decoration: none;
+	}
+	.crumb a:hover {
+		color: var(--foam);
+	}
+	.crumb__sep {
+		color: var(--line2);
+	}
+	.post__title {
+		margin-bottom: 16px;
+		font-family: var(--font-sans);
+		font-weight: 700;
+		font-size: clamp(28px, 4.5vw, 48px);
+		line-height: 1.08;
+		letter-spacing: -0.02em;
+		color: var(--ink);
+	}
+	.post__lede {
+		max-width: 62ch;
+		margin-bottom: 20px;
+		font-family: var(--font-sans);
+		font-size: clamp(16px, 2vw, 20px);
+		line-height: 1.55;
+		color: var(--muted);
+	}
+	.post__meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--faint);
+	}
+	.post__sep {
+		color: var(--line2);
+	}
+	.post__copy {
+		margin-left: auto;
+		border: none;
+		background: transparent;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--faint);
+		cursor: pointer;
+		transition: color 0.2s;
+	}
+	.post__copy:hover {
+		color: var(--foam);
+	}
+	.post__tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-top: 16px;
+	}
+	.post__tag {
+		padding: 3px 7px;
+		border: 1px solid var(--line);
+		border-radius: 5px;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		color: var(--muted);
+	}
+	.post__bottom {
+		margin-top: 40px;
+		padding: 24px 0 8px;
+		border-top: 1px solid var(--line);
+	}
+</style>
