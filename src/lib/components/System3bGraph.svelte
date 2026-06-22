@@ -68,19 +68,19 @@
 
 <style>
 	.s3b-fallback {
-		border: 1px solid #404040;
+		border: 1px solid var(--line2);
 		border-radius: 12px;
 		padding: 16px;
-		background: #1a1a1a;
+		background: var(--panel);
 	}
 	.note {
 		margin: 0 0 12px;
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-family: var(--font-mono);
 		font-size: 12px;
 		color: var(--faint);
 	}
 	.s3b-fallback.failed .note {
-		color: #e5c07b;
+		color: var(--gold);
 	}
 	.layers {
 		list-style: none;
@@ -100,18 +100,18 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.name {
-		color: #e5e5e5;
+		color: var(--ink);
 		font-weight: 600;
 	}
 	.count {
 		margin-left: auto;
-		color: #e5c07b;
+		color: var(--gold);
 		font-size: 11px;
 		white-space: nowrap;
 	}
 	.desc {
 		margin: 4px 0 0;
-		color: #888888;
+		color: var(--muted);
 		font-size: 13px;
 		line-height: 1.5;
 	}

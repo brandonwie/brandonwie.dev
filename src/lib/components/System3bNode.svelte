@@ -51,12 +51,12 @@
 		width: 180px;
 		height: 56px;
 		padding: 0 12px;
-		background: #2d2d2d;
-		border: 1px solid #404040;
+		background: var(--panel);
+		border: 1px solid var(--line2);
 		border-left: 3px solid var(--c);
 		border-radius: 8px;
-		color: #e5e5e5;
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		color: var(--ink);
+		font-family: var(--font-mono);
 		font-size: 12px;
 		line-height: 1.2;
 		text-align: left;
@@ -69,7 +69,7 @@
 		cursor: pointer;
 	}
 	.s3b-node.expandable:hover {
-		background: #353535;
+		background: var(--overlay);
 		border-color: var(--c);
 	}
 	.dot {

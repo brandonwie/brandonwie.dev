@@ -155,14 +155,14 @@
 			maxZoom={1.6}
 			proOptions={{ hideAttribution: true }}
 		>
-			<Background bgColor="#1a1a1a" patternColor="#2b2b2b" gap={22} />
+			<Background bgColor="#13111c" patternColor="#26233a" gap={22} />
 			<Controls showLock={false} />
 			<MiniMap
 				pannable
 				zoomable
 				nodeColor={mmColor}
-				maskColor="rgba(10,10,10,0.6)"
-				bgColor="#161616"
+				maskColor="rgba(19,17,28,0.6)"
+				bgColor="#191724"
 			/>
 			<FitView trigger={expandedSubKey} />
 		</SvelteFlow>
@@ -192,45 +192,48 @@
 
 <style>
 	.s3b-flow {
-		border: 1px solid #404040;
+		border: 1px solid var(--line2);
 		border-radius: 12px;
 		overflow: hidden;
-		background: #1a1a1a;
+		background: var(--panel);
 	}
 	.toolbar {
 		display: flex;
 		align-items: center;
 		gap: 12px;
 		padding: 10px 14px;
-		border-bottom: 1px solid #404040;
-		background: #2d2d2d;
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		border-bottom: 1px solid var(--line2);
+		background: var(--surface);
+		font-family: var(--font-mono);
 		font-size: 12px;
 	}
 	.title {
-		color: #e5e5e5;
+		color: var(--ink);
 	}
 	.crumb {
-		color: #a855f7;
+		color: var(--foam);
 	}
 	.spacer {
 		flex: 1;
 	}
 	.hint {
-		color: #9a95b7;
+		color: var(--faint);
 	}
 	.btn {
-		background: #1a1a1a;
-		border: 1px solid #404040;
+		background: var(--bg);
+		border: 1px solid var(--line2);
 		border-radius: 6px;
-		color: #e5e5e5;
+		color: var(--ink);
 		font: inherit;
 		padding: 4px 10px;
 		cursor: pointer;
+		transition:
+			border-color 120ms ease,
+			color 120ms ease;
 	}
 	.btn:hover {
-		border-color: #a855f7;
-		color: #a855f7;
+		border-color: var(--foam);
+		color: var(--foam);
 	}
 	.canvas {
 		height: clamp(440px, 70vh, 760px);
@@ -241,9 +244,9 @@
 		flex-direction: column;
 		gap: 8px;
 		padding: 10px 14px;
-		border-top: 1px solid #404040;
-		background: #2d2d2d;
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		border-top: 1px solid var(--line2);
+		background: var(--surface);
+		font-family: var(--font-mono);
 		font-size: 11px;
 	}
 	.legend-row {
@@ -253,7 +256,7 @@
 		gap: 10px;
 	}
 	.legend-head {
-		color: #9a95b7;
+		color: var(--faint);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		min-width: 64px;
@@ -262,7 +265,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 5px;
-		color: #9a95b7;
+		color: var(--faint);
 	}
 	.swatch {
 		width: 9px;
@@ -278,16 +281,16 @@
 	}
 	/* xyflow surface tweaks to match the terminal palette */
 	.canvas :global(.svelte-flow) {
-		background: #1a1a1a;
+		background: var(--panel);
 	}
 	.canvas :global(.svelte-flow__controls-button) {
-		background: #2d2d2d;
-		border-bottom: 1px solid #404040;
-		fill: #e5e5e5;
-		color: #e5e5e5;
+		background: var(--surface);
+		border-bottom: 1px solid var(--line2);
+		fill: var(--ink);
+		color: var(--ink);
 	}
 	.canvas :global(.svelte-flow__controls-button:hover) {
-		background: #353535;
+		background: var(--overlay);
 	}
 	.canvas :global(.svelte-flow__edge-path) {
 		transition: opacity 120ms ease;

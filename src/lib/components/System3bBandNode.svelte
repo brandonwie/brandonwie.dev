@@ -16,9 +16,9 @@
 
 <style>
 	.s3b-band {
-		border: 1px dashed #353535;
+		border: 1px dashed var(--line2);
 		border-radius: 10px;
-		background: rgba(45, 45, 45, 0.18);
+		background: color-mix(in srgb, var(--panel) 30%, transparent);
 		pointer-events: none;
 	}
 	.lane-label {
