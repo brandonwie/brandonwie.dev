@@ -12,6 +12,7 @@
 
 	const content = $derived(getDsaIIContent(locale));
 	const pageTitle = $derived(`${content.metaTitle} | Brandon Wie`);
+	const basePath = $derived(locale === 'ko' ? '/ko' : '');
 	const insideLinks = $derived([
 		{ href: '#map', label: content.sections.map },
 		{ href: '#lab', label: content.sections.lab },
@@ -21,16 +22,36 @@
 
 <StudySeoHead {pageTitle} description={content.metaDescription} basePath="/study/dsa-ii" {locale} />
 
+{#snippet secHead(label: string)}
+	<div class="mb-5 flex items-center gap-3.5">
+		<span class="font-mono font-bold text-foam">#</span>
+		<h2 class="font-sans text-xl font-semibold tracking-tight text-ink">{label}</h2>
+		<span class="h-px flex-1 bg-line2"></span>
+	</div>
+{/snippet}
+
 <StudyPageShell>
+	<div
+		class="mb-8 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-faint"
+	>
+		<a href={basePath || '/'} class="transition-colors hover:text-foam">~</a>
+		<span class="text-line2">/</span>
+		<a href="{basePath}/study" class="transition-colors hover:text-foam">study</a>
+		<span class="text-line2">/</span>
+		<span>dsa-ii</span>
+	</div>
+
 	<section class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
 		<div>
 			<p class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
 				{content.eyebrow}
 			</p>
-			<h1 class="mt-4 max-w-4xl text-3xl font-semibold leading-tight text-ink sm:text-5xl">
+			<h1
+				class="mt-4 max-w-4xl font-sans text-3xl font-bold leading-tight tracking-tight text-ink sm:text-5xl"
+			>
 				{content.title}
 			</h1>
-			<p class="mt-6 max-w-3xl text-lg leading-8 text-muted">{content.subtitle}</p>
+			<p class="mt-6 max-w-3xl font-sans text-lg leading-8 text-muted">{content.subtitle}</p>
 		</div>
 		<aside class="study-card p-5">
 			<p class="font-mono text-xs uppercase tracking-wider text-faint">
@@ -41,9 +62,9 @@
 					<li>
 						<a
 							href={link.href}
-							class="flex items-center gap-2 font-mono text-sm text-muted no-underline transition-colors hover:text-accent"
+							class="flex items-center gap-2 font-mono text-sm text-muted no-underline transition-colors hover:text-foam"
 						>
-							<span class="text-accent">▸</span>{link.label}
+							<span class="text-foam">▸</span>{link.label}
 						</a>
 					</li>
 				{/each}
@@ -58,18 +79,14 @@
 	</section>
 
 	<section id="map" class="mt-16 scroll-mt-24">
-		<h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
-			{content.sections.map}
-		</h2>
+		{@render secHead(content.sections.map)}
 		<div class="mt-6">
 			<StudyRoadmap modules={content.modules} ariaLabel={content.sections.map} />
 		</div>
 	</section>
 
 	<section id="lab" class="mt-16 scroll-mt-24">
-		<h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
-			{content.sections.lab}
-		</h2>
+		{@render secHead(content.sections.lab)}
 		<div class="mt-5 grid min-w-0 gap-5 lg:grid-cols-2">
 			<BstTraversalVisualizer copy={content.visuals.bstTraversal} />
 			<BstRemovalVisualizer copy={content.visuals.bstRemoval} />
@@ -79,13 +96,11 @@
 	</section>
 
 	<section class="mt-16">
-		<h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
-			{content.sections.notes}
-		</h2>
+		{@render secHead(content.sections.notes)}
 		<div class="mt-5 grid gap-4 lg:grid-cols-3">
 			{#each content.concepts as concept (concept.title)}
 				<article class="study-card p-5">
-					<h3 class="text-lg font-semibold text-ink">{concept.title}</h3>
+					<h3 class="font-sans text-lg font-semibold text-ink">{concept.title}</h3>
 					<p class="mt-3 text-sm leading-7 text-muted">{concept.body}</p>
 					<p class="mt-4 font-mono text-xs text-faint">{concept.source}</p>
 				</article>
@@ -94,14 +109,12 @@
 	</section>
 
 	<section id="recall" class="mt-16 scroll-mt-24">
-		<h2 class="font-mono text-xs font-semibold uppercase tracking-wider text-faint">
-			{content.sections.recall}
-		</h2>
+		{@render secHead(content.sections.recall)}
 		<div class="mt-5 grid gap-4 lg:grid-cols-2">
 			{#each content.modules as module, index (index)}
 				<div class="study-card p-5">
-					<p class="font-mono text-xs uppercase tracking-wider text-accent">{module.kicker}</p>
-					<h3 class="mt-2 text-base font-semibold text-ink">{module.title}</h3>
+					<p class="font-mono text-xs uppercase tracking-wider text-foam">{module.kicker}</p>
+					<h3 class="mt-2 font-sans text-base font-semibold text-ink">{module.title}</h3>
 					<div class="mt-4 grid gap-2">
 						{#each module.recall as prompt (prompt.q)}
 							<details class="study-recall">
