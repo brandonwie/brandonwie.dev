@@ -37,6 +37,36 @@
 
 ## Session Log
 
+### 2026-06-22 (Session 27)
+
+**Terminal redesign (Rosé Pine) — restyle + Phase-4 pages, merged (PR #24)**
+
+- **Shipped (squash `8fa6cda`, 12 commits on the branch):** completed the
+  `tmp/site` terminal redesign — recolored tokens, Space Grotesk + JetBrains
+  Mono, terminal hero/cards/palette, scroll reveals, dark-only (light mode +
+  ThemeToggle removed), real EN/KO i18n preserved.
+- **This session's slice:** `/system/3b` hub + @xyflow graph chrome (pre-redesign
+  hardcoded hex → Rosé Pine tokens; CSS vars in `<style>`, concrete palette hex
+  for xyflow canvas props), Study index + DSA-I/II chrome (crumb + `secHead` +
+  foam), then three new source-bounded pages — `/tags` (data-derived cloud →
+  grouped post list), `/projects` (reuses `about.ts` `systems[]`), `/contact`
+  (link-only static, channels from `about.ts` `links[]`). Each + `/ko` mirror.
+- **KO policy (user-decided):** fallback banners apply only when KO is missing /
+  unreviewed; reviewed KO (`about.ts`) is reused for parity; data-derived index
+  pages (`/tags`) ship live KO without a banner.
+- **Process:** ran under `/3b:role-master`; every commit cleared an independent
+  `step-check` reviewer pass (two EPISKEY rounds resolved — the `/ko/tags` KO
+  exception + a copy-provenance wording fix). PR rectified per Claude +
+  CodeRabbit (palette tokens, a11y/semantics, i18n, xyflow constants).
+- **Verification:** local + remote CI `check` ✅, Cloudflare Pages ✅, EN/KO keys
+  138 = 138, all new pages prerender under adapter-static strict.
+- **Deferred (need content, not engineering):** `/uses` + `/now` (no canonical
+  source); home stats strip + "currently" strip (need real numbers — blog-voice
+  rule forbids fabrication).
+
+**Next:** supply `uses.md` / `now.md` sources + home stats numbers to finish the
+two deferred pages and the home strips.
+
 ### 2026-06-20 (Session 26)
 
 **Header i18n drift — root-cause fix (locale from URL only)**
