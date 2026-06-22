@@ -22,13 +22,12 @@
 	const totalCount = $derived(categories.reduce((sum, c) => sum + c.count, 0));
 </script>
 
-<div class="chips" role="tablist" aria-label={m.category_filter()}>
+<div class="chips" role="group" aria-label={m.category_filter()}>
 	<button
 		type="button"
 		class="chip"
 		class:is-active={activeCategory === null}
-		role="tab"
-		aria-selected={activeCategory === null}
+		aria-pressed={activeCategory === null}
 		onclick={() => onSelect(null)}
 	>
 		{m.all_categories()}<span class="chip__count">{totalCount}</span>
@@ -38,8 +37,7 @@
 			type="button"
 			class="chip"
 			class:is-active={activeCategory === cat.name}
-			role="tab"
-			aria-selected={activeCategory === cat.name}
+			aria-pressed={activeCategory === cat.name}
 			onclick={() => onSelect(cat.name)}
 		>
 			{cat.name}<span class="chip__count">{cat.count}</span>

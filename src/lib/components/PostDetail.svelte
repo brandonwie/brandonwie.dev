@@ -180,7 +180,7 @@
 		{#if isFallback}
 			<div class="post__fallback" data-pagefind-ignore>
 				<p>{m.translation_notice()}</p>
-				<a href="/posts/{meta.slug}">{m.view_in_english()}</a>
+				<a href={`${postsHref('en')}/${meta.slug}`}>{m.view_in_english()}</a>
 			</div>
 		{/if}
 

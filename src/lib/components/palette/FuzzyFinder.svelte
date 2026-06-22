@@ -34,6 +34,7 @@
 	// Section ordering for grouped display. Stable-sort by this so Fuse rank is
 	// preserved within each group.
 	const GROUP_ORDER: Record<PaletteGroup, number> = { nav: 0, action: 1, post: 2 };
+	const RESULTS_LIST_ID = 'cmdk-results';
 
 	let inputRef: HTMLInputElement;
 	let query = $state('');
@@ -47,6 +48,7 @@
 	// is restored when the palette closes.
 	let dialogRef: HTMLDivElement;
 	let previouslyFocused: HTMLElement | null = null;
+	const activeOptionId = $derived(results.length > 0 ? optionId(selectedIndex) : undefined);
 
 	// Default list shown before the user types: nav + actions in full, then the
 	// most-recent posts capped at DEFAULT_POST_LIMIT (UX-3). `items` is already
@@ -68,6 +70,10 @@
 	// order within each group. Array.prototype.sort is stable.
 	function grouped(list: FuzzyResult[]): FuzzyResult[] {
 		return [...list].sort((a, b) => GROUP_ORDER[a.item.group] - GROUP_ORDER[b.item.group]);
+	}
+
+	function optionId(index: number): string {
+		return `cmdk-option-${index}`;
 	}
 
 	// AUTO-SCROLL TO SELECTED ROW
@@ -185,7 +191,7 @@
 	onkeydown={(e) => e.key === 'Escape' && onClose()}
 	role="dialog"
 	aria-modal="true"
-	aria-label="Command palette"
+	aria-label={m.palette_aria_label()}
 	tabindex="-1"
 >
 	<div class="cmdk-panel">
@@ -201,13 +207,25 @@
 				placeholder={m.palette_placeholder()}
 				class="cmdk-input"
 				spellcheck="false"
+				role="combobox"
+				aria-autocomplete="list"
+				aria-expanded={results.length > 0}
+				aria-haspopup="listbox"
+				aria-controls={RESULTS_LIST_ID}
+				aria-activedescendant={activeOptionId}
 			/>
 			<kbd class="cmdk-esc">esc</kbd>
 		</div>
 
 		<!-- RESULTS LIST (max-h + scroll). Rows carry data-result-index; section
 		     headers are interleaved but non-selectable. -->
-		<div bind:this={resultsContainerRef} class="cmdk-results">
+		<div
+			bind:this={resultsContainerRef}
+			id={RESULTS_LIST_ID}
+			class="cmdk-results"
+			role="listbox"
+			aria-label={m.search_results_status()}
+		>
 			{#if results.length === 0}
 				<div class="cmdk-empty">{m.palette_no_results()}</div>
 			{:else}
@@ -217,6 +235,7 @@
 						<div class="cmdk-grp">{groupLabel(result.item.group)}</div>
 					{/if}
 					<div
+						id={optionId(i)}
 						data-result-index={i}
 						class="cmdk-item"
 						class:is-selected={i === selectedIndex}
@@ -275,12 +294,16 @@
 		<!-- FOOTER - keyboard hints + result count -->
 		<div class="cmdk-foot">
 			<div class="cmdk-foot__hints">
-				<span><kbd>↑↓</kbd>navigate</span>
-				<span><kbd>↵</kbd>select</span>
-				<span><kbd>esc</kbd>close</span>
+				<span><kbd>↑↓</kbd>{m.palette_hint_navigate()}</span>
+				<span><kbd>↵</kbd>{m.palette_hint_select()}</span>
+				<span><kbd>esc</kbd>{m.palette_hint_close()}</span>
 			</div>
 			<div>
-				{results.length} result{results.length === 1 ? '' : 's'}
+				{#if results.length === 1}
+					{m.palette_result_count({ count: results.length })}
+				{:else}
+					{m.palette_results_count({ count: results.length })}
+				{/if}
 			</div>
 		</div>
 	</div>

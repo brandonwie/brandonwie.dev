@@ -38,7 +38,7 @@
 				<div class="site-footer__cta">$ connect --brandon</div>
 				<p class="site-footer__tagline">{m.footer_tagline({}, { locale })}</p>
 			</div>
-			<div class="site-footer__cols">
+			<nav class="site-footer__cols" aria-label={m.footer_navigation_label({}, { locale })}>
 				<div class="site-footer__col">
 					<div class="site-footer__ch">{m.footer_col_site({}, { locale })}</div>
 					<a href={navHref('about')}>{navLabel('about')}</a>
@@ -61,11 +61,11 @@
 						LinkedIn ↗
 					</a>
 				</div>
-			</div>
+			</nav>
 		</div>
 		<div class="site-footer__copy">
-			<span>© 2026 Brandon Seokhyun Wie · built with the 3B harness</span>
-			<span>uptime: ∞ · theme: rosé-pine</span>
+			<span>{m.footer_copy_primary({}, { locale })}</span>
+			<span>{m.footer_copy_secondary({}, { locale })}</span>
 		</div>
 	</div>
 </footer>

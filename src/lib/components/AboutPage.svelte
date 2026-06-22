@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getAboutContent, type AboutLocale } from '$lib/data/about';
+	import { m } from '$lib/paraglide/messages';
 	import { DEFAULT_OG_IMAGE, localeCode, SITE_NAME } from '$lib/seo';
 
 	let { locale = 'en' }: { locale?: AboutLocale } = $props();
@@ -61,9 +62,13 @@
 			<div
 				class="mb-5 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-faint"
 			>
-				<a href={homeHref} class="transition-colors hover:text-foam">~</a>
+				<a
+					href={homeHref}
+					aria-label={m.back_to_home({}, { locale })}
+					class="transition-colors hover:text-foam">~</a
+				>
 				<span class="text-line2">/</span>
-				<span>about</span>
+				<span>{m.nav_about({}, { locale })}</span>
 			</div>
 			<p class="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-faint">
 				{content.eyebrow}
