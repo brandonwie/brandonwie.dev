@@ -56,6 +56,7 @@ export const GET: RequestHandler = async () => {
 		{ en: '/study/dsa-i', ko: '/ko/study/dsa-i', priority: '0.7' },
 		{ en: '/study/dsa-ii', ko: '/ko/study/dsa-ii', priority: '0.7' },
 		{ en: '/posts', ko: '/ko/posts', priority: '0.8' },
+		{ en: '/tags', ko: '/ko/tags', priority: '0.5' },
 		{ en: '/system', ko: '/ko/system', priority: '0.5' },
 		{ en: '/system/3b', ko: '/ko/system/3b', priority: '0.7' },
 	];

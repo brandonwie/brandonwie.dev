@@ -8,12 +8,15 @@
 	 * are component-scoped so the mockup's bare `.foot`/`.ch`/`.copy` selectors
 	 * cannot leak.
 	 *
-	 * Gated links (Projects, Uses, Now, Tags, Contact) are intentionally omitted
-	 * until those pages exist (Phase 4); only built routes + external links appear.
+	 * Gated links (Projects, Uses, Now, Contact) are intentionally omitted until
+	 * those pages exist (Phase 4); only built routes + external links appear. Tags
+	 * ships in the Phase-4 slice, so it is linked here (and kept out of the lean
+	 * top nav). The /tags href is built from the locale base rather than NAV_ITEMS,
+	 * which stays scoped to the four header destinations.
 	 */
 	import { page } from '$app/state';
 	import { m } from '$lib/paraglide/messages';
-	import { NAV_ITEMS, hrefFor, localeOf } from '$lib/data/nav';
+	import { NAV_ITEMS, base, hrefFor, localeOf } from '$lib/data/nav';
 	import type { NavKey } from '$lib/data/nav';
 
 	const locale = $derived(localeOf(page.url.pathname));
@@ -46,6 +49,7 @@
 				<div class="site-footer__col">
 					<div class="site-footer__ch">{m.footer_col_more({}, { locale })}</div>
 					<a href={navHref('system')}>{navLabel('system')}</a>
+					<a href="{base(locale)}/tags">{m.nav_tags({}, { locale })}</a>
 				</div>
 				<div class="site-footer__col">
 					<div class="site-footer__ch">{m.footer_col_connect({}, { locale })}</div>

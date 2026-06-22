@@ -75,6 +75,21 @@ export function getCategoriesWithCounts(
 		.sort((a, b) => b.count - a.count);
 }
 
+// Compute tags with post counts, sorted by count descending (ties: name asc).
+export function getTagsWithCounts(
+	postList: PostMetadata[],
+): Array<{ name: string; count: number }> {
+	const counts: Record<string, number> = {};
+	for (const post of postList) {
+		for (const tag of post.tags) {
+			counts[tag] = (counts[tag] || 0) + 1;
+		}
+	}
+	return Object.entries(counts)
+		.map(([name, count]) => ({ name, count }))
+		.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
 // Search posts by query
 export function searchPosts(query: string, postList: PostMetadata[]): PostMetadata[] {
 	const lowerQuery = query.toLowerCase();
