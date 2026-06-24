@@ -21,6 +21,8 @@
 	const canonicalHref = $derived(absoluteUrl(locale === 'ko' ? '/ko' : '/'));
 	const pageTitle = $derived(m.site_title());
 	const pageDescription = $derived(m.site_description());
+	const authorNameParts = SITE_AUTHOR.split(' ');
+	const postCount = $derived(posts.length);
 	const jsonLd = $derived(
 		JSON.stringify([
 			{
@@ -58,6 +60,7 @@
 	const postHref = (slug: string) => withBase(`/posts/${slug}`);
 	const allPostsHref = () => withBase('/posts');
 	const aboutHref = () => withBase('/about');
+	const projectsHref = () => withBase('/projects');
 	const systemHref = () => withBase('/system/3b');
 </script>
 
@@ -92,12 +95,35 @@
 	<section class="home__hero">
 		<TerminalHero title="brandon@moba: ~/whoami" prompt="whoami --verbose">
 			<div class="hero__typed"><TypedText text={m.blog_tagline()} /></div>
-			<h1 class="hero__name">Brandon Seokhyun <span class="hero__g">Wie</span></h1>
+			<h1 class="hero__name" aria-label={SITE_AUTHOR}>
+				{#each authorNameParts as namePart (namePart)}
+					<span class="hero__name-gradient" aria-hidden="true">{namePart}</span>
+				{/each}
+			</h1>
 			<p class="hero__desc">{m.blog_bio()}</p>
 			<div class="hero__cta">
-				<a class="hero__btn hero__btn--solid" href={allPostsHref()}>{m.palette_nav_posts()} →</a>
+				<a class="hero__btn hero__btn--solid" href={projectsHref()}>{m.palette_nav_projects()} →</a>
+				<a class="hero__btn" href={allPostsHref()}>{m.palette_nav_posts()}</a>
 				<a class="hero__btn" href={aboutHref()}>{m.palette_nav_about()}</a>
 			</div>
+			<dl class="hero-stats" aria-label={m.hero_stats_label()}>
+				<div class="hero-stat">
+					<dt class="hero-stat__label">{m.hero_stat_events_label()}</dt>
+					<dd class="hero-stat__value">7<span class="hero-stat__accent">M</span></dd>
+				</div>
+				<div class="hero-stat">
+					<dt class="hero-stat__label">{m.hero_stat_posts_label()}</dt>
+					<dd class="hero-stat__value">{postCount}</dd>
+				</div>
+				<div class="hero-stat">
+					<dt class="hero-stat__label">{m.hero_stat_services_label()}</dt>
+					<dd class="hero-stat__value">6</dd>
+				</div>
+				<div class="hero-stat">
+					<dt class="hero-stat__label">{m.hero_stat_languages_label()}</dt>
+					<dd class="hero-stat__value">EN/KR</dd>
+				</div>
+			</dl>
 		</TerminalHero>
 	</section>
 
@@ -190,6 +216,8 @@
 
 <style>
 	.home {
+		box-sizing: border-box;
+		width: 100%;
 		max-width: 72rem;
 		margin: 0 auto;
 		padding: 0 1.5rem;
@@ -197,33 +225,51 @@
 
 	/* hero */
 	.home__hero {
+		width: 100%;
+		max-width: 100%;
 		padding: 40px 0 16px;
 	}
 	.hero__typed {
+		min-width: 0;
+		max-width: 100%;
 		min-height: 22px;
 		margin-bottom: 26px;
+		overflow-wrap: anywhere;
 	}
 	.hero__name {
+		display: flex;
+		flex-wrap: wrap;
+		column-gap: 0.24em;
 		margin: 6px 0 18px;
 		font-family: var(--font-sans);
 		font-weight: 700;
-		font-size: clamp(36px, 6vw, 72px);
+		font-size: 72px;
 		line-height: 1;
-		letter-spacing: -0.03em;
+		letter-spacing: 0;
 		color: var(--ink);
 	}
-	.hero__g {
-		background: linear-gradient(90deg, var(--foam), var(--iris));
+	.hero__name-gradient {
+		background: linear-gradient(100deg, var(--foam), var(--iris) 52%, var(--rose));
 		-webkit-background-clip: text;
 		background-clip: text;
-		-webkit-text-fill-color: transparent;
+		color: var(--ink);
+		-webkit-box-decoration-break: clone;
+		box-decoration-break: clone;
+	}
+	@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+		.hero__name-gradient {
+			color: transparent;
+			-webkit-text-fill-color: transparent;
+		}
 	}
 	.hero__desc {
+		min-width: 0;
 		max-width: 60ch;
 		font-family: var(--font-sans);
 		font-size: clamp(16px, 2vw, 20px);
 		line-height: 1.55;
 		color: var(--muted);
+		overflow-wrap: break-word;
 	}
 	.hero__cta {
 		display: flex;
@@ -261,9 +307,45 @@
 		background: var(--ink);
 		color: var(--bg);
 	}
+	.hero-stats {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 22px;
+		margin: 34px 0 0;
+		padding: 28px 0 0;
+		border-top: 1px dashed var(--line2);
+	}
+	.hero-stat {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.hero-stat__value {
+		order: -1;
+		margin: 0;
+		font-family: var(--font-sans);
+		font-weight: 700;
+		font-size: 30px;
+		line-height: 1;
+		color: var(--ink);
+	}
+	.hero-stat__accent {
+		color: var(--foam);
+	}
+	.hero-stat__label {
+		margin-top: 7px;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		line-height: 1.35;
+		letter-spacing: 0;
+		text-transform: uppercase;
+		color: var(--faint);
+	}
 
 	/* sections */
 	.home__sec {
+		width: 100%;
+		max-width: 100%;
 		padding: 48px 0;
 		border-top: 1px solid var(--line);
 	}
@@ -282,7 +364,7 @@
 		font-family: var(--font-sans);
 		font-weight: 600;
 		font-size: clamp(20px, 3vw, 28px);
-		letter-spacing: -0.01em;
+		letter-spacing: 0;
 		color: var(--ink);
 	}
 	.sec-head__grow {
@@ -435,17 +517,58 @@
 	}
 
 	@media (max-width: 880px) {
+		.hero__name {
+			font-size: 56px;
+		}
 		.work-grid {
 			grid-template-columns: 1fr;
 		}
 	}
 	@media (max-width: 720px) {
+		.hero-stats {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
 		.log-row {
 			grid-template-columns: 1fr;
 			gap: 6px;
 		}
 		.log-row__tags {
 			display: none;
+		}
+	}
+	@media (max-width: 560px) {
+		.home {
+			padding: 0 1rem;
+		}
+		.home__hero,
+		.home__sec {
+			max-width: calc(100vw - 2rem);
+		}
+		.hero__name {
+			flex-direction: column;
+			font-size: 42px;
+			row-gap: 0;
+		}
+		.hero__name-gradient {
+			width: fit-content;
+		}
+		.hero__typed,
+		.hero__desc {
+			max-width: 30ch;
+		}
+		.hero__cta {
+			align-items: stretch;
+			flex-direction: column;
+			max-width: 20rem;
+		}
+		.hero__btn {
+			justify-content: center;
+			width: 100%;
+		}
+	}
+	@media (max-width: 420px) {
+		.hero-stats {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

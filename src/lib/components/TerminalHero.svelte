@@ -37,6 +37,9 @@
 
 <style>
 	.term {
+		box-sizing: border-box;
+		width: 100%;
+		max-width: 100%;
 		overflow: hidden;
 		border: 1px solid var(--line2);
 		border-radius: 12px;
@@ -68,12 +71,17 @@
 		background: var(--foam);
 	}
 	.term__title {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		margin-left: 12px;
 		font-family: var(--font-mono);
 		font-size: 12px;
 		color: var(--faint);
 	}
 	.term__body {
+		min-width: 0;
 		padding: 34px 36px 38px;
 	}
 	.term__prompt {
@@ -81,6 +89,7 @@
 		font-family: var(--font-mono);
 		font-size: 14px;
 		color: var(--muted);
+		overflow-wrap: anywhere;
 	}
 	.term__u {
 		color: var(--foam);
