@@ -244,7 +244,7 @@
 		font-family: var(--font-sans);
 		font-weight: 700;
 		font-size: 72px;
-		line-height: 1;
+		line-height: 1.08;
 		letter-spacing: 0;
 		color: var(--ink);
 	}
