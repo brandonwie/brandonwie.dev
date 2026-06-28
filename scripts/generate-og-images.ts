@@ -390,6 +390,12 @@ async function main() {
 	// Generate per-post OG images
 	for (const post of posts) {
 		const outPath = join(OUT_DIR, `${post.slug}.png`);
+		// Skip covers owned by media-gen (resources/media/<slug>/brief.json) so this
+		// legacy Satori generator never overwrites a media-gen cover, even with --force.
+		if (existsSync(join(ROOT, 'resources/media', post.slug, 'brief.json'))) {
+			skipped++;
+			continue;
+		}
 		if (!FORCE && existsSync(outPath)) {
 			skipped++;
 			continue;

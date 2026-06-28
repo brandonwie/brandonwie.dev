@@ -70,11 +70,17 @@
 
 	function onHeroError(event: Event) {
 		const img = event.currentTarget as HTMLImageElement;
-		if (img.dataset.fallback) {
+		const stage = img.dataset.stage;
+		if (stage === 'default') {
+			img.onerror = null; // default cover also failed — stop retrying
+			return;
+		}
+		if (stage === 'cover') {
+			img.dataset.stage = 'default';
 			img.src = DEFAULT_COVER;
 			return;
 		}
-		img.dataset.fallback = '1';
+		img.dataset.stage = 'cover';
 		img.src = coverImage(meta.slug);
 	}
 
@@ -208,7 +214,7 @@
 		<div class="post__hero" data-pagefind-ignore>
 			<img
 				src={heroImageUrl}
-				alt={meta.title}
+				alt=""
 				width="2400"
 				height="1260"
 				fetchpriority="high"

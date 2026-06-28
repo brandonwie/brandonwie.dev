@@ -126,7 +126,7 @@ const THEMES: Record<string, Theme> = {
 
 // ── Geometry profiles ────────────────────────────────────────────────────
 interface Profile {
-	key: 'og' | 'hero';
+	key: 'og';
 	vbW: number;
 	vbH: number;
 	outW: number;
@@ -142,7 +142,7 @@ interface Profile {
 	handle: { x: number; y: number; size: number };
 }
 
-const PROFILES: Record<'og' | 'hero', Profile> = {
+const PROFILES: Record<'og', Profile> = {
 	og: {
 		key: 'og',
 		vbW: 1200,
@@ -159,22 +159,6 @@ const PROFILES: Record<'og' | 'hero', Profile> = {
 		cards: { y: 246, h: 238, x0: 52, x1: 1148 },
 		caption: { x: 52, y: 572, size: 24, maxW: 1000 },
 		handle: { x: 1148, y: 572, size: 22 },
-	},
-	hero: {
-		key: 'hero',
-		vbW: 1600,
-		vbH: 640,
-		outW: 2000,
-		outH: 800,
-		panel: { x: 80, y: 60, w: 1440, h: 520, rx: 20 },
-		lights: { cy: 102, cx: [120, 150, 180], r: 9 },
-		title: { x: 222, y: 109, size: 22, maxW: 900 },
-		path: { x: 1500, y: 109, size: 18 },
-		divider: { y: 132, x1: 100, x2: 1500 },
-		thesis: { x: 120, y: 212, size: 38, maxW: 1360 },
-		cards: { y: 272, h: 196, x0: 120, x1: 1480 },
-		caption: { x: 120, y: 540, size: 24, maxW: 1100 },
-		handle: { x: 1500, y: 540, size: 22 },
 	},
 };
 
@@ -442,33 +426,22 @@ function renderSvg(brief: Brief, p: Profile): string {
 		`<line x1="${p.divider.x1}" y1="${p.divider.y}" x2="${p.divider.x2}" y2="${p.divider.y}" stroke="${t.divider}" stroke-width="2"/>`,
 	);
 	// thesis line
-	const thesis = fit(brief.thesis, p.thesis.maxW, p.thesis.size, 22);
+	const thesis = fit(brief.thesis, p.thesis.maxW - p.thesis.size * 2 * CHAR_W, p.thesis.size, 22);
 	out.push(
 		`<text x="${p.thesis.x}" y="${p.thesis.y}" font-size="${thesis.size}"><tspan fill="${t.dollar}">$ </tspan><tspan fill="${t.text}">${escapeXml(thesis.text)}</tspan></text>`,
 	);
 
 	// component cards
 	const innerW = p.cards.x1 - p.cards.x0;
-	const gap =
-		n <= 2
-			? p.key === 'hero'
-				? 90
-				: 80
-			: n === 3
-				? p.key === 'hero'
-					? 40
-					: 28
-				: p.key === 'hero'
-					? 30
-					: 22;
+	const gap = n <= 2 ? 80 : n === 3 ? 28 : 22;
 	const cardW = (innerW - (n - 1) * gap) / n;
-	const labelSize = Math.min(p.key === 'hero' ? 28 : 26, Math.max(14, Math.floor(cardW / 13)));
+	const labelSize = Math.min(26, Math.max(14, Math.floor(cardW / 13)));
 	const subSize = Math.max(12, labelSize - 6);
-	const gScale = Math.min(1.15, Math.max(0.72, cardW / (p.key === 'hero' ? 360 : 300)));
-	const gHalf = (p.key === 'hero' ? 30 : 26) * gScale;
-	const glyphCy = p.cards.y + (p.key === 'hero' ? 78 : 88);
-	const labelY = p.cards.y + (p.key === 'hero' ? 150 : 172);
-	const subY = p.cards.y + (p.key === 'hero' ? 180 : 204);
+	const gScale = Math.min(1.15, Math.max(0.72, cardW / 300));
+	const gHalf = 26 * gScale;
+	const glyphCy = p.cards.y + 88;
+	const labelY = p.cards.y + 172;
+	const subY = p.cards.y + 204;
 
 	brief.components.forEach((c, i) => {
 		const x = p.cards.x0 + i * (cardW + gap);
@@ -489,7 +462,7 @@ function renderSvg(brief: Brief, p: Profile): string {
 	});
 
 	// caption + handle
-	const cap = fit(brief.takeaway, p.caption.maxW, p.caption.size, 16);
+	const cap = fit(brief.takeaway, p.caption.maxW - p.caption.size * 2 * CHAR_W, p.caption.size, 16);
 	out.push(
 		`<text x="${p.caption.x}" y="${p.caption.y}" font-size="${cap.size}"><tspan fill="${t.dollar}">$ </tspan><tspan fill="${t.caption}">${escapeXml(cap.text)}</tspan></text>`,
 	);
@@ -502,19 +475,55 @@ function renderSvg(brief: Brief, p: Profile): string {
 }
 
 // ── Validation ───────────────────────────────────────────────────────────
+const GLYPH_IDS: ReadonlySet<string> = new Set([
+	'graph',
+	'network',
+	'search',
+	'vector',
+	'symbol',
+	'database',
+	'cache',
+	'queue',
+	'lock',
+	'shield',
+	'pipeline',
+	'cloud',
+	'api',
+	'diff',
+	'clock',
+	'layers',
+	'branch',
+	'terminal',
+	'chart',
+	'doc',
+	'gear',
+	'node',
+]);
+const THEME_KEYS: ReadonlySet<string> = new Set(['terminal-mocha', 'terminal-latte']);
+
 function validate(b: unknown, slug: string): string[] {
+	if (!b || typeof b !== 'object') return ['brief is not an object'];
 	const errs: string[] = [];
 	const brief = b as Partial<Brief>;
 	for (const f of ['topic', 'thesis', 'takeaway'] as const) {
 		if (!brief[f] || typeof brief[f] !== 'string') errs.push(`missing ${f}`);
 	}
+	if (brief.theme !== undefined && !THEME_KEYS.has(brief.theme))
+		errs.push(`unknown theme: ${brief.theme}`);
 	if (!Array.isArray(brief.components)) errs.push('components must be an array');
 	else if (brief.components.length < 2 || brief.components.length > 4)
 		errs.push(`components must be 2-4 (got ${brief.components.length})`);
 	else
 		brief.components.forEach((c, i) => {
-			if (!c.label) errs.push(`component[${i}].label missing`);
+			if (!c || typeof c !== 'object') {
+				errs.push(`component[${i}] must be an object`);
+				return;
+			}
+			if (!c.label || typeof c.label !== 'string') errs.push(`component[${i}].label missing`);
+			if (!c.sublabel || typeof c.sublabel !== 'string')
+				errs.push(`component[${i}].sublabel missing`);
 			if (!c.glyph) errs.push(`component[${i}].glyph missing`);
+			else if (!GLYPH_IDS.has(c.glyph)) errs.push(`component[${i}].glyph invalid: ${c.glyph}`);
 		});
 	if (brief.slug && brief.slug !== slug) errs.push(`slug mismatch: ${brief.slug} vs dir ${slug}`);
 	return errs;
@@ -542,16 +551,20 @@ function renderSlug(slug: string, platforms: ('og' | 'hero')[]): { ok: boolean; 
 	// One 1.91:1 design, rasterized at two resolutions:
 	//   og   1200x630  -> static/og/<slug>.png    (list card + og:image / Twitter meta)
 	//   hero 2400x1260 -> static/hero/<slug>.png   (in-post hero; reusable as X / LinkedIn article cover)
-	const svg = renderSvg(brief, PROFILES.og);
-	const svgPath = join(dir, 'og.svg');
-	writeFileSync(svgPath, svg + '\n');
-	if (platforms.includes('og')) {
-		if (!existsSync(OG_OUT)) mkdirSync(OG_OUT, { recursive: true });
-		rasterize(svgPath, join(OG_OUT, `${slug}.png`), 1200, 630);
-	}
-	if (platforms.includes('hero')) {
-		if (!existsSync(HERO_OUT)) mkdirSync(HERO_OUT, { recursive: true });
-		rasterize(svgPath, join(HERO_OUT, `${slug}.png`), 2400, 1260);
+	try {
+		const svg = renderSvg(brief, PROFILES.og);
+		const svgPath = join(dir, 'og.svg');
+		writeFileSync(svgPath, svg + '\n');
+		if (platforms.includes('og')) {
+			if (!existsSync(OG_OUT)) mkdirSync(OG_OUT, { recursive: true });
+			rasterize(svgPath, join(OG_OUT, `${slug}.png`), 1200, 630);
+		}
+		if (platforms.includes('hero')) {
+			if (!existsSync(HERO_OUT)) mkdirSync(HERO_OUT, { recursive: true });
+			rasterize(svgPath, join(HERO_OUT, `${slug}.png`), 2400, 1260);
+		}
+	} catch (e) {
+		return { ok: false, errs: [`render/rasterize failed: ${(e as Error).message}`] };
 	}
 	return { ok: true, errs: [] };
 }
@@ -559,10 +572,20 @@ function renderSlug(slug: string, platforms: ('og' | 'hero')[]): { ok: boolean; 
 // ── CLI ──────────────────────────────────────────────────────────────────
 function main() {
 	const args = process.argv.slice(2);
-	const slugArg = args.find((a) => a.startsWith('--slug='))?.split('=')[1];
+	const slugFlag = args.find((a) => a.startsWith('--slug='));
+	const slugArg = slugFlag?.split('=')[1];
+	if (slugFlag !== undefined && !slugArg) {
+		console.error('--slug= requires a value');
+		process.exit(1);
+	}
 	const platArg = args.find((a) => a.startsWith('--platforms='))?.split('=')[1];
 	const checkOnly = args.includes('--check');
 	const platforms = (platArg ? platArg.split(',') : ['og', 'hero']) as ('og' | 'hero')[];
+	const badPlatforms = platforms.filter((p) => p !== 'og' && p !== 'hero');
+	if (badPlatforms.length) {
+		console.error(`Invalid --platforms: ${badPlatforms.join(', ')} (valid: og, hero)`);
+		process.exit(1);
+	}
 
 	if (!existsSync(MEDIA_DIR)) {
 		console.error(`No briefs dir: ${MEDIA_DIR}`);

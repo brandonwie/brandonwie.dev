@@ -94,7 +94,7 @@
 	{:else}
 		<div class="card-grid">
 			{#each filteredPosts as post (post.slug)}
-				<PostCard {post} href={postHref(post.slug)} />
+				<PostCard {post} href={postHref(post.slug)} headingLevel="h2" />
 			{/each}
 		</div>
 	{/if}

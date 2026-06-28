@@ -8,13 +8,22 @@
 	import { coverImage, DEFAULT_COVER } from '$lib/seo';
 	import { formatDateShort, effectiveDate } from '$lib/utils/date';
 
-	let { post, href }: { post: PostMetadata; href: string } = $props();
+	let {
+		post,
+		href,
+		headingLevel = 'h3',
+	}: { post: PostMetadata; href: string; headingLevel?: 'h2' | 'h3' } = $props();
 
 	const date = $derived(effectiveDate(post.date, post.updated));
 
 	function onCoverError(event: Event) {
 		const img = event.currentTarget as HTMLImageElement;
-		if (!img.src.endsWith('default.png')) img.src = DEFAULT_COVER;
+		if (img.dataset.fallback) {
+			img.onerror = null; // default cover also failed — stop retrying
+			return;
+		}
+		img.dataset.fallback = '1';
+		img.src = DEFAULT_COVER;
 	}
 </script>
 
@@ -35,7 +44,7 @@
 			<span class="post-card__cat">{post.category}</span>
 			<time datetime={date}>{formatDateShort(date)}</time>
 		</div>
-		<h3 class="post-card__title">{post.title}</h3>
+		<svelte:element this={headingLevel} class="post-card__title">{post.title}</svelte:element>
 		{#if post.description}
 			<p class="post-card__desc">{post.description}</p>
 		{/if}
