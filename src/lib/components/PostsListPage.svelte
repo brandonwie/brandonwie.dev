@@ -9,8 +9,8 @@
 	import { m } from '$lib/paraglide/messages';
 	import type { PostMetadata } from '$lib/stores/posts';
 	import { getCategoriesWithCounts } from '$lib/stores/posts';
-	import { formatDateShort, effectiveDate } from '$lib/utils/date';
 	import CategorySidebar from '$lib/components/CategorySidebar.svelte';
+	import PostCard from '$lib/components/PostCard.svelte';
 	import { absoluteUrl, DEFAULT_OG_IMAGE, localeCode, SITE_NAME } from '$lib/seo';
 
 	let { posts, basePath = '/' }: { posts: PostMetadata[]; basePath?: string } = $props();
@@ -92,20 +92,9 @@
 	{#if filteredPosts.length === 0}
 		<p class="posts__empty">{m.no_posts()}</p>
 	{:else}
-		<div class="log">
+		<div class="card-grid">
 			{#each filteredPosts as post (post.slug)}
-				<a class="log-row" href={postHref(post.slug)}>
-					<time class="log-row__date" datetime={effectiveDate(post.date, post.updated)}>
-						{formatDateShort(effectiveDate(post.date, post.updated))}
-					</time>
-					<div class="log-row__body">
-						<span class="log-row__title">{post.title}</span>
-						{#if post.description}
-							<span class="log-row__desc">{post.description}</span>
-						{/if}
-					</div>
-					<span class="log-row__cat">{post.category}</span>
-				</a>
+				<PostCard {post} href={postHref(post.slug)} />
 			{/each}
 		</div>
 	{/if}
@@ -178,77 +167,20 @@
 		color: var(--muted);
 	}
 
-	/* log */
-	.log {
-		overflow: hidden;
-		border: 1px solid var(--line2);
-		border-radius: 10px;
-		background: color-mix(in srgb, var(--bg2) 50%, transparent);
-	}
-	.log-row {
+	/* card grid */
+	.card-grid {
 		display: grid;
-		grid-template-columns: 104px 1fr auto;
+		grid-template-columns: repeat(3, 1fr);
 		gap: 20px;
-		align-items: center;
-		padding: 16px 22px;
-		border-top: 1px solid var(--line);
-		text-decoration: none;
-		transition: background-color 0.2s;
 	}
-	.log-row:first-child {
-		border-top: none;
+	@media (max-width: 880px) {
+		.card-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
 	}
-	.log-row:hover {
-		background: var(--overlay);
-	}
-	.log-row__date {
-		font-family: var(--font-mono);
-		font-size: 12px;
-		color: var(--faint);
-		white-space: nowrap;
-	}
-	.log-row__body {
-		min-width: 0;
-	}
-	.log-row__title {
-		display: block;
-		font-family: var(--font-sans);
-		font-size: 16px;
-		font-weight: 500;
-		color: var(--ink);
-	}
-	.log-row:hover .log-row__title {
-		color: var(--foam);
-	}
-	.log-row__desc {
-		display: block;
-		margin-top: 2px;
-		overflow: hidden;
-		font-size: 13px;
-		line-height: 1.4;
-		color: var(--muted);
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.log-row__cat {
-		padding: 3px 7px;
-		border: 1px solid var(--line);
-		border-radius: 5px;
-		font-family: var(--font-mono);
-		font-size: 10px;
-		color: var(--iris);
-		white-space: nowrap;
-	}
-	@media (max-width: 720px) {
-		.log-row {
+	@media (max-width: 560px) {
+		.card-grid {
 			grid-template-columns: 1fr;
-			gap: 6px;
-		}
-		.log-row__date {
-			order: -1;
-		}
-		.log-row__cat {
-			justify-self: start;
 		}
 	}
 </style>

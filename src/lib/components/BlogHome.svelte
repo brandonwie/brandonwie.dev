@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
 	import type { PostMetadata } from '$lib/stores/posts';
-	import { formatDateShort, effectiveDate } from '$lib/utils/date';
+	import PostCard from '$lib/components/PostCard.svelte';
 	import TerminalHero from '$lib/components/TerminalHero.svelte';
 	import TypedText from '$lib/components/TypedText.svelte';
 	import { cardGlow } from '$lib/actions/cardGlow';
@@ -195,19 +195,9 @@
 		{#if recentPosts.length === 0}
 			<p class="home__empty">{m.no_posts()}</p>
 		{:else}
-			<div class="log">
+			<div class="card-grid">
 				{#each recentPosts as post (post.slug)}
-					<a class="log-row" href={postHref(post.slug)}>
-						<time class="log-row__date" datetime={effectiveDate(post.date, post.updated)}>
-							{formatDateShort(effectiveDate(post.date, post.updated))}
-						</time>
-						<span class="log-row__title">{post.title}</span>
-						<span class="log-row__tags">
-							{#each (post.tags ?? []).slice(0, 2) as tag (tag)}
-								<span class="log-row__tag">{tag}</span>
-							{/each}
-						</span>
-					</a>
+					<PostCard {post} href={postHref(post.slug)} />
 				{/each}
 			</div>
 		{/if}
@@ -461,55 +451,11 @@
 		color: var(--foam);
 	}
 
-	/* recent.log */
-	.log {
-		overflow: hidden;
-		border: 1px solid var(--line2);
-		border-radius: 10px;
-		background: color-mix(in srgb, var(--bg2) 50%, transparent);
-	}
-	.log-row {
+	/* recent card grid */
+	.card-grid {
 		display: grid;
-		grid-template-columns: 104px 1fr auto;
-		gap: 20px;
-		align-items: center;
-		padding: 16px 22px;
-		border-top: 1px solid var(--line);
-		text-decoration: none;
-		transition: background-color 0.2s;
-	}
-	.log-row:first-child {
-		border-top: none;
-	}
-	.log-row:hover {
-		background: var(--overlay);
-	}
-	.log-row__date {
-		font-family: var(--font-mono);
-		font-size: 12px;
-		color: var(--faint);
-	}
-	.log-row__title {
-		font-family: var(--font-sans);
-		font-size: 16px;
-		font-weight: 500;
-		color: var(--ink);
-	}
-	.log-row:hover .log-row__title {
-		color: var(--foam);
-	}
-	.log-row__tags {
-		display: flex;
-		gap: 6px;
-	}
-	.log-row__tag {
-		padding: 3px 7px;
-		border: 1px solid var(--line);
-		border-radius: 5px;
-		font-family: var(--font-mono);
-		font-size: 10px;
-		white-space: nowrap;
-		color: var(--faint);
+		grid-template-columns: repeat(3, 1fr);
+		gap: 18px;
 	}
 
 	.home__empty {
@@ -523,22 +469,21 @@
 		.work-grid {
 			grid-template-columns: 1fr;
 		}
+		.card-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
 	}
 	@media (max-width: 720px) {
 		.hero-stats {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
-		.log-row {
-			grid-template-columns: 1fr;
-			gap: 6px;
-		}
-		.log-row__tags {
-			display: none;
-		}
 	}
 	@media (max-width: 560px) {
 		.home {
 			padding: 0 1rem;
+		}
+		.card-grid {
+			grid-template-columns: 1fr;
 		}
 		.home__hero,
 		.home__sec {

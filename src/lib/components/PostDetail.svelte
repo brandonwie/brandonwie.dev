@@ -9,7 +9,16 @@
 	import ReadingProgress from '$lib/components/ReadingProgress.svelte';
 	import TableOfContents from '$lib/components/TableOfContents.svelte';
 	import { formatDateLong } from '$lib/utils/date';
-	import { absoluteUrl, localeCode, SITE_AUTHOR, SITE_NAME, SITE_URL } from '$lib/seo';
+	import {
+		absoluteUrl,
+		coverImage,
+		DEFAULT_COVER,
+		heroImage,
+		localeCode,
+		SITE_AUTHOR,
+		SITE_NAME,
+		SITE_URL,
+	} from '$lib/seo';
 
 	interface TocHeading {
 		text: string;
@@ -57,6 +66,17 @@
 	const contentLocale = $derived(isFallback ? 'en' : locale);
 	const contentLanguage = $derived(contentLocale === 'ko' ? 'ko-KR' : 'en-US');
 	const ogImageUrl = $derived(`${SITE_URL}/og/${meta.slug}.png`);
+	const heroImageUrl = $derived(heroImage(meta.slug));
+
+	function onHeroError(event: Event) {
+		const img = event.currentTarget as HTMLImageElement;
+		if (img.dataset.fallback) {
+			img.src = DEFAULT_COVER;
+			return;
+		}
+		img.dataset.fallback = '1';
+		img.src = coverImage(meta.slug);
+	}
 
 	let copied = $state(false);
 
@@ -184,6 +204,19 @@
 			</div>
 		{/if}
 
+		<!-- Hero cover (1.91:1) — also reused as the X / LinkedIn article image -->
+		<div class="post__hero" data-pagefind-ignore>
+			<img
+				src={heroImageUrl}
+				alt={meta.title}
+				width="2400"
+				height="1260"
+				fetchpriority="high"
+				decoding="async"
+				onerror={onHeroError}
+			/>
+		</div>
+
 		<!-- Meta Header -->
 		<header class="post__head">
 			<div class="crumb">
@@ -277,6 +310,20 @@
 	}
 	.post__fallback a:hover {
 		color: var(--foam);
+	}
+	.post__hero {
+		margin-bottom: 28px;
+		overflow: hidden;
+		aspect-ratio: 1200 / 630;
+		border: 1px solid var(--line2);
+		border-radius: 14px;
+		background: color-mix(in srgb, var(--bg2) 60%, transparent);
+	}
+	.post__hero img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
 	}
 	.post__head {
 		margin-bottom: 36px;

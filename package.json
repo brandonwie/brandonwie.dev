@@ -24,6 +24,8 @@
 		"translation:create": "tsx scripts/translation-create.ts",
 		"og:generate": "tsx scripts/generate-og-images.ts",
 		"og:generate:force": "tsx scripts/generate-og-images.ts --force",
+		"media:gen": "tsx scripts/media-gen-cover.ts",
+		"media:gen:check": "tsx scripts/media-gen-cover.ts --check",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"validate:dates": "tsx scripts/validate-dates.ts",
