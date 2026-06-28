@@ -7,7 +7,7 @@
 <text x="144" y="57" font-size="22" fill="#bac2de">iac ~ terraform</text>
 <text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
 <line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
-<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">the files, state, and lifecycle you must know</tspan></text>
+<text x="52" y="176" font-size="38"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">the files, state, and lifecycle you must know</tspan></text>
 <rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
 <ellipse cx="225.33" cy="310.08" rx="28.4" ry="10.17" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><path d="M 196.93 310.08 L 196.93 357.92 A 28.4 10.17 0 0 0 253.74 357.92 L 253.74 310.08" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><path d="M 196.93 334 A 28.4 10.17 0 0 0 253.74 334" fill="none" stroke="#a6e3a1" stroke-width="2.87" opacity="0.7"/>
 <text x="72" y="418" font-size="26" fill="#cdd6f4">terraform.tfstate</text>

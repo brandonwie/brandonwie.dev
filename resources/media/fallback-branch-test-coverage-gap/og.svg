@@ -7,7 +7,7 @@
 <text x="144" y="57" font-size="22" fill="#bac2de">tests ~ fallback gap</text>
 <text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
 <line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
-<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">deleting the fallback still passes every test</tspan></text>
+<text x="52" y="176" font-size="38"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">deleting the fallback still passes every test</tspan></text>
 <rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
 <line x1="207.39" y1="304.1" x2="207.39" y2="363.9" stroke="#a6e3a1" stroke-width="3.59" stroke-linecap="round"/><circle cx="207.39" cy="304.1" r="7.18" fill="#a6e3a1" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="207.39" cy="363.9" r="7.18" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="246.26" cy="331.01" r="7.18" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><path d="M 207.39 339.98 Q 207.39 331.01 239.09 331.01" fill="none" stroke="#a6e3a1" stroke-width="3.05"/>
 <text x="72" y="418" font-size="26" fill="#cdd6f4">falsy branch</text>

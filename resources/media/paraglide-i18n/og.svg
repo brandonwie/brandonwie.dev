@@ -7,7 +7,7 @@
 <text x="144" y="57" font-size="22" fill="#bac2de">i18n ~ paraglide</text>
 <text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
 <line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
-<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">compile translations away, zero runtime cost</tspan></text>
+<text x="52" y="176" font-size="39"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">compile translations away, zero runtime cost</tspan></text>
 <rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
 <rect x="178.69" y="323.54" width="18.54" height="20.93" rx="4" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><rect x="216.06" y="323.54" width="18.54" height="20.93" rx="4" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><rect x="253.44" y="323.54" width="18.54" height="20.93" rx="4" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><line x1="197.23" y1="334" x2="216.06" y2="334" stroke="#a6e3a1" stroke-width="2.87" stroke-linecap="round"/><line x1="234.6" y1="334" x2="253.44" y2="334" stroke="#a6e3a1" stroke-width="2.87" stroke-linecap="round"/>
 <text x="72" y="418" font-size="26" fill="#cdd6f4">compile-time</text>

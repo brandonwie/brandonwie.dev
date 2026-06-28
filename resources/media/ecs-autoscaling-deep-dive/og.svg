@@ -7,7 +7,7 @@
 <text x="144" y="57" font-size="22" fill="#bac2de">ecs ~ autoscaling</text>
 <text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
 <line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
-<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">target tracking scales proportionally, not +1</tspan></text>
+<text x="52" y="176" font-size="38"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">target tracking scales proportionally, not +1</tspan></text>
 <rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
 <line x1="195.43" y1="360.91" x2="255.23" y2="360.91" stroke="#a6e3a1" stroke-width="2.87" stroke-linecap="round"/><rect x="199.92" y="336.99" width="12.56" height="23.92" fill="#a6e3a1" opacity="0.6"/><rect x="219.35" y="319.05" width="12.56" height="41.86" fill="#a6e3a1"/><rect x="238.79" y="331.01" width="12.56" height="29.9" fill="#a6e3a1" opacity="0.8"/>
 <text x="72" y="418" font-size="26" fill="#cdd6f4">target tracking</text>

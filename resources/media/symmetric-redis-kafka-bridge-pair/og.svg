@@ -7,7 +7,7 @@
 <text x="144" y="57" font-size="22" fill="#bac2de">kafka ~ bridge pair</text>
 <text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
 <line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
-<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">two one-way bridges beat one tunneled broker</tspan></text>
+<text x="52" y="176" font-size="39"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">two one-way bridges beat one tunneled broker</tspan></text>
 <rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
 <line x1="225.33" y1="334" x2="197.83" y2="314.74" stroke="#a6e3a1" stroke-width="3.59" stroke-linecap="round"/><line x1="225.33" y1="334" x2="252.84" y2="314.74" stroke="#a6e3a1" stroke-width="3.59" stroke-linecap="round"/><line x1="225.33" y1="334" x2="197.83" y2="353.26" stroke="#a6e3a1" stroke-width="3.59" stroke-linecap="round"/><line x1="225.33" y1="334" x2="252.84" y2="353.26" stroke="#a6e3a1" stroke-width="3.59" stroke-linecap="round"/><circle cx="197.83" cy="314.74" r="7.77" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="252.84" cy="314.74" r="7.77" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="197.83" cy="353.26" r="7.77" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="252.84" cy="353.26" r="7.77" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="225.33" cy="334" r="8.97" fill="#a6e3a1"/>
 <text x="72" y="418" font-size="26" fill="#cdd6f4">listeners trap</text>

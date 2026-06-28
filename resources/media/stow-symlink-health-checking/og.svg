@@ -7,7 +7,7 @@
 <text x="144" y="57" font-size="22" fill="#bac2de">stow ~ symlinks</text>
 <text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
 <line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
-<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">broken symlinks lie unless you check folding</tspan></text>
+<text x="52" y="176" font-size="39"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">broken symlinks lie unless you check folding</tspan></text>
 <rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
 <path d="M 225.33 303.5 L 258.22 316.06 L 225.33 328.62 L 192.44 316.06 Z" fill="#a6e3a1" stroke="#a6e3a1" stroke-width="3.05"/><path d="M 225.33 321.44 L 258.22 334 L 225.33 346.56 L 192.44 334 Z" fill="none" stroke="#a6e3a1" stroke-width="3.05"/><path d="M 225.33 339.38 L 258.22 351.94 L 225.33 364.5 L 192.44 351.94 Z" fill="none" stroke="#a6e3a1" stroke-width="3.05"/>
 <text x="72" y="418" font-size="26" fill="#cdd6f4">tree folding</text>

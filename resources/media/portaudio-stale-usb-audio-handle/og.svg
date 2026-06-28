@@ -7,7 +7,7 @@
 <text x="144" y="57" font-size="22" fill="#bac2de">audio ~ usb handle</text>
 <text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
 <line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
-<text x="52" y="176" font-size="39"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">stale usb handle yields silent zeros, no error</tspan></text>
+<text x="52" y="176" font-size="37"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">stale usb handle yields silent zeros, no error</tspan></text>
 <rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
 <path d="M 208.89 329.52 L 208.89 316.06 A 16.45 16.45 0 0 1 241.78 316.06 L 241.78 329.52" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><rect x="205.9" y="329.52" width="38.87" height="31.4" rx="5" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="225.33" cy="343.57" r="4.78" fill="#a6e3a1"/>
 <text x="72" y="418" font-size="26" fill="#cdd6f4">stale handle</text>

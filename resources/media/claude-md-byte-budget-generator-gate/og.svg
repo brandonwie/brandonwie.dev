@@ -7,7 +7,7 @@
 <text x="144" y="57" font-size="22" fill="#bac2de">claude.md ~ budget</text>
 <text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
 <line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
-<text x="52" y="176" font-size="39"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">fail oversized rules pre-write, not at restart</tspan></text>
+<text x="52" y="176" font-size="37"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">fail oversized rules pre-write, not at restart</tspan></text>
 <rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
 <path d="M 205.9 308.58 L 229.82 308.58 L 244.77 323.53 L 244.77 359.42 L 205.9 359.42 Z" fill="none" stroke="#a6e3a1" stroke-width="3.59" stroke-linejoin="round"/><line x1="214.87" y1="336.99" x2="235.8" y2="336.99" stroke="#a6e3a1" stroke-width="2.51" stroke-linecap="round"/><line x1="214.87" y1="348.95" x2="235.8" y2="348.95" stroke="#a6e3a1" stroke-width="2.51" stroke-linecap="round"/>
 <text x="72" y="418" font-size="26" fill="#cdd6f4">per-rule warn</text>

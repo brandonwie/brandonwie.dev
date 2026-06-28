@@ -7,7 +7,7 @@
 <text x="144" y="57" font-size="22" fill="#bac2de">ecs ~ deploy</text>
 <text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
 <line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
-<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">build to running with zero-downtime rollback</tspan></text>
+<text x="52" y="176" font-size="39"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">build to running with zero-downtime rollback</tspan></text>
 <rect x="52" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
 <path d="M 160.67 342.93 A 9.37 9.37 0 0 1 169.59 329.54 A 12.27 12.27 0 0 1 189.68 326.19 A 9.37 9.37 0 0 1 201.95 342.93 Z" fill="none" stroke="#a6e3a1" stroke-width="2.68" stroke-linejoin="round"/>
 <text x="72" y="418" font-size="19" fill="#cdd6f4">ECR push</text>
