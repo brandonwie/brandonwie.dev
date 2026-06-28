@@ -1,0 +1,29 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">airflow ~ dag deploy</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">pick dag deploy by team, infra, speed</tspan></text>
+<rect x="52" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<line x1="167.36" y1="311.68" x2="167.36" y2="356.32" stroke="#a6e3a1" stroke-width="2.68" stroke-linecap="round"/><circle cx="167.36" cy="311.68" r="5.36" fill="#a6e3a1" stroke="#a6e3a1" stroke-width="2.68"/><circle cx="167.36" cy="356.32" r="5.36" fill="none" stroke="#a6e3a1" stroke-width="2.68"/><circle cx="196.37" cy="331.77" r="5.36" fill="none" stroke="#a6e3a1" stroke-width="2.68"/><path d="M 167.36 338.46 Q 167.36 331.77 191.02 331.77" fill="none" stroke="#a6e3a1" stroke-width="2.28"/>
+<text x="72" y="418" font-size="19" fill="#cdd6f4">git pull on EC2</text>
+<text x="72" y="450" font-size="13" fill="#a6adc8">no restart, ~30s sync</text>
+<rect x="331.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 460.25 311.24 L 484.8 320.61 L 460.25 329.98 L 435.7 320.61 Z" fill="#fab387" stroke="#fab387" stroke-width="2.28"/><path d="M 460.25 324.63 L 484.8 334 L 460.25 343.37 L 435.7 334 Z" fill="none" stroke="#fab387" stroke-width="2.28"/><path d="M 460.25 338.02 L 484.8 347.39 L 460.25 356.76 L 435.7 347.39 Z" fill="none" stroke="#fab387" stroke-width="2.28"/>
+<text x="351.5" y="418" font-size="19" fill="#cdd6f4">bake into image</text>
+<text x="351.5" y="450" font-size="13" fill="#a6adc8">immutable, slow rebuild</text>
+<rect x="611" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<line x1="739.75" y1="334" x2="719.22" y2="319.63" stroke="#89b4fa" stroke-width="2.68" stroke-linecap="round"/><line x1="739.75" y1="334" x2="760.28" y2="319.63" stroke="#89b4fa" stroke-width="2.68" stroke-linecap="round"/><line x1="739.75" y1="334" x2="719.22" y2="348.37" stroke="#89b4fa" stroke-width="2.68" stroke-linecap="round"/><line x1="739.75" y1="334" x2="760.28" y2="348.37" stroke="#89b4fa" stroke-width="2.68" stroke-linecap="round"/><circle cx="719.22" cy="319.63" r="5.8" fill="none" stroke="#89b4fa" stroke-width="2.68"/><circle cx="760.28" cy="319.63" r="5.8" fill="none" stroke="#89b4fa" stroke-width="2.68"/><circle cx="719.22" cy="348.37" r="5.8" fill="none" stroke="#89b4fa" stroke-width="2.68"/><circle cx="760.28" cy="348.37" r="5.8" fill="none" stroke="#89b4fa" stroke-width="2.68"/><circle cx="739.75" cy="334" r="6.69" fill="#89b4fa"/>
+<text x="631" y="418" font-size="19" fill="#cdd6f4">git-sync sidecar</text>
+<text x="631" y="450" font-size="13" fill="#a6adc8">kubernetes standard</text>
+<rect x="890.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#cba6f7" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 999.17 342.93 A 9.37 9.37 0 0 1 1008.09 329.54 A 12.27 12.27 0 0 1 1028.18 326.19 A 9.37 9.37 0 0 1 1040.45 342.93 Z" fill="none" stroke="#cba6f7" stroke-width="2.68" stroke-linejoin="round"/>
+<text x="910.5" y="418" font-size="19" fill="#cdd6f4">S3/EFS sync</text>
+<text x="910.5" y="450" font-size="13" fill="#a6adc8">aws-native, sync lag</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">small ec2 team? git pull beats sidecars</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

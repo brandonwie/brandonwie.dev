@@ -1,0 +1,13 @@
+{
+  "slug": "waf-allowlist-patterns",
+  "topic": "waf ~ allowlist",
+  "thesis": "block by default, allow only known routes",
+  "components": [
+    { "label": "default-block", "sublabel": "unknown routes 403", "glyph": "shield" },
+    { "label": "STARTS_WITH", "sublabel": "covers sub-paths + queries", "glyph": "search" },
+    { "label": "terminating allow", "sublabel": "skips later rules", "glyph": "branch" }
+  ],
+  "takeaway": "start closed; open only what you trust",
+  "theme": "terminal-mocha",
+  "alt": "Terminal-style cover for WAF allowlist patterns: default-block, STARTS_WITH matching, terminating allow"
+}

@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">iac ~ terraform</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">the files, state, and lifecycle you must know</tspan></text>
+<rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<ellipse cx="225.33" cy="310.08" rx="28.4" ry="10.17" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><path d="M 196.93 310.08 L 196.93 357.92 A 28.4 10.17 0 0 0 253.74 357.92 L 253.74 310.08" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><path d="M 196.93 334 A 28.4 10.17 0 0 0 253.74 334" fill="none" stroke="#a6e3a1" stroke-width="2.87" opacity="0.7"/>
+<text x="72" y="418" font-size="26" fill="#cdd6f4">terraform.tfstate</text>
+<text x="72" y="450" font-size="20" fill="#a6adc8">maps code to real aws</text>
+<rect x="426.67" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="570.1" y="308.58" width="59.8" height="18.54" rx="3" fill="#fab387" opacity="0.5"/><rect x="570.1" y="340.58" width="44.85" height="18.54" rx="3" fill="none" stroke="#fab387" stroke-width="2.87"/><line x1="579.07" y1="317.85" x2="594.02" y2="317.85" stroke="#fab387" stroke-width="2.51" stroke-linecap="round"/><line x1="586.54" y1="310.38" x2="586.54" y2="325.33" stroke="#fab387" stroke-width="2.51" stroke-linecap="round"/><line x1="579.07" y1="349.85" x2="594.02" y2="349.85" stroke="#fab387" stroke-width="2.51" stroke-linecap="round"/>
+<text x="446.67" y="418" font-size="26" fill="#cdd6f4">resource vs data</text>
+<text x="446.67" y="450" font-size="20" fill="#a6adc8">own it or just read it</text>
+<rect x="801.33" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 958.22 329.52 L 958.22 316.06 A 16.45 16.45 0 0 1 991.11 316.06 L 991.11 329.52" fill="none" stroke="#89b4fa" stroke-width="3.59"/><rect x="955.23" y="329.52" width="38.87" height="31.4" rx="5" fill="none" stroke="#89b4fa" stroke-width="3.59"/><circle cx="974.67" cy="343.57" r="4.78" fill="#89b4fa"/>
+<text x="821.33" y="418" font-size="26" fill="#cdd6f4">lifecycle block</text>
+<text x="821.33" y="450" font-size="20" fill="#a6adc8">prevent_destroy guardrail</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">remote state, commit lock.hcl, keep secrets out</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

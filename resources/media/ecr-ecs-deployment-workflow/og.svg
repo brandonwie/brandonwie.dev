@@ -1,0 +1,29 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">ecs ~ deploy</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">build to running with zero-downtime rollback</tspan></text>
+<rect x="52" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 160.67 342.93 A 9.37 9.37 0 0 1 169.59 329.54 A 12.27 12.27 0 0 1 189.68 326.19 A 9.37 9.37 0 0 1 201.95 342.93 Z" fill="none" stroke="#a6e3a1" stroke-width="2.68" stroke-linejoin="round"/>
+<text x="72" y="418" font-size="19" fill="#cdd6f4">ECR push</text>
+<text x="72" y="450" font-size="13" fill="#a6adc8">build, tag, push image</text>
+<rect x="331.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="425.44" y="326.19" width="13.84" height="15.62" rx="4" fill="none" stroke="#fab387" stroke-width="2.68"/><rect x="453.33" y="326.19" width="13.84" height="15.62" rx="4" fill="none" stroke="#fab387" stroke-width="2.68"/><rect x="481.23" y="326.19" width="13.84" height="15.62" rx="4" fill="none" stroke="#fab387" stroke-width="2.68"/><line x1="439.27" y1="334" x2="453.33" y2="334" stroke="#fab387" stroke-width="2.14" stroke-linecap="round"/><line x1="467.17" y1="334" x2="481.23" y2="334" stroke="#fab387" stroke-width="2.14" stroke-linecap="round"/>
+<text x="351.5" y="418" font-size="19" fill="#cdd6f4">rolling update</text>
+<text x="351.5" y="450" font-size="13" fill="#a6adc8">new healthy before drain</text>
+<rect x="611" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 739.75 311.68 L 758.72 320.61 L 758.72 337.35 Q 758.72 351.85 739.75 356.32 Q 720.78 351.85 720.78 337.35 L 720.78 320.61 Z" fill="none" stroke="#89b4fa" stroke-width="2.68"/><path d="M 730.82 335.12 L 737.96 342.48 L 749.79 327.31" fill="none" stroke="#89b4fa" stroke-width="2.68" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="631" y="418" font-size="19" fill="#cdd6f4">circuit breaker</text>
+<text x="631" y="450" font-size="13" fill="#a6adc8">auto rollback on fail</text>
+<rect x="890.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#cba6f7" stroke-opacity="0.5" stroke-width="2"/>
+<line x1="1005.86" y1="311.68" x2="1005.86" y2="356.32" stroke="#cba6f7" stroke-width="2.68" stroke-linecap="round"/><circle cx="1005.86" cy="311.68" r="5.36" fill="#cba6f7" stroke="#cba6f7" stroke-width="2.68"/><circle cx="1005.86" cy="356.32" r="5.36" fill="none" stroke="#cba6f7" stroke-width="2.68"/><circle cx="1034.87" cy="331.77" r="5.36" fill="none" stroke="#cba6f7" stroke-width="2.68"/><path d="M 1005.86 338.46 Q 1005.86 331.77 1029.52 331.77" fill="none" stroke="#cba6f7" stroke-width="2.28"/>
+<text x="910.5" y="418" font-size="19" fill="#cdd6f4">git SHA tags</text>
+<text x="910.5" y="450" font-size="13" fill="#a6adc8">traceable rollbacks</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">enable circuit breaker; tag with git SHAs</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

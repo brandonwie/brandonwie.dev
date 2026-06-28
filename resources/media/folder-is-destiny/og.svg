@@ -1,0 +1,29 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">3b ~ folder policy</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">folder sets policy; frontmatter handles 5%</tspan></text>
+<rect x="52" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 180.75 311.24 L 205.3 320.61 L 180.75 329.98 L 156.2 320.61 Z" fill="#a6e3a1" stroke="#a6e3a1" stroke-width="2.28"/><path d="M 180.75 324.63 L 205.3 334 L 180.75 343.37 L 156.2 334 Z" fill="none" stroke="#a6e3a1" stroke-width="2.28"/><path d="M 180.75 338.02 L 205.3 347.39 L 180.75 356.76 L 156.2 347.39 Z" fill="none" stroke="#a6e3a1" stroke-width="2.28"/>
+<text x="72" y="418" font-size="19" fill="#cdd6f4">source_type</text>
+<text x="72" y="450" font-size="13" fill="#a6adc8">layer-of-origin default</text>
+<rect x="331.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 460.25 311.68 L 479.22 320.61 L 479.22 337.35 Q 479.22 351.85 460.25 356.32 Q 441.28 351.85 441.28 337.35 L 441.28 320.61 Z" fill="none" stroke="#fab387" stroke-width="2.68"/><path d="M 451.32 335.12 L 458.46 342.48 L 470.29 327.31" fill="none" stroke="#fab387" stroke-width="2.68" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="351.5" y="418" font-size="19" fill="#cdd6f4">privacy</text>
+<text x="351.5" y="450" font-size="13" fill="#a6adc8">can a machine index it</text>
+<rect x="611" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<circle cx="739.75" cy="334" r="20.53" fill="none" stroke="#89b4fa" stroke-width="2.68"/><line x1="739.75" y1="334" x2="739.75" y2="321.73" stroke="#89b4fa" stroke-width="2.41" stroke-linecap="round"/><line x1="739.75" y1="334" x2="749.12" y2="338.46" stroke="#89b4fa" stroke-width="2.41" stroke-linecap="round"/>
+<text x="631" y="418" font-size="19" fill="#cdd6f4">tier</text>
+<text x="631" y="450" font-size="13" fill="#a6adc8">staleness ladder</text>
+<rect x="890.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#cba6f7" stroke-opacity="0.5" stroke-width="2"/>
+<circle cx="1019.25" cy="334" r="13.84" fill="none" stroke="#cba6f7" stroke-width="2.68"/><line x1="1035.32" y1="334" x2="1041.57" y2="334" stroke="#cba6f7" stroke-width="2.95" stroke-linecap="round"/><line x1="1030.61" y1="345.36" x2="1035.03" y2="349.78" stroke="#cba6f7" stroke-width="2.95" stroke-linecap="round"/><line x1="1019.25" y1="350.07" x2="1019.25" y2="356.32" stroke="#cba6f7" stroke-width="2.95" stroke-linecap="round"/><line x1="1007.89" y1="345.36" x2="1003.47" y2="349.78" stroke="#cba6f7" stroke-width="2.95" stroke-linecap="round"/><line x1="1003.18" y1="334" x2="996.93" y2="334" stroke="#cba6f7" stroke-width="2.95" stroke-linecap="round"/><line x1="1007.89" y1="322.64" x2="1003.47" y2="318.22" stroke="#cba6f7" stroke-width="2.95" stroke-linecap="round"/><line x1="1019.25" y1="317.93" x2="1019.25" y2="311.68" stroke="#cba6f7" stroke-width="2.95" stroke-linecap="round"/><line x1="1030.61" y1="322.64" x2="1035.03" y2="318.22" stroke="#cba6f7" stroke-width="2.95" stroke-linecap="round"/><circle cx="1019.25" cy="334" r="4.46" fill="#cba6f7"/>
+<text x="910.5" y="418" font-size="19" fill="#cdd6f4">shared loader</text>
+<text x="910.5" y="450" font-size="13" fill="#a6adc8">one privacy-matrix.js</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">default by folder; override only the 5%</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

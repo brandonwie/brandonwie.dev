@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">rag ~ embeddings</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">encode queries and docs differently</tspan></text>
+<rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="183.47" y="313.07" width="50.23" height="4.66" rx="2" fill="#a6e3a1" opacity="0.55"/><rect x="183.47" y="328.02" width="41.86" height="4.66" rx="2" fill="#a6e3a1"/><rect x="183.47" y="342.97" width="33.49" height="4.66" rx="2" fill="#a6e3a1" opacity="0.4"/><circle cx="240.28" cy="345.96" r="14.95" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><line x1="250.75" y1="356.43" x2="261.21" y2="366.89" stroke="#a6e3a1" stroke-width="3.59" stroke-linecap="round"/>
+<text x="72" y="418" font-size="26" fill="#cdd6f4">task_type</text>
+<text x="72" y="450" font-size="20" fill="#a6adc8">query vs document split</text>
+<rect x="426.67" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="570.1" y="304.1" width="59.8" height="59.8" rx="6" fill="none" stroke="#fab387" stroke-width="3.59"/><circle cx="600" cy="334" r="19.73" fill="none" stroke="#fab387" stroke-width="2.87" stroke-dasharray="6.58 5.38"/><circle cx="600" cy="334" r="5.38" fill="#fab387"/><circle cx="583.55" cy="322.04" r="3.59" fill="#fab387"/><circle cx="614.95" cy="319.05" r="3.59" fill="#fab387"/><circle cx="613.46" cy="348.95" r="3.59" fill="#fab387"/><line x1="600" y1="334" x2="614.95" y2="319.05" stroke="#fab387" stroke-width="2.51" stroke-linecap="round"/>
+<text x="446.67" y="418" font-size="26" fill="#cdd6f4">asymmetric</text>
+<text x="446.67" y="450" font-size="20" fill="#a6adc8">queries point to docs</text>
+<rect x="801.33" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="928.02" y="323.54" width="18.54" height="20.93" rx="4" fill="none" stroke="#89b4fa" stroke-width="3.59"/><rect x="965.4" y="323.54" width="18.54" height="20.93" rx="4" fill="none" stroke="#89b4fa" stroke-width="3.59"/><rect x="1002.77" y="323.54" width="18.54" height="20.93" rx="4" fill="none" stroke="#89b4fa" stroke-width="3.59"/><line x1="946.56" y1="334" x2="965.4" y2="334" stroke="#89b4fa" stroke-width="2.87" stroke-linecap="round"/><line x1="983.94" y1="334" x2="1002.77" y2="334" stroke="#89b4fa" stroke-width="2.87" stroke-linecap="round"/>
+<text x="821.33" y="418" font-size="26" fill="#cdd6f4">re-embed corpus</text>
+<text x="821.33" y="450" font-size="20" fill="#a6adc8">768-d, same schema</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">split query/doc encoding for better recall</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

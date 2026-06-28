@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">ai ~ code review</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">not every AI comment is a fix; triage first</tspan></text>
+<rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="195.43" y="308.58" width="59.8" height="18.54" rx="3" fill="#a6e3a1" opacity="0.5"/><rect x="195.43" y="340.58" width="44.85" height="18.54" rx="3" fill="none" stroke="#a6e3a1" stroke-width="2.87"/><line x1="204.4" y1="317.85" x2="219.35" y2="317.85" stroke="#a6e3a1" stroke-width="2.51" stroke-linecap="round"/><line x1="211.88" y1="310.38" x2="211.88" y2="325.33" stroke="#a6e3a1" stroke-width="2.51" stroke-linecap="round"/><line x1="204.4" y1="349.85" x2="219.35" y2="349.85" stroke="#a6e3a1" stroke-width="2.51" stroke-linecap="round"/>
+<text x="72" y="418" font-size="26" fill="#cdd6f4">stale diff</text>
+<text x="72" y="450" font-size="20" fill="#a6adc8">already fixed later commit</text>
+<rect x="426.67" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="558.14" y="313.07" width="50.23" height="4.66" rx="2" fill="#fab387" opacity="0.55"/><rect x="558.14" y="328.02" width="41.86" height="4.66" rx="2" fill="#fab387"/><rect x="558.14" y="342.97" width="33.49" height="4.66" rx="2" fill="#fab387" opacity="0.4"/><circle cx="614.95" cy="345.96" r="14.95" fill="none" stroke="#fab387" stroke-width="3.59"/><line x1="625.42" y1="356.43" x2="635.88" y2="366.89" stroke="#fab387" stroke-width="3.59" stroke-linecap="round"/>
+<text x="446.67" y="418" font-size="26" fill="#cdd6f4">feature exists</text>
+<text x="446.67" y="450" font-size="20" fill="#a6adc8">search before adding</text>
+<rect x="801.33" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<line x1="956.73" y1="304.1" x2="956.73" y2="363.9" stroke="#89b4fa" stroke-width="3.59" stroke-linecap="round"/><circle cx="956.73" cy="304.1" r="7.18" fill="#89b4fa" stroke="#89b4fa" stroke-width="3.59"/><circle cx="956.73" cy="363.9" r="7.18" fill="none" stroke="#89b4fa" stroke-width="3.59"/><circle cx="995.6" cy="331.01" r="7.18" fill="none" stroke="#89b4fa" stroke-width="3.59"/><path d="M 956.73 339.98 Q 956.73 331.01 988.42 331.01" fill="none" stroke="#89b4fa" stroke-width="3.05"/>
+<text x="821.33" y="418" font-size="26" fill="#cdd6f4">triage workflow</text>
+<text x="821.33" y="450" font-size="20" fill="#a6adc8">decision tree per comment</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">write comments that explain WHY, not WHAT</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

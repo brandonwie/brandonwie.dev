@@ -1,0 +1,29 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">wrap ~ follow-ups</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">every loss mode needs its own defense</tspan></text>
+<rect x="52" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<ellipse cx="180.75" cy="316.15" rx="21.2" ry="7.59" fill="none" stroke="#a6e3a1" stroke-width="2.68"/><path d="M 159.55 316.15 L 159.55 351.85 A 21.2 7.59 0 0 0 201.95 351.85 L 201.95 316.15" fill="none" stroke="#a6e3a1" stroke-width="2.68"/><path d="M 159.55 334 A 21.2 7.59 0 0 0 201.95 334" fill="none" stroke="#a6e3a1" stroke-width="2.14" opacity="0.7"/>
+<text x="72" y="418" font-size="19" fill="#cdd6f4">durable-source</text>
+<text x="72" y="450" font-size="13" fill="#a6adc8">regenerate, no carry-forward</text>
+<rect x="331.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="429.01" y="318.38" width="37.49" height="3.48" rx="2" fill="#fab387" opacity="0.55"/><rect x="429.01" y="329.54" width="31.24" height="3.48" rx="2" fill="#fab387"/><rect x="429.01" y="340.7" width="24.99" height="3.48" rx="2" fill="#fab387" opacity="0.4"/><circle cx="471.41" cy="342.93" r="11.16" fill="none" stroke="#fab387" stroke-width="2.68"/><line x1="479.22" y1="350.74" x2="487.03" y2="358.55" stroke="#fab387" stroke-width="2.68" stroke-linecap="round"/>
+<text x="351.5" y="418" font-size="19" fill="#cdd6f4">multi-source scan</text>
+<text x="351.5" y="450" font-size="13" fill="#a6adc8">collect every source</text>
+<rect x="611" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="714.09" y="315.03" width="51.33" height="37.94" rx="5" fill="none" stroke="#89b4fa" stroke-width="2.68"/><path d="M 726.36 329.54 L 736.4 336.68 L 726.36 343.82" fill="none" stroke="#89b4fa" stroke-width="2.41" stroke-linecap="round" stroke-linejoin="round"/><line x1="740.87" y1="343.82" x2="753.14" y2="343.82" stroke="#89b4fa" stroke-width="2.41" stroke-linecap="round"/>
+<text x="631" y="418" font-size="19" fill="#cdd6f4">conv extraction</text>
+<text x="631" y="450" font-size="13" fill="#a6adc8">keyword orphans persisted</text>
+<rect x="890.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#cba6f7" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 1006.98 330.65 L 1006.98 320.61 A 12.27 12.27 0 0 1 1031.52 320.61 L 1031.52 330.65" fill="none" stroke="#cba6f7" stroke-width="2.68"/><rect x="1004.74" y="330.65" width="29.01" height="23.43" rx="5" fill="none" stroke="#cba6f7" stroke-width="2.68"/><circle cx="1019.25" cy="341.14" r="3.57" fill="#cba6f7"/>
+<text x="910.5" y="418" font-size="19" fill="#cdd6f4">generator+lock</text>
+<text x="910.5" y="450" font-size="13" fill="#a6adc8">parallel-wrap safe</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">defend each loss mode independently</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">skills ~ transport</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">one source of truth, three transports</tspan></text>
+<rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<line x1="207.39" y1="304.1" x2="207.39" y2="363.9" stroke="#a6e3a1" stroke-width="3.59" stroke-linecap="round"/><circle cx="207.39" cy="304.1" r="7.18" fill="#a6e3a1" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="207.39" cy="363.9" r="7.18" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="246.26" cy="331.01" r="7.18" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><path d="M 207.39 339.98 Q 207.39 331.01 239.09 331.01" fill="none" stroke="#a6e3a1" stroke-width="3.05"/>
+<text x="72" y="418" font-size="26" fill="#cdd6f4">symlink</text>
+<text x="72" y="450" font-size="20" fill="#a6adc8">resolve canonical bytes</text>
+<rect x="426.67" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 583.55 329.52 L 583.55 316.06 A 16.45 16.45 0 0 1 616.45 316.06 L 616.45 329.52" fill="none" stroke="#fab387" stroke-width="3.59"/><rect x="580.57" y="329.52" width="38.87" height="31.4" rx="5" fill="none" stroke="#fab387" stroke-width="3.59"/><circle cx="600" cy="343.57" r="4.78" fill="#fab387"/>
+<text x="446.67" y="418" font-size="26" fill="#cdd6f4">version pin</text>
+<text x="446.67" y="450" font-size="20" fill="#a6adc8">syncs_with adapter copy</text>
+<rect x="801.33" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 974.67 303.5 L 1007.56 316.06 L 974.67 328.62 L 941.78 316.06 Z" fill="#89b4fa" stroke="#89b4fa" stroke-width="3.05"/><path d="M 974.67 321.44 L 1007.56 334 L 974.67 346.56 L 941.78 334 Z" fill="none" stroke="#89b4fa" stroke-width="3.05"/><path d="M 974.67 339.38 L 1007.56 351.94 L 974.67 364.5 L 941.78 351.94 Z" fill="none" stroke="#89b4fa" stroke-width="3.05"/>
+<text x="821.33" y="418" font-size="26" fill="#cdd6f4">discovery vs run</text>
+<text x="821.33" y="450" font-size="20" fill="#a6adc8">see vs runnable surfaces</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">author once; transport per runtime</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

@@ -1,0 +1,29 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">lint ~ headings</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">MD041 wants one #; --fix won&apos;t fix it</tspan></text>
+<rect x="52" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 166.24 315.03 L 184.1 315.03 L 195.26 326.19 L 195.26 352.97 L 166.24 352.97 Z" fill="none" stroke="#a6e3a1" stroke-width="2.68" stroke-linejoin="round"/><line x1="172.94" y1="336.23" x2="188.56" y2="336.23" stroke="#a6e3a1" stroke-width="1.87" stroke-linecap="round"/><line x1="172.94" y1="345.16" x2="188.56" y2="345.16" stroke="#a6e3a1" stroke-width="1.87" stroke-linecap="round"/>
+<text x="72" y="418" font-size="19" fill="#cdd6f4">MD041</text>
+<text x="72" y="450" font-size="13" fill="#a6adc8">first line single #</text>
+<rect x="331.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 460.25 311.24 L 484.8 320.61 L 460.25 329.98 L 435.7 320.61 Z" fill="#fab387" stroke="#fab387" stroke-width="2.28"/><path d="M 460.25 324.63 L 484.8 334 L 460.25 343.37 L 435.7 334 Z" fill="none" stroke="#fab387" stroke-width="2.28"/><path d="M 460.25 338.02 L 484.8 347.39 L 460.25 356.76 L 435.7 347.39 Z" fill="none" stroke="#fab387" stroke-width="2.28"/>
+<text x="351.5" y="418" font-size="19" fill="#cdd6f4">MD001</text>
+<text x="351.5" y="450" font-size="13" fill="#a6adc8">increment by one level</text>
+<rect x="611" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<circle cx="739.75" cy="334" r="13.84" fill="none" stroke="#89b4fa" stroke-width="2.68"/><line x1="755.82" y1="334" x2="762.07" y2="334" stroke="#89b4fa" stroke-width="2.95" stroke-linecap="round"/><line x1="751.11" y1="345.36" x2="755.53" y2="349.78" stroke="#89b4fa" stroke-width="2.95" stroke-linecap="round"/><line x1="739.75" y1="350.07" x2="739.75" y2="356.32" stroke="#89b4fa" stroke-width="2.95" stroke-linecap="round"/><line x1="728.39" y1="345.36" x2="723.97" y2="349.78" stroke="#89b4fa" stroke-width="2.95" stroke-linecap="round"/><line x1="723.68" y1="334" x2="717.43" y2="334" stroke="#89b4fa" stroke-width="2.95" stroke-linecap="round"/><line x1="728.39" y1="322.64" x2="723.97" y2="318.22" stroke="#89b4fa" stroke-width="2.95" stroke-linecap="round"/><line x1="739.75" y1="317.93" x2="739.75" y2="311.68" stroke="#89b4fa" stroke-width="2.95" stroke-linecap="round"/><line x1="751.11" y1="322.64" x2="755.53" y2="318.22" stroke="#89b4fa" stroke-width="2.95" stroke-linecap="round"/><circle cx="739.75" cy="334" r="4.46" fill="#89b4fa"/>
+<text x="631" y="418" font-size="19" fill="#cdd6f4">--fix skips both</text>
+<text x="631" y="450" font-size="13" fill="#a6adc8">reports, never rewrites</text>
+<rect x="890.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#cba6f7" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="996.93" y="315.03" width="44.63" height="13.84" rx="3" fill="#cba6f7" opacity="0.5"/><rect x="996.93" y="338.91" width="33.48" height="13.84" rx="3" fill="none" stroke="#cba6f7" stroke-width="2.14"/><line x1="1003.63" y1="321.95" x2="1014.79" y2="321.95" stroke="#cba6f7" stroke-width="1.87" stroke-linecap="round"/><line x1="1009.21" y1="316.37" x2="1009.21" y2="327.53" stroke="#cba6f7" stroke-width="1.87" stroke-linecap="round"/><line x1="1003.63" y1="345.83" x2="1014.79" y2="345.83" stroke="#cba6f7" stroke-width="1.87" stroke-linecap="round"/>
+<text x="910.5" y="418" font-size="19" fill="#cdd6f4">proseWrap trap</text>
+<text x="910.5" y="450" font-size="13" fill="#a6adc8">#NNN wraps to H1</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">start with one #, bump heading levels by one</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

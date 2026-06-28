@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">postgres ~ IN limits</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">batch IDs; IN degrades before the 65K cap</tspan></text>
+<rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 208.89 329.52 L 208.89 316.06 A 16.45 16.45 0 0 1 241.78 316.06 L 241.78 329.52" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><rect x="205.9" y="329.52" width="38.87" height="31.4" rx="5" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><circle cx="225.33" cy="343.57" r="4.78" fill="#a6e3a1"/>
+<text x="72" y="418" font-size="26" fill="#cdd6f4">65,535 cap</text>
+<text x="72" y="450" font-size="20" fill="#a6adc8">16-bit bind ceiling</text>
+<rect x="426.67" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 600 303.5 L 632.89 316.06 L 600 328.62 L 567.11 316.06 Z" fill="#fab387" stroke="#fab387" stroke-width="3.05"/><path d="M 600 321.44 L 632.89 334 L 600 346.56 L 567.11 334 Z" fill="none" stroke="#fab387" stroke-width="3.05"/><path d="M 600 339.38 L 632.89 351.94 L 600 364.5 L 567.11 351.94 Z" fill="none" stroke="#fab387" stroke-width="3.05"/>
+<text x="446.67" y="418" font-size="26" fill="#cdd6f4">batch 500-1k</text>
+<text x="446.67" y="450" font-size="20" fill="#a6adc8">sub-ms planning time</text>
+<rect x="801.33" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<ellipse cx="974.67" cy="310.08" rx="28.4" ry="10.17" fill="none" stroke="#89b4fa" stroke-width="3.59"/><path d="M 946.26 310.08 L 946.26 357.92 A 28.4 10.17 0 0 0 1003.07 357.92 L 1003.07 310.08" fill="none" stroke="#89b4fa" stroke-width="3.59"/><path d="M 946.26 334 A 28.4 10.17 0 0 0 1003.07 334" fill="none" stroke="#89b4fa" stroke-width="2.87" opacity="0.7"/>
+<text x="821.33" y="418" font-size="26" fill="#cdd6f4">ANY(array)</text>
+<text x="821.33" y="450" font-size="20" fill="#a6adc8">one param bypass</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">batch IDs at 500-1,000 per query</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

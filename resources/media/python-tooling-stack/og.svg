@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">python ~ tooling</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">one Astral stack replaces five tools</tspan></text>
+<rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<circle cx="225.33" cy="334" r="18.54" fill="none" stroke="#a6e3a1" stroke-width="3.59"/><line x1="246.86" y1="334" x2="255.23" y2="334" stroke="#a6e3a1" stroke-width="3.95" stroke-linecap="round"/><line x1="240.56" y1="349.22" x2="246.48" y2="355.14" stroke="#a6e3a1" stroke-width="3.95" stroke-linecap="round"/><line x1="225.33" y1="355.53" x2="225.33" y2="363.9" stroke="#a6e3a1" stroke-width="3.95" stroke-linecap="round"/><line x1="210.11" y1="349.22" x2="204.19" y2="355.14" stroke="#a6e3a1" stroke-width="3.95" stroke-linecap="round"/><line x1="203.81" y1="334" x2="195.43" y2="334" stroke="#a6e3a1" stroke-width="3.95" stroke-linecap="round"/><line x1="210.11" y1="318.78" x2="204.19" y2="312.86" stroke="#a6e3a1" stroke-width="3.95" stroke-linecap="round"/><line x1="225.33" y1="312.47" x2="225.33" y2="304.1" stroke="#a6e3a1" stroke-width="3.95" stroke-linecap="round"/><line x1="240.56" y1="318.78" x2="246.48" y2="312.86" stroke="#a6e3a1" stroke-width="3.95" stroke-linecap="round"/><circle cx="225.33" cy="334" r="5.98" fill="#a6e3a1"/>
+<text x="72" y="418" font-size="26" fill="#cdd6f4">uv</text>
+<text x="72" y="450" font-size="20" fill="#a6adc8">pip/poetry, in Rust</text>
+<rect x="426.67" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="558.14" y="313.07" width="50.23" height="4.66" rx="2" fill="#fab387" opacity="0.55"/><rect x="558.14" y="328.02" width="41.86" height="4.66" rx="2" fill="#fab387"/><rect x="558.14" y="342.97" width="33.49" height="4.66" rx="2" fill="#fab387" opacity="0.4"/><circle cx="614.95" cy="345.96" r="14.95" fill="none" stroke="#fab387" stroke-width="3.59"/><line x1="625.42" y1="356.43" x2="635.88" y2="366.89" stroke="#fab387" stroke-width="3.59" stroke-linecap="round"/>
+<text x="446.67" y="418" font-size="26" fill="#cdd6f4">ruff</text>
+<text x="446.67" y="450" font-size="20" fill="#a6adc8">lint+format, one tool</text>
+<rect x="801.33" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="934.3" y="313.07" width="28.4" height="41.86" rx="4" fill="none" stroke="#89b4fa" stroke-width="3.59"/><rect x="986.63" y="313.07" width="28.4" height="41.86" rx="4" fill="none" stroke="#89b4fa" stroke-width="3.59"/><line x1="962.71" y1="334" x2="984.23" y2="334" stroke="#89b4fa" stroke-width="3.23" stroke-linecap="round"/><path d="M 984.23 334 l -6.58 -5.98 l 0 11.96 z" fill="#89b4fa"/>
+<text x="821.33" y="418" font-size="26" fill="#cdd6f4">ty</text>
+<text x="821.33" y="450" font-size="20" fill="#a6adc8">fast type checking</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">format before lint; standardize the stack</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

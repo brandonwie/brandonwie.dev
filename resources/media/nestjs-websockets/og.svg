@@ -1,0 +1,29 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">nestjs ~ websockets</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">decorator gateways for real-time push</tspan></text>
+<rect x="52" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 169.59 311.68 Q 158.43 311.68 158.43 325.07 Q 158.43 334 152.85 334 Q 158.43 334 158.43 342.93 Q 158.43 356.32 169.59 356.32" fill="none" stroke="#a6e3a1" stroke-width="2.68"/><path d="M 191.91 311.68 Q 203.07 311.68 203.07 325.07 Q 203.07 334 208.65 334 Q 203.07 334 203.07 342.93 Q 203.07 356.32 191.91 356.32" fill="none" stroke="#a6e3a1" stroke-width="2.68"/><circle cx="180.75" cy="334" r="4.46" fill="#a6e3a1"/>
+<text x="72" y="418" font-size="19" fill="#cdd6f4">@MessageBody</text>
+<text x="72" y="450" font-size="13" fill="#a6adc8">testable handlers</text>
+<rect x="331.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 464.71 311.68 L 449.09 336.23 L 460.25 336.23 L 456.9 356.32 L 472.52 330.65 L 460.25 330.65 Z" fill="none" stroke="#fab387" stroke-width="2.68" stroke-linejoin="round"/>
+<text x="351.5" y="418" font-size="19" fill="#cdd6f4">redis adapter</text>
+<text x="351.5" y="450" font-size="13" fill="#a6adc8">multi-instance pub/sub</text>
+<rect x="611" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 739.75 311.68 L 758.72 320.61 L 758.72 337.35 Q 758.72 351.85 739.75 356.32 Q 720.78 351.85 720.78 337.35 L 720.78 320.61 Z" fill="none" stroke="#89b4fa" stroke-width="2.68"/><path d="M 730.82 335.12 L 737.96 342.48 L 749.79 327.31" fill="none" stroke="#89b4fa" stroke-width="2.68" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="631" y="418" font-size="19" fill="#cdd6f4">handshake auth</text>
+<text x="631" y="450" font-size="13" fill="#a6adc8">JWT, specific error codes</text>
+<rect x="890.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#cba6f7" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 1004.74 315.03 L 1022.6 315.03 L 1033.76 326.19 L 1033.76 352.97 L 1004.74 352.97 Z" fill="none" stroke="#cba6f7" stroke-width="2.68" stroke-linejoin="round"/><line x1="1011.44" y1="336.23" x2="1027.06" y2="336.23" stroke="#cba6f7" stroke-width="1.87" stroke-linecap="round"/><line x1="1011.44" y1="345.16" x2="1027.06" y2="345.16" stroke="#cba6f7" stroke-width="1.87" stroke-linecap="round"/>
+<text x="910.5" y="418" font-size="19" fill="#cdd6f4">WsException</text>
+<text x="910.5" y="450" font-size="13" fill="#a6adc8">structured ws errors</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">testable handlers, scale, auth, WsException</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

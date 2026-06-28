@@ -1,0 +1,29 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">3b ~ session engine</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="40"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">state isn&apos;t real until written to files</tspan></text>
+<rect x="52" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="145.94" y="326.19" width="13.84" height="15.62" rx="4" fill="none" stroke="#a6e3a1" stroke-width="2.68"/><rect x="173.83" y="326.19" width="13.84" height="15.62" rx="4" fill="none" stroke="#a6e3a1" stroke-width="2.68"/><rect x="201.73" y="326.19" width="13.84" height="15.62" rx="4" fill="none" stroke="#a6e3a1" stroke-width="2.68"/><line x1="159.77" y1="334" x2="173.83" y2="334" stroke="#a6e3a1" stroke-width="2.14" stroke-linecap="round"/><line x1="187.67" y1="334" x2="201.73" y2="334" stroke="#a6e3a1" stroke-width="2.14" stroke-linecap="round"/>
+<text x="72" y="418" font-size="19" fill="#cdd6f4">/wrap</text>
+<text x="72" y="450" font-size="13" fill="#a6adc8">conversation to files</text>
+<rect x="331.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<rect x="436.15" y="322.84" width="9.37" height="22.32" rx="3" fill="#fab387" stroke="#fab387" stroke-width="2.68"/><rect x="449.09" y="322.84" width="9.37" height="22.32" rx="3" fill="none" stroke="#fab387" stroke-width="2.68"/><rect x="462.04" y="322.84" width="9.37" height="22.32" rx="3" fill="none" stroke="#fab387" stroke-width="2.68"/><rect x="474.98" y="322.84" width="9.37" height="22.32" rx="3" fill="none" stroke="#fab387" stroke-width="2.68"/><line x1="424.99" y1="334" x2="435.03" y2="334" stroke="#fab387" stroke-width="2.14" stroke-linecap="round"/>
+<text x="351.5" y="418" font-size="19" fill="#cdd6f4">buffer</text>
+<text x="351.5" y="450" font-size="13" fill="#a6adc8">queue not memory</text>
+<rect x="611" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 728.59 311.68 Q 717.43 311.68 717.43 325.07 Q 717.43 334 711.85 334 Q 717.43 334 717.43 342.93 Q 717.43 356.32 728.59 356.32" fill="none" stroke="#89b4fa" stroke-width="2.68"/><path d="M 750.91 311.68 Q 762.07 311.68 762.07 325.07 Q 762.07 334 767.65 334 Q 762.07 334 762.07 342.93 Q 762.07 356.32 750.91 356.32" fill="none" stroke="#89b4fa" stroke-width="2.68"/><circle cx="739.75" cy="334" r="4.46" fill="#89b4fa"/>
+<text x="631" y="418" font-size="19" fill="#cdd6f4">Resume Here</text>
+<text x="631" y="450" font-size="13" fill="#a6adc8">restart contract</text>
+<rect x="890.5" y="246" width="257.5" height="238" rx="14" fill="#1e1e2e" stroke="#cba6f7" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 1019.25 311.24 L 1043.8 320.61 L 1019.25 329.98 L 994.7 320.61 Z" fill="#cba6f7" stroke="#cba6f7" stroke-width="2.28"/><path d="M 1019.25 324.63 L 1043.8 334 L 1019.25 343.37 L 994.7 334 Z" fill="none" stroke="#cba6f7" stroke-width="2.28"/><path d="M 1019.25 338.02 L 1043.8 347.39 L 1019.25 356.76 L 994.7 347.39 Z" fill="none" stroke="#cba6f7" stroke-width="2.28"/>
+<text x="910.5" y="418" font-size="19" fill="#cdd6f4">clean rollups</text>
+<text x="910.5" y="450" font-size="13" fill="#a6adc8">delete absorbed summaries</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">preserve what&apos;s needed; delete what&apos;s absorbed</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>
