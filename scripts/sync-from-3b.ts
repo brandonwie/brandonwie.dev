@@ -685,10 +685,11 @@ async function reconcileFlags(dryRun: boolean, verbose: boolean) {
  * line back into the blog post frontmatter, for posts named in --allow=<file>
  * (newline-separated `category/slug.md` paths).
  *
- * Safety: skips any allowlisted post that is not expanded:true, and any whose
- * hash already matches. Never rewrites body or any other frontmatter field.
- * The allowlist must be audit-verified as format-only; this pass does not
- * itself distinguish format-only from real content change.
+ * Safety: skips blog-first posts, any allowlisted post that is not
+ * expanded:true, and any whose hash already matches. Never rewrites body or
+ * any other frontmatter field. The allowlist must be audit-verified as
+ * format-only; this pass does not itself distinguish format-only from real
+ * content change.
  */
 async function rehashFormatOnly(allowPath: string, dryRun: boolean, verbose: boolean) {
 	console.log('🔁 Re-baselining source_content_hash (format-only allowlist)...');
@@ -715,6 +716,7 @@ async function rehashFormatOnly(allowPath: string, dryRun: boolean, verbose: boo
 	let rehashed = 0;
 	let alreadyCurrent = 0;
 	let skippedNotExpanded = 0;
+	let skippedBlogFirst = 0;
 	let notFound = 0;
 	const seen = new Set<string>();
 
@@ -732,12 +734,16 @@ async function rehashFormatOnly(allowPath: string, dryRun: boolean, verbose: boo
 			continue;
 		}
 
-		const newHash = await computeContentHash(cleanBody(body));
 		const targetPath = join(TARGET_DIR, category, `${slug}.md`);
 		const existing = await readExistingPost(targetPath);
 		if (!existing) {
 			console.log(`⏭️  ${relativePath}: blog post not found`);
 			notFound++;
+			continue;
+		}
+		if (existing.frontmatter?.origin === 'blog') {
+			console.log(`⏭️  ${relativePath}: blog-first post (origin: blog) — skipping`);
+			skippedBlogFirst++;
 			continue;
 		}
 		if (existing.frontmatter?.expanded !== true) {
@@ -746,6 +752,7 @@ async function rehashFormatOnly(allowPath: string, dryRun: boolean, verbose: boo
 			continue;
 		}
 
+		const newHash = await computeContentHash(cleanBody(body));
 		const oldHash = existing.frontmatter.source_content_hash || '(none)';
 		if (oldHash === newHash) {
 			alreadyCurrent++;
@@ -775,6 +782,7 @@ async function rehashFormatOnly(allowPath: string, dryRun: boolean, verbose: boo
 	console.log('📊 Rehash Summary');
 	console.log(`   ${dryRun ? 'Would rehash' : 'Rehashed'}: ${rehashed}`);
 	console.log(`   Already current: ${alreadyCurrent}`);
+	console.log(`   Skipped (blog-first): ${skippedBlogFirst}`);
 	console.log(`   Skipped (not expanded): ${skippedNotExpanded}`);
 	console.log(`   Blog post not found: ${notFound}`);
 	if (missing.length) {
