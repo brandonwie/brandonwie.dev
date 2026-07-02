@@ -28,7 +28,7 @@
 		entries: FeedEntry[];
 	}
 
-	let { campaigns }: { campaigns: FeedCampaign[] } = $props();
+	let { campaigns, path }: { campaigns: FeedCampaign[]; path: string } = $props();
 
 	const PLATFORM_LABEL: Record<string, string> = {
 		linkedin: 'LinkedIn',
@@ -54,12 +54,12 @@
 		name="description"
 		content="Where each idea went — blog posts, X Articles, and LinkedIn posts grouped by campaign."
 	/>
-	<link rel="canonical" href={`${SITE_URL}/feed`} />
+	<link rel="canonical" href={`${SITE_URL}${path}`} />
 </svelte:head>
 
 <main id="main-content" class="feed">
 	<header class="feed__head">
-		<div class="crumb">~/feed</div>
+		<div class="crumb">~{path}</div>
 		<h1 class="feed__title">Social feed</h1>
 		<p class="feed__lede">
 			Where each idea went. One campaign, several surfaces — the long-form canonical plus the posts
