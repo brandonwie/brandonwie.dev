@@ -90,6 +90,11 @@ interface TargetFrontmatter {
 	// Hash guard fields — protect expanded posts from sync overwrite
 	expanded?: boolean; // true after blog narrative expansion
 	source_content_hash?: string; // SHA-256 of cleaned 3B body at last sync
+	// Blog-first marker (NON-TASK lane, /3b:blog-publish v3) — the post was
+	// authored directly in this repo with no 3B source. Sync + --check skip
+	// hash-compare entirely; Step 8.5 knowledge promotion removes this field
+	// and retrofits expanded + source_content_hash.
+	origin?: 'blog';
 }
 
 // ============================================================================
@@ -920,6 +925,23 @@ async function syncPosts() {
 			continue; // Never overwrite expanded posts
 		}
 		// --- END EXPANDED POST PROTECTION ---
+
+		// --- BLOG-FIRST POST PROTECTION (origin: blog) ---
+		// NON-TASK lane posts (/3b:blog-publish v3) are authored directly in
+		// this repo and have no 3B source. If a 3B knowledge file later appears
+		// with the SAME slug, never overwrite the blog-first post and never
+		// hash-compare it (it has no source_content_hash until Step 8.5
+		// promotion retrofits one and removes `origin: blog`).
+		if (existing?.frontmatter?.origin === 'blog') {
+			if (verbose || checkOnly) {
+				console.log(`⏭️  Skipping (blog-first, origin: blog): ${relativePath}`);
+			}
+			skipReasons['blog-first post (origin: blog)'] =
+				(skipReasons['blog-first post (origin: blog)'] || 0) + 1;
+			skipped++;
+			continue;
+		}
+		// --- END BLOG-FIRST POST PROTECTION ---
 
 		// In --check mode, only expanded posts matter — skip the rest
 		if (checkOnly) {
