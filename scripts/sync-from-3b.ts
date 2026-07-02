@@ -874,15 +874,33 @@ async function syncPosts() {
 			continue;
 		}
 
-		// Transform and compute hash
-		const targetFrontmatter = transformFrontmatter(frontmatter, body, category);
-		const cleanedBody = cleanBody(body);
-		const contentHash = await computeContentHash(cleanedBody);
 		const targetPath = join(TARGET_DIR, category, basename(entry.path));
 		const slug = basename(entry.path, '.md');
 
 		// Check if target already exists
 		const existing = await readExistingPost(targetPath);
+
+		// --- BLOG-FIRST POST PROTECTION (origin: blog) ---
+		// NON-TASK lane posts (/3b:blog-publish v3) are authored directly in
+		// this repo and have no 3B source. If a 3B knowledge file later appears
+		// with the SAME slug, never overwrite the blog-first post and never
+		// hash-compare it (it has no source_content_hash until Step 8.5
+		// promotion retrofits one and removes `origin: blog`).
+		if (existing?.frontmatter?.origin === 'blog') {
+			if (verbose || checkOnly) {
+				console.log(`⏭️  Skipping (blog-first, origin: blog): ${relativePath}`);
+			}
+			skipReasons['blog-first post (origin: blog)'] =
+				(skipReasons['blog-first post (origin: blog)'] || 0) + 1;
+			skipped++;
+			continue;
+		}
+		// --- END BLOG-FIRST POST PROTECTION ---
+
+		// Transform and compute hash
+		const targetFrontmatter = transformFrontmatter(frontmatter, body, category);
+		const cleanedBody = cleanBody(body);
+		const contentHash = await computeContentHash(cleanedBody);
 
 		// --- EXPANDED POST PROTECTION ---
 		if (existing?.frontmatter?.expanded === true) {
@@ -925,23 +943,6 @@ async function syncPosts() {
 			continue; // Never overwrite expanded posts
 		}
 		// --- END EXPANDED POST PROTECTION ---
-
-		// --- BLOG-FIRST POST PROTECTION (origin: blog) ---
-		// NON-TASK lane posts (/3b:blog-publish v3) are authored directly in
-		// this repo and have no 3B source. If a 3B knowledge file later appears
-		// with the SAME slug, never overwrite the blog-first post and never
-		// hash-compare it (it has no source_content_hash until Step 8.5
-		// promotion retrofits one and removes `origin: blog`).
-		if (existing?.frontmatter?.origin === 'blog') {
-			if (verbose || checkOnly) {
-				console.log(`⏭️  Skipping (blog-first, origin: blog): ${relativePath}`);
-			}
-			skipReasons['blog-first post (origin: blog)'] =
-				(skipReasons['blog-first post (origin: blog)'] || 0) + 1;
-			skipped++;
-			continue;
-		}
-		// --- END BLOG-FIRST POST PROTECTION ---
 
 		// In --check mode, only expanded posts matter — skip the rest
 		if (checkOnly) {
