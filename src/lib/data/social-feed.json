@@ -1,0 +1,43 @@
+{
+	"campaigns": [
+		{
+			"cluster_id": "2026-06-27-data-layer-retrieval-lanes",
+			"canonical_url": "https://x.com/BrandonWie/status/2070760872356508021",
+			"blog_slug": null,
+			"topic": "Your AI coding agent has four search engines (X Article)",
+			"date": "2026-06-27",
+			"entries": [
+				{
+					"post_id": "2026-06-27-data-layer-retrieval-lanes",
+					"date": "2026-06-27",
+					"platform": "linkedin",
+					"lang": "en",
+					"format": "prose",
+					"topic": "What your AI coding agent's data-layer plugins build and how each fetches",
+					"url": "https://www.linkedin.com/posts/brandonwie_i-caught-myself-doing-something-dumb-using-share-7476511135438143490-gfdg/",
+					"is_canonical": false
+				},
+				{
+					"post_id": "2026-06-27-data-layer-retrieval-lanes-x",
+					"date": "2026-06-27",
+					"platform": "x",
+					"lang": "en",
+					"format": "prose",
+					"topic": "Data-layer retrieval lanes: how each engine fetches (X post linking the article)",
+					"url": "https://x.com/BrandonWie/status/2070761494149734718",
+					"is_canonical": false
+				},
+				{
+					"post_id": "2026-06-27-data-layer-retrieval-lanes-x-article",
+					"date": "2026-06-27",
+					"platform": "x",
+					"lang": "en",
+					"format": "prose",
+					"topic": "Your AI coding agent has four search engines (X Article)",
+					"url": "https://x.com/BrandonWie/status/2070760872356508021",
+					"is_canonical": true
+				}
+			]
+		}
+	]
+}

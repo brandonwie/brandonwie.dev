@@ -19,6 +19,7 @@
 		SITE_NAME,
 		SITE_URL,
 	} from '$lib/seo';
+	import socialFeed from '$lib/data/social-feed.json';
 
 	interface TocHeading {
 		text: string;
@@ -67,6 +68,29 @@
 	const contentLanguage = $derived(contentLocale === 'ko' ? 'ko-KR' : 'en-US');
 	const ogImageUrl = $derived(`${SITE_URL}/og/${meta.slug}.png`);
 	const heroImageUrl = $derived(heroImage(meta.slug));
+
+	// Build-computed reciprocal social links (ADR-053 Phase 6 / social-hub H4):
+	// campaigns in the sanitized feed snapshot whose derived blog_slug matches
+	// this post. No stored backlinks — the join is recomputed every build.
+	const SOCIAL_PLATFORM_LABEL: Record<string, string> = {
+		linkedin: 'LinkedIn',
+		x: 'X',
+		threads: 'Threads',
+		mastodon: 'Mastodon',
+		bluesky: 'Bluesky',
+	};
+	const socialLinks = $derived(
+		socialFeed.campaigns
+			.filter((c) => c.blog_slug === meta.slug)
+			.flatMap((c) => c.entries)
+			.map((entry) => ({
+				url: entry.url,
+				label:
+					entry.platform === 'x' && entry.post_id.endsWith('-x-article')
+						? 'X Article'
+						: (SOCIAL_PLATFORM_LABEL[entry.platform] ?? entry.platform),
+			})),
+	);
 
 	function onHeroError(event: Event) {
 		const img = event.currentTarget as HTMLImageElement;
@@ -274,6 +298,18 @@
 			{/if}
 		</div>
 
+		<!-- Reciprocal social links — computed at build from the feed snapshot -->
+		{#if socialLinks.length}
+			<aside class="post__social" data-pagefind-ignore>
+				<span class="post__social-label">Also published on</span>
+				{#each socialLinks as link (link.url)}
+					<a class="post__social-chip" href={link.url} target="_blank" rel="noopener noreferrer">
+						{link.label}
+					</a>
+				{/each}
+			</aside>
+		{/if}
+
 		<!-- Comments -->
 		<div data-pagefind-ignore>
 			<Giscus slug={meta.slug} lang={locale} />
@@ -417,5 +453,38 @@
 		margin-top: 40px;
 		padding: 24px 0 8px;
 		border-top: 1px solid var(--line);
+	}
+	.post__social {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		align-items: center;
+		margin-top: 32px;
+		padding: 14px 16px;
+		border: 1px solid var(--line2);
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--panel) 45%, transparent);
+	}
+	.post__social-label {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--faint);
+	}
+	.post__social-chip {
+		display: inline-block;
+		padding: 3px 10px;
+		border: 1px solid var(--line2);
+		border-radius: 999px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--muted);
+		text-decoration: none;
+		transition:
+			border-color 0.2s,
+			color 0.2s;
+	}
+	.post__social-chip:hover {
+		border-color: var(--foam);
+		color: var(--foam);
 	}
 </style>

@@ -18,6 +18,8 @@
 		"sync:diff": "deno run --allow-read --allow-write --allow-env --allow-run scripts/sync-from-3b.ts --diff",
 		"sync:reconcile": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts --reconcile",
 		"sync:rehash": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts --rehash",
+		"snapshot:social": "deno run --allow-read --allow-write --allow-env scripts/snapshot-social.ts",
+		"snapshot:social:check": "deno run --allow-read --allow-env scripts/snapshot-social.ts --check",
 		"study:check": "deno run --allow-read --allow-env scripts/validate-study-sources.ts",
 		"hash": "deno run --allow-read --allow-env scripts/compute-content-hash.ts",
 		"translation:status": "tsx scripts/translation-status.ts",
