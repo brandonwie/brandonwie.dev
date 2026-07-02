@@ -19,7 +19,6 @@
 		SITE_NAME,
 		SITE_URL,
 	} from '$lib/seo';
-	import socialFeed from '$lib/data/social-feed.json';
 
 	interface TocHeading {
 		text: string;
@@ -39,6 +38,11 @@
 		draft?: boolean;
 	}
 
+	interface SocialLink {
+		url: string;
+		label: string;
+	}
+
 	interface Props {
 		meta: PostMeta;
 		content: Component | null;
@@ -46,6 +50,7 @@
 		isFallback?: boolean;
 		hasKoreanTranslation?: boolean;
 		headings?: TocHeading[];
+		socialLinks?: SocialLink[];
 	}
 
 	let {
@@ -55,6 +60,7 @@
 		isFallback = false,
 		hasKoreanTranslation = false,
 		headings = [],
+		socialLinks = [],
 	}: Props = $props();
 
 	const showToc = $derived(headings.length >= 3);
@@ -68,29 +74,6 @@
 	const contentLanguage = $derived(contentLocale === 'ko' ? 'ko-KR' : 'en-US');
 	const ogImageUrl = $derived(`${SITE_URL}/og/${meta.slug}.png`);
 	const heroImageUrl = $derived(heroImage(meta.slug));
-
-	// Build-computed reciprocal social links (ADR-053 Phase 6 / social-hub H4):
-	// campaigns in the sanitized feed snapshot whose derived blog_slug matches
-	// this post. No stored backlinks — the join is recomputed every build.
-	const SOCIAL_PLATFORM_LABEL: Record<string, string> = {
-		linkedin: 'LinkedIn',
-		x: 'X',
-		threads: 'Threads',
-		mastodon: 'Mastodon',
-		bluesky: 'Bluesky',
-	};
-	const socialLinks = $derived(
-		socialFeed.campaigns
-			.filter((c) => c.blog_slug === meta.slug)
-			.flatMap((c) => c.entries)
-			.map((entry) => ({
-				url: entry.url,
-				label:
-					entry.platform === 'x' && entry.post_id.endsWith('-x-article')
-						? 'X Article'
-						: (SOCIAL_PLATFORM_LABEL[entry.platform] ?? entry.platform),
-			})),
-	);
 
 	function onHeroError(event: Event) {
 		const img = event.currentTarget as HTMLImageElement;

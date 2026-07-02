@@ -1,5 +1,13 @@
 import type { PageLoad } from './$types';
 import type { Component } from 'svelte';
+import socialLinksBySlug from '$lib/data/social-links.json';
+
+interface SocialLink {
+	url: string;
+	label: string;
+}
+
+const socialLinks = socialLinksBySlug as Record<string, SocialLink[]>;
 
 // POST MODULE TYPE
 // ----------------
@@ -44,6 +52,7 @@ export const load: PageLoad = async ({ params }) => {
 				},
 				headings: headings ?? [],
 				hasKoreanTranslation,
+				socialLinks: socialLinks[params.slug] ?? [],
 			};
 		}
 	}
