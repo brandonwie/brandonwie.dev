@@ -4,7 +4,7 @@ description: >-
   라우트 allowlist를 사용한 block-by-default WAF 접근 방식. 알 수 없는 라우트가 자동 차단되어 blocklist보다
   보안이 강해요.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-06-18'
+updated: '2026-07-02'
 tags:
   - aws
   - waf
@@ -15,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: waf-allowlist-patterns
-source_updated: '2026-06-18'
-translation_date: '2026-06-18'
+source_updated: '2026-07-02'
+translation_date: '2026-07-02'
 references:
   - url: >-
       https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
@@ -206,6 +206,14 @@ search_string         = "/health"
 
 헬스 체크 엔드포인트처럼 하위 경로나 쿼리 파라미터가 절대 붙으면 안 되는 경로에 써요. 이 엄격함 덕분에 공격자가 `/health/../admin` 같은 경로를 덧붙이는 걸 막아줘요.
 
+`EXACTLY`를 골라야 하는 두 번째 이유가 있는데, 놓치기 쉬워요. `STARTS_WITH`는 경로와 그 하위 트리보다 더 많은 걸 매칭하거든요. `STARTS_WITH "/foo"`는 `/foo`와 `/foo/bar`를 매칭하지만, `/foo-bar`나 `/foobar` 같은 형제 접두사도 같이 매칭해요. 하위 트리가 없는 단일 라우트 엔드포인트 — 예를 들어 달랑 하나 있는 `POST /today-zero` — 를 `STARTS_WITH`로 허용하면, 접두사를 공유하는 미래의 형제 경로까지 조용히 다 들여보내는 거예요. `EXACTLY "/today-zero"`가 그 구멍을 막아요.
+
+트레이드오프도 있어요. `EXACTLY`는 trailing slash 변형(`/today-zero/`)과 나중에 추가되는 하위 경로도 거부해서, 항목을 하나씩 따로 등록해야 해요. `/health` 옆에 가상의 `/health/websocket`을 유지하는 것과 같은 규율이죠. 제가 정착한 결정 규칙은 이래요.
+
+- **하위 트리 없는 고정 경로 하나** → `EXACTLY "/foo"`
+- **하위 경로나 쿼리 파라미터가 예상됨** → `STARTS_WITH "/foo"`
+- **하위 트리는 허용하되 형제 경로는 막고 싶음** → 경계 안전 regex `^/foo(/|$)`
+
 ### CONTAINS
 
 ```hcl
@@ -255,6 +263,14 @@ aws wafv2 get-web-acl \
 ```
 
 규칙 정의를 돌려주니 byte match statement가 올바른지 확인할 수 있어요.
+
+출력을 grep하기 전에 알아둘 게 하나 있어요. `get-web-acl`은 각 `ByteMatchStatement.SearchString`을 base64로 인코딩해서 돌려줘요. 규칙이 살아 있어도 JSON에서 `/today-zero`를 검색하면 아무것도 안 나와요. 인코딩된 값으로 grep하거나(`/today-zero`는 `L3RvZGF5LXplcm8=`로 인코딩돼요), field를 base64로 디코딩하세요.
+
+```bash
+aws wafv2 get-web-acl --name app-prod-waf --scope REGIONAL --id <id> \
+  --region ap-northeast-2 --query 'WebACL.Rules' --output json \
+  | grep -c "L3RvZGF5LXplcm8="   # 1 = 존재
+```
 
 ### 차단된 요청 확인
 
@@ -317,6 +333,12 @@ statement { byte_match_statement { search_string = "/v2/spaces" ... } }
 
 **v2 라우트 추가 체크리스트:** 백엔드에 v2 controller를 추가할 때는 항상 `waf/prod_waf.tf`에 대응하는 WAF allowlist 항목도 같이 넣어요. dev WAF는 `/v2/*`를 포괄 허용하니까 거기선 알아서 동작하는데, 바로 그래서 개발 단계에서는 이 문제가 안 잡혀요.
 
+### 반대 케이스: 이미 커버되는 하위 경로
+
+버전 경로 함정에는 Terraform을 건드리기 전에 확인할 가치가 있는 반대 케이스가 있어요. `STARTS_WITH` 항목은 그 아래 namespace 전체를 커버해요. `/blocks`가 이미 allowlist에 있다면 새 `/blocks/complete-overdue` 라우트는 이미 허용된 상태고, 전용 항목을 추가하는 건 중복이에요 — 동작은 그대로인데 WCU(web ACL capacity unit)만 더 쓰는 거죠.
+
+그러니까 확인은 양방향으로 해야 해요. 버전·루트 접두사는 자체 항목이 필요하고, 이미 허용된 접두사 아래 하위 경로는 필요 없어요. 반사적으로 라우트를 열기 전에 WAF `.tf`를 읽고 기존 namespace 항목이 커버하는지 보세요. `terraform plan`이 no-op으로 나오면 이미 허용되고 있다는 뜻이에요.
+
 ## Terraform Plan 읽기: 규칙 변경 시 Set-Diff
 
 기존 규칙에 `byte_match` 구문을 하나만 추가하고 `terraform plan`을 처음 돌려보면 당황하게 돼요. 깔끔한 한 줄 추가로 표시되지 않거든요. AWS provider는 `rule`과 그 안의 `statement` 블록을 set으로 모델링해서, 규칙 전체가 `- rule { … } -> null` 다음에 `+ rule { … }`로 다시 렌더링돼요. 규칙을 지웠다가 다시 만드는 것처럼 보이죠.
@@ -333,7 +355,7 @@ grep -E "^[[:space:]]*\+ +search_string" plan.txt | sed -E 's/.*= "//;s/".*//' |
 
 ## 핵심 교훈
 
-WAF allowlist 설정을 위한 여덟 가지 원칙이에요.
+WAF allowlist 설정을 위한 아홉 가지 원칙이에요.
 
 1. **기본은 차단으로.** 알 수 없는 라우트는 애플리케이션에 절대 닿으면 안 돼요. allowlist 방식이 이걸 자동으로 처리해요.
 2. **API 라우트에는 STARTS_WITH.** 대부분의 라우트에는 쿼리 파라미터나 하위 경로가 붙어요. 일반적인 API 경로에 정확 매칭은 너무 빡빡해요.
@@ -343,3 +365,4 @@ WAF allowlist 설정을 위한 여덟 가지 원칙이에요.
 6. **버전 라우트는 별도 항목이 필요해요.** `STARTS_WITH "/spaces"`는 `/v2/spaces`를 매칭하지 않아요. 버전 접두사마다 자체 allowlist statement가 있어야 해요.
 7. **상태 코드로 거부 계층을 구분해요.** 커스텀 본문과 함께 오는 403은 allowlist 누락, 429는 WAF rate limiting, 504는 요청이 WAF를 통과한 뒤 백엔드가 타임아웃된 거예요. 규칙이 아니라 핸들러를 디버깅해요.
 8. **terminating `allow {}`는 이후 규칙을 건너뛰어요.** allowlist 규칙이 매칭되면 관리형 규칙 그룹과 rate limiting이 그 요청에는 실행되지 않으니, 권한 있는 내부 엔드포인트는 자체 보호를 갖춰야 해요.
+9. **이미 허용된 namespace의 하위 경로는 커버 완료.** `/blocks`에 걸린 `STARTS_WITH` 항목이 `/blocks/complete-overdue`를 이미 허용하니, 전용 항목은 동작 변화 없이 비용만 추가해요. 버전 라우트 규칙의 반대예요. 버전·루트 접두사는 자체 항목이 필요하지만 하위 경로는 아니에요. 규칙을 추가하기 전에 `.tf`와 `terraform plan` no-op으로 확인하세요.

@@ -4,7 +4,7 @@ description: >-
   비동기 업데이트(웹훅, 메시지 큐)를 받을 때 소스의 updatedAt과 로컬 타임스탬프를 비교해서 stale 데이터가 최신 변경을 덮어쓰지
   않도록 보호하는 패턴.
 date: 2026-02-13T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-07-02'
 tags:
   - backend
   - sync
@@ -15,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: updatedAt-staleness-guard
-source_updated: '2026-03-22'
-translation_date: '2026-03-22'
+source_updated: '2026-07-02'
+translation_date: '2026-07-02'
 references:
   - url: 'https://developers.google.com/calendar/api/v3/reference/events'
     title: Google Calendar Events API Reference
@@ -104,9 +104,17 @@ await repo.update(id, {
 
 // ✅ .save()는 @UpdateDateColumn을 트리거함
 await repo.save(entity);
+
+// ⚠️ .upsert()도 ON CONFLICT 경로에서 @UpdateDateColumn을 건너뜀.
+// `updated_at = EXCLUDED.updated_at`으로 entity가 들고 있던 값을 그대로 쓰기 때문에
+// stale한 entity 타임스탬프가 conflict 시 그대로 저장됨
+entity.updatedAt = new Date(); // upsert 전에 갱신 필수
+await repo.upsert(entity, ["uniqueCol"]);
 ```
 
 `updatedAt`이 실제 마지막 수정 시간을 반영하지 않으면, staleness 가드가 잘못된 판단을 내려요. 어떤 ORM 메서드가 자동 타임스탬프를 트리거하고 어떤 게 수동 할당이 필요한지 항상 확인하세요. TypeORM에서는 `.save()`가 `@UpdateDateColumn`을 트리거하지만 `.update()`는 안 해요 — 이 차이가 이 패턴 전체를 조용히 망가뜨릴 수 있어요.
+
+셋 중에 제일 교활한 건 `.upsert()`였어요. 자동 타임스탬프를 건너뛰는 데서 끝나지 않고, ON CONFLICT 경로에서 `updated_at = EXCLUDED.updated_at`을 내보내요. entity가 들고 있던 타임스탬프가 뭐든 그대로 다시 저장된다는 뜻이에요. 그 값이 stale하면 upsert를 아무리 반복해도 record의 `updatedAt`은 영영 안 움직여요. 반복 일정의 단일 인스턴스를 다시 수정하는 케이스에서 이 문제를 만났어요. 수정할 때마다 upsert를 타고 entity에는 여전히 옛 타임스탬프가 실려 있어서, upsert 직전에 entity를 갱신해주기 전까지 `updatedAt`이 얼어붙어 있었죠. `.update()`에 필요한 것과 똑같은 수동 할당이죠. 동작 원리를 보면(적어도 제가 확인한 TypeORM 버전에서는) `EntityManager.upsert`는 entity에 정의된 column만 conflict-overwrite 목록에 추가하고, column이 이미 있으면 `CURRENT_TIMESTAMP`를 주입하지 않아요.
 
 ## 이 패턴이 필요 없는 경우
 

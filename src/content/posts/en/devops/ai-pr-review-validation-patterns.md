@@ -1,8 +1,8 @@
 ---
 title: AI PR Review Validation Patterns
-description: Thirteen patterns where AI code reviewers (Claude, Copilot, Codex) produce false positives, plus the classification framework and reinforcing-comment templates that keep triage fast.
+description: Fourteen patterns where AI code reviewers (Claude, Copilot, Codex) produce false positives, plus the classification framework and reinforcing-comment templates that keep triage fast.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-04-29T00:00:00.000Z
+updated: 2026-07-02T00:00:00.000Z
 tags:
   - devops
   - ai
@@ -11,7 +11,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 75ca09218a401a0f9e19c9cfc881702ee52c90b923c374628c0c8f29dcfd0fff
+source_content_hash: 5622a3af80f8ff795f932f1e97fd10f30555d7da23fdfb873a39eac3c718f9d1
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -278,6 +278,29 @@ sed -n '<claimed-line>p' <claimed-file>
 If the grep returns empty or the line shows different content, the finding is either hallucinated or comparing against a phantom version. Treat every unverified claim as INVALID until grep confirms it. This adds about 5 seconds per finding and catches cross-skill confusion that would otherwise drive 30+ minutes of wasted fix work.
 
 **Reviewer asymmetry (data point, same PR):** the 3b-forge plugin review on the same PR was grounded — 4 of 5 findings valid. Plugin reviewers operating on the actual repo file structure produce higher-precision output than session-scope reviewers (Codex) when the session contains skill name collisions.
+
+### 14. Stale Local Read Under a Live Parallel-Lane Checkout
+
+**What it looks like:** A function you "just read" doesn't match the committed version. `git status` flips between two consecutive commands. A CI run you checked with `--limit 1` looks skipped while the real run is in progress one line down.
+
+**Why it happens:** This one is different from the other thirteen — the stale state is yours, not the AI reviewer's. When another session shares the same working checkout and is actively committing, your in-memory model of a file — or of git and CI state — goes stale between your read and your next claim. You end up reviewing or reporting against bytes that no longer match HEAD.
+
+**Example (codex-hud PR #20):**
+
+The `syncPatchedRuntime` body I read was the parallel lane's mid-edit working-tree state (reconcile-first); the committed version (`b51e659`) had already reordered it to reconcile-after-repair. I nearly added a redundant guard against code that no longer existed. On the same PR, a "Claude review skipped?!" alarm turned out to be `gh run list --limit 1` catching a skipped duplicate `issue_comment` event — the real run was in progress, one line further down the list.
+
+The same failure mode cuts the other way, too. On PR #22 of this blog's own repo, I dismissed a Claude review finding as a false positive because a bare working-tree read showed clean code. The finding was real — a concurrent session on the shared checkout had already fixed the bug locally (`47e90be`), so the pushed head the reviewer analyzed still had it. A second reviewer pass caught the miscall. Over-skepticism from a stale read costs just as much as over-trust: in a multi-session tree, validate AI findings against `git show origin/<branch>:<file>` and `git log`, never a bare working-tree read.
+
+**Prevention:** Before any "done" / "nothing left" / "this is the code" claim on a shared checkout, re-verify ground truth:
+
+```bash
+git rev-parse HEAD
+git status
+git log --oneline
+git show origin/<branch>:<file>   # the bytes the reviewer actually saw
+```
+
+Then read the actual file again — never trust the in-memory model. For CI, list several runs, not `--limit 1`. And when a parallel lane is out-pacing you on the same files, stand down rather than duplicate the work — the session actively implementing owns those changes.
 
 ## Reinforcing Comment Templates
 

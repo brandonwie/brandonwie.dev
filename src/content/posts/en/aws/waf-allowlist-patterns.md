@@ -2,7 +2,7 @@
 title: WAF Allowlist Patterns
 description: Block-by-default WAF approach using route allowlisting. Stronger security than
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-06-18'
+updated: '2026-07-02'
 tags:
   - aws
   - waf
@@ -17,7 +17,7 @@ references:
       https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
     title: Creating and managing an IP set in AWS WAF
     type: official
-source_content_hash: c3231a65f4bcb2a9909bad2aa925f73c7e03e0d91eb878883b891506ee282f01
+source_content_hash: 29eb344a05030ee2ea72a6dcc61fce3a9c7efd271ba587c659870059989ad9fd
 ---
 
 I noticed our production API was receiving thousands of requests to paths like `/wp-admin`, `/phpmyadmin`, and `/.env`. Bots scanning for vulnerabilities, hitting every common exploit path they know. Our API returned 404s for all of them, but each request still consumed compute resources, cluttered logs, and occasionally triggered rate limiting for legitimate users.
@@ -202,6 +202,14 @@ Matches: only `/health`, nothing else.
 
 Use this for health check endpoints and other paths that should never have sub-paths or query parameters. The strictness prevents attackers from appending paths like `/health/../admin`.
 
+There is a second reason to reach for `EXACTLY`, and it is easy to overlook: `STARTS_WITH` matches more than the path and its subtree. `STARTS_WITH "/foo"` matches `/foo` and `/foo/bar`, but it also matches sibling prefixes like `/foo-bar` and `/foobar`. For a single-route endpoint with no subtree -- say, a lone `POST /today-zero` -- allowlisting it with `STARTS_WITH` quietly admits every future sibling path that happens to share the prefix. `EXACTLY "/today-zero"` closes that leak.
+
+The trade-off is that `EXACTLY` also rejects the trailing-slash variant (`/today-zero/`) and any subpath added later -- each one then needs its own entry, the same discipline as maintaining `/health` alongside a hypothetical `/health/websocket`. The decision rule I settled on:
+
+- **Lone fixed path, no subtree** → `EXACTLY "/foo"`
+- **Sub-paths or query parameters expected** → `STARTS_WITH "/foo"`
+- **Subtree wanted, sibling leak not** → boundary-safe regex `^/foo(/|$)`
+
 ### CONTAINS
 
 ```hcl
@@ -251,6 +259,14 @@ aws wafv2 get-web-acl \
 ```
 
 This returns the rule definition so you can confirm the byte match statements are correct.
+
+One thing to know before you grep the output: `get-web-acl` returns each `ByteMatchStatement.SearchString` base64-encoded. Searching the JSON for `/today-zero` finds nothing even when the rule is live. Either grep for the encoded value (`/today-zero` encodes to `L3RvZGF5LXplcm8=`) or base64-decode the field:
+
+```bash
+aws wafv2 get-web-acl --name moba-prod-waf --scope REGIONAL --id <id> \
+  --region ap-northeast-2 --query 'WebACL.Rules' --output json \
+  | grep -c "L3RvZGF5LXplcm8="   # 1 = present
+```
 
 ### Check Blocked Requests
 
@@ -313,6 +329,12 @@ Without the explicit `/v2/spaces` entry, requests silently return 403 in product
 
 **Checklist for new v2 routes:** When adding a v2 controller in the backend, always add a corresponding WAF allowlist entry in `waf/prod_waf.tf`. Dev WAF blanket-allows `/v2/*` so it works there automatically -- which is exactly why you will not catch this in development.
 
+### The Inverse Case: Sub-Paths Are Already Covered
+
+The versioned-route gotcha has an inverse worth checking before you touch Terraform at all. A `STARTS_WITH` entry covers the entire namespace beneath it: if `/blocks` is already allowlisted, a new `/blocks/complete-overdue` route is already allowed, and adding a dedicated entry for it is redundant -- extra WCU (web ACL capacity units) spent for zero change in behavior.
+
+So the check cuts both ways. Versioned and root prefixes need their own entries; sub-paths under an already-allowed prefix do not. Before reflexively opening a route, read the WAF `.tf` to see whether an existing namespace entry covers it -- a `terraform plan` that comes back as a no-op confirms the coverage.
+
 ## Terraform Plan Review: Reading Set-Diff on Rule Changes
 
 One more gotcha shows up the first time you add a single `byte_match` statement to an existing rule and run `terraform plan`. It does not render as a clean one-line addition. The AWS provider models `rule` (and the nested `statement` blocks) as sets, so the entire rule re-renders as `- rule { … } -> null` followed by `+ rule { … }`. That reads like the rule is being deleted and recreated.
@@ -329,7 +351,7 @@ grep -E "^[[:space:]]*\+ +search_string" plan.txt | sed -E 's/.*= "//;s/".*//' |
 
 ## Key Takeaways
 
-Eight principles for WAF allowlist configuration:
+Nine principles for WAF allowlist configuration:
 
 1. **Default to block.** Unknown routes should never reach your application. The allowlist approach handles this automatically.
 2. **Use STARTS_WITH for API routes.** Most routes have query parameters or sub-paths. Exact matching is too restrictive for general API paths.
@@ -339,3 +361,4 @@ Eight principles for WAF allowlist configuration:
 6. **Versioned routes need separate entries.** `STARTS_WITH "/spaces"` does not match `/v2/spaces`. Each version prefix requires its own allowlist statement.
 7. **Status codes identify the rejecting layer.** A 403 with your custom block body means a missing allowlist entry; a 429 is WAF rate limiting; a 504 is the backend timing out after the request already passed WAF -- debug the handler, not the rules.
 8. **A terminating `allow {}` skips later rules.** Once an allowlist rule matches, managed rule groups and rate limiting never run for that request, so privileged internal endpoints must carry their own protection.
+9. **Sub-paths of an allowed namespace are already covered.** A `STARTS_WITH` entry on `/blocks` already allows `/blocks/complete-overdue`, so a dedicated entry adds cost without changing behavior. It is the inverse of the versioned-route rule: version and root prefixes need their own entries, sub-paths do not. Verify with the `.tf` and a `terraform plan` no-op before adding a rule.

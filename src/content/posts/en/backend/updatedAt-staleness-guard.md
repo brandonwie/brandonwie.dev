@@ -2,7 +2,7 @@
 title: updatedAt Staleness Guard
 description: 'When receiving asynchronous updates (webhooks, message queues), compare the'
 date: 2026-02-13T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-07-02'
 tags:
   - backend
   - sync
@@ -18,7 +18,7 @@ references:
   - url: 'https://en.wikipedia.org/wiki/Optimistic_concurrency_control'
     title: Optimistic Concurrency Control
     type: authoritative
-source_content_hash: 5085cd21e888bd0cc7876773f1eb090ace81ab87ef72af84ddab3f06d6dbc058
+source_content_hash: f8472d723499e53b67d9e646ada8c4740103bb523e991af8fdcc7ae9d6056c2e
 expanded: true
 ---
 
@@ -100,9 +100,17 @@ await repo.update(id, {
 
 // ✅ .save() DOES trigger @UpdateDateColumn
 await repo.save(entity);
+
+// ⚠️ .upsert() ALSO skips @UpdateDateColumn on the ON CONFLICT path.
+// It writes `updated_at = EXCLUDED.updated_at` — the value carried on the
+// entity — so a stale entity timestamp is written back verbatim on conflict.
+entity.updatedAt = new Date(); // refresh BEFORE upsert
+await repo.upsert(entity, ["uniqueCol"]);
 ```
 
 If your `updatedAt` doesn't reflect the true last-modification time, the staleness guard makes the wrong decision. Always verify which ORM methods trigger auto-timestamps and which require manual assignment. In TypeORM, `.save()` triggers `@UpdateDateColumn` but `.update()` does not — a distinction that can silently break this entire pattern.
+
+`.upsert()` turned out to be the sneakiest of the three. It doesn't just skip the auto-timestamp — on the ON CONFLICT path it emits `updated_at = EXCLUDED.updated_at`, meaning whatever timestamp the entity happens to be carrying gets written back verbatim. If that value is stale, the record's `updatedAt` never advances no matter how many times the upsert runs. I ran into this with re-edits of a single instance of a recurring event: each edit flowed through an upsert, the entity still carried the old timestamp, and `updatedAt` stayed frozen until the entity was refreshed right before the upsert — the same manual assignment `.update()` needs. The mechanism (at least in the TypeORM version I checked) is that `EntityManager.upsert` adds a column to the conflict-overwrite list only when the entity defines it; it does not inject `CURRENT_TIMESTAMP` when the column is already present.
 
 ## When NOT to Use This
 

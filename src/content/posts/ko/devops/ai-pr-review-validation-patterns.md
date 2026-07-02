@@ -1,10 +1,10 @@
 ---
 title: AI PR 리뷰 검증 패턴
 description: >-
-  AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 13가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크
+  AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 14가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크
   + 보강 주석 템플릿.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-04-29'
+updated: '2026-07-02'
 tags:
   - devops
   - ai
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
-source_updated: '2026-04-29'
-translation_date: '2026-05-10'
+source_updated: '2026-07-02'
+translation_date: '2026-07-02'
 references:
   - url: 'https://docs.github.com/en/rest/pulls/reviews'
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -290,6 +290,29 @@ sed -n '<claimed-line>p' <claimed-file>
 grep이 비어 있거나 line이 다른 내용을 보여주면, finding은 hallucinated이거나 phantom version과 비교 중이에요. grep이 확인할 때까지 모든 미검증 주장을 INVALID로 다루세요. finding당 ~5초 추가되고, 그렇지 않으면 30+ 분 낭비할 cross-skill confusion을 잡아요.
 
 **Reviewer 비대칭(같은 PR의 데이터 포인트):** 같은 PR의 3b-forge plugin review는 grounded였어요 — 5개 중 4개 valid finding. 실제 repo file 구조에서 동작하는 plugin reviewer가 세션 scope reviewer (Codex)보다 — 세션이 skill 이름 충돌을 포함할 때 — 더 높은 정밀도 output을 만들어요.
+
+### 14. 병렬 세션이 작업 중인 checkout에서의 Stale Local Read
+
+**어떻게 보이나:** 방금 읽은 function이 commit된 버전과 달라요. `git status` 결과가 연속으로 실행한 두 명령 사이에 달라져요. `--limit 1`로 확인한 CI run은 skip된 것처럼 보이는데, 진짜 run은 목록 한 줄 아래에서 진행 중이에요.
+
+**왜 이런 일이 생기나:** 이 패턴은 나머지 열세 개와 방향이 달라요 — 이번엔 stale한 게 AI reviewer가 아니라 저예요. 다른 세션이 같은 working checkout을 공유하며 활발하게 commit하고 있으면, file과 git·CI 상태를 담아둔 in-memory model이 읽은 시점과 다음 주장 사이에 stale해져요. 그러면 HEAD와 더 이상 일치하지 않는 bytes를 놓고 review하거나 보고하게 돼요.
+
+**예시 (codex-hud PR #20):**
+
+제가 읽은 `syncPatchedRuntime` body는 병렬 lane이 수정 중이던 working-tree 상태(reconcile-first)였어요. commit된 버전(`b51e659`)은 이미 reconcile-after-repair로 순서를 바꾼 뒤였죠. 이제는 존재하지도 않는 코드를 막겠다고 불필요한 guard를 추가할 뻔했어요. 같은 PR에서 "Claude review가 skip됐다?!" 경보는 `gh run list --limit 1`이 skip된 중복 `issue_comment` event를 잡은 것이었고, 진짜 run은 목록 한 줄 아래에서 진행 중이었어요.
+
+같은 실패 모드는 반대 방향으로도 작동해요. 이 블로그 repo의 PR #22에서는 bare working-tree read에 깨끗한 코드가 보인다는 이유로 Claude review finding을 오탐으로 기각했어요. 그런데 그 finding은 진짜였어요 — 공유 checkout의 다른 세션이 버그를 이미 로컬에서 고쳐둔 상태(`47e90be`)라, reviewer가 분석한 pushed head에는 버그가 그대로 있었거든요. 두 번째 reviewer pass가 이 오판을 잡았어요. stale read에서 나온 과잉 회의(over-skepticism)는 과잉 신뢰만큼 비싸요. multi-session tree에서는 AI finding을 bare working-tree read가 아니라 `git show origin/<branch>:<file>`과 `git log`로 검증하세요.
+
+**예방:** 공유 checkout에서 "done", "남은 것 없음", "이게 그 코드다" 같은 주장을 하기 전에 ground truth를 다시 확인하세요.
+
+```bash
+git rev-parse HEAD
+git status
+git log --oneline
+git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
+```
+
+그다음 실제 file을 다시 읽으세요. in-memory model은 절대 믿지 말고요. CI는 `--limit 1`이 아니라 여러 run을 나열해서 확인하세요. 병렬 lane이 같은 file에서 앞서가고 있다면 작업을 중복하지 말고 물러서세요 — 한창 구현 중인 세션이 그 변경의 주인이니까요.
 
 ## 워크플로
 
