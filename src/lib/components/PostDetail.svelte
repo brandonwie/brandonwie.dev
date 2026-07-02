@@ -284,7 +284,7 @@
 		<!-- Reciprocal social links — computed at build from the feed snapshot -->
 		{#if socialLinks.length}
 			<aside class="post__social" data-pagefind-ignore>
-				<span class="post__social-label">Also published on</span>
+				<span class="post__social-label">{m.also_published_on({}, { locale })}</span>
 				{#each socialLinks as link (link.url)}
 					<a class="post__social-chip" href={link.url} target="_blank" rel="noopener noreferrer">
 						{link.label}

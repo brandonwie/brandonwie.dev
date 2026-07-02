@@ -6,6 +6,7 @@
 	 * Phase 6 / social-hub H4): entries link to the live platform posts, and a
 	 * campaign with a matching published post links to the blog.
 	 */
+	import { m } from '$lib/paraglide/messages';
 	import { SITE_URL } from '$lib/seo';
 
 	interface FeedEntry {
@@ -28,7 +29,11 @@
 		entries: FeedEntry[];
 	}
 
-	let { campaigns, path }: { campaigns: FeedCampaign[]; path: string } = $props();
+	let {
+		campaigns,
+		path,
+		locale,
+	}: { campaigns: FeedCampaign[]; path: string; locale: 'en' | 'ko' } = $props();
 
 	const PLATFORM_LABEL: Record<string, string> = {
 		linkedin: 'LinkedIn',
@@ -39,36 +44,34 @@
 	};
 
 	function entryLabel(entry: FeedEntry): string {
-		const platform = PLATFORM_LABEL[entry.platform] ?? entry.platform;
 		if (entry.platform === 'x' && entry.post_id.endsWith('-x-article')) {
 			return 'X Article';
 		}
+		const platform = PLATFORM_LABEL[entry.platform] ?? entry.platform;
 		if (entry.format === 'thread') return `${platform} thread`;
 		return platform;
+	}
+
+	function blogHref(slug: string): string {
+		return `${path.startsWith('/ko') ? '/ko' : ''}/posts/${slug}`;
 	}
 </script>
 
 <svelte:head>
-	<title>Feed | Brandon Wie</title>
-	<meta
-		name="description"
-		content="Where each idea went — blog posts, X Articles, and LinkedIn posts grouped by campaign."
-	/>
+	<title>{m.social_feed_title({}, { locale })} | Brandon Wie</title>
+	<meta name="description" content={m.social_feed_description({}, { locale })} />
 	<link rel="canonical" href={`${SITE_URL}${path}`} />
 </svelte:head>
 
 <main id="main-content" class="feed">
 	<header class="feed__head">
 		<div class="crumb">~{path}</div>
-		<h1 class="feed__title">Social feed</h1>
-		<p class="feed__lede">
-			Where each idea went. One campaign, several surfaces — the long-form canonical plus the posts
-			that point at it. Links are computed at build from the publishing archive.
-		</p>
+		<h1 class="feed__title">{m.social_feed_title({}, { locale })}</h1>
+		<p class="feed__lede">{m.social_feed_lede({}, { locale })}</p>
 	</header>
 
 	{#if campaigns.length === 0}
-		<p class="feed__empty">Nothing published yet.</p>
+		<p class="feed__empty">{m.social_feed_empty({}, { locale })}</p>
 	{:else}
 		<ol class="feed__list">
 			{#each campaigns as campaign (campaign.cluster_id ?? campaign.entries[0].post_id)}
@@ -83,7 +86,9 @@
 					<ul class="campaign__links">
 						{#if campaign.blog_slug}
 							<li>
-								<a class="chip chip--blog" href={`/posts/${campaign.blog_slug}`}>Blog post</a>
+								<a class="chip chip--blog" href={blogHref(campaign.blog_slug)}
+									>{m.social_feed_blog_post({}, { locale })}</a
+								>
 							</li>
 						{/if}
 						{#each campaign.entries as entry (entry.post_id + entry.platform + entry.lang)}

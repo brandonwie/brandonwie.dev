@@ -5,4 +5,4 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<SocialFeedPage campaigns={data.campaigns} path="/feed" />
+<SocialFeedPage campaigns={data.campaigns} path="/feed" locale="en" />
