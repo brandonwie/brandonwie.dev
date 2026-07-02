@@ -1,5 +1,13 @@
 import type { PageLoad } from './$types';
 import type { Component } from 'svelte';
+import socialLinksBySlug from '$lib/data/social-links.json';
+
+interface SocialLink {
+	url: string;
+	label: string;
+}
+
+const socialLinks = socialLinksBySlug as Record<string, SocialLink[]>;
 
 /**
  * Korean Post Loader with English Fallback
@@ -47,6 +55,7 @@ export const load: PageLoad = async ({ params }) => {
 				isFallback: false,
 				hasKoreanTranslation: true,
 				requestedLang: 'ko',
+				socialLinks: socialLinks[slug] ?? [],
 			};
 		}
 	}
@@ -67,6 +76,7 @@ export const load: PageLoad = async ({ params }) => {
 				isFallback: true,
 				hasKoreanTranslation: false,
 				requestedLang: 'ko',
+				socialLinks: socialLinks[slug] ?? [],
 			};
 		}
 	}

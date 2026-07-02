@@ -11,4 +11,5 @@
 	locale="en"
 	headings={data.headings}
 	hasKoreanTranslation={data.hasKoreanTranslation}
+	socialLinks={data.socialLinks}
 />

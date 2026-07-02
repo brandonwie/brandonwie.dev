@@ -38,6 +38,11 @@
 		draft?: boolean;
 	}
 
+	interface SocialLink {
+		url: string;
+		label: string;
+	}
+
 	interface Props {
 		meta: PostMeta;
 		content: Component | null;
@@ -45,6 +50,7 @@
 		isFallback?: boolean;
 		hasKoreanTranslation?: boolean;
 		headings?: TocHeading[];
+		socialLinks?: SocialLink[];
 	}
 
 	let {
@@ -54,6 +60,7 @@
 		isFallback = false,
 		hasKoreanTranslation = false,
 		headings = [],
+		socialLinks = [],
 	}: Props = $props();
 
 	const showToc = $derived(headings.length >= 3);
@@ -274,6 +281,18 @@
 			{/if}
 		</div>
 
+		<!-- Reciprocal social links — computed at build from the feed snapshot -->
+		{#if socialLinks.length}
+			<aside class="post__social" data-pagefind-ignore>
+				<span class="post__social-label">{m.also_published_on({}, { locale })}</span>
+				{#each socialLinks as link (link.url)}
+					<a class="post__social-chip" href={link.url} target="_blank" rel="noopener noreferrer">
+						{link.label}
+					</a>
+				{/each}
+			</aside>
+		{/if}
+
 		<!-- Comments -->
 		<div data-pagefind-ignore>
 			<Giscus slug={meta.slug} lang={locale} />
@@ -417,5 +436,38 @@
 		margin-top: 40px;
 		padding: 24px 0 8px;
 		border-top: 1px solid var(--line);
+	}
+	.post__social {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		align-items: center;
+		margin-top: 32px;
+		padding: 14px 16px;
+		border: 1px solid var(--line2);
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--panel) 45%, transparent);
+	}
+	.post__social-label {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		color: var(--faint);
+	}
+	.post__social-chip {
+		display: inline-block;
+		padding: 3px 10px;
+		border: 1px solid var(--line2);
+		border-radius: 999px;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		color: var(--muted);
+		text-decoration: none;
+		transition:
+			border-color 0.2s,
+			color 0.2s;
+	}
+	.post__social-chip:hover {
+		border-color: var(--foam);
+		color: var(--foam);
 	}
 </style>
