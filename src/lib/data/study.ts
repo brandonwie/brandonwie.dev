@@ -328,11 +328,6 @@ export interface IterativeSortCopy extends StepperCopy {
 	description: string;
 	/** One localized note per step (component owns the array geometry). */
 	steps: string[];
-	roleLabels: {
-		compare: string;
-		swap: string;
-		sorted: string;
-	};
 }
 
 export interface DivideConquerSortCopy extends StepperCopy {
@@ -340,11 +335,6 @@ export interface DivideConquerSortCopy extends StepperCopy {
 	description: string;
 	/** One localized note per step (component owns the segment geometry). */
 	steps: string[];
-	roleLabels: {
-		split: string;
-		merge: string;
-		sorted: string;
-	};
 }
 
 export interface DsaIIIVisualsCopy {
@@ -1746,11 +1736,6 @@ const dsaIIIContent: Record<StudyLocale, DsaIIIContent> = {
 				previousAriaLabel: 'Previous step',
 				nextAriaLabel: 'Next step',
 				resetAriaLabel: 'Reset to first step',
-				roleLabels: {
-					compare: 'compare',
-					swap: 'swap',
-					sorted: 'sorted',
-				},
 				steps: [
 					'Bubble sort compares adjacent pairs and swaps them when out of order. Start: [5, 1, 4, 2, 8].',
 					'Pass 1: 5 > 1, so swap. The larger value bubbles to the right.',
@@ -1772,11 +1757,6 @@ const dsaIIIContent: Record<StudyLocale, DsaIIIContent> = {
 				previousAriaLabel: 'Previous step',
 				nextAriaLabel: 'Next step',
 				resetAriaLabel: 'Reset to first step',
-				roleLabels: {
-					split: 'divide',
-					merge: 'merge',
-					sorted: 'sorted',
-				},
 				steps: [
 					'Merge sort splits the array in half, sorts each half, then merges. Start: [5, 1, 4, 2].',
 					'Divide: split into [5, 1] and [4, 2].',
@@ -2002,11 +1982,6 @@ const dsaIIIContent: Record<StudyLocale, DsaIIIContent> = {
 				previousAriaLabel: '이전 단계',
 				nextAriaLabel: '다음 단계',
 				resetAriaLabel: '첫 단계로 초기화',
-				roleLabels: {
-					compare: 'compare',
-					swap: 'swap',
-					sorted: 'sorted',
-				},
 				steps: [
 					'Bubble sort는 인접한 쌍을 비교해 순서가 어긋나면 swap합니다. 시작: [5, 1, 4, 2, 8].',
 					'Pass 1: 5 > 1이라 swap합니다. 큰 값이 오른쪽으로 올라갑니다.',
@@ -2027,11 +2002,6 @@ const dsaIIIContent: Record<StudyLocale, DsaIIIContent> = {
 				previousAriaLabel: '이전 단계',
 				nextAriaLabel: '다음 단계',
 				resetAriaLabel: '첫 단계로 초기화',
-				roleLabels: {
-					split: 'divide',
-					merge: 'merge',
-					sorted: '정렬 완료',
-				},
 				steps: [
 					'Merge sort는 배열을 반으로 나누고 각 반을 정렬한 뒤 merge합니다. 시작: [5, 1, 4, 2].',
 					'Divide: [5, 1]과 [4, 2]로 나눕니다.',
