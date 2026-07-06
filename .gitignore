@@ -49,6 +49,10 @@ package-lock.json
 # graphify output (per-repo knowledge graph — rebuild via /graphify)
 graphify-out/
 
+# graphify local Git hooks installed by `graphify hook install`
+.husky/post-checkout
+.husky/post-commit
+
 # context-mode plugin local sandbox + index (per-repo, rebuild on demand)
 .context-mode/
 
