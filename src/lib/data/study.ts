@@ -294,6 +294,75 @@ export interface DsaIIContent {
 	visuals: DsaIIVisualsCopy;
 }
 
+export interface AvlVisualizerCopy extends StepperCopy {
+	title: string;
+	description: string;
+	/** One localized note per step (component owns the tree geometry + rotations). */
+	steps: string[];
+	balanceFactorLabel: string;
+	roleLabels: {
+		insert: string;
+		imbalance: string;
+		rotate: string;
+		balanced: string;
+		remove: string;
+	};
+}
+
+export interface TwoFourVisualizerCopy extends StepperCopy {
+	title: string;
+	description: string;
+	/** One localized note per step (component owns the node geometry + keys). */
+	steps: string[];
+	roleLabels: {
+		overflow: string;
+		promote: string;
+		underflow: string;
+		transfer: string;
+		fusion: string;
+	};
+}
+
+export interface IterativeSortCopy extends StepperCopy {
+	title: string;
+	description: string;
+	/** One localized note per step (component owns the array geometry). */
+	steps: string[];
+}
+
+export interface DivideConquerSortCopy extends StepperCopy {
+	title: string;
+	description: string;
+	/** One localized note per step (component owns the segment geometry). */
+	steps: string[];
+}
+
+export interface DsaIIIVisualsCopy {
+	avl: AvlVisualizerCopy;
+	twoFour: TwoFourVisualizerCopy;
+	iterativeSort: IterativeSortCopy;
+	dcSort: DivideConquerSortCopy;
+}
+
+export interface DsaIIIContent {
+	metaTitle: string;
+	metaDescription: string;
+	eyebrow: string;
+	title: string;
+	subtitle: string;
+	sections: {
+		map: string;
+		lab: string;
+		notes: string;
+		recall: string;
+		inside: string;
+	};
+	coverage: string[];
+	modules: DsaModule[];
+	concepts: DsaConceptCard[];
+	visuals: DsaIIIVisualsCopy;
+}
+
 const indexContent: Record<StudyLocale, StudyIndexContent> = {
 	en: {
 		metaTitle: 'Study',
@@ -331,6 +400,18 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 				modules: ['Module 4', 'Module 5', 'Module 6', 'Module 7'],
 				meta: 'Modules 4-7 · 4 interactive demos',
 				updated: '2026-06-19',
+			},
+			{
+				slug: 'dsa-iii',
+				title: 'Data Structures & Algorithms III',
+				status: 'fresh notes',
+				href: '/study/dsa-iii',
+				summary:
+					'AVL trees and rotations, (2,4) trees with splits and fusions, iterative sorts, and the divide-and-conquer sorts (merge, quicksort, LSD radix, and quickselect), from the DSA III study folder.',
+				learned: ['AVL rotations', '(2,4) tree splits', 'Sort trade-offs', 'Quickselect'],
+				modules: ['Module 8', 'Module 9', 'Module 10', 'Module 11'],
+				meta: 'Modules 8-11 · 4 interactive demos',
+				updated: '2026-07-06',
 			},
 		],
 		approach: {
@@ -379,6 +460,18 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 				modules: ['Module 4', 'Module 5', 'Module 6', 'Module 7'],
 				meta: 'Module 4-7 · 인터랙티브 데모 4개',
 				updated: '2026-06-19',
+			},
+			{
+				slug: 'dsa-iii',
+				title: 'Data Structures & Algorithms III',
+				status: 'fresh notes',
+				href: '/ko/study/dsa-iii',
+				summary:
+					'DSA III 폴더에서 정리한 AVL 트리와 rotation, split과 fusion을 쓰는 (2,4) tree, iterative sort, 그리고 merge·quicksort·LSD radix·quickselect 같은 divide-and-conquer sort 내용입니다.',
+				learned: ['AVL rotation', '(2,4) tree split', '정렬 트레이드오프', 'Quickselect'],
+				modules: ['Module 8', 'Module 9', 'Module 10', 'Module 11'],
+				meta: 'Module 8-11 · 인터랙티브 데모 4개',
+				updated: '2026-07-06',
 			},
 		],
 		approach: {
@@ -1425,4 +1518,502 @@ const dsaIIContent: Record<StudyLocale, DsaIIContent> = {
 
 export function getDsaIIContent(locale: StudyLocale): DsaIIContent {
 	return dsaIIContent[locale];
+}
+
+const dsaIIIContent: Record<StudyLocale, DsaIIIContent> = {
+	en: {
+		metaTitle: 'Data Structures & Algorithms III',
+		metaDescription:
+			'Interactive DSA III notes: AVL trees and rotations, (2,4) trees, and iterative plus divide-and-conquer sorting algorithms.',
+		eyebrow: 'Data Structures & Algorithms',
+		title: 'DSA III: self-balancing trees and divide-and-conquer algorithms.',
+		subtitle:
+			'Self-balancing trees keep search logarithmic no matter the insertion order, and divide-and-conquer breaks sorting into smaller subproblems that combine efficiently. These notes turn my Georgia Tech DSA III material into demos you can step through.',
+		sections: {
+			map: 'learning map',
+			lab: 'visual lab',
+			notes: 'concept notes',
+			recall: 'test yourself',
+			inside: "what's inside",
+		},
+		coverage: [
+			'A Module 0 refresher on Java generics, Big-O, and the balance invariant that ties the course together.',
+			'AVL trees: balance factors and the four rotations that restore O(log n) height.',
+			'(2,4) trees: multi-way nodes that grow by splitting and shrink by fusing.',
+			'Iterative sorts: bubble, insertion, selection, and cocktail shaker, compared by stability and adaptivity.',
+			'Divide-and-conquer sorts: merge, quicksort, LSD radix, and quickselect, plus the comparison lower bound.',
+		],
+		modules: [
+			{
+				kicker: 'Module 8 · AVL',
+				title: 'AVL Trees',
+				summary:
+					"A self-balancing BST that stores each node's balance factor and rotates when its magnitude passes one, so the tree height stays logarithmic no matter the insertion order.",
+				recall: [
+					{
+						q: 'What is the AVL balance factor, and when does a rotation trigger?',
+						a: 'Balance factor = height(left) − height(right). A node is fine at −1, 0, or 1; once the magnitude reaches 2 after an insert or delete, a rotation is required.',
+					},
+					{
+						q: 'How many rotations can an insertion versus a deletion need?',
+						a: 'An insertion needs at most one rotation at the lowest imbalanced node. A deletion can cascade up to O(log n) rotations, because each rebalance can shorten a subtree and unbalance an ancestor.',
+					},
+					{
+						q: 'How do you tell the four rotation cases apart?',
+						a: 'Left-heavy (BF +2): left child leaning left is LL (single right rotation), leaning right is LR (double). Right-heavy (BF −2): right child leaning right is RR (single left rotation), leaning left is RL (double).',
+					},
+					{
+						q: 'What is height(null) by convention, and why does it matter?',
+						a: 'height(null) = −1, so a leaf has height 0 and height(node) = 1 + max(child heights). It keeps balance-factor arithmetic consistent.',
+					},
+					{
+						q: 'After a rotation, what do you recompute first?',
+						a: 'Heights and balance factors of the rotated nodes, bottom-up: the demoted node first, then the promoted new subtree root, whose height depends on it.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 9 · (2,4)',
+				title: '(2,4) Trees',
+				summary:
+					'A multi-way search tree whose nodes hold one to three keys and two to four children. It grows by splitting overflowing nodes and shrinks by borrowing or merging, keeping every leaf at the same depth.',
+				recall: [
+					{
+						q: 'How does a (2,4) tree stay balanced without rotations?',
+						a: 'Every leaf sits at the same depth. Overflow splits a 4-node and promotes its middle key upward, so height only ever grows at the root.',
+					},
+					{
+						q: 'Transfer versus fusion on deletion: what is the difference?',
+						a: 'When a node underflows, transfer borrows a key from an adjacent sibling through the parent if that sibling can spare one; otherwise fusion merges the node, a parent key, and the sibling into one.',
+					},
+					{
+						q: 'Why is a (2,4) tree equivalent to a red-black tree?',
+						a: 'Each (2,4) node maps to a small red-black cluster, and split/fuse correspond to red-black recolorings and rotations, so both give the same O(log n) guarantees.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 10 · Iterative sorts',
+				title: 'Iterative Sorts',
+				summary:
+					'Bubble, insertion, selection, and cocktail-shaker sorts: quadratic comparison sorts separated by stability, adaptivity, in-place behavior, and how many comparisons versus swaps they make.',
+				recall: [
+					{
+						q: 'Which iterative sorts are stable?',
+						a: 'Bubble, insertion, and cocktail shaker are stable. Selection sort is not, because a long-distance swap can reorder equal keys.',
+					},
+					{
+						q: 'Which iterative sort is adaptive, and what does that mean?',
+						a: 'Insertion sort is adaptive: nearly-sorted input approaches O(n) because few shifts are needed. Selection sort always scans the full unsorted region.',
+					},
+					{
+						q: 'Why would you pick selection sort despite its O(n²) time?',
+						a: 'It makes at most O(n) swaps, the fewest of the quadratic sorts, which matters when a write is far more expensive than a comparison.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 11 · Divide & conquer',
+				title: 'Divide & Conquer Sorts',
+				summary:
+					'Merge sort, randomized in-place quicksort with Hoare partition, non-comparison LSD radix sort, and quickselect for order statistics, all framed by the Ω(n log n) comparison lower bound.',
+				recall: [
+					{
+						q: 'Why is O(n log n) a lower bound for comparison sorts?',
+						a: 'A comparison sort is a decision tree with n! leaves, and a binary tree with n! leaves has height at least log₂(n!) = Ω(n log n).',
+					},
+					{
+						q: 'Merge sort versus quicksort: stability and space?',
+						a: 'Merge sort is stable and out-of-place (O(n) extra). Quicksort is in-place (O(log n) stack) but unstable; a randomized pivot gives expected O(n log n).',
+					},
+					{
+						q: 'How does LSD radix sort beat the comparison lower bound?',
+						a: 'It never compares keys. It distributes by digit into buckets, least-significant digit first, in O(k·n) for k digits, so Ω(n log n) does not apply.',
+					},
+					{
+						q: 'What does quickselect do, and how fast is it?',
+						a: 'It finds the kth smallest element in O(n) expected time by partitioning like quicksort but recursing into only the side that holds k.',
+					},
+				],
+			},
+		],
+		concepts: [
+			{
+				title: 'The balance factor',
+				body: 'Every AVL node stores height(left) − height(right). Keeping that in {−1, 0, 1} forces Θ(log n) height, so search, insert, and delete stay O(log n) regardless of insertion order.',
+				source: 'Module 8 · AVL',
+			},
+			{
+				title: 'One rotation on insert, many on delete',
+				body: 'A single insertion unbalances at most one ancestor, fixed by one rotation. A deletion can shorten a subtree and cascade, so you may rotate at several nodes on the way back to the root.',
+				source: 'Module 8 · AVL',
+			},
+			{
+				title: 'Grow by splitting, shrink by fusing',
+				body: 'A (2,4) tree never rotates. An overflowing node splits and promotes its middle key; an underflowing node borrows from a sibling (transfer) or merges (fusion). Height changes only at the root.',
+				source: 'Module 9 · (2,4) Trees',
+			},
+			{
+				title: 'Stability and adaptivity',
+				body: 'Sorts differ by more than Big-O. Stability preserves the order of equal keys; adaptivity means near-sorted input runs faster. Insertion sort has both; selection sort has neither but minimizes swaps.',
+				source: 'Module 10 · Iterative Sorts',
+			},
+			{
+				title: 'The comparison lower bound',
+				body: 'Any sort that only compares keys needs Ω(n log n) comparisons in the worst case, because its decision tree needs n! leaves. Merge and quicksort meet the bound; radix sort sidesteps it by not comparing.',
+				source: 'Module 11 · Divide & Conquer',
+			},
+			{
+				title: 'Partition, then recurse',
+				body: 'Divide-and-conquer splits a problem, solves the parts, and combines. Merge sort splits evenly and merges; quicksort partitions around a pivot; quickselect recurses into just one partition for a linear-expected-time order statistic.',
+				source: 'Module 11 · Divide & Conquer',
+			},
+		],
+		visuals: {
+			avl: {
+				title: 'AVL insertion & deletion',
+				description:
+					'Insert 10, 5, 7 to trigger a left-right double rotation, then insert 3 and delete 10 to trigger a deletion rebalance.',
+				balanceFactorLabel: 'BF',
+				previousLabel: 'Back',
+				nextLabel: 'Next',
+				resetLabel: 'Reset',
+				previousAriaLabel: 'Previous step',
+				nextAriaLabel: 'Next step',
+				resetAriaLabel: 'Reset to first step',
+				roleLabels: {
+					insert: 'insert',
+					imbalance: 'unbalanced',
+					rotate: 'rotate',
+					balanced: 'balanced',
+					remove: 'remove',
+				},
+				steps: [
+					'Insert 10 into the empty tree. One node, balance factor 0.',
+					'Insert 5. It goes left of 10, so the root is left-heavy with balance factor +1, still in range.',
+					'Insert 7. Plain BST placement puts it right of 5, pushing the root to balance factor +2: unbalanced, in a left-right (LR) shape.',
+					'Left-rotate the left child so 7 moves above 5. The subtree is now left-left, ready for the outer rotation.',
+					'Right-rotate the root. 7 becomes the new root with 5 and 10 as children, and every balance factor is back to 0.',
+					'Now show deletion. Insert 3 to the left of 5 first, and the tree stays balanced.',
+					'Delete 10. The root loses its right child and reaches balance factor +2, a left-left (LL) shape.',
+					'A single right rotation lifts 5 to the root, with 3 and 7 as children, balanced again.',
+				],
+			},
+			twoFour: {
+				title: '(2,4) tree: split & fusion',
+				description:
+					'Insert 40 into a full node to force a split, then remove keys to watch a transfer and a fusion.',
+				previousLabel: 'Back',
+				nextLabel: 'Next',
+				resetLabel: 'Reset',
+				previousAriaLabel: 'Previous step',
+				nextAriaLabel: 'Next step',
+				resetAriaLabel: 'Reset to first step',
+				roleLabels: {
+					overflow: 'overflow',
+					promote: 'promote',
+					underflow: 'underflow',
+					transfer: 'transfer',
+					fusion: 'fusion',
+				},
+				steps: [
+					'Start with a full root [10, 20, 30]. A (2,4) node holds up to three keys.',
+					'Insert 40. The node overflows to four keys, so it must split.',
+					'Split: promote the second key (20) to a new root; [10] and [30, 40] become its children. Height grows only at the root.',
+					'Remove 10. The left leaf underflows, but its sibling [30, 40] has a spare key.',
+					'Transfer: 20 drops from the root into the left leaf and 30 moves up. Now root [30] over leaves [20] and [40].',
+					'Remove 20. The left leaf underflows again, and this time the sibling [40] has no spare.',
+					'Fusion: merge the empty leaf, the parent key 30, and [40] into [30, 40]. The root collapses and the height shrinks.',
+				],
+			},
+			iterativeSort: {
+				title: 'Bubble sort, pass by pass',
+				description:
+					'Bubble sort compares adjacent pairs and swaps out-of-order ones; the last-swap check stops once a pass makes no swaps.',
+				previousLabel: 'Back',
+				nextLabel: 'Next',
+				resetLabel: 'Reset',
+				previousAriaLabel: 'Previous step',
+				nextAriaLabel: 'Next step',
+				resetAriaLabel: 'Reset to first step',
+				steps: [
+					'Bubble sort compares adjacent pairs and swaps them when out of order. Start: [5, 1, 4, 2, 8].',
+					'Pass 1: 5 > 1, so swap. The larger value bubbles to the right.',
+					'5 > 4, swap again.',
+					'5 > 2, swap. The largest value keeps moving toward the end.',
+					'5 < 8, no swap, so 8 is now in its final place.',
+					'Pass 2: 1 stays before 4, but 4 > 2, so swap.',
+					'4 < 5, no swap, so 5 is settled too.',
+					'Pass 3 makes no swaps, so the last-swap check stops early. Sorted: [1, 2, 4, 5, 8].',
+				],
+			},
+			dcSort: {
+				title: 'Merge sort: divide & conquer',
+				description:
+					'Split the array down to single elements, then merge the sorted pieces back together.',
+				previousLabel: 'Back',
+				nextLabel: 'Next',
+				resetLabel: 'Reset',
+				previousAriaLabel: 'Previous step',
+				nextAriaLabel: 'Next step',
+				resetAriaLabel: 'Reset to first step',
+				steps: [
+					'Merge sort splits the array in half, sorts each half, then merges. Start: [5, 1, 4, 2].',
+					'Divide: split into [5, 1] and [4, 2].',
+					'Divide again until each piece is a single element, which is already sorted.',
+					'Conquer: merge each pair in order, giving [1, 5] and [2, 4].',
+					'Merge the two sorted halves by comparing fronts, producing [1, 2, 4, 5].',
+				],
+			},
+		},
+	},
+	ko: {
+		metaTitle: 'Data Structures & Algorithms III',
+		metaDescription:
+			'AVL 트리와 rotation, (2,4) tree, 그리고 iterative sort와 divide-and-conquer sort를 다루는 인터랙티브 DSA III 노트입니다.',
+		eyebrow: 'Data Structures & Algorithms',
+		title: 'DSA III: self-balancing 트리와 divide-and-conquer 알고리즘.',
+		subtitle:
+			'self-balancing 트리는 삽입 순서와 상관없이 search를 logarithmic하게 유지하고, divide-and-conquer는 정렬을 더 작은 부분 문제로 나눠 효율적으로 합칩니다. Georgia Tech DSA III에서 공부한 내용을 단계별로 따라가는 데모로 정리했습니다.',
+		sections: {
+			map: '학습 맵',
+			lab: '비주얼 랩',
+			notes: '개념 노트',
+			recall: '스스로 점검',
+			inside: '이 페이지 구성',
+		},
+		coverage: [
+			'Java generic, Big-O, 그리고 과정 전체를 관통하는 balance invariant를 다시 짚는 Module 0 복습.',
+			'AVL 트리: balance factor와 O(log n) 높이를 회복하는 네 가지 rotation.',
+			'(2,4) tree: split으로 커지고 fusion으로 작아지는 multi-way 노드.',
+			'Iterative sort: bubble, insertion, selection, cocktail shaker를 stability와 adaptivity로 비교.',
+			'Divide-and-conquer sort: merge, quicksort, LSD radix, quickselect와 비교 정렬의 lower bound.',
+		],
+		modules: [
+			{
+				kicker: 'Module 8 · AVL',
+				title: 'AVL Trees',
+				summary:
+					'각 노드의 balance factor를 저장하고 그 크기가 1을 넘으면 rotation으로 균형을 맞추는 self-balancing BST입니다. 덕분에 삽입 순서와 무관하게 트리 높이가 logarithmic하게 유지됩니다.',
+				recall: [
+					{
+						q: 'AVL의 balance factor는 무엇이고, 언제 rotation이 필요한가요?',
+						a: 'balance factor = height(left) − height(right)입니다. −1, 0, +1이면 정상이고, insert나 delete 후 크기가 2가 되면 rotation이 필요합니다.',
+					},
+					{
+						q: 'insertion과 deletion은 각각 rotation이 몇 번 필요한가요?',
+						a: 'insertion은 가장 아래의 불균형 노드에서 최대 한 번이면 됩니다. deletion은 균형을 맞출 때마다 subtree가 짧아져 조상이 다시 불균형해질 수 있어 최대 O(log n)번까지 연쇄될 수 있습니다.',
+					},
+					{
+						q: '네 가지 rotation case는 어떻게 구분하나요?',
+						a: 'left-heavy(BF +2)일 때 왼쪽 자식이 왼쪽으로 기울면 LL(single right rotation), 오른쪽으로 기울면 LR(double)입니다. right-heavy(BF −2)일 때 오른쪽 자식이 오른쪽이면 RR(single left rotation), 왼쪽이면 RL(double)입니다.',
+					},
+					{
+						q: '관례상 height(null)은 무엇이고 왜 중요한가요?',
+						a: 'height(null) = −1이라서 leaf의 높이가 0이 되고 height(node) = 1 + max(자식 높이)가 됩니다. balance factor 계산을 일관되게 유지해 줍니다.',
+					},
+					{
+						q: 'rotation 후에는 무엇부터 다시 계산하나요?',
+						a: 'rotation한 노드들의 height와 balance factor를 아래에서 위로 갱신합니다. 내려간 노드를 먼저, 그다음 그 높이에 의존하는 새 subtree root를 갱신합니다.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 9 · (2,4)',
+				title: '(2,4) Trees',
+				summary:
+					'노드마다 key를 1~3개, 자식을 2~4개 갖는 multi-way search tree입니다. overflow된 노드를 split하며 커지고 빌리거나 merge하며 작아지는데, 모든 leaf가 같은 깊이에 유지됩니다.',
+				recall: [
+					{
+						q: '(2,4) tree는 rotation 없이 어떻게 균형을 유지하나요?',
+						a: '모든 leaf가 같은 깊이에 있습니다. overflow가 나면 4-node를 split하고 가운데 key를 위로 promote하므로, 높이는 오직 root에서만 늘어납니다.',
+					},
+					{
+						q: 'deletion에서 transfer와 fusion의 차이는 무엇인가요?',
+						a: '노드가 underflow되면, 인접 sibling이 여유가 있을 때 parent를 거쳐 key를 빌려오는 것이 transfer이고, 여유가 없으면 노드·parent key·sibling을 하나로 합치는 것이 fusion입니다.',
+					},
+					{
+						q: '(2,4) tree가 red-black tree와 동등한 이유는?',
+						a: '각 (2,4) 노드가 작은 red-black 클러스터에 대응하고, split/fuse가 red-black의 recoloring과 rotation에 대응합니다. 같은 O(log n)을 보장합니다.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 10 · Iterative sorts',
+				title: 'Iterative Sorts',
+				summary:
+					'bubble, insertion, selection, cocktail shaker sort입니다. 모두 quadratic 비교 정렬이지만 stability, adaptivity, in-place 여부, 그리고 comparison 대 swap 횟수로 갈립니다.',
+				recall: [
+					{
+						q: 'iterative sort 중 stable한 것은?',
+						a: 'bubble, insertion, cocktail shaker는 stable합니다. selection sort는 멀리 떨어진 swap이 같은 key의 순서를 바꿀 수 있어 stable하지 않습니다.',
+					},
+					{
+						q: 'adaptive한 iterative sort는 무엇이고 무슨 뜻인가요?',
+						a: 'insertion sort가 adaptive합니다. 거의 정렬된 입력에서는 shift가 적어 O(n)에 가까워집니다. selection sort는 항상 정렬 안 된 구간 전체를 훑습니다.',
+					},
+					{
+						q: 'O(n²)인데도 selection sort를 쓰는 이유는?',
+						a: 'quadratic 정렬 중 swap이 최대 O(n)으로 가장 적습니다. write가 comparison보다 훨씬 비쌀 때 유리합니다.',
+					},
+				],
+			},
+			{
+				kicker: 'Module 11 · Divide & conquer',
+				title: 'Divide & Conquer Sorts',
+				summary:
+					'merge sort, Hoare partition을 쓰는 randomized in-place quicksort, 비교하지 않는 LSD radix sort, 그리고 order statistic을 위한 quickselect입니다. Ω(n log n) 비교 lower bound가 배경이 됩니다.',
+				recall: [
+					{
+						q: '비교 정렬의 lower bound가 O(n log n)인 이유는?',
+						a: '비교 정렬은 leaf가 n!개인 decision tree이고, leaf가 n!개인 이진 트리의 높이는 최소 log₂(n!) = Ω(n log n)이기 때문입니다.',
+					},
+					{
+						q: 'merge sort와 quicksort의 stability와 공간은?',
+						a: 'merge sort는 stable하고 out-of-place(O(n) 추가)입니다. quicksort는 in-place(O(log n) stack)지만 unstable하며, randomized pivot으로 기대 O(n log n)이 됩니다.',
+					},
+					{
+						q: 'LSD radix sort는 어떻게 비교 lower bound를 넘나요?',
+						a: 'key를 비교하지 않습니다. least-significant digit부터 자릿수별 bucket으로 분배해 k자리에 대해 O(k·n)으로 동작하므로 Ω(n log n)이 적용되지 않습니다.',
+					},
+					{
+						q: 'quickselect는 무엇을 하고 얼마나 빠른가요?',
+						a: 'quicksort처럼 partition하되 k가 있는 쪽으로만 재귀해서 k번째로 작은 원소를 기대 O(n)에 찾습니다.',
+					},
+				],
+			},
+		],
+		concepts: [
+			{
+				title: 'balance factor',
+				body: '모든 AVL 노드는 height(left) − height(right)를 저장합니다. 이 값을 {−1, 0, +1}로 유지하면 높이가 Θ(log n)이 되어 삽입 순서와 무관하게 search·insert·delete가 O(log n)에 머뭅니다.',
+				source: 'Module 8 · AVL',
+			},
+			{
+				title: 'insert는 한 번, delete는 여러 번',
+				body: '한 번의 insertion은 조상 하나만 불균형하게 만들어 rotation 한 번이면 됩니다. deletion은 subtree를 짧게 만들어 연쇄될 수 있어 root로 돌아가는 길에 여러 노드에서 rotation할 수 있습니다.',
+				source: 'Module 8 · AVL',
+			},
+			{
+				title: 'split으로 크고 fusion으로 작게',
+				body: '(2,4) tree는 rotation을 쓰지 않습니다. overflow 노드는 split하며 가운데 key를 promote하고, underflow 노드는 sibling에서 빌리거나(transfer) 합칩니다(fusion). 높이는 root에서만 바뀝니다.',
+				source: 'Module 9 · (2,4) Trees',
+			},
+			{
+				title: 'stability와 adaptivity',
+				body: '정렬은 Big-O만으로 갈리지 않습니다. stability는 같은 key의 순서를 보존하고, adaptivity는 거의 정렬된 입력을 더 빠르게 처리합니다. insertion sort는 둘 다 갖고, selection sort는 둘 다 없지만 swap을 최소화합니다.',
+				source: 'Module 10 · Iterative Sorts',
+			},
+			{
+				title: '비교 정렬의 lower bound',
+				body: 'key만 비교하는 정렬은 최악의 경우 Ω(n log n)번 비교해야 합니다. decision tree에 leaf가 n!개 필요하기 때문입니다. merge와 quicksort는 이 한계에 도달하고, radix sort는 비교하지 않아 이를 우회합니다.',
+				source: 'Module 11 · Divide & Conquer',
+			},
+			{
+				title: 'partition 후 재귀',
+				body: 'divide-and-conquer는 문제를 나누고, 부분을 풀고, 합칩니다. merge sort는 반씩 나눠 merge하고, quicksort는 pivot을 기준으로 partition하며, quickselect는 한쪽 partition으로만 재귀해 기대 선형 시간에 order statistic을 찾습니다.',
+				source: 'Module 11 · Divide & Conquer',
+			},
+		],
+		visuals: {
+			avl: {
+				title: 'AVL 삽입과 삭제',
+				description:
+					'10, 5, 7을 넣어 left-right double rotation을 일으킨 뒤, 3을 넣고 10을 지워 deletion 후 rebalance를 봅니다.',
+				balanceFactorLabel: 'BF',
+				previousLabel: '이전',
+				nextLabel: '다음',
+				resetLabel: '초기화',
+				previousAriaLabel: '이전 단계',
+				nextAriaLabel: '다음 단계',
+				resetAriaLabel: '첫 단계로 초기화',
+				roleLabels: {
+					insert: 'insert',
+					imbalance: '불균형',
+					rotate: 'rotate',
+					balanced: '균형',
+					remove: '삭제',
+				},
+				steps: [
+					'빈 트리에 10을 insert합니다. 노드 하나, balance factor 0.',
+					'5를 insert합니다. 10의 왼쪽으로 가서 root가 balance factor +1로 left-heavy가 되지만 아직 정상 범위입니다.',
+					'7을 insert합니다. 일반 BST 규칙으로 5의 오른쪽에 놓이면서 root가 balance factor +2가 됩니다. left-right(LR) 모양의 불균형입니다.',
+					'왼쪽 자식을 left-rotate해서 7을 5 위로 올립니다. 이제 subtree가 left-left 모양이 되어 바깥 rotation 준비가 됩니다.',
+					'root를 right-rotate합니다. 7이 새 root가 되고 5와 10이 자식이 되며, 모든 balance factor가 0으로 돌아옵니다.',
+					'이번엔 deletion을 봅니다. 먼저 3을 5의 왼쪽에 insert합니다. 트리는 균형을 유지합니다.',
+					'10을 삭제합니다. root가 오른쪽 자식을 잃고 balance factor +2, 즉 left-left(LL) 모양이 됩니다.',
+					'single right rotation으로 5가 root로 올라가고 3과 7이 자식이 됩니다. 다시 균형입니다.',
+				],
+			},
+			twoFour: {
+				title: '(2,4) tree: split과 fusion',
+				description:
+					'가득 찬 노드에 40을 insert해 split을 일으키고, 이어서 key를 remove하며 transfer와 fusion을 살펴봅니다.',
+				previousLabel: '이전',
+				nextLabel: '다음',
+				resetLabel: '초기화',
+				previousAriaLabel: '이전 단계',
+				nextAriaLabel: '다음 단계',
+				resetAriaLabel: '첫 단계로 초기화',
+				roleLabels: {
+					overflow: 'overflow',
+					promote: 'promote',
+					underflow: 'underflow',
+					transfer: 'transfer',
+					fusion: 'fusion',
+				},
+				steps: [
+					'가득 찬 root [10, 20, 30]에서 시작합니다. (2,4) 노드는 key를 최대 3개까지 담습니다.',
+					'40을 insert합니다. 노드가 key 4개로 overflow되어 split해야 합니다.',
+					'Split: 두 번째 key(20)를 새 root로 promote하고, [10]과 [30, 40]이 자식이 됩니다. 높이는 root에서만 늘어납니다.',
+					'10을 remove합니다. 왼쪽 leaf가 underflow되지만 sibling [30, 40]에 여유 key가 있습니다.',
+					'Transfer: 20이 root에서 왼쪽 leaf로 내려오고 30이 위로 올라갑니다. 이제 root [30] 아래에 leaf [20]과 [40]이 있습니다.',
+					'20을 remove합니다. 왼쪽 leaf가 다시 underflow되는데, 이번엔 sibling [40]에 여유가 없습니다.',
+					'Fusion: 빈 leaf, 부모 key 30, [40]을 [30, 40]으로 합칩니다. root가 collapse되고 높이가 줄어듭니다.',
+				],
+			},
+			iterativeSort: {
+				title: 'Bubble sort, pass별로',
+				description:
+					'Bubble sort는 인접한 쌍을 비교해 순서가 어긋나면 swap하고, 한 pass에서 swap이 없으면 last-swap 검사로 멈춥니다.',
+				previousLabel: '이전',
+				nextLabel: '다음',
+				resetLabel: '초기화',
+				previousAriaLabel: '이전 단계',
+				nextAriaLabel: '다음 단계',
+				resetAriaLabel: '첫 단계로 초기화',
+				steps: [
+					'Bubble sort는 인접한 쌍을 비교해 순서가 어긋나면 swap합니다. 시작: [5, 1, 4, 2, 8].',
+					'Pass 1: 5 > 1이라 swap합니다. 큰 값이 오른쪽으로 올라갑니다.',
+					'5 > 4, 다시 swap합니다.',
+					'5 > 2, swap합니다. 가장 큰 값이 계속 끝으로 이동합니다.',
+					'5 < 8, swap 안 합니다. 이제 8이 제자리에 놓였습니다.',
+					'Pass 2: 1은 4 앞에 그대로 있고, 4 > 2라 swap합니다.',
+					'4 < 5, swap 안 합니다. 5도 자리를 잡았습니다.',
+					'Pass 3에서 swap이 없으므로 last-swap 검사로 조기 종료합니다. 정렬 완료: [1, 2, 4, 5, 8].',
+				],
+			},
+			dcSort: {
+				title: 'Merge sort: divide & conquer',
+				description: '배열을 원소 하나까지 나눈 뒤, 정렬된 조각들을 다시 merge합니다.',
+				previousLabel: '이전',
+				nextLabel: '다음',
+				resetLabel: '초기화',
+				previousAriaLabel: '이전 단계',
+				nextAriaLabel: '다음 단계',
+				resetAriaLabel: '첫 단계로 초기화',
+				steps: [
+					'Merge sort는 배열을 반으로 나누고 각 반을 정렬한 뒤 merge합니다. 시작: [5, 1, 4, 2].',
+					'Divide: [5, 1]과 [4, 2]로 나눕니다.',
+					'각 조각이 원소 하나가 될 때까지 다시 나눕니다. 원소 하나는 이미 정렬된 상태입니다.',
+					'Conquer: 각 쌍을 순서대로 merge해 [1, 5]와 [2, 4]를 만듭니다.',
+					'정렬된 두 반을 front끼리 비교하며 merge해 [1, 2, 4, 5]를 얻습니다.',
+				],
+			},
+		},
+	},
+};
+
+export function getDsaIIIContent(locale: StudyLocale): DsaIIIContent {
+	return dsaIIIContent[locale];
 }
