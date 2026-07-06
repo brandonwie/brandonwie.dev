@@ -116,7 +116,7 @@
 	<section id="recall" class="mt-16 scroll-mt-24">
 		{@render secHead(content.sections.recall)}
 		<div class="mt-5 grid gap-4 lg:grid-cols-2">
-			{#each content.modules as module, index (index)}
+			{#each content.modules as module (module.kicker)}
 				<div class="study-card p-5">
 					<p class="font-mono text-xs uppercase tracking-wider text-foam">{module.kicker}</p>
 					<h3 class="mt-2 font-sans text-base font-semibold text-ink">{module.title}</h3>
