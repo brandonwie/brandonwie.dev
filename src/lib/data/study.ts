@@ -320,7 +320,6 @@ export interface TwoFourVisualizerCopy extends StepperCopy {
 		underflow: string;
 		transfer: string;
 		fusion: string;
-		settled: string;
 	};
 }
 
@@ -1726,7 +1725,6 @@ const dsaIIIContent: Record<StudyLocale, DsaIIIContent> = {
 					underflow: 'underflow',
 					transfer: 'transfer',
 					fusion: 'fusion',
-					settled: 'balanced',
 				},
 				steps: [
 					'Start with a full root [10, 20, 30]. A (2,4) node holds up to three keys.',
@@ -1983,7 +1981,6 @@ const dsaIIIContent: Record<StudyLocale, DsaIIIContent> = {
 					underflow: 'underflow',
 					transfer: 'transfer',
 					fusion: 'fusion',
-					settled: '균형',
 				},
 				steps: [
 					'가득 찬 root [10, 20, 30]에서 시작합니다. (2,4) 노드는 key를 최대 3개까지 담습니다.',

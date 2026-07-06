@@ -175,7 +175,7 @@
 
 			{#each frame.nodes as node (node.id)}
 				{@const role = node.role}
-				<g class="transition-opacity duration-200 motion-reduce:transition-none">
+				<g>
 					<circle
 						cx={node.x}
 						cy={node.y}
