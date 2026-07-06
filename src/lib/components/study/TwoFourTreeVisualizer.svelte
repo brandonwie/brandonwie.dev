@@ -112,10 +112,10 @@
 			<h3 class="text-lg font-semibold text-ink">{copy.title}</h3>
 			<p class="mt-2 text-sm leading-6 text-muted">{copy.description}</p>
 		</div>
-		<span class="font-mono text-xs text-faint">{step + 1}/{copy.steps.length}</span>
+		<span class="font-mono text-xs text-faint">{step + 1}/{frames.length}</span>
 	</div>
 
-	<Stepper length={copy.steps.length} bind:step labels={copy} />
+	<Stepper length={frames.length} bind:step labels={copy} />
 
 	<div class="mt-5 overflow-x-auto">
 		<svg viewBox="0 0 360 200" class="min-w-[20rem] max-w-full" role="img" aria-label={copy.title}>
@@ -174,6 +174,6 @@
 	</div>
 
 	<p class="mt-5 border-l border-accent bg-bg px-3 py-2 text-sm leading-6 text-muted">
-		{step + 1}. {copy.steps[step]}
+		{step + 1}. {copy.steps[step] ?? ''}
 	</p>
 </article>
