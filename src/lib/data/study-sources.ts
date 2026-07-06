@@ -145,3 +145,68 @@ export const DSA_II_SOURCE_FILES: StudySourceFile[] = [
 		role: 'slide-summary',
 	},
 ];
+
+export const DSA_III_SOURCE_ROOT_LABEL = 'personal/study/gt-dsa/dsa-iii';
+
+export const DSA_III_SOURCE_FILES: StudySourceFile[] = [
+	{
+		path: '_index.md',
+		sha256: '33130c9c300a28f99083f4f2dc5c9a386eb36cb1f44f1fa5b72e766ecc01b5e4',
+		role: 'index',
+	},
+	{
+		path: 'm8-avl-trees.md',
+		sha256: 'c9a188135831788d2bd0b7a0539953861a7be6aab280094dda3b8661ae645904',
+		role: 'primary-note',
+	},
+	{
+		path: 'm9-2-4-trees.md',
+		sha256: '6c9c9958f09a3488c688b1d67a1e074542b1e49aa01dad89f5973322047dbb5e',
+		role: 'primary-note',
+	},
+	{
+		path: 'm10-iterative-sorts.md',
+		sha256: '479429343405464f8cb8a54e31e2e9b9ffeec886145989a9f8d9eae15c6028fd',
+		role: 'primary-note',
+	},
+	{
+		path: 'm11-divide-conquer-sorts.md',
+		sha256: 'a6aba4bb0435579b2d6646306adf4de40c509c4ddcb4d4f3308aa4f842b035a7',
+		role: 'primary-note',
+	},
+	{
+		path: 'refs/m0-analysis-of-algorithms-summary.md',
+		sha256: '383b0178fa1306008e00d4620da417a1ddb9ddd09948fa7f3cb2bda0c6706fb6',
+		role: 'slide-summary',
+	},
+	{
+		path: 'refs/m0-iterators-summary.md',
+		sha256: 'a1990f5815366b47d6ae4322541f9a4d1c85f3b110f3090621c94f68fe7df637',
+		role: 'slide-summary',
+	},
+	{
+		path: 'refs/m8-binary-search-trees-summary.md',
+		sha256: '831d64cc99344312785f843a75f5ca69cc633714b69ebd31599cbde34741c44f',
+		role: 'slide-summary',
+	},
+	{
+		path: 'refs/m8-avl-trees-summary.md',
+		sha256: 'd673460522f67feeed09985d2cf99380654a53e75c2f4723cff26001bdafbef1',
+		role: 'slide-summary',
+	},
+	{
+		path: 'refs/m8-pfaff-bst-performance-summary.md',
+		sha256: '699f3eaeb893fafc5c8c5b779f486391986f6f835c795ad83cfc2b56b7293986',
+		role: 'slide-summary',
+	},
+	{
+		path: 'refs/m9-2-4-trees-slides-summary.md',
+		sha256: 'dbee34f5e427643ce0da7da2fbf0abc4cdac1c0f0396b9e7e6f9a5179db967a7',
+		role: 'slide-summary',
+	},
+	{
+		path: 'refs/m10-iterative-sorts-summary.md',
+		sha256: '0cc79e028280ea762acf55c5ab6f3477918b2645c09df8dcd8317907c269d534',
+		role: 'slide-summary',
+	},
+];
