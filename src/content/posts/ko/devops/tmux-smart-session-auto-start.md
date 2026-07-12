@@ -2,7 +2,7 @@
 title: tmux 스마트 세션 자동 시작
 description: 'iTerm2 Profile Command(`tmux-smart-attach`)로 tmux를 자동 시작해서, 새 터미널 창마다 독립된 tmux 세션을 갖고 닫힌 창의 세션은 재사용하는 방법이에요.'
 date: 2026-02-25T00:00:00.000Z
-updated: '2026-06-05'
+updated: '2026-07-13'
 tags:
   - devops
   - tmux
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: tmux-smart-session-auto-start
-source_updated: '2026-06-05'
-translation_date: '2026-06-14'
+source_updated: '2026-07-13'
+translation_date: '2026-07-13'
 references:
   - url: 'https://man7.org/linux/man-pages/man1/tmux.1.html'
     title: tmux(1) man page
@@ -29,7 +29,7 @@ references:
 
 모든 컨텍스트에서 안정적으로 동작하는 방법에 안착할 때까지 세 번을 갈아엎었어요.
 
-> **업데이트 (2026-06-05):** 제 환경에서는 이제 이 방식으로 tmux를 자동 시작하지 않아요 — 터미널 워크스페이스 매니저(Herdr)가 그 레이어를 맡게 되면서, 필요할 때만 tmux를 수동으로 띄워요. 아래 패턴은 독립형 iTerm2 스타일 창에서는 여전히 유효해서, 지금의 일상 설정이라기보다 참고용으로 남겨둬요.
+> **업데이트 (2026-07-04):** 이제 제 환경에서는 터미널 워크스페이스 매니저(Herdr)가 그 레이어를 맡고 있어서 더 이상 기본 방식은 아니에요. 한번은 Herdr의 `[terminal].default_shell`을 `tmux-smart-attach` wrapper에 연결해 봤는데 그렇게 하니까 새 Herdr pane마다 tmux가 중첩된 채로 시작하더라고요. 원하던 게 아니라서 다시 빼버렸어요. 그래도 독립형 iTerm2 스타일 창에서는 이 wrapper가 여전히 유효하고 tmux 중첩을 정말 원할 때는 Herdr에서 명시적으로 켜는 옵션으로 쓸 수 있어요(아래 Herdr 설정 참고). Herdr 버전은 기본 터미널 정책이 아니라 opt-in으로 생각하면 돼요.
 
 ## 뻔한 방법의 문제
 
@@ -39,17 +39,18 @@ iTerm2의 "Send text at start" 설정에 `tmux new -A -s main\n`을 넣으면 `-
 
 안착하기 전에 세 가지 방법을 시도했어요:
 
-| 옵션                        | 장점                              | 단점                                                  |
-| --------------------------- | --------------------------------- | ----------------------------------------------------- |
-| iTerm2 "Send text at start" | 간단, 한 줄 설정                  | 조건 분기 없음, 모든 창이 같은 세션                   |
-| .zshrc 자동 시작(폐기됨)    | 전체 셸 로직, 창별 세션           | 비터미널 zsh 컨텍스트가 깨짐 (VS Code, .zshrc 소싱 스크립트) |
-| iTerm2 Profile Command(선택) | 셸 프로파일과 분리, 스킵 조건 불필요 | 빠른 닫기/열기 시 알려진 race condition               |
+| 옵션                          | 장점                                   | 단점                                                        |
+| ----------------------------- | -------------------------------------- | ----------------------------------------------------------- |
+| iTerm2 "Send text at start"   | 간단, 한 줄 설정                       | 조건 분기 없음, 모든 창이 같은 세션                         |
+| .zshrc 자동 시작(폐기됨)      | 전체 셸 로직, 창별 세션                | 비터미널 zsh 컨텍스트가 깨짐 (VS Code, .zshrc 소싱 스크립트) |
+| iTerm2 Profile Command(선택)  | 셸 프로파일과 분리, 스킵 조건 불필요   | 빠른 닫기/열기 시 알려진 race condition                     |
+| Herdr `default_shell` wrapper | Herdr 네이티브 설정, 앱 재시작 없이 reload | tmux를 Herdr 아래에 중첩, 키·마우스 처리에서 의도적 트레이드오프 필요 |
 
 `.zshrc` 방식은 처음엔 괜찮아 보였어요 — 비iTerm2 컨텍스트를 건너뛰려고 guard 조건(`$TERM_PROGRAM`, `[[ -t 0 ]]`)을 넣었죠. 하지만 zsh 프로파일을 소싱하는 프로그램들(VS Code 통합 터미널, `zsh -l`을 쓰는 셸 스크립트)이 여전히 tmux 블록을 예상치 못하게 실행시킬 수 있었어요. 근본 문제는 이거예요: `.zshrc`는 너무 많은 컨텍스트에서 실행돼서 안전하게 게이트하기 어려워요.
 
 ## 해결 방법: iTerm2 Profile Command
 
-tmux 시작을 iTerm2 Profile Command로 옮기면 컨텍스트 문제가 완전히 사라져요 — 스크립트는 iTerm2가 탭을 열 때만 실행되고, VS Code나 SSH, 스크립트 컨텍스트에서는 절대 실행되지 않아요.
+tmux 시작을 iTerm2 Profile Command로 옮기면 컨텍스트 문제가 완전히 사라져요 — 스크립트는 iTerm2가 탭을 열 때만 실행되고 VS Code나 SSH, 스크립트 컨텍스트에서는 절대 실행되지 않아요.
 
 **스크립트 위치:** `~/.local/bin/tmux-smart-attach`
 
@@ -78,13 +79,37 @@ fi
 
 **iTerm2 설정:** Profiles → General → Command → "Custom Shell" 선택 → 절대 경로 지정: `/Users/<username>/.local/bin/tmux-smart-attach`
 
+### 선택 사항: Herdr에서 명시적으로 켜기
+
+Herdr를 터미널 워크스페이스 매니저로 쓰면서 각 pane을 tmux 안에서 시작하고 싶다면, Herdr의 터미널 실행 파일을 같은 wrapper로 지정하고 서버 설정을 reload하면 돼요:
+
+```toml
+[terminal]
+default_shell = "/Users/brandonwie/.local/bin/tmux-smart-attach"
+shell_mode = "non_login"
+```
+
+```bash
+herdr server reload-config
+```
+
+`shell_mode = "non_login"`은 Herdr가 이 wrapper를 pane 프로세스로 실행하게 해요. wrapper 자체의 `#!/bin/zsh -l` shebang이 tmux를 `exec`하기 전에 로그인 셸 환경을 먼저 로드하니까, PATH와 도구는 그대로 쓸 수 있어요. Herdr 0.7.1에서 직접 확인해보니 `reload-config` 직후 새로 분할한 pane이 `tmux new-session -s 0`으로 뜨더라고요.
+
+Herdr를 원래의 pane 시작 방식으로 되돌리려면, `[terminal]` 오버라이드 전체를 지우고 다시 reload하면 돼요:
+
+```bash
+herdr server reload-config
+```
+
+이걸 opt-in으로 둔 데는 이유가 있어요 — tmux를 Herdr 아래에 중첩시키거든요. 그러니 각 Herdr pane이 그냥 평범한 셸로 열리길 바란다면 `[terminal].default_shell`은 설정하지 않고 두면 돼요.
+
 ## 동작 방식
 
 스크립트는 간단한 결정 트리를 따라요:
 
 1. detach된 tmux 세션이 있는지 확인해요 (`#{session_attached}`가 0인 세션)
-2. 있으면, 첫 번째 detached 세션(가장 낮은 번호)에 attach해요
-3. 없으면, 가장 낮은 미사용 번호로 새 세션을 만들어요
+2. 있으면 첫 번째 detached 세션(가장 낮은 번호)에 attach해요
+3. 없으면 가장 낮은 미사용 번호로 새 세션을 만들어요
 
 ### 세션 번호 매기기
 
@@ -110,13 +135,14 @@ gap-filling 로직 덕분에 세션 1을 kill하면(`tmux kill-session -t 1`) �
 
 ## 알려진 제한 사항
 
-빠른 닫기/열기 시 race condition이 있어요: `Cmd+W` 직후 바로 `Cmd+N`을 하면 중복 세션이 생길 수 있어요. iTerm2가 창을 완전히 닫는 데 ~1초가 걸리거든요(애니메이션 + pty 정리). 그 사이 tmux 서버는 이전 세션을 여전히 attached로 봐요. `kill -0` PID 체크와 sleep-retry 방식을 시도했지만, iTerm2의 닫기 파이프라인이 non-blocking 해결책을 쓰기엔 너무 느려요. 실제로는 문제를 거의 일으키지 않아요 — 중복 세션은 다음번에 그냥 재사용되거든요.
+빠른 닫기/열기 시 race condition이 있어요: `Cmd+W` 직후 바로 `Cmd+N`을 하면 중복 세션이 생길 수 있어요. iTerm2가 창을 완전히 닫는 데 ~1초가 걸리거든요(애니메이션 + pty 정리). 그 사이 tmux 서버는 이전 세션을 여전히 attached로 봐요. `kill -0` PID 체크와 sleep-retry 방식을 시도했지만 iTerm2의 닫기 파이프라인이 non-blocking 해결책을 쓰기엔 너무 느려요. 실제로는 문제를 거의 일으키지 않아요 — 중복 세션은 다음번에 그냥 재사용되거든요.
 
 ## 언제 사용하면 좋을까
 
 - 각 터미널 창마다 자체 tmux 세션을 원할 때
 - detach된 세션 재사용이 필요할 때 (창 닫고, 다시 열면, 세션이 돌아와요)
 - 여러 터미널 컨텍스트(iTerm2, VS Code, SSH)에서 서로 다른 tmux 동작이 필요할 때
+- 새 Herdr pane마다 tmux 안에서 시작하길 원하고 그에 따라오는 multiplexer 중첩 동작을 감수할 때
 
 ## 언제 사용하지 않으면 좋을까
 
@@ -124,6 +150,7 @@ gap-filling 로직 덕분에 세션 1을 kill하면(`tmux kill-session -t 1`) �
 - iTerm2의 `-CC` control mode를 쓸 때 (셸이 아니라 iTerm2가 라이프사이클을 관리해야 해요)
 - SSH 연결 끊김 후에도 tmux 세션이 유지돼야 하는 서버에서 (다른 패턴 — `exec` 없이 `tmux attach || tmux new` 사용)
 - 터미널 워크스페이스 매니저(Herdr 등)가 이미 최상위 워크스페이스 모델을 맡고 있을 때 — 그 아래에서 tmux를 자동 시작하면 중첩이 생기고, 터미널 레벨의 키·마우스 처리와 충돌할 수 있어요
+- Herdr pane이 기본적으로 평범한 셸로 열리길 기대할 때 — 이 경우 Herdr의 `[terminal].default_shell`을 설정하지 않고 두면 Herdr가 `$SHELL`로 폴백해요
 
 ## 마무리
 

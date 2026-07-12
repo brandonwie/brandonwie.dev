@@ -3,7 +3,7 @@ title: "Claude Code Agent Teams"
 description: >-
   여러 Claude Code 인스턴스를 팀으로 조율하는 실험적 기능의 설정, 패턴, 주의사항을 알아봅니다.
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-05-20'
+updated: '2026-07-13'
 tags:
   - ai-ml
   - claude-code
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: '2026-05-20'
-translation_date: '2026-06-14'
+source_updated: '2026-07-13'
+translation_date: '2026-07-13'
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Claude Code 세션 팀 조율하기
@@ -54,6 +54,8 @@ Teams, subagent, solo 세션의 구분이 중요해요. 잘못 고르면 조율 
 | 순차 작업, 같은 file 편집       | Solo 세션  |
 
 Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cross-layer 조율(frontend + backend + test 동시 진행), 그리고 발견 사항을 공유해야 하는 독립 모듈 개발이에요.
+
+결과를 거둬들이는 쪽에서 뒤늦게 깨달은 주의점이 하나 있어요. 팀원의 출력을 리드 세션으로 다시 읽어와야 한다면, `name`이나 `team_name` 없는 동기 `Agent` 호출을 쓰는 편이 나아요. 그 최종 메시지가 tool 결과로 바로 돌아오거든요. 반면 이름이 붙었거나 백그라운드로 도는 팀원의 분석 내용은 `SendMessage`가 도착하기 전까지(도착한다는 보장도 없이) 오케스트레이터에는 안 보여요. 그러니 실제로 결과물을 손에 쥐어야 하는 fan-out 후 수집 단계에서는 이름 붙은 팀원에 기대지 마세요.
 
 ## 언제 Teams를 쓰면 안 될까
 
@@ -97,7 +99,7 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 
 ## 겪은 어려움들
 
-이 섹션이 이 글이 존재하는 이유예요. 공식 문서는 해피 패스만 다뤄요. 아래 내용은 전부 깨진 세션, 잃어버린 작업, 골치 아픈 debugging을 거치며 배운 거예요.
+이 섹션이 이 글이 존재하는 이유예요. 공식 문서는 해피 패스만 다뤄요. 아래 내용은 전부 깨진 세션과 잃어버린 작업을 거치며 배운 거지, 문서에서 배운 게 아니에요.
 
 **실험적이고 문서화되지 않은 edge case.** 이 기능은 experimental로 표시되어 있어요. error 복구, 팀원별 context 한도, 작업 의존성 해결 방식은 시행착오로 배웠어요. 문서가 기본은 다루지만 실패 모드는 안 다뤄요.
 
@@ -132,7 +134,9 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 
 **Deferred tool 가시성 편향.** TeamCreate를 올바르게 문서화한 뒤에도, Claude는 `team_name` 없이 `Agent` tool을 계속 사용했어요 -- 항상 split pane 없이 in-process로 실행돼요. 근본 원인: `Agent` tool은 항상 기본 도구 목록에 보이지만, `TeamCreate`는 `ToolSearch`로 로드해야 하거든요. Claude는 보이는 도구를 먼저 선택해요. 해결법은 `SessionStart` hook(`session-start-team-preload.py`)으로 세션 시작 시 Claude에게 TeamCreate 사전 로드를 상기시키는 거였어요. advisory 출력에 명시적 3단계 workflow가 포함돼요: `ToolSearch` → `TeamCreate` → `Agent(team_name)`. 핵심: `Agent` without `team_name` = in-process subprocess; `Agent` WITH `team_name` = tmux split pane. 이 차이는 알지 못하면 보이지 않아요.
 
-**팀원 summary-field 함정 (조용한 deliverable 손실).** 팀원이 메시지를 돌려보낼 때, 답장에는 `summary` 필드(UI 미리보기용 5-10단어)와 `message` 필드(전체 내용)가 모두 있어요. 어떤 팀원들은 `summary` 필드에만 "X 완료, 붙여넣을 준비 됨" 같은 메타 요약을 넣고 message 본문은 비워두거나 메타를 다시 적어요. 실제 deliverable은 절대 도착하지 않아요. 4월 초 3-agent 준비 팀에서 이걸 겪었어요: 3명 중 2명이 summary-only 메시지를 돌려보냈고, 사전 콘텐츠 메시지 없이 idle 알림이 도착했어요. 리드 세션은 "idle"을 작업 완료로 해석하고 넘어갔어요. 근본 원인: 팀원 prompt가 deliverable이 어디에 들어가야 하는지 명시적으로 말해주지 않아서 -- 팀원들이 summary를 보고서로 취급한 거예요. **수정:** 모든 팀원 브리핑은 명시적으로 "전체 deliverable은 message 본문에, summary 필드는 메타데이터 전용으로 최대 10단어"라고 말해야 해요. 똑같이 중요한 것: _사전 콘텐츠 메시지 없는_ idle 알림은 작업 완료가 아니라 silent failure로 취급하세요. 복구는 단순해요 -- idle 팀원에게 `SendMessage`로 깨워서 보고서를 inline으로 요청하면 돼요.
+**팀원 summary-field 함정 (조용한 deliverable 손실).** 팀원이 메시지를 돌려보낼 때, 답장에는 `summary` 필드(UI 미리보기용 5-10단어)와 `message` 필드(전체 내용)가 모두 있어요. 어떤 팀원들은 `summary` 필드에만 "X 완료, 붙여넣을 준비 됨" 같은 메타 요약을 넣고 message 본문은 비워두거나 메타를 다시 적어요. 실제 deliverable은 절대 도착하지 않아요. 4월 초 3-agent 준비 팀에서 이걸 겪었어요: 3명 중 2명이 summary-only 메시지를 돌려보냈고, 사전 콘텐츠 메시지 없이 idle 알림이 도착했어요. 리드 세션은 "idle"을 작업 완료로 해석하고 넘어갔어요. 근본 원인: 팀원 prompt가 deliverable이 어디에 들어가야 하는지 명시적으로 말해주지 않아서 -- 팀원들이 summary를 보고서로 취급한 거예요. **수정:** 모든 팀원 브리핑은 명시적으로 "전체 deliverable은 message 본문에, summary 필드는 메타데이터 전용으로 최대 10단어"라고 말해야 해요. 똑같이 중요한 것: _사전 콘텐츠 메시지 없는_ idle 알림은 작업 완료가 아니라 silent failure로 취급하세요. 복구는 믿을 게 못 돼요. idle 팀원에게 `SendMessage`로 보고서를 inline 요청해도 제때 전달된다는 보장이 없고, 늦은 결과물이 한 턴 뒤에 오거나 필요한 시점 전에 안 올 수도 있어요. 확실한 해법은 구조적이에요. fan-out 후 수집 단계라면 `name`이나 `team_name` 없는 _동기_ `Agent` 호출을 쓰세요. 그 최종 메시지가 tool 결과로 바로 돌아와서, deliverable이 보이지 않는 summary 필드에 갇힐 일이 없어요. 이름 붙었거나 백그라운드로 도는 팀원은 출력을 inline으로 다시 읽을 필요가 없는 작업에만 쓰세요.
+
+**tool이 제한된 worker 타입은 아예 메시지를 못 보내요.** summary-field 함정에는 더 고약한 변종이 있어요. 도구 목록에서 `SendMessage`와 `Write`가 통째로 빠진 worker 타입(Read, Glob, Grep, Bash만 가진 읽기 전용 worker)은 백그라운드 보고서를 구조적으로 전달할 수 없어요. 오케스트레이터에는 idle 알림만 오고 그게 끝이에요. 전달 도구 자체가 worker의 도구함에 없으니 아무리 다시 지시해도 안 고쳐져요. 2026-07-10에 백그라운드 진단 worker 4명으로 이걸 겪었어요. 원인을 알아내기까지 네 번 넘게 헛되이 재촉했죠. **수정:** 백그라운드로 제한된 worker 타입에 fan-out할 때는 file-drop 전달 계약을 미리 정하고("전체 보고서를 Bash heredoc으로 `<약속한-경로>`에 써라"), 오케스트레이터가 idle ping마다 그 file을 읽게 하세요. Bash가 있는 worker는 Write 도구가 없어도 `cat > file <<'EOF'`는 언제든 할 수 있거든요. 결과가 inline으로 돌아와야 한다면 이름 없는 동기 `Agent` 호출이 여전히 더 간단한 해법이에요.
 
 ## 제한 사항 요약
 
@@ -151,6 +155,8 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 - 유휴 팀원이 다른 에이전트의 진행 중 작업을 가져갈 수 있음 (명시적 소유권 지정 필요)
 - Worktree에서 gitignored file 누락 (팀원이 개인 설정을 못 읽음)
 - Deferred tool(TeamCreate 등)은 ToolSearch로 로드하기 전까지 안 보임
+- 이름 붙은/백그라운드 팀원은 결과물을 inline으로 안정적으로 돌려주지 못함 (fan-out 후 수집 단계엔 동기 `Agent` 호출 사용)
+- tool이 제한된 worker(`SendMessage`나 `Write` 없음)는 백그라운드 보고서를 아예 전달 못 함 (file-drop 계약 사용)
 
 ## 예시 prompt
 
@@ -174,3 +180,5 @@ Agent Teams는 실질적인 조율 문제를 해결해요: 공유 상태가 있�
 가장 중요한 교훈은: 도구가 존재하지 않는다고 결론 내리기 전에 확인하세요. Claude Code의 deferred tool은 검색하기 전까지 안 보여요. 한 세션에서의 잘못된 가정 하나가 설정에 전파되어 며칠간 이후 모든 세션의 품질을 떨어뜨렸어요. 보이는 도구 목록이 아니라 `ToolSearch`로 확인하세요.
 
 두 번째 교훈은 v2.1.138 binary-strings 감사에서 나왔어요: 설정 파일은 의도를 기술하고, 동작은 runtime detector가 결정해요. 문서대로 동작하지 않을 땐 바이너리의 stderr(`claude --debug`)에서 runtime이 실제로 뭘 골랐는지를 grep하세요. `[BackendRegistry] Selected:` 줄이 ground truth이고, `settings.json`은 그렇지 않아요.
+
+세 번째 교훈은 작업을 띄우는 게 아니라 거둬들이는 것에 관한 거예요. 이름 붙었거나 백그라운드로 도는 팀원의 출력은 메시지가 우연히 도착하기 전까지 리드에게 안 보이고, 그 메시지는 안정적으로 오지 않아요. 팀원이 deliverable을 summary 필드에 묻어버렸거나, worker의 도구함에 메시지 보낼 방법이 아예 없어서죠. 결과물을 정말 손에 쥐어야 할 땐 동기 `Agent` 호출이 최종 메시지를 tool 결과로 바로 돌려줘요. 이름 붙은 팀원과 백그라운드 팀원은 출력을 inline으로 다시 읽을 필요가 전혀 없는 작업에만 남겨두세요.

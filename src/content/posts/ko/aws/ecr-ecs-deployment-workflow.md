@@ -2,7 +2,7 @@
 title: ECR/ECS 배포 워크플로우
 description: 'Amazon ECR과 ECS를 사용한 컨테이너 배포 전체 과정 — 인증부터 롤링 업데이트, 트러블슈팅까지 정리했어요.'
 date: 2025-04-29T00:00:00.000Z
-updated: '2026-03-15'
+updated: '2026-07-13'
 tags:
   - aws
   - ecs
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ecr-ecs-deployment-workflow
-source_updated: '2026-03-15'
-translation_date: '2026-02-25'
+source_updated: '2026-07-13'
+translation_date: '2026-07-13'
 references:
   - url: >-
       https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-types.html
@@ -35,27 +35,36 @@ references:
     type: official
 ---
 
-첫 ECS 배포에서 세 시간을 날렸어요. ECR에 이미지를 푸시하고, task definition을 업데이트했는데 서비스가 아무것도 안 하고 가만히 있더라고요. 알고 보니 ECS가 새 task definition revision을 만들긴 했는데, 서비스는 여전히 이전 revision을 가리키고 있었어요. `register-task-definition`과 `update-service`가 순서대로 실행해야 하는 별개의 단계라는 걸 아무도 안 알려줬어요. ECR/ECS 배포를 제대로 하기까지 겪은 많은 교훈 중 첫 번째였어요.
+첫 ECS 배포는 GitHub Actions 로그에서 완벽해 보였어요. 초록색 체크 표시가 쭉 떠 있었죠. 그런데 실제로 도는 서비스를 확인해 보니 여전히 예전 이미지를 서빙하고 있더라고요. task definition은 등록됐는데 정작 ECS 서비스한테 그걸 쓰라고 아무도 안 알려준 거예요. 안정적인 컨테이너 배포에 이르기까지 겪은 "되는 것 같은데 실은 안 되는" 순간들, 그 첫 번째였어요.
 
-## 왜 중요한가
+Docker 컨테이너를 AWS에 배포하면서 `docker build`부터 자동 롤백이 붙은 무중단 롤링 업데이트까지 전체 파이프라인을 이해하고 싶다면, 이 글이 단계마다 짚어줘요. 문서가 미리 경고해 주지 않는 함정까지요.
+
+## 문제
 
 컨테이너화된 애플리케이션을 AWS에 배포하려면 여러 서비스를 조율해야 해요 -- 이미지 저장용 ECR, 오케스트레이션용 ECS, 컴퓨팅용 Fargate -- 여기에 인증 플로우, 이미지 태깅 전략, 배포 설정이 필요해요. 명확한 엔드투엔드 워크플로우가 없으면 배포가 에러 투성이가 돼요. 잘못된 저장소에 이미지가 푸시되고, task definition이 오래된 이미지를 참조하고, 롤링 업데이트가 다운타임을 일으키고, 실패한 배포에 자동 롤백이 없어요.
 
-## 직접 겪으며 배운 것들
+## 직접 겪은 어려움
 
 이것들 전부 프로덕션에서 저를 힘들게 했어요:
 
 - **ECR 인증은 세션 기반이에요.** Docker 로그인 토큰이 12시간 뒤 만료돼요. CI/CD 파이프라인이 푸시 전에 토큰을 갱신하지 않으면 "no basic auth credentials"라는 암호 같은 에러와 함께 조용히 실패해요.
-- **Task definition 버전 관리가 헷갈려요.** ECS는 `register-task-definition`을 호출할 때마다 새 revision을 만들지만, 서비스가 자동으로 최신 revision을 선택하지 않아요. 새 revision ARN으로 서비스를 명시적으로 업데이트해야 해요.
+- **Task definition 버전 관리가 헷갈려요.** ECS는 `register-task-definition`을 호출할 때마다 새 revision을 만들지만 서비스가 자동으로 최신 revision을 선택하지 않아요. 새 revision ARN으로 서비스를 명시적으로 업데이트해야 해요.
 - **롤링 업데이트 퍼센트 계산이 직관적이지 않아요.** `minimum_healthy_percent`와 `maximum_percent`는 절대값이 아니라 `desired_count`에 대한 상대값이에요. 배포 중 실제 task 수는 세 값의 조합에 따라 달라져요.
-- **Health check 타이밍 갭이 배포를 죽여요.** Health check grace period가 너무 짧으면, 아직 시작 중인 task를 ECS가 종료해요(특히 JVM이나 NestJS처럼 콜드 스타트가 느린 앱). 무한 배포 루프가 생겨요.
-- **Circuit breaker가 기본으로 활성화되어 있지 않아요.** `deployment_circuit_breaker` 없이는 잘못된 이미지가 ECS가 실패하는 task를 끝없이 재시도하게 만들어요. 직접 개입할 때까지 Fargate 비용이 계속 나가요.
+- **Health check 타이밍 갭이 배포를 죽여요.** Health check grace period가 너무 짧으면 아직 시작 중인 task를 ECS가 종료해요(특히 JVM이나 NestJS처럼 콜드 스타트가 느린 앱). 무한 배포 루프가 생겨요.
+- **Circuit breaker가 기본으로 활성화되어 있지 않아요.** `deployment_circuit_breaker` 없이는 잘못된 이미지가 ECS로 하여금 실패하는 task를 끝없이 재시도하게 만들어요. 직접 개입할 때까지 Fargate 비용이 계속 나가요.
+- **`--force-new-deployment`는 새로 푸시한 태그를 절대 배포하지 않아요.** 지금 task definition이 고정해 둔 이미지 참조를 그대로 다시 당겨올 뿐이에요. `:v1.0.6`을 푸시하고 강제 재배포하면 새 태그를 고정한 task-def revision을 새로 등록하고 `update-service --task-definition <반환된 ARN>`을 호출하지 않는 한 조용히 예전 이미지가 다시 떠요. `register-task-definition`이 돌려주는 ARN을 꼭 붙잡으세요. 다음 revision 번호를 넘겨짚으면 안 돼요.
+- **`batch-get-image`로 manifest를 캡처할 때는 assertion이 없으면 fail-open이에요.** 맞지 않는 manifest는 `failures[]`에 들어가는데 명령은 그대로 0으로 끝나요. 그래서 단순하게 `--query 'images[0].imageManifest'`로 캡처하면 비어 있거나 null인 롤백 아티팩트를 성공한 것처럼 남겨요. `set -euo pipefail` 아래에서 `jq -e` 복합 assertion 하나로 캡처를 막아 두세요(`failures`가 비어 있고, 이미지가 정확히 하나이고, `imageManifest`가 null 아닌 `mediaType`을 가진 문자열일 것). 한 가지 주의할 점은 `--accepted-media-types`가 세 값만 허용한다는 거예요(Docker manifest v1/v2, OCI image manifest v1). manifest-list나 OCI-index 타입은 플래그 값으로 거부되니, index 기반 태그는 이 플래그 없이 다시 실행하세요.
+- **롤백 태그 복원**: `aws ecr put-image --image-tag <tag> --image-manifest file://saved.json --image-manifest-media-type "$(jq -r '.mediaType' saved.json)"`로 미리 캡처해 둔 manifest에서 덮어쓴 mutable 태그를 되살려요. 고정된 태그를 덮어쓰는 푸시 전에 반드시 먼저 캡처해 두세요.
 
 ## 사용하면 좋을 때
 
 Docker 컨테이너를 AWS에서 관리형 오케스트레이션으로 배포하거나, Kubernetes 복잡성 없이 AWS 네이티브 CI/CD를 원하거나, 무중단 롤링 배포가 필요하거나, 이미 Terraform으로 AWS 인프라를 관리하고 있을 때 적합해요.
 
+## 쓰지 않는 게 좋을 때
+
 단일 정적 사이트(S3 + CloudFront 사용), 멀티 클라우드 요구사항(Kubernetes 사용), 매우 짧은 배치 작업(Lambda 사용), 로컬 개발(Docker Compose 사용), 예산 제한이 있는 사이드 프로젝트(Docker가 설치된 t3.micro EC2가 더 저렴)에는 건너뛰세요.
+
+이런 함정들을 염두에 두고, 아래에서 아키텍처와 배포 파이프라인의 각 단계를 살펴볼게요.
 
 ## 아키텍처 개요
 
@@ -80,7 +89,9 @@ flowchart LR
 
 ## ECR: 이미지 저장소
 
-ECR은 AWS의 관리형 Docker 컨테이너 레지스트리예요. Terraform으로 저장소를 만드는 것부터 시작해요:
+ECR은 AWS의 관리형 Docker 컨테이너 레지스트리예요. 여기에 빌드한 이미지가 올라가 있다가, ECS가 컨테이너로 실행하려고 당겨가요.
+
+### ECR 저장소 만들기
 
 ```hcl
 resource "aws_ecr_repository" "app" {
@@ -117,9 +128,11 @@ docker push \
   ${ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/my-app:latest
 ```
 
-인증 토큰이 12시간 뒤 만료된다는 걸 기억하세요. CI/CD에서는 항상 푸시 전에 갱신해야 해요.
+이미지가 ECR에 올라가면 이제 ECS가 배포를 넘겨받아요. 새 task definition을 등록하고 그걸 쓰라고 ECS 서비스에 알려주는 흐름이에요.
 
 ## ECS 배포 흐름
+
+### 전체 배포 파이프라인
 
 코드 푸시부터 실행 중인 task까지의 전체 배포 순서예요:
 
@@ -164,13 +177,17 @@ aws ecs update-service \
   --force-new-deployment
 ```
 
-핵심은 3단계가 선택이 아니라는 거예요. `update-service` 없이는 새 task definition이 존재해도 ECS가 이전 revision을 계속 실행해요.
+마지막 명령어의 플래그 하나는 짚고 넘어갈 함정이에요. `--force-new-deployment`는 새로 푸시한 태그를 배포하지 않아요. 지금 task definition이 이미 고정해 둔 이미지 참조를 그대로 다시 당겨올 뿐이에요. `:v1.0.6`을 푸시하고 강제 재배포하면 조용히 예전 이미지가 다시 떠요. 이 글 맨 앞의 "초록 체크, 그런데 옛날 서비스" 실패와 똑같은 거예요. 모양만 살짝 다를 뿐이죠.
+
+새 태그를 정말로 배포하려면, 그 태그를 고정한 task-definition revision을 새로 등록하고 `update-service --task-definition <반환된 ARN>`을 호출해야 해요. 다음 revision 번호가 비어 있다고 넘겨짚지 말고, `register-task-definition`이 돌려주는 ARN을 붙잡으세요. 동시에 도는 다른 배포가 그 번호를 먼저 채갈 수도 있거든요. 엉뚱한 revision을 가리키는 건 CI는 통과하고 프로덕션에서 터지는, 딱 그런 조용한 실수예요.
+
+위 수동 단계는 원리를 보여줘요. 하지만 프로덕션에서는 무중단 배포가 필요하죠. 그게 바로 롤링 업데이트가 등장하는 지점이에요.
 
 ## 롤링 업데이트
 
 ### 동작 방식
 
-ECS가 task를 하나씩 교체해서 무중단을 보장해요. `desired_count = 2`일 때 일반적인 롤링 업데이트는 이렇게 생겼어요:
+ECS가 task를 하나씩 교체해서 무중단을 보장해요. 핵심은 이거예요. 이전 task를 드레인하고 종료하기 전에, 새 task가 먼저 시작해서 health check를 통과해요. `desired_count = 2`일 때는 이렇게 흘러가요:
 
 ```text
 Time     | Old v1.0 | New v2.0 | Total | Status
@@ -297,7 +314,7 @@ flowchart LR
     H --> I["Complete to v2.0"]
 ```
 
-`deployment_circuit_breaker` 없이는 잘못된 이미지가 ECS가 실패하는 task를 끝없이 재시도하게 만들어요. 직접 개입할 때까지 Fargate 비용이 계속 나가요. 프로덕션 서비스에는 반드시 활성화하세요:
+`deployment_circuit_breaker` 없이는 잘못된 이미지가 ECS로 하여금 실패하는 task를 끝없이 재시도하게 만들어요. 직접 개입할 때까지 Fargate 비용이 계속 나가요. 프로덕션 서비스에는 반드시 활성화하세요:
 
 ```hcl
 deployment_circuit_breaker {
@@ -306,9 +323,11 @@ deployment_circuit_breaker {
 }
 ```
 
+자주 나오는 질문이 하나 있어요. 배포 도중에 auto-scaling이 끼어들면 어떻게 될까요? ECS가 알아서 잘 처리해요.
+
 ## Auto-Scaling과 배포
 
-Auto-scaling은 배포 중에도 멈추지 않아요. 계속 동작하고, 그 상호작용을 이해해 두면 좋아요:
+Auto-scaling은 배포 중에도 멈추지 않아요. 계속 동작하고 그 상호작용을 이해해 두면 좋아요:
 
 ```mermaid
 flowchart LR
@@ -380,7 +399,7 @@ aws application-autoscaling register-scalable-target \
 
 ## GitHub Actions 워크플로우
 
-전체 파이프라인을 처리하는 프로덕션 수준의 GitHub Actions 워크플로우예요:
+다음 워크플로우는 `main`에 푸시하면 Docker 이미지를 빌드하고, ECR에 푸시하고, task definition을 업데이트하고, ECS에 배포하는 것까지 한 번에 처리해요:
 
 ```yaml
 name: Deploy to ECS
@@ -433,7 +452,7 @@ jobs:
           wait-for-service-stability: true
 ```
 
-`wait-for-service-stability: true` 플래그가 중요해요. 이거 없으면 워크플로우가 배포가 시작되자마자 성공으로 처리돼요. 배포가 끝났을 때가 아니라요. 배포가 실패하면 CI도 실패해야 해요.
+`wait-for-service-stability: true` 플래그가 중요해요. 이거 없으면 워크플로우가 배포가 시작되자마자 성공으로 처리돼요. 배포가 끝났을 때가 아니라요. 배포가 실패하면 CI도 실패해야 하잖아요. 파이프라인을 자동화했으니, 이제 배포를 오래도록 안정적으로 유지해 주는 실천들을 볼게요.
 
 ## 모범 사례
 
@@ -471,6 +490,21 @@ Git SHA 태그가 가장 유용해요. 프로덕션에서 뭔가 깨졌을 때, 
     }
   ]
 }
+```
+
+### 롤백: 덮어쓴 태그 복원
+
+Circuit breaker는 ECS 서비스를 이전 task definition으로 되돌려줘요. 하지만 ECR에서 mutable 태그를 이미 덮어썼다면 손을 쓸 수 없어요. 그 시점엔 예전 이미지 참조가 그냥 사라진 거예요. 되살리려면 덮어쓰는 푸시 전에 이미지 manifest를 캡처해 두고, 나중에 복원해야 해요. 순서가 전부예요. 고정된 태그를 덮어쓰는 푸시가 있기 전에 캡처해야 해요. 덮어쓴 다음엔 캡처할 게 남아 있지 않으니까요.
+
+캡처가 발목을 잡는 부분이기도 해요. `aws ecr batch-get-image`는 fail-open이에요. 맞지 않는 manifest는 `failures[]` 배열에 들어가는데 명령은 여전히 0으로 끝나요. 그래서 단순하게 `--query 'images[0].imageManifest'`를 쓰면 비어 있거나 null인 아티팩트를 남기는데 정작 필요해지는 순간까지는 성공한 것처럼 보여요. `set -euo pipefail` 아래에서 `jq -e` 복합 assertion 하나로 캡처를 막아 두세요. `failures` 배열이 비어 있고, 이미지가 정확히 하나 돌아왔고, `imageManifest`가 null 아닌 `mediaType`을 가진 문자열이어야 해요. 또 하나 날카로운 부분은 `--accepted-media-types`인데, 세 값만 허용해요(Docker manifest v1, Docker manifest v2, OCI image manifest v1). manifest-list와 OCI-index 타입은 플래그 값으로 거부되니, index 기반 태그는 이 플래그 없이 다시 실행하면 돼요.
+
+덮어쓰기 전에 검증된 manifest를 저장해 뒀다면, 태그 복원은 명령어 하나예요:
+
+```bash
+aws ecr put-image \
+  --image-tag <tag> \
+  --image-manifest file://saved.json \
+  --image-manifest-media-type "$(jq -r '.mediaType' saved.json)"
 ```
 
 ### Health Check
@@ -608,9 +642,14 @@ flowchart LR
 
 ## 실전 정리
 
-ECR/ECS 배포 워크플로우는 움직이는 부분이 많지만, 핵심 루프는 단순해요: 인증, 이미지 푸시, task definition 등록, 서비스 업데이트. 나머지 -- 롤링 업데이트, circuit breaker, 수명 주기 정책 -- 는 그 핵심 루프를 감싸는 안전망이에요.
+ECR/ECS 배포는 기술 문제라기보다 조율 문제예요. 이미지 레지스트리, task definition, 서비스 업데이트, health check -- 하나씩 떼어 놓으면 다 잘 동작해요. 어려운 건 이걸 안정적으로 함께 굴러가게 만드는 거예요. 가장 중요한 것들을 꼽아 볼게요.
 
-Circuit breaker는 첫날부터 활성화하세요. 비용이 들지 않고 실패하는 배포에 Fargate 비용이 나가는 걸 막아줘요. 그리고 이미지에는 항상 Git SHA 태그를 사용하세요 -- 새벽 2시에 뭔가 깨졌을 때, 어떤 커밋이 실행 중인지 정확히 알고 싶을 거예요.
+1. **Circuit breaker는 항상 켜 두세요.** `deployment_circuit_breaker` 없이는 잘못된 이미지가 ECS를 실패하는 task 재시도의 무한 루프에 빠뜨려요. 직접 개입할 때까지 Fargate 비용이 계속 나가고요. Terraform 한 줄이면 되는데 새벽 3시 호출을 막아줘요.
+2. **이미지는 `latest`가 아니라 git SHA로 태그하세요.** `:latest`는 편하지만 어떤 버전이 도는지 알 수 없어서 롤백이 괴로워져요. git SHA 태그(`my-app:abc123def`)를 쓰면 실행 중인 task에서 소스 커밋까지 바로 추적돼요.
+3. **Health check grace period는 넉넉하게 잡으세요.** 앱이 시작하는 데 30초가 걸리면(JVM이나 NestJS 앱이면 흔해요) grace period 10초는 무한 배포 루프를 만들어요. ECS가 task를 띄우고, 준비되기 전에 죽이고, 또 띄우고, 또 죽여요. 최악의 시작 시간의 2배 이상으로 잡으세요.
+4. **앱에서 SIGTERM을 처리하세요.** ECS는 롤링 업데이트 중 task를 종료하기 전에 SIGTERM을 보내요. 앱이 이 시그널을 처리하지 않으면 진행 중이던 요청이 그냥 끊겨요. 위의 Node.js graceful shutdown 패턴은 10줄이면 되고 배포 중 데이터 손실을 막아줘요.
+
+이 글의 GitHub Actions 워크플로우는 그대로 가져다 쓸 수 있는 프로덕션 출발점이에요. 클론해서 cluster와 service 이름만 바꾸면, 실패 시 자동 롤백이 붙은 무중단 배포가 완성돼요.
 
 ## 참고 자료
 

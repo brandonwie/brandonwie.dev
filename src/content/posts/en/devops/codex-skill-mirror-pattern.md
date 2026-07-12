@@ -2,7 +2,7 @@
 title: Codex Skill Mirror Pattern
 description: 'When a repository already treats `.agents/skills/` as the canonical skill source, the clean Codex integration is not "replace it with `.codex/skills/`" or "symlink the whole folder wholesale." A mirror layer with selective adapters preserves the canonical source while giving Codex what it needs.'
 date: 2026-04-18T00:00:00.000Z
-updated: "2026-06-14"
+updated: "2026-07-13"
 tags:
   - devops
   - codex
@@ -15,12 +15,12 @@ lang: en
 expanded: true
 references:
   - url: 'https://github.com/openai/codex'
-    title: OpenAI Codex CLI — official repository
+    title: 'OpenAI Codex CLI: official repository'
     type: official
   - url: 'https://developers.openai.com/codex/skills'
     title: OpenAI Codex Skills
     type: official
-source_content_hash: 0933c96b3d0d619a465074961063a41516034d120bc3895612b1f94584fc02f9
+source_content_hash: 4d086b3e631fb4d2d4fe363bbdde8c3975e6acc4dbbbf11d88281a56e442f1b1
 ---
 
 When a repository already treats `.agents/skills/` as the canonical skill source, the clean Codex integration is not "replace it with `.codex/skills/`" or "symlink the whole folder wholesale." Both shortcuts have failure modes that surface only after install, when the skills look like they work but quietly misbehave. The stable pattern is six steps:
@@ -36,7 +36,7 @@ When a repository already treats `.agents/skills/` as the canonical skill source
 
 Claude-native skills often assume runtime features that do not exist in Codex with the same names or semantics, such as `AskUserQuestion`, `TodoWrite`, slash-skill chaining, or Claude-specific tool names like `WebSearch` and `WebFetch`.
 
-A raw directory symlink from `.agents/skills/` into `~/.codex/skills/` makes skills discoverable, but it does **not** make them seamless. The result is a hybrid failure mode:
+A raw directory symlink from `.agents/skills/` into `~/.codex/skills/` makes skills discoverable, but it does not make them run cleanly. The result is a hybrid failure mode:
 
 - portable markdown-only skills appear to work
 - high-friction workflow skills are discoverable but operationally misleading
@@ -44,7 +44,7 @@ A raw directory symlink from `.agents/skills/` into `~/.codex/skills/` makes ski
 
 ## The mirror-with-adapters layout
 
-Introduce a **mirror-with-adapters** layer owned by the target runtime:
+Introduce a mirror-with-adapters layer owned by the target runtime:
 
 ```text
 .agents/skills/                  # canonical Claude source
@@ -71,7 +71,7 @@ When a mirrored Codex skill path is still a symlink into `.agents/skills/`, edit
 2. create a real directory at that path
 3. write the Codex-owned `SKILL.md` there
 
-In git, this migration appears as **delete the old symlink + add real files under the same path**. That is the correct shape of the change, not a sign that the mirror is broken.
+In git, this migration appears as a deleted symlink plus real files added under the same path. That is the correct shape of the change, not a sign that the mirror is broken.
 
 ### When to write a real adapter
 
@@ -90,6 +90,14 @@ Once a skill becomes a real Codex adapter, keep it intentionally compact:
 3. Port only the decision-critical upstream deltas needed to maintain contract parity.
 4. Avoid copying the full Claude skill body unless the target runtime truly needs a full fork.
 
+Three later refinements extend that discipline as the adapters matured.
+
+A real adapter can identify its own runtime from the fact that it was selected, rather than reading it out of the environment. Codex exposes `CODEX_HOME` and `CODEX_PROFILE`, but neither is guaranteed to exist. Treat adapter selection as the runtime provenance signal once explicit arguments and a valid pre-exported agent value are in place. The environment variables are useful hints, not prerequisites the adapter can depend on.
+
+Projection sync runs from the canonical checkout, and a canonical-only guard that rejects a linked worktree is an ownership boundary, not a bug to route around. When the guard fires inside a task worktree, keep the source adapter and the task-branch projection together in one commit, verify parity, and refresh the installed plugin after merge. Bypassing the guard trades a clean ownership rule for silent drift.
+
+Local marketplace source bytes can change without a version bump, which leaves the installed cache pointing at stale content while the version number still matches. Refresh the cache idempotently with `codex plugin add <plugin>@<marketplace> --json`, then compare the cached skill hash against both the marketplace source and the repo adapter before closing out the change.
+
 ### Escalation to a portable plugin
 
 When the workflow contains reusable domain logic (state models, scorers, prompt assets, provider protocol), adapter-only mirroring becomes too thin. Promote the extracted system into:
@@ -99,6 +107,12 @@ When the workflow contains reusable domain logic (state models, scorers, prompt 
 3. tests that import the extracted package directly
 
 This keeps the cross-agent logic reusable while containing runtime-specific boot steps, update flows, and downstream pipeline coupling inside the wrapper layer.
+
+Bundle the prompt assets with the extracted core so the package stays self-contained rather than reaching back into the original runtime for them. Validate imports and tests inside the runtime-local environment (`uv run` or an equivalent virtualenv) instead of the host interpreter, so the package proves it works on its own terms.
+
+Renaming a portable wrapper touches more than a folder. Align the public identity bundle together: folder name, manifest or distribution name, environment variables, and user-visible state paths all move as one so the outward-facing name stays consistent. Internal module names are a separate decision. Keep them stable unless an API rename earns its own churn, because a wrapper rename does not by itself justify rewriting import paths.
+
+A globally linked adapter can still pin a fixed project execution root when the workflow is tightly coupled to another repository. Global discovery and execution location are separate concerns: the adapter stays visible everywhere while requiring its commands to run from one specific repo.
 
 ## Why this layering works
 
@@ -112,7 +126,7 @@ Codex-specific adaptations live under `.codex/skills/`, where they can evolve wi
 
 ### Discovery and execution are separated cleanly
 
-Repo-local mirrors solve **what Codex can discover**. Adapters solve **what Codex can execute cleanly**. Treating those as separate problems avoids both over-duplication and false seamlessness.
+Repo-local mirrors solve what Codex can discover. Adapters solve what Codex can execute cleanly. Treating those as separate problems avoids both over-duplication and the false impression that everything runs cleanly.
 
 Codex can also discover `.agents/skills/` directly from the repository. That is useful for portable pass-through skills but confusing when a real same-name adapter exists under `.codex/skills/`. In that case, disable only the Claude-native source `SKILL.md` in `~/.codex/config.toml` via `[[skills.config]]`; leave the `.codex/skills/` adapter enabled.
 
@@ -133,9 +147,9 @@ It does not fit when the target runtime should become the new source of truth im
 
 ## Practical takeaway
 
-Discovery compatibility and execution compatibility are different problems. Mirror portable skills with symlinks; adapt only the ones with real runtime mismatch. Promote a mirrored skill into a real adapter **before** editing it, or the write lands in Claude's canonical source. Keep adapters compact and synced by upstream `metadata.version` plus decision-critical deltas, not by full clone. When adapter translation stops being enough, split the reusable logic into a portable core package and keep the runtime/plugin layer thin.
+Discovery compatibility and execution compatibility are different problems. Mirror portable skills with symlinks; adapt only the ones with real runtime mismatch. Promote a mirrored skill into a real adapter before editing it, or the write lands in Claude's canonical source. Keep adapters compact and synced by upstream `metadata.version` plus decision-critical deltas, not by full clone. When adapter translation stops being enough, split the reusable logic into a portable core package and keep the runtime/plugin layer thin.
 
 ## References
 
-- [OpenAI Codex CLI — official repository](https://github.com/openai/codex)
+- [OpenAI Codex CLI: official repository](https://github.com/openai/codex)
 - [OpenAI Codex Skills](https://developers.openai.com/codex/skills)

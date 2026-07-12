@@ -2,7 +2,7 @@
 title: ECR/ECS Deployment Workflow
 description: Complete guide to container deployment using Amazon ECR and ECS.
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-03-15T00:00:00.000Z
+updated: "2026-07-13"
 expanded: true
 tags:
   - aws
@@ -30,44 +30,63 @@ references:
       https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-circuit-breaker.html
     title: ECS Deployment Circuit Breaker
     type: official
-source_content_hash: 4f24fda7155c07b74d03bd9f2585027984de96d3dcabbb894c207257e52ff753
+source_content_hash: 9221baac95cccd253103a70108d22ddc1cbc9bf3654a4e8b61ec4d744235a2cc
 ---
 
-Our first ECS deployment looked perfect in the GitHub Actions logs — green checkmarks everywhere. Then we checked the running service: it was still serving the old image. The task definition had been registered, but nobody told the ECS service to actually use it. That was the first of many "it works but not really" moments on our path to reliable container deployments.
+Our first ECS deployment looked perfect in the GitHub Actions logs, green checkmarks everywhere. Then we checked the running service: it was still serving the old image. The task definition had been registered, but nobody told the ECS service to actually use it. That was the first of many "it works but not really" moments on our way to reliable container deployments.
 
-If you're deploying Docker containers to AWS and want to understand the full pipeline — from `docker build` to zero-downtime rolling updates with automatic rollback — this guide walks through every step, including the gotchas that docs don't warn you about.
+If you're deploying Docker containers to AWS and want to understand the full pipeline, from `docker build` to zero-downtime rolling updates with automatic rollback, this guide walks through every step, including the gotchas that the docs don't warn you about.
 
 ---
 
-## The Problem
+## The problem
 
 Deploying containerized applications to AWS requires coordinating multiple services (ECR for image storage, ECS for orchestration, Fargate for compute) with specific authentication flows, image tagging strategies, and deployment configurations. Without a clear end-to-end workflow, deployments are error-prone: images get pushed to wrong repos, task definitions reference stale images, rolling updates cause downtime, and failed deployments have no automatic rollback.
 
 ---
 
-## Difficulties Encountered
+## Difficulties encountered
 
-- **ECR authentication is session-based** -- the Docker login token expires
-  after 12 hours, causing CI/CD pipelines to fail silently with cryptic "no
-  basic auth credentials" errors if not refreshed before each push
-- **Task definition versioning confusion** -- ECS creates a new revision on
+- ECR authentication is session-based. The Docker login token expires after 12
+  hours, so CI/CD pipelines fail silently with cryptic "no basic auth
+  credentials" errors if the token isn't refreshed before each push.
+- Task definition versioning trips people up. ECS creates a new revision on
   every `register-task-definition` call, but the service does not automatically
   pick up the latest revision; you must explicitly update the service with the
-  new revision ARN
-- **Rolling update percentage math is unintuitive** -- `minimum_healthy_percent`
-  and `maximum_percent` are relative to `desired_count`, not absolute numbers,
-  so the actual task count during deployment depends on the combination of all
-  three values
-- **Health check timing gaps** -- if the health check grace period is too short,
+  new revision ARN.
+- Rolling update percentage math is unintuitive. `minimum_healthy_percent` and
+  `maximum_percent` are relative to `desired_count`, not absolute numbers, so
+  the actual task count during deployment depends on the combination of all
+  three values.
+- Health check timing has gaps. If the health check grace period is too short,
   ECS kills tasks that are still starting up (especially JVM or NestJS apps with
-  slow cold starts), causing an infinite deployment loop
-- **Circuit breaker is not enabled by default** -- without
-  `deployment_circuit_breaker`, a bad image causes ECS to endlessly retry
-  launching failing tasks, burning Fargate costs until you manually intervene
+  slow cold starts), which creates an infinite deployment loop.
+- The circuit breaker is not enabled by default. Without
+  `deployment_circuit_breaker`, a bad image makes ECS endlessly retry launching
+  failing tasks, burning Fargate costs until you manually intervene.
+- `--force-new-deployment` never deploys a newly pushed tag. It re-pulls
+  whatever image reference the current task definition pins. A workflow that
+  pushes `:v1.0.6` then force-redeploys silently restarts the old image unless
+  it also registers a new task-def revision pinning the new tag and calls
+  `update-service --task-definition <returned ARN>`. Capture the ARN returned by
+  `register-task-definition`; never assume the next revision number.
+- `batch-get-image` manifest capture is fail-open without assertions. A
+  mismatched manifest lands in `failures[]` while the command exits 0, so a
+  naive `--query 'images[0].imageManifest'` capture writes an empty or null
+  rollback artifact that looks successful. Gate the capture with one compound
+  `jq -e` assertion (`failures` empty AND exactly one image AND `imageManifest`
+  is a string with non-null `mediaType`) under `set -euo pipefail`. One caveat:
+  `--accepted-media-types` permits only three values (Docker manifest v1/v2, OCI
+  image manifest v1), and manifest-list or OCI-index types are rejected as flag
+  values, so rerun without the flag for index-backed tags.
+- Rollback tag restore:
+  `aws ecr put-image --image-tag <tag> --image-manifest file://saved.json --image-manifest-media-type "$(jq -r '.mediaType' saved.json)"`
+  restores an overwritten mutable tag from a pre-captured manifest. Capture
+  before any push that overwrites a pinned tag.
 
 ---
 
-## When to Use
+## When to use
 
 - Deploying Docker containers to AWS with managed orchestration
 - Teams wanting AWS-native CI/CD without Kubernetes complexity
@@ -76,24 +95,24 @@ Deploying containerized applications to AWS requires coordinating multiple servi
 
 ---
 
-## When NOT to Use
+## When not to use
 
-- **Single static site or Lambda function** -- ECS/Fargate is overkill; use S3
-  - CloudFront or Lambda directly
-- **Multi-cloud or cloud-agnostic requirement** -- ECR/ECS locks you into AWS;
-  use Kubernetes (EKS or self-managed) instead
-- **Very short-lived batch jobs** -- Fargate has a minimum 1-minute billing
-  granularity and cold start overhead; consider Lambda or Step Functions
-- **Local development workflows** -- use Docker Compose locally, not ECS; the
-  feedback loop with ECR push/ECS deploy is too slow for iterative development
-- **Budget-constrained hobby projects** -- Fargate costs add up quickly; a
-  single t3.micro EC2 with Docker is cheaper for low-traffic services
+- Single static site or Lambda function: ECS/Fargate is overkill; use S3 with
+  CloudFront, or Lambda directly.
+- Multi-cloud or cloud-agnostic requirement: ECR/ECS locks you into AWS; use
+  Kubernetes (EKS or self-managed) instead.
+- Very short-lived batch jobs: Fargate has a one-minute minimum billing
+  granularity and cold-start overhead; consider Lambda or Step Functions.
+- Local development workflows: use Docker Compose locally, not ECS; the feedback
+  loop with ECR push and ECS deploy is too slow for iterative development.
+- Budget-constrained hobby projects: Fargate costs add up quickly; a single
+  t3.micro EC2 with Docker is cheaper for low-traffic services.
 
-With those pitfalls in mind, let's walk through the architecture and each step of the deployment pipeline.
+With those pitfalls noted, the sections below cover the architecture and each step of the deployment pipeline.
 
 ---
 
-## Architecture Overview
+## Architecture overview
 
 At a high level, the deployment pipeline moves code from your local machine through three AWS services:
 
@@ -119,9 +138,9 @@ flowchart LR
 
 ## ECR (Elastic Container Registry)
 
-The first stop in the pipeline is ECR — AWS's managed Docker container registry. This is where your built images live before ECS pulls them down to run as containers.
+The first stop in the pipeline is ECR, AWS's managed Docker container registry. This is where your built images live before ECS pulls them down to run as containers.
 
-### Creating ECR Repository
+### Creating the ECR repository
 
 ```hcl
 resource "aws_ecr_repository" "app" {
@@ -134,13 +153,9 @@ resource "aws_ecr_repository" "app" {
 }
 ```
 
-**scan_on_push features:**
+With `scan_on_push = true`, ECR scans OS packages for known CVEs and checks dependencies for vulnerabilities; the results are viewable in the AWS Console or via the API.
 
-- Scans for known CVEs in OS packages
-- Checks dependencies for vulnerabilities
-- Results viewable in AWS Console or API
-
-### Push Workflow
+### Push workflow
 
 ```bash
 # 1. Authenticate Docker to ECR
@@ -164,9 +179,9 @@ Once your image is in ECR, ECS takes over to orchestrate the deployment. The flo
 
 ---
 
-## ECS Deployment Flow
+## ECS deployment flow
 
-### Complete Deployment Pipeline
+### Complete deployment pipeline
 
 Here's the full sequence from code push to running containers:
 
@@ -196,7 +211,7 @@ sequenceDiagram
     ECS->>CI: Deployment Complete
 ```
 
-### Manual Deployment Steps
+### Manual deployment steps
 
 ```bash
 # 1. Build and push image (see above)
@@ -213,13 +228,17 @@ aws ecs update-service \
   --force-new-deployment
 ```
 
+One flag in that last command is a trap worth calling out. `--force-new-deployment` does not deploy a newly pushed tag; it re-pulls whatever image reference the _current_ task definition already pins. A workflow that pushes `:v1.0.6` and then force-redeploys will silently restart the _old_ image. That's the same "green checkmarks, stale service" failure from the top of this post, just wearing a different hat.
+
+To actually ship the new tag, register a new task-definition revision that pins it, then call `update-service --task-definition <returned ARN>`. Capture the ARN that `register-task-definition` hands back rather than assuming the next revision number is free. A concurrent deploy can take it out from under you, and pointing the service at the wrong revision is exactly the kind of quiet mistake that passes CI and fails in production.
+
 The manual steps above show the mechanics, but in production you want zero-downtime deployments. That's where rolling updates come in.
 
 ---
 
-## Rolling Updates
+## Rolling updates
 
-### How Rolling Updates Work
+### How rolling updates work
 
 ECS replaces tasks one by one to ensure zero downtime. The key idea: new tasks start and pass health checks _before_ old tasks are drained and terminated:
 
@@ -233,7 +252,7 @@ Time     | Old v1.0 | New v2.0 | Total | Status
 03:00    | 0        | 2        | 2     | Complete
 ```
 
-### Rolling Update Process (3 Tasks)
+### Rolling update process (3 tasks)
 
 ```mermaid
 graph TB
@@ -250,7 +269,7 @@ graph TB
     end
 ```
 
-### Rolling Update Timeline
+### Rolling update timeline
 
 ```mermaid
 gantt
@@ -289,18 +308,18 @@ gantt
     Running           :done, t3run, 06:00, 1s
 ```
 
-### Key Phases of Each Task Replacement
+### Key phases of each task replacement
 
-1. **Starting** (60-90 seconds) -- Pull new Docker image from ECR, start
-   container, initialize application
-2. **Health Checks** (30-60 seconds) -- ALB health checks must pass, app must
-   respond on the configured port, multiple successful checks required
-3. **Draining** (30-300 seconds) -- Stop sending new requests to old task, allow
-   existing requests to complete, graceful shutdown period
-4. **Termination** -- Old task fully stopped, resources released, new task fully
-   operational
+1. Starting (60-90 seconds): pull the new Docker image from ECR, start the
+   container, and initialize the application.
+2. Health checks (30-60 seconds): ALB health checks must pass, the app must
+   respond on the configured port, and several successful checks are required.
+3. Draining (30-300 seconds): stop sending new requests to the old task and
+   allow existing requests to complete during a graceful shutdown period.
+4. Termination: the old task is fully stopped, its resources are released, and
+   the new task is fully operational.
 
-### Deployment Configuration
+### Deployment configuration
 
 ```hcl
 resource "aws_ecs_service" "app" {
@@ -321,12 +340,12 @@ resource "aws_ecs_service" "app" {
 }
 ```
 
-**Percentage meaning (with desired_count = 3):**
+With `desired_count = 3`, those percentages mean:
 
-- `minimum_healthy_percent = 100`: Always keep at least 3 tasks
-- `maximum_percent = 200`: Can have up to 6 tasks during deployment
+- `minimum_healthy_percent = 100`: always keep at least 3 tasks
+- `maximum_percent = 200`: up to 6 tasks during deployment
 
-### Deployment Strategies
+### Deployment strategies
 
 | Strategy     | Min % | Max % | Speed  | Risk   | Use Case   |
 | ------------ | ----- | ----- | ------ | ------ | ---------- |
@@ -334,7 +353,7 @@ resource "aws_ecs_service" "app" {
 | Balanced     | 100   | 200   | Medium | Low    | Most apps  |
 | Aggressive   | 50    | 200   | Fast   | Medium | Staging    |
 
-### Circuit Breaker and Automatic Rollback
+### Circuit breaker and automatic rollback
 
 When the circuit breaker is enabled, ECS detects failed deployments and
 automatically rolls back to the last stable version:
@@ -362,11 +381,11 @@ deployment_circuit_breaker {
 }
 ```
 
-One question that comes up frequently: what happens if auto-scaling kicks in during a deployment? The good news is ECS handles this gracefully.
+A common question: what happens if auto-scaling kicks in during a deployment? ECS handles it gracefully.
 
 ---
 
-## Deployment with Auto-Scaling
+## Deployment with auto-scaling
 
 Auto-scaling continues working during deployments:
 
@@ -388,13 +407,13 @@ flowchart LR
     E --> B
 ```
 
-**Key behaviors:**
+Key behaviors:
 
-- If auto-scaling adds tasks during deployment, new tasks get latest version
+- If auto-scaling adds tasks during deployment, new tasks get the latest version
 - If auto-scaling removes tasks, ECS prioritizes removing old version tasks
 - Scale state is preserved after deployment
 
-### Auto-Scaling Interaction Scenarios
+### Auto-scaling interaction scenarios
 
 | Scenario                   | What Happens                    | Result                                          |
 | -------------------------- | ------------------------------- | ----------------------------------------------- |
@@ -403,21 +422,21 @@ flowchart LR
 | Memory issue during deploy | Auto-scaling triggers           | Both new and old tasks can scale                |
 | Deploy fails               | Tasks remain at current version | Auto-scaling continues normally                 |
 
-### Deployment with CPU Spike (Scales from 2 to 3)
+### Deployment with a CPU spike (scales from 2 to 3)
 
 ```text
 Time     | Old v1.0 | New v2.0 | Total | Event
 ---------|----------|----------|-------|------------------
 00:00    | 2        | 0        | 2     | Deployment starts
 00:30    | 2        | 1        | 3     | New task starting
-01:00    | 2        | 1        | 3     | CPU SPIKE -- auto-scale triggered
+01:00    | 2        | 1        | 3     | CPU SPIKE, auto-scale triggered
 01:30    | 2        | 2        | 4     | Scale-out adds v2.0 task
 02:00    | 1        | 2        | 3     | Remove one old task
 02:30    | 1        | 3        | 4     | Add final new task
 03:00    | 0        | 3        | 3     | All tasks now v2.0
 ```
 
-### Resolving Auto-Scaling Conflicts
+### Resolving auto-scaling conflicts
 
 If auto-scaling fights with deployment, temporarily suspend scaling:
 
@@ -439,13 +458,13 @@ aws application-autoscaling register-scalable-target \
     '{"DynamicScalingInSuspended": false, "DynamicScalingOutSuspended": false}'
 ```
 
-With the deployment mechanics understood, let's automate the entire pipeline with GitHub Actions.
+With the deployment mechanics covered, the next step is automating the pipeline with GitHub Actions.
 
 ---
 
-## GitHub Actions Workflow
+## GitHub Actions workflow
 
-The following workflow builds a Docker image, pushes it to ECR, updates the task definition, and deploys to ECS — all triggered by a push to `main`:
+The following workflow builds a Docker image, pushes it to ECR, updates the task definition, and deploys to ECS, all triggered by a push to `main`:
 
 ```yaml
 name: Deploy to ECS
@@ -499,13 +518,13 @@ jobs:
           wait-for-service-stability: true
 ```
 
-With the pipeline automated, here are the practices that keep deployments reliable over time.
+With the pipeline automated, these practices keep deployments reliable over time.
 
 ---
 
-## Best Practices
+## Best practices
 
-### Image Tagging
+### Image tagging
 
 Consistent tagging makes it possible to trace a running container back to its source code and roll back to any previous version:
 
@@ -516,9 +535,9 @@ Recommended tags:
 - Semantic: my-app:v1.2.3  (releases)
 ```
 
-### ECR Lifecycle Policy
+### ECR lifecycle policy
 
-Without cleanup, ECR accumulates images indefinitely — each push adds a new one. Lifecycle policies automatically expire old images to keep storage costs under control:
+Without cleanup, ECR accumulates images indefinitely, since each push adds a new one. Lifecycle policies automatically expire old images to keep storage costs under control:
 
 ```json
 {
@@ -539,7 +558,22 @@ Without cleanup, ECR accumulates images indefinitely — each push adds a new on
 }
 ```
 
-### Health Checks
+### Rollback: restoring an overwritten tag
+
+The circuit breaker rolls the ECS service back to the previous task definition, but it can't help once you've overwritten a mutable tag in ECR. At that point the old image reference is simply gone. Recovering it means capturing the image manifest _before_ the overwriting push, then restoring it afterward. The ordering is the whole game: capture before any push that overwrites a pinned tag, because after the overwrite there is nothing left to capture.
+
+Capture is also the part that bites. `aws ecr batch-get-image` is fail-open: a mismatched manifest lands in the `failures[]` array while the command still exits `0`. A naive `--query 'images[0].imageManifest'` then writes an empty or null artifact that looks successful right up until you actually need it. Gate the capture with a single compound `jq -e` assertion under `set -euo pipefail`: the `failures` array is empty, exactly one image came back, and `imageManifest` is a string with a non-null `mediaType`. One more sharp edge is `--accepted-media-types`, which permits only three values (Docker manifest v1, Docker manifest v2, OCI image manifest v1). Manifest-list and OCI-index types are rejected as flag values, so for index-backed tags you rerun without the flag.
+
+With a validated manifest saved before the overwrite, restoring the tag is one command:
+
+```bash
+aws ecr put-image \
+  --image-tag <tag> \
+  --image-manifest file://saved.json \
+  --image-manifest-media-type "$(jq -r '.mediaType' saved.json)"
+```
+
+### Health checks
 
 Health checks are the mechanism that prevents bad deployments from receiving traffic. The ALB checks each task's health endpoint before routing requests to it:
 
@@ -557,7 +591,7 @@ resource "aws_lb_target_group" "app" {
 }
 ```
 
-### Graceful Shutdown
+### Graceful shutdown
 
 ECS sends `SIGTERM` before terminating tasks during rolling updates. The
 application must handle this signal to avoid dropping in-flight requests:
@@ -590,7 +624,7 @@ app.get("/health", (req, res) => {
 });
 ```
 
-### Deployment Monitoring
+### Deployment monitoring
 
 Monitor these signals during rolling updates to detect anomalies early:
 
@@ -632,7 +666,7 @@ aws ecs describe-services \
 
 ## Troubleshooting
 
-### Deployment Stuck
+### Deployment stuck
 
 ```bash
 # Check task stopped reason
@@ -648,7 +682,7 @@ aws ecs describe-services \
   --query 'services[0].events[:5]'
 ```
 
-### Common Issues
+### Common issues
 
 | Issue                   | Cause                     | Solution                            |
 | ----------------------- | ------------------------- | ----------------------------------- |
@@ -660,7 +694,7 @@ aws ecs describe-services \
 | No automatic rollback   | Circuit breaker not set   | Enable `deployment_circuit_breaker` |
 | Auto-scaling conflicts  | Scaling fights deployment | Temporarily suspend auto-scaling    |
 
-### Stuck Deployment Decision Tree
+### Stuck deployment decision tree
 
 ```mermaid
 flowchart LR
@@ -674,17 +708,17 @@ flowchart LR
 
 ---
 
-## Practical Takeaways
+## Practical takeaways
 
-ECR/ECS deployment is a coordination problem more than a technical one. Each piece (image registry, task definitions, service updates, health checks) works fine individually — the challenge is making them work together reliably. Here's what matters most:
+ECR/ECS deployment is a coordination problem more than a technical one. Each piece (image registry, task definitions, service updates, health checks) works fine individually; the challenge is making them work together reliably. Here's what matters most:
 
-1. **Always enable the circuit breaker.** Without `deployment_circuit_breaker`, a bad image causes ECS to endlessly retry launching failing tasks, burning Fargate costs until you manually intervene. This is a one-line Terraform addition that saves you from 3 AM pages.
+1. Always enable the circuit breaker. Without `deployment_circuit_breaker`, a bad image causes ECS to endlessly retry launching failing tasks, burning Fargate costs until you manually intervene. It's a one-line Terraform addition that saves you from 3 AM pages.
 
-2. **Tag images with git SHAs, not just `latest`.** The `:latest` tag is convenient but makes rollbacks painful because you can't tell which version is running. Git SHA tags (`my-app:abc123def`) give you instant traceability from running task to source commit.
+2. Tag images with git SHAs, not just `latest`. The `:latest` tag is convenient but makes rollbacks painful because you can't tell which version is running. Git SHA tags (`my-app:abc123def`) give you instant traceability from a running task to its source commit.
 
-3. **Set health check grace periods generously.** If your application takes 30 seconds to start (common for JVM or NestJS apps), a 10-second grace period creates an infinite deployment loop: ECS launches a task, kills it before it's ready, launches another, kills it again. Set the grace period to at least 2x your worst-case startup time.
+3. Set health check grace periods generously. If your application takes 30 seconds to start (common for JVM or NestJS apps), a 10-second grace period creates an infinite deployment loop: ECS launches a task, kills it before it's ready, launches another, and kills it again. Set the grace period to at least 2x your worst-case startup time.
 
-4. **Handle SIGTERM in your application.** ECS sends SIGTERM before terminating tasks during rolling updates. If your app doesn't handle this signal, in-flight requests get dropped. The Node.js graceful shutdown pattern above takes 10 lines and prevents data loss during deployments.
+4. Handle SIGTERM in your application. ECS sends SIGTERM before terminating tasks during rolling updates. If your app doesn't handle this signal, in-flight requests get dropped. The Node.js graceful shutdown pattern above takes 10 lines and prevents data loss during deployments.
 
 The GitHub Actions workflow in this post is a production-ready starting point. Clone it, update the cluster/service names, and you have zero-downtime deployments with automatic rollback on failure.
 
