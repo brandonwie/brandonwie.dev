@@ -2,7 +2,7 @@
 title: Lemon Squeezy Subscription Management
 description: 'Subscription lifecycle, cancellation, expiration, and reactivation.'
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-07-23'
 tags:
   - backend
   - payments
@@ -15,18 +15,28 @@ expanded: true
 references:
   - url: >-
       https://docs.lemonsqueezy.com/guides/developer-guide/managing-subscriptions
-    title: Subscription Management — Lemon Squeezy
+    title: Subscription management in Lemon Squeezy
     type: official
-source_content_hash: a03d4b527e84f6bd9192ccec061d44ea854d3de02efc44e3bd1835d7e16a4f90
+  - url: https://docs.lemonsqueezy.com/help/products/subscriptions
+    title: 'Subscriptions help: updating subscription prices'
+    type: official
+  - url: https://docs.lemonsqueezy.com/api/subscriptions/update-subscription
+    title: Update a subscription API reference
+    type: official
+source_content_hash: 7cbd909afedeecb5a7dffe62f6039e57777655cefd5e5e4eff5d806ac6a04ae3
 ---
 
-I was building a SaaS product with Lemon Squeezy handling payments, and a user cancelled their subscription. No big deal -- I had a "Cancel" button wired up. But then they changed their mind two weeks later and wanted back in. I clicked around the API docs, tried to resume the subscription, and hit a wall: **the subscription had expired, and Lemon Squeezy would not let me reactivate it.**
+I was building a SaaS product with Lemon Squeezy handling payments when a user
+cancelled their subscription. Two weeks later, they changed their mind. I tried
+to resume it through the API, but the subscription had already expired. Lemon
+Squeezy would not reactivate it.
 
-That one moment taught me that subscription management is not about the happy path. It is about understanding the full lifecycle -- every status transition, every grace period edge case, and exactly when a subscription crosses the point of no return.
+That failure forced me to map the full lifecycle: each status transition, the
+grace period, and the exact point after which a customer needs a new checkout.
 
 ---
 
-## The Subscription Lifecycle
+## The subscription lifecycle
 
 Lemon Squeezy subscriptions move through seven distinct statuses. Each one determines what your users can access and what actions your backend can take.
 
@@ -40,13 +50,16 @@ Lemon Squeezy subscriptions move through seven distinct statuses. Each one deter
 | `cancelled` | Cancelled but in grace period           |
 | `expired`   | Subscription ended completely           |
 
-The first three statuses are straightforward. The interesting -- and dangerous -- territory starts at `past_due`. When a renewal charge fails, Lemon Squeezy retries four times over two weeks. If all retries fail, the subscription moves to `unpaid`, and your dunning rules determine what happens next.
+The first three statuses are straightforward. The risk starts at `past_due`.
+When a renewal charge fails, Lemon Squeezy retries four times over two weeks. If
+all retries fail, the subscription moves to `unpaid`, and the configured dunning
+rules determine what happens next.
 
 But the status transition that bit me hardest was `cancelled` to `expired`. There is a narrow window between those two, and if you miss it, your user has to start from scratch.
 
 ---
 
-## Grace Period Behavior: The Window You Cannot Afford to Ignore
+## What happens during the grace period
 
 When a user cancels, the subscription does not end immediately. Here is the exact sequence:
 
@@ -54,14 +67,14 @@ When a user cancels, the subscription does not end immediately. Here is the exac
 2. The `cancelled` attribute flips to `true`
 3. `ends_at` populates with the expiration date (typically the end of the current billing period)
 4. The customer retains full access until `ends_at`
-5. **During the grace period**: The subscription CAN be resumed via API
-6. **After the grace period**: Status transitions to `expired` -- and it is NOT resumable
+5. During the grace period, the API can resume the subscription
+6. After the grace period, the status changes to `expired` and cannot be resumed
 
 That grace period is your safety net. As long as the subscription is `cancelled` but not yet `expired`, you can bring it back to life with a single API call.
 
 ---
 
-## Resuming a Cancelled Subscription
+## Resuming a cancelled subscription
 
 The API call to resume is a PATCH request that sets `cancelled` back to `false`:
 
@@ -84,24 +97,27 @@ This is the ideal reactivation path, and it is only available during the grace p
 
 ---
 
-## After Expiration: The Point of No Return
+## What changes after expiration
 
 This is the part I learned the hard way.
 
-> **Once a subscription reaches `expired` status, it is no longer resumable through the API.**
+> Once a subscription reaches `expired` status, the API cannot resume it.
 
 After expiration, your options narrow dramatically:
 
-1. You cannot resume the subscription via API -- the endpoint will reject the request
+1. The resume endpoint rejects the request
 2. The user must go through a new checkout flow
 3. A new checkout creates a completely new subscription with different IDs (subscription, order, order_item)
 4. A fresh billing cycle starts from the new subscription date
 
-This means your database now has two subscription records for the same customer. Your access-control logic needs to handle the old expired record gracefully while recognizing the new active one. If you are tracking subscription history for analytics or compliance, you need to link these records yourself -- Lemon Squeezy does not do it for you.
+This leaves two subscription records for the same customer. Access-control logic
+must ignore the old expired record while recognizing the new active one. If the
+product tracks subscription history, the application must link the records
+itself.
 
 ---
 
-## Pause vs Cancel vs Expire: Know the Differences
+## How pause, cancel, and expire differ
 
 These three actions look similar from a UI perspective, but they have very different implications for your backend:
 
@@ -111,32 +127,36 @@ These three actions look similar from a UI perspective, but they have very diffe
 | Cancel | Yes, during grace period | `cancelled` → `expired` |
 | Expire | **No**                   | `expired`               |
 
-**Pausing** is the safest option when a user wants to take a break. The subscription stays in a `paused` state indefinitely and can be resumed at any time. Lemon Squeezy offers two pause modes:
+Pausing fits a temporary break. The subscription stays in a `paused` state and
+can be resumed later. Lemon Squeezy offers two pause modes:
 
 - `void`: No service during the pause (user loses access)
 - `free`: Service continues for free (user keeps access, you stop billing)
 
-**Cancelling** starts a countdown. The user keeps access through the grace period, but once `ends_at` passes, the subscription expires and cannot be brought back.
+Cancelling starts a countdown. The user keeps access through the grace period,
+but once `ends_at` passes, the subscription expires and cannot be brought back.
 
-If your product has a "take a break" feature, use pause. If the user genuinely wants to leave, use cancel -- but make sure your resubscription flow is ready for the expired case.
+If the product has a "take a break" feature, use pause. If the user wants to
+leave, use cancel and make sure the resubscription flow handles expiration.
 
 ---
 
-## Webhook Events to Monitor
+## Webhook events to monitor
 
 Lemon Squeezy communicates subscription changes through webhooks. These five events cover the full lifecycle:
 
-- `subscription_created` -- New subscription started
-- `subscription_updated` -- Status or attributes changed (covers pause, resume, plan changes)
-- `subscription_cancelled` -- User or system cancelled the subscription
-- `subscription_resumed` -- Cancelled subscription was reactivated during grace period
-- `subscription_expired` -- Grace period ended, subscription is now permanently inactive
+- `subscription_created`: new subscription started
+- `subscription_updated`: status or attributes changed
+- `subscription_cancelled`: user or system cancelled the subscription
+- `subscription_resumed`: cancelled subscription resumed during the grace period
+- `subscription_expired`: grace period ended and the subscription became inactive
 
-Your webhook handler should update your local database on every event. Do not rely on polling the API -- webhooks are the source of truth for real-time status changes.
+The webhook handler should update the local database on every event. Polling
+alone leaves a delay between the provider state and the product state.
 
 ---
 
-## Database Design
+## Database design
 
 A customer can have multiple subscriptions over time (especially after expirations that require new checkouts). Your schema should reflect this one-to-many relationship:
 
@@ -157,16 +177,69 @@ The `endsAt` field is particularly important. When `status` is `cancelled`, `end
 
 ---
 
-## Practical Takeaways
+## Moving existing subscribers to a new price
 
-Four rules that would have saved me hours of debugging:
+Editing a product or variant price does not automatically update subscriptions
+that already reference it. Existing subscriptions retain the price captured
+when they were created until their plan changes.
 
-1. **Always check `ends_at` for cancelled subscriptions.** A cancelled subscription is not the same as an expired one. The user may still have legitimate access.
+The migration path is:
 
-2. **Verify status before allowing service access.** Do not treat any non-`active` status as "no access." `on_trial`, `cancelled` (during grace), and `paused` (in `free` mode) all grant access depending on your business rules.
+1. Create new variants at the new price.
+2. List subscriptions that still reference the old variant.
+3. PATCH each subscription with the new `variant_id`.
+4. Unpublish the old variants only after no subscriptions depend on them.
 
-3. **Build a resubscription flow from day one.** Expired subscriptions require a full new checkout. If you wait until a user asks "why can't I reactivate?" to build this, you are too late.
+Proration needs an explicit choice. `disable_prorations: true` keeps the current
+billing date and applies the new price at the next renewal. By contrast,
+`invoice_immediately: true` creates a prorated invoice now.
 
-4. **Keep expired subscription data.** Do not delete or archive expired records aggressively. You need them for billing history, analytics, and to understand why a customer who "was subscribed" no longer has access.
+```bash
+PATCH /v1/subscriptions/{subscription_id}
+{
+  "data": {
+    "type": "subscriptions",
+    "id": "{subscription_id}",
+    "attributes": {
+      "variant_id": 123456,
+      "disable_prorations": true
+    }
+  }
+}
+```
 
-The subscription lifecycle in Lemon Squeezy is well-designed, but it is unforgiving once you cross the expiration boundary. Understanding the grace period window -- and building your UX around it -- is the difference between a smooth reactivation and a frustrated user going through checkout again.
+The update endpoint documents several cases that need separate handling.
+Changing billing intervals, moving between free and paid variants, or starting
+or ending a trial can change the billing anchor. PayPal subscriptions cannot be
+updated through this API path; those customers need to change plans through the
+customer portal.
+
+I would not PATCH the same `variant_id` after editing its price and assume the
+subscription takes a new snapshot. That behavior is not documented. A new
+variant makes the intended migration observable and reversible.
+
+---
+
+## Practical takeaways
+
+Five rules I now use:
+
+1. Check `ends_at` for cancelled subscriptions. A cancelled subscription may
+   still grant legitimate access.
+
+2. Verify status before granting access. `on_trial`, `cancelled` during grace,
+   and `paused` in `free` mode can all grant access under product rules.
+
+3. Build a resubscription flow early. Expired subscriptions require a new
+   checkout.
+
+4. Keep expired subscription data for billing history, analytics, and access
+   investigations.
+
+5. Migrate prices through explicit variants. Choose proration behavior, handle
+   PayPal separately, and keep old variants until every dependent subscription
+   has moved.
+
+The expiration boundary is the operational dividing line. Before it, resuming
+preserves the subscription and its IDs. After it, the customer must check out
+again and the application must connect the new record to the old history.

@@ -2,7 +2,7 @@
 title: Claude Code Agent Teams
 description: Experimental feature for orchestrating multiple Claude Code instances as a coordinated team with shared task lists and inter-agent messaging
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-07-13'
+updated: '2026-07-23'
 tags:
   - ai-ml
   - claude-code
@@ -12,7 +12,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 15de9f31fcd1dd98232276bdf9779aad9a2906fd567318548f0e16ef3c242005
+source_content_hash: 1a7d3546f650d647ee7c0bcbadc102bff55cf504c8c8129111c228e2babb2833
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
@@ -23,22 +23,33 @@ references:
     notes: "strings $(which claude) reveals [BackendRegistry] Selected: tmux log + functions yk7/hk7/vk7 managing S_()/e_() macros (preferTmuxOverIterm2, iterm2It2SetupComplete) outside settings.json"
 ---
 
-I needed three independent code reviews running in parallel (security, performance, and test coverage) on the same PR. Opening three terminal tabs and copy-pasting context between them felt like managing interns over Slack. Agent Teams let one Claude session act as lead, spawn teammates into separate tmux panes, and coordinate through a shared task list. The idea works well, but getting there means knowing where the sharp edges are.
+I needed three independent code reviews running in parallel: security,
+performance, and test coverage. Separate terminal sessions could do the work,
+but they could not share task state or findings without manual coordination.
 
-This post documents how Agent Teams work, when they outperform subagents or solo sessions, and every difficulty I hit across weeks of daily use, including the ones that silently degraded my setup without me noticing.
+Agent Teams formalize that pattern. One Claude Code session leads while
+independent teammates use their own context windows, a shared task list, and
+direct messages. The feature is still experimental, so durable coordination
+patterns matter more than any one release's pane implementation.
 
 ## What Agent Teams are
 
-Agent Teams is an experimental Claude Code feature where one session (the lead) creates a team, spawns teammates, and coordinates work through shared infrastructure. Each teammate runs as an independent Claude instance with its own context window.
+Agent Teams is an experimental Claude Code feature where one session acts as
+lead and coordinates independent Claude instances. The official documentation
+describes the feature as of Claude Code 2.1.178; details from older releases in
+this post are labeled as historical observations.
 
 The coordination primitives are:
 
 - The lead is the main session that creates the team, assigns tasks, and approves work.
 - Teammates are separate Claude instances spawned into their own panes.
 - The task list holds shared work items with states (pending, in progress, completed) and dependency tracking.
-- The mailbox handles direct messaging between any agents, not just lead-to-teammate pairs.
+- The mailbox handles direct messaging between agents, including
+  lead-to-teammate and teammate-to-teammate messages.
 
-This is different from subagents (the `Agent` tool), which run in the background and return a result. Teammates are persistent, interactive, and can communicate with each other.
+This differs from subagents, which report a result to the caller but do not
+communicate with each other. Teammates can message one another and coordinate
+through shared tasks.
 
 ## When to use teams
 
@@ -52,9 +63,12 @@ The distinction between teams, subagents, and solo sessions matters. Picking wro
 
 Teams work well for parallel code review, competing hypothesis debugging, cross-layer coordination (frontend + backend + tests simultaneously), and independent module development where workers need to share findings.
 
-There is a collect-side caveat that took me a while to internalize. If you need to read a worker's output back into the lead session, prefer a synchronous `Agent` call with no `name` or `team_name`: its final message returns directly as the tool result. A named or background teammate's analysis text is invisible to the orchestrator until (and if ever) a `SendMessage` arrives. Do not rely on a named teammate for a fan-out then collect step where you actually need the payload in hand.
+There is a collect-side caveat. A background teammate's work is not a deliverable
+until it is sent back or written to an agreed artifact. For fan-out work where
+the lead must consume every result immediately, use a synchronous worker or make
+the delivery path explicit in the task brief.
 
-## When NOT to use teams
+## When not to use teams
 
 Not every parallel workload benefits from the coordination overhead.
 
@@ -65,7 +79,7 @@ Not every parallel workload benefits from the coordination overhead.
 
 ## Setup
 
-Two settings are needed. First, enable the experimental feature flag:
+Enable the experimental feature flag:
 
 ```json
 {
@@ -75,7 +89,9 @@ Two settings are needed. First, enable the experimental feature flag:
 }
 ```
 
-Then set the display mode. Options are `"in-process"`, `"tmux"`, or `"auto"`:
+Display behavior has changed across releases. If you need a specific mode,
+consult the documentation for the installed Claude Code version rather than
+copying an old setting blindly. A commonly used tmux preference is:
 
 ```json
 {
@@ -83,9 +99,13 @@ Then set the display mode. Options are `"in-process"`, `"tmux"`, or `"auto"`:
 }
 ```
 
-Both `"tmux"` and `"auto"` should auto-detect iTerm2 via the `it2` CLI, but the iTerm2 backend is broken as of v2.1.74 (issue #24301; details below). In practice, split panes only work inside a tmux session. Without tmux, teammates silently fall back to in-process mode, with no error and no warning. To work around it, launch `tmux -CC` in iTerm2 (control mode) to get native iTerm2 panes via the tmux backend.
+The official documentation now says that, as of 2.1.178, spawning a teammate no
+longer requires a separate team-setup step and cleanup occurs automatically when
+the session exits. Older iTerm2 and tmux observations below describe the versions
+named in their headings; they are diagnostic history, not a current setup
+contract.
 
-## Key patterns
+## Patterns that held up
 
 Four patterns emerged from daily use that make teams productive rather than chaotic:
 
@@ -108,7 +128,10 @@ This section is the reason this post exists. The official docs cover the happy p
 
 **Gitignored symlinks missing in worktrees.** When teammates work in git worktrees, only tracked files appear. Gitignored symlinks (`CLAUDE.local.md`, `.claude/settings.local.json`, `.claude/skills`) are missing. Personal instructions and settings do not load for worktree teammates. The mitigation is putting critical environment variables in user-level `~/.claude/settings.local.json` and front-loading context in spawn prompts.
 
-**iTerm2 `ITermBackend` NOT functional (known bug #24301).** The binary contains an `ITermBackend` with full `it2 session split` support, but the backend selection logic never activates it. With `teammateMode: "auto"` or `"tmux"`, Claude Code silently falls back to `in-process` when not inside a tmux session, even with `it2` installed, Python API enabled, and all iTerm2 env vars present. Confirmed in v2.1.74 across multiple test cycles. The `teammateMode` setting is snapshotted at session start, so mid-session changes to `settings.json` have no effect. To work around it, use `tmux -CC` (iTerm2 control mode) to get native iTerm2 panes with the tmux backend.
+**Historical iTerm2 backend behavior in 2.1.74.** In that release, the tested
+`ITermBackend` path did not activate and the runtime fell back to in-process
+mode outside tmux. `tmux -CC` supplied split panes through the tmux backend.
+Re-test this on newer releases before using it as a workaround.
 
 **Backend selector stores macros outside `settings.json` (v2.1.138 audit).** A regression report on Claude Code 2.1.138 sent me into the binary's string table to figure out why split panes still weren't spawning despite `teammateMode: "tmux"` + `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` + an active tmux session. `strings $(which claude)` surfaced two persistent flags managed by a getter/setter pair the binary calls `S_()` / `e_()`:
 
@@ -119,7 +142,10 @@ Neither flag lives in `settings.json`, and neither has a CLI read/write surface.
 
 The implication that surprised me: `teammateMode` reads as authoritative in the docs, but the runtime detector is the actual decision point. `settings.json` acts as a hint, not a hard override. If you want to know which backend the binary really picked, run `claude --debug`, attempt a `TeamCreate`, and grep stderr for `[BackendRegistry] Selected:`. The string is the ground truth; everything else is configuration.
 
-**TeamDelete doesn't kill orphaned tmux panes.** When agents shut down, the tmux pane stays alive as a fresh zsh shell. `TeamDelete` cleans team metadata but not panes. You must manually run `tmux kill-pane -t %<id>` for each orphan. Check with `tmux list-panes -a` after team work to avoid accumulating zombie shells.
+**Historical orphaned panes.** Older builds could leave a tmux pane alive as a
+shell after team metadata was removed. Current documentation says session-exit
+cleanup is automatic. If a specific version still leaks panes, confirm with
+`tmux list-panes -a` and report it against that release.
 
 **Tmux pane race condition on parallel spawn.** Spawning three or more teammates simultaneously can trigger "not in a mode" errors from tmux `send-keys`. The pane gets created, but the agent fails to start. Retrying individually usually works. Spawning teammates sequentially (with a brief pause) avoids the issue entirely.
 
@@ -135,25 +161,25 @@ The implication that surprised me: `teammateMode` reads as authoritative in the 
 
 **Restricted-tool worker types cannot message at all.** The summary-field trap has a harder variant. Worker agent types whose tool list excludes `SendMessage` and `Write` entirely (read-only workers with only Read, Glob, Grep, and Bash) are structurally unable to deliver a background report. The orchestrator receives idle notifications and nothing else, and no amount of re-instruction fixes it because the delivery tool does not exist in the worker's toolbox. I hit this on 2026-07-10 with four background diagnostic workers: four-plus wasted nudges before diagnosing the cause. The fix: when fanning out to restricted-tool agent types in the background, specify a file-drop delivery contract up front ("write your full report via Bash heredoc to `<agreed-path>`") and have the orchestrator read the files on each idle ping. Workers with Bash can always `cat > file <<'EOF'` even without the Write tool. A synchronous unnamed `Agent` call remains the simpler fix when the result must return inline.
 
-## Limitations summary
+## Current limitations to design around
 
-For quick reference, here is the full constraint set:
+The official documentation still calls out limitations around session
+resumption, task coordination, and shutdown behavior. In practice, I design for
+these durable constraints:
 
-- No session resumption for in-process teammates
-- One team per session, no nested teams
-- Fixed lead (cannot transfer leadership)
-- All teammates inherit lead's permission mode at spawn
-- Split panes require tmux (iTerm2 ITermBackend exists but is broken, #24301)
-- Without tmux, teammates run in-process silently (no error, no split panes)
-- Workaround for iTerm2: tmux -CC control mode gives native panes via tmux backend
-- Backend selection is decided by the runtime detector (`process.env.TMUX`), not `teammateMode` in `settings.json` (verify with `claude --debug` + grep `[BackendRegistry] Selected:`)
-- TeamDelete does not clean up orphaned tmux panes (manual cleanup needed)
-- Parallel spawn race condition with 3+ teammates (retry individually)
-- Idle teammates can claim another agent's in-progress tasks (use explicit ownership)
-- Gitignored files missing in worktrees (teammates lack personal config)
-- Deferred tools (like TeamCreate) are invisible until loaded via ToolSearch
-- Named/background teammates cannot reliably return a payload inline; use a synchronous `Agent` call for any fan-out then collect step
-- Restricted-tool workers (no `SendMessage` or `Write`) cannot deliver a background report at all; use a file-drop contract
+- Teammates have independent context. Put critical requirements in each task
+  brief instead of assuming the lead's context transfers.
+- Shared tasks do not prevent overlapping file ownership. Assign owners and
+  sequence same-file changes explicitly.
+- A background result needs a delivery contract: direct message, synchronous
+  return, or an agreed file path.
+- Worktrees contain tracked files, not personal gitignored configuration.
+  Provide required environment and instructions separately.
+- Permission and display behavior are version-sensitive. Verify the installed
+  release and runtime logs before diagnosing from settings alone.
+
+The detailed incidents above remain useful for recognizing failure shapes, but
+their tool names and backend behavior are not a compatibility promise.
 
 ## Example prompt
 
@@ -172,10 +198,15 @@ The lead assigns each reviewer a task, the reviewers work independently in their
 
 ## Takeaways
 
-Agent Teams solve a real coordination problem: parallel work across a codebase with shared state. The task list and mailbox primitives are well-designed. The rough edges are in infrastructure: tmux pane management, config parsing, worktree isolation, and the deferred tool visibility problem that can silently downgrade your setup.
+Agent Teams fit complex work where independent workers need to share findings
+and coordinate. Subagents fit focused jobs where only the result matters, while
+a solo session is safer for sequential edits to the same files.
 
-The most important lesson: verify your tools exist before concluding they do not. Deferred tools in Claude Code are invisible until you search for them. One bad assumption in one session propagated through my configuration and degraded every subsequent session for days. Check with `ToolSearch`, not with the visible tool list.
+The most durable lesson is to make ownership and delivery explicit. A shared
+task list does not serialize writes, and spawning a teammate does not guarantee
+that the lead receives a usable report.
 
-The second-most important lesson came later, from the v2.1.138 binary-strings audit: configuration files describe intent, runtime detectors decide behavior. When something is not working the way the docs say it should, grep the binary's stderr (`claude --debug`) for what the runtime actually picked. The `[BackendRegistry] Selected:` line is the ground truth in a way that `settings.json` is not.
-
-The third lesson is about collecting work back, not spawning it. A named or background teammate's output is invisible to the lead until a message happens to arrive, and messages do not arrive reliably: sometimes because a teammate buried the deliverable in the summary field, sometimes because the worker's toolbox has no way to send a message at all. When you actually need the payload in hand, a synchronous `Agent` call returns its final message straight to you as the tool result. Reserve named and background teammates for work whose output you never have to read back inline.
+The second lesson is to separate official behavior from version-specific
+evidence. Start with the current documentation, then use runtime logs to
+diagnose the installed release. Old binary strings and pane workarounds can
+explain an incident without defining today's contract.

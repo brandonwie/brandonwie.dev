@@ -2,7 +2,7 @@
 title: "Claude Code: Shared + Personal AI Config Pattern"
 description: Split AI instructions into committed (shared) and gitignored (personal) layers
 date: 2026-02-04T00:00:00.000Z
-updated: "2026-07-13"
+updated: "2026-07-23"
 tags:
   - devops
   - claude-code
@@ -12,7 +12,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: d48c8bc78d7907cc4f70f77061ff7dffad0c2b3482915c05d5899e86837e0a03
+source_content_hash: dcbe64a1d4804ca000c8bd25992698e9f82f45e4b8b816980e208de3d0ca6037
 references:
   - url: "https://docs.anthropic.com/en/docs/claude-code"
     title: Claude Code Documentation
@@ -59,7 +59,7 @@ coding conventions, command reference, deployment instructions. Personal files
 contain per-developer preferences, private tool configs, and symlinks to
 external systems.
 
-## Key decisions
+## Design decisions
 
 ### CLAUDE.md is the single source of truth
 
@@ -211,11 +211,45 @@ global rules without restating them.
 - 4 rules files total from the best-practices audit (+ tag-taxonomy from Tier 1)
 - Every session now enforces the same principles while loading fewer lines
 
-## Settings.local.json consolidation
+## Current profile settings architecture (July 2026)
+
+The shared instruction pattern above still uses repository files and generated
+projections. Private runtime settings are different. After several symlink
+failure modes, I stopped chaining profile `settings.json` files together.
+
+The current layout uses two gitignored authorities and two independent runtime
+files:
+
+```text
+private authority                 runtime
+─────────────────                 ───────
+settings.personal.json  ─deploy→  ~/.claude/settings.json
+settings.work.json      ─deploy→  ~/.claude-work/settings.json
+```
+
+Each runtime is a regular mode-`0600` file. Capture and deployment are explicit
+per-profile operations; there is no background or bidirectional sync. Before a
+mutation, the workflow verifies trusted parent directories, expected ownership,
+valid JSON, and distinct profile identity.
+
+The most important guardrail is a continuously monitored window with no running
+Claude process. If a new process appears or the file identity is unclear, the
+operation stops. Rollback is a separately approved whole-file update rather
+than a best-effort merge.
+
+This does not contradict the shared repository pattern. Team-visible
+instructions can still use a repository source of truth and generated copies.
+Machine-private runtime settings need a smaller blast radius and stronger
+identity checks.
+
+## Historical settings.local.json consolidation
+
+> This section records the March 2026 design that preceded the independent-file
+> architecture above. It is history, not the current deployment contract.
 
 Per-project `settings.local.json` files were the next deduplication target. I had
 14 files (8 of them symlinks from a central source) that mostly repeated the same
-bash command allow-list. The key change was replacing 100+ individual `Bash(...)`
+bash command allow-list. The main change was replacing 100+ individual `Bash(...)`
 allow entries with a single `Bash(*)` catch-all, because Claude Code's permission
 precedence (`deny > ask > allow`) makes that catch-all safe.
 
@@ -246,14 +280,17 @@ frontend/mobile files stay as-is since other teams manage them, 100% redundant
 but harmless. New projects automatically get correct permissions from the global
 config, with no per-project setup.
 
-### Why Bash(\*) is safe
+### Why `Bash(*)` is safe
 
 The `deny > ask > allow` precedence means `Bash(*)` only auto-approves commands
 that don't match a deny or ask pattern. Dangerous commands like
 `terraform destroy` and `git push --force` are in deny. Risky commands like
 `git push` and `rm` are in ask. Everything else flows through to the catch-all.
 
-## Per-profile settings.json (corrected)
+## Historical shared settings chain
+
+> The symlink topology below was retired in July 2026. Do not recreate it from
+> this incident record.
 
 When I first wrote this up in March, I claimed `settings.json` couldn't be
 symlinked across profiles and described the architecture as "three copies." That
@@ -288,11 +325,15 @@ multi-line bash scripts, entire code blocks, and auth tokens. My work profile
 accumulated ~160 entries (32KB) before cleanup. The `Bash(*)` catch-all prevents
 this by auto-approving before the interactive prompt fires.
 
-## Chain failure mode
+## Why the shared chain failed
+
+> The recovery commands in this section document an old topology. With the
+> current independent regular-file architecture, use the profile-specific
+> capture, deploy, and rollback workflow instead of re-linking settings.
 
 The `work → personal → SoT` chain has a single-file failure mode that took me a
 while to recognize. If anything breaks `~/.claude/settings.json`, **both profiles
-lose the chain at once**, not just personal. The most common cause is the Claude
+lose the chain at once**, including the personal profile. The most common cause is the Claude
 Code UI (or a plugin's permission prompt) writing the file atomically: it creates
 a temp file and uses `rename()` to move it over the target. That `rename()`
 replaces the symlink inode with a regular file in place, silently orphaning the
@@ -380,7 +421,10 @@ profile instead of cascading across both. The cost is that the
 it still works with decoupled chains. I haven't done that spike yet, but it's
 worth it before the next major settings restructure.
 
-## The revert loop surfaces
+## Historical UI rewrite loop
+
+> This second incident explains why the shared chain was retired. Its symlink
+> repair recipe is preserved as evidence, not as current guidance.
 
 A week after that first incident, I hit the same symptom again and assumed the
 one-shot atomic-rename explanation was still the whole story. It wasn't. After I
@@ -437,7 +481,7 @@ diff "$LIVE" "$SOT" > /dev/null       # identical (via symlink)
 python3 -m json.tool < "$LIVE" > /dev/null   # JSON valid through link
 ```
 
-The key move is step 3: promote live to SoT _before_ re-linking, so nothing is
+The important step is number 3: promote live to SoT _before_ re-linking, so nothing is
 lost. The structural walk from the previous section forces you to decide intent
 for every diff, which is correct when both sides have real intent to preserve.
 Here the UI's "intent" is a stale cache, so freezing live into the SoT and
@@ -470,12 +514,10 @@ permissions into the repo, which is worse.
 
 ## Optional session-profile extension (claude-swap)
 
-The symlink chain above handles two profiles (personal and work) cleanly. But it
-can't run two accounts at once, since each profile points at one set of credentials.
-A later stage added an optional multi-account session layer on top of the
-existing chain. It's additive only: the chain stays untouched and remains the
-primary architecture, and the session layer is inert unless you install the
-runtime.
+The independent personal and work profiles each point at one credential set. A
+later stage added an optional multi-account session layer without changing
+those primary runtime files. The session layer is inert unless its separate
+runtime is installed.
 
 ### Runtime lifecycle
 
@@ -549,9 +591,11 @@ references that won't work for other developers:
 ## The result
 
 New developers clone the repo and get working Claude Code instructions
-immediately. Personal customizations stay private. The sync script prevents drift
-across AI tools, and layer deduplication keeps token usage low by promoting shared
-principles to the global config. The central SoT directory makes it easy to audit
-what's shared versus personal, guard comments prevent accidental leaks at the point
-of authorship, and the optional session layer stacks multi-account isolation on top
-without disturbing the two-profile chain underneath.
+immediately. Personal customizations stay private. The sync script prevents
+drift across AI tools, while layer deduplication avoids loading the same rule in
+every project.
+
+The larger lesson is that shared instructions and private runtime settings have
+different failure domains. Repository instructions benefit from one auditable
+source of truth. Profile settings are safer as independent, identity-checked
+runtime files with explicit deployment and rollback.

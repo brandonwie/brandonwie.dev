@@ -1,9 +1,10 @@
 ---
-title: "Claude Code Agent Teams"
+title: Claude Code Agent Teams를 실제 작업에 쓰며 배운 점
 description: >-
-  여러 Claude Code 인스턴스를 팀으로 조율하는 실험적 기능의 설정, 패턴, 주의사항을 알아봅니다.
+  Agent Teams의 현재 동작과 version별 pane 문제, 작업 소유권, 결과 전달
+  실패를 구분해서 정리한 사용 기록이에요.
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-07-13'
+updated: 2026-07-23
 tags:
   - ai-ml
   - claude-code
@@ -14,61 +15,69 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: '2026-07-13'
-translation_date: '2026-07-13'
+source_updated: 2026-07-23
+translation_date: 2026-07-23
 references:
-  - url: "https://code.claude.com/docs/en/agent-teams"
-    title: Claude Code 세션 팀 조율하기
+  - url: 'https://code.claude.com/docs/en/agent-teams'
+    title: Claude Code Agent Teams 공식 문서
     type: official
-  - url: "internal://claude-binary-strings/v2.1.138"
-    title: "BackendRegistry + 영속 매크로 증거 (binary strings dump)"
+  - url: 'internal://claude-binary-strings/v2.1.138'
+    title: BackendRegistry와 persistent macro를 확인한 binary strings 기록
     type: verified
-    notes: "strings $(which claude) 결과에서 [BackendRegistry] Selected: tmux 로그와 settings.json 바깥에 저장되는 S_()/e_() 매크로(preferTmuxOverIterm2, iterm2It2SetupComplete)를 확인"
+    notes: >-
+      v2.1.138 binary에서 BackendRegistry 선택 log와 settings.json 밖의
+      preferTmuxOverIterm2, iterm2It2SetupComplete flag를 확인한 version별 증거
 ---
 
-같은 PR 하나를 놓고 보안, 성능, test 커버리지 세 방향으로 독립적인 코드 review를 동시에 돌려야 했어요. 터미널 탭 세 개를 열고 context를 복붙하는 건 Slack으로 인턴 관리하는 느낌이었죠. Agent Teams를 쓰면 하나의 Claude 세션이 리드 역할을 하고, 팀원을 별도 tmux pane에 생성하고, 공유 작업 목록으로 조율해요. 아이디어는 매력적이에요. 다만 실행하려면 날카로운 모서리가 어디 있는지 알아야 해요.
+PR 하나를 보안, 성능, test coverage 세 방향에서 동시에 review해야 했어요.
+terminal session을 따로 띄우면 작업은 병렬로 할 수 있지만 task 상태와 발견
+사항을 직접 옮겨야 했어요.
 
-이 글에서는 Agent Teams의 동작 방식, subagent나 solo 세션보다 나은 경우, 그리고 몇 주간 매일 사용하면서 겪은 모든 어려움을 다뤄요 -- 내가 모르는 사이에 셋업을 조용히 망가뜨린 것들까지 포함해서요.
+Agent Teams는 이 흐름을 제품 기능으로 묶어요. 하나의 Claude Code session이
+lead가 되고, 각자 context window를 가진 팀원들이 shared task list와 직접
+메시지를 사용해요. 아직 experimental 기능이라 pane 구현보다 오래 유지되는
+조율 규칙이 더 중요했어요.
 
-## Agent Teams란
+## Agent Teams가 제공하는 것
 
-Agent Teams는 하나의 세션(리드)이 팀을 만들고, 팀원을 생성하고, 공유 인프라 위에서 작업을 조율하는 실험적 Claude Code 기능이에요. 각 팀원은 자체 context window를 가진 독립적인 Claude 인스턴스로 실행돼요.
+공식 문서는 Claude Code 2.1.178 기준 동작을 설명해요. 아래에서 이전 version을
+다루는 부분은 당시 관찰로 따로 표시했어요.
 
-조율 프리미티브는 이래요:
+- 리드가 팀을 조율하고 작업을 배정하며 결과를 승인해요.
+- 팀원은 독립된 Claude instance와 context를 사용해요.
+- 작업 목록은 pending, in progress, completed 상태와 의존성을 공유해요.
+- 메일함으로 리드와 팀원, 팀원끼리 직접 메시지를 주고받아요.
 
-- **리드** -- 팀을 만들고, 작업을 할당하고, 결과를 승인하는 메인 세션
-- **팀원** -- 각자 자체 pane에서 생성되는 별도의 Claude 인스턴스
-- **작업 목록** -- 상태(대기, 진행 중, 완료)와 의존성 추적이 있는 공유 작업 항목
-- **메일박스** -- 리드-팀원 쌍에 제한되지 않는, 모든 에이전트 간 직접 메시징
+호출자에게 결과 하나만 돌려주는 subagent와 달리 teammate는 서로 메시지를
+주고받고 shared task로 조율할 수 있어요.
 
-Subagent(`Agent` 도구)와는 달라요. Subagent는 백그라운드에서 실행되고 결과를 반환하는 방식이에요. 팀원은 영속적이고 인터랙티브하며 서로 소통할 수 있어요.
+## 언제 team을 쓸까
 
-## 언제 Teams를 쓸까
+| 필요한 것                           | 선택       |
+| ----------------------------------- | ---------- |
+| 짧고 집중된 작업, 결과만 필요       | Subagent   |
+| 작업자끼리 발견 사항을 주고받아야 함 | Agent team |
+| 같은 file을 순서대로 편집           | Solo       |
 
-Teams, subagent, solo 세션의 구분이 중요해요. 잘못 고르면 조율 오버헤드에 시간을 낭비하거나 성능을 놓치게 돼요.
+병렬 code review, 서로 다른 가설을 검증하는 debugging, frontend와 backend와
+test를 함께 맞추는 작업에 잘 맞아요. 독립된 module을 맡더라도 중간 발견을
+공유해야 한다면 team이 유용해요.
 
-| 필요                            | 사용       |
-| ------------------------------- | ---------- |
-| 빠른 집중 작업, 결과만 중요     | Subagent   |
-| 작업자들이 토론하고 협업해야 함 | Agent team |
-| 순차 작업, 같은 file 편집       | Solo 세션  |
+다만 background teammate의 작업은 결과가 아니에요. 메시지로 돌아오거나 약속한
+artifact에 쓰이기 전에는 lead가 읽을 수 없어요. fan-out 뒤 모든 결과를 바로
+모아야 한다면 synchronous worker를 쓰거나 전달 경로를 brief에 명시해요.
 
-Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cross-layer 조율(frontend + backend + test 동시 진행), 그리고 발견 사항을 공유해야 하는 독립 모듈 개발이에요.
+## team이 맞지 않는 경우
 
-결과를 거둬들이는 쪽에서 뒤늦게 깨달은 주의점이 하나 있어요. 팀원의 출력을 리드 세션으로 다시 읽어와야 한다면, `name`이나 `team_name` 없는 동기 `Agent` 호출을 쓰는 편이 나아요. 그 최종 메시지가 tool 결과로 바로 돌아오거든요. 반면 이름이 붙었거나 백그라운드로 도는 팀원의 분석 내용은 `SendMessage`가 도착하기 전까지(도착한다는 보장도 없이) 오케스트레이터에는 안 보여요. 그러니 실제로 결과물을 손에 쥐어야 하는 fan-out 후 수집 단계에서는 이름 붙은 팀원에 기대지 마세요.
+- 같은 file을 순서대로 고치는 작업은 solo session이 안전해요.
+- 혼자 5분 안에 끝나는 일은 team setup 비용이 더 커요.
+- 여러 번에 걸쳐 이어갈 작업은 session resumption이 가능한 solo 작업과 handoff
+  문서가 나아요.
+- team 안에서 다시 team을 만드는 중첩 구조는 지원하지 않아요.
 
-## 언제 Teams를 쓰면 안 될까
+## 설정과 version 차이
 
-모든 병렬 워크로드가 조율 오버헤드를 감수할 만한 건 아니에요.
-
-- **같은 file의 순차 편집.** 팀원이 같은 file을 동시에 안전하게 편집할 수 없어요. Solo 세션을 대신 쓰세요.
-- **빠른 일회성 작업.** 솔로로 5분 이내면 팀 셋업이 절약하는 시간보다 더 걸려요. 집중 위임에는 subagent를 쓰세요.
-- **세션 지속성이 필요할 때.** in-process 팀원은 중단되면 복구할 수 없어요. 여러 번에 나눠서 할 수 있는 작업이면 인계 문서와 함께 solo 세션을 쓰세요.
-- **중첩 조율.** 팀 안에서 팀을 만들 수 없어요. 계층적 위임이 필요하면 여러 solo 세션을 수동으로 조율하세요.
-
-## 설정하기
-
-두 가지 설정이 필요해요. 먼저 실험적 기능 flag를 활성화해요:
+실험 기능 flag를 켜요.
 
 ```json
 {
@@ -78,7 +87,9 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 }
 ```
 
-그리고 display 모드를 설정해요. 옵션은 `"in-process"`, `"tmux"`, `"auto"`예요:
+화면 동작은 release마다 바뀌었어요. 특정 mode가 필요하면 오래된 설정을 그대로
+복사하지 말고 설치한 version의 문서를 확인해요. tmux를 선호할 때 사용해 온
+설정은 다음과 같아요.
 
 ```json
 {
@@ -86,81 +97,118 @@ Teams가 빛나는 경우: 병렬 코드 review, 경쟁적 가설 debugging, cro
 }
 ```
 
-`"tmux"`와 `"auto"` 모두 `it2` CLI로 iTerm2를 자동 감지하게 되어 있지만, iTerm2 backend는 v2.1.74 기준으로 동작하지 않아요(issue #24301 -- 아래에서 자세히 다뤄요). 실제로 split pane은 tmux 세션 안에서만 작동해요. tmux 없이는 팀원이 에러나 경고 없이 조용히 in-process 모드로 빠져요. **우회 방법:** iTerm2에서 `tmux -CC`(control mode)를 실행하면 tmux backend로 네이티브 iTerm2 pane을 띄울 수 있어요.
+공식 문서에 따르면 2.1.178부터 teammate를 만들 때 별도 team setup 단계가
+필요하지 않고 session이 끝나면 cleanup도 자동으로 이뤄져요. 아래 iTerm2와
+tmux 문제는 각 heading에 적힌 예전 version의 진단 기록이에요. 현재 설정
+contract로 사용하면 안 돼요.
 
-## 핵심 패턴
+## 반복해서 도움이 된 패턴
 
-매일 사용하면서 팀을 혼란스럽지 않고 생산적으로 만드는 네 가지 패턴이 나왔어요:
+- Delegate mode(Shift+Tab)로 lead를 조율과 review에 집중시켜요.
+- teammate가 read-only로 계획을 먼저 쓰고 lead가 승인한 뒤 구현해요.
+- teammate 한 명당 task 5~6개 정도로 나눠요.
+- `TeammateIdle`과 `TaskCompleted` hook으로 조기 중단과 완료 오판을 막아요.
 
-- **Delegate 모드** (Shift+Tab) -- 리드를 조율만 하도록 제한해서 직접 구현하는 걸 막아요. 리드가 작업 관리와 review에 집중하게 해줘요.
-- **계획 승인** -- 팀원이 읽기 전용 모드에서 먼저 계획을 세우고, 리드가 검토한 뒤에 구현을 승인해요. 잘못된 요구사항 이해로 인한 헛수고를 방지해요.
-- **작업 크기 조정** -- 팀원당 5-6개 작업을 목표로 하세요. 너무 적으면 팀원이 놀고, 너무 많으면 context overflow가 생겨요.
-- **품질 hook** -- `TeammateIdle`(팀원이 일찍 멈추지 않고 계속 작업하게 함)과 `TaskCompleted`(조기 완료 선언 방지)가 가드레일 역할을 해요.
+## 실제로 만난 실패들
 
-## 겪은 어려움들
+공식 문서가 기본 동작을 설명한다면, 이 부분은 깨진 session에서 확인한 실패
+모양을 기록해요.
 
-이 섹션이 이 글이 존재하는 이유예요. 공식 문서는 해피 패스만 다뤄요. 아래 내용은 전부 깨진 세션과 잃어버린 작업을 거치며 배운 거지, 문서에서 배운 게 아니에요.
+### 실험 기능의 경계
 
-**실험적이고 문서화되지 않은 edge case.** 이 기능은 experimental로 표시되어 있어요. error 복구, 팀원별 context 한도, 작업 의존성 해결 방식은 시행착오로 배웠어요. 문서가 기본은 다루지만 실패 모드는 안 다뤄요.
+in-process로 실행한 팀원이 중단되거나 terminal이 닫히면 이어갈 수 없어요.
+팀원은 생성할 때 리드의 권한 mode를 그대로 상속해요. 읽기 전용 reviewer와
+쓰기가 가능한 implementer에게 서로 다른 권한을 줄 수 없어요.
 
-**in-process 모드에 세션 복구가 없어요.** 팀원이 crash하거나 터미널이 닫히면 그 팀원의 작업이 사라져요. 작업 중간에 20분치 구현 진행을 잃고 나서 발견했어요. checkpoint나 복구 메커니즘이 없어요.
+Git worktree에는 tracked file만 들어와요. `CLAUDE.local.md`,
+`.claude/settings.local.json`, `.claude/skills`처럼 gitignore된 symlink는
+없어요. 필요한 환경 변수와 지시사항은 user-level 설정이나 spawn prompt로
+따로 전달해야 해요.
 
-**권한 상속이 전부 아니면 전무예요.** 팀원은 생성 시 리드의 권한 모드를 상속해요. 다른 팀원에게 다른 권한 수준을 줄 수 없어요 -- 읽기 전용 reviewer와 읽기/쓰기 구현자가 별도의 권한 설정이 필요한데 지원되지 않아요.
+### iTerm2와 tmux의 예전 동작
 
-**team vs subagent vs solo 선택.** 구분이 미묘해요. 초기에는 subagent가 더 적합한 작업(빠른 집중 작업)에 agent teams를 써서 5초면 끝나는 백그라운드 작업에 조율 오버헤드를 낭비했어요.
+2.1.74에서는 테스트한 `ITermBackend` 경로가 활성화되지 않았고 tmux 밖에서는
+in-process mode로 fallback됐어요. `tmux -CC`를 쓰면 tmux backend가 iTerm2
+split pane을 제공했어요. 최신 release에도 같은 우회가 필요하다고 가정하지
+말고 다시 확인해야 해요.
 
-**Git worktree에서 gitignored symlink가 사라져요.** 팀원이 git worktree에서 작업하면 tracked file만 보여요. Gitignored symlink(`CLAUDE.local.md`, `.claude/settings.local.json`, `.claude/skills`)가 없어서 개인 설정과 지침이 worktree 팀원에게 로드되지 않아요. 중요한 환경 변수는 user-level `~/.claude/settings.local.json`에 넣고, spawn prompt에 context를 미리 포함시켜서 우회했어요.
+2.1.138 문제를 조사하며 binary string table에서 `S_()`와 `e_()`가 관리하는
+flag 두 개를 찾았어요.
 
-**iTerm2 `ITermBackend`가 동작하지 않아요(known bug #24301).** 바이너리에 `it2 session split` 지원이 포함된 `ITermBackend`가 있지만, backend 선택 로직이 이걸 활성화하지 않아요. `teammateMode: "auto"`나 `"tmux"`를 설정해도 tmux 세션 안이 아니면 Claude Code가 조용히 `in-process`로 빠져요 -- `it2`가 설치되어 있고, Python API가 활성화되어 있고, 모든 iTerm2 환경 변수가 있어도요. v2.1.74에서 여러 번 test해서 확인했어요. `teammateMode` 설정은 세션 시작 시 스냅샷되기 때문에 세션 중간에 `settings.json`을 바꿔도 효과가 없어요. **우회 방법:** `tmux -CC`(iTerm2 control mode)를 쓰면 tmux backend로 네이티브 iTerm2 pane을 띄울 수 있어요.
+- `preferTmuxOverIterm2`: iTerm2 setup prompt에서 "Use tmux instead"를
+  고르면 `true`가 돼요.
+- `iterm2It2SetupComplete`: `it2 session list` 검증이 성공하면 `true`가
+  돼요.
 
-**Backend 선택 매크로가 `settings.json` 바깥에 저장돼요 (v2.1.138 감사).** Claude Code 2.1.138에서 split pane이 여전히 안 뜨는 regression 보고가 와서, 바이너리의 string table을 들여다봤어요. `teammateMode: "tmux"` + `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` + 활성 tmux 세션이 다 갖춰져 있는데도 split이 안 됐거든요. `strings $(which claude)`를 돌리니 바이너리가 `S_()` / `e_()`라고 부르는 getter/setter 쌍이 관리하는 영속 플래그 두 개가 보였어요:
+둘 다 `settings.json`에 없고 CLI로 읽거나 쓸 수도 없었어요. 당시 runtime은
+`process.env.TMUX`가 있으면 stderr에
+`[BackendRegistry] Selected: tmux (running inside tmux session)`을
+남겼어요. 그 version을 진단할 때는 문서의 설정값보다 `claude --debug` log가
+실제 선택을 보여줬어요.
 
-- `preferTmuxOverIterm2` -- 사용자가 iTerm2 셋업 prompt에서 "Use tmux instead"를 고르면 `true`로 설정되고, `hk7()`이 읽어요.
-- `iterm2It2SetupComplete` -- `it2 session list` 검증이 성공한 뒤 `true`로 설정돼요.
+오래된 build는 team metadata를 지운 뒤에도 tmux pane을 shell로 남기기도
+했어요. 현재 문서는 session 종료 시 자동 cleanup을 설명해요. 특정 version에서
+pane이 남는다면 `tmux list-panes -a`로 확인하고 그 release의 bug로 보고해요.
 
-두 플래그 모두 `settings.json`에 없고, CLI read/write 표면도 없어요. runtime backend selector는 `process.env.TMUX`가 설정돼 있으면 stderr에 `[BackendRegistry] Selected: tmux (running inside tmux session)`을 찍어요 -- 즉, 기존 tmux pane 안에서 띄운 세션이면 `settings.json`이 뭐라고 적혀 있든 tmux backend가 이겨요.
+teammate를 세 명 이상 동시에 만들 때 tmux `send-keys`의 "not in a mode"
+오류도 겪었어요. pane은 생겼지만 agent가 시작되지 않았고, 한 명씩 다시 만들면
+대체로 정상 동작했어요.
 
-이 점이 의외였어요. `teammateMode`는 문서상 authoritative처럼 읽히지만, 실제 결정은 runtime detector가 해요. `settings.json`은 hint이지 hard override가 아니에요. 바이너리가 어떤 backend를 실제로 골랐는지 알고 싶으면, `claude --debug`로 실행하고 `TeamCreate`를 시도한 뒤 stderr에서 `[BackendRegistry] Selected:`를 grep하세요. 그 한 줄이 ground truth이고, 나머지는 다 configuration일 뿐이에요.
+### 공유 task는 file 소유권을 보장하지 않아요
 
-**TeamDelete가 참조가 끊긴 tmux pane을 정리하지 않아요.** 에이전트가 종료되면 tmux pane이 새 zsh 셸로 살아 있어요. `TeamDelete`는 팀 메타데이터만 정리하고 pane은 안 건드려요. 참조가 끊긴 각 pane에 `tmux kill-pane -t %<id>`를 수동으로 실행해야 해요. 팀 작업 후 `tmux list-panes -a`로 좀비 셸이 쌓이지 않게 확인하세요.
+먼저 끝난 teammate가 다른 teammate의 진행 중 task를 가져간 적이 있어요. 두
+agent가 같은 file을 고치게 되면서 충돌 위험이 생겼어요.
 
-**동시에 3명 이상 spawn하면 tmux race condition이 생겨요.** 팀원을 동시에 3명 이상 생성하면 tmux `send-keys`에서 "not in a mode" error가 나요. Pane은 만들어지지만 에이전트가 시작되지 않아요. 개별적으로 다시 시도하면 보통 해결돼요. 팀원을 순차적으로(잠깐의 간격을 두고) 생성하면 문제를 아예 피할 수 있어요.
+공유 작업 목록은 file 수정을 순서대로 보장하지 않아요. 팀원을 만들 때 담당자를
+지정하고, `in_progress`이거나 다른 agent가 소유한 작업은 가져가지 못하게
+brief에 적어야 해요.
 
-**유휴 에이전트가 다른 팀원의 작업을 가져가는 문제(동시성 위험).** 팀원이 자기 배치를 일찍 끝내면, 공유 작업 목록에서 아직 안 끝난 작업을 보고 가져갈 수 있어요 -- 다른 팀원이 이미 그 file로 작업하고 있어도요. 같은 file을 두 에이전트가 동시에 수정하면 데이터 유실이나 충돌이 생겨요. 72개 블로그 글을 3명의 에이전트로 확장하는 작업에서 이걸 겪었어요: 가장 빠른 에이전트가 먼저 끝나고 다른 팀원의 작업을 가져가서 같은 file에 sub-agent를 생성했어요. 원래 에이전트가 먼저 써둔 덕분에 데이터 유실은 없었어요. **예방법:** spawn할 때 `TaskUpdate`의 `owner`로 작업을 명시적으로 배정하고, 이미 `in_progress`이거나 다른 에이전트 소유인 작업은 가져가지 말라고 지시하세요.
+### 보이는 tool만 고르는 편향
 
-**Settings.json 재구성 부작용.** Claude Code UI에서 설정을 저장하면 `settings.json`을 재구성하면서 `defaultMode` 같은 값을 조용히 바꿀 수 있어요. UI에서 변경한 뒤에는 항상 버전 관리와 diff를 확인하세요 -- 조용한 변경을 잡아낼 수 있어요.
+예전에는 `TeamCreate`가 기본 tool 목록에 보이지 않는다는 이유로 존재하지 않는
+기능이라고 잘못 판단했어요. deferred tool은 `ToolSearch`로 불러오기 전까지
+보이지 않았어요. 그 잘못된 결론이 global instruction에 들어가면서 split pane
+team 대신 background subagent를 쓰는 session이 이어졌어요.
 
-**TeamCreate가 instructions에서 잘못 제거됨.** 이건 특히 교활했어요. 이전 세션에서 `TeamCreate`가 deferred tool이라 도구 목록에 안 보이니까 존재하지 않는다고 결론 내렸어요. 글로벌 CLAUDE.md가 "Agent tool을 대신 사용하라"로 업데이트됐고, 이후 모든 세션에서 split pane teams 대신 백그라운드 subprocess가 사용됐어요. 수정은 간단했어요: deferred tool이 존재하지 않는다고 결론 내리기 전에 항상 `ToolSearch`로 확인하는 거예요. 하지만 피해는 이미 발생한 뒤였어요 -- teams가 작동하고 있다고 생각했지만 실제로는 백그라운드 subagent를 받고 있던 세션들이 여러 번 있었어요.
+2.1.138 당시에는 `Agent`에 `team_name`을 주지 않으면 in-process subprocess,
+`team_name`을 주면 tmux teammate가 됐어요. 이 역시 version별 기록이에요.
+현재 release에서는 공식 문서와 live tool schema를 먼저 확인해야 해요.
 
-**Deferred tool 가시성 편향.** TeamCreate를 올바르게 문서화한 뒤에도, Claude는 `team_name` 없이 `Agent` tool을 계속 사용했어요 -- 항상 split pane 없이 in-process로 실행돼요. 근본 원인: `Agent` tool은 항상 기본 도구 목록에 보이지만, `TeamCreate`는 `ToolSearch`로 로드해야 하거든요. Claude는 보이는 도구를 먼저 선택해요. 해결법은 `SessionStart` hook(`session-start-team-preload.py`)으로 세션 시작 시 Claude에게 TeamCreate 사전 로드를 상기시키는 거였어요. advisory 출력에 명시적 3단계 workflow가 포함돼요: `ToolSearch` → `TeamCreate` → `Agent(team_name)`. 핵심: `Agent` without `team_name` = in-process subprocess; `Agent` WITH `team_name` = tmux split pane. 이 차이는 알지 못하면 보이지 않아요.
+### summary field에 결과가 사라질 수 있어요
 
-**팀원 summary-field 함정 (조용한 deliverable 손실).** 팀원이 메시지를 돌려보낼 때, 답장에는 `summary` 필드(UI 미리보기용 5-10단어)와 `message` 필드(전체 내용)가 모두 있어요. 어떤 팀원들은 `summary` 필드에만 "X 완료, 붙여넣을 준비 됨" 같은 메타 요약을 넣고 message 본문은 비워두거나 메타를 다시 적어요. 실제 deliverable은 절대 도착하지 않아요. 4월 초 3-agent 준비 팀에서 이걸 겪었어요: 3명 중 2명이 summary-only 메시지를 돌려보냈고, 사전 콘텐츠 메시지 없이 idle 알림이 도착했어요. 리드 세션은 "idle"을 작업 완료로 해석하고 넘어갔어요. 근본 원인: 팀원 prompt가 deliverable이 어디에 들어가야 하는지 명시적으로 말해주지 않아서 -- 팀원들이 summary를 보고서로 취급한 거예요. **수정:** 모든 팀원 브리핑은 명시적으로 "전체 deliverable은 message 본문에, summary 필드는 메타데이터 전용으로 최대 10단어"라고 말해야 해요. 똑같이 중요한 것: _사전 콘텐츠 메시지 없는_ idle 알림은 작업 완료가 아니라 silent failure로 취급하세요. 복구는 믿을 게 못 돼요. idle 팀원에게 `SendMessage`로 보고서를 inline 요청해도 제때 전달된다는 보장이 없고, 늦은 결과물이 한 턴 뒤에 오거나 필요한 시점 전에 안 올 수도 있어요. 확실한 해법은 구조적이에요. fan-out 후 수집 단계라면 `name`이나 `team_name` 없는 _동기_ `Agent` 호출을 쓰세요. 그 최종 메시지가 tool 결과로 바로 돌아와서, deliverable이 보이지 않는 summary 필드에 갇힐 일이 없어요. 이름 붙었거나 백그라운드로 도는 팀원은 출력을 inline으로 다시 읽을 필요가 없는 작업에만 쓰세요.
+teammate 응답에는 UI용 짧은 `summary`와 전체 `message`가 따로 있었어요.
+brief가 모호하면 teammate가 summary에 "완료"만 적고 message 본문을 비워
+실제 deliverable이 오지 않았어요. content message 없이 idle 알림만 온 경우도
+완료로 보면 안 돼요.
 
-**tool이 제한된 worker 타입은 아예 메시지를 못 보내요.** summary-field 함정에는 더 고약한 변종이 있어요. 도구 목록에서 `SendMessage`와 `Write`가 통째로 빠진 worker 타입(Read, Glob, Grep, Bash만 가진 읽기 전용 worker)은 백그라운드 보고서를 구조적으로 전달할 수 없어요. 오케스트레이터에는 idle 알림만 오고 그게 끝이에요. 전달 도구 자체가 worker의 도구함에 없으니 아무리 다시 지시해도 안 고쳐져요. 2026-07-10에 백그라운드 진단 worker 4명으로 이걸 겪었어요. 원인을 알아내기까지 네 번 넘게 헛되이 재촉했죠. **수정:** 백그라운드로 제한된 worker 타입에 fan-out할 때는 file-drop 전달 계약을 미리 정하고("전체 보고서를 Bash heredoc으로 `<약속한-경로>`에 써라"), 오케스트레이터가 idle ping마다 그 file을 읽게 하세요. Bash가 있는 worker는 Write 도구가 없어도 `cat > file <<'EOF'`는 언제든 할 수 있거든요. 결과가 inline으로 돌아와야 한다면 이름 없는 동기 `Agent` 호출이 여전히 더 간단한 해법이에요.
+결과를 메시지로 받아야 한다면 brief에 아래 계약을 넣어요.
 
-## 제한 사항 요약
+```text
+Put the full deliverable in the message body.
+The summary field is metadata only, max 10 words.
+```
 
-빠른 참조를 위한 전체 제약 조건이에요:
+fan-out 결과를 바로 읽어야 할 때는 이름 없는 synchronous worker가 더
+단순해요. 마지막 메시지가 tool result로 돌아와 summary에 갇히지 않아요.
 
-- in-process 팀원에 세션 복구 없음
-- 세션당 한 팀, 중첩 팀 불가
-- 고정 리드 (리더십 이전 불가)
-- 모든 팀원이 생성 시 리드의 권한 모드 상속
-- Split pane에 tmux 필요 (iTerm2 ITermBackend가 존재하지만 동작하지 않음 -- #24301)
-- tmux 없이는 팀원이 에러 없이 조용히 in-process로 빠짐
-- iTerm2 우회 방법: tmux -CC control mode로 tmux backend를 띄워 네이티브 pane 사용
-- backend 선택은 `settings.json`의 `teammateMode`가 아니라 runtime detector(`process.env.TMUX`)가 결정함 (`claude --debug` + `[BackendRegistry] Selected:` grep으로 확인)
-- TeamDelete가 참조가 끊긴 tmux pane을 정리하지 않음 (수동 정리 필요)
-- 팀원 3명 이상 동시 spawn 시 race condition 발생 (개별 재시도로 해결)
-- 유휴 팀원이 다른 에이전트의 진행 중 작업을 가져갈 수 있음 (명시적 소유권 지정 필요)
-- Worktree에서 gitignored file 누락 (팀원이 개인 설정을 못 읽음)
-- Deferred tool(TeamCreate 등)은 ToolSearch로 로드하기 전까지 안 보임
-- 이름 붙은/백그라운드 팀원은 결과물을 inline으로 안정적으로 돌려주지 못함 (fan-out 후 수집 단계엔 동기 `Agent` 호출 사용)
-- tool이 제한된 worker(`SendMessage`나 `Write` 없음)는 백그라운드 보고서를 아예 전달 못 함 (file-drop 계약 사용)
+더 강한 실패도 있었어요. `SendMessage`와 `Write`가 없는 read-only worker는
+background report를 보낼 방법 자체가 없었어요. 이런 worker를 background로
+띄운다면 Bash로 약속한 경로에 report를 쓰는 file-drop 계약이 필요해요.
 
-## 예시 prompt
+## 현재도 전제로 둘 제한
 
-팀 조율 패턴을 보여주는 prompt예요:
+- teammate는 서로 다른 context를 사용하므로 핵심 요구사항을 task마다 적어요.
+- shared task만으로 file 중복 소유를 막을 수 없어요.
+- background 결과에는 message, synchronous return, file path 중 하나의 전달
+  계약이 필요해요.
+- worktree에는 개인 gitignored 설정이 없어요.
+- permission과 display 동작은 version에 민감하므로 설치한 release와 runtime
+  log로 확인해요.
+
+위의 긴 incident는 실패 모양을 알아보는 데는 유용하지만, 오래된 tool 이름과
+backend 동작을 오늘의 호환성 약속으로 읽으면 안 돼요.
+
+## 사용 예시
 
 ```text
 Create an agent team to review PR #142. Spawn three
@@ -171,14 +219,20 @@ reviewers:
 Have them each review and report findings.
 ```
 
-리드가 각 reviewer에게 작업을 할당하고, reviewer들은 각자의 pane에서 독립적으로 작업하고, 발견 사항은 메일박스를 거쳐 리드에게 모여 종합돼요.
+lead가 task를 배정하고 각 reviewer가 독립적으로 일한 뒤 mailbox로 발견 사항을
+보내는 형태예요.
 
-## 정리
+## 남은 원칙
 
-Agent Teams는 실질적인 조율 문제를 해결해요: 공유 상태가 있는 codebase에서의 병렬 작업이에요. 작업 목록과 메일박스 프리미티브는 잘 설계되어 있어요. 거친 모서리는 인프라 쪽에 있어요 -- tmux pane 관리, config parsing, worktree 격리, 그리고 셋업을 조용히 다운그레이드할 수 있는 deferred tool 가시성 문제예요.
+Agent Teams는 독립된 작업자가 서로 발견을 공유해야 하는 복잡한 작업에 맞아요.
+결과 하나만 필요하면 subagent가 낫고, 같은 file을 순서대로 고치면 solo
+session이 안전해요.
 
-가장 중요한 교훈은: 도구가 존재하지 않는다고 결론 내리기 전에 확인하세요. Claude Code의 deferred tool은 검색하기 전까지 안 보여요. 한 세션에서의 잘못된 가정 하나가 설정에 전파되어 며칠간 이후 모든 세션의 품질을 떨어뜨렸어요. 보이는 도구 목록이 아니라 `ToolSearch`로 확인하세요.
+가장 오래 남은 교훈은 소유권과 전달 방식을 명시하는 것이었어요. shared task가
+write를 serialize하지 않고 teammate를 띄웠다고 결과가 lead에게 도착하는 것도
+아니에요.
 
-두 번째 교훈은 v2.1.138 binary-strings 감사에서 나왔어요: 설정 파일은 의도를 기술하고, 동작은 runtime detector가 결정해요. 문서대로 동작하지 않을 땐 바이너리의 stderr(`claude --debug`)에서 runtime이 실제로 뭘 골랐는지를 grep하세요. `[BackendRegistry] Selected:` 줄이 ground truth이고, `settings.json`은 그렇지 않아요.
-
-세 번째 교훈은 작업을 띄우는 게 아니라 거둬들이는 것에 관한 거예요. 이름 붙었거나 백그라운드로 도는 팀원의 출력은 메시지가 우연히 도착하기 전까지 리드에게 안 보이고, 그 메시지는 안정적으로 오지 않아요. 팀원이 deliverable을 summary 필드에 묻어버렸거나, worker의 도구함에 메시지 보낼 방법이 아예 없어서죠. 결과물을 정말 손에 쥐어야 할 땐 동기 `Agent` 호출이 최종 메시지를 tool 결과로 바로 돌려줘요. 이름 붙은 팀원과 백그라운드 팀원은 출력을 inline으로 다시 읽을 필요가 전혀 없는 작업에만 남겨두세요.
+공식 동작과 version별 증거도 분리해야 해요. 현재 문서를 기준으로 시작하고,
+설정과 다르게 움직일 때 설치한 release의 runtime log를 봐요. 과거 binary
+string과 pane 우회는 당시 incident를 설명할 수 있지만 오늘의 contract는
+아니에요.
