@@ -84,7 +84,10 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<h1>Korea's first UAM reservation platform</h1>
+		<p class="company">Moviation</p>
+		<!-- "Korea's first" is on the submitted CV and is defensible, but it is
+		     dropped here by choice: the work stands without the superlative. -->
+		<h1>UAM reservation platform</h1>
 		<p class="state">
 			{#if tooling}
 				And the build-time tooling behind every page
@@ -128,6 +131,16 @@
 		display: flex;
 		flex-direction: column;
 		gap: clamp(1.35rem, 3.5vh, 2.25rem);
+	}
+
+	/* Company eyebrow above the title: the audience always knows which chapter
+	   they are in without the title having to carry the company name. */
+	.company {
+		margin: 0 0 0.4rem;
+		font-size: var(--deck-meta);
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		opacity: 0.5;
 	}
 
 	h1 {

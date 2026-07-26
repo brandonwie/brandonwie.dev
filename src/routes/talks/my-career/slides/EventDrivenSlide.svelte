@@ -128,6 +128,7 @@
 
 <section class="slide" bind:this={root}>
 	<header>
+		<p class="company">MOBA</p>
 		<h1>Decoupling the sync queue</h1>
 		<!--
 			The subtitle must not outrun the diagram. "Fire and forget" is only true
@@ -199,6 +200,16 @@
 		display: flex;
 		flex-direction: column;
 		gap: clamp(1.35rem, 3.5vh, 2.25rem);
+	}
+
+	/* Company eyebrow above the title: the audience always knows which chapter
+	   they are in without the title having to carry the company name. */
+	.company {
+		margin: 0 0 0.4rem;
+		font-size: var(--deck-meta);
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		opacity: 0.5;
 	}
 
 	h1 {
