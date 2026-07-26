@@ -110,14 +110,14 @@
 <style>
 	.slide {
 		width: 100%;
-		max-width: 72rem;
+		max-width: 82rem;
 		display: flex;
 		flex-direction: column;
-		gap: clamp(1.5rem, 4vh, 3rem);
+		gap: clamp(2rem, 5vh, 3.5rem);
 	}
 
 	h1 {
-		font-size: clamp(1.5rem, 4vw, 2.75rem);
+		font-size: var(--deck-title);
 		font-weight: 600;
 		letter-spacing: -0.02em;
 		margin: 0;
@@ -165,12 +165,12 @@
 	}
 
 	.company {
-		font-size: clamp(0.95rem, 1.8vw, 1.35rem);
+		font-size: var(--deck-heading);
 		font-weight: 600;
 	}
 
 	.years {
-		font-size: clamp(0.7rem, 1.2vw, 0.85rem);
+		font-size: var(--deck-meta);
 		opacity: 0.55;
 		font-variant-numeric: tabular-nums;
 	}
@@ -178,10 +178,10 @@
 	/* Same reason as the notes on the sync slide: onMount runs after first paint,
 	   so a JS-only resting state flashes step 2's text during step 1. */
 	.gained {
-		margin-top: 0.35rem;
-		font-size: clamp(0.75rem, 1.3vw, 0.95rem);
+		margin-top: 0.5rem;
+		font-size: var(--deck-body);
 		border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-		padding-top: 0.35rem;
+		padding-top: 0.5rem;
 		visibility: hidden;
 		opacity: 0;
 	}

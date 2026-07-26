@@ -217,6 +217,19 @@
 <style>
 	/* Fixed overlay rather than a layout reset — the deck covers the site chrome
 	   without modifying any shared layout file. */
+	/* Shared type scale. Slides read these rather than sizing themselves, so
+	   sixteen slides stay one artifact and a scale change is one edit.
+	   Sized for a projected room: the floor values assume someone is reading
+	   this from the back, not from a laptop at arm's length. */
+	.deck,
+	.print-deck {
+		--deck-title: clamp(2rem, 4.4vw, 3.5rem);
+		--deck-subtitle: clamp(1rem, 1.7vw, 1.35rem);
+		--deck-heading: clamp(1.15rem, 2vw, 1.6rem);
+		--deck-body: clamp(1rem, 1.5vw, 1.25rem);
+		--deck-meta: clamp(0.8rem, 1.15vw, 1rem);
+	}
+
 	.deck {
 		position: fixed;
 		inset: 0;
@@ -265,7 +278,7 @@
 		justify-content: space-between;
 		align-items: baseline;
 		margin-top: 0.6rem;
-		font-size: 0.75rem;
+		font-size: var(--deck-meta);
 		letter-spacing: 0.04em;
 		opacity: 0.55;
 		font-variant-numeric: tabular-nums;
@@ -287,7 +300,7 @@
 		border-radius: 4px;
 		color: inherit;
 		font: inherit;
-		font-size: 0.75rem;
+		font-size: var(--deck-meta);
 		letter-spacing: 0.04em;
 		padding: 0.3rem 0.7rem;
 		cursor: pointer;

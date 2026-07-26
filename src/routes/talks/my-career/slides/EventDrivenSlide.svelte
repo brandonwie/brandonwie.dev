@@ -22,17 +22,14 @@
 	let ready = $state(false);
 	let applied = -1;
 
-	// Three steps: 0 coupled · 1 the decoupling · 2 payoff.
+	// TWO STEPS: before and after. Deck-wide rule — no slide gets a third.
 	//
-	// The queue moving out and the event channel appearing are one change, not
-	// two — the channel is what replaces the direct call, so showing the box
-	// leave without it left an incomplete picture on screen. They run as one
-	// sequence: the box lands, then the channel draws into the gap it left.
-	//
-	// The payoff is likewise single: the response going immediate and the reasons
-	// it can are the same point, so the slide ends on a complete thought.
+	// A slide answers one question, so it has one transition. Everything after
+	// the single advance is choreographed inside that one step: the queue lands,
+	// the event channel draws into the gap, then the response and its reasons
+	// arrive. Sequenced, but one input.
 	const showChannel = $derived(step >= 1);
-	const respondsImmediately = $derived(step >= 2);
+	const respondsImmediately = $derived(step >= 1);
 
 	const notes = [
 		'Fire and forget — the request no longer waits on the queue',
@@ -116,12 +113,15 @@
 			}
 		}
 
+		// Last in the sequence: the reasoning only makes sense once the diagram
+		// and the response have both settled.
 		gsap.to(root.querySelectorAll('.note'), {
-			autoAlpha: target >= 2 ? 1 : 0,
-			y: target >= 2 ? 0 : 6,
+			autoAlpha: target >= 1 ? 1 : 0,
+			y: target >= 1 ? 0 : 6,
 			duration: DURATION * d,
 			stagger: 0.07 * d,
 			ease: EASE,
+			delay: target >= 1 ? (DURATION * 0.7 + 0.45) * d : 0,
 		});
 	}
 </script>
@@ -195,14 +195,14 @@
 <style>
 	.slide {
 		width: 100%;
-		max-width: 72rem;
+		max-width: 82rem;
 		display: flex;
 		flex-direction: column;
-		gap: clamp(1rem, 3vh, 2rem);
+		gap: clamp(1.35rem, 3.5vh, 2.25rem);
 	}
 
 	h1 {
-		font-size: clamp(1.4rem, 3.5vw, 2.5rem);
+		font-size: var(--deck-title);
 		font-weight: 600;
 		letter-spacing: -0.02em;
 		margin: 0;
@@ -210,7 +210,7 @@
 
 	.state {
 		margin: 0.4rem 0 0;
-		font-size: clamp(0.8rem, 1.5vw, 1rem);
+		font-size: var(--deck-subtitle);
 		opacity: 0.6;
 		/* Only the wording changes here; no motion, so attention stays on the boxes. */
 	}
@@ -250,12 +250,12 @@
 	}
 
 	.box-title {
-		font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+		font-size: var(--deck-heading);
 		font-weight: 600;
 	}
 
 	.box-note {
-		font-size: clamp(0.7rem, 1.2vw, 0.8rem);
+		font-size: var(--deck-meta);
 		opacity: 0.55;
 	}
 
@@ -295,7 +295,7 @@
 		left: 0;
 		right: 0;
 		text-align: center;
-		font-size: 0.7rem;
+		font-size: var(--deck-meta);
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		opacity: 0.5;
@@ -303,7 +303,7 @@
 
 	.response {
 		margin: 0;
-		font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+		font-size: var(--deck-body);
 		opacity: 0.85;
 	}
 
@@ -314,7 +314,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.4rem;
-		font-size: clamp(0.8rem, 1.4vw, 0.95rem);
+		font-size: var(--deck-body);
 		opacity: 0.85;
 	}
 
