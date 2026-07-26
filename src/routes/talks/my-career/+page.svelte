@@ -25,6 +25,7 @@
 	import PushSlide from './slides/PushSlide.svelte';
 	import ParallelSyncSlide from './slides/ParallelSyncSlide.svelte';
 	import InfrastructureSlide from './slides/InfrastructureSlide.svelte';
+	import DataPipelineSlide from './slides/DataPipelineSlide.svelte';
 	import EventDrivenSlide from './slides/EventDrivenSlide.svelte';
 
 	// Chronological, per storyboard.md. The sync-queue slide is MOBA work and now
@@ -52,6 +53,7 @@
 		{ id: 'push', label: 'Sync — polling to push', steps: 2, component: PushSlide },
 		{ id: 'parallel', label: 'Sync — linear to parallel', steps: 2, component: ParallelSyncSlide },
 		{ id: 'infrastructure', label: 'Infrastructure', steps: 2, component: InfrastructureSlide },
+		{ id: 'data-pipeline', label: 'Data pipeline', steps: 2, component: DataPipelineSlide },
 	];
 </script>
 
