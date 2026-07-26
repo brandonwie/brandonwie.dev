@@ -34,18 +34,16 @@
 		},
 		{
 			id: 'roster',
-			input: 'School roster',
+			input: 'Class roster',
 			before: { title: 'Entered one by one', note: 'in the admin CMS' },
-			after: { title: 'One spreadsheet upload', note: 'a whole school in a single file' },
+			after: { title: 'One spreadsheet upload', note: 'a whole class in a single file' },
 			output: 'Teachers and children registered',
 		},
 	];
 
 	const notes = [
-		'Core maintainer of the NestJS backend; supported the migration to Kotlin and Spring Boot',
-		'Contributed to redesigning the schema for grade and class transitions, with full history preserved',
-		'Customer-facing web on Next.js; admin CMS on React and Vite',
-		'Infrastructure automation, EFK logging, CI/CD',
+		'Admin CMS on React and Vite; customer-facing web on Next.js',
+		'Built the prototype of the StoryLine teachers app',
 	];
 
 	let root = $state<HTMLElement>();
@@ -106,10 +104,10 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">Playtag</p>
-		<h1>Automating the operator workflow</h1>
+		<h1>The admin tool operators ran the day on</h1>
 		<p class="state">
 			{#if automated}
-				After — face detection in the browser, and a whole school in one upload
+				After — face detection in the browser, and a whole class in one upload
 			{:else}
 				Before — operators cropped every photo and typed in every child
 			{/if}
@@ -150,10 +148,6 @@
 			<li class="note">{note}</li>
 		{/each}
 	</ul>
-
-	<!-- Their own award, so stating it is recall rather than a claim. Kept
-	     small and factual for exactly that reason. -->
-	<p class="award">Superman Award, H1 2024 — sole company-wide recipient</p>
 </section>
 
 <style>

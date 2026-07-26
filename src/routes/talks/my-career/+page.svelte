@@ -18,7 +18,8 @@
 	import ArcSlide from './slides/ArcSlide.svelte';
 	import ModulabsSlide from './slides/ModulabsSlide.svelte';
 	import MoviationSlide from './slides/MoviationSlide.svelte';
-	import PlaytagSlide from './slides/PlaytagSlide.svelte';
+	import PlaytagAdminSlide from './slides/PlaytagAdminSlide.svelte';
+	import PlaytagBackendSlide from './slides/PlaytagBackendSlide.svelte';
 	import EventDrivenSlide from './slides/EventDrivenSlide.svelte';
 
 	// Chronological, per storyboard.md. The sync-queue slide is MOBA work, so it
@@ -27,7 +28,8 @@
 		{ id: 'arc', label: 'The arc', steps: 2, component: ArcSlide },
 		{ id: 'modulabs', label: 'MODULABS', steps: 2, component: ModulabsSlide },
 		{ id: 'moviation', label: 'Moviation', steps: 2, component: MoviationSlide },
-		{ id: 'playtag', label: 'Playtag', steps: 2, component: PlaytagSlide },
+		{ id: 'playtag-admin', label: 'Playtag — admin tool', steps: 2, component: PlaytagAdminSlide },
+		{ id: 'playtag-backend', label: 'Playtag — backend', steps: 2, component: PlaytagBackendSlide },
 		{
 			id: 'event-driven',
 			label: 'Decoupling the sync queue',
