@@ -20,6 +20,27 @@
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
+	// Two flows, same shape: something arrives, an operator used to do the work
+	// by hand, the result ships. Only the middle stage changes on advance.
+	const flows = [
+		{
+			id: 'photos',
+			input: 'Photo captured',
+			before: { title: 'Manual cropping', note: 'in Figma, one photo at a time' },
+			// Short enough not to wrap, and it reads as a direct swap for the line
+			// above it: manual cropping becomes automatic cropping.
+			after: { title: 'Automatic cropping', note: 'TensorFlow.js face detection' },
+			output: 'Published to parents',
+		},
+		{
+			id: 'roster',
+			input: 'School roster',
+			before: { title: 'Entered one by one', note: 'in the admin CMS' },
+			after: { title: 'One spreadsheet upload', note: 'a whole school in a single file' },
+			output: 'Teachers and children registered',
+		},
+	];
+
 	const notes = [
 		'Core maintainer of the NestJS backend; supported the migration to Kotlin and Spring Boot',
 		'Contributed to redesigning the schema for grade and class transitions, with full history preserved',
@@ -59,12 +80,12 @@
 			automated = want;
 			await tick();
 
-			const stage = root.querySelector('.stage-swap');
-			if (stage && !still) {
+			const swapped = root.querySelectorAll('.stage-swap');
+			if (swapped.length && !still) {
 				gsap.fromTo(
-					stage,
+					swapped,
 					{ autoAlpha: 0, scale: 0.94 },
-					{ autoAlpha: 1, scale: 1, duration: DURATION, ease: EASE },
+					{ autoAlpha: 1, scale: 1, duration: DURATION, stagger: 0.08, ease: EASE },
 				);
 			}
 		}
@@ -85,38 +106,43 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">Playtag</p>
-		<h1>Computer vision in the operator workflow</h1>
+		<h1>Automating the operator workflow</h1>
 		<p class="state">
 			{#if automated}
-				After — TensorFlow.js face detection and auto-cropping
+				After — face detection in the browser, and a whole school in one upload
 			{:else}
-				Before — every photo cropped by hand
+				Before — operators cropped every photo and typed in every child
 			{/if}
 		</p>
 	</header>
 
-	<!-- Three stages, only the middle one changes. The photo arrives and the
-	     photo publishes either way; what changed is who does the work. -->
-	<div class="pipeline">
-		<div class="stage"><span class="stage-title">Photo captured</span></div>
+	<!-- Both flows keep the same three stages; only the middle one changes. The
+	     input arrives and the result ships either way — what changed is who does
+	     the work in between. -->
+	<div class="flows">
+		{#each flows as flow (flow.id)}
+			<div class="pipeline">
+				<div class="stage"><span class="stage-title">{flow.input}</span></div>
 
-		<span class="arrow" aria-hidden="true">&rarr;</span>
+				<span class="arrow" aria-hidden="true">&rarr;</span>
 
-		{#if automated}
-			<div class="stage stage-swap is-auto">
-				<span class="stage-title">Face detection · auto-crop</span>
-				<span class="stage-note">TensorFlow.js, in the browser</span>
+				{#if automated}
+					<div class="stage stage-swap is-auto">
+						<span class="stage-title">{flow.after.title}</span>
+						<span class="stage-note">{flow.after.note}</span>
+					</div>
+				{:else}
+					<div class="stage stage-swap">
+						<span class="stage-title">{flow.before.title}</span>
+						<span class="stage-note">{flow.before.note}</span>
+					</div>
+				{/if}
+
+				<span class="arrow" aria-hidden="true">&rarr;</span>
+
+				<div class="stage"><span class="stage-title">{flow.output}</span></div>
 			</div>
-		{:else}
-			<div class="stage stage-swap">
-				<span class="stage-title">Manual cropping</span>
-				<span class="stage-note">one photo at a time</span>
-			</div>
-		{/if}
-
-		<span class="arrow" aria-hidden="true">&rarr;</span>
-
-		<div class="stage"><span class="stage-title">Published to parents</span></div>
+		{/each}
 	</div>
 
 	<ul class="notes">
@@ -160,11 +186,20 @@
 		opacity: 0.6;
 	}
 
-	.pipeline {
-		display: flex;
+	/* One grid for both flows. `display: contents` on each row lets the two
+	   pipelines share a single column template, so the middle stages and the
+	   output stages line up vertically instead of each row sizing itself. */
+	.flows {
+		display: grid;
+		grid-template-columns: auto auto auto auto auto;
+		justify-content: start;
 		align-items: stretch;
-		gap: clamp(0.6rem, 1.8vw, 1.5rem);
-		flex-wrap: wrap;
+		column-gap: clamp(0.6rem, 1.8vw, 1.5rem);
+		row-gap: clamp(0.6rem, 1.6vh, 1rem);
+	}
+
+	.pipeline {
+		display: contents;
 	}
 
 	.stage {
@@ -181,11 +216,14 @@
 		min-width: clamp(10rem, 18vw, 15rem);
 	}
 
-	/* Fixed width, sized for the longer of the two labels. Without it the box
-	   grows when the label changes and shoves "Published to parents" sideways —
-	   a stage that did not change has no business moving. */
+	/* Fixed width AND a reserved height. Without the width the box grows when its
+	   label changes and shoves "Published to parents" sideways; without the
+	   height the longer label wraps to an extra line, the row grows, and a
+	   vertically-centred slide pushes the title up. Both are the same rule: a
+	   stage that did not change has no business moving. */
 	.stage-swap {
-		width: clamp(13rem, 24vw, 20rem);
+		width: clamp(14rem, 26vw, 25rem);
+		min-height: clamp(6.5rem, 13vh, 8rem);
 	}
 
 	.is-auto {
