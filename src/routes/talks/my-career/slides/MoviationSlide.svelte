@@ -35,6 +35,7 @@
 	onMount(async () => {
 		const { gsap } = await loadGsap();
 		if (root) {
+			gsap.set(root.querySelectorAll('.pipe'), { autoAlpha: 0, y: 10 });
 			gsap.set(root.querySelectorAll('.note'), { autoAlpha: 0, y: 6 });
 		}
 		ready = true;
@@ -55,21 +56,16 @@
 		const d = still ? 0 : 1;
 		const want = target >= 1;
 
-		if (want !== tooling) {
-			tooling = want;
-			await tick();
-
-			const rows = root.querySelectorAll('.pipe');
-			if (rows.length && !still) {
-				gsap.fromTo(
-					rows,
-					{ autoAlpha: 0, y: 10 },
-					{ autoAlpha: 1, y: 0, duration: DURATION, stagger: 0.08, ease: EASE },
-				);
-			}
-		}
-
+		tooling = want;
 		await tick();
+
+		gsap.to(root.querySelectorAll('.pipe'), {
+			autoAlpha: want ? 1 : 0,
+			y: want ? 0 : 10,
+			duration: DURATION * d,
+			stagger: 0.08 * d,
+			ease: EASE,
+		});
 
 		gsap.to(root.querySelectorAll('.note'), {
 			autoAlpha: target >= 1 ? 1 : 0,
@@ -105,17 +101,21 @@
 		<span class="bridge">JavaScript channel — the native&ndash;web bridge, owned end to end</span>
 	</div>
 
-	{#if tooling}
-		<div class="pipeline">
-			{#each generated as row (row.from)}
-				<div class="pipe">
-					<span class="from">{row.from}</span>
-					<span class="arrow" aria-hidden="true">&rarr;</span>
-					<span class="to">{row.to}</span>
-				</div>
-			{/each}
-		</div>
-	{/if}
+	<!--
+		Always rendered, only revealed. Inserting these rows at step 2 re-flowed a
+		vertically-centred slide and shoved everything above them up the screen —
+		the title and the diagram moved when neither had changed. Reserving the
+		space means the only thing that moves is the thing that changed.
+	-->
+	<div class="pipeline">
+		{#each generated as row (row.from)}
+			<div class="pipe">
+				<span class="from">{row.from}</span>
+				<span class="arrow" aria-hidden="true">&rarr;</span>
+				<span class="to">{row.to}</span>
+			</div>
+		{/each}
+	</div>
 
 	<ul class="notes">
 		{#each notes as note (note)}
@@ -202,12 +202,16 @@
 		max-width: 62rem;
 	}
 
+	/* Hidden in CSS as well as GSAP: onMount runs after first paint, so a
+	   JS-only resting state flashes these rows on entry. */
 	.pipe {
 		display: grid;
 		grid-template-columns: clamp(11rem, 21vw, 17rem) auto minmax(0, 1fr);
 		align-items: baseline;
 		gap: clamp(0.5rem, 1.5vw, 1.25rem);
 		font-size: var(--deck-body);
+		visibility: hidden;
+		opacity: 0;
 	}
 
 	.from {
