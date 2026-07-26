@@ -24,8 +24,11 @@
 
 	const notes = [
 		'The only JavaScript engineer on the team when the backend seat opened; became core maintainer of the NestJS service',
-		'Contributed to redesigning the schema for grade and class transitions, with full history preserved',
-		'Two engineers joined later and migrated to Kotlin and Spring Boot; the NestJS service kept serving production',
+		// "Participated", not "contributed": Brandon gave opinions on the schema
+		// but did not own the design. Below CV wording on purpose — going under
+		// what the CV claims is always safe, going over never is.
+		'Participated in the schema redesign for grade and class transitions, with full history preserved',
+		'Supported the migration to Kotlin and Spring Boot; the NestJS service kept serving production',
 		'Infrastructure automation, EFK logging, CI/CD',
 	];
 
