@@ -269,13 +269,6 @@
 		opacity: 0.5;
 	}
 
-	.award {
-		margin: 0;
-		font-size: var(--deck-meta);
-		letter-spacing: 0.04em;
-		opacity: 0.55;
-	}
-
 	@media (max-width: 760px) {
 		.pipeline {
 			flex-direction: column;

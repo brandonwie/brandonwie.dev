@@ -14,7 +14,9 @@
   raise it without evidence. See facts.md.
 
   Do NOT claim ownership of the Spring repository or service layers (facts.md
-  C3). Two engineers joined and ran that migration; Brandon supported it.
+  C3). Brandon took part in that migration; he did not lead it. "Led" appears
+  exactly once on this slide, on the GitLab to GitHub migration, and that is
+  what makes the other verbs read as deliberate rather than modest.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
@@ -149,10 +151,6 @@
 			<li class="note">{note}</li>
 		{/each}
 	</ul>
-
-	<!-- Their own award, so stating it is recall rather than a claim. Closes the
-	     Playtag section, kept small and factual. -->
-	<p class="award">Superman Award, H1 2024 — sole company-wide recipient</p>
 </section>
 
 <style>
@@ -279,13 +277,6 @@
 		height: 1px;
 		background: currentColor;
 		opacity: 0.5;
-	}
-
-	.award {
-		margin: 0;
-		font-size: var(--deck-meta);
-		letter-spacing: 0.04em;
-		opacity: 0.55;
 	}
 
 	@media (max-width: 760px) {
