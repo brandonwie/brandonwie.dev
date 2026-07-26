@@ -20,16 +20,19 @@
 	import MoviationSlide from './slides/MoviationSlide.svelte';
 	import PlaytagAdminSlide from './slides/PlaytagAdminSlide.svelte';
 	import PlaytagBackendSlide from './slides/PlaytagBackendSlide.svelte';
+	import MobaSetupSlide from './slides/MobaSetupSlide.svelte';
 	import EventDrivenSlide from './slides/EventDrivenSlide.svelte';
 
-	// Chronological, per storyboard.md. The sync-queue slide is MOBA work, so it
-	// stays last until the rest of the MOBA section is built around it.
+	// Chronological, per storyboard.md. The sync-queue slide is MOBA work and now
+	// sits behind the MOBA setup slide; the remaining sync beats slot in around
+	// it as they are built.
 	const slides: DeckSlide[] = [
 		{ id: 'arc', label: 'The arc', steps: 2, component: ArcSlide },
 		{ id: 'modulabs', label: 'MODULABS', steps: 2, component: ModulabsSlide },
 		{ id: 'moviation', label: 'Moviation', steps: 2, component: MoviationSlide },
 		{ id: 'playtag-admin', label: 'Playtag — admin tool', steps: 2, component: PlaytagAdminSlide },
 		{ id: 'playtag-backend', label: 'Playtag — backend', steps: 2, component: PlaytagBackendSlide },
+		{ id: 'moba-setup', label: 'MOBA — the setup', steps: 2, component: MobaSetupSlide },
 		{
 			id: 'event-driven',
 			label: 'Decoupling the sync queue',
