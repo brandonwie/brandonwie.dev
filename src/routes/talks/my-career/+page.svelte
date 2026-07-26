@@ -16,10 +16,17 @@
 	import Deck from '$lib/components/deck/Deck.svelte';
 	import type { DeckSlide } from '$lib/components/deck/types';
 	import ArcSlide from './slides/ArcSlide.svelte';
+	import ModulabsSlide from './slides/ModulabsSlide.svelte';
+	import MoviationSlide from './slides/MoviationSlide.svelte';
 	import EventDrivenSlide from './slides/EventDrivenSlide.svelte';
 
+	// Chronological, per storyboard.md. The sync-queue slide is MOBA work and
+	// belongs later in the deck; it sits last for now because the Playtag and
+	// MOBA sections between are not built yet.
 	const slides: DeckSlide[] = [
 		{ id: 'arc', label: 'The arc', steps: 2, component: ArcSlide },
+		{ id: 'modulabs', label: 'MODULABS', steps: 2, component: ModulabsSlide },
+		{ id: 'moviation', label: 'Moviation', steps: 2, component: MoviationSlide },
 		{
 			id: 'event-driven',
 			label: 'Decoupling the sync queue',
