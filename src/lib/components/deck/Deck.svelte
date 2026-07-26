@@ -20,7 +20,9 @@
 -->
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 	import type { DeckSlide } from './types';
 
 	let {
@@ -33,6 +35,11 @@
 
 	let index = $state(0);
 	let step = $state(0);
+
+	// Position lives in the URL (?page=2&step=3), one-based so it reads the way a
+	// person counts. Two things fall out of that: a reload lands where you were
+	// rather than back at slide 1, and any slide can be linked to directly.
+	let restored = $state(false);
 
 	// `browser &&` short-circuits before `searchParams` is touched. Reading it
 	// during prerender throws — the whole route is statically generated, so the
@@ -74,6 +81,44 @@
 
 	const atStart = $derived(index === 0 && step === 0);
 	const atEnd = $derived(index === slides.length - 1 && step === stepCount - 1);
+
+	function clamp(value: number, max: number): number {
+		return Math.min(Math.max(value, 0), Math.max(max, 0));
+	}
+
+	// Restore before the first paint the user sees. Runs in onMount rather than
+	// at init because searchParams cannot be read while prerendering.
+	onMount(() => {
+		const params = page.url.searchParams;
+		const wantedPage = Number(params.get('page'));
+		const wantedStep = Number(params.get('step'));
+
+		if (Number.isFinite(wantedPage) && wantedPage > 0) {
+			index = clamp(Math.trunc(wantedPage) - 1, slides.length - 1);
+		}
+		if (Number.isFinite(wantedStep) && wantedStep > 0) {
+			step = clamp(Math.trunc(wantedStep) - 1, (slides[index]?.steps ?? 1) - 1);
+		}
+
+		restored = true;
+	});
+
+	// Mirror position back into the URL. replaceState rather than pushState: a
+	// presenter pressing Back mid-talk should leave the deck, not walk back one
+	// step at a time through every advance they made.
+	$effect(() => {
+		if (!browser || !restored || printMode) return;
+
+		const target = new URL(page.url);
+		target.searchParams.set('page', String(index + 1));
+		target.searchParams.set('step', String(step + 1));
+
+		// Guard the write: page.url updates after replaceState, which re-runs this
+		// effect, and an unguarded call would loop.
+		if (target.href !== page.url.href) {
+			replaceState(target, page.state);
+		}
+	});
 
 	function onKeyDown(event: KeyboardEvent) {
 		// The site layout owns Cmd/Ctrl chords (palette, search). Only claim bare

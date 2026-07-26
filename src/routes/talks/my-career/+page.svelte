@@ -1,5 +1,5 @@
 <!--
-  /talks/playtag-claude
+  /talks/my-career
 
   Presentation deck. Content is governed by the fact ledger in 3B:
   projects/3b/actives/playtag-interview/facts.md — every claim on a slide must
@@ -23,7 +23,7 @@
 		{
 			id: 'event-driven',
 			label: 'Decoupling the sync queue',
-			steps: 4,
+			steps: 3,
 			component: EventDrivenSlide,
 		},
 	];

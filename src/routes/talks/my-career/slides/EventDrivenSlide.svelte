@@ -22,15 +22,17 @@
 	let ready = $state(false);
 	let applied = -1;
 
-	// One visible change per advance, so each animation can be landed on the
-	// sentence that explains it rather than firing several at once.
-	//   0 coupled · 1 queue moves out · 2 event channel · 3 payoff
+	// Three steps: 0 coupled · 1 the decoupling · 2 payoff.
 	//
-	// The payoff is one step, not two: the response going immediate and the
-	// reasons it can are the same point, so they land together and the slide
-	// finishes on a complete thought.
-	const showChannel = $derived(step >= 2);
-	const respondsImmediately = $derived(step >= 3);
+	// The queue moving out and the event channel appearing are one change, not
+	// two — the channel is what replaces the direct call, so showing the box
+	// leave without it left an incomplete picture on screen. They run as one
+	// sequence: the box lands, then the channel draws into the gap it left.
+	//
+	// The payoff is likewise single: the response going immediate and the reasons
+	// it can are the same point, so the slide ends on a complete thought.
+	const showChannel = $derived(step >= 1);
+	const respondsImmediately = $derived(step >= 2);
 
 	const notes = [
 		'Fire and forget — the request no longer waits on the queue',
@@ -89,12 +91,19 @@
 		// Draw the channel only on the advance that introduces it. Re-running the
 		// draw on every later step would re-animate a line that is already there,
 		// which reads as a glitch rather than a change.
-		const introducingChannel = target === 2 || (still && target >= 2);
+		const introducingChannel = target === 1 || (still && target >= 1);
 
 		if (introducingChannel) {
+			// Delayed past the Flip so the two reads as cause and effect — the box
+			// leaves, then the channel fills the gap — rather than as two things
+			// moving at once.
 			const channel = root.querySelector('.channel-line');
 			if (channel) {
-				gsap.fromTo(channel, { drawSVG: '0%' }, { drawSVG: '100%', duration: 0.4 * d, ease: EASE });
+				gsap.fromTo(
+					channel,
+					{ drawSVG: '0%' },
+					{ drawSVG: '100%', duration: 0.4 * d, ease: EASE, delay: DURATION * 0.7 * d },
+				);
 			}
 
 			const head = root.querySelector('.channel-head');
@@ -102,14 +111,14 @@
 				gsap.fromTo(
 					head,
 					{ autoAlpha: 0 },
-					{ autoAlpha: 0.65, duration: 0.2 * d, ease: EASE, delay: 0.35 * d },
+					{ autoAlpha: 0.65, duration: 0.2 * d, ease: EASE, delay: (DURATION * 0.7 + 0.35) * d },
 				);
 			}
 		}
 
 		gsap.to(root.querySelectorAll('.note'), {
-			autoAlpha: target >= 3 ? 1 : 0,
-			y: target >= 3 ? 0 : 6,
+			autoAlpha: target >= 2 ? 1 : 0,
+			y: target >= 2 ? 0 : 6,
 			duration: DURATION * d,
 			stagger: 0.07 * d,
 			ease: EASE,
