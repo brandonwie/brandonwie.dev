@@ -72,14 +72,8 @@
 		step = 0;
 	}
 
-	// Click advances one step, same as ArrowRight. A presenter driving from a
-	// clicker or trackpad gets the same one-change-per-input control as the
-	// keyboard, which is what makes it possible to land each animation on the
-	// sentence it belongs to.
-	function onClick() {
-		if (printMode) return;
-		next();
-	}
+	const atStart = $derived(index === 0 && step === 0);
+	const atEnd = $derived(index === slides.length - 1 && step === stepCount - 1);
 
 	function onKeyDown(event: KeyboardEvent) {
 		// The site layout owns Cmd/Ctrl chords (palette, search). Only claim bare
@@ -88,6 +82,10 @@
 
 		const target = event.target as HTMLElement | null;
 		if (target && (target.tagName === 'INPUT' || target.isContentEditable)) return;
+
+		// A focused control already handles Space and Enter itself. Without this,
+		// Space would fire the button AND this handler, advancing two steps.
+		if (target?.tagName === 'BUTTON' && (event.key === ' ' || event.key === 'Enter')) return;
 
 		switch (event.key) {
 			case 'ArrowRight':
@@ -119,7 +117,7 @@
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
-<svelte:window onkeydown={onKeyDown} onclick={onClick} />
+<svelte:window onkeydown={onKeyDown} />
 
 {#if printMode}
 	<!-- PDF fallback: every slide, final step, no motion, one per page. -->
@@ -147,14 +145,25 @@
 			<div class="deck-bar" style="--progress: {progress}"></div>
 			<div class="deck-meta">
 				<span class="deck-label">{current.label}</span>
-				<span class="deck-count">
-					{index + 1} / {slides.length}
-					{#if stepCount > 1}
-						<!-- Labelled, because two bare fractions side by side read as one
-						     number over another rather than slide-then-step. -->
-						<span class="deck-step">· step {step + 1}/{stepCount}</span>
-					{/if}
-				</span>
+
+				<!-- Explicit controls rather than click-anywhere: the diagrams are the
+				     point of the deck, and a stray click on one should not advance it. -->
+				<div class="deck-controls">
+					<button type="button" onclick={prev} disabled={atStart} aria-label="Previous step">
+						&larr; Prev
+					</button>
+					<span class="deck-count">
+						{index + 1} / {slides.length}
+						{#if stepCount > 1}
+							<!-- Labelled, because two bare fractions side by side read as one
+							     number over another rather than slide-then-step. -->
+							<span class="deck-step">· step {step + 1}/{stepCount}</span>
+						{/if}
+					</span>
+					<button type="button" onclick={next} disabled={atEnd} aria-label="Next step">
+						Next &rarr;
+					</button>
+				</div>
 			</div>
 		</nav>
 	</div>
@@ -219,6 +228,34 @@
 
 	.deck-step {
 		opacity: 0.7;
+	}
+
+	.deck-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
+	}
+
+	.deck-controls button {
+		background: none;
+		border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+		border-radius: 4px;
+		color: inherit;
+		font: inherit;
+		font-size: 0.75rem;
+		letter-spacing: 0.04em;
+		padding: 0.3rem 0.7rem;
+		cursor: pointer;
+		transition: border-color 160ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.deck-controls button:hover:not(:disabled) {
+		border-color: currentColor;
+	}
+
+	.deck-controls button:disabled {
+		opacity: 0.3;
+		cursor: default;
 	}
 
 	/* Print / PDF export */

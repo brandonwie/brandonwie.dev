@@ -175,12 +175,15 @@
 		font-variant-numeric: tabular-nums;
 	}
 
+	/* Same reason as the notes on the sync slide: onMount runs after first paint,
+	   so a JS-only resting state flashes step 2's text during step 1. */
 	.gained {
 		margin-top: 0.35rem;
 		font-size: clamp(0.75rem, 1.3vw, 0.95rem);
-		opacity: 0.8;
 		border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent);
 		padding-top: 0.35rem;
+		visibility: hidden;
+		opacity: 0;
 	}
 
 	/* Narrow screens: the rail stops being a timeline and becomes a list. Dropping

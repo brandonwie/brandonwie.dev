@@ -23,7 +23,7 @@
 		{
 			id: 'event-driven',
 			label: 'Decoupling the sync queue',
-			steps: 5,
+			steps: 4,
 			component: EventDrivenSlide,
 		},
 	];

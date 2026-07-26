@@ -23,8 +23,12 @@
 	let applied = -1;
 
 	// One visible change per advance, so each animation can be landed on the
-	// sentence that explains it rather than firing three at once.
-	//   0 coupled · 1 queue moves out · 2 event channel · 3 response · 4 reasoning
+	// sentence that explains it rather than firing several at once.
+	//   0 coupled · 1 queue moves out · 2 event channel · 3 payoff
+	//
+	// The payoff is one step, not two: the response going immediate and the
+	// reasons it can are the same point, so they land together and the slide
+	// finishes on a complete thought.
 	const showChannel = $derived(step >= 2);
 	const respondsImmediately = $derived(step >= 3);
 
@@ -35,7 +39,15 @@
 	];
 
 	onMount(async () => {
-		await loadGsap();
+		const { gsap } = await loadGsap();
+
+		// Pin the resting state before the first render pass. Without this the
+		// notes mount visible and only get faded out once GSAP loads, so entering
+		// the slide flashed the final step's text.
+		if (root) {
+			gsap.set(root.querySelectorAll('.note'), { autoAlpha: 0, y: 6 });
+		}
+
 		ready = true;
 	});
 
@@ -96,8 +108,8 @@
 		}
 
 		gsap.to(root.querySelectorAll('.note'), {
-			autoAlpha: target >= 4 ? 1 : 0,
-			y: target >= 4 ? 0 : 6,
+			autoAlpha: target >= 3 ? 1 : 0,
+			y: target >= 3 ? 0 : 6,
 			duration: DURATION * d,
 			stagger: 0.07 * d,
 			ease: EASE,
@@ -297,9 +309,14 @@
 		opacity: 0.85;
 	}
 
+	/* Hidden in CSS, not just via GSAP: onMount runs after first paint, so a
+	   JS-only resting state still flashes the final text for a frame. GSAP's
+	   autoAlpha writes inline styles that override this when the step arrives. */
 	.note {
 		padding-left: 1rem;
 		position: relative;
+		visibility: hidden;
+		opacity: 0;
 	}
 
 	.note::before {
