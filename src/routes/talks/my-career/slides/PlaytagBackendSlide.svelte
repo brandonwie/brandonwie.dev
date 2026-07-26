@@ -2,10 +2,19 @@
   S5 — Playtag, the backend seat (0:45)
 
   The second half of the Playtag section, and the pivot point of the whole arc:
-  this is where frontend became full-stack, not by plan but because the seat was
-  empty and nobody else wrote JavaScript.
+  this is where frontend became full-stack, because the backend seat opened and
+  Brandon was the one already writing JavaScript.
 
-  Same three-stage shape as the admin slide so the section reads as one chapter.
+  THE ANIMATION CARRIES THE TURN, NOT A TASK. An earlier version made the hero
+  beat a connection-pool tuning; that is a task, and burying the pivot under it
+  wasted the one slide where the arc actually bends. The pool work is a note now.
+
+  The filled seat spans both rows — deliberately the same visual idea as the
+  MODULABS gateway, so the audience reads it without being taught it twice.
+
+  Note the slide shows the FACT (seat empty, then filled, no gap). The readiness
+  behind it — being prepared and waiting for the chance — is Brandon's to say
+  out loud; as a printed claim about himself it would be weak.
 
   CAUTION — the concurrency figure is Brandon's recollection, not on the CV or
   in any verified source. He recalled "20 to 40" and chose to state "around 20"
@@ -25,11 +34,11 @@
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
 	const notes = [
-		'The only JavaScript engineer on the team when the backend seat opened; became core maintainer of the NestJS service',
 		// "Participated", not "contributed": Brandon gave opinions on the schema
 		// but did not own the design. Below CV wording on purpose — going under
 		// what the CV claims is always safe, going over never is.
 		'Participated in the schema redesign for grade and class transitions, with full history preserved',
+		'Tuned the connection pool so the research pipeline registered companies in parallel, around 20 at a time, instead of one by one',
 		// "Took part in", not "supported": Brandon did hands-on work in the
 		// migration rather than assisting from the side. Still not "led" — see
 		// facts.md C3.
@@ -70,22 +79,20 @@
 			parallel = want;
 			await tick();
 
-			const swapped = root.querySelector('.stage-swap');
-			if (swapped && !still) {
+			// The filled seat grows into the space the vacancy left, so the change
+			// reads as one motion closing a gap rather than two boxes swapping.
+			const seat = root.querySelector('.filled');
+			if (seat && !still) {
 				gsap.fromTo(
-					swapped,
-					{ autoAlpha: 0, scale: 0.94 },
-					{ autoAlpha: 1, scale: 1, duration: DURATION, ease: EASE },
-				);
-			}
-
-			// The lanes are the point of this slide: one becomes many.
-			const lanes = root.querySelectorAll('.lane');
-			if (lanes.length && !still) {
-				gsap.fromTo(
-					lanes,
-					{ autoAlpha: 0, x: -8 },
-					{ autoAlpha: 1, x: 0, duration: DURATION, stagger: 0.05, ease: EASE },
+					seat,
+					{ autoAlpha: 0, scaleY: 0.7 },
+					{
+						autoAlpha: 1,
+						scaleY: 1,
+						duration: DURATION,
+						ease: EASE,
+						transformOrigin: 'top center',
+					},
 				);
 			}
 		}
@@ -109,41 +116,36 @@
 		<h1>Taking the empty backend seat</h1>
 		<p class="state">
 			{#if parallel}
-				After — a tuned connection pool, companies registering in parallel
+				After — I took it the moment it opened, and kept the frontend
 			{:else}
-				Before — the research pipeline registered one company at a time
+				Before — I was on the frontend, and the one who mainly wrote JavaScript
 			{/if}
 		</p>
 	</header>
 
-	<div class="pipeline">
-		<div class="stage"><span class="stage-title">Research pipeline</span></div>
-
-		<span class="arrow" aria-hidden="true">&rarr;</span>
+	<!--
+		The span is the whole slide: one engineer covering both rows where there
+		used to be a gap. Deliberately the same visual idea as the MODULABS
+		gateway, so the audience reads it without being taught it twice.
+	-->
+	<div class="seats">
+		<span class="role" style="grid-row: 1">Frontend</span>
+		<span class="role" style="grid-row: 2">Backend</span>
 
 		{#if parallel}
-			<div class="stage stage-swap is-parallel">
-				<span class="stage-title">Parallel requests</span>
-				<span class="stage-note">pool size tuned; around 20 at a time</span>
-				<div class="lanes" aria-hidden="true">
-					{#each Array(6) as _, i (i)}
-						<span class="lane"></span>
-					{/each}
-				</div>
+			<div class="seat filled">
+				<span class="seat-title">Me</span>
+				<span class="seat-note">core maintainer of the NestJS service</span>
 			</div>
 		{:else}
-			<div class="stage stage-swap">
-				<span class="stage-title">Linear processing</span>
-				<span class="stage-note">one company at a time</span>
-				<div class="lanes" aria-hidden="true">
-					<span class="lane is-single"></span>
-				</div>
+			<div class="seat" style="grid-row: 1">
+				<span class="seat-title">Me</span>
+			</div>
+			<div class="seat vacant" style="grid-row: 2">
+				<span class="seat-title">Unfilled</span>
+				<span class="seat-note">a TypeScript service with no one to run it</span>
 			</div>
 		{/if}
-
-		<span class="arrow" aria-hidden="true">&rarr;</span>
-
-		<div class="stage"><span class="stage-title">Companies registered</span></div>
 	</div>
 
 	<ul class="notes">
@@ -183,15 +185,28 @@
 		opacity: 0.6;
 	}
 
-	.pipeline {
+	/* Fixed row heights so the seat boxes are identical in both states and the
+	   slide cannot grow when the vacancy is filled. */
+	.seats {
 		display: grid;
-		grid-template-columns: auto auto auto auto auto;
+		grid-template-columns: auto minmax(0, 28rem);
+		grid-template-rows: repeat(2, clamp(4rem, 8vh, 5.5rem));
 		justify-content: start;
 		align-items: stretch;
-		column-gap: clamp(0.6rem, 1.8vw, 1.5rem);
+		column-gap: clamp(0.75rem, 2.5vw, 2rem);
+		row-gap: 0.6rem;
 	}
 
-	.stage {
+	.role {
+		grid-column: 1;
+		display: flex;
+		align-items: center;
+		font-size: var(--deck-heading);
+		font-weight: 600;
+	}
+
+	.seat {
+		grid-column: 2;
 		border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
 		border-radius: 6px;
 		padding: clamp(0.6rem, 1.5vw, 1rem) clamp(0.75rem, 2vw, 1.25rem);
@@ -200,54 +215,28 @@
 		justify-content: center;
 		gap: 0.25rem;
 		background: color-mix(in srgb, currentColor 4%, transparent);
-		min-width: clamp(9rem, 16vw, 13rem);
 	}
 
-	/* Fixed width and reserved height: the label change must not resize the box,
-	   or it shoves the stage after it sideways and grows a centred slide. */
-	.stage-swap {
-		width: clamp(14rem, 26vw, 25rem);
-		min-height: clamp(6.5rem, 13vh, 8rem);
+	/* The vacancy reads as absence: dashed, dimmed, no substance. */
+	.vacant {
+		border-style: dashed;
+		background: none;
+		opacity: 0.5;
 	}
 
-	.is-parallel {
+	.filled {
+		grid-row: 1 / 3;
 		background: color-mix(in srgb, currentColor 9%, transparent);
 	}
 
-	.stage-title {
+	.seat-title {
 		font-size: var(--deck-heading);
 		font-weight: 600;
 	}
 
-	.stage-note {
+	.seat-note {
 		font-size: var(--deck-meta);
 		opacity: 0.55;
-	}
-
-	/* One bar becomes six. The count is illustrative, not a measurement — the
-	   number that matters is in the note, where it can be qualified. */
-	.lanes {
-		display: flex;
-		gap: 3px;
-		margin-top: 0.4rem;
-		height: 6px;
-	}
-
-	.lane {
-		flex: 1;
-		border-radius: 2px;
-		background: currentColor;
-		opacity: 0.45;
-	}
-
-	.is-single {
-		flex: 0 0 22%;
-	}
-
-	.arrow {
-		align-self: center;
-		font-size: var(--deck-body);
-		opacity: 0.45;
 	}
 
 	.notes {
@@ -280,17 +269,19 @@
 	}
 
 	@media (max-width: 760px) {
-		.pipeline {
-			grid-template-columns: 1fr;
-			row-gap: 0.6rem;
+		.seats {
+			grid-template-columns: minmax(0, 1fr);
+			grid-template-rows: auto;
+			row-gap: 0.4rem;
 		}
 
-		.stage-swap {
-			width: auto;
-		}
-
-		.arrow {
-			display: none;
+		/* Role labels sit above their seat rather than beside it; the span that
+		   carries the idea on a wide screen has no room to work here. */
+		.role,
+		.seat,
+		.filled {
+			grid-column: 1;
+			grid-row: auto;
 		}
 	}
 </style>
