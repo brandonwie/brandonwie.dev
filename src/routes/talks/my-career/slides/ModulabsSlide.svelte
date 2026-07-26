@@ -3,10 +3,16 @@
 
   One question: what did the architecture look like before, and after.
 
-  Three markets each integrated their own way; a gateway module put them behind
-  one surface. The convergence is shown by a single box spanning all three rows
-  rather than by diagonal lines — same idea, and it survives a projector and a
-  narrow screen, which crossing lines do not.
+  Three products all call the same AIFFEL APIs but each shipped its own user
+  state and routing. A higher-order component took that control layer over,
+  while every product kept its own layout and details.
+
+  The convergence is shown by a single box spanning all three rows rather than
+  by diagonal lines — same idea, and it survives a projector and a narrow
+  screen, which crossing lines do not.
+
+  Note this is a FRONTEND composition layer, not a backend gateway. Getting that
+  wrong in the room invites a question with an awkward correction.
 
   Every claim here has a verified row in facts.md § MODULABS.
 -->
@@ -16,6 +22,9 @@
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
+	// All three products call the same AIFFEL APIs, but each has its own layout
+	// and its own details. What was shared was never the UI — it was user state
+	// and routing, which is why the answer was a HOC and not a component library.
 	const markets = ['B2G', 'B2B', 'B2C'];
 
 	const notes = [
@@ -83,12 +92,12 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<h1>One surface for three markets</h1>
+		<h1>One gateway HOC module, three products</h1>
 		<p class="state">
 			{#if unified}
-				After — a single gateway module, proposed and adopted internally
+				After — one HOC owns user state and routing; each product keeps its own layout
 			{:else}
-				Before — B2G, B2B and B2C each integrated their own way
+				Before — B2G, B2B and B2C each handled user state and routing themselves
 			{/if}
 		</p>
 	</header>
@@ -99,23 +108,26 @@
 	-->
 	<div class="diagram" class:is-unified={unified}>
 		{#each markets as market, i (market)}
-			<span class="source" style="grid-row: {i + 1}">{market}</span>
+			<span class="source" style="grid-row: {i + 1}">
+				<span class="source-name">{market}</span>
+				<span class="source-note">own layout</span>
+			</span>
 		{/each}
 
 		{#if unified}
 			<div class="box gateway">
-				<span class="box-title">Gateway module</span>
-				<span class="box-note">one integration surface</span>
+				<span class="box-title">Gateway HOC module</span>
+				<span class="box-note">user state · route control</span>
 			</div>
 		{:else}
 			{#each markets as market, i (market)}
 				<div class="box adapter" style="grid-row: {i + 1}">
-					<span class="box-note">own integration</span>
+					<span class="box-note">own user state · own routing</span>
 				</div>
 			{/each}
 		{/if}
 
-		<div class="box platform"><span class="box-title">AIFFEL platform</span></div>
+		<div class="box platform"><span class="box-title">AIFFEL APIs</span></div>
 	</div>
 
 	<ul class="notes">
@@ -160,10 +172,22 @@
 	.source {
 		grid-column: 1;
 		display: flex;
-		align-items: center;
+		flex-direction: column;
+		justify-content: center;
+		gap: 0.1rem;
+	}
+
+	.source-name {
 		font-size: var(--deck-heading);
 		font-weight: 600;
 		letter-spacing: 0.02em;
+	}
+
+	/* Says the quiet part out loud: the layouts stayed different on purpose.
+	   The HOC unified control, not appearance. */
+	.source-note {
+		font-size: var(--deck-meta);
+		opacity: 0.5;
 	}
 
 	.box {
