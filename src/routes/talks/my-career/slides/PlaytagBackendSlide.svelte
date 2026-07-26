@@ -29,7 +29,8 @@
 		// what the CV claims is always safe, going over never is.
 		'Participated in the schema redesign for grade and class transitions, with full history preserved',
 		'Supported the migration to Kotlin and Spring Boot; the NestJS service kept serving production',
-		'Infrastructure automation, EFK logging, CI/CD',
+		'Led the migration from GitLab to GitHub',
+		'Infrastructure management, EFK logging, GitHub CI/CD',
 	];
 
 	let root = $state<HTMLElement>();
