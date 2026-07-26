@@ -13,6 +13,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { loadGsap, EASE, DURATION, reducedMotion } from '$lib/components/deck/gsap';
+	import SlideVideo from '$lib/components/deck/SlideVideo.svelte';
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
@@ -31,6 +32,10 @@
 	let tooling = $state(false);
 	let ready = $state(false);
 	let applied = -1;
+
+	// Held while a step animation runs, so the recording is not moving at the
+	// same time as the pipeline rows arrive.
+	let videoPaused = $state(false);
 
 	onMount(async () => {
 		const { gsap } = await loadGsap();
@@ -58,6 +63,12 @@
 
 		tooling = want;
 		await tick();
+
+		// One thing moves at a time: hold the recording while the rows arrive.
+		if (!still) {
+			videoPaused = true;
+			setTimeout(() => (videoPaused = false), (DURATION + 0.3) * 1000);
+		}
 
 		gsap.to(root.querySelectorAll('.pipe'), {
 			autoAlpha: want ? 1 : 0,
@@ -93,35 +104,54 @@
 		</p>
 	</header>
 
-	<div class="shell">
-		<span class="shell-label">Flutter shell</span>
-		<div class="inner">
-			<span class="box-title">Next.js web app</span>
-		</div>
-		<span class="bridge">JavaScript channel — the native&ndash;web bridge, owned end to end</span>
-	</div>
-
 	<!--
-		Always rendered, only revealed. Inserting these rows at step 2 re-flowed a
-		vertically-centred slide and shoved everything above them up the screen —
-		the title and the diagram moved when neither had changed. Reserving the
-		space means the only thing that moves is the thing that changed.
+		Recording and diagram are complementary, not redundant: the video proves it
+		shipped and shows what it does, while the diagram shows the one thing the
+		video cannot — that this UI is a web app running inside a native shell.
 	-->
-	<div class="pipeline">
-		{#each generated as row (row.from)}
-			<div class="pipe">
-				<span class="from">{row.from}</span>
-				<span class="arrow" aria-hidden="true">&rarr;</span>
-				<span class="to">{row.to}</span>
-			</div>
-		{/each}
-	</div>
+	<div class="body">
+		<figure class="media">
+			<SlideVideo
+				src="/talks/my-career/moviation"
+				label="VONAER reservation flow: searching a departure point, picking it on the map, then choosing an arrival point"
+				paused={videoPaused}
+			/>
+			<figcaption>VONAER — booking a seat</figcaption>
+		</figure>
 
-	<ul class="notes">
-		{#each notes as note (note)}
-			<li class="note">{note}</li>
-		{/each}
-	</ul>
+		<div class="detail">
+			<div class="shell">
+				<span class="shell-label">Flutter shell</span>
+				<div class="inner">
+					<span class="box-title">Next.js web app</span>
+				</div>
+				<span class="bridge">
+					JavaScript channel — the native&ndash;web bridge, owned end to end
+				</span>
+			</div>
+
+			<!--
+				Always rendered, only revealed. Inserting these rows at step 2 re-flowed
+				a vertically-centred slide and shoved everything above them up the
+				screen — the title and the diagram moved when neither had changed.
+			-->
+			<div class="pipeline">
+				{#each generated as row (row.from)}
+					<div class="pipe">
+						<span class="from">{row.from}</span>
+						<span class="arrow" aria-hidden="true">&rarr;</span>
+						<span class="to">{row.to}</span>
+					</div>
+				{/each}
+			</div>
+
+			<ul class="notes">
+				{#each notes as note (note)}
+					<li class="note">{note}</li>
+				{/each}
+			</ul>
+		</div>
+	</div>
 </section>
 
 <style>
@@ -154,6 +184,34 @@
 		margin: 0.4rem 0 0;
 		font-size: var(--deck-subtitle);
 		opacity: 0.6;
+	}
+
+	/* Recording left, explanation right. The phone is 1:2, so it costs little
+	   width and reads instantly as mobile. */
+	.body {
+		display: grid;
+		grid-template-columns: clamp(9rem, 15vw, 13rem) minmax(0, 1fr);
+		gap: clamp(1.25rem, 3vw, 2.5rem);
+		align-items: start;
+	}
+
+	.media {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+	}
+
+	.media figcaption {
+		font-size: var(--deck-meta);
+		opacity: 0.5;
+	}
+
+	.detail {
+		display: flex;
+		flex-direction: column;
+		gap: clamp(1rem, 2.5vh, 1.75rem);
+		min-width: 0;
 	}
 
 	/* Nesting carries the architecture: the web app literally sits inside the
@@ -252,6 +310,17 @@
 	}
 
 	@media (max-width: 760px) {
+		.body {
+			grid-template-columns: 1fr;
+		}
+
+		/* The recording drops below the explanation on a phone — the words matter
+		   more than the proof when there is only one column to spend. */
+		.media {
+			order: 2;
+			max-width: 11rem;
+		}
+
 		.pipe {
 			grid-template-columns: 1fr;
 			gap: 0.15rem;

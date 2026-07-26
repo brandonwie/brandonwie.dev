@@ -19,6 +19,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { loadGsap, EASE, DURATION, reducedMotion } from '$lib/components/deck/gsap';
+	import SlideVideo from '$lib/components/deck/SlideVideo.svelte';
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
@@ -37,6 +38,9 @@
 	let unified = $state(false);
 	let ready = $state(false);
 	let applied = -1;
+
+	// Held while the gateway morph runs, so only one thing on screen moves.
+	let videoPaused = $state(false);
 
 	onMount(async () => {
 		const { gsap } = await loadGsap();
@@ -64,6 +68,12 @@
 		if (want !== unified) {
 			unified = want;
 			await tick();
+
+			// One thing moves at a time: hold the recording during the morph.
+			if (!still) {
+				videoPaused = true;
+				setTimeout(() => (videoPaused = false), (DURATION + 0.3) * 1000);
+			}
 
 			// The gateway grows into the space the three adapters occupied, so the
 			// reduction is legible as one motion rather than a swap.
@@ -103,39 +113,56 @@
 		</p>
 	</header>
 
-	<!--
-		One grid, not three stacked ones: the market label and its adapter share a
-		row, so they stay aligned at any width without hand-tuned heights.
-	-->
-	<div class="diagram" class:is-unified={unified}>
-		{#each markets as market, i (market)}
-			<span class="source" style="grid-row: {i + 1}">
-				<span class="source-name">{market}</span>
-				<span class="source-note">own layout</span>
-			</span>
-		{/each}
+	<div class="body">
+		<div class="detail">
+			<!--
+				One grid, not three stacked ones: the market label and its adapter share
+				a row, so they stay aligned at any width without hand-tuned heights.
+			-->
+			<div class="diagram" class:is-unified={unified}>
+				{#each markets as market, i (market)}
+					<span class="source" style="grid-row: {i + 1}">
+						<span class="source-name">{market}</span>
+						<span class="source-note">own layout</span>
+					</span>
+				{/each}
 
-		{#if unified}
-			<div class="box gateway">
-				<span class="box-title">Gateway HOC module</span>
-				<span class="box-note">user state · route control</span>
+				{#if unified}
+					<div class="box gateway">
+						<span class="box-title">Gateway HOC module</span>
+						<span class="box-note">user state · route control</span>
+					</div>
+				{:else}
+					{#each markets as market, i (market)}
+						<div class="box adapter" style="grid-row: {i + 1}">
+							<span class="box-note">own user state · own routing</span>
+						</div>
+					{/each}
+				{/if}
+
+				<div class="box platform"><span class="box-title">AIFFEL APIs</span></div>
 			</div>
-		{:else}
-			{#each markets as market, i (market)}
-				<div class="box adapter" style="grid-row: {i + 1}">
-					<span class="box-note">own user state · own routing</span>
-				</div>
-			{/each}
-		{/if}
 
-		<div class="box platform"><span class="box-title">AIFFEL APIs</span></div>
+			<ul class="notes">
+				{#each notes as note (note)}
+					<li class="note">{note}</li>
+				{/each}
+			</ul>
+		</div>
+
+		<!--
+			The three market labels are abstractions until the audience sees one of
+			the products. This is what "B2G, B2B and B2C" actually shipped as.
+		-->
+		<figure class="media">
+			<SlideVideo
+				src="/talks/my-career/modulabs"
+				label="The AIFFEL learning platform: a Python lesson with runnable code blocks"
+				paused={videoPaused}
+			/>
+			<figcaption>AIFFEL — one of the three products</figcaption>
+		</figure>
 	</div>
-
-	<ul class="notes">
-		{#each notes as note (note)}
-			<li class="note">{note}</li>
-		{/each}
-	</ul>
 </section>
 
 <style>
@@ -168,6 +195,34 @@
 		margin: 0.4rem 0 0;
 		font-size: var(--deck-subtitle);
 		opacity: 0.6;
+	}
+
+	/* Explanation left, evidence right. The recording is deliberately the
+	   smaller element — it supports the architecture claim, it is not the point. */
+	.body {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) clamp(12rem, 20vw, 18rem);
+		gap: clamp(1.25rem, 3vw, 2.5rem);
+		align-items: start;
+	}
+
+	.detail {
+		display: flex;
+		flex-direction: column;
+		gap: clamp(1rem, 2.5vh, 1.75rem);
+		min-width: 0;
+	}
+
+	.media {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+	}
+
+	.media figcaption {
+		font-size: var(--deck-meta);
+		opacity: 0.5;
 	}
 
 	.diagram {
@@ -271,6 +326,15 @@
 	}
 
 	@media (max-width: 760px) {
+		.body {
+			grid-template-columns: 1fr;
+		}
+
+		.media {
+			order: 2;
+			max-width: 16rem;
+		}
+
 		.diagram {
 			grid-template-columns: auto minmax(0, 1fr);
 			column-gap: 0.75rem;
