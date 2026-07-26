@@ -23,9 +23,12 @@
 		{ from: 'Form definitions', to: 'Declarative form builder' },
 	];
 
+	// Funding rounds stay off the slides by choice: they are the company's
+	// achievement, not the engineer's, and citing them reads as borrowed credit.
+	// The SITA liaison work stands on its own.
 	const notes = [
 		'Roughly 5x faster typical page development',
-		'Primary technical liaison for SITA API integrations, through a 500 Global round',
+		'Primary technical liaison for SITA API integrations',
 	];
 
 	let root = $state<HTMLElement>();
