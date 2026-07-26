@@ -21,6 +21,7 @@
 	import PlaytagAdminSlide from './slides/PlaytagAdminSlide.svelte';
 	import PlaytagBackendSlide from './slides/PlaytagBackendSlide.svelte';
 	import MobaSetupSlide from './slides/MobaSetupSlide.svelte';
+	import AccountSeparationSlide from './slides/AccountSeparationSlide.svelte';
 	import EventDrivenSlide from './slides/EventDrivenSlide.svelte';
 
 	// Chronological, per storyboard.md. The sync-queue slide is MOBA work and now
@@ -33,6 +34,12 @@
 		{ id: 'playtag-admin', label: 'Playtag — admin tool', steps: 2, component: PlaytagAdminSlide },
 		{ id: 'playtag-backend', label: 'Playtag — backend', steps: 2, component: PlaytagBackendSlide },
 		{ id: 'moba-setup', label: 'MOBA — the setup', steps: 2, component: MobaSetupSlide },
+		{
+			id: 'account-separation',
+			label: 'Sync — account separation',
+			steps: 2,
+			component: AccountSeparationSlide,
+		},
 		{
 			id: 'event-driven',
 			label: 'Decoupling the sync queue',
