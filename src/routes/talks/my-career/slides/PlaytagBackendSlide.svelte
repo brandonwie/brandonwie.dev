@@ -132,14 +132,16 @@
 		<span class="role" style="grid-row: 1">Frontend</span>
 		<span class="role" style="grid-row: 2">Backend</span>
 
+		<!-- The label carries the change as much as the geometry does: the same
+		     person, renamed by what he now covers. -->
 		{#if parallel}
 			<div class="seat filled">
-				<span class="seat-title">Me</span>
+				<span class="seat-title">Full-stack Brandon</span>
 				<span class="seat-note">core maintainer of the NestJS service</span>
 			</div>
 		{:else}
 			<div class="seat" style="grid-row: 1">
-				<span class="seat-title">Me</span>
+				<span class="seat-title">Frontend Brandon</span>
 			</div>
 			<div class="seat vacant" style="grid-row: 2">
 				<span class="seat-title">Unfilled</span>
