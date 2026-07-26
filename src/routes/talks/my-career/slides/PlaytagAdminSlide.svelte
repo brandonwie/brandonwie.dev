@@ -44,6 +44,8 @@
 	const notes = [
 		'Admin CMS on React and Vite; customer-facing web on Next.js',
 		'Built the prototype of the StoryLine teachers app',
+		'Added observability with Sentry logging',
+		'Led the migration from GitLab to GitHub',
 	];
 
 	let root = $state<HTMLElement>();

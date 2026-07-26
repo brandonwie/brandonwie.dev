@@ -43,7 +43,6 @@
 		// migration rather than assisting from the side. Still not "led" — see
 		// facts.md C3.
 		'Took part in the migration to Kotlin and Spring Boot; the NestJS service kept serving production',
-		'Led the migration from GitLab to GitHub',
 		'Infrastructure management, EFK logging, GitHub CI/CD',
 	];
 
