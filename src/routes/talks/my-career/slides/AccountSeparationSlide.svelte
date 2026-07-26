@@ -11,10 +11,15 @@
   visual sentence the MODULABS gateway and the Playtag seat already taught —
   containment means coupling.
 
-  Two accounts with two calendars each, NOT a number and NOT "unlimited".
-  facts.md records this as "multi-account, multi-calendar sync"; the storyboard
-  says "unlimited", which is the looser of the two, so the tighter one wins. Two
-  of each is enough to show the shape without asserting a ceiling.
+  IT IS GENUINELY UNLIMITED (Brandon, 2026-07-26). An earlier draft showed two
+  accounts with two calendars each and no ellipsis, on the theory that the
+  tighter claim was the safer one. It was not — it read as a hard limit of two,
+  which understates the system. Both ellipses are load-bearing: one inside a
+  card for more calendars, one under the stack for more accounts.
+
+  The cards are deliberately smaller than the user-account box. They are the
+  repeating element, so they have to look like the start of a list rather than
+  like two fixed slots.
 
   PUBLISH-SAFE: a product capability any user of the app can observe, with no
   internal architecture. Keep it that way — the repo this lives in is public.
@@ -26,8 +31,8 @@
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
 	const notes = [
-		'One user can connect multiple calendar accounts',
-		'Each connected account can sync multiple calendars',
+		'One user can connect any number of calendar accounts',
+		'Each connected account can sync any number of calendars',
 	];
 
 	let root = $state<HTMLElement>();
@@ -110,7 +115,7 @@
 		<h1>Splitting the calendar from the user</h1>
 		<p class="state">
 			{#if separated}
-				After &mdash; one user, several calendar accounts, several calendars each
+				After &mdash; one user, any number of calendar accounts, any number of calendars each
 			{:else}
 				Before &mdash; the calendar account was the user account
 			{/if}
@@ -144,6 +149,7 @@
 					<div class="chips">
 						<span class="chip">Calendar</span>
 						<span class="chip">Calendar</span>
+						<span class="chip chip-more">&hellip;</span>
 					</div>
 				</div>
 				<div class="account second">
@@ -151,8 +157,12 @@
 					<div class="chips">
 						<span class="chip">Calendar</span>
 						<span class="chip">Calendar</span>
+						<span class="chip chip-more">&hellip;</span>
 					</div>
 				</div>
+				<!-- Two cards read as a limit of two. The ellipsis under the stack is
+				     what makes it a list. -->
+				<span class="more second" aria-label="and more calendar accounts">&hellip;</span>
 			{/if}
 		</div>
 	</div>
@@ -228,10 +238,17 @@
 		border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
 		border-radius: 6px;
 		background: color-mix(in srgb, currentColor 9%, transparent);
-		padding: clamp(0.6rem, 1.5vw, 0.9rem) clamp(0.7rem, 1.8vw, 1.1rem);
+		padding: clamp(0.45rem, 1.1vw, 0.7rem) clamp(0.6rem, 1.4vw, 0.85rem);
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 0.35rem;
+	}
+
+	/* A step below the user-account box in the type scale. These are the
+	   repeating element, so they have to read as list items rather than as peers
+	   of the thing they were extracted from. */
+	.account .box-title {
+		font-size: var(--deck-body);
 	}
 
 	/* Nested means coupled — the same visual sentence as the MODULABS gateway and
@@ -259,10 +276,25 @@
 	.chip {
 		border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
 		border-radius: 999px;
-		padding: 0.15rem 0.6rem;
-		font-size: var(--deck-meta);
+		padding: 0.1rem 0.5rem;
+		font-size: calc(var(--deck-meta) * 0.9);
 		opacity: 0;
 		visibility: hidden;
+	}
+
+	/* Dashed, because it stands for calendars rather than being one. */
+	.chip-more {
+		border-style: dashed;
+		letter-spacing: 0.08em;
+	}
+
+	/* Dimmed with a transparent colour rather than `opacity`, because GSAP's
+	   autoAlpha drives opacity to 1 on reveal and would erase a CSS opacity. */
+	.more {
+		font-size: var(--deck-heading);
+		letter-spacing: 0.2em;
+		padding-left: 0.6rem;
+		color: color-mix(in srgb, currentColor 45%, transparent);
 	}
 
 	.second {
