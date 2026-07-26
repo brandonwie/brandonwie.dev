@@ -18,7 +18,7 @@
 		{ company: 'MODULABS', years: '2021 – 2023', gained: 'Frontend web' },
 		{ company: 'Moviation', years: '2023', gained: 'Frontend mobile · web' },
 		{ company: 'Playtag', years: '2023 – 2025', gained: 'Full-stack' },
-		{ company: 'MOBA', years: '2025 – now', gained: 'Backend · Infra' },
+		{ company: 'MOBA', years: '2025 – now', gained: 'Lead backend · Infra' },
 	];
 
 	let root = $state<HTMLElement>();
