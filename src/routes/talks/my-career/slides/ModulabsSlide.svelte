@@ -92,6 +92,7 @@
 
 <section class="slide" bind:this={root}>
 	<header>
+		<p class="company">MODULABS</p>
 		<h1>One gateway HOC module, three products</h1>
 		<p class="state">
 			{#if unified}
@@ -144,6 +145,16 @@
 		display: flex;
 		flex-direction: column;
 		gap: clamp(1.35rem, 3.5vh, 2.25rem);
+	}
+
+	/* Company eyebrow above the title: the audience always knows which chapter
+	   they are in without the title having to carry the company name. */
+	.company {
+		margin: 0 0 0.4rem;
+		font-size: var(--deck-meta);
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		opacity: 0.5;
 	}
 
 	h1 {
