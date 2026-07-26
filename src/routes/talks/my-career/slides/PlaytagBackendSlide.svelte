@@ -16,11 +16,9 @@
   behind it — being prepared and waiting for the chance — is Brandon's to say
   out loud; as a printed claim about himself it would be weak.
 
-  CAUTION — the concurrency figure is Brandon's recollection, not on the CV or
-  in any verified source. He recalled "20 to 40" and chose to state "around 20"
-  precisely because he is unsure: understating costs nothing if the real number
-  was higher, while overstating in front of people who can check does. Do not
-  raise it without evidence. See facts.md.
+  The connection-pool work was cut entirely (2026-07-26). It was a task, not a
+  turn, and it carried the deck's only soft number. It stays in facts.md for
+  Q&A; do not re-add it here.
 
   Do NOT claim ownership of the Spring repository or service layers (facts.md
   C3). Brandon took part in that migration; he did not lead it. "Led" appears
@@ -43,9 +41,6 @@
 		// facts.md C3.
 		'Took part in the migration to Kotlin and Spring Boot; the NestJS service kept serving production',
 		'Infrastructure management, EFK logging, GitHub CI/CD',
-		// Last on purpose. It carries the deck's only soft number, so it sits
-		// where it is least likely to be the thing anyone questions.
-		'Tuned the connection pool so the research pipeline registered companies in parallel, around 20 at a time, instead of one by one',
 	];
 
 	let root = $state<HTMLElement>();
