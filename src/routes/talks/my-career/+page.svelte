@@ -23,6 +23,7 @@
 	import MobaSetupSlide from './slides/MobaSetupSlide.svelte';
 	import AccountSeparationSlide from './slides/AccountSeparationSlide.svelte';
 	import PushSlide from './slides/PushSlide.svelte';
+	import ParallelSyncSlide from './slides/ParallelSyncSlide.svelte';
 	import EventDrivenSlide from './slides/EventDrivenSlide.svelte';
 
 	// Chronological, per storyboard.md. The sync-queue slide is MOBA work and now
@@ -48,6 +49,7 @@
 			component: EventDrivenSlide,
 		},
 		{ id: 'push', label: 'Sync — polling to push', steps: 2, component: PushSlide },
+		{ id: 'parallel', label: 'Sync — linear to parallel', steps: 2, component: ParallelSyncSlide },
 	];
 </script>
 
