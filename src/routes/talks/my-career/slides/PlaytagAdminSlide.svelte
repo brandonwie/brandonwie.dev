@@ -30,7 +30,10 @@
 			// Short enough not to wrap, and it reads as a direct swap for the line
 			// above it: manual cropping becomes automatic cropping.
 			after: { title: 'Automatic cropping', note: 'TensorFlow.js face detection' },
-			output: 'Published to parents',
+			// The tool RETURNS cropped files — it does not upload or publish them.
+			// An earlier draft said "Published to parents", which invented a delivery
+			// step that never existed (facts.md, 2026-07-26).
+			output: 'Cropped images returned',
 		},
 		{
 			id: 'roster',
