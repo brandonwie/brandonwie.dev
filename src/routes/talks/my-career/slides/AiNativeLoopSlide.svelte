@@ -69,7 +69,7 @@
 		gsap.set(root.querySelector('.ret-across'), { scaleX: 0, transformOrigin: 'right center' });
 		gsap.set(root.querySelector('.ret-up'), { scaleY: 0, transformOrigin: 'bottom center' });
 		gsap.set(root.querySelector('.ret-head'), { autoAlpha: 0 });
-		gsap.set(root.querySelector('.ret-label'), { autoAlpha: 0 });
+		gsap.set(root.querySelectorAll('.ret-label, .vendors'), { autoAlpha: 0 });
 		gsap.set(root.querySelectorAll('.gate'), { autoAlpha: 0, y: 4 });
 		gsap.set(root.querySelector('.gate-note'), { autoAlpha: 0, y: 6 });
 
@@ -114,9 +114,15 @@
 		timeline.to(root.querySelector('.ret-across'), { scaleX: 1, duration: 0.45 * d, ease: EASE });
 		timeline.to(root.querySelector('.ret-up'), { scaleY: 1, duration: 0.18 * d, ease: EASE });
 		timeline.to(root.querySelector('.ret-head'), { autoAlpha: 1, duration: 0.2 * d, ease: EASE });
+		// The loop caption and the vendor-span line arrive together, both in step 0.
+		// Deliberately NOT a fan diagram: a fan shows today's topology and cannot
+		// show a sequence, and the brief's ask is temporal ("history of it like how
+		// I improved system overtime"). The arc is narrated; this line only states
+		// the span. Text also needs no markup, no CSS, and no breakpoint rule in a
+		// slide whose grid already collapses 6 -> 3 columns at 900px.
 		timeline.to(
-			root.querySelector('.ret-label'),
-			{ autoAlpha: 1, duration: DURATION * d, ease: EASE },
+			root.querySelectorAll('.ret-label, .vendors'),
+			{ autoAlpha: 1, duration: DURATION * d, stagger: 0.06 * d, ease: EASE },
 			d ? '-=0.3' : 0,
 		);
 
@@ -178,6 +184,8 @@
 	<p class="ret-label">
 		What <code>/wrap</code> writes is the context the next spec is written against.
 	</p>
+
+	<p class="vendors">One propagation layer renders claude / codex / agy / grok.</p>
 
 	<p class="gate-note">Three gates stay human: what to build, what it means, and what ships.</p>
 </section>
@@ -330,7 +338,10 @@
 		opacity: 0.55;
 	}
 
-	.ret-label {
+	/* Shared so the vendor-span line needs no rules of its own and no breakpoint
+	   of its own. It participates in the existing column flow. */
+	.ret-label,
+	.vendors {
 		margin: 0;
 		font-size: var(--deck-body);
 		opacity: 0.6;
