@@ -5,10 +5,11 @@
   projects/3b/actives/playtag-interview/facts.md — every claim on a slide must
   have a `verified` row there. Structure follows storyboard.md.
 
-  All 19 beats are registered — 17 as of 2026-07-28, plus the learning beat and
-  the end card appended 2026-07-29. The array order below IS the storyboard
-  order, and the `Page` column in storyboard.md is this array's one-based index
-  — if the two ever disagree, the storyboard is the spec and this file is wrong.
+  All 20 beats are registered — 17 as of 2026-07-28, plus the learning beat and
+  the end card appended 2026-07-29, plus the how-I-work beat inserted before the
+  credentials later the same day. The array order below IS the storyboard order,
+  and the `Page` column in storyboard.md is this array's one-based index — if the
+  two ever disagree, the storyboard is the spec and this file is wrong.
 
   Build order was deliberate, not chronological: S7 (decoupling the sync queue)
   was built first because Flip plus DrawSVG is the hardest animation here. Once
@@ -37,13 +38,15 @@
 	import RetrievalRebuildSlide from './slides/RetrievalRebuildSlide.svelte';
 	import PrivacyMatrixSlide from './slides/PrivacyMatrixSlide.svelte';
 	import CloseSlide from './slides/CloseSlide.svelte';
+	import CommunicationSlide from './slides/CommunicationSlide.svelte';
 	import LearningSlide from './slides/LearningSlide.svelte';
 	import EndSlide from './slides/EndSlide.svelte';
 
 	// Chronological, per storyboard.md: title, the arc, then the four companies in
 	// order, then MOBA depth (sync then infrastructure then data), then 3B, then
-	// the close, then the learning beat and the end card. Pages 7–13 are the MOBA
-	// section, 14–16 are 3B, 17 closes, 18 is the learning evidence, 19 is FINE.
+	// the close, then the character section, then the end card. Pages 7–13 are the
+	// MOBA section, 14–16 are 3B, 17 closes, 18–19 are the character pair (how he
+	// works, then what he kept learning), and 20 is FINE.
 	const slides: DeckSlide[] = [
 		{ id: 'title', label: 'Title', steps: 1, component: TitleSlide },
 		{ id: 'arc', label: 'The arc', steps: 2, component: ArcSlide },
@@ -87,7 +90,14 @@
 			component: PrivacyMatrixSlide,
 		},
 		{ id: 'close', label: 'Close', steps: 1, component: CloseSlide },
-		// Page 18, appended after the close at Brandon's instruction (2026-07-29).
+		// Page 18, inserted immediately before the credentials at Brandon's
+		// instruction (2026-07-29). Position matters both ways round: the three
+		// anchors on this slide are callbacks to pages 3, 12 and 15, so it has to
+		// come after all of them, and putting it directly before the credentials
+		// pairs how-he-works with what-he-learned as one character section rather
+		// than leaving either stranded on its own after the close.
+		{ id: 'communication', label: 'How I work', steps: 2, component: CommunicationSlide },
+		// Page 19, appended after the close at Brandon's instruction (2026-07-29).
 		// Worth knowing it sits after the close rather than before it: the close
 		// answers the role's three scope items and ends on "in that order", which
 		// is a deliberate last word, and this beat lands after that. Moving it to
