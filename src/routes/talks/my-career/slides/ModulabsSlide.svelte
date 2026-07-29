@@ -196,8 +196,16 @@
 						{/each}
 					</div>
 					<div class="bars">
-						{#each markets as market (market)}
-							<span class="bar bar-own">own state &middot; own routing</span>
+						<!--
+							Column set inline, per item. Grid auto-placement REFUSES to
+							overlap: an item with a definite row but an auto column, whose
+							columns are already taken by the span, gets pushed into implicit
+							columns 4-6 rather than stacking — which blows the row sideways
+							and is exactly what broke here. Explicitly placed items may share
+							cells, which is what the crossfade needs.
+						-->
+						{#each markets as market, i (market)}
+							<span class="bar bar-own" style="grid-column: {i + 1}">state &middot; routing</span>
 						{/each}
 						<span class="bar bar-span">Gateway HOC &mdash; user state &middot; route control</span>
 					</div>
@@ -253,7 +261,7 @@
 					{#if unified}
 						AUI &mdash; one Storybook design system, used across product teams.
 					{:else}
-						Every team rebuilding the same components, slightly differently.
+						The same components, rebuilt slightly differently in each product.
 					{/if}
 				</p>
 			</div>
