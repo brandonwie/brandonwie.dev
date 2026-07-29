@@ -447,11 +447,12 @@
 		background: color-mix(in srgb, currentColor 8%, transparent);
 	}
 
-	/* Below the request path, not on it. It gets no arrow and no column of its
-	   own, because being off to one side with its own trigger IS the after-state
-	   — an inbound connector would put it straight back on the path it left. */
+	/* Below the request path, not on it, and centred: left-aligned it hung off one
+	   end of a row whose weight sits at both edges. It still gets no arrow — being
+	   below with its own trigger IS the after-state, and an inbound connector
+	   would put it straight back on the path it just left. */
 	.sync-module {
-		align-self: flex-start;
+		align-self: center;
 		max-width: 28rem;
 		opacity: 0;
 	}
