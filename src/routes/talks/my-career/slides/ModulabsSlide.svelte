@@ -1,18 +1,38 @@
 <!--
   S2 — MODULABS, 2021–2023 (1:00)
 
-  One question: what did the architecture look like before, and after.
+  One question: what did this codebase look like before, and after.
 
-  Three products all call the same AIFFEL APIs but each shipped its own user
-  state and routing. A higher-order component took that control layer over,
-  while every product kept its own layout and details.
+  THREE CHANGES, ONE ADVANCE (restructured 2026-07-29 at Brandon's call). The
+  gateway HOC used to own the whole slide, with the TypeScript migration and AUI
+  demoted to text bullets underneath. Both of those are structural changes of the
+  same weight, so all three now get equal visual treatment and swap together on a
+  single advance. Same pattern InfrastructureSlide uses for its four beats.
 
-  The convergence is shown by a single box spanning all three rows rather than
-  by diagonal lines — same idea, and it survives a projector and a narrow
-  screen, which crossing lines do not.
+  Control — three products each shipped their own user state and routing; a
+  higher-order component took that layer over. Every product kept its own layout,
+  so what converged was CONTROL, not appearance. This is a FRONTEND composition
+  layer, not a backend gateway; getting that wrong in the room invites a question
+  with an awkward correction.
 
-  Note this is a FRONTEND composition layer, not a backend gateway. Getting that
-  wrong in the room invites a question with an awkward correction.
+  Codebase — class-component JavaScript to TypeScript with functional components.
+  The chips carry it as one migration sweeping left to right, which is why the
+  stagger exists: a simultaneous swap would read as a rewrite rather than a
+  migration.
+
+  Components — per-team UI converging into AUI, the internal Storybook design
+  system. Scattered units settle into alignment inside a frame that appears
+  around them.
+
+  NO FLIP, NO DOM SWAP for anything animated. Every animated element is in the
+  DOM from first paint and moves only via autoAlpha and transform, so nothing
+  depends on layout measurement and print mode cannot catch a half-built state.
+  The captions are the only thing that swap text, exactly as the old `.state`
+  line did.
+
+  DROPPED FROM THE SLIDE 2026-07-29: the JupyterLab-fork TypeScript refactor. It
+  is a fourth item that does not fit a three-change frame, and it is the smallest
+  of the four. Still verified in facts.md § MODULABS and fair game in Q&A.
 
   Every claim here has a verified row in facts.md § MODULABS.
 -->
@@ -23,15 +43,26 @@
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
-	// All three products call the same AIFFEL APIs, but each has its own layout
-	// and its own details. What was shared was never the UI — it was user state
-	// and routing, which is why the answer was a HOC and not a component library.
+	// All three call the same AIFFEL APIs. What was shared was never the UI — it
+	// was user state and routing, which is why the answer was a HOC and not a
+	// component library. (The component library is the third row.)
 	const markets = ['B2G', 'B2B', 'B2C'];
 
-	const notes = [
-		'Migrated a class-component JavaScript codebase to TypeScript with functional components',
-		'Refactored a JupyterLab module to TypeScript on an internal fork',
-		'Led AUI, the internal Storybook design system used across product teams',
+	// Five is enough to read as "a codebase" without becoming a count the audience
+	// tries to interpret.
+	const files = [0, 1, 2, 3, 4];
+
+	// Fixed offsets, never random: print mode and a re-render must produce the
+	// same scatter, or the frozen PDF frame shows a different picture than the
+	// one that was rehearsed.
+	const SCATTER = [
+		{ x: -13, y: 7, r: -5 },
+		{ x: 10, y: -6, r: 4 },
+		{ x: -5, y: 9, r: 6 },
+		{ x: 15, y: -4, r: -3 },
+		{ x: -11, y: -8, r: 5 },
+		{ x: 6, y: 6, r: -6 },
+		{ x: -8, y: -3, r: 3 },
 	];
 
 	let root = $state<HTMLElement>();
@@ -39,13 +70,28 @@
 	let ready = $state(false);
 	let applied = -1;
 
-	// Held while the gateway morph runs, so only one thing on screen moves.
+	// Held while the three changes run, so only one thing on screen moves.
 	let videoPaused = $state(false);
 
 	onMount(async () => {
 		const { gsap } = await loadGsap();
 		if (root) {
-			gsap.set(root.querySelectorAll('.note'), { autoAlpha: 0, y: 6 });
+			// Step-0 state, set once. Everything below is already rendered — these
+			// only position it, so re-entering step 0 restores rather than rebuilds.
+			gsap.set(root.querySelector('.bar-span'), {
+				autoAlpha: 0,
+				scaleX: 0.3,
+				transformOrigin: 'left center',
+			});
+			gsap.set(root.querySelectorAll('.lang-after'), { autoAlpha: 0 });
+			gsap.set(root.querySelector('.frame'), { autoAlpha: 0 });
+			gsap.set(root.querySelectorAll('.unit'), {
+				x: (i: number) => SCATTER[i].x,
+				y: (i: number) => SCATTER[i].y,
+				rotate: (i: number) => SCATTER[i].r,
+			});
+			// Only now is it safe to show them — see the `.units` rule.
+			gsap.set(root.querySelector('.units'), { opacity: 1 });
 		}
 		ready = true;
 	});
@@ -59,95 +105,158 @@
 
 	async function render(target: number) {
 		const { gsap } = await loadGsap();
+		await tick();
 		if (!root) return;
 
 		const still = !animate || reducedMotion();
 		const d = still ? 0 : 1;
 		const want = target >= 1;
 
-		if (want !== unified) {
-			unified = want;
-			await tick();
+		unified = want;
 
-			// One thing moves at a time: hold the recording during the morph.
-			if (!still) {
-				videoPaused = true;
-				setTimeout(() => (videoPaused = false), (DURATION + 0.3) * 1000);
-			}
-
-			// The gateway grows into the space the three adapters occupied, so the
-			// reduction is legible as one motion rather than a swap.
-			const gateway = root.querySelector('.gateway');
-			if (gateway && !still) {
-				gsap.fromTo(
-					gateway,
-					{ autoAlpha: 0, scaleY: 0.72 },
-					{ autoAlpha: 1, scaleY: 1, duration: DURATION, ease: EASE, transformOrigin: 'center' },
-				);
-			}
+		if (!still) {
+			videoPaused = true;
+			setTimeout(() => (videoPaused = false), 1250);
 		}
 
-		await tick();
+		// One timeline, three segments, lightly overlapped. Sequenced rather than
+		// simultaneous so the eye is led through them in the order they are
+		// narrated; simultaneous would be a flash, not three changes.
+		const timeline = gsap.timeline();
 
-		gsap.to(root.querySelectorAll('.note'), {
-			autoAlpha: target >= 1 ? 1 : 0,
-			y: target >= 1 ? 0 : 6,
-			duration: DURATION * d,
-			stagger: 0.07 * d,
-			ease: EASE,
-			delay: target >= 1 ? DURATION * 0.6 * d : 0,
-		});
+		// 1 — Control. Three per-product bars give way to one span. The span grows
+		// into the width they occupied, so the reduction reads as one motion.
+		timeline.to(
+			root.querySelectorAll('.bar-own'),
+			{ autoAlpha: want ? 0 : 1, duration: DURATION * d, ease: EASE },
+			0,
+		);
+		timeline.to(
+			root.querySelector('.bar-span'),
+			{
+				autoAlpha: want ? 1 : 0,
+				scaleX: want ? 1 : 0.3,
+				duration: DURATION * d,
+				ease: EASE,
+			},
+			d ? 0.05 : 0,
+		);
+
+		// 2 — Codebase. The stagger IS the claim: a migration moving through the
+		// files, not an instantaneous rewrite.
+		timeline.to(
+			root.querySelectorAll('.lang-before'),
+			{ autoAlpha: want ? 0 : 1, duration: DURATION * d, stagger: 0.05 * d, ease: EASE },
+			d ? 0.18 : 0,
+		);
+		timeline.to(
+			root.querySelectorAll('.lang-after'),
+			{ autoAlpha: want ? 1 : 0, duration: DURATION * d, stagger: 0.05 * d, ease: EASE },
+			d ? 0.21 : 0,
+		);
+
+		// 3 — Components. Loose units settle into alignment, then the shared frame
+		// appears around them. Frame last: the system is the consequence of the
+		// convergence, not the cause of it.
+		timeline.to(
+			root.querySelectorAll('.unit'),
+			{
+				x: (i: number) => (want ? 0 : SCATTER[i].x),
+				y: (i: number) => (want ? 0 : SCATTER[i].y),
+				rotate: (i: number) => (want ? 0 : SCATTER[i].r),
+				duration: DURATION * d,
+				stagger: 0.04 * d,
+				ease: EASE,
+			},
+			d ? 0.36 : 0,
+		);
+		timeline.to(
+			root.querySelector('.frame'),
+			{ autoAlpha: want ? 1 : 0, duration: DURATION * d, ease: EASE },
+			d ? 0.52 : 0,
+		);
 	}
 </script>
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">MODULABS</p>
-		<h1>One gateway HOC module, three products</h1>
-		<p class="state">
-			{#if unified}
-				After — one HOC owns user state and routing; each product keeps its own layout
-			{:else}
-				Before — B2G, B2B and B2C each handled user state and routing themselves
-			{/if}
-		</p>
+		<p class="company">MODULABS &middot; 2021&ndash;2023</p>
+		<h1>Three fixes, none of them a feature</h1>
 	</header>
 
 	<div class="body">
-		<div class="detail">
-			<!--
-				One grid, not three stacked ones: the market label and its adapter share
-				a row, so they stay aligned at any width without hand-tuned heights.
-			-->
-			<div class="diagram" class:is-unified={unified}>
-				{#each markets as market, i (market)}
-					<span class="source" style="grid-row: {i + 1}">
-						<span class="source-name">{market}</span>
-						<span class="source-note">own layout</span>
-					</span>
-				{/each}
-
-				{#if unified}
-					<div class="box gateway">
-						<span class="box-title">Gateway HOC module</span>
-						<span class="box-note">user state · route control</span>
+		<div class="changes">
+			<!-- 1 — Control -->
+			<div class="change">
+				<p class="change-label">Control</p>
+				<div class="stage">
+					<div class="markets">
+						{#each markets as market (market)}
+							<span class="market">{market}</span>
+						{/each}
 					</div>
-				{:else}
-					{#each markets as market, i (market)}
-						<div class="box adapter" style="grid-row: {i + 1}">
-							<span class="box-note">own user state · own routing</span>
-						</div>
-					{/each}
-				{/if}
-
-				<div class="box platform"><span class="box-title">AIFFEL APIs</span></div>
+					<div class="bars">
+						{#each markets as market (market)}
+							<span class="bar bar-own">own state &middot; own routing</span>
+						{/each}
+						<span class="bar bar-span">Gateway HOC &mdash; user state &middot; route control</span>
+					</div>
+				</div>
+				<p class="change-caption">
+					{#if unified}
+						One HOC owns control. Each product keeps its own layout.
+					{:else}
+						Three products, three copies of user state and routing.
+					{/if}
+				</p>
 			</div>
 
-			<ul class="notes">
-				{#each notes as note (note)}
-					<li class="note">{note}</li>
-				{/each}
-			</ul>
+			<!-- 2 — Codebase -->
+			<div class="change">
+				<p class="change-label">Codebase</p>
+				<div class="stage">
+					<div class="chips">
+						{#each files as file (file)}
+							<span class="chip">
+								<span class="lang lang-before">.js</span>
+								<span class="lang lang-after">.ts</span>
+							</span>
+						{/each}
+					</div>
+				</div>
+				<p class="change-caption">
+					{#if unified}
+						TypeScript, functional components. Types where the contracts were.
+					{:else}
+						JavaScript, class components. Contracts held in people's heads.
+					{/if}
+				</p>
+			</div>
+
+			<!-- 3 — Components -->
+			<div class="change">
+				<p class="change-label">Components</p>
+				<div class="stage">
+					<div class="system">
+						<div class="frame" aria-hidden="true"></div>
+						<div class="units">
+							<!-- Iterating SCATTER only to get its length; the offsets are
+							     applied by GSAP, not by markup. Underscore prefix is what the
+							     lint rule wants for a deliberately unused binding. -->
+							{#each SCATTER as _offset, i (i)}
+								<span class="unit"></span>
+							{/each}
+						</div>
+					</div>
+				</div>
+				<p class="change-caption">
+					{#if unified}
+						AUI &mdash; one Storybook design system, used across product teams.
+					{:else}
+						Every team rebuilding the same components, slightly differently.
+					{/if}
+				</p>
+			</div>
 		</div>
 
 		<!--
@@ -160,7 +269,7 @@
 				label="The AIFFEL learning platform: a Python lesson with runnable code blocks"
 				paused={videoPaused}
 			/>
-			<figcaption>AIFFEL — one of the three products</figcaption>
+			<figcaption>AIFFEL &mdash; one of the three products</figcaption>
 		</figure>
 	</div>
 </section>
@@ -171,7 +280,7 @@
 		max-width: 82rem;
 		display: flex;
 		flex-direction: column;
-		gap: clamp(1.35rem, 3.5vh, 2.25rem);
+		gap: clamp(1.1rem, 3vh, 1.9rem);
 	}
 
 	/* Company eyebrow above the title: the audience always knows which chapter
@@ -191,26 +300,167 @@
 		margin: 0;
 	}
 
-	.state {
-		margin: 0.4rem 0 0;
-		font-size: var(--deck-subtitle);
-		opacity: 0.6;
-	}
-
 	/* Explanation left, evidence right. The recording is deliberately the
-	   smaller element — it supports the architecture claim, it is not the point. */
+	   smaller element — it supports the claims, it is not the point. */
 	.body {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) clamp(12rem, 20vw, 18rem);
+		grid-template-columns: minmax(0, 1fr) clamp(11rem, 18vw, 16rem);
 		gap: clamp(1.25rem, 3vw, 2.5rem);
 		align-items: start;
 	}
 
-	.detail {
+	.changes {
 		display: flex;
 		flex-direction: column;
-		gap: clamp(1rem, 2.5vh, 1.75rem);
+		gap: clamp(0.9rem, 2.4vh, 1.6rem);
 		min-width: 0;
+	}
+
+	.change {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		min-width: 0;
+	}
+
+	.change-label {
+		margin: 0;
+		font-size: var(--deck-meta);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		opacity: 0.45;
+	}
+
+	/* Fixed-height stage per row, so a caption changing length can never move the
+	   visual and the three rows stay put across the advance. */
+	.stage {
+		min-height: 3.4rem;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 0.3rem;
+	}
+
+	.change-caption {
+		margin: 0;
+		font-size: var(--deck-body);
+		opacity: 0.7;
+		/* Reserves two lines at the narrowest width the deck supports. */
+		min-height: 1.5em;
+	}
+
+	/* --- 1. Control ------------------------------------------------------- */
+
+	.markets,
+	.bars {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.4rem;
+		max-width: 34rem;
+	}
+
+	.market {
+		font-size: var(--deck-meta);
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		opacity: 0.75;
+	}
+
+	.bar {
+		border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+		border-radius: 5px;
+		background: color-mix(in srgb, currentColor 4%, transparent);
+		padding: 0.4rem 0.6rem;
+		font-size: var(--deck-meta);
+		opacity: 0.85;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		/* Both states occupy the same grid cell so the swap is a crossfade in
+		   place, with no reflow between them. */
+		grid-row: 1;
+	}
+
+	.bar-own {
+		border-style: dashed;
+	}
+
+	/* Hidden in CSS as well as by the onMount set: onMount runs after the first
+	   paint, so without this the after-state flashes before step 0 is applied.
+	   Same convention every two-step slide in this deck follows. */
+	.bar-span {
+		grid-column: 1 / -1;
+		background: color-mix(in srgb, currentColor 9%, transparent);
+		font-weight: 600;
+		opacity: 0;
+	}
+
+	/* --- 2. Codebase ------------------------------------------------------ */
+
+	.chips {
+		display: flex;
+		gap: 0.4rem;
+	}
+
+	.chip {
+		position: relative;
+		width: 3.1rem;
+		height: 1.9rem;
+		border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+		border-radius: 5px;
+		background: color-mix(in srgb, currentColor 4%, transparent);
+	}
+
+	/* Stacked, not swapped: both labels exist from first paint, which is what
+	   lets the crossfade run without a DOM change mid-advance. */
+	.lang {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		font-size: var(--deck-meta);
+		font-weight: 600;
+		letter-spacing: 0.04em;
+	}
+
+	.lang-after {
+		opacity: 0;
+	}
+
+	/* --- 3. Components ---------------------------------------------------- */
+
+	.system {
+		position: relative;
+		width: fit-content;
+		padding: 0.55rem 0.7rem;
+	}
+
+	.frame {
+		position: absolute;
+		inset: 0;
+		border: 1px solid color-mix(in srgb, currentColor 32%, transparent);
+		border-radius: 7px;
+		background: color-mix(in srgb, currentColor 6%, transparent);
+		opacity: 0;
+	}
+
+	/* The units are visible in BOTH states, so they cannot be hidden the way the
+	   after-state elements are — but they must not paint aligned before onMount
+	   scatters them, or the first frame shows the answer. Hidden here, revealed
+	   by onMount once the offsets are on. */
+	.units {
+		position: relative;
+		display: flex;
+		gap: 0.45rem;
+		opacity: 0;
+	}
+
+	.unit {
+		width: 1.5rem;
+		height: 1.5rem;
+		border: 1px solid color-mix(in srgb, currentColor 34%, transparent);
+		border-radius: 4px;
+		background: color-mix(in srgb, currentColor 7%, transparent);
 	}
 
 	.media {
@@ -225,106 +475,6 @@
 		opacity: 0.5;
 	}
 
-	.diagram {
-		display: grid;
-		grid-template-columns: auto minmax(0, 26rem) auto;
-		grid-template-rows: repeat(3, auto);
-		justify-content: start;
-		align-items: center;
-		row-gap: 0.6rem;
-		column-gap: clamp(0.75rem, 2.5vw, 2rem);
-	}
-
-	.source {
-		grid-column: 1;
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		gap: 0.1rem;
-	}
-
-	.source-name {
-		font-size: var(--deck-heading);
-		font-weight: 600;
-		letter-spacing: 0.02em;
-	}
-
-	/* Says the quiet part out loud: the layouts stayed different on purpose.
-	   The HOC unified control, not appearance. */
-	.source-note {
-		font-size: var(--deck-meta);
-		opacity: 0.5;
-	}
-
-	.box {
-		border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-		border-radius: 6px;
-		padding: clamp(0.6rem, 1.4vw, 1rem) clamp(0.75rem, 2vw, 1.25rem);
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		gap: 0.25rem;
-		background: color-mix(in srgb, currentColor 4%, transparent);
-	}
-
-	.adapter {
-		grid-column: 2;
-		border-style: dashed;
-	}
-
-	/* The gateway spans all three rows. That span IS the point of the slide —
-	   one surface where there were three — so it carries the idea without any
-	   diagonal lines to draw or explain. */
-	.gateway {
-		grid-column: 2;
-		grid-row: 1 / 4;
-		background: color-mix(in srgb, currentColor 9%, transparent);
-	}
-
-	.platform {
-		grid-column: 3;
-		grid-row: 1 / 4;
-	}
-
-	.box-title {
-		font-size: var(--deck-heading);
-		font-weight: 600;
-	}
-
-	.box-note {
-		font-size: var(--deck-meta);
-		opacity: 0.55;
-	}
-
-	.notes {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-		font-size: var(--deck-body);
-		opacity: 0.85;
-	}
-
-	.note {
-		padding-left: 1rem;
-		position: relative;
-		visibility: hidden;
-		opacity: 0;
-	}
-
-	.note::before {
-		content: '';
-		position: absolute;
-		left: 0;
-		top: 0.62em;
-		width: 0.4rem;
-		height: 1px;
-		background: currentColor;
-		opacity: 0.5;
-	}
-
 	@media (max-width: 760px) {
 		.body {
 			grid-template-columns: 1fr;
@@ -332,20 +482,25 @@
 
 		.media {
 			order: 2;
-			max-width: 16rem;
+			max-width: 15rem;
 		}
 
-		.diagram {
-			grid-template-columns: auto minmax(0, 1fr);
-			column-gap: 0.75rem;
+		/* Three products stop being readable as three columns well before the
+		   deck's minimum width; the bar text is the part that carries the row.
+		   Two of the three identical per-product bars go with them — three copies
+		   of one string stacked in a single cell reads as one bar anyway, so show
+		   one and keep the crossfade honest. */
+		.markets {
+			display: none;
 		}
 
-		/* The platform drops below rather than squeezing a third column into a
-		   phone width; the row alignment that matters is label-to-adapter. */
-		.platform {
-			grid-column: 1 / -1;
-			grid-row: 4;
-			margin-top: 0.5rem;
+		.bars {
+			grid-template-columns: 1fr;
+		}
+
+		.bars > :nth-child(2),
+		.bars > :nth-child(3) {
+			display: none;
 		}
 	}
 </style>
