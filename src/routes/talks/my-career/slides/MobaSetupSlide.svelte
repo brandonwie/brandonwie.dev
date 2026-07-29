@@ -15,11 +15,19 @@
   owner"; that had no verified row, and "sole" is an escalation the panel cannot
   check. See facts.md § Role and scale (S5).
 
-  EACH MULTIPLE SITS ON ITS OWN ROW. Users went 120 → 6,000, which is 50x and
-  matches the submitted CV exactly. Events went 500k → 7M, which is 14x. A
-  single "≈50x" floating over both rows would silently claim the user multiple
-  for the event count too; per-row means every figure on the slide is
-  recomputable from the two numbers printed beside it. See facts.md C2.
+  EACH MULTIPLE SITS ON ITS OWN ROW. Users went 120 → 6.5k, which is ≈54x.
+  Events went 200k → 7M, which is 35x. A single multiple floating over both rows
+  would silently claim one metric's ratio for the other; per-row means every
+  figure on the slide is recomputable from the two numbers printed beside it.
+  See facts.md C2.
+
+  BOTH FIGURES CORRECTED 2026-07-29 (Brandon, mid-walk). Users read 6,000+ and
+  events started at 500k; the real numbers are 6.5k+ and 200k. That moves the
+  event multiple from 14x to 35x, and the user multiple from the CV's 50x to 54x
+  — the recomputability rule above is what forces the second change, since 6.5k
+  over 120 does not come to 50 and this audience does arithmetic. The CV's ~50x
+  was true against 6,000; the slide says "today", which is what lets the two
+  differ without reading as a discrepancy.
 
   The bars are not decoration. Two numbers side by side are arithmetic; a sliver
   becoming a full track is the ratio, read instantly.
@@ -38,6 +46,15 @@
 		return `${Math.round(v / 1000)}k`;
 	}
 
+	// Switches to `k` at a thousand so the counter's units match where it lands.
+	// Rendering the run as 1,340 and the rest as 6.5k would change notation at the
+	// exact moment the eye stops moving, which reads as a glitch rather than as
+	// the number settling.
+	function users(v: number): string {
+		if (v >= 1000) return `${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+		return `${Math.round(v)}`;
+	}
+
 	// `fromLabel` / `toLabel` are the exact resting wording; `fmt` only renders
 	// the in-between frames while the counter is moving. That keeps the two
 	// states under the ledger's control and lets the motion be approximate.
@@ -46,20 +63,20 @@
 			key: 'users',
 			label: 'Users',
 			from: 120,
-			to: 6000,
+			to: 6500,
 			fromLabel: '~120',
-			toLabel: '6,000+',
-			multiple: '≈50x',
-			fmt: (v: number) => Math.round(v).toLocaleString('en-US'),
+			toLabel: '6.5k+',
+			multiple: '≈54x',
+			fmt: users,
 		},
 		{
 			key: 'events',
 			label: 'Events',
-			from: 500_000,
+			from: 200_000,
 			to: 7_000_000,
-			fromLabel: '500k',
+			fromLabel: '200k',
 			toLabel: '7M+',
-			multiple: '≈14x',
+			multiple: '≈35x',
 			fmt: events,
 		},
 	];
