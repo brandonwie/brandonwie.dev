@@ -8,8 +8,30 @@
   module. Everything else on screen holds still so the audience knows where to
   look. That is the whole design rule.
 
+  THE SYNC CALL, ADDED 2026-07-29 (Brandon, mid-walk). Decoupling alone was the
+  smaller half of this beat. The optimistic update was unreliable, so every
+  request forced a full sync as insurance — the heaviest module in the system,
+  one Google round trip per request, and users meeting Google's rate limits as a
+  result. Correcting the optimistic update removed the call entirely. That is a
+  root-cause story rather than a refactor, and it is the strongest thing on this
+  slide, so the line under the diagram carries it.
+
+  Its verified row is facts.md § Sync engine — force-sync from Google on every
+  request, hitting rate limits → correct optimistic updates survive without a
+  Google round trip. The row existed the whole time and had no beat; it was the
+  storyboard that was incomplete, not the ledger.
+
+  DO NOT attribute the forced sync to a person on stage, in any wording. The
+  ledger row describes a mechanism and so does this slide. "The optimistic update
+  was unreliable, so every request forced a sync" is the whole story, and naming
+  who wrote it adds nothing except a way to look bad in a room of engineers.
+
+  It crossfades in one grid cell rather than getting a second Flip. One expensive
+  morph per slide is the budget, and this slide already spends it on the queue.
+
   Claims here are at CV wording (see facts.md). No throughput number on this
-  slide — that belongs to S9.
+  slide — that belongs to S9. Error rate stays off it too: C4 locks that to
+  "near-zero" and it belongs with the recurring-event work.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
@@ -33,7 +55,7 @@
 
 	const notes = [
 		'Fire and forget — the request no longer waits on the queue',
-		'Separation of concerns between request handling and sync work',
+		'No Google round trip on the common path, so no rate-limit pressure',
 		'Shaped so a future service split is possible, not blocked',
 	];
 
@@ -45,6 +67,7 @@
 		// the slide flashed the final step's text.
 		if (root) {
 			gsap.set(root.querySelectorAll('.note'), { autoAlpha: 0, y: 6 });
+			gsap.set(root.querySelector('.sync-after'), { autoAlpha: 0 });
 		}
 
 		ready = true;
@@ -113,6 +136,23 @@
 			}
 		}
 
+		// The sync call goes after the channel lands, because it is the consequence
+		// of the change and not part of it: the queue leaves, the event replaces the
+		// call, and only then does the round trip stop being necessary.
+		const syncDelay = (DURATION * 0.7 + 0.3) * d;
+		gsap.to(root.querySelector('.sync-before'), {
+			autoAlpha: target >= 1 ? 0 : 0.75,
+			duration: DURATION * d,
+			ease: EASE,
+			delay: target >= 1 ? syncDelay : 0,
+		});
+		gsap.to(root.querySelector('.sync-after'), {
+			autoAlpha: target >= 1 ? 1 : 0,
+			duration: DURATION * d,
+			ease: EASE,
+			delay: target >= 1 ? syncDelay : 0,
+		});
+
 		// Last in the sequence: the reasoning only makes sense once the diagram
 		// and the response have both settled.
 		gsap.to(root.querySelectorAll('.note'), {
@@ -137,11 +177,11 @@
 		-->
 		<p class="state" class:after={decoupled}>
 			{#if respondsImmediately}
-				After — event-driven, fire and forget
+				After — event-driven, and the sync call is gone
 			{:else if decoupled}
 				After — the queue owns its own lifecycle
 			{:else}
-				Before — queue injected into the block module, tightly coupled
+				Before — queue injected into the block module, and every request forces a sync
 			{/if}
 		</p>
 	</header>
@@ -179,6 +219,22 @@
 				</div>
 			{/if}
 		</div>
+	</div>
+
+	<!--
+		The sync call, crossfading in one grid cell. Both states are in the DOM from
+		first paint and neither is placed automatically, which is what lets them
+		share a cell — the same mechanic ModulabsSlide and MoviationSlide use, and
+		deliberately NOT another Flip. One expensive morph per slide is the budget.
+	-->
+	<div class="synccall">
+		<span class="sync-state sync-before">
+			Then a full sync, every time &mdash; the heaviest module, a Google round trip per request, and
+			users meeting Google&rsquo;s rate limits
+		</span>
+		<span class="sync-state sync-after">
+			No sync call at all &mdash; correct optimistic updates hold without a Google round trip
+		</span>
 	</div>
 
 	<p class="response">
@@ -310,6 +366,29 @@
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		opacity: 0.5;
+	}
+
+	/* Both states occupy the same cell so the swap is a crossfade in place with no
+	   reflow, and the row's height is the taller of the two in both steps. */
+	.synccall {
+		display: grid;
+	}
+
+	.sync-state {
+		grid-area: 1 / 1;
+		font-size: var(--deck-body);
+		max-width: 62rem;
+	}
+
+	.sync-before {
+		opacity: 0.75;
+	}
+
+	/* Hidden in CSS as well as by the onMount set: onMount runs after the first
+	   paint, so without this the after-state flashes on entry. */
+	.sync-after {
+		font-weight: 600;
+		opacity: 0;
 	}
 
 	.response {
