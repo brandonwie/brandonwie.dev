@@ -118,12 +118,18 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">MOBA &middot; 2025 &ndash; now</p>
-		<h1>Running the sync in parallel</h1>
+		<!--
+			NOT "Running the sync in parallel" — that described the animation the room
+			is already watching. The picture IS the 5x, so the headline has to say the
+			thing the picture cannot: batching is what stopped heavy accounts running
+			out of memory.
+		-->
+		<h1>Batching is what fixed the memory</h1>
 		<p class="state">
 			{#if parallel}
-				After &mdash; batched and run together, and the history cap is gone
+				After &mdash; batched, and the history cap is gone
 			{:else}
-				Before &mdash; one linear pass over every event, under a one-year history cap
+				Before &mdash; one pass over every event, capped at one year
 			{/if}
 		</p>
 	</header>

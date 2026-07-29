@@ -181,7 +181,13 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">MOBA &middot; 2025 &ndash; now</p>
-		<h1>Where the backend had to keep up</h1>
+		<!--
+			NOT "Where the backend had to keep up" — a topic sentence, and passive on
+			the one slide that establishes scope. The header above says the frame is
+			closed beta to public: what changed was the system's obligations, not only
+			its size. That is the claim, so it is the headline.
+		-->
+		<h1>It went public underneath me</h1>
 		<p class="state">
 			{#if grown}
 				Public &mdash; the same engine today

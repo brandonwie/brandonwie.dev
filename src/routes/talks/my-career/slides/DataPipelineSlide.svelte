@@ -106,7 +106,13 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">MOBA &middot; 2025 &ndash; now</p>
-		<h1>Moving the pipeline into production</h1>
+		<!--
+			NOT "Moving the pipeline into production" — the state line directly below
+			IS the production move, so the headline was saying it twice, and the
+			header above says the hero beat is FRESHNESS. Two days to two hours is
+			the claim; the production move is how it was achieved.
+		-->
+		<h1>Two days behind became two hours</h1>
 		<p class="state">
 			{#if frequent}
 				After &mdash; Terraform-managed Airflow on AWS, shipped by GitHub Actions

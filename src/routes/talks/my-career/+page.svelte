@@ -85,7 +85,10 @@
 		},
 		{
 			id: 'privacy-matrix',
-			label: 'Privacy governance → mono',
+			// Renders live in the progress rail, so this label is on screen the whole
+			// time the slide is up. It named the company until 2026-07-29; the slide
+			// body had already been generalized and the rail had been missed.
+			label: 'Privacy governance',
 			steps: 2,
 			component: PrivacyMatrixSlide,
 		},

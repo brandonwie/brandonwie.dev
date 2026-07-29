@@ -109,14 +109,18 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">Playtag &middot; 2023 &ndash; 2025</p>
-		<h1>The admin tool operators ran the day on</h1>
-		<p class="state">
-			{#if automated}
-				After — face detection in the browser, and a whole class in one upload
-			{:else}
-				Before — operators cropped every photo and typed in every child
-			{/if}
-		</p>
+		<!--
+			NOT "The admin tool operators ran the day on" — descriptive, and its
+			definite article assumed the room already knew which tool. It also
+			repeated "operators" from the line directly beneath it.
+
+			The `.state` line is gone with it. Every clause in it restated a box in
+			the pipeline below — "face detection in the browser" against "Automatic
+			cropping / TensorFlow.js face detection", "a whole class in one upload"
+			against "One spreadsheet upload", and so on. It was scaffolding, not a
+			claim, so nothing in the ledger goes with it.
+		-->
+		<h1>Removed the step, not sped it up</h1>
 	</header>
 
 	<!-- Both flows keep the same three stages; only the middle one changes. The
@@ -177,12 +181,6 @@
 		font-weight: 600;
 		letter-spacing: -0.02em;
 		margin: 0;
-	}
-
-	.state {
-		margin: 0.4rem 0 0;
-		font-size: var(--deck-subtitle);
-		opacity: 0.6;
 	}
 
 	/* One grid for both flows. `display: contents` on each row lets the two

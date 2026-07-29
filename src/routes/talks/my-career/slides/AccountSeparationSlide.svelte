@@ -109,13 +109,22 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">MOBA &middot; 2025 &ndash; now</p>
-		<!-- Short enough to hold one line at the deck's title size. The longer
-		     "Separating who you are from what you sync" wrapped to two, and this is
-		     the only slide in the deck that would have done so. -->
-		<h1>Splitting the calendar from the user</h1>
+		<!--
+			NOT "Splitting the calendar from the user" — the two boxes below are
+			literally labelled "User account" and "Calendar account", so the headline
+			was reading them out. It was also a stage direction for the Flip rather
+			than a claim. What the slide argues is that the coupling was the limit:
+			one account each was not a scale decision, it was a consequence of the
+			two being the same record.
+
+			Short enough to hold one line at the deck's title size — the earlier
+			"Separating who you are from what you sync" wrapped to two, and this is
+			the only slide in the deck that would have done so.
+		-->
+		<h1>Coupling was the cap, not scale</h1>
 		<p class="state">
 			{#if separated}
-				After &mdash; one user, any number of calendar accounts, any number of calendars each
+				After &mdash; one user, many accounts, many calendars
 			{:else}
 				Before &mdash; the calendar account was the user account
 			{/if}

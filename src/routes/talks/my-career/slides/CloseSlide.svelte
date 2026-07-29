@@ -93,7 +93,15 @@
 </script>
 
 <section class="slide" bind:this={root}>
-	<h1>Four layers, one direction</h1>
+	<!--
+		The bookend with S1's "Four companies, one direction" is deliberate and the
+		cadence is kept — same sentence, companies become layers. What was missing is
+		the fifth node: per the header above, the open slot IS this slide's statement,
+		and the headline stopped at counting the four the eye had already counted.
+		Changing the cadence would break the callback S1 spends 0:45 setting up, so
+		the clause is added rather than the line replaced.
+	-->
+	<h1>Four layers, and the next one is open</h1>
 
 	<div class="rail">
 		<div class="rail-line" aria-hidden="true"></div>

@@ -134,7 +134,16 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">MOBA &middot; 2025 &ndash; now</p>
-		<h1>Six credentials, all while leading backend</h1>
+		<!--
+			NOT "Six credentials, all while leading backend" — "Six" counted the rows
+			below it and "credentials" restated the group label, so the headline was a
+			caption for its own table. It was also the third sentence making the same
+			point: the eyebrow already says 2025 – now, and the body line said it best.
+			That body line is promoted here, and removed from the body, because it is
+			the only falsifiable version of the three. ("Credentials" also stretched —
+			four of the six are courses.)
+		-->
+		<h1>None of it happened between jobs</h1>
 	</header>
 
 	<div class="groups">
@@ -163,12 +172,11 @@
 		</div>
 	</div>
 
-	<p class="point">None of it happened between jobs.</p>
+	<p class="point">Both certificates came out of the work in this talk.</p>
 
 	<p class="detail">
-		The two certificates are the two subjects that turned up in the work &mdash; AWS on the
-		infrastructure, AI on the pipeline. The four courses were going back for fundamentals on
-		purpose, not chasing a framework.
+		AWS on the infrastructure, AI on the data work. The four courses were fundamentals, not
+		frameworks.
 	</p>
 </section>
 

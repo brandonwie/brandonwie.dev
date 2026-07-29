@@ -109,12 +109,19 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">Playtag &middot; 2023 &ndash; 2025</p>
-		<h1>Taking the empty backend seat</h1>
+		<!--
+			NOT "Taking the empty backend seat" — the row label below says "Backend"
+			and the seat box says "Unfilled", so the headline was captioning its own
+			diagram. It also dropped the half that matters: he did not move seats, he
+			took a second one. The box spanning both rows is that claim; the headline
+			now says it too.
+		-->
+		<h1>I widened instead of switching</h1>
 		<p class="state">
 			{#if parallel}
-				After — I took it the moment it opened, and kept the frontend
+				After — both seats, and the frontend kept
 			{:else}
-				Before — I was on the frontend, and the one who mainly wrote JavaScript
+				Before — frontend, and the main JavaScript writer
 			{/if}
 		</p>
 	</header>

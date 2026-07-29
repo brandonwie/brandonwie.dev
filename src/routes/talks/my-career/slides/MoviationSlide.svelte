@@ -163,9 +163,18 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">Moviation &middot; 2023</p>
-		<!-- "Korea's first" is on the submitted CV and is defensible, but it is
-		     dropped here by choice: the work stands without the superlative. -->
-		<h1>UAM reservation platform</h1>
+		<!--
+			NOT "UAM reservation platform". That was the only headline in the deck
+			that named an artifact instead of making a claim, and "UAM" is a term
+			nobody outside the industry can decode — it means air taxi. It also
+			described the video beside it while two thirds of the slide is about
+			replacing hand-maintained files with generated ones, which the headline
+			never touched. The product is named in the figcaption, where it belongs.
+
+			"Korea's first" is on the submitted CV and is defensible, but it is
+			dropped here by choice: the work stands without the superlative.
+		-->
+		<h1>Generate it once, or fix it forever</h1>
 	</header>
 
 	<!--
@@ -180,7 +189,9 @@
 				label="VONAER reservation flow: searching a departure point, picking it on the map, then choosing an arrival point"
 				paused={videoPaused}
 			/>
-			<figcaption>VONAER &mdash; booking a seat</figcaption>
+			<!-- Carries the product now that the headline states the argument. "air
+			     taxi" rather than "UAM" for the same reason the headline dropped it. -->
+			<figcaption>VONAER &mdash; booking a seat on an air taxi</figcaption>
 		</figure>
 
 		<div class="detail">

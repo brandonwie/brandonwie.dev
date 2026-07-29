@@ -121,7 +121,14 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">MOBA &middot; 2025 &ndash; now</p>
-		<h1>Rebuilding the infrastructure</h1>
+		<!--
+			NOT "Rebuilding the infrastructure" — that was the four row labels summed
+			up, and it asserted nothing. The argument this slide makes is in the
+			header above: four things swapping on ONE advance reads as a single
+			systemic gap rather than four unrelated tickets. That argument was never
+			on screen.
+		-->
+		<h1>Not four tickets &mdash; one systemic gap</h1>
 		<p class="state">
 			{#if after}
 				After &mdash; one source of truth, room to grow, and a closed edge

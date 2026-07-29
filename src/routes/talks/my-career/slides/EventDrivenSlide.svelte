@@ -212,7 +212,15 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">MOBA &middot; 2025 &ndash; now</p>
-		<h1>Decoupling the sync queue</h1>
+		<!--
+			NOT "Decoupling the sync queue". That named the box labels rendered
+			directly below it AND advertised the smaller half of the beat — the
+			header above says so outright: the root cause is the strongest thing on
+			this slide, and decoupling is what followed from fixing it. "A bad guess"
+			is also the plain-language gloss of "optimistic update", which is the one
+			term on this slide a non-specialist cannot decode.
+		-->
+		<h1>Every request paid for a bad guess</h1>
 		<!--
 			The subtitle must not outrun the diagram. "Fire and forget" is only true
 			once the response no longer waits, so it appears at that step and not
@@ -220,11 +228,9 @@
 		-->
 		<p class="state" class:after={decoupled}>
 			{#if respondsImmediately}
-				After — event-driven, and sync runs on connect instead of on every request
-			{:else if decoupled}
-				After — the queue owns its own lifecycle
+				After — event-driven, and sync runs on connect
 			{:else}
-				Before — queue injected into the block module, and every request forces a sync
+				Before — every request forces a sync
 			{/if}
 		</p>
 	</header>
