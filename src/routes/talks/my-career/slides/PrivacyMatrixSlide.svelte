@@ -8,14 +8,27 @@
   better than any retriever does.
 
   ONE ADVANCE, TWO TOKENS. The storyboard asked for a denied path bouncing off
-  the gate. Sending a permitted path through on the same advance is what makes
-  the bounce mean something — otherwise the audience sees a thing fail and has
-  nothing to compare it to. Both are choreography inside one input, which is
-  what the two-step rule allows (staggered arrival, not a third state).
+  the gate. Showing a permitted path alongside it is what makes the denial mean
+  something — otherwise the audience sees a thing fail and has nothing to
+  compare it to.
 
-  TOKENS TRAVEL IN AN ABSOLUTE OVERLAY. `.track` is inset over the flow row and
-  pointer-events: none, so animating `left` moves nothing else on the slide.
-  Nothing in the matrix, the gate, or the consumer list shifts on advance.
+  THEY NO LONGER TRAVEL (Brandon, 2026-07-29). The denied token used to run at
+  the gate and reverse, which read as a thing bouncing rather than a thing
+  refused, and it was the only motion in the deck that had to be watched to be
+  understood — look away for a second and the pill is simply back where it
+  started, indistinguishable from never having been sent. Both now fade in on
+  their own side of the gate and stay there, each with the verdict as a badge.
+
+  That also deleted a special case. The travelling version had to be HIDDEN
+  entirely under `?print` and reduced motion, because a still frame of a
+  mid-journey pill is indistinguishable from debris — so the PDF fallback was
+  making a weaker argument than the live slide. A placed pill needs no
+  exemption, and position carries what the travel carried: left of the gate
+  means the content never reached a consumer.
+
+  THE OVERLAY STAYS. `.track` is inset over the flow row and pointer-events:
+  none, so the pills sit above the layout without occupying it. Nothing in the
+  matrix, the gate, or the consumer list shifts on advance.
 
   THE CLAIM IS THE SHAPE, NOT THE ROW COUNT. Five matrix rows are shown out of
   a much longer table; they are chosen to show both verdicts, not to be
@@ -126,8 +139,7 @@
 		);
 
 		if (!want) {
-			// Returning to step 0: park both tokens back at the start, invisible.
-			timeline.set([pass, deny], { autoAlpha: 0, left: '3%' });
+			timeline.to([pass, deny], { autoAlpha: 0, duration: DURATION * d, ease: EASE });
 			timeline.to(root.querySelector('.tie'), {
 				autoAlpha: 0,
 				y: 6,
@@ -137,39 +149,21 @@
 			return;
 		}
 
-		if (d === 0) {
-			// Print (`?print` renders every slide at its final step with animate
-			// false) and reduced-motion. These two tokens carry their entire meaning
-			// in the TRAVEL — a still frame of one pill at 80% and one back at 3%
-			// cannot show that the second was refused rather than never sent, so in
-			// a PDF it reads as debris. Hide them. The matrix, the gate, the
-			// footnote and the tie line still make the whole argument without them.
-			timeline.set([pass, deny], { autoAlpha: 0 });
-		} else {
-			// Permitted first, so the denial has something to be measured against;
-			// then the denial, which is the beat that lands.
-			timeline.set([pass, deny], { left: '3%' });
-
-			timeline.to(pass, { autoAlpha: 1, duration: 0.15, ease: EASE });
-			// 600ms, not the 750ms this first shipped at. 750 made it the longest
-			// single motion in the deck — longer than S9's Flip, which at least
-			// depicts an architecture change. 600 matches the S1/S12/S15 rail draw,
-			// which is the established ceiling for a one-time structural move.
-			// See animation-audit.md finding 1.
-			// 80%, pulled in from 86% on 2026-07-29. The tokens used to read
-			// `knowledge/**` and `personal/**`; spelling them out in words made the
-			// permitted one materially wider, and since `left` positions its LEFT
-			// edge with nowrap text, 86% left it about half a rem from the right
-			// edge of the slide. 80% still lands it squarely over the consumer list,
-			// which is the only thing the position has to communicate.
-			timeline.to(pass, { left: '80%', duration: 0.6, ease: EASE });
-
-			timeline.to(deny, { autoAlpha: 1, duration: 0.15, ease: EASE }, '-=0.35');
-			timeline.to(deny, { left: '44%', duration: 0.45, ease: EASE });
-			// Refused at the gate and sent back. Faster on the way out than on the
-			// way in — it did not negotiate.
-			timeline.to(deny, { left: '3%', duration: 0.3, ease: EASE });
-		}
+		// Both fade in where they belong and stay there. No travel: the denied token
+		// used to run at the gate and reverse, which read as a thing bouncing rather
+		// than a thing refused, and it was the only motion in the deck that had to be
+		// watched to be understood.
+		//
+		// Position now carries what the travel carried — one pill left of the gate,
+		// one right of it — and that deletes a special case. These two used to be
+		// hidden entirely under `?print` and reduced motion, because a still frame of
+		// a mid-journey pill is indistinguishable from debris. A static pill needs no
+		// such exemption, so the PDF now makes the same argument the room sees.
+		timeline.to(
+			[deny, pass],
+			{ autoAlpha: 1, duration: DURATION * d, stagger: 0.1 * d, ease: EASE },
+			d ? '-=0.1' : 0,
+		);
 
 		timeline.to(
 			root.querySelector('.tie'),
@@ -209,8 +203,14 @@
 		<!-- Overlay only. Absolutely positioned and pointer-events: none, so the
 		     travelling tokens cannot shift anything underneath them. -->
 		<div class="track" aria-hidden="true">
-			<span class="token pass">Distilled knowledge</span>
-			<span class="token deny">Personal notes</span>
+			<span class="token deny">
+				Personal notes
+				<span class="badge">never crosses</span>
+			</span>
+			<span class="token pass">
+				Distilled knowledge
+				<span class="badge">passes</span>
+			</span>
 		</div>
 	</div>
 
@@ -333,10 +333,14 @@
 		pointer-events: none;
 	}
 
+	/* Placed, not animated. Each sits on its own side of the gate, which is the
+	   whole claim — left of it means the content never reached a consumer. */
 	.token {
 		position: absolute;
 		top: 0;
-		left: 3%;
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.5rem;
 		border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
 		border-radius: 999px;
 		padding: 0.2rem 0.7rem;
@@ -347,7 +351,19 @@
 	}
 
 	.token.deny {
-		top: 1.35rem;
+		left: 2%;
+	}
+
+	/* Clear of the gate column, over the consumer list. That position is the only
+	   thing this pill's placement has to communicate. */
+	.token.pass {
+		left: 60%;
+	}
+
+	.badge {
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		opacity: 0.6;
 	}
 
 	.footnote {
