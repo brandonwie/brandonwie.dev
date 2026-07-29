@@ -3,12 +3,17 @@
 
   Name and one thesis line. Nothing else; the presenter says the rest.
 
-  WORDING FLAG — needs Brandon's call. The headline leads with the destination
-  rather than repeating S1's "Four companies, one direction" verbatim two
-  slides running. It is a claim about fit, not a claim of past credit, so it
-  does not trip the downward-correction rule the earlier sections went through.
-  But it is the first sentence in the room, so it has to be a sentence you want
-  to say out loud to Hyunsoo.
+  THE HEADLINE ADDRESSES THE ROOM, NOT A COMPANY (Brandon, 2026-07-29). It read
+  "The layer I'd bring to mono", which pinned the first sentence of the deck to
+  one employer and made the whole thing single-use. "to you" says the same thing
+  to whoever is sitting there, so this deck can be walked again without an edit.
+  It also lands better spoken: it is addressed to the people in the room rather
+  than to their company name.
+
+  The headline leads with the destination rather than repeating S1's "Four
+  companies, one direction" verbatim two slides running. It is a claim about
+  fit, not a claim of past credit, so it does not trip the downward-correction
+  rule the earlier sections went through.
 
   NO SplitText. The storyboard asked for a SplitText line reveal, but SplitText
   is a Club GreenSock plugin and gsap.ts registers only Flip and DrawSVG.
@@ -49,7 +54,7 @@
 
 <section class="slide" bind:this={root}>
 	<p class="who reveal">Seokhyun Wie</p>
-	<h1 class="reveal">The layer I'd bring to mono</h1>
+	<h1 class="reveal">The layer I'd bring to you</h1>
 	<p class="thesis reveal">
 		Frontend to full-stack to backend to infrastructure &mdash; four companies, one direction.
 	</p>
