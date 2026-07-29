@@ -22,6 +22,21 @@
   makes it structural rather than a tidy-up. The boxes carry where, and the line
   underneath carries what it cost.
 
+  SYNC DID NOT DISAPPEAR — its trigger changed (Brandon, 2026-07-29). An earlier
+  version of this slide said "no sync call at all", which is not survivable in a
+  room that thinks for two seconds: a calendar sync engine that never syncs
+  raises the question immediately. What actually changed is that sync stopped
+  being on the request path and now runs when an integration is connected. So the
+  after-state has a Sync box of its own, outside both modules, on its own
+  trigger. The separation IS the claim, which is why it is a box and not a note
+  attached to somebody else's.
+
+  THE OPTIMISTIC UPDATE LIVES IN THE BLOCK MODULE (Brandon, 2026-07-29). It is
+  the cause; the forced sync was insurance against it being wrong. Putting it in
+  the module that owns it — and above the call it caused — is what lets the two
+  be read together. Its border tells the story on its own: dashed while it is
+  unreliable, solid once it is correct, so the fix needs no adjective.
+
   Its verified row is facts.md § Sync engine — force-sync from Google on every
   request, hitting rate limits → correct optimistic updates survive without a
   Google round trip. The row existed the whole time and had no beat; it was the
@@ -74,6 +89,7 @@
 		if (root) {
 			gsap.set(root.querySelectorAll('.note'), { autoAlpha: 0, y: 6 });
 			gsap.set(root.querySelector('.sync-after'), { autoAlpha: 0 });
+			gsap.set(root.querySelector('.sync-module'), { autoAlpha: 0 });
 		}
 
 		ready = true;
@@ -142,14 +158,25 @@
 			}
 		}
 
-		// Both sync boxes leave with the Flip, not after it. They are what the
+		// Both sync-call boxes leave with the Flip, not after it. They are what the
 		// advance is about, so they cannot wait their turn behind the box that
 		// moves. No delay, and no initial hide in onMount either: they are visible
 		// at step 0 by default, which is the state that needs no help.
-		gsap.to(root.querySelectorAll('.sync'), {
+		gsap.to(root.querySelectorAll('.sync-call'), {
 			autoAlpha: target >= 1 ? 0 : 1,
 			duration: DURATION * d,
 			ease: EASE,
+		});
+
+		// Sync itself arrives last of the diagram elements, after the calls have
+		// gone and the channel has drawn. Order is the argument: the call had to
+		// stop being on the request path before sync could be a thing with its own
+		// trigger. Arriving first would read as a fourth module appearing.
+		gsap.to(root.querySelector('.sync-module'), {
+			autoAlpha: target >= 1 ? 1 : 0,
+			duration: DURATION * d,
+			ease: EASE,
+			delay: target >= 1 ? (DURATION * 0.7 + 0.15) * d : 0,
 		});
 
 		// The consequence line follows the channel, because it is the result of the
@@ -193,7 +220,7 @@
 		-->
 		<p class="state" class:after={decoupled}>
 			{#if respondsImmediately}
-				After — event-driven, and the sync call is gone
+				After — event-driven, and sync runs on connect instead of on every request
 			{:else if decoupled}
 				After — the queue owns its own lifecycle
 			{:else}
@@ -206,20 +233,32 @@
 		<div class="column">
 			<div class="box block" data-flip-id="block">
 				<span class="box-title">Block module</span>
+
+				<!--
+					The cause sits above the symptom, in the module that owns it. The
+					forced sync was insurance against this box being wrong, so the two
+					have to be readable together or the slide shows a cost with no reason.
+				-->
+				<span class="box optimistic" class:fixed={decoupled}>
+					Optimistic update
+					<span class="box-note">{decoupled ? 'correct' : 'unreliable'}</span>
+				</span>
+
+				<!--
+					Two sync-call boxes, not one. The call sat in the block module AND in
+					the queue module, and a single box would show the cost without showing
+					that it had to be removed from two places. That is the whole reason
+					this is a box and not a sentence.
+				-->
+				<span class="box sync-call">Sync call</span>
+
 				{#if !decoupled}
 					<div class="box queue" data-flip-id="queue">
 						<span class="box-title">Google queue module</span>
 						<span class="box-note">dependency-injected</span>
-						<span class="box sync">Sync call</span>
+						<span class="box sync-call">Sync call</span>
 					</div>
 				{/if}
-				<!--
-					Two sync boxes, not one. The call sat in the block module AND in the
-					queue module, and a single box would show the cost without showing
-					that it had to be removed in two places. That is the whole reason
-					this is a box and not a sentence.
-				-->
-				<span class="box sync">Sync call</span>
 			</div>
 		</div>
 
@@ -246,9 +285,20 @@
 						mid-morph, which reads as the diagram settling rather than as the
 						call being removed.
 					-->
-					<span class="box sync">Sync call</span>
+					<span class="box sync-call">Sync call</span>
 				</div>
 			{/if}
+
+			<!--
+				Sync did not go away — it is the product. What changed is its trigger.
+				It sits outside both modules and off the request path, on its own event,
+				which is the honest picture: an engine that never runs would raise the
+				obvious question the moment anyone thought about it.
+			-->
+			<div class="box sync-module">
+				<span class="box-title">Sync</span>
+				<span class="box-note">runs when an integration is connected</span>
+			</div>
 		</div>
 	</div>
 
@@ -264,7 +314,8 @@
 			each time. Users met Google&rsquo;s rate limits during normal use.
 		</span>
 		<span class="sync-state sync-after">
-			No sync call at all &mdash; correct optimistic updates hold without a Google round trip
+			Correct optimistic updates hold without a Google round trip. Sync still runs &mdash; on
+			connect, not on every request.
 		</span>
 	</div>
 
@@ -327,6 +378,14 @@
 		justify-content: center;
 	}
 
+	/* Stacked, because the lane holds two things after the advance and they are
+	   not peers: the queue receives the event, and sync sits below it on a
+	   different trigger entirely. */
+	.lane {
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
 	.box {
 		border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
 		border-radius: 6px;
@@ -350,12 +409,38 @@
 	/* Sits inside whatever module contains it, so nesting carries the claim: the
 	   call lived in two places and had to be removed from both. Filled rather
 	   than outlined, because this is the thing that costs something. */
-	.sync {
+	.sync-call {
 		align-self: flex-start;
 		padding: 0.2rem 0.55rem;
 		font-size: var(--deck-meta);
 		background: color-mix(in srgb, currentColor 16%, transparent);
 		border-color: color-mix(in srgb, currentColor 45%, transparent);
+	}
+
+	/* The cause. Reads as part of the block module rather than as a callout,
+	   because that is where it lives and where it was fixed. */
+	.optimistic {
+		align-self: flex-start;
+		display: flex;
+		align-items: baseline;
+		gap: 0.45rem;
+		padding: 0.2rem 0.55rem;
+		font-size: var(--deck-meta);
+		border-style: dashed;
+	}
+
+	/* Solid once it is correct: the border style is the claim, so it does not
+	   need a word to say "fixed". */
+	.optimistic.fixed {
+		border-style: solid;
+		background: color-mix(in srgb, currentColor 8%, transparent);
+	}
+
+	/* Off the request path and outside both modules — that separation IS the
+	   after-state, so it gets its own box rather than a note on someone else's. */
+	.sync-module {
+		align-self: stretch;
+		opacity: 0;
 	}
 
 	.box-title {
