@@ -5,10 +5,10 @@
   projects/3b/actives/playtag-interview/facts.md — every claim on a slide must
   have a `verified` row there. Structure follows storyboard.md.
 
-  All 17 beats are registered as of 2026-07-28. The array order below IS the
-  storyboard order, and the `Page` column in storyboard.md is this array's
-  one-based index — if the two ever disagree, the storyboard is the spec and
-  this file is wrong.
+  All 18 beats are registered — 17 as of 2026-07-28, plus the learning beat
+  appended 2026-07-29. The array order below IS the storyboard order, and the
+  `Page` column in storyboard.md is this array's one-based index — if the two
+  ever disagree, the storyboard is the spec and this file is wrong.
 
   Build order was deliberate, not chronological: S7 (decoupling the sync queue)
   was built first because Flip plus DrawSVG is the hardest animation here. Once
@@ -37,10 +37,12 @@
 	import RetrievalRebuildSlide from './slides/RetrievalRebuildSlide.svelte';
 	import PrivacyMatrixSlide from './slides/PrivacyMatrixSlide.svelte';
 	import CloseSlide from './slides/CloseSlide.svelte';
+	import LearningSlide from './slides/LearningSlide.svelte';
 
 	// Chronological, per storyboard.md: title, the arc, then the four companies in
 	// order, then MOBA depth (sync then infrastructure then data), then 3B, then
-	// the close. Pages 7–13 are the MOBA section; 14–17 are 3B and the close.
+	// the close, then the learning beat. Pages 7–13 are the MOBA section, 14–16
+	// are 3B, 17 closes, and 18 is the learning evidence.
 	const slides: DeckSlide[] = [
 		{ id: 'title', label: 'Title', steps: 1, component: TitleSlide },
 		{ id: 'arc', label: 'The arc', steps: 2, component: ArcSlide },
@@ -84,6 +86,16 @@
 			component: PrivacyMatrixSlide,
 		},
 		{ id: 'close', label: 'Close', steps: 2, component: CloseSlide },
+		// Page 18, appended after the close at Brandon's instruction (2026-07-29).
+		// Worth knowing it sits after the close rather than before it: the close
+		// answers the role's three scope items and ends on "in that order", which
+		// is a deliberate last word, and this beat lands after that. Moving it to
+		// page 17 is a one-line swap with the entry above, and there is a real
+		// argument for it — the close's third row is "devops, later; Terraform and
+		// AWS already", which the two AWS certifications directly back, so putting
+		// the evidence immediately before the summary lets the close land on top
+		// of it. Left at 18 as asked; the decision is Brandon's.
+		{ id: 'learning', label: 'Never stopped learning', steps: 2, component: LearningSlide },
 	];
 </script>
 
