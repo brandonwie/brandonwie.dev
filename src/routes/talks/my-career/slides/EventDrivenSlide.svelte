@@ -14,7 +14,13 @@
   one Google round trip per request, and users meeting Google's rate limits as a
   result. Correcting the optimistic update removed the call entirely. That is a
   root-cause story rather than a refactor, and it is the strongest thing on this
-  slide, so the line under the diagram carries it.
+  slide.
+
+  IT IS TWO BOXES, NOT A SENTENCE (Brandon, 2026-07-29). The call sat in the
+  block module AND in the queue module. A line of text states the cost; nested
+  boxes state that it had to be removed from two places, which is the part that
+  makes it structural rather than a tidy-up. The boxes carry where, and the line
+  underneath carries what it cost.
 
   Its verified row is facts.md § Sync engine — force-sync from Google on every
   request, hitting rate limits → correct optimistic updates survive without a
@@ -136,9 +142,19 @@
 			}
 		}
 
-		// The sync call goes after the channel lands, because it is the consequence
-		// of the change and not part of it: the queue leaves, the event replaces the
-		// call, and only then does the round trip stop being necessary.
+		// Both sync boxes leave with the Flip, not after it. They are what the
+		// advance is about, so they cannot wait their turn behind the box that
+		// moves. No delay, and no initial hide in onMount either: they are visible
+		// at step 0 by default, which is the state that needs no help.
+		gsap.to(root.querySelectorAll('.sync'), {
+			autoAlpha: target >= 1 ? 0 : 1,
+			duration: DURATION * d,
+			ease: EASE,
+		});
+
+		// The consequence line follows the channel, because it is the result of the
+		// change rather than part of it: the calls go, the event replaces them, and
+		// only then does the round trip stop being necessary.
 		const syncDelay = (DURATION * 0.7 + 0.3) * d;
 		gsap.to(root.querySelector('.sync-before'), {
 			autoAlpha: target >= 1 ? 0 : 0.75,
@@ -194,8 +210,16 @@
 					<div class="box queue" data-flip-id="queue">
 						<span class="box-title">Google queue module</span>
 						<span class="box-note">dependency-injected</span>
+						<span class="box sync">Sync call</span>
 					</div>
 				{/if}
+				<!--
+					Two sync boxes, not one. The call sat in the block module AND in the
+					queue module, and a single box would show the cost without showing
+					that it had to be removed in two places. That is the whole reason
+					this is a box and not a sentence.
+				-->
+				<span class="box sync">Sync call</span>
 			</div>
 		</div>
 
@@ -216,6 +240,13 @@
 				<div class="box queue" data-flip-id="queue">
 					<span class="box-title">Google queue module</span>
 					<span class="box-note">own lifecycle</span>
+					<!--
+						Rendered and hidden rather than omitted, so the queue box keeps the
+						same height across the Flip. Omitting it would make the box resize
+						mid-morph, which reads as the diagram settling rather than as the
+						call being removed.
+					-->
+					<span class="box sync">Sync call</span>
 				</div>
 			{/if}
 		</div>
@@ -229,8 +260,8 @@
 	-->
 	<div class="synccall">
 		<span class="sync-state sync-before">
-			Then a full sync, every time &mdash; the heaviest module, a Google round trip per request, and
-			users meeting Google&rsquo;s rate limits
+			Called on every request &mdash; the heaviest module in the system, and a Google round trip
+			each time. Users met Google&rsquo;s rate limits during normal use.
 		</span>
 		<span class="sync-state sync-after">
 			No sync call at all &mdash; correct optimistic updates hold without a Google round trip
@@ -314,6 +345,17 @@
 	.queue {
 		border-style: dashed;
 		background: color-mix(in srgb, currentColor 8%, transparent);
+	}
+
+	/* Sits inside whatever module contains it, so nesting carries the claim: the
+	   call lived in two places and had to be removed from both. Filled rather
+	   than outlined, because this is the thing that costs something. */
+	.sync {
+		align-self: flex-start;
+		padding: 0.2rem 0.55rem;
+		font-size: var(--deck-meta);
+		background: color-mix(in srgb, currentColor 16%, transparent);
+		border-color: color-mix(in srgb, currentColor 45%, transparent);
 	}
 
 	.box-title {
