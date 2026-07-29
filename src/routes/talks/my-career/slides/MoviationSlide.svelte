@@ -8,6 +8,15 @@
   Step 2 is the tooling instinct: the repetitive parts of every page became
   generated artifacts rather than hand-written ones.
 
+  THE THREE ROWS ARE ONE STORY, NOT THREE TOOLS (Brandon, 2026-07-29). Colors
+  were re-edited by hand whenever they changed; translations were consumed as
+  raw JSON with no type guarantee; every form component was exported and
+  imported individually. All three are the same failure — an artifact a human
+  maintains by hand — and all three were answered the same way, by generating
+  them at build time. The `from` column therefore carries the manual work rather
+  than the artifact's name, because the pain is what makes this read as a
+  decision instead of a tool list.
+
   Every claim here has a verified row in facts.md § Moviation.
 -->
 <script lang="ts">
@@ -17,10 +26,15 @@
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
+	// The `from` column is the manual work, not the artifact's name. An earlier
+	// version listed "Design tokens (JSON)" and "Translation strings", which named
+	// the inputs and hid the point: all three were hand-maintained, and two of
+	// them had no type guarantee at all. The pain is what makes the automation
+	// read as a decision rather than a tool list.
 	const generated = [
-		{ from: 'Design tokens (JSON)', to: 'Typed TypeScript + colour schemes' },
-		{ from: 'Translation strings', to: 'Typed i18n accessors' },
-		{ from: 'Form definitions', to: 'Declarative form builder' },
+		{ from: 'Colors, edited by hand', to: 'Design tokens generated as typed TypeScript' },
+		{ from: 'Strings, untyped JSON', to: 'Translations generated as typed accessors' },
+		{ from: 'Forms, wired one by one', to: 'One declarative form builder' },
 	];
 
 	// Funding rounds stay off the slides by choice: they are the company's
@@ -100,7 +114,7 @@
 		<h1>UAM reservation platform</h1>
 		<p class="state">
 			{#if tooling}
-				And the build-time tooling behind every page
+				Hand-maintained artifacts, generated at build time instead
 			{:else}
 				A Next.js web app delivered inside a Flutter WebView shell
 			{/if}

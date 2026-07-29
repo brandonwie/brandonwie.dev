@@ -288,7 +288,7 @@
 		letter-spacing: 0.08em;
 	}
 
-	/* Dimmed with a transparent colour rather than `opacity`, because GSAP's
+	/* Dimmed with a transparent color rather than `opacity`, because GSAP's
 	   autoAlpha drives opacity to 1 on reveal and would erase a CSS opacity. */
 	.more {
 		font-size: var(--deck-heading);
