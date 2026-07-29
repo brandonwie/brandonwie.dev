@@ -3,19 +3,32 @@
 
   One question: what was delivered, and what was built to deliver it faster.
 
-  Step 1 is the product and its shape — a Next.js app inside a Flutter shell,
-  with the bridge between them called out because that is the part I owned.
-  Step 2 is the tooling instinct: the repetitive parts of every page became
-  generated artifacts rather than hand-written ones.
+  THREE ROWS, ONE ADVANCE — same grammar as ModulabsSlide (rebuilt 2026-07-29).
+  The previous version listed the tooling as three `from -> to` text rows, which
+  named the artifacts and left the audience reading rather than seeing. Each row
+  is now a picture that changes: the manual state is on screen at step 0, and one
+  advance replaces it with what was generated.
 
-  THE THREE ROWS ARE ONE STORY, NOT THREE TOOLS (Brandon, 2026-07-29). Colors
-  were re-edited by hand whenever they changed; translations were consumed as
-  raw JSON with no type guarantee; every form component was exported and
-  imported individually. All three are the same failure — an artifact a human
-  maintains by hand — and all three were answered the same way, by generating
-  them at build time. The `from` column therefore carries the manual work rather
-  than the artifact's name, because the pain is what makes this read as a
-  decision instead of a tool list.
+  All three rows are the same story. Colors were re-edited by hand wherever they
+  appeared; translations were consumed as raw JSON with no type guarantee; every
+  form component was exported and imported individually. Same failure three
+  times — an artifact a human maintains by hand — and the same fix three times.
+
+  Rows 1 and 3 collapse many into one, because that is what actually happened:
+  five hand-edited places became one token source, and per-form wiring became one
+  builder. Row 2 does not collapse, because nothing was reduced there — the JSON
+  stayed; what changed was that a typed layer was generated over it. Making that
+  row a collapse too would have been a tidier picture and a false one.
+
+  The Flutter shell stays visible in both steps. It is the context every one of
+  those pages was built inside, not a beat of its own, and the bridge is the part
+  Brandon owned end to end.
+
+  NO FLIP, NO DOM SWAP for anything animated. Both states of every row live in
+  the same grid cell from first paint and crossfade in place, which is only legal
+  because every cell is explicitly placed — grid auto-placement refuses to
+  overlap and would push the second state into implicit columns instead. That
+  exact bug broke the equivalent row on ModulabsSlide.
 
   Every claim here has a verified row in facts.md § Moviation.
 -->
@@ -26,16 +39,14 @@
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
-	// The `from` column is the manual work, not the artifact's name. An earlier
-	// version listed "Design tokens (JSON)" and "Translation strings", which named
-	// the inputs and hid the point: all three were hand-maintained, and two of
-	// them had no type guarantee at all. The pain is what makes the automation
-	// read as a decision rather than a tool list.
-	const generated = [
-		{ from: 'Colors, edited by hand', to: 'Design tokens generated as typed TypeScript' },
-		{ from: 'Strings, untyped JSON', to: 'Translations generated as typed accessors' },
-		{ from: 'Forms, wired one by one', to: 'One declarative form builder' },
-	];
+	// Deliberately uneven fill percentages: five copies of one value, each edited
+	// on its own, drift apart. Even fills would show duplication without showing
+	// why duplication was the problem.
+	const swatches = [11, 5, 15, 8, 12];
+
+	// Four is enough to read as "several forms" without becoming a count the
+	// audience tries to interpret.
+	const forms = ['Sign-up', 'Booking', 'Profile', 'Payment'];
 
 	// Funding rounds stay off the slides by choice: they are the company's
 	// achievement, not the engineer's, and citing them reads as borrowed credit.
@@ -46,19 +57,23 @@
 	];
 
 	let root = $state<HTMLElement>();
-	let tooling = $state(false);
+	let generated = $state(false);
 	let ready = $state(false);
 	let applied = -1;
 
-	// Held while a step animation runs, so the recording is not moving at the
-	// same time as the pipeline rows arrive.
+	// Held while the three rows change, so only one thing on screen moves.
 	let videoPaused = $state(false);
 
 	onMount(async () => {
 		const { gsap } = await loadGsap();
 		if (root) {
-			gsap.set(root.querySelectorAll('.pipe'), { autoAlpha: 0, y: 10 });
-			gsap.set(root.querySelectorAll('.note'), { autoAlpha: 0, y: 6 });
+			// Step-0 resting state. Every after-state element is already in the DOM;
+			// these only hide it, so returning to step 0 restores rather than rebuilds.
+			gsap.set(root.querySelectorAll('.after'), { autoAlpha: 0 });
+			gsap.set(root.querySelectorAll('.after-span'), {
+				scaleX: 0.32,
+				transformOrigin: 'left center',
+			});
 		}
 		ready = true;
 	});
@@ -72,53 +87,69 @@
 
 	async function render(target: number) {
 		const { gsap } = await loadGsap();
+		await tick();
 		if (!root) return;
 
 		const still = !animate || reducedMotion();
 		const d = still ? 0 : 1;
 		const want = target >= 1;
 
-		tooling = want;
-		await tick();
+		generated = want;
 
-		// One thing moves at a time: hold the recording while the rows arrive.
 		if (!still) {
 			videoPaused = true;
-			setTimeout(() => (videoPaused = false), (DURATION + 0.3) * 1000);
+			setTimeout(() => (videoPaused = false), 1250);
 		}
 
-		gsap.to(root.querySelectorAll('.pipe'), {
-			autoAlpha: want ? 1 : 0,
-			y: want ? 0 : 10,
-			duration: DURATION * d,
-			stagger: 0.08 * d,
-			ease: EASE,
+		// One timeline, three segments, lightly overlapped — sequenced so the eye
+		// is led through the rows in the order they are narrated. Simultaneous
+		// would be a flash rather than three changes.
+		const timeline = gsap.timeline();
+
+		['color', 'strings', 'forms'].forEach((row, i) => {
+			const at = d ? i * 0.16 : 0;
+			const scope = root!.querySelector(`.row-${row}`);
+			if (!scope) return;
+
+			timeline.to(
+				scope.querySelectorAll('.before'),
+				{ autoAlpha: want ? 0 : 1, duration: DURATION * d, stagger: 0.04 * d, ease: EASE },
+				at,
+			);
+			timeline.to(
+				scope.querySelectorAll('.after'),
+				{ autoAlpha: want ? 1 : 0, duration: DURATION * d, ease: EASE },
+				at + (d ? 0.05 : 0),
+			);
+			// Only the collapsing rows have a span to grow; the strings row swaps in
+			// place because nothing was reduced there.
+			timeline.to(
+				scope.querySelectorAll('.after-span'),
+				{ scaleX: want ? 1 : 0.32, duration: DURATION * d, ease: EASE },
+				at + (d ? 0.05 : 0),
+			);
 		});
 
-		gsap.to(root.querySelectorAll('.note'), {
-			autoAlpha: target >= 1 ? 1 : 0,
-			y: target >= 1 ? 0 : 6,
-			duration: DURATION * d,
-			stagger: 0.07 * d,
-			ease: EASE,
-			delay: target >= 1 ? (DURATION + 0.25) * d : 0,
-		});
+		timeline.to(
+			root.querySelectorAll('.note'),
+			{
+				autoAlpha: want ? 1 : 0,
+				y: want ? 0 : 6,
+				duration: DURATION * d,
+				stagger: 0.07 * d,
+				ease: EASE,
+			},
+			d ? 0.5 : 0,
+		);
 	}
 </script>
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">Moviation</p>
+		<p class="company">Moviation &middot; 2023</p>
 		<!-- "Korea's first" is on the submitted CV and is defensible, but it is
 		     dropped here by choice: the work stands without the superlative. -->
 		<h1>UAM reservation platform</h1>
-		<p class="state">
-			{#if tooling}
-				Hand-maintained artifacts, generated at build time instead
-			{:else}
-				A Next.js web app delivered inside a Flutter WebView shell
-			{/if}
-		</p>
 	</header>
 
 	<!--
@@ -133,33 +164,84 @@
 				label="VONAER reservation flow: searching a departure point, picking it on the map, then choosing an arrival point"
 				paused={videoPaused}
 			/>
-			<figcaption>VONAER — booking a seat</figcaption>
+			<figcaption>VONAER &mdash; booking a seat</figcaption>
 		</figure>
 
 		<div class="detail">
+			<!-- Nesting carries the architecture: the web app literally sits inside
+			     the shell, so the diagram is the sentence. Static in both steps. -->
 			<div class="shell">
 				<span class="shell-label">Flutter shell</span>
-				<div class="inner">
-					<span class="box-title">Next.js web app</span>
-				</div>
-				<span class="bridge">
-					JavaScript channel — the native&ndash;web bridge, owned end to end
-				</span>
+				<span class="inner">Next.js web app</span>
+				<span class="bridge"
+					>JavaScript channel &mdash; the native&ndash;web bridge, owned end to end</span
+				>
 			</div>
 
-			<!--
-				Always rendered, only revealed. Inserting these rows at step 2 re-flowed
-				a vertically-centred slide and shoved everything above them up the
-				screen — the title and the diagram moved when neither had changed.
-			-->
-			<div class="pipeline">
-				{#each generated as row (row.from)}
-					<div class="pipe">
-						<span class="from">{row.from}</span>
-						<span class="arrow" aria-hidden="true">&rarr;</span>
-						<span class="to">{row.to}</span>
+			<div class="changes">
+				<!-- 1 — Color. Many hand-edited places become one generated source. -->
+				<div class="change">
+					<p class="change-label">Color</p>
+					<div class="stage">
+						<div class="row row-color">
+							{#each swatches as fill, i (i)}
+								<span
+									class="cell before swatch"
+									style="grid-column: {i +
+										1}; background: color-mix(in srgb, currentColor {fill}%, transparent)"
+								></span>
+							{/each}
+							<span class="cell after after-span">Design tokens, generated as typed TypeScript</span
+							>
+						</div>
 					</div>
-				{/each}
+					<p class="change-caption">
+						{#if generated}
+							One source. A color changes once and every page follows.
+						{:else}
+							The same value kept in five places, re-edited by hand.
+						{/if}
+					</p>
+				</div>
+
+				<!-- 2 — Strings. Nothing collapses: a typed layer is generated over
+				     JSON that stayed exactly where it was. -->
+				<div class="change">
+					<p class="change-label">Strings</p>
+					<div class="stage">
+						<div class="row row-strings">
+							<span class="cell before dashed">Translation JSON, read as-is</span>
+							<span class="cell after">Generated typed accessors over the same JSON</span>
+						</div>
+					</div>
+					<p class="change-caption">
+						{#if generated}
+							Typed at compile time. A missing key stops being a runtime surprise.
+						{:else}
+							No types, so a wrong key was only found by opening the page.
+						{/if}
+					</p>
+				</div>
+
+				<!-- 3 — Forms. Per-form wiring becomes one builder. -->
+				<div class="change">
+					<p class="change-label">Forms</p>
+					<div class="stage">
+						<div class="row row-forms">
+							{#each forms as form, i (form)}
+								<span class="cell before dashed small" style="grid-column: {i + 1}">{form}</span>
+							{/each}
+							<span class="cell after after-span">One declarative form builder</span>
+						</div>
+					</div>
+					<p class="change-caption">
+						{#if generated}
+							Declared, not wired. A new form is a definition, not a file.
+						{:else}
+							Every form component exported and imported one at a time.
+						{/if}
+					</p>
+				</div>
 			</div>
 
 			<ul class="notes">
@@ -177,7 +259,7 @@
 		max-width: 82rem;
 		display: flex;
 		flex-direction: column;
-		gap: clamp(1.35rem, 3.5vh, 2.25rem);
+		gap: clamp(1rem, 2.8vh, 1.75rem);
 	}
 
 	/* Company eyebrow above the title: the audience always knows which chapter
@@ -197,17 +279,11 @@
 		margin: 0;
 	}
 
-	.state {
-		margin: 0.4rem 0 0;
-		font-size: var(--deck-subtitle);
-		opacity: 0.6;
-	}
-
 	/* Recording left, explanation right. The phone is 1:2, so it costs little
 	   width and reads instantly as mobile. */
 	.body {
 		display: grid;
-		grid-template-columns: clamp(9rem, 15vw, 13rem) minmax(0, 1fr);
+		grid-template-columns: clamp(8rem, 13vw, 11rem) minmax(0, 1fr);
 		gap: clamp(1.25rem, 3vw, 2.5rem);
 		align-items: start;
 	}
@@ -227,19 +303,20 @@
 	.detail {
 		display: flex;
 		flex-direction: column;
-		gap: clamp(1rem, 2.5vh, 1.75rem);
+		gap: clamp(0.85rem, 2.2vh, 1.4rem);
 		min-width: 0;
 	}
 
-	/* Nesting carries the architecture: the web app literally sits inside the
-	   shell, so the diagram is the sentence. */
+	/* Compact on purpose: this is context for the three rows below, not a beat.
+	   The earlier version spent five vertical rems on it. */
 	.shell {
 		border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
 		border-radius: 8px;
-		padding: clamp(0.75rem, 2vw, 1.25rem);
+		padding: 0.6rem 0.85rem;
 		display: flex;
-		flex-direction: column;
-		gap: 0.6rem;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.4rem 0.7rem;
 		background: color-mix(in srgb, currentColor 4%, transparent);
 		max-width: 46rem;
 	}
@@ -253,48 +330,120 @@
 
 	.inner {
 		border: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
-		border-radius: 6px;
-		padding: clamp(0.6rem, 1.6vw, 1rem);
+		border-radius: 5px;
+		padding: 0.2rem 0.55rem;
 		background: color-mix(in srgb, currentColor 8%, transparent);
-	}
-
-	.box-title {
-		font-size: var(--deck-heading);
+		font-size: var(--deck-body);
 		font-weight: 600;
 	}
 
 	.bridge {
 		font-size: var(--deck-meta);
-		opacity: 0.7;
+		opacity: 0.65;
 	}
 
-	.pipeline {
+	.changes {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-		/* Capped so the source column cannot stretch across the full slide and
-		   strand the arrow halfway to the output it points at. */
-		max-width: 62rem;
+		gap: clamp(0.75rem, 2vh, 1.25rem);
+		min-width: 0;
 	}
 
-	/* Hidden in CSS as well as GSAP: onMount runs after first paint, so a
-	   JS-only resting state flashes these rows on entry. */
-	.pipe {
-		display: grid;
-		grid-template-columns: clamp(11rem, 21vw, 17rem) auto minmax(0, 1fr);
-		align-items: baseline;
-		gap: clamp(0.5rem, 1.5vw, 1.25rem);
-		font-size: var(--deck-body);
-		visibility: hidden;
-		opacity: 0;
+	.change {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		min-width: 0;
 	}
 
-	.from {
-		opacity: 0.6;
-	}
-
-	.arrow {
+	.change-label {
+		margin: 0;
+		font-size: var(--deck-meta);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
 		opacity: 0.45;
+	}
+
+	/* Fixed-height stage per row, so a caption changing length can never move the
+	   picture and the three rows stay put across the advance. */
+	.stage {
+		min-height: 2.4rem;
+		display: flex;
+		align-items: center;
+	}
+
+	.change-caption {
+		margin: 0;
+		font-size: var(--deck-body);
+		opacity: 0.7;
+		min-height: 1.5em;
+	}
+
+	/* Both states share one grid cell and crossfade in place. This is only legal
+	   because every cell is explicitly placed: grid auto-placement refuses to
+	   overlap and pushes the second state into implicit columns instead. */
+	.row {
+		display: grid;
+		gap: 0.4rem;
+		width: 100%;
+		max-width: 40rem;
+	}
+
+	.row-color {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+
+	.row-strings {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	/* The color and forms rows set this inline per item; this row has a single
+	   before-cell and would otherwise be auto-placed, which means grid pushes it
+	   into an implicit second column rather than letting it share the cell with
+	   the after-state. Same trap that broke the equivalent row on ModulabsSlide. */
+	.row-strings > .before {
+		grid-column: 1;
+	}
+
+	.row-forms {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+
+	.cell {
+		grid-row: 1;
+		border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+		border-radius: 5px;
+		padding: 0.4rem 0.6rem;
+		font-size: var(--deck-meta);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.dashed {
+		border-style: dashed;
+		background: color-mix(in srgb, currentColor 4%, transparent);
+	}
+
+	/* No label: five bars carrying one value between them, drifting apart. Words
+	   here would be five copies of the same word. */
+	.swatch {
+		border-style: dashed;
+	}
+
+	.small {
+		font-size: var(--deck-meta);
+		opacity: 0.75;
+	}
+
+	/* Hidden in CSS as well as by the onMount set: onMount runs after the first
+	   paint, so without this the after-state flashes on entry. */
+	.after {
+		grid-column: 1 / -1;
+		background: color-mix(in srgb, currentColor 9%, transparent);
+		font-weight: 600;
+		font-size: var(--deck-body);
+		opacity: 0;
 	}
 
 	.notes {
@@ -303,7 +452,7 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 0.35rem;
 		font-size: var(--deck-body);
 		opacity: 0.85;
 	}
@@ -338,12 +487,16 @@
 			max-width: 11rem;
 		}
 
-		.pipe {
-			grid-template-columns: 1fr;
-			gap: 0.15rem;
+		/* Five bars and four form names stop being readable well before the deck's
+		   minimum width. Keep one of each: the before-state is carried by the
+		   caption at that size, and the crossfade stays honest. */
+		.row-color,
+		.row-forms {
+			grid-template-columns: minmax(0, 1fr);
 		}
 
-		.arrow {
+		.row-color > .before:not(:first-child),
+		.row-forms > .before:not(:first-child) {
 			display: none;
 		}
 	}
