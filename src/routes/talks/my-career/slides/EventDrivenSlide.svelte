@@ -239,7 +239,15 @@
 					forced sync was insurance against this box being wrong, so the two
 					have to be readable together or the slide shows a cost with no reason.
 				-->
-				<span class="box optimistic" class:fixed={decoupled}>
+				<!--
+					NOT `class:fixed`. A global utility `.fixed { position: fixed }` exists
+					in the app stylesheet, and Svelte's scoping does not protect against
+					that — the scope hash narrows a selector, it does not stop an
+					unscoped global rule from matching the same element. This box tore
+					itself out of the block module and sat on top of the title until the
+					class was renamed.
+				-->
+				<span class="box optimistic" class:is-correct={decoupled}>
 					Optimistic update
 					<span class="box-note">{decoupled ? 'correct' : 'unreliable'}</span>
 				</span>
@@ -288,18 +296,19 @@
 					<span class="box sync-call">Sync call</span>
 				</div>
 			{/if}
-
-			<!--
-				Sync did not go away — it is the product. What changed is its trigger.
-				It sits outside both modules and off the request path, on its own event,
-				which is the honest picture: an engine that never runs would raise the
-				obvious question the moment anyone thought about it.
-			-->
-			<div class="box sync-module">
-				<span class="box-title">Sync</span>
-				<span class="box-note">runs when an integration is connected</span>
-			</div>
 		</div>
+	</div>
+
+	<!--
+		Sync did not go away — it is the product. What changed is its trigger. It
+		sits BELOW the block-to-queue row rather than inside it, because that row is
+		the request path and this is no longer on it. An engine that never runs
+		would raise the obvious question the moment anyone thought about it; an
+		engine drawn inside the request path would answer the wrong one.
+	-->
+	<div class="box sync-module">
+		<span class="box-title">Sync</span>
+		<span class="box-note">runs when an integration is connected</span>
 	</div>
 
 	<!--
@@ -332,12 +341,16 @@
 </section>
 
 <style>
+	/* Tighter than the deck default. This slide gained a fourth block when Sync
+	   moved below the request path, and at the original 3.5vh the last note sat
+	   under the progress bar on a 900px-tall viewport. Six gaps at ~10px less
+	   each is the cheapest 60px on the slide. */
 	.slide {
 		width: 100%;
 		max-width: 82rem;
 		display: flex;
 		flex-direction: column;
-		gap: clamp(1.35rem, 3.5vh, 2.25rem);
+		gap: clamp(0.9rem, 2.2vh, 1.5rem);
 	}
 
 	/* Company eyebrow above the title: the audience always knows which chapter
@@ -369,21 +382,16 @@
 		grid-template-columns: 1fr auto 1fr;
 		align-items: center;
 		gap: clamp(0.75rem, 2vw, 1.5rem);
-		min-height: clamp(140px, 26vh, 240px);
+		/* Reserved so the row does not jump height when the queue leaves it, but no
+		   larger than that job needs — the surplus was padding the diagram against
+		   a slide that no longer has room to spare. */
+		min-height: clamp(120px, 18vh, 180px);
 	}
 
 	.column {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-	}
-
-	/* Stacked, because the lane holds two things after the advance and they are
-	   not peers: the queue receives the event, and sync sits below it on a
-	   different trigger entirely. */
-	.lane {
-		flex-direction: column;
-		gap: 0.75rem;
 	}
 
 	.box {
@@ -422,6 +430,9 @@
 	.optimistic {
 		align-self: flex-start;
 		display: flex;
+		/* Explicit: `.box` sets column, and inheriting it stacked the label above
+		   its own state instead of reading as one line. */
+		flex-direction: row;
 		align-items: baseline;
 		gap: 0.45rem;
 		padding: 0.2rem 0.55rem;
@@ -430,16 +441,18 @@
 	}
 
 	/* Solid once it is correct: the border style is the claim, so it does not
-	   need a word to say "fixed". */
-	.optimistic.fixed {
+	   need a word beside it. */
+	.optimistic.is-correct {
 		border-style: solid;
 		background: color-mix(in srgb, currentColor 8%, transparent);
 	}
 
-	/* Off the request path and outside both modules — that separation IS the
-	   after-state, so it gets its own box rather than a note on someone else's. */
+	/* Below the request path, not on it. It gets no arrow and no column of its
+	   own, because being off to one side with its own trigger IS the after-state
+	   — an inbound connector would put it straight back on the path it left. */
 	.sync-module {
-		align-self: stretch;
+		align-self: flex-start;
+		max-width: 28rem;
 		opacity: 0;
 	}
 
