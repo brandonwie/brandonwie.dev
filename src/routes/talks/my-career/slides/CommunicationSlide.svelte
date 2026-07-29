@@ -13,37 +13,58 @@
   discipline is that nothing goes on a slide without a verified row — and "I am
   open to being wrong" is not the kind of claim a ledger can gate.
 
-  So the slide does not assert the qualities. It points at three moments the room
-  has already watched, and lets them carry it. That is the only reason this beat
-  earns its 35 seconds:
+  So the slide does not stop at asserting the qualities. Each one points at a
+  moment the room has already watched, and the moments carry it. That is the only
+  reason this beat earns its 35 seconds:
 
-    - "I argue from evidence, and change my mind on it" — page 15. He measured
-      his own search engine, found it delivered nothing, deleted it, and wrote
-      down why. Verified in facts.md as a deletion for zero measured value.
-    - "An objection is not finished until it carries an alternative" — page 3.
-      The gateway module was proposed and built, not complained about. init.me.md
-      § MODULABS: "architected a gateway module convinces team and implemented".
-    - "When I cannot change all of it, I change the part I can" — page 12. Cheap
-      exact-path blocking rules went in immediately; the move behind a private
-      network happened gradually afterwards. init.me.md § Infrastructure.
+    - Critical thinking — page 3. The gateway module was proposed and built, not
+      complained about. init.me.md § MODULABS: "architected a gateway module
+      convinces team and implemented".
+    - Strong opinions, weakly held — page 15. He built a search engine, measured
+      it, found it delivered nothing, and deleted it. Held strongly enough to
+      build; let go on the measurement. Verified in facts.md as a deletion for
+      zero measured value.
+    - Intellectual humility — page 15's second guard. A regression test that
+      blocks HIS OWN change when results get worse. Humility stated as a feeling
+      is unfalsifiable; humility built into a gate that can veto him is not.
+
+  Note the anchors are his own work failing or being constrained in all three
+  cases. That is deliberate. An anchor where he was proved right would make these
+  claims about competence; an anchor where he was checked makes them about
+  character, which is what the slide is for.
 
   The closing line is the whole device and it must not be cut: without it, the
   three rows read as self-description, and the audience has no reason to believe
   any of them.
 
-  SOURCE IS facts.md § Communication style, which holds four positions. Rows 1
-  and 2 of that section — intellectual humility, and strong opinions weakly held
-  — are merged here into a single line. They are two halves of one behavior
-  (commit on evidence, revise on evidence), and stating them as separate bullets
-  reads as padding. No claim is lost in the merge; the ledger keeps both.
+  THE NAMES ARE LOAD-BEARING (Brandon, 2026-07-29, correcting the first build):
+  "strong opinions weakly held, intellectual humility, critical thinking — these
+  three are the most important aspects of me." The first version of this slide
+  translated all three into plain sentences and dropped the names, on the
+  grounds that two of them are insider vocabulary. That was the wrong call. They
+  are the words he identifies with, and a slide about how someone works that
+  refuses to use their own vocabulary is describing a different person.
 
-  REGISTER: the source note in init.me.md asks for "more formal and academic
-  words". That instruction predates the plain-language direction the deck took on
-  2026-07-29, and following it would fight pages 15 and 16, which were rewritten
-  the other way on the same day. "Intellectual humility" and "strong opinions,
-  weakly held" are both insider vocabulary — the second is a borrowed phrase most
-  of the room will not know. They are said here in ordinary words instead. Raised
-  with Brandon rather than silently overridden; see progress.md.
+  The jargon problem is real but it is solved by the gloss line, not by deletion.
+  Each row names the concept, then says it in ordinary language, then anchors it.
+  A listener who has never met "strong opinions, weakly held" gets the meaning
+  from the line underneath; a listener who has met it gets the shorthand and the
+  respect of being spoken to in it. Removing the names bought plainness at the
+  cost of the only thing the slide is actually about.
+
+  "Critical thinking" is NEW as of this correction — it is not among the four
+  positions in facts.md § Communication style and not in init.me.md's five
+  bullets. It arrived when Brandon named the three out loud, which makes him the
+  source for it exactly as init.me.md is the source for the rest. Recorded in
+  facts.md as a position added on 2026-07-29.
+
+  BIAS FOR ACTION IS DELIBERATELY NOT HERE. "When I cannot change all of it, I
+  change the part I can" is the fourth ledger position and it was a row in the
+  first build. Three abstract nouns is already the most abstraction this deck
+  carries on one slide; a fourth turns a set of claims into a list of virtues.
+  It moved to script.md as a spoken line, and it is the one of the four that the
+  MOBA infrastructure beats already demonstrate without help. Restoring it is a
+  one-entry change if Brandon wants it back.
 
   DO NOT put the scouting story on this slide. facts.md marks it `input — true
   but self-reported; strong as a spoken aside, weak as a slide claim`. It is the
@@ -65,21 +86,32 @@
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
-	// `anchor` is the moment in this talk that already demonstrated the rule. It
-	// is never a restatement of the rule in other words — if it were, the slide
-	// would be asserting twice and proving nothing.
+	// Three tiers per row, and each does a job the other two cannot.
+	//
+	//   name   — the concept Brandon actually identifies with. These are the words
+	//            he uses about himself, so they lead.
+	//   gloss  — the same idea in ordinary language, because two of the three
+	//            names are insider vocabulary and half the room will not have met
+	//            them. The gloss is what stops the row being a badge.
+	//   anchor — the moment in this talk that already demonstrated it. Never a
+	//            restatement of the gloss in other words; if it were, the row
+	//            would assert twice and prove nothing.
 	const rules = [
 		{
-			principle: 'I argue from evidence, and I change my mind on it',
-			anchor: 'The search engine I deleted was my own.',
-		},
-		{
-			principle: 'An objection is not finished until it carries an alternative',
+			name: 'Critical thinking',
+			gloss:
+				'I argue based on evidence. An objection is not finished until it carries an alternative.',
 			anchor: 'The gateway module was a proposal, not a complaint.',
 		},
 		{
-			principle: 'When I cannot change all of it, I change the part I can',
-			anchor: 'The cheap blocking rules shipped first. The private network came after.',
+			name: 'Strong opinions, weakly held',
+			gloss: 'I commit to a position, and I let it go when the evidence turns.',
+			anchor: 'The search engine I deleted was my own.',
+		},
+		{
+			name: 'Intellectual humility',
+			gloss: 'I assume I will be wrong, so I build the thing that catches it.',
+			anchor: 'A test blocks my own change when the results get worse.',
 		},
 	];
 
@@ -91,7 +123,8 @@
 		const { gsap } = await loadGsap();
 		if (!root) return;
 
-		gsap.set(root.querySelectorAll('.principle'), { autoAlpha: 0, y: 8 });
+		gsap.set(root.querySelectorAll('.name'), { autoAlpha: 0, y: 8 });
+		gsap.set(root.querySelectorAll('.gloss'), { autoAlpha: 0, y: 8 });
 		gsap.set(root.querySelectorAll('.anchor'), { autoAlpha: 0 });
 		gsap.set(root.querySelector('.point'), { autoAlpha: 0, y: 6 });
 
@@ -115,13 +148,29 @@
 
 		const timeline = gsap.timeline();
 
-		timeline.to(root.querySelectorAll('.principle'), {
+		timeline.to(root.querySelectorAll('.name'), {
 			autoAlpha: 1,
 			y: 0,
 			duration: DURATION * d,
 			stagger: 0.1 * d,
 			ease: EASE,
 		});
+
+		// Glosses trail their names closely rather than arriving as a second wave.
+		// The name and its plain-language version are one unit — separating them
+		// would leave three abstract nouns alone on screen, which is the exact
+		// impression this slide exists to avoid.
+		timeline.to(
+			root.querySelectorAll('.gloss'),
+			{
+				autoAlpha: 0.85,
+				y: 0,
+				duration: DURATION * d,
+				stagger: 0.1 * d,
+				ease: EASE,
+			},
+			d ? '-=0.42' : 0,
+		);
 
 		// The anchors arrive together rather than staggered under their own rules.
 		// Staggered, the eye tracks down the column and reads them as three more
@@ -157,9 +206,10 @@
 	</header>
 
 	<ul class="rules">
-		{#each rules as rule (rule.principle)}
+		{#each rules as rule (rule.name)}
 			<li class="rule">
-				<span class="principle">{rule.principle}</span>
+				<span class="name">{rule.name}</span>
+				<span class="gloss">{rule.gloss}</span>
 				<span class="anchor">{rule.anchor}</span>
 			</li>
 		{/each}
@@ -223,12 +273,18 @@
 		opacity: 0.5;
 	}
 
-	.principle {
+	.name {
 		font-size: var(--deck-heading);
 		font-weight: 600;
 		letter-spacing: -0.01em;
 		visibility: hidden;
 		opacity: 0;
+	}
+
+	.gloss {
+		font-size: var(--deck-body);
+		opacity: 0;
+		visibility: hidden;
 	}
 
 	/* Dimmer than the rule it backs, so the three principles still scan as three
