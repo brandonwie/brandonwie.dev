@@ -64,6 +64,15 @@
 	// Held while the three rows change, so only one thing on screen moves.
 	let videoPaused = $state(false);
 
+	// Same guard ModulabsSlide carries, for the same reason: three sequenced
+	// segments push this timeline past a second, which is long enough that
+	// advancing and immediately retreating would leave two runs writing the same
+	// properties until the first finished. Rehearsal does that constantly. Only
+	// `.kill()` is needed off the handle, so it is typed structurally rather than
+	// dragging in a GSAP namespace type.
+	let running: { kill: () => void } | undefined;
+	let videoTimer: ReturnType<typeof setTimeout> | undefined;
+
 	onMount(async () => {
 		const { gsap } = await loadGsap();
 		if (root) {
@@ -90,6 +99,12 @@
 		await tick();
 		if (!root) return;
 
+		// Before anything is built. Killing mid-flight leaves elements at their
+		// intermediate values, which is correct: the tweens below read current
+		// state, so they carry on from wherever the interrupted run got to.
+		running?.kill();
+		clearTimeout(videoTimer);
+
 		const still = !animate || reducedMotion();
 		const d = still ? 0 : 1;
 		const want = target >= 1;
@@ -98,13 +113,14 @@
 
 		if (!still) {
 			videoPaused = true;
-			setTimeout(() => (videoPaused = false), 1250);
+			videoTimer = setTimeout(() => (videoPaused = false), 1250);
 		}
 
 		// One timeline, three segments, lightly overlapped — sequenced so the eye
 		// is led through the rows in the order they are narrated. Simultaneous
 		// would be a flash rather than three changes.
 		const timeline = gsap.timeline();
+		running = timeline;
 
 		['color', 'strings', 'forms'].forEach((row, i) => {
 			const at = d ? i * 0.16 : 0;
