@@ -45,7 +45,13 @@
 	import { paletteOpen } from '$lib/stores/palette';
 	import FuzzyFinder from '$lib/components/palette/FuzzyFinder.svelte';
 	import SiteHeader from '$lib/components/SiteHeader.svelte';
-	import { localeOf, pathForLocale, searchHref, type Locale } from '$lib/data/nav';
+	import {
+		hasLocaleVariant,
+		localeOf,
+		pathForLocale,
+		searchHref,
+		type Locale,
+	} from '$lib/data/nav';
 	import { buildPaletteItems, type PaletteItem } from '$lib/palette/items';
 	import Footer from '$lib/components/Footer.svelte';
 
@@ -208,9 +214,13 @@
 	/>
 {/if}
 
-<!-- Hidden links for SSG prerendering - allows SvelteKit to crawl all locale versions -->
-<div style="display:none">
-	{#each locales as locale (locale)}
-		<a href={localeHref(locale)}>{locale}</a>
-	{/each}
-</div>
+<!-- Hidden links for SSG prerendering - allows SvelteKit to crawl all locale versions.
+     Skipped on English-only routes (e.g. /talks), which have no /ko counterpart
+     for the crawler to reach. -->
+{#if hasLocaleVariant(page.url.pathname)}
+	<div style="display:none">
+		{#each locales as locale (locale)}
+			<a href={localeHref(locale)}>{locale}</a>
+		{/each}
+	</div>
+{/if}

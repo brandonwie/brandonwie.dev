@@ -57,6 +57,22 @@ export function pathForLocale(pathname: string, locale: Locale): string {
 	return `${base(locale)}${path === '/' ? '' : path}` || '/';
 }
 
+/**
+ * Route prefixes that exist in English only.
+ *
+ * Talks are delivered in one language, so they have no Korean twin. The root
+ * layout emits hidden locale links so the static-site crawler can reach every
+ * locale variant; pointing it at a `/ko` path that does not exist fails the
+ * build under `prerender.handleHttpError: 'fail'`.
+ */
+const ENGLISH_ONLY_PREFIXES = ['/talks'] as const;
+
+/** Whether a pathname has a counterpart in every locale. */
+export function hasLocaleVariant(pathname: string): boolean {
+	const path = stripLocale(pathname);
+	return !ENGLISH_ONLY_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
 /** Locale-aware href for a nav item. */
 export function hrefFor(item: NavItem, locale: Locale): string {
 	return `${base(locale)}${item.path}`;
