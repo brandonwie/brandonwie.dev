@@ -2,10 +2,33 @@
   S14 — Privacy governance → mono (0:45) · never cut
 
   The tie-in beat, and per facts.md the most transferable idea in the deck.
-  mono processes video of children in childcare settings, so "what may be
-  indexed, by which system, and how that is enforced rather than promised" is
-  not a side concern for that product — it generalizes to their problem far
-  better than any retriever does.
+
+  THE MONO CLAIM IS GONE (Brandon, 2026-07-29). This slide used to end on "mono
+  processes video of children. What may be indexed, by which system, is the kind
+  of thing that has to be enforced rather than promised." Two problems, and the
+  second is the serious one.
+
+  It was vague — "the kind of thing that has to be" asserts importance without
+  saying what breaks. And it was WRONG, or at least too narrow: mono is not only
+  about children. The line came from inferring a product's scope off its public
+  description, then stating that inference back to the people who build it, in
+  their own room, as though it were established. Being narrated a version of
+  their own product that is not quite right is a bad way to open the beat that is
+  supposed to prove judgement.
+
+  What replaces it claims nothing about mono at all. Any product that adds AI
+  ends up with several systems reading the same user data; that is true of theirs
+  without anyone having to assert what theirs does. The connection to StoryLine's
+  AI narrative is left for Brandon to make out loud if the room wants it — a
+  presenter can read whether that lands, a slide cannot.
+
+  LEGIBILITY (same note). Some of this room is not technical. The headline said
+  "One table decides what every index may read", where "table" reads as a
+  database table and "index" is jargon for the thing being governed. It is now a
+  rule and a system. The new subtitle exists purely to narrate the diagram —
+  content kinds on the left, the shared rule in the middle, the systems that must
+  ask it on the right — because that reading is obvious only if you already know
+  what you are looking at.
 
   ONE ADVANCE, TWO TOKENS. The storyboard asked for a denied path bouncing off
   the gate. Showing a permitted path alongside it is what makes the denial mean
@@ -45,10 +68,14 @@
   internal project names, and the consumer that actually matters — content
   leaving the machine for a model API — was the least legible of the four.
 
-  PUBLISH-SAFE: 3B's own governance rule and its own loader. The mono line is
-  inference from a public product description (monoxyz.ai), not anything told
-  in confidence — but it IS a statement about their product made in their room,
-  so it should be one Brandon is comfortable defending if asked how he knows.
+  PUBLISH-SAFE: 3B's own governance rule and its own loader, and now nothing
+  else. The slide previously carried an inference about mono's product drawn
+  from its public description (monoxyz.ai) — removed 2026-07-29, see above. This
+  note used to warn that it was a statement about their product made in their
+  room and that Brandon should be ready to defend how he knew it. The warning was
+  correct and the right answer to it turned out to be deletion, not a better
+  defence: there is no version of guessing at someone's product on a slide that
+  is worth the sentence it buys.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
@@ -176,7 +203,10 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">3B &mdash; privacy governance</p>
-		<h1>One table decides what every index may read</h1>
+		<h1>One rule decides what every system may read</h1>
+		<p class="lead">
+			One row per kind of content in 3B. Every tool that reads any of it checks this table first.
+		</p>
 	</header>
 
 	<div class="flow">
@@ -220,8 +250,8 @@
 	</p>
 
 	<p class="tie">
-		mono processes video of children. What may be indexed, by which system, is the kind of thing
-		that has to be enforced rather than promised.
+		Any product that adds AI ends up with several systems reading the same user data. Writing the
+		policy is easy &mdash; enforcing it rather than promising it is the part you have to build.
 	</p>
 </section>
 
@@ -247,6 +277,16 @@
 		font-weight: 600;
 		letter-spacing: -0.02em;
 		margin: 0;
+	}
+
+	/* Narrates the diagram rather than adding a claim. Same slot the other slides
+	   give their before/after line, which this beat has no use for — nothing here
+	   is a before. */
+	.lead {
+		margin: 0.4rem 0 0;
+		font-size: var(--deck-subtitle);
+		opacity: 0.6;
+		max-width: 72ch;
 	}
 
 	.flow {
