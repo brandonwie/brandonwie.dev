@@ -27,9 +27,10 @@
 
   OMSCS IS DELIBERATELY ABSENT. The four courses are prerequisites on a Georgia
   Tech OMSCS track, which would be the strongest possible version of this beat —
-  and it also announces a Master's plan to a room where the referral already
-  raised a concern about him leaving again (qa-prep.md § The return story).
-  Off-slide by default; honest if asked. Brandon's call, recorded in facts.md.
+  and announcing a Master's plan mid-interview also raises a question about
+  future availability that this slide is not the place to open. Off-slide by
+  default; honest if asked. Brandon's call; the reasoning and the prepared
+  answer live in the private task folder, not here.
 
   REVEAL ONLY, NO DEPICTIVE MOTION. Nothing structural changes here — it is a
   list and then the reading of the list. Per animation-audit.md's distinction

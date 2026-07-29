@@ -35,11 +35,14 @@
 		// "Participated", not "contributed": Brandon gave opinions on the schema
 		// but did not own the design. Below CV wording on purpose — going under
 		// what the CV claims is always safe, going over never is.
-		'Participated in the schema redesign for grade and class transitions, with full history preserved',
-		// "Took part in", not "supported": Brandon did hands-on work in the
-		// migration rather than assisting from the side. Still not "led" — see
-		// facts.md C3.
-		'Took part in the migration to Kotlin and Spring Boot; the NestJS service kept serving production',
+		// Both lines became noun phrases 2026-07-29. They were written-CV sentences
+		// with trailing subordinate clauses; the hedge is preserved by keeping the
+		// scope word ("part of", not "led"), so shortening them costs no accuracy
+		// and stops the diffidence reading as a full spoken sentence.
+		'Part of the schema redesign for grade and class transitions — full history preserved',
+		// Not "led" — see facts.md C3. Hands-on in the migration, not assisting
+		// from the side, and not owning it either.
+		'Part of the Kotlin and Spring Boot migration — NestJS kept serving production',
 		'Infrastructure management, EFK logging, GitHub CI/CD',
 	];
 

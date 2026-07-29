@@ -47,10 +47,10 @@
 	// Five, because five in line versus five at once is exactly the 5x claim.
 	const BATCHES = [1, 2, 3, 4, 5];
 
-	const notes = [
-		'The one-year history cap was removed',
-		'Heavy accounts no longer overflow memory during a sync',
-	];
+	// The one-year cap was stated three times — both state-line branches and here.
+	// It stays in the state pair, where the before/after contrast carries it, and
+	// leaves the notes. "during a sync" was scaffolding on a slide about syncing.
+	const notes = ['Heavy accounts no longer overflow memory'];
 
 	let root = $state<HTMLElement>();
 	let parallel = $state(false);

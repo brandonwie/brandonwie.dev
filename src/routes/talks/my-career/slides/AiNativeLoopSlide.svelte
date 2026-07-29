@@ -1,9 +1,11 @@
 <!--
   S12 — 3B, the AI-native loop (1:00) · never cut
 
-  Maps directly to Sarah's scope item #2, "스토리라인 제품 내 AI narrative
-  (prompt engineering)". This is the slide that answers it, so it has to read
-  as a system rather than as enthusiasm for a tool.
+  The slide that answers a prompt-engineering scope line in a role description,
+  so it has to read as a system rather than as enthusiasm for a tool. Kept
+  audience-neutral on purpose: it argues that agent work needs gates, which is
+  true wherever it is shown. Role-specific scope stays in the private task
+  folder, never in this repo.
 
   THE POINT IS THE GATES, NOT THE AUTOMATION. Six stages run as a loop; three
   of them stay human. That is the claim worth making in a room that has to

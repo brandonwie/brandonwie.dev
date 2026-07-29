@@ -28,9 +28,13 @@
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
+	// Note 1's trailing clause was the headline and the state line said a third
+	// time; note 2's "chosen for ... scalability" was scaffolding around the
+	// reason. SSE stays spelled out — an unexpanded acronym on a slide is a word
+	// the presenter has to stop and translate.
 	const notes = [
-		'Polling removed entirely — updates arrive when the change happens',
-		'WebSocket rather than SSE, chosen for realtime-note scalability',
+		'Polling removed entirely',
+		'WebSocket over server-sent events — realtime notes scale better',
 	];
 
 	let root = $state<HTMLElement>();

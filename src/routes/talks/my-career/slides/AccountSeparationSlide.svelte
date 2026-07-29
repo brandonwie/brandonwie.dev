@@ -30,6 +30,8 @@
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
+	// These carry the precision now that the state line above them stopped
+	// restating both of them at full length ("any number of ... any number of").
 	const notes = [
 		'One user can connect any number of calendar accounts',
 		'Each connected account can sync any number of calendars',

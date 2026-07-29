@@ -2,9 +2,11 @@
   S15 — Close (0:20) · never cut · ONE STEP
 
   GENERALIZED 2026-07-29 (Brandon: the deck is for general use now). This slide
-  used to close on Sarah's three scope items — mono full-stack, StoryLine AI
-  narrative, devops later — answered in her order. That list was the single most
-  company-locked thing in the deck and it had to go.
+  used to close on the three scope items from one specific role's outreach
+  message, answered in the order that message listed them. That list was the
+  single most company-locked thing in the deck and it had to go. The role's
+  scope, and who sent it, live in the private task folder rather than here — see
+  projects/3b/actives/playtag-interview/ in 3B.
 
   WHAT WAS DELIBERATELY KEPT. Brandon's first instinct was to delete the whole
   slide. It carries two separate things, though, and only one of them was

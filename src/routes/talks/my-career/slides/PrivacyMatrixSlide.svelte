@@ -48,24 +48,26 @@
   right — see the `.rule-path` rule for why a citation differs from the glob
   rows that were removed.
 
-  THE MONO CLAIM IS GONE (Brandon, 2026-07-29). This slide used to end on "mono
-  processes video of children. What may be indexed, by which system, is the kind
-  of thing that has to be enforced rather than promised." Two problems, and the
-  second is the serious one.
+  NEVER ASSERT WHAT THE AUDIENCE'S OWN PRODUCT DOES (Brandon, 2026-07-29). This
+  slide used to end by naming the company being presented to and stating what
+  its product handled, then arguing that such data has to be governed. Two
+  problems, and the second is the serious one.
 
   It was vague — "the kind of thing that has to be" asserts importance without
-  saying what breaks. And it was WRONG, or at least too narrow: mono is not only
-  about children. The line came from inferring a product's scope off its public
-  description, then stating that inference back to the people who build it, in
-  their own room, as though it were established. Being narrated a version of
-  their own product that is not quite right is a bad way to open the beat that is
-  supposed to prove judgement.
+  saying what breaks. And it was WRONG, or at least too narrow. The line came
+  from inferring a product's scope off its public description, then stating that
+  inference back to the people who build it, in their own room, as though it were
+  established. Being narrated a version of their own product that is not quite
+  right is a bad way to open the beat that is supposed to prove judgement.
 
-  What replaces it claims nothing about mono at all. Any product that adds AI
-  ends up with several systems reading the same user data; that is true of theirs
-  without anyone having to assert what theirs does. The connection to StoryLine's
-  AI narrative is left for Brandon to make out loud if the room wants it — a
+  What replaces it claims nothing about anyone's product. Any product that adds
+  AI ends up with several systems reading the same user data; that is true of
+  theirs without anyone having to assert what theirs is. Any connection to what
+  the room actually builds is left for the presenter to make out loud — a
   presenter can read whether that lands, a slide cannot.
+
+  This is also why the slide is reusable: the argument is about the shape of the
+  problem, not about one company's product, so it needs no edit per audience.
 
   LEGIBILITY (same note). Some of this room is not technical. The headline said
   "One table decides what every index may read", where "table" reads as a
@@ -144,13 +146,13 @@
   de-jargoning something twice is not the same as checking it once.
 
   PUBLISH-SAFE: 3B's own governance rule and its own loader, and now nothing
-  else. The slide previously carried an inference about mono's product drawn
-  from its public description (monoxyz.ai) — removed 2026-07-29, see above. This
-  note used to warn that it was a statement about their product made in their
-  room and that Brandon should be ready to defend how he knew it. The warning was
-  correct and the right answer to it turned out to be deletion, not a better
-  defence: there is no version of guessing at someone's product on a slide that
-  is worth the sentence it buys.
+  else. The slide previously carried an inference about the audience's product,
+  drawn from that company's public description — removed 2026-07-29, see above.
+  This note used to warn that it was a statement about their product made in
+  their room and that Brandon should be ready to defend how he knew it. The
+  warning was correct and the right answer to it turned out to be deletion, not
+  a better defence: there is no version of guessing at someone's product on a
+  slide that is worth the sentence it buys.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';

@@ -3,10 +3,10 @@
 
   Name and one thesis line. Nothing else; the presenter says the rest.
 
-  THE HEADLINE ADDRESSES THE ROOM, NOT A COMPANY (Brandon, 2026-07-29). It read
-  "The layer I'd bring to mono", which pinned the first sentence of the deck to
-  one employer and made the whole thing single-use. "to you" says the same thing
-  to whoever is sitting there, so this deck can be walked again without an edit.
+  THE HEADLINE ADDRESSES THE ROOM, NOT A COMPANY (Brandon, 2026-07-29). It named
+  the employer directly, which pinned the first sentence of the deck to one
+  audience and made the whole thing single-use. "to you" says the same thing to
+  whoever is sitting there, so this deck can be walked again without an edit.
   It also lands better spoken: it is addressed to the people in the room rather
   than to their company name.
 

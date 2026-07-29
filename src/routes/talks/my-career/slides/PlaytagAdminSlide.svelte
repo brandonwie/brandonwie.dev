@@ -1,14 +1,16 @@
 <!--
   S4 — Playtag, 2023–2025 (0:45)
 
-  DELIBERATELY THE SHORTEST COMPANY SLIDE. This audience worked with Brandon
-  here, so depth spends stage time proving something they already believe, and
-  any wording above what they remember reads as overclaiming. The section is a
-  credibility anchor, not a proof.
+  DELIBERATELY THE SHORTEST COMPANY SLIDE. The section is a credibility anchor,
+  not a proof, so depth costs stage time without buying anything. Originally
+  written for a room that had worked with Brandon here, where any wording above
+  what they remembered would have read as overclaiming — but the brevity holds
+  for any audience, because the beat after this one carries the actual turn.
 
-  The one beat that earns its animation is the TensorFlow.js auto-crop: it is
-  computer vision shipped into a real operator workflow on childcare imagery,
-  which is the closest prior art in the whole deck to what mono does.
+  The one beat that earns its animation is the TensorFlow.js auto-crop: computer
+  vision shipped into a real operator workflow, and the closest prior art in the
+  deck to applied-AI product work generally. If the room happens to build
+  something adjacent, say so out loud; the slide does not assume it.
 
   Every line is at CV wording. See facts.md § Playtag, and note C3 in
   particular: do NOT claim ownership of the Spring repository or service
@@ -45,9 +47,11 @@
 	];
 
 	const notes = [
-		'Admin CMS on React and Vite; customer-facing web on Next.js',
-		'Built the prototype of the StoryLine teachers app',
-		'Added observability with Sentry logging',
+		'React + Vite admin; Next.js customer web',
+		'Prototyped the StoryLine teachers app',
+		// Was "Added observability with Sentry logging" — two unfamiliar words in
+		// five, and "observability ... logging" says one thing twice.
+		'Added Sentry error logging',
 		'Led the migration from GitLab to GitHub',
 	];
 
