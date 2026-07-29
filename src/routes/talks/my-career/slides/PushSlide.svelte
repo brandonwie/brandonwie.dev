@@ -173,10 +173,13 @@
 		margin: 0;
 	}
 
+	/* This is the sentence that states what actually changed, and it was dimmer
+	   than the supporting notes underneath it (0.6 against 0.85). Same inversion
+	   as the connectors, so it moves with them. */
 	.state {
 		margin: 0.4rem 0 0;
 		font-size: var(--deck-subtitle);
-		opacity: 0.6;
+		opacity: 0.8;
 	}
 
 	.chain {
@@ -217,16 +220,31 @@
 		padding: 0 0.5rem;
 	}
 
+	/* The connectors carry the whole argument of this slide, so they are the one
+	   thing that must not be quiet. They used to sit at 0.5/0.55 against nodes
+	   drawn at full opacity with a border and a fill — the unchanging scaffolding
+	   rendered stronger than the only thing that changes. A text arrow is a thin
+	   stroke to begin with, so it gets weight as well as opacity. */
 	.glyph {
 		font-size: var(--deck-heading);
-		opacity: 0.5;
+		font-weight: 700;
+		opacity: 0.9;
 		line-height: 1;
 	}
 
+	/* Off --deck-meta, which is the deck's smallest step and is meant for the
+	   eyebrow. These four words ARE the claim: webhook vs fetched on request,
+	   WebSocket push vs polled on a timer. They wrap to two lines at the narrow
+	   end of the reserved width, which is fine — the link column is centered and
+	   stretched, so a taller label cannot move the nodes. */
 	.link-label {
-		font-size: var(--deck-meta);
-		opacity: 0.55;
+		font-size: var(--deck-body);
+		opacity: 0.85;
 		text-align: center;
+		/* Reserves two lines at the narrowest width the deck supports, so a label
+		   that wraps in one state and not the other cannot change the row height
+		   mid-advance. The nodes holding still is the premise of the slide. */
+		min-height: 2.8em;
 	}
 
 	.notes {
