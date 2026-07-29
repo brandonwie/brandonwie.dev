@@ -74,11 +74,11 @@
 	const showChannel = $derived(step >= 1);
 	const respondsImmediately = $derived(step >= 1);
 
-	const notes = [
-		'Fire and forget — the request no longer waits on the queue',
-		'No Google round trip on the common path, so no rate-limit pressure',
-		'Shaped so a future service split is possible, not blocked',
-	];
+	// Trimmed 2026-07-29. Note 1's trailing clause repeated the `.response` line
+	// below the diagram, and note 2 restated both halves of the sync-call caption.
+	// The picture and the caption already carry those; a note that says them again
+	// is the third telling, not reinforcement.
+	const notes = ['Fire and forget', 'A future service split stays possible'];
 
 	onMount(async () => {
 		const { gsap } = await loadGsap();
@@ -323,14 +323,20 @@
 		share a cell — the same mechanic ModulabsSlide and MoviationSlide use, and
 		deliberately NOT another Flip. One expensive morph per slide is the budget.
 	-->
+	<!--
+		CUT TO HALF, 2026-07-29. These were the only two prose paragraphs in the
+		deck, and between them they said the trigger change three times — the state
+		line, the Sync box note, and here. "each time" restated "on every request";
+		"during normal use" was a defensive hedge; the whole second sentence of the
+		after-state repeated what the Sync box already says.
+	-->
 	<div class="synccall">
 		<span class="sync-state sync-before">
-			Called on every request &mdash; the heaviest module in the system, and a Google round trip
-			each time. Users met Google&rsquo;s rate limits during normal use.
+			Every request &mdash; the heaviest module in the system, one Google round trip. Users hit
+			Google&rsquo;s rate limits.
 		</span>
 		<span class="sync-state sync-after">
-			Correct optimistic updates hold without a Google round trip. Sync still runs &mdash; on
-			connect, not on every request.
+			Correct updates hold on their own &mdash; no Google round trip.
 		</span>
 	</div>
 

@@ -32,11 +32,11 @@
 			label: 'State',
 			before: {
 				title: 'Local tfvars and tfstate',
-				note: 'drift against the real AWS account; some resources manual or CloudFormation',
+				note: 'drifted from the account; some resources manual',
 			},
 			after: {
 				title: 'Remote state on S3 and DynamoDB',
-				note: 'every resource Terraform-managed, from one source of truth',
+				note: 'every resource Terraform-managed',
 			},
 		},
 		{
@@ -44,7 +44,7 @@
 			label: 'Capacity',
 			before: {
 				title: 'A single ECS task',
-				note: 'no autoscaling, and migrations rode along with the app deploy',
+				note: 'no autoscaling; migrations shipped with the app',
 			},
 			after: {
 				title: 'Autoscaling across one to four tasks',
@@ -55,24 +55,31 @@
 			key: 'exposure',
 			label: 'Exposure',
 			before: {
-				title: 'Everything in public subnets',
-				note: 'open to the internet',
+				title: 'Everything open to the internet',
+				// Was "open to the internet" — the same words as the title above it,
+				// and the state line said it a third time. Replaced rather than
+				// emptied: these boxes crossfade in place, so a note with no content
+				// would leave the before-box shorter than the after-box it swaps with.
+				// This version sets up the after-state instead of repeating the title.
+				note: 'no filtering in front of it',
 			},
 			after: {
 				title: 'Path-based WAF rules and a locked-down allowlist',
-				note: 'about 95% less attack surface; moving to private subnets behind a bastion',
+				note: '~95% less attack surface; private subnets next',
 			},
 		},
 		{
 			key: 'cost',
 			label: 'Cost',
 			before: {
-				title: 'Paying for what was not used',
+				title: 'Paying for idle capacity',
 				note: 'oversized instances, an empty private subnet, NAT charges',
 			},
 			after: {
 				title: 'Right-sized, with unused resources removed',
-				note: 'about 15% lower infra cost; the NAT optimization alone was about $60 a month',
+				// Real em dash, not `&mdash;` — these strings interpolate as text, so
+				// an HTML entity would render literally.
+				note: '~15% lower infra cost — ~$60/mo from NAT alone',
 			},
 		},
 	];

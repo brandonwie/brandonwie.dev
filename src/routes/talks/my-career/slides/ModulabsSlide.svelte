@@ -228,9 +228,9 @@
 				</div>
 				<p class="change-caption">
 					{#if unified}
-						One HOC owns control. Each product keeps its own layout.
+						One HOC. Layouts stay per product.
 					{:else}
-						Three products, three copies of user state and routing.
+						Three copies of state and routing.
 					{/if}
 				</p>
 			</div>
@@ -250,7 +250,7 @@
 				</div>
 				<p class="change-caption">
 					{#if unified}
-						TypeScript, functional components. Types where the contracts were.
+						TypeScript, functional components. Contracts written down.
 					{:else}
 						JavaScript, class components. Contracts held in people's heads.
 					{/if}
@@ -275,9 +275,9 @@
 				</div>
 				<p class="change-caption">
 					{#if unified}
-						AUI &mdash; one Storybook design system, used across product teams.
+						AUI &mdash; one Storybook system, every team.
 					{:else}
-						The same components, rebuilt slightly differently in each product.
+						The same components, rebuilt in each product.
 					{/if}
 				</p>
 			</div>

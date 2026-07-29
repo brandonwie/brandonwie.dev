@@ -166,7 +166,7 @@
 	const rows = [
 		{ kind: 'Personal notes', verdict: 'private' },
 		{ kind: 'Session journals', verdict: 'private' },
-		{ kind: 'Anything I hand-wrote as a source', verdict: 'private' },
+		{ kind: 'Anything I hand-wrote', verdict: 'private' },
 		{ kind: 'Distilled knowledge', verdict: 'public' },
 		{ kind: 'Decision records', verdict: 'public' },
 	];
@@ -196,7 +196,7 @@
 	const consumers = [
 		'Search over my own notes — never leaves the machine',
 		'The repo map — sends file contents to a model API',
-		'The checks that catch it when one of them drifts',
+		'The checks that catch it when one of them drifts off the rule',
 	];
 
 	let root = $state<HTMLElement>();
@@ -296,10 +296,16 @@
 	<header>
 		<p class="company">3B &mdash; privacy governance</p>
 		<h1>One rule decides what every system may read</h1>
+		<!--
+			Was 32 words with an appositive hanging off a path and a relative clause
+			hanging off the appositive — a written paragraph on the slide with the
+			deck's worst words-per-second load. Its last sentence ("every tool checks
+			there first") was also said again in the footnote below the diagram.
+		-->
 		<p class="lead">
-			One row per kind of content in 3B, in
-			<span class="rule-path">.agents/rules/information-layer.md</span> &mdash; a table in a markdown
-			file, which the code reads at runtime. Every tool that touches any of it checks there first.
+			One row per kind of content, in
+			<span class="rule-path">.agents/rules/information-layer.md</span>. The code reads that table
+			at runtime.
 		</p>
 	</header>
 
@@ -339,13 +345,13 @@
 	</div>
 
 	<p class="footnote">
-		Every one of them reads the same table &mdash; none keeps its own copy &mdash; and committing a
-		change to it rewrites the enforcement list automatically, so the two cannot drift apart.
+		None of them keeps its own copy &mdash; change the table and the enforcement list changes with
+		it.
 	</p>
 
 	<p class="tie">
 		Any product that adds AI ends up with several systems reading the same user data. Writing the
-		policy is easy &mdash; enforcing it rather than promising it is the part you have to build.
+		policy is easy. Enforcing it is the part you build.
 	</p>
 </section>
 

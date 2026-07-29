@@ -52,8 +52,8 @@
 	// achievement, not the engineer's, and citing them reads as borrowed credit.
 	// The SITA liaison work stands on its own.
 	const notes = [
-		'Roughly 5x faster typical page development',
-		'Primary technical liaison for SITA API integrations',
+		'Roughly 5x faster to build a page',
+		'Primary technical liaison on the SITA integration',
 	];
 
 	let root = $state<HTMLElement>();
@@ -200,9 +200,9 @@
 			<div class="shell">
 				<span class="shell-label">Flutter shell</span>
 				<span class="inner">Next.js web app</span>
-				<span class="bridge"
-					>JavaScript channel &mdash; the native&ndash;web bridge, owned end to end</span
-				>
+				<!-- "the native–web bridge" was an appositive glossing the word right
+				     before it, and the nesting already shows web-inside-native. -->
+				<span class="bridge">JavaScript bridge &mdash; owned end to end</span>
 			</div>
 
 			<div class="changes">
@@ -218,15 +218,14 @@
 										1}; background: color-mix(in srgb, currentColor {fill}%, transparent)"
 								></span>
 							{/each}
-							<span class="cell after after-span">Design tokens, generated as typed TypeScript</span
-							>
+							<span class="cell after after-span">Design tokens, generated in TypeScript</span>
 						</div>
 					</div>
 					<p class="change-caption">
 						{#if generated}
-							One source. A color changes once and every page follows.
+							One source. Change it once, everywhere.
 						{:else}
-							The same value kept in five places, re-edited by hand.
+							One value, five places, hand-edited.
 						{/if}
 					</p>
 				</div>
@@ -242,14 +241,14 @@
 					<div class="stage">
 						<div class="row row-strings">
 							<span class="cell before dashed">Translation JSON, read as-is</span>
-							<span class="cell after">Generated typed accessors over the same locale JSON</span>
+							<span class="cell after">Typed accessors, generated over the same JSON</span>
 						</div>
 					</div>
 					<p class="change-caption">
 						{#if generated}
-							Typed at compile time. A missing translation key stops being a runtime surprise.
+							A missing key now fails the build.
 						{:else}
-							No types, so a wrong translation key was only found by opening the page.
+							A wrong key only showed up in the browser.
 						{/if}
 					</p>
 				</div>
@@ -267,9 +266,9 @@
 					</div>
 					<p class="change-caption">
 						{#if generated}
-							Declared, not wired. A new form is a definition, not a file.
+							A new form is a definition, not a file.
 						{:else}
-							Every form component exported and imported one at a time.
+							Every form wired by hand, one at a time.
 						{/if}
 					</p>
 				</div>

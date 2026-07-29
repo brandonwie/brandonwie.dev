@@ -44,11 +44,14 @@
 	// Twelve runs a day is the two-hourly cadence, drawn literally.
 	const TICKS = Array.from({ length: 12 }, (_, i) => i);
 
+	// Note 2 used to open by restating the freshness line verbatim ("the data is
+	// about two hours behind live"); only its second half was new, so it now leads
+	// with the reason. The others lost trailing clauses, not claims.
 	const notes = [
-		'Amplitude to Airflow to S3 as Parquet, partitioned on event time, with completeness checks',
-		'The window trails two hours behind live, so late-arriving events are already in it',
-		'Three repos — Airflow, ETL, events — consolidated into a monorepo with shared Python contracts',
-		'A Typesense search-sync service kept continuously in step with Postgres',
+		'Amplitude to Airflow to S3 as Parquet, partitioned on event time',
+		'The two-hour lag is deliberate — late events land inside the window',
+		'Three repos merged into one, with shared Python contracts',
+		'Typesense search kept in step with Postgres',
 	];
 
 	let root = $state<HTMLElement>();
@@ -149,9 +152,9 @@
 		-->
 		<p class="freshness">
 			{#if frequent}
-				Each run pulls &minus;4h to &minus;2h &mdash; the data is about two hours behind live
+				A &minus;4h to &minus;2h window &mdash; data about two hours behind live
 			{:else}
-				Each run pulls D&minus;2 &mdash; the data is two days behind live
+				A D&minus;2 window &mdash; data two days behind live
 			{/if}
 		</p>
 	</div>

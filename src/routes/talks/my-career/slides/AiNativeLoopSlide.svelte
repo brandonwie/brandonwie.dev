@@ -35,7 +35,7 @@
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
 	const stages = [
-		{ name: 'Spec', detail: 'A human writes the .me.md. Agents never modify it.', human: true },
+		{ name: 'Spec', detail: 'A human writes it. Agents never touch it.', human: true },
 		{
 			name: 'task-starter',
 			detail: 'Investigate, scope with the human, issue, branch, plan.',
@@ -46,11 +46,11 @@
 			detail: 'Master and reviewer, architect and workers, or a singleton.',
 			human: false,
 		},
-		{ name: 'Review loop', detail: 'A PR that automated review iterates on.', human: false },
+		{ name: 'Review loop', detail: 'Automated review iterates on the PR.', human: false },
 		{ name: 'Merge', detail: 'A human reads the diff and merges it.', human: true },
 		{
 			name: '/wrap',
-			detail: 'Learnings become knowledge entries, published behind a privacy gate.',
+			detail: 'Lessons become notes, published behind a privacy gate.',
 			human: false,
 		},
 	];
@@ -182,10 +182,11 @@
 	</div>
 
 	<p class="ret-label">
-		What <code>/wrap</code> writes is the context the next spec is written against.
+		<code>/wrap</code> writes the context the next spec starts from.
 	</p>
 
-	<p class="vendors">One propagation layer renders claude / codex / agy / grok.</p>
+	<!-- "One propagation layer renders" was machine language for a human idea. -->
+	<p class="vendors">One source of truth, four agents: claude / codex / agy / grok.</p>
 
 	<p class="gate-note">Three gates stay human: what to build, what it means, and what ships.</p>
 </section>
