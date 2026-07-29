@@ -105,7 +105,7 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">MOBA</p>
+		<p class="company">MOBA &middot; 2025 &ndash; now</p>
 		<h1>Moving the pipeline into production</h1>
 		<p class="state">
 			{#if frequent}

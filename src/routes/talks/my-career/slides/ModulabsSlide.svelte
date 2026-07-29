@@ -196,7 +196,7 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">MODULABS &middot; 2021&ndash;2023</p>
+		<p class="company">MODULABS &middot; 2021 &ndash; 2023</p>
 		<h1>Three fixes, none of them a feature</h1>
 	</header>
 

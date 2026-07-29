@@ -133,7 +133,7 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">MOBA &middot; Mar 2025 &ndash; present</p>
+		<p class="company">MOBA &middot; 2025 &ndash; now</p>
 		<h1>Six credentials, all while leading backend</h1>
 	</header>
 

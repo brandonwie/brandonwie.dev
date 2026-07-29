@@ -91,7 +91,7 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">MOBA</p>
+		<p class="company">MOBA &middot; 2025 &ndash; now</p>
 		<h1>From asking to being told</h1>
 		<p class="state">
 			{#if pushed}

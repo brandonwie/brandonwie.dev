@@ -108,7 +108,7 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">Playtag</p>
+		<p class="company">Playtag &middot; 2023 &ndash; 2025</p>
 		<h1>The admin tool operators ran the day on</h1>
 		<p class="state">
 			{#if automated}

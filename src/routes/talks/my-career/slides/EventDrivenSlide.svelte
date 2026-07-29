@@ -211,7 +211,7 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">MOBA</p>
+		<p class="company">MOBA &middot; 2025 &ndash; now</p>
 		<h1>Decoupling the sync queue</h1>
 		<!--
 			The subtitle must not outrun the diagram. "Fire and forget" is only true

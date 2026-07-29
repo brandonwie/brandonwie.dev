@@ -108,7 +108,7 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">MOBA</p>
+		<p class="company">MOBA &middot; 2025 &ndash; now</p>
 		<!-- Short enough to hold one line at the deck's title size. The longer
 		     "Separating who you are from what you sync" wrapped to two, and this is
 		     the only slide in the deck that would have done so. -->
