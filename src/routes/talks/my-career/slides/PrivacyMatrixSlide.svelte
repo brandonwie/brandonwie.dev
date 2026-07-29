@@ -63,10 +63,18 @@
   styled, so they rendered in raw browser monospace. That asked the room to
   parse glob syntax on the way to a point that has nothing to do with syntax,
   and the one thing worth understanding here is WHICH KINDS of content each
-  verdict covers. Rows now name the content. The consumer list had the same
-  problem in a different form: "QMD index", "graphify", "doc-audit lint" are
-  internal project names, and the consumer that actually matters — content
-  leaving the machine for a model API — was the least legible of the four.
+  verdict covers. Rows now name the content.
+
+  THE CONSUMER LIST TOOK THREE PASSES (see the `consumers` comment). It went
+  from internal project names, to terms of art, to what each one risks — and
+  only the third pass survived Brandon reading it, because the test that
+  mattered was not "is this shorter" but "can he finish the sentence if someone
+  asks". He could not define "embedding store" from the stage, which makes it a
+  trap with a delay on it rather than a detail.
+
+  The crosscheck that produced the third pass also found the list was WRONG:
+  two of the four entries were the same consumer. Worth remembering that
+  de-jargoning something twice is not the same as checking it once.
 
   PUBLISH-SAFE: 3B's own governance rule and its own loader, and now nothing
   else. The slide previously carried an inference about mono's product drawn
@@ -96,15 +104,32 @@
 		{ kind: 'Decision records', verdict: 'public' },
 	];
 
-	// Named by what they DO rather than by their internal project names. "QMD
-	// index", "graphify", "doc-audit lint" mean nothing outside this repo, and
-	// the one that matters — content leaving the machine for a model API — was
-	// the least legible of the four.
+	// Named by what they RISK, not by what they are. Two earlier passes at this
+	// list both failed, in different ways:
+	//
+	//   1. Internal project names — "QMD index", "graphify", "doc-audit lint".
+	//      Meaningless outside this repo.
+	//   2. Terms of art — "the local search index", "anything uploaded to a model
+	//      API", "the embedding store". Better, and still jargon: Brandon could
+	//      not have explained "embedding store" from the stage, and a slide
+	//      carrying a phrase its presenter cannot define is a trap with a delay
+	//      on it.
+	//
+	// Crosschecked 2026-07-29 against the actual readers of
+	// scripts/lib/privacy-matrix.js. That check found the list was also WRONG,
+	// not just opaque: "the local search index" and "the embedding store" are the
+	// same consumer. 3b-retrieve.js is FTS5 and sqlite-vec merged by RRF — one
+	// index with two halves — so the column was showing four things over three,
+	// and padding the count with a duplicate is the opposite of what a list like
+	// this is for.
+	//
+	// Three now, each one a sentence Brandon can finish. The real matrix has more
+	// readers (the ignore-file generator, the freshness gate, get-privacy);
+	// the claim is the shape, not the count.
 	const consumers = [
-		'The local search index',
-		'Anything uploaded to a model API',
-		'The embedding store',
-		'Automated documentation checks',
+		'Search over my own notes',
+		'Anything that leaves my machine for an AI service',
+		'The checks that catch it when one of them drifts',
 	];
 
 	let root = $state<HTMLElement>();
