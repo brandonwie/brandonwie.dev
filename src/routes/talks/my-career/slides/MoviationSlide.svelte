@@ -204,21 +204,25 @@
 					</p>
 				</div>
 
-				<!-- 2 — Strings. Nothing collapses: a typed layer is generated over
-				     JSON that stayed exactly where it was. -->
+				<!-- 2 — i18n strings. Nothing collapses: a typed layer is generated
+				     over JSON that stayed exactly where it was.
+
+				     The label names i18n, not just "Strings". Brandon could not see what
+				     the row was about from the picture alone, and he is the one who
+				     built it — an audience seeing it for six seconds has no chance. -->
 				<div class="change">
-					<p class="change-label">Strings</p>
+					<p class="change-label">i18n strings</p>
 					<div class="stage">
 						<div class="row row-strings">
 							<span class="cell before dashed">Translation JSON, read as-is</span>
-							<span class="cell after">Generated typed accessors over the same JSON</span>
+							<span class="cell after">Generated typed accessors over the same locale JSON</span>
 						</div>
 					</div>
 					<p class="change-caption">
 						{#if generated}
-							Typed at compile time. A missing key stops being a runtime surprise.
+							Typed at compile time. A missing translation key stops being a runtime surprise.
 						{:else}
-							No types, so a wrong key was only found by opening the page.
+							No types, so a wrong translation key was only found by opening the page.
 						{/if}
 					</p>
 				</div>
