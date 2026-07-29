@@ -21,7 +21,18 @@
   a much longer table; they are chosen to show both verdicts, not to be
   complete. Do not read the count out loud.
 
-  PUBLISH-SAFE: 3B's own path globs and its own loader. The mono line is
+  NO CODE ON THE SLIDE. Corrected 2026-07-29 on Brandon's instruction. The
+  matrix rows were the literal path globs — `personal/**`, `**/*.me.md`,
+  `projects/*/decisions/**` — wrapped in `<code>`, which the stylesheet never
+  styled, so they rendered in raw browser monospace. That asked the room to
+  parse glob syntax on the way to a point that has nothing to do with syntax,
+  and the one thing worth understanding here is WHICH KINDS of content each
+  verdict covers. Rows now name the content. The consumer list had the same
+  problem in a different form: "QMD index", "graphify", "doc-audit lint" are
+  internal project names, and the consumer that actually matters — content
+  leaving the machine for a model API — was the least legible of the four.
+
+  PUBLISH-SAFE: 3B's own governance rule and its own loader. The mono line is
   inference from a public product description (monoxyz.ai), not anything told
   in confidence — but it IS a statement about their product made in their room,
   so it should be one Brandon is comfortable defending if asked how he knows.
@@ -32,16 +43,29 @@
 
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
-	// Chosen to show both verdicts, not to be exhaustive.
+	// Chosen to show both verdicts, not to be exhaustive. These were the literal
+	// path globs until 2026-07-29 — `personal/**`, `**/*.me.md` and so on — which
+	// put monospaced code on a slide and made the audience parse syntax to reach
+	// a point that is not about syntax. The rule is keyed on paths in the repo;
+	// what the room needs to see is which KINDS of content each verdict covers.
 	const rows = [
-		{ path: 'personal/**', verdict: 'private' },
-		{ path: 'journals/**', verdict: 'private' },
-		{ path: '**/*.me.md', verdict: 'private' },
-		{ path: 'knowledge/**', verdict: 'public' },
-		{ path: 'projects/*/decisions/**', verdict: 'public' },
+		{ kind: 'Personal notes', verdict: 'private' },
+		{ kind: 'Session journals', verdict: 'private' },
+		{ kind: 'Anything I hand-wrote as a source', verdict: 'private' },
+		{ kind: 'Distilled knowledge', verdict: 'public' },
+		{ kind: 'Decision records', verdict: 'public' },
 	];
 
-	const consumers = ['QMD index', 'graphify → model API', 'vector store', 'doc-audit lint'];
+	// Named by what they DO rather than by their internal project names. "QMD
+	// index", "graphify", "doc-audit lint" mean nothing outside this repo, and
+	// the one that matters — content leaving the machine for a model API — was
+	// the least legible of the four.
+	const consumers = [
+		'The local search index',
+		'Anything uploaded to a model API',
+		'The embedding store',
+		'Automated documentation checks',
+	];
 
 	let root = $state<HTMLElement>();
 	let ready = $state(false);
@@ -116,7 +140,7 @@
 		if (d === 0) {
 			// Print (`?print` renders every slide at its final step with animate
 			// false) and reduced-motion. These two tokens carry their entire meaning
-			// in the TRAVEL — a still frame of one pill at 86% and one back at 3%
+			// in the TRAVEL — a still frame of one pill at 80% and one back at 3%
 			// cannot show that the second was refused rather than never sent, so in
 			// a PDF it reads as debris. Hide them. The matrix, the gate, the
 			// footnote and the tie line still make the whole argument without them.
@@ -132,7 +156,13 @@
 			// depicts an architecture change. 600 matches the S1/S12/S15 rail draw,
 			// which is the established ceiling for a one-time structural move.
 			// See animation-audit.md finding 1.
-			timeline.to(pass, { left: '86%', duration: 0.6, ease: EASE });
+			// 80%, pulled in from 86% on 2026-07-29. The tokens used to read
+			// `knowledge/**` and `personal/**`; spelling them out in words made the
+			// permitted one materially wider, and since `left` positions its LEFT
+			// edge with nowrap text, 86% left it about half a rem from the right
+			// edge of the slide. 80% still lands it squarely over the consumer list,
+			// which is the only thing the position has to communicate.
+			timeline.to(pass, { left: '80%', duration: 0.6, ease: EASE });
 
 			timeline.to(deny, { autoAlpha: 1, duration: 0.15, ease: EASE }, '-=0.35');
 			timeline.to(deny, { left: '44%', duration: 0.45, ease: EASE });
@@ -157,9 +187,9 @@
 
 	<div class="flow">
 		<ul class="matrix">
-			{#each rows as row (row.path)}
+			{#each rows as row (row.kind)}
 				<li class="row">
-					<code>{row.path}</code>
+					<span class="kind">{row.kind}</span>
 					<span class="verdict" class:private={row.verdict === 'private'}>{row.verdict}</span>
 				</li>
 			{/each}
@@ -167,7 +197,7 @@
 
 		<div class="gate">
 			<span class="gate-bar" aria-hidden="true"></span>
-			<span class="gate-label">one shared loader</span>
+			<span class="gate-label">one shared rule</span>
 		</div>
 
 		<ul class="consumers">
@@ -179,13 +209,14 @@
 		<!-- Overlay only. Absolutely positioned and pointer-events: none, so the
 		     travelling tokens cannot shift anything underneath them. -->
 		<div class="track" aria-hidden="true">
-			<span class="token pass"><code>knowledge/**</code></span>
-			<span class="token deny"><code>personal/**</code></span>
+			<span class="token pass">Distilled knowledge</span>
+			<span class="token deny">Personal notes</span>
 		</div>
 	</div>
 
 	<p class="footnote">
-		One loader, N consumers, a generated ignore file, and a pre-commit gate that fails on drift.
+		Every one of them reads the same table &mdash; none keeps its own copy &mdash; and a check fails
+		the commit if any of them drifts out of line with it.
 	</p>
 
 	<p class="tie">

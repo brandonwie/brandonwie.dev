@@ -27,8 +27,22 @@
   days is exactly the kind of number not to say out loud in a room that may
   ask how it was measured.
 
-  PUBLISH-SAFE: entirely Brandon's own repo, and both ADRs are already public
-  in it. Nothing employer-related on this slide.
+  NO INTERNAL IDENTIFIERS, AND NO ENGINEER SHORTHAND. Corrected 2026-07-29 on
+  Brandon's instruction. The two decisions used to be cited as "ADR-005" and
+  "ADR-041", which name nothing to anyone outside this repo — the audience
+  cannot look them up and the number carries none of the meaning. What those
+  references were actually doing was signalling "this was written down, not
+  improvised", so the slide now says that in words: deleted it AND wrote down
+  why, then rebuilt against that write-up. Same signal, no decoder ring.
+
+  The supporting lines were shell and retrieval jargon for the same reason —
+  "exits non-zero", "telemetry", "recall aid merged via RRF", "harness-model
+  pairs". All rewritten as plain sentences. The claims are unchanged; only the
+  register is. If a line cannot be said out loud to a non-specialist without
+  translating it, it does not belong on a slide.
+
+  PUBLISH-SAFE: entirely Brandon's own repo, and both decision records are
+  already public in it. Nothing employer-related on this slide.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
@@ -39,25 +53,25 @@
 	const beats = [
 		{
 			state: 'Built',
-			line: 'A retrieval layer over the whole knowledge base.',
+			line: 'A search layer over the whole knowledge base.',
 			late: false,
 		},
 		{
 			state: 'Deleted',
-			line: 'Measured it. Zero value delivered. Removed it — ADR-005.',
+			line: 'Measured it. It delivered nothing. Deleted it, and wrote down why.',
 			late: false,
 		},
 		{
 			state: 'Rebuilt',
-			line: 'Against the post-mortem, not against the disappointment — ADR-041.',
+			line: 'Against that write-up — against the post-mortem, not the disappointment.',
 			late: true,
 		},
 	];
 
 	const guards = [
-		'Mandatory invocation inside seven skills, so the read path cannot be skipped',
-		'A regression eval that exits non-zero and blocks the merge',
-		'Telemetry: two-thirds of searches are forced, not voluntary',
+		'Seven workflows are required to call it, so the read path cannot be skipped',
+		'A quality test that blocks the merge whenever results get worse',
+		'Two-thirds of searches now happen because the system demands it, not because I remembered',
 	];
 
 	let root = $state<HTMLElement>();
@@ -163,8 +177,9 @@
 	</ul>
 
 	<p class="evidence">
-		Lexical-first on purpose: a 2026 benchmark had inline grep beat inline vector across all ten
-		harness-model pairs, so vector stays a recall aid merged via RRF, not the ranker.
+		Keyword search does the ranking, on purpose. A 2026 benchmark had plain text search beat vector
+		search in all ten combinations it tested, so vector search still runs to widen what gets found
+		&mdash; it never decides the order.
 	</p>
 </section>
 
