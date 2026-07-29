@@ -1,7 +1,32 @@
 <!--
-  S14 — Privacy governance → mono (0:45) · never cut
+  S14 — Privacy governance (0:45) · never cut
 
   The tie-in beat, and per facts.md the most transferable idea in the deck.
+
+  THE FOOTNOTE WAS WRONG, CORRECTED 2026-07-29 after Brandon asked whether it is
+  really "one rule". It is — and the slide was understating it while overstating
+  the enforcement.
+
+  What is true: the rule is a MARKDOWN TABLE in a documentation file,
+  `.agents/rules/information-layer.md` § Privacy matrix. `scripts/lib/
+  privacy-matrix.js` parses that markdown at runtime — its header names the file
+  as the SoT and `parseMatrix(ruleBody)` reads the table out of the prose.
+  Twelve consumers import that loader and none carries its own list. So the
+  document IS the executable policy, which is a better story than a shared
+  config file.
+
+  What was false: the footnote said "a check fails the commit if any of them
+  drifts out of line with it." No such check exists, and it describes behaviour
+  that was DELIBERATELY REMOVED. `.husky/pre-commit` (the .graphifyignore drift
+  gate) regenerates and re-stages instead of failing; its own comment records
+  why they moved off `--check` mode — it could be passed by running the
+  regenerator and forgetting to `git add`, leaving committed state stale. The
+  honest version is the stronger one: it cannot drift, because committing a
+  change to the table rewrites the enforcement list.
+
+  DO NOT put the rule's file path on the slide. Brandon asked what the rule is
+  so HE can answer it; the path is an internal identifier and belongs in
+  script.md, not on screen — same reason the ADR numbers came off S13.
 
   THE MONO CLAIM IS GONE (Brandon, 2026-07-29). This slide used to end on "mono
   processes video of children. What may be indexed, by which system, is the kind
@@ -270,8 +295,8 @@
 	</div>
 
 	<p class="footnote">
-		Every one of them reads the same table &mdash; none keeps its own copy &mdash; and a check fails
-		the commit if any of them drifts out of line with it.
+		Every one of them reads the same table &mdash; none keeps its own copy &mdash; and committing a
+		change to it rewrites the enforcement list automatically, so the two cannot drift apart.
 	</p>
 
 	<p class="tie">
