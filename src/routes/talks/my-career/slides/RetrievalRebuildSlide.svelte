@@ -41,6 +41,30 @@
   register is. If a line cannot be said out loud to a non-specialist without
   translating it, it does not belong on a slide.
 
+  SECOND PLAIN-LANGUAGE PASS, 2026-07-29 (Brandon: hard to follow if you are not
+  technical). The pass above missed the two most prominent lines on the slide.
+  The headline was "I measured it, deleted it, and rebuilt it" — three verbs
+  attached to a pronoun with no antecedent, so the audience spent the first beat
+  working out what "it" was. The headline now names the thing. And the diagnosis,
+  set at subtitle size and therefore the second-largest text here, still read
+  "write infrastructure with no forced read path", which is the purest engineer
+  shorthand in the deck. It now says the same thing in words anyone can repeat:
+  everything was being filed away, and nothing was ever required to read it.
+  "Retrieval" left the eyebrow for the same reason; it now matches the plain
+  phrasing S14 already uses for this system.
+
+  The vector half is no longer named on the slide. A technical listener hears the
+  right term from the presenter (script.md keeps it); a non-technical one reads
+  "the search that matches on meaning" and loses nothing. Naming it and then
+  glossing it would have cost a clause and bought nothing on screen.
+
+  EACH GUARD CARRIES ONE CONCRETE EXAMPLE (Brandon, same pass). The rules alone
+  were noddable-but-unpicturable: "a quality test blocks the merge" is agreeable
+  and imageless. Each example is the instance that makes the rule checkable, and
+  the third one deliberately answers the question the claim provokes — every
+  search is logged with the reason it fired, which is HOW the two-thirds split is
+  known. Expect that question if the room is technical.
+
   PUBLISH-SAFE: entirely Brandon's own repo, and both decision records are
   already public in it. Nothing employer-related on this slide.
 -->
@@ -53,25 +77,42 @@
 	const beats = [
 		{
 			state: 'Built',
-			line: 'A search layer over the whole knowledge base.',
+			line: 'A search engine over my own notes — the decisions, the fixes, the things I had already solved once.',
 			late: false,
 		},
 		{
 			state: 'Deleted',
-			line: 'Measured it. It delivered nothing. Deleted it, and wrote down why.',
+			line: 'I measured what it was actually worth. Nothing. So I deleted it, and wrote down why.',
 			late: false,
 		},
 		{
 			state: 'Rebuilt',
-			line: 'Against that write-up — against the post-mortem, not the disappointment.',
+			line: 'From that write-up. The reasons it failed became the list of things to fix.',
 			late: true,
 		},
 	];
 
+	// Each guard is a rule plus one concrete instance of that rule. The rules on
+	// their own were the abstract part of this slide — "a quality test blocks the
+	// merge" is a sentence you can nod along to without picturing anything. The
+	// example is what makes it checkable, and it also answers the question the
+	// rule provokes: which workflow, which test, and how would you even know.
 	const guards = [
-		'Seven workflows are required to call it, so the read path cannot be skipped',
-		'A quality test that blocks the merge whenever results get worse',
-		'Two-thirds of searches now happen because the system demands it, not because I remembered',
+		{
+			rule: 'Seven of my workflows now have to search my notes before they answer',
+			example:
+				'Opening a project cannot tell me where I left off until it has searched what I wrote last time.',
+		},
+		{
+			rule: 'A test that will not let a change through if search gets worse',
+			example:
+				'A fixed set of questions whose right answers I already know — miss one it used to get, and the change stops.',
+		},
+		{
+			rule: 'Two-thirds of searches now happen because the system forced them, not because I remembered',
+			example:
+				'Every search is logged with the reason it fired, which is how I can tell those two apart.',
+		},
 	];
 
 	let root = $state<HTMLElement>();
@@ -152,8 +193,8 @@
 
 <section class="slide" bind:this={root}>
 	<header>
-		<p class="company">3B &mdash; retrieval</p>
-		<h1>I measured it, deleted it, and rebuilt it</h1>
+		<p class="company">3B &mdash; searching my own notes</p>
+		<h1>I built my own search engine, then deleted it</h1>
 	</header>
 
 	<ol class="beats">
@@ -166,20 +207,24 @@
 	</ol>
 
 	<p class="diagnosis">
-		The post-mortem named the cause:
-		<strong>write infrastructure with no forced read path.</strong>
+		The write-up named the cause:
+		<strong>everything was being filed away, and nothing was ever required to read it.</strong>
 	</p>
 
 	<ul class="guards">
-		{#each guards as guard (guard)}
-			<li class="guard">{guard}</li>
+		{#each guards as guard (guard.rule)}
+			<li class="guard">
+				<span class="rule">{guard.rule}</span>
+				<span class="example">{guard.example}</span>
+			</li>
 		{/each}
 	</ul>
 
 	<p class="evidence">
-		Keyword search does the ranking, on purpose. A 2026 benchmark had plain text search beat vector
-		search in all ten combinations it tested, so vector search still runs to widen what gets found
-		&mdash; it never decides the order.
+		The plain word-matching search decides the order, on purpose: a 2026 benchmark tried ten
+		combinations of AI model and tooling, and plain matching won all ten. The search that matches on
+		meaning still runs, to catch a note that said the same thing in different words &mdash; but it
+		never decides what comes first.
 	</p>
 </section>
 
@@ -253,16 +298,28 @@
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		gap: 0.55rem;
 		font-size: var(--deck-body);
 		opacity: 0.85;
 	}
 
+	/* Column, not the default inline flow: the rule and its example are two
+	   spans, and inline they would run together into one sentence that reads as
+	   a rule contradicting itself. */
 	.guard {
 		padding-left: 1rem;
 		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
 		visibility: hidden;
 		opacity: 0;
+	}
+
+	/* Dimmer than the rule it sits under, so the three rules still scan as a
+	   list of three and the examples read as support rather than as six items. */
+	.example {
+		opacity: 0.6;
 	}
 
 	.guard::before {
@@ -276,11 +333,15 @@
 		opacity: 0.5;
 	}
 
+	/* Full slide width, NOT the 72ch reading measure the other body copy uses.
+	   Adding the guard examples pushed this slide past the stage and the last
+	   line landed on the progress rail; the narrow measure was costing two extra
+	   lines here. This is the dimmest, most optional paragraph on the slide, so
+	   it is the right place to spend line length rather than shorten a claim. */
 	.evidence {
 		margin: 0;
 		font-size: var(--deck-body);
 		opacity: 0.6;
-		max-width: 72ch;
 		visibility: hidden;
 	}
 
