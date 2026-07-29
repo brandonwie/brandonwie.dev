@@ -116,4 +116,9 @@
 	];
 </script>
 
-<Deck {slides} title="Seokhyun Wie — Playtag" />
+<!--
+	The title is the browser tab and it was the last place naming the company.
+	Generalized 2026-07-29 with the rest of the deck; it now quotes S1's headline,
+	which is the thesis and names nobody.
+-->
+<Deck {slides} title="Seokhyun Wie — Four companies, one direction" />

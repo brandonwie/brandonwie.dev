@@ -158,7 +158,19 @@
 
 <svelte:head>
 	<title>{title}</title>
-	<!-- Not for search engines until the publish surface is decided. -->
+	<!--
+		PUBLISH SURFACE, SETTLED 2026-07-29 (Brandon): unlisted, not hidden. The
+		route stays reachable by anyone holding the link and stays out of every
+		discovery surface — no nav entry, no sitemap row, no search-index entry, no
+		inbound link anywhere in the site.
+
+		This meta tag is what does the work, and it only works BECAUSE robots.txt
+		still allows crawling. Adding `Disallow: /talks/` would be the intuitive
+		"more private" move and it would backfire: a disallowed URL cannot be
+		fetched, so the crawler never reads this tag, and the bare URL can still be
+		listed from an external link with no way to remove it. Allow the crawl, deny
+		the index. Do not "harden" robots.txt here.
+	-->
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
