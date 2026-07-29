@@ -24,9 +24,29 @@
   honest version is the stronger one: it cannot drift, because committing a
   change to the table rewrites the enforcement list.
 
-  DO NOT put the rule's file path on the slide. Brandon asked what the rule is
-  so HE can answer it; the path is an internal identifier and belongs in
-  script.md, not on screen — same reason the ADR numbers came off S13.
+  THE PATH IS NOW ON THE SLIDE, reversing what this note said hours earlier
+  (Brandon asked, and he was right). The first call treated it as an internal
+  identifier like the ADR numbers removed from S13. It is not the same thing.
+  `ADR-005` is an OPAQUE KEY — the number carries no information and cannot be
+  decoded without the repo. A path is SELF-DESCRIBING: read it and you already
+  know there is a rules directory and that one of those rules governs the
+  information layer. It survives the test that killed the ADR numbers — said out
+  loud to a non-specialist it needs no translation.
+
+  It also earns its place rather than merely surviving. The natural skeptical
+  response to "one rule decides what every system may read" is whether that is
+  real or just a diagram, and the path is the answer: not an architecture
+  drawing, a file. That is the whole reason this beat is interesting, and it was
+  the one thing the slide did not show.
+
+  It sits in the LEAD, not on the gate where it belongs semantically. The gate
+  column is `auto`-width; a 33-character nowrap string there roughly doubles it
+  and squeezes the matrix and the consumer list either side. The lead is
+  full-width, and it is directly under the claim the path is evidence for.
+
+  Monospaced deliberately, and this is the one place in the deck where that is
+  right — see the `.rule-path` rule for why a citation differs from the glob
+  rows that were removed.
 
   THE MONO CLAIM IS GONE (Brandon, 2026-07-29). This slide used to end on "mono
   processes video of children. What may be indexed, by which system, is the kind
@@ -255,7 +275,9 @@
 		<p class="company">3B &mdash; privacy governance</p>
 		<h1>One rule decides what every system may read</h1>
 		<p class="lead">
-			One row per kind of content in 3B. Every tool that reads any of it checks this table first.
+			One row per kind of content in 3B, in
+			<span class="rule-path">.agents/rules/information-layer.md</span> &mdash; a table in a markdown
+			file, which the code reads at runtime. Every tool that touches any of it checks there first.
 		</p>
 	</header>
 
@@ -406,6 +428,20 @@
 		text-transform: uppercase;
 		opacity: 0.55;
 		white-space: nowrap;
+	}
+
+	/* The rule, named, so "one rule decides" reads as a file that exists rather
+	   than as a claim about architecture. Monospaced ON PURPOSE, and this is the
+	   one place in the deck where that is right: the glob rows were removed for
+	   rendering as raw code the room had to PARSE, whereas a path is a citation
+	   the room only has to RECOGNISE. It lives in the lead rather than on the
+	   gate, where it belongs semantically — the gate column is `auto`-width, and
+	   a 33-character nowrap string there would have roughly doubled it and
+	   squeezed the matrix and the consumer list either side. */
+	.rule-path {
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 0.85em;
+		opacity: 0.75;
 	}
 
 	.consumer {
