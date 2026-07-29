@@ -42,16 +42,35 @@
   translating it, it does not belong on a slide.
 
   SECOND PLAIN-LANGUAGE PASS, 2026-07-29 (Brandon: hard to follow if you are not
-  technical). The pass above missed the two most prominent lines on the slide.
-  The headline was "I measured it, deleted it, and rebuilt it" — three verbs
-  attached to a pronoun with no antecedent, so the audience spent the first beat
-  working out what "it" was. The headline now names the thing. And the diagnosis,
-  set at subtitle size and therefore the second-largest text here, still read
-  "write infrastructure with no forced read path", which is the purest engineer
-  shorthand in the deck. It now says the same thing in words anyone can repeat:
-  everything was being filed away, and nothing was ever required to read it.
-  "Retrieval" left the eyebrow for the same reason; it now matches the plain
-  phrasing S14 already uses for this system.
+  technical). The diagnosis, set at subtitle size and therefore the
+  second-largest text here, read "write infrastructure with no forced read path"
+  — the purest engineer shorthand in the deck. It now says the same thing in
+  words anyone can repeat: everything was filed away, and nothing was ever
+  required to read it. "Retrieval" left the eyebrow for the same reason; it now
+  matches the plain phrasing S14 already uses for this system.
+
+  THE HEADLINE IS THE ARGUMENT, NOT THE ARC (Brandon, 2026-07-29: "does not seem
+  aligned with the page context"). Two drafts failed here and both failed the
+  same way. "I measured it, deleted it, and rebuilt it" hung three verbs on a
+  pronoun with no antecedent. Its replacement, "I built my own search engine,
+  then deleted it", named the thing but restated two of the three column
+  headings sitting directly beneath it — and then stopped at the admission,
+  while the bottom two-thirds of the slide is about what the rebuild does
+  differently. A headline that repeats the row below it and omits the row's
+  point is not a headline.
+
+  Every other slide in this deck splits the two: the eyebrow carries the subject
+  and the h1 carries the claim ("3B — my own system, in version control" /
+  "Working with agents as a loop, not a prompt"). This one now does the same.
+  The eyebrow names the system; the h1 states the lesson the whole page is
+  evidence for; the beats own the arc; the diagnosis owns the cause; the guards
+  own the fix. Nothing says the same thing twice.
+
+  "I stopped trusting my memory" is also the half the old headline could not
+  reach. The diagnosis is that nothing was REQUIRED to read; guard one makes it
+  required; guard three ends "not remembered" and closes the loop with a number.
+  In a room hiring for judgement, being remembered for building the constraint
+  beats being remembered for having deleted something.
 
   The vector half is no longer named on the slide. A technical listener hears the
   right term from the presenter (script.md keeps it); a non-technical one reads
@@ -65,6 +84,16 @@
   search is logged with the reason it fired, which is HOW the two-thirds split is
   known. Expect that question if the room is technical.
 
+  CUT TO ROUGHLY HALF, 2026-07-29 (Brandon: too many words). ~200 words to ~105.
+  Everything that survived is a fragment rather than a sentence, because the
+  slide gets 45 seconds and the audience is listening rather than reading. The
+  cuts were appositives and hedges, not claims: Built lost a three-item list
+  restating what "my own notes" already means; the guards lost their sentence
+  scaffolding; the evidence paragraph lost the clause explaining what the
+  meaning-based search catches, which is a Q&A answer rather than a slide line.
+  Every verified claim is still on the slide. script.md keeps the long forms for
+  a room that asks.
+
   PUBLISH-SAFE: entirely Brandon's own repo, and both decision records are
   already public in it. Nothing employer-related on this slide.
 -->
@@ -77,41 +106,39 @@
 	const beats = [
 		{
 			state: 'Built',
-			line: 'A search engine over my own notes — the decisions, the fixes, the things I had already solved once.',
+			line: 'A search engine over my own notes.',
 			late: false,
 		},
 		{
 			state: 'Deleted',
-			line: 'I measured what it was actually worth. Nothing. So I deleted it, and wrote down why.',
+			line: 'Measured what it was worth. Nothing. Deleted it — and wrote down why.',
 			late: false,
 		},
 		{
 			state: 'Rebuilt',
-			line: 'From that write-up. The reasons it failed became the list of things to fix.',
+			line: 'From that write-up. The reasons became the build list.',
 			late: true,
 		},
 	];
 
-	// Each guard is a rule plus one concrete instance of that rule. The rules on
-	// their own were the abstract part of this slide — "a quality test blocks the
-	// merge" is a sentence you can nod along to without picturing anything. The
-	// example is what makes it checkable, and it also answers the question the
-	// rule provokes: which workflow, which test, and how would you even know.
+	// Each guard is a rule plus one concrete instance of it. The rules alone were
+	// the abstract part of this slide — "a quality test blocks the merge" is a
+	// sentence you can nod along to without picturing anything. Both halves are
+	// deliberately fragments, not sentences: this slide gets 45 seconds, and the
+	// audience is listening, not reading. The third example answers the question
+	// the claim provokes — how would you even know that.
 	const guards = [
 		{
-			rule: 'Seven of my workflows now have to search my notes before they answer',
-			example:
-				'Opening a project cannot tell me where I left off until it has searched what I wrote last time.',
+			rule: 'Seven workflows must search my notes before they answer',
+			example: 'Opening a project searches what I wrote last time first.',
 		},
 		{
-			rule: 'A test that will not let a change through if search gets worse',
-			example:
-				'A fixed set of questions whose right answers I already know — miss one it used to get, and the change stops.',
+			rule: 'A change that makes search worse cannot ship',
+			example: 'Fixed questions, answers I already know — miss one, the change stops.',
 		},
 		{
-			rule: 'Two-thirds of searches now happen because the system forced them, not because I remembered',
-			example:
-				'Every search is logged with the reason it fired, which is how I can tell those two apart.',
+			rule: 'Two-thirds of searches are forced now, not remembered',
+			example: 'Every search logs why it fired. That is how I know.',
 		},
 	];
 
@@ -194,7 +221,7 @@
 <section class="slide" bind:this={root}>
 	<header>
 		<p class="company">3B &mdash; searching my own notes</p>
-		<h1>I built my own search engine, then deleted it</h1>
+		<h1>I stopped trusting my memory</h1>
 	</header>
 
 	<ol class="beats">
@@ -208,7 +235,7 @@
 
 	<p class="diagnosis">
 		The write-up named the cause:
-		<strong>everything was being filed away, and nothing was ever required to read it.</strong>
+		<strong>everything was filed away, and nothing was ever required to read it.</strong>
 	</p>
 
 	<ul class="guards">
@@ -221,10 +248,8 @@
 	</ul>
 
 	<p class="evidence">
-		The plain word-matching search decides the order, on purpose: a 2026 benchmark tried ten
-		combinations of AI model and tooling, and plain matching won all ten. The search that matches on
-		meaning still runs, to catch a note that said the same thing in different words &mdash; but it
-		never decides what comes first.
+		Plain word-matching does the ranking, on purpose &mdash; a 2026 benchmark had it beat the
+		meaning-based search in all ten setups tried.
 	</p>
 </section>
 
