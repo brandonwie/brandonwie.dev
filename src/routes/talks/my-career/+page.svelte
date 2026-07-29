@@ -5,10 +5,10 @@
   projects/3b/actives/playtag-interview/facts.md — every claim on a slide must
   have a `verified` row there. Structure follows storyboard.md.
 
-  All 18 beats are registered — 17 as of 2026-07-28, plus the learning beat
-  appended 2026-07-29. The array order below IS the storyboard order, and the
-  `Page` column in storyboard.md is this array's one-based index — if the two
-  ever disagree, the storyboard is the spec and this file is wrong.
+  All 19 beats are registered — 17 as of 2026-07-28, plus the learning beat and
+  the end card appended 2026-07-29. The array order below IS the storyboard
+  order, and the `Page` column in storyboard.md is this array's one-based index
+  — if the two ever disagree, the storyboard is the spec and this file is wrong.
 
   Build order was deliberate, not chronological: S7 (decoupling the sync queue)
   was built first because Flip plus DrawSVG is the hardest animation here. Once
@@ -38,11 +38,12 @@
 	import PrivacyMatrixSlide from './slides/PrivacyMatrixSlide.svelte';
 	import CloseSlide from './slides/CloseSlide.svelte';
 	import LearningSlide from './slides/LearningSlide.svelte';
+	import EndSlide from './slides/EndSlide.svelte';
 
 	// Chronological, per storyboard.md: title, the arc, then the four companies in
 	// order, then MOBA depth (sync then infrastructure then data), then 3B, then
-	// the close, then the learning beat. Pages 7–13 are the MOBA section, 14–16
-	// are 3B, 17 closes, and 18 is the learning evidence.
+	// the close, then the learning beat and the end card. Pages 7–13 are the MOBA
+	// section, 14–16 are 3B, 17 closes, 18 is the learning evidence, 19 is FINE.
 	const slides: DeckSlide[] = [
 		{ id: 'title', label: 'Title', steps: 1, component: TitleSlide },
 		{ id: 'arc', label: 'The arc', steps: 2, component: ArcSlide },
@@ -95,7 +96,10 @@
 		// AWS already", which the two AWS certifications directly back, so putting
 		// the evidence immediately before the summary lets the close land on top
 		// of it. Left at 18 as asked; the decision is Brandon's.
-		{ id: 'learning', label: 'Never stopped learning', steps: 2, component: LearningSlide },
+		{ id: 'learning', label: 'Never stopped learning', steps: 1, component: LearningSlide },
+		// The end card, and the slide that is actually on screen longest: Session 1
+		// is presentation plus Q&A, so this one holds while the questions run.
+		{ id: 'end', label: 'FINE', steps: 1, component: EndSlide },
 	];
 </script>
 

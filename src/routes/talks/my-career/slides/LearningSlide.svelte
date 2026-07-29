@@ -1,5 +1,5 @@
 <!--
-  S16 — Never stopped learning (0:30) · cut-1
+  S16 — Never stopped learning (0:30) · cut-1 · ONE STEP
 
   Added 2026-07-29 at Brandon's request. The claim is NOT "I study" — every
   candidate says that and none of it is checkable. The claim is that all six
@@ -84,18 +84,23 @@
 		render(target);
 	});
 
-	async function render(target: number) {
+	// Single step (changed 2026-07-29 at Brandon's instruction). Nothing here is
+	// gated on `step`: the whole slide arrives in one sequence on arrival, and the
+	// staggered ordering does the work an advance used to do — labels, then the
+	// rows under them, then the reading of the list. `target` is accepted to keep
+	// the signature the deck's other slides use, but a one-step slide never
+	// receives anything but 0.
+	async function render(_target: number) {
 		const { gsap } = await loadGsap();
 		await tick();
 		if (!root) return;
 
 		const d = !animate || reducedMotion() ? 0 : 1;
-		const want = target >= 1;
 
 		const timeline = gsap.timeline();
 
-		// Step 0: the evidence. Labels first so the two groups are distinguishable
-		// before the rows start arriving under them.
+		// Labels first, so the two groups are distinguishable before rows start
+		// arriving under them.
 		timeline.to(root.querySelectorAll('.group-label'), {
 			autoAlpha: 1,
 			duration: DURATION * d,
@@ -109,17 +114,18 @@
 			d ? '-=0.3' : 0,
 		);
 
-		// Step 1: the reading of it. The list alone invites "so you collect
-		// certificates"; these two lines are the answer to that.
+		// The reading of it. The list alone invites "so you collect certificates";
+		// these two lines are the answer, and they arrive last so the room has read
+		// the evidence before hearing what it means.
 		timeline.to(
 			root.querySelector('.point'),
-			{ autoAlpha: want ? 1 : 0, y: want ? 0 : 8, duration: DURATION * d, ease: EASE },
-			d ? '-=0.1' : 0,
+			{ autoAlpha: 1, y: 0, duration: DURATION * d, ease: EASE },
+			d ? '-=0.05' : 0,
 		);
 
 		timeline.to(
 			root.querySelector('.detail'),
-			{ autoAlpha: want ? 1 : 0, y: want ? 0 : 6, duration: DURATION * d, ease: EASE },
+			{ autoAlpha: 1, y: 0, duration: DURATION * d, ease: EASE },
 			d ? '-=0.25' : 0,
 		);
 	}
