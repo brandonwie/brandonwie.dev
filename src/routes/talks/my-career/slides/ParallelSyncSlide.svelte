@@ -1,19 +1,38 @@
 <!--
   S9 — Sync: linear → parallel (0:45)
 
-  FIVE BLOCKS, NOT FOUR, AND THAT IS DELIBERATE. Run in line, five batches
-  occupy the whole track; run together, they occupy one fifth of it. The
-  animation therefore *is* the 5x — the number is not asserted next to a
-  picture, it is the picture. Change the count and the arithmetic on screen
-  stops matching the claim.
+  THERE WERE NO BATCHES BEFORE. Corrected 2026-07-29 on Brandon's report. This
+  slide used to render five blocks labelled "Batch" in the before state, which
+  contradicted every source: init.me.md says "linear 1 year limit sync
+  processing, NO BATCH (caused memory overflow for users with thousands of
+  events)", facts.md § MOBA sync carries "Linear sync with a 1-year history cap"
+  as the before, and storyboard.md § S9 specs "a single sequential lane splits
+  into parallel lanes". The build had drifted from its own spec.
+
+  It also broke the causation. The memory overflow happened BECAUSE nothing was
+  batched — one pass held everything. Batching is what fixed memory; running the
+  batches together is what produced the throughput. Showing batches as
+  pre-existing collapsed two distinct changes into one and left the memory note
+  underneath unexplained.
+
+  So the before state is ONE continuous bar: five segments butted together with
+  their inner borders collapsed and no per-block label, reading as a single
+  linear pass across the whole track. The word "Batch" appears only on the
+  advance — which is how the slide says batching was part of the fix without
+  spending a caption on it.
+
+  FIVE SEGMENTS, NOT FOUR, AND THAT IS DELIBERATE. The one bar divides into five
+  and the stack occupies one fifth of the track it used to fill. The animation
+  therefore *is* the 5x — the number is not asserted next to a picture, it is
+  the picture. Change the count and the arithmetic on screen stops matching.
 
   5x is locked in facts.md C1 and matches the submitted CV. The interview-facts
   file offers a 5–20x range; that range is deliberately NOT used. Pick the
   figure the panel is holding.
 
-  The blocks are the same DOM nodes in both states — a class flips the flex
-  direction and Flip animates the delta. Nothing is created or destroyed, so
-  the five things that were queued are visibly the five things now running.
+  The segments are the same DOM nodes in both states — a class flips the flex
+  direction and Flip animates the delta. Nothing is created or destroyed, so the
+  single pass is visibly the same work that ends up running five at a time.
 
   PUBLISH-SAFE: batch parallelism and a removed history cap, both already on the
   submitted CV, with no internal detail beyond it. Keep it that way — the repo
@@ -102,21 +121,29 @@
 		<h1>Running the sync in parallel</h1>
 		<p class="state">
 			{#if parallel}
-				After &mdash; the batches run together, and the history cap is gone
+				After &mdash; batched and run together, and the history cap is gone
 			{:else}
-				Before &mdash; the batches ran one after another, under a one-year history cap
+				Before &mdash; one linear pass over every event, under a one-year history cap
 			{/if}
 		</p>
 	</header>
 
-	<!-- The stage is a fixed box representing elapsed time. Five blocks in a row
-	     fill it; five blocks stacked occupy one fifth of it. -->
+	<!-- The stage is a fixed box representing elapsed time. One bar fills it; the
+	     five batches it divides into occupy one fifth of it. -->
 	<div class="stage">
 		<div class="lanes" class:parallel>
 			{#each BATCHES as batch (batch)}
 				<div class="batch"><span>Batch</span></div>
 			{/each}
 		</div>
+
+		<!-- States on the bar the exact thing that was wrong before: there was no
+		     batching at all. Deliberately NOT a repeat of the header sentence —
+		     that one carries the pass and the cap, this one carries the absence
+		     that caused the memory overflow. Absolutely positioned for the same
+		     reason `.gain` is: naming the bar must not change its geometry, or
+		     Flip animates the label's cost. -->
+		<span class="pass">Nothing batched</span>
 
 		<span class="gain">&asymp;5x throughput</span>
 	</div>
@@ -164,17 +191,24 @@
 		position: relative;
 		width: 100%;
 		height: clamp(11rem, 25vh, 14rem);
+		/* One definition of the bar's thickness — `.batch` sets its height from
+		   this and `.pass` centres itself against the same band. */
+		--bar-h: clamp(1.9rem, 4.2vh, 2.4rem);
 	}
 
+	/* No gap before the advance: the five segments butt together and read as one
+	   continuous bar. The gap is what divides them into batches, so it arrives
+	   with the advance rather than being there all along. */
 	.lanes {
 		display: flex;
 		flex-direction: row;
-		gap: 0.5rem;
+		gap: 0;
 		width: 100%;
 	}
 
 	.lanes.parallel {
 		flex-direction: column;
+		gap: 0.5rem;
 	}
 
 	.batch {
@@ -182,11 +216,37 @@
 		border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
 		border-radius: 6px;
 		background: color-mix(in srgb, currentColor 9%, transparent);
-		height: clamp(1.9rem, 4.2vh, 2.4rem);
+		height: var(--bar-h);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		font-size: var(--deck-meta);
+	}
+
+	/* Undivided state: square off the inner corners and pull each segment onto
+	   its neighbour's border so the seam is a single line rather than two. Only
+	   the outer ends keep their radius, which is what makes five elements read
+	   as one bar. */
+	.lanes:not(.parallel) .batch {
+		border-radius: 0;
+	}
+
+	.lanes:not(.parallel) .batch + .batch {
+		margin-left: -1px;
+	}
+
+	.lanes:not(.parallel) .batch:first-child {
+		border-radius: 6px 0 0 6px;
+	}
+
+	.lanes:not(.parallel) .batch:last-child {
+		border-radius: 0 6px 6px 0;
+	}
+
+	/* The per-segment label is what would give the before state away as five
+	   things. It appears only once they genuinely are five things. */
+	.lanes:not(.parallel) .batch span {
+		visibility: hidden;
 	}
 
 	/* One fifth of the track — the same fraction of time five parallel batches
@@ -194,6 +254,26 @@
 	.lanes.parallel .batch {
 		flex: none;
 		width: calc(20% - 0.4rem);
+	}
+
+	/* Names the undivided bar, centred on the band the bar occupies. Goes away
+	   the moment the bar divides, because from then on the five labels say what
+	   this one was standing in for. */
+	.pass {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: var(--bar-h);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: var(--deck-meta);
+		opacity: 0.85;
+	}
+
+	.lanes.parallel ~ .pass {
+		visibility: hidden;
 	}
 
 	/* Absolutely positioned so revealing it cannot shift the blocks. It sits in
