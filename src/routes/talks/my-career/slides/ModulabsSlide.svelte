@@ -73,6 +73,15 @@
 	// Held while the three changes run, so only one thing on screen moves.
 	let videoPaused = $state(false);
 
+	// This slide's timeline spans ~1.05s — more than twice any other beat, because
+	// three segments run in sequence rather than one tween firing. That widens the
+	// window where advancing and immediately retreating would leave two timelines
+	// writing the same properties until the first one finished, which is a thing
+	// rehearsal does constantly. Only `.kill()` is needed off the handle, so it is
+	// typed structurally rather than dragging in a GSAP namespace type.
+	let running: { kill: () => void } | undefined;
+	let videoTimer: ReturnType<typeof setTimeout> | undefined;
+
 	onMount(async () => {
 		const { gsap } = await loadGsap();
 		if (root) {
@@ -108,6 +117,12 @@
 		await tick();
 		if (!root) return;
 
+		// Before anything is built. Killing mid-flight leaves elements at their
+		// intermediate values, which is correct: the tweens below read current
+		// state, so they carry on from wherever the interrupted run got to.
+		running?.kill();
+		clearTimeout(videoTimer);
+
 		const still = !animate || reducedMotion();
 		const d = still ? 0 : 1;
 		const want = target >= 1;
@@ -116,13 +131,14 @@
 
 		if (!still) {
 			videoPaused = true;
-			setTimeout(() => (videoPaused = false), 1250);
+			videoTimer = setTimeout(() => (videoPaused = false), 1250);
 		}
 
 		// One timeline, three segments, lightly overlapped. Sequenced rather than
 		// simultaneous so the eye is led through them in the order they are
 		// narrated; simultaneous would be a flash, not three changes.
 		const timeline = gsap.timeline();
+		running = timeline;
 
 		// 1 — Control. Three per-product bars give way to one span. The span grows
 		// into the width they occupied, so the reduction reads as one motion.
