@@ -1,30 +1,34 @@
 <!--
-  S15 — Close (0:30) · never cut
+  S15 — Close (0:20) · never cut · ONE STEP
 
-  Returns to the S1 arc, now with mono on the end, then answers the three scope
-  items from Sarah's first message IN HER ORDER:
+  GENERALIZED 2026-07-29 (Brandon: the deck is for general use now). This slide
+  used to close on Sarah's three scope items — mono full-stack, StoryLine AI
+  narrative, devops later — answered in her order. That list was the single most
+  company-locked thing in the deck and it had to go.
 
-    1. 신규 프로젝트 mono full stack
-    2. 스토리라인 제품 내 AI narrative (prompt engineering)
-    3. 향후 devops까지 확장 (optional)
+  WHAT WAS DELIBERATELY KEPT. Brandon's first instinct was to delete the whole
+  slide. It carries two separate things, though, and only one of them was
+  company-specific: the scope list, and the callback to the S1 arc. The callback
+  is the payoff S1 spends 45 seconds setting up — the same four capability
+  labels returning, complete, with an open fifth node. Deleting the slide would
+  have thrown that away to remove the list, so the list went and the arc stayed.
 
-  Her order is kept deliberately, including "optional" on devops. Reordering it
-  to lead with the most impressive layer would be answering a different
-  question than the one she asked.
+  THE CALLBACK IS THE ARC. Labels 1-4 come back VERBATIM from ArcSlide. Rewording
+  them here breaks the callback and costs the payoff — that is the entire reason
+  this slide exists now.
 
-  END ON THE PRODUCT, NOT ON YOURSELF — storyboard S15. The last line on the
-  deck is about what ships and in what order, not about the candidate.
+  THE FIFTH NODE IS DELIBERATELY EMPTY. Its dot is outlined rather than filled
+  and its capability cell is blank. That used to be a setup — the three scope
+  rows arrived on the advance and filled it. Now it is the statement itself: the
+  next slot is open, and the presenter names the company out loud rather than the
+  slide naming it. That is what makes this deck reusable without an edit.
 
-  THE CALLBACK IS THE ARC. The same four capability labels the audience saw on
-  S1 come back verbatim; only the fifth node is new. Rewording them here would
-  break the callback and cost the payoff.
+  ONE STEP, because the advance had nothing left to reveal once the scope rows
+  went. Everything arrives in one sequence: the rail draws, then the five nodes
+  stagger in, and the fifth arriving last IS the callback landing.
 
-  mono's own capability cell is deliberately EMPTY at step 0 — the three rows
-  underneath are what fill it, and they arrive on the advance.
-
-  PUBLISH-SAFE: company names and a public product name. The scope items came
-  from a recruiting message, so they are paraphrased to the role, not quoted in
-  Korean, and nothing about internal task lists appears.
+  PUBLISH-SAFE: four past employers already on the submitted CV, and no fifth
+  company named anywhere on the slide.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
@@ -33,30 +37,16 @@
 	let { step = 0, animate = true }: { step?: number; animate?: boolean } = $props();
 
 	// Labels 1-4 are verbatim from ArcSlide. Do not reword them here.
+	// The fifth carries no company name on purpose — see the header note.
 	const stops = [
 		{ company: 'MODULABS', years: '2021 – 2023', gained: 'Frontend web', next: false },
 		{ company: 'Moviation', years: '2023', gained: 'Frontend mobile · web', next: false },
 		{ company: 'Playtag', years: '2023 – 2025', gained: 'Full-stack', next: false },
 		{ company: 'MOBA', years: '2025 – now', gained: 'Lead backend · Infra', next: false },
-		{ company: 'mono', years: 'next', gained: '', next: true },
-	];
-
-	const scope = [
-		{
-			n: '1',
-			item: 'mono, full-stack',
-			backing: 'Playtag full-stack, then owning a backend at MOBA',
-		},
-		{
-			n: '2',
-			item: 'StoryLine, AI narrative',
-			backing: 'The agent workflow I run on my own system every day',
-		},
-		{
-			n: '3',
-			item: 'devops, later',
-			backing: 'Terraform and AWS already, whenever it earns the time',
-		},
+		// The em dash is load-bearing, not decoration: an empty years cell would
+		// collapse its line box and lift the fifth capability slot out of line with
+		// the other four.
+		{ company: 'Next', years: '—', gained: '', next: true },
 	];
 
 	let root = $state<HTMLElement>();
@@ -69,8 +59,6 @@
 
 		gsap.set(root.querySelector('.rail-line'), { scaleX: 0, transformOrigin: 'left center' });
 		gsap.set(root.querySelectorAll('.stop'), { autoAlpha: 0, y: 8 });
-		gsap.set(root.querySelectorAll('.scope-row'), { autoAlpha: 0, y: 6 });
-		gsap.set(root.querySelector('.last'), { autoAlpha: 0, y: 6 });
 
 		ready = true;
 	});
@@ -82,47 +70,30 @@
 		render(target);
 	});
 
-	async function render(target: number) {
+	// Single step. `target` is accepted only to match the signature every other
+	// slide in the deck uses.
+	async function render(_target: number) {
 		const { gsap } = await loadGsap();
 		await tick();
 		if (!root) return;
 
 		const d = !animate || reducedMotion() ? 0 : 1;
-		const want = target >= 1;
 
 		const timeline = gsap.timeline();
 
 		timeline.to(root.querySelector('.rail-line'), { scaleX: 1, duration: 0.6 * d, ease: EASE });
 
-		// The fifth node arrives last in the stagger, which is the callback.
+		// The fifth node arrives last in the stagger, which is the callback landing.
 		timeline.to(
 			root.querySelectorAll('.stop'),
 			{ autoAlpha: 1, y: 0, duration: DURATION * d, stagger: 0.08 * d, ease: EASE },
 			d ? '-=0.25' : 0,
 		);
-
-		timeline.to(
-			root.querySelectorAll('.scope-row'),
-			{
-				autoAlpha: want ? 1 : 0,
-				y: want ? 0 : 6,
-				duration: DURATION * d,
-				stagger: 0.09 * d,
-				ease: EASE,
-			},
-			d ? '-=0.1' : 0,
-		);
-
-		timeline.to(
-			root.querySelector('.last'),
-			{ autoAlpha: want ? 1 : 0, y: want ? 0 : 6, duration: DURATION * d, ease: EASE },
-			d ? '-=0.2' : 0,
-		);
 	}
 </script>
 
 <section class="slide" bind:this={root}>
-	<h1>Four layers, three things the role asks for</h1>
+	<h1>Four layers, one direction</h1>
 
 	<div class="rail">
 		<div class="rail-line" aria-hidden="true"></div>
@@ -138,18 +109,6 @@
 			{/each}
 		</ol>
 	</div>
-
-	<ol class="scope">
-		{#each scope as row (row.n)}
-			<li class="scope-row">
-				<span class="n">{row.n}</span>
-				<span class="item">{row.item}</span>
-				<span class="backing">{row.backing}</span>
-			</li>
-		{/each}
-	</ol>
-
-	<p class="last">In that order.</p>
 </section>
 
 <style>
@@ -193,7 +152,8 @@
 		background: currentColor;
 	}
 
-	/* mono has not happened yet, so its node is outlined rather than filled. */
+	/* The next one has not happened yet, so its node is outlined rather than
+	   filled. */
 	.stop.next .dot {
 		background: transparent;
 		border: 1px solid currentColor;
@@ -226,56 +186,15 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	/* Empty on the mono node, but the rule still reserves its height so the five
-	   columns share one baseline. */
+	/* Empty on the fifth node, and the reserved height is what makes that read as
+	   an open slot rather than a missing one — five columns, one baseline, the
+	   last one waiting. */
 	.gained {
 		margin-top: 0.5rem;
 		min-height: 1.5em;
 		font-size: var(--deck-body);
 		border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent);
 		padding-top: 0.5rem;
-	}
-
-	.scope {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.55rem;
-	}
-
-	.scope-row {
-		display: grid;
-		grid-template-columns: 1.5rem minmax(0, 14rem) minmax(0, 1fr);
-		align-items: baseline;
-		gap: 1rem;
-		visibility: hidden;
-		opacity: 0;
-	}
-
-	.n {
-		font-size: var(--deck-meta);
-		opacity: 0.45;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.item {
-		font-size: var(--deck-body);
-		font-weight: 600;
-	}
-
-	.backing {
-		font-size: var(--deck-body);
-		opacity: 0.7;
-	}
-
-	.last {
-		margin: 0;
-		font-size: var(--deck-subtitle);
-		opacity: 0.6;
-		min-height: 1.6em;
-		visibility: hidden;
 	}
 
 	@media (max-width: 900px) {
@@ -291,14 +210,6 @@
 		.stops {
 			grid-template-columns: repeat(3, 1fr);
 			gap: 1.25rem;
-		}
-
-		.scope-row {
-			grid-template-columns: 1.25rem 1fr;
-		}
-
-		.backing {
-			grid-column: 2;
 		}
 	}
 </style>

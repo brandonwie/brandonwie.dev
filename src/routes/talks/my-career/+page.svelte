@@ -86,7 +86,7 @@
 			steps: 2,
 			component: PrivacyMatrixSlide,
 		},
-		{ id: 'close', label: 'Close', steps: 2, component: CloseSlide },
+		{ id: 'close', label: 'Close', steps: 1, component: CloseSlide },
 		// Page 18, appended after the close at Brandon's instruction (2026-07-29).
 		// Worth knowing it sits after the close rather than before it: the close
 		// answers the role's three scope items and ends on "in that order", which
