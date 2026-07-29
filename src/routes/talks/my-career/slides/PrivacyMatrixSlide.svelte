@@ -110,7 +110,29 @@
   and the one thing worth understanding here is WHICH KINDS of content each
   verdict covers. Rows now name the content.
 
-  THE CONSUMER LIST TOOK THREE PASSES (see the `consumers` comment). It went
+  FOURTH PASS ON THE CONSUMER LIST, 2026-07-29 (Brandon: "Anything that leaves
+  my machine for an AI service" sounds vague). It was. Three faults in one line:
+  "anything" implied a category when it is ONE tool doing one specific thing;
+  "an AI service" was a euphemism for the concrete thing, a model API; and it
+  hid the asymmetry that is the entire reason this slide exists.
+
+  The asymmetry, verified against the repo: search is local — `3b-retrieve.js`
+  runs a transformers.js pipeline and contains no network calls at all — and the
+  checks are local. The repo map is the ONLY consumer where content leaves the
+  machine, and even then only for non-code: code is parsed locally, AST-only,
+  while the markdown gets sent to a model API to be summarised into the graph.
+  Two of three never leave the laptop; one does. Listing them as peers made the
+  rule look like general tidiness rather than the thing standing between private
+  notes and an upload.
+
+  The two lines now say which side they are on. The third is left alone — it was
+  checked and it is TRUE: `graphify-privacy-diff.js` is a real drift auditor with
+  `--baseline` snapshot diffing. It is a manual audit rather than the pre-commit
+  path, which is why the footnote describes regeneration and this line describes
+  catching. Do not "fix" it into agreement with the footnote; they describe two
+  different mechanisms and both exist.
+
+  THE CONSUMER LIST TOOK THREE PASSES BEFORE THAT (see the `consumers` comment). It went
   from internal project names, to terms of art, to what each one risks — and
   only the third pass survived Brandon reading it, because the test that
   mattered was not "is this shorter" but "can he finish the sentence if someone
@@ -172,8 +194,8 @@
 	// readers (the ignore-file generator, the freshness gate, get-privacy);
 	// the claim is the shape, not the count.
 	const consumers = [
-		'Search over my own notes',
-		'Anything that leaves my machine for an AI service',
+		'Search over my own notes — never leaves the machine',
+		'The repo map — sends file contents to a model API',
 		'The checks that catch it when one of them drifts',
 	];
 
