@@ -1,10 +1,24 @@
 <!--
   S11 — Data pipeline (0:45) · cut-1
 
-  The hero beat is CADENCE, because it is the one change on this slide that a
-  picture can carry without explanation: one pull a day becomes a pull every
-  two hours. Everything else the pipeline work involved — the production move,
-  the monorepo, the Parquet layout, the search-sync — rides in the notes.
+  The hero beat is FRESHNESS, carried by cadence. Twelve ticks instead of one is
+  the part a picture can show without explanation, but twelve runs fetching
+  two-day-old data would be twelve times the work for nothing. The lag line under
+  the cadence is what turns the tick marks into a claim.
+
+  Everything else the pipeline work involved — the production move, the monorepo,
+  the Parquet layout, the search-sync — rides in the notes.
+
+  THE LAG WAS WRONG IN THE LEDGER (Brandon, 2026-07-29). facts.md read "upgraded
+  from daily D-2 pulls to two-hourly D-4→D-2 windows", and the D-4→D-2 is in
+  DAYS. Two-hourly runs each pulling a two-day-old window would leave the data
+  exactly as stale as before — the cadence would have bought nothing. The real
+  after-state is a −4h→−2h window, so the data sits about two hours behind live
+  instead of two days. Before is unchanged and was right: daily runs pulling D−2.
+
+  The window trails live by two hours rather than reaching for it, which is the
+  reason it is −4h→−2h and not −2h→now: events need time to arrive before the
+  run reads that slice. Consecutive windows tile rather than overlap.
 
   TYPESENSE ONLY. facts.md § Do not say is explicit: search-sync against
   Postgres, and NOTHING about pgvector, embeddings, or RAG under MOBA. RAG
@@ -32,7 +46,7 @@
 
 	const notes = [
 		'Amplitude to Airflow to S3 as Parquet, partitioned on event time, with completeness checks',
-		'Each run re-pulls a four-to-two-day window, so late-arriving events are not missed',
+		'The window trails two hours behind live, so late-arriving events are already in it',
 		'Three repos — Airflow, ETL, events — consolidated into a monorepo with shared Python contracts',
 		'A Typesense search-sync service kept continuously in step with Postgres',
 	];
@@ -120,6 +134,20 @@
 				One run a day
 			{/if}
 		</p>
+
+		<!--
+			The cadence is the visible change; the lag is the one that matters. Twelve
+			ticks instead of one says the pipeline runs more often, which on its own
+			could still be twelve runs fetching two-day-old data. This line is what
+			makes it a freshness claim.
+		-->
+		<p class="freshness">
+			{#if frequent}
+				Each run pulls &minus;4h to &minus;2h &mdash; the data is about two hours behind live
+			{:else}
+				Each run pulls D&minus;2 &mdash; the data is two days behind live
+			{/if}
+		</p>
 	</div>
 
 	<ul class="notes">
@@ -199,6 +227,15 @@
 		font-size: var(--deck-heading);
 		font-weight: 600;
 		min-height: 1.6em;
+	}
+
+	/* Same reservation for the same reason: the after-state line is the longer of
+	   the two, and nothing below it may move on the advance. */
+	.freshness {
+		margin: 0;
+		font-size: var(--deck-body);
+		opacity: 0.7;
+		min-height: 1.5em;
 	}
 
 	.notes {
