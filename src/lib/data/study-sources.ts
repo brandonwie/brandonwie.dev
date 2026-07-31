@@ -210,3 +210,38 @@ export const DSA_III_SOURCE_FILES: StudySourceFile[] = [
 		role: 'slide-summary',
 	},
 ];
+
+export const DSA_IV_SOURCE_ROOT_LABEL = 'personal/study/gt-dsa/dsa-iv';
+
+export const DSA_IV_SOURCE_FILES: StudySourceFile[] = [
+	{
+		path: '_index.md',
+		sha256: '4bf0ee6e643c7cf0ce7c227c55184179c0c5f5a3c5327726f5daa97d54cc5758',
+		role: 'index',
+	},
+	{
+		path: 'm0-intro-review.md',
+		sha256: '893ec4c4039bbc674d97c7d410b469f54b3326765b696361f6b42617d1acc037',
+		role: 'primary-note',
+	},
+	{
+		path: 'm12-pattern-matching.md',
+		sha256: 'd61d196fa6779e43cba03576f33e438d04dcc43bc3cd65fc23c7265503544ae5',
+		role: 'primary-note',
+	},
+	{
+		path: 'm13-graph-algorithms.md',
+		sha256: '4ba1d672c74bbc235f751bd1e00727caa44a137c9f1821d1ad87f16064b045ea',
+		role: 'primary-note',
+	},
+	{
+		path: 'm14-minimum-spanning-trees.md',
+		sha256: 'd4146fa8e4a17ceb57ce52c3761198a7217f05b90fb7845789b485f9383a3f12',
+		role: 'primary-note',
+	},
+	{
+		path: 'm15-dynamic-programming.md',
+		sha256: 'a5778fd18301a3796d1e47f5553657d4c50785a992b8c79774dea65e4d7a66bb',
+		role: 'primary-note',
+	},
+];

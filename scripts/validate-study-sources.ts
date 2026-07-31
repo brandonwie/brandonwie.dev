@@ -8,6 +8,8 @@ import {
 	DSA_II_SOURCE_ROOT_LABEL,
 	DSA_III_SOURCE_FILES,
 	DSA_III_SOURCE_ROOT_LABEL,
+	DSA_IV_SOURCE_FILES,
+	DSA_IV_SOURCE_ROOT_LABEL,
 } from '../src/lib/data/study-sources.ts';
 
 async function exists(path: string): Promise<boolean> {
@@ -53,6 +55,7 @@ const groups = [
 	{ label: DSA_I_SOURCE_ROOT_LABEL, files: DSA_I_SOURCE_FILES },
 	{ label: DSA_II_SOURCE_ROOT_LABEL, files: DSA_II_SOURCE_FILES },
 	{ label: DSA_III_SOURCE_ROOT_LABEL, files: DSA_III_SOURCE_FILES },
+	{ label: DSA_IV_SOURCE_ROOT_LABEL, files: DSA_IV_SOURCE_FILES },
 ];
 
 const mismatches: string[] = [];
