@@ -29,9 +29,28 @@
 const KNOWLEDGE_ROOT = `${Deno.env.get('HOME')}/dev/personal/3b/knowledge`;
 
 /**
- * Mirror of cleanBody() from sync-from-3b.ts. Strips:
+ * Mirror of isPlainParagraphLine() from sync-from-3b.ts:113-124.
+ *
+ * Tests the TRIMMED line, not the raw line: an indented list item or fenced
+ * block must not be misread as prose.
+ */
+function isPlainParagraphLine(line: string): boolean {
+	const trimmed = line.trim();
+	return (
+		trimmed.length > 0 &&
+		!trimmed.startsWith('#') &&
+		!trimmed.startsWith('```') &&
+		!trimmed.startsWith('>') &&
+		!trimmed.startsWith('-') &&
+		!trimmed.startsWith('---')
+	);
+}
+
+/**
+ * Mirror of cleanBody() from sync-from-3b.ts:298-359. Strips:
  *   - the H1 title (already extracted to frontmatter.title)
- *   - the first paragraph after H1 (already extracted to frontmatter.description)
+ *   - the ENTIRE first paragraph after H1, including its wrapped continuation
+ *     lines (already extracted to frontmatter.description)
  *   - "## Related" sections
  *   - "## When This Came Up" sections
  *   - leading horizontal rule
@@ -43,24 +62,34 @@ function cleanBody(body: string): string {
 
 	const lines = cleaned.split('\n');
 	let foundFirstParagraph = false;
+	let skippingFirstParagraph = false;
 	const filteredLines: string[] = [];
 
 	for (const line of lines) {
 		if (!foundFirstParagraph && line.trim() === '') {
 			continue;
 		}
-		if (
-			!foundFirstParagraph &&
-			line.trim() &&
-			!line.startsWith('#') &&
-			!line.startsWith('```') &&
-			!line.startsWith('>') &&
-			!line.startsWith('-') &&
-			!line.startsWith('---')
-		) {
+
+		// Skip the whole first paragraph (description), including wrapped lines.
+		if (!foundFirstParagraph && isPlainParagraphLine(line)) {
 			foundFirstParagraph = true;
+			skippingFirstParagraph = true;
 			continue;
 		}
+
+		if (skippingFirstParagraph) {
+			if (line.trim() === '') {
+				skippingFirstParagraph = false;
+				continue;
+			}
+
+			if (isPlainParagraphLine(line)) {
+				continue;
+			}
+
+			skippingFirstParagraph = false;
+		}
+
 		if (foundFirstParagraph || line.trim() === '') {
 			filteredLines.push(line);
 		}
