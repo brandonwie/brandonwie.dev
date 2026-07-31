@@ -1,8 +1,8 @@
 ---
 title: PostgreSQL IN 절 파라미터 제한
-description: 'TypeORM의 `In([...])` 연산자로 대량 ID를 쿼리하면 생성된 SQL이 ID당 하나의 바인드 파라미터를 만들어 성능이 저하됩니다'
+description: 'PostgreSQL wire protocol은 파라미터 쿼리를 65,535개 바인드 파라미터로 제한해요. TypeORM의 `In([...])`을 500-1,000개로 쪼개면 실질적인 성능 한계 안에 머물러요.'
 date: 2026-02-11T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-07-31'
 tags:
   - backend
   - postgresql
@@ -13,19 +13,21 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: postgresql-in-clause-limits
-source_updated: '2026-03-22'
-translation_date: '2026-02-12'
+source_updated: '2026-07-31'
+translation_date: '2026-07-31'
 references:
   - url: 'https://www.postgresql.org/docs/current/protocol-message-formats.html'
     title: PostgreSQL Protocol Message Formats - Bind Message
     type: official
 ---
 
-Google Calendar 동기화 엔드포인트에서 ID 배열로 블록을 쿼리하는 코드가
-있었어요. 개발 환경에서 50개 블록으로는 잘 동작했어요. 스테이징에서 파워
-유저의 캘린더에서 온 3,000개 이상의 블록으로는 쿼리 플래닝에 수 초가
-걸렸어요. 실제 규모에서는 PostgreSQL의 하드 리밋인 65,535 파라미터에
-도달해서 크래시가 났을 거예요.
+Google Calendar에서 받은 블록 ID 수천 개를 데이터베이스에서 찾아오는 동기화
+기능을 만들고 있었어요. 쿼리는 TypeORM의 `In([...])` 연산자를 썼어요. ID가 수십
+개뿐인 개발 환경에서는 아무 문제가 없었고요. 그런데 캘린더를 무겁게 쓰는
+사용자는 한 번 동기화에 블록 ID가 수천 개씩 나올 수 있었어요. 이 쿼리 크기를
+가늠하다가 만난 상한선은 꽤 단단했어요. 수천 개를 넘어가면 플래닝이 눈에 띄게
+느려지고, 65,535개에서는 알아보기 힘든 프로토콜 수준 에러와 함께 쿼리가 아예
+실패해요.
 
 문제는 TypeORM의 추상화 뒤에 숨어 있었어요. `In([...])`은 무해해 보이지만,
 요소 하나당 바인드 파라미터 하나를 생성해요. 숫자가 올라갈 때 경고는
@@ -119,7 +121,87 @@ WHERE id = ANY($1::int[])        -- 1 param, bypasses 65K limit
 
 TypeORM은 `find()`에서 `ANY(array)`를 네이티브로 지원하지 않지만, raw
 `query()`로는 사용할 수 있어요. 타입 안전성이 크게 중요하지 않거나 배열
-파라미터를 지원하는 쿼리 빌더를 사용할 때 더 나은 접근법이에요.
+파라미터를 지원하는 쿼리 빌더를 사용할 때 더 나은 접근법이에요. 대량 작업에서
+자주 보이는 `UNNEST` 패턴도 발상은 같아요. 배열 파라미터 하나가 스칼라 N개를
+대신하는 거죠.
+
+## 같은 상한이 대량 `INSERT`에도 걸려요
+
+처음엔 몰랐는데, 65,535라는 숫자는 `IN` 절이 아니라 `Bind` 메시지의
+성질이에요. 파라미터를 쓰는 모든 statement에 그대로 적용되니까, 여러 행을 한
+번에 넣는 `INSERT`도 예외가 아니에요. 여기서는 계산이 ID 개수가 아니라 컬럼 수
+× 행 수라서 보기보다 훨씬 쉽게 걸려요:
+
+```text
+15 columns x 7,029 rows = 105,435 parameters   -> exceeds 65,535
+```
+
+7,000행은 큰 데이터로 느껴지지 않죠. 그런데 TypeORM의
+`repository.insert(rows)`는 이걸 statement 하나로 만들어요. 그래서 한계에
+걸리기엔 한참 작아 보이는 크기에서 대량 적재가 터져요. 쪼개는 방법은 앞과
+똑같아요:
+
+```ts
+const CHUNK = 1000; // 15 x 1000 = 15,000 params, comfortably under
+for (let i = 0; i < rows.length; i += CHUNK) {
+  await repo.insert(rows.slice(i, i + CHUNK));
+}
+```
+
+이 실패를 짚어내기 어려운 이유도 `IN` 절 때와 판박이예요. 드라이버가 뱉는 에러는
+파라미터 상한을 한 번도 언급하지 않아서, 증상이 원인과 전혀 다른 곳을
+가리켜요. 컬럼 수만 알면 `floor(60000 / columns)`로 안전한 chunk 크기가 바로
+나와요. 감으로 정할 필요가 없어요.
+
+한 번만 적재하고 끝나는 경우라면 `COPY ... FROM STDIN`이 이 고민 자체를
+없애줘요. 스트리밍으로 넣기 때문에 바인드 파라미터를 아예 안 써요. 쪼갠
+`INSERT`가 몇 초 걸리는 구간에서도 1초 아래로 끝나는 이유죠. 대신 ORM 경로를
+완전히 벗어나니까 애플리케이션 코드보다는 import 작업에 어울려요.
+
+### `ON CONFLICT` upsert도 계산은 똑같아요
+
+upsert도 `Bind` 메시지 하나라서 계산이 달라지지 않아요. 행당 파라미터 수는
+`INSERT` 목록의 컬럼 수 그대로예요. `ON CONFLICT` 대상과 `DO UPDATE SET` 절은
+`EXCLUDED`와 대상 테이블을 참조할 뿐 새 placeholder를 만들지 않아서 개수를
+늘리지 않아요. 그래서 6컬럼 upsert의 상한은 `floor(65535 / 6)`, 즉
+10,922행이에요:
+
+```sql
+INSERT INTO "user_contacts"
+  ("user_id", "email", "display_name", "photo_url", "integration_id", "updated_at")
+VALUES ($1,$2,$3,$4,$5,$6), ($7,$8,$9,$10,$11,$12), ...   -- 6 params per row
+ON CONFLICT ("user_id", "integration_id", "email")         -- 0 params
+DO UPDATE SET "display_name" = COALESCE(EXCLUDED."display_name", ...)
+```
+
+### 계산을 아는 레이어에서 쪼개기
+
+큰 배열을 들고 있는 호출부에서 쪼개고 싶어지는데, 지금 다시 한다면 statement를
+만드는 메서드 안에서 쪼갤 거예요. 행당 파라미터 수를 아는 레이어는 거기뿐이고,
+그래야 호출부마다 따로 기억할 필요 없이 전부 수정을 물려받아요. 저희는 네 곳이
+하나의 `bulkUpsert`를 함께 썼는데, 한 번도 쪼갠 적 없던 bootstrap 경로가 상한을
+넘긴 범인이었어요.
+
+분기를 하나 두면 작은 배치는 여전히 statement 하나로 나가요:
+
+```ts
+const MAX_ROWS_PER_STATEMENT = 1000; // 6 x 1000 = 6,000 params
+
+if (rows.length > MAX_ROWS_PER_STATEMENT) {
+  const out: Ref[] = [];
+  for (const batch of chunk(rows, MAX_ROWS_PER_STATEMENT)) {
+    out.push(...(await this.bulkUpsert(userId, batch, opts, manager)));
+  }
+  return out;
+}
+```
+
+여기서 놓치기 쉬운 게 두 가지 있어요. 하나는 호출부의 transaction
+핸들(`manager`)을 모든 chunk에 그대로 넘기는 거예요. 그래야 transaction 안에서
+부른 쪽이 쪼갠 뒤에도 원자성을 유지해요. 안 넘기면 원자적이던 statement 하나를
+조용히 독립적인 N개로 바꿔버린 셈이 돼요. 다른 하나는 `ON CONFLICT` 절을
+유지하는 거예요. transaction 밖에서 부른 쪽이 일부만 적용된 상태를 안전하게
+재시도할 수 있는 건 이 절 덕분이에요.
 
 ## 이게 왜 효과적인가
 
@@ -145,8 +227,16 @@ TypeORM은 `find()`에서 `ANY(array)`를 네이티브로 지원하지 않지만
   애플리케이션에서 ID 리스트를 구체화하는 대신 `JOIN`이나 서브쿼리를
   사용하세요.
 - **쓰기 작업**: bulk `INSERT`/`UPDATE`에는 `IN` 절 배치 대신 `UNNEST`나
-  `VALUES` 패턴을 사용하세요.
+  `VALUES` 패턴을 쓰고, 위에서 본 컬럼 수 × 행 수 계산을 같이 기억해 두세요.
+  이 statement들도 같은 `Bind` 메시지를 타고 가니까 행 단위로 따로 쪼개야 해요.
 
 경험 법칙: `IN` 절이 수백 개 요소를 넘어설 가능성이 있다면, 500으로
 배치하세요. 점진적 성능 저하와 프로토콜 크래시를 모두 방지하는 작은 코드
 변경이에요.
+
+가장 늦게 몸에 붙은 건 이 상한이 `IN` 절이 아니라 `Bind` 메시지에 속한다는
+점이에요. 여러 행 `INSERT`나 `ON CONFLICT` upsert에서도 똑같이 나타나는데,
+거기서는 개수가 리스트처럼 생긴 무언가가 아니라 컬럼 수 × 행 수예요. 세 번을
+따로 겪고 나서야 매번 새 버그로 취급하는 걸 그만뒀어요. 어떤 statement의 행당
+파라미터 수를 알아두는 것, 그리고 그 숫자를 아는 레이어에서 쪼개는 것. 실제로
+두루 쓰이는 건 이 부분이에요.

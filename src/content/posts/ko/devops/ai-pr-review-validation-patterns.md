@@ -4,7 +4,7 @@ description: >-
   AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 14가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크
   + 보강 주석 템플릿.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-07-02'
+updated: '2026-07-31'
 tags:
   - devops
   - ai
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
-source_updated: '2026-07-02'
-translation_date: '2026-07-02'
+source_updated: '2026-07-31'
+translation_date: '2026-07-31'
 references:
   - url: 'https://docs.github.com/en/rest/pulls/reviews'
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -24,18 +24,18 @@ references:
 
 ## 분류 프레임워크
 
-AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진짜 버그도 있고, 스타일 선호도 있고, 완전히 틀린 것도 있어요. 단순한 VALID/INVALID 이분법으로는 부족하고, 빠른 분류 판단을 위해 더 세밀한 등급이 필요해요.
+AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진짜 버그도 있고, 스타일 선호도 있고, 완전히 틀린 것도 있어요. 단순한 VALID/INVALID 이분법은 얼마 안 가 한계가 왔어요. triage를 빠르게 굴리려면 더 세밀한 등급이 필요했어요.
 
 | 분류                  | 기준                                               | 조치                    |
 | --------------------- | -------------------------------------------------- | ----------------------- |
 | **VALID BUG**         | 실제 버그, 보안 이슈, 장애 유발                    | 즉시 수정               |
 | **VALID IMPROVEMENT** | 올바른 제안, 코드 품질 향상                        | 즉시 수정               |
 | **GOOD-TO-HAVE**      | 맞는 지적이지만 우선순위가 낮은 개선               | 쉬우면 수정, 위험하면 skip |
-| **CONTROVERSIAL**     | 논쟁의 여지가 있음 — 타당하지만 비용 대비 효과 불명 | 건별로 판단             |
+| **CONTROVERSIAL**     | 논쟁의 여지가 있음: 타당하지만 비용 대비 효과 불명   | 건별로 판단             |
 | **OPTIONAL**          | 있으면 좋은 수준, 스타일 관련, 긴급하지 않음       | 사용자에게 확인         |
 | **INVALID**           | 틀림, context 오해, 해당 안 됨                     | 문서화 + 보강 주석 추가 |
 
-나중에 추가한 두 등급 — GOOD-TO-HAVE와 CONTROVERSIAL — 은 release PR에서 필수적이었어요. feature branch 리뷰에서는 모든 지적을 처리할 여유가 있지만, develop-to-main merge에서 19개 지적을 분류할 때는 "맞고 수정할 가치가 있는 것"과 "맞지만 지금 건드릴 가치가 없는 것"을 빠르게 분리해야 해요. GOOD-TO-HAVE는 수정이 쉽고 위험이 낮은 개선이에요. CONTROVERSIAL은 AI 지적이 타당하지만 현재 context에서 수정 비용이 이점을 넘는 경우예요. 예를 들어 release 중에 27개 test file에 type guard를 추가하라는 지적 같은 거죠.
+나중에 추가한 GOOD-TO-HAVE와 CONTROVERSIAL 두 등급은 release PR에서 특히 값을 했어요. feature branch에서는 보통 전부 처리할 수 있어요. 그런데 develop-to-main merge에서 19개 지적을 분류하는 건 성격이 다른 일이라, "맞고 수정할 가치가 있는 것"과 "맞지만 지금 건드릴 가치가 없는 것"을 갈라야 했어요. GOOD-TO-HAVE는 수정이 쉽고 위험이 낮은 개선이에요. CONTROVERSIAL은 AI 지적이 타당하지만 현재 context에서 수정 비용이 이점을 넘는 경우예요. release 중에 27개 test file에 type guard를 추가하라는 지적 같은 거죠.
 
 ## AI가 흔히 혼동하는 패턴
 
@@ -124,7 +124,7 @@ resyncOccurred = true;
 
 **어떻게 보이나:** 에이전트가 모듈 단위 싱글턴을 thread-unsafe하다고 지적하거나 lock을 추가하라고 제안해요.
 
-**왜 이런 일이 생기나:** AI가 기본적으로 스레드 기반 모델을 가정해요. 그런데 실제 production 환경에서는 프로세스 기반 worker를 쓰는 경우가 많아요. Celery prefork, gunicorn worker process — 각 worker가 별도의 메모리 공간을 가지기 때문에 공유 상태 자체가 없어요.
+**왜 이런 일이 생기나:** AI가 기본적으로 스레드 기반 모델을 가정해요. 그런데 실제 production 환경에서는 프로세스 기반 worker를 쓰는 경우가 많아요. Celery prefork나 gunicorn worker process를 쓰면 각 worker가 자기 메모리 공간을 가져서, 보호할 공유 상태 자체가 없어요.
 
 **예시:**
 
@@ -133,7 +133,7 @@ resyncOccurred = true;
 현실: Celery prefork = 별도 process. 각각 자기만의 global namespace를 가짐
 ```
 
-Python 프로젝트에서 CodeRabbit이 모듈 단위 변수마다 스레드 안전성 이슈로 지적한 사례예요. Django/Celery 스택에서 prefork worker를 쓰면 각 프로세스가 global namespace의 자기 사본을 갖게 돼요. 스레드도 없고, 공유도 없고, 문제도 없어요.
+Python 프로젝트에서 CodeRabbit이 모듈 단위 변수마다 스레드 안전성 이슈로 지적한 사례예요. Django/Celery 스택에서 prefork worker를 쓰면 각 프로세스가 global namespace의 자기 사본을 갖게 돼요. 스레드 사이에 공유되는 게 없으니 lock을 걸 대상도 없어요.
 
 **예방:** 보강 주석을 추가해요.
 
@@ -206,7 +206,7 @@ constructor에 합리적인 default가 있고 factory가 이를 override하는 �
 현실: 해당 줄은 develop에서 NOTE 주석임. if 블록은 PR #711에서 제거됨
 ```
 
-PR #712에서 실제로 겪은 사례예요. Claude가 `main` branch 코드를 분석해서 test assertion이 잘못됐다고 지적했어요. 하지만 `develop`에서는 인용한 줄이 이미 주석으로 교체되어 있었고, production 코드는 이전 PR에서 변경된 상태였어요. assertion은 현재 `develop` 상태에서는 정확했어요.
+PR #712에서 실제로 겪은 사례예요. Claude가 `main` branch 코드를 분석해서 test assertion이 잘못됐다고 지적했어요. 하지만 `develop`에서는 인용한 줄이 이미 주석으로 교체된 상태였어요. 이전 PR에서 production 코드가 바뀌었거든요. assertion은 현재 `develop` 상태 기준으로는 정확했어요.
 
 **예방:** test 위치에 보강 주석을 추가해요.
 
@@ -221,13 +221,13 @@ PR #712에서 실제로 겪은 사례예요. Claude가 `main` branch 코드를 �
 
 **왜 이런 일이 생기나:** GitHub API가 PR diff가 20,000줄을 넘으면 HTTP 406을 반환해요. Release PR(develop to main)은 이 제한을 자주 넘어요. diff API endpoint에 의존하는 AI reviewer는 분석할 데이터 자체가 없어서, 빈 review를 만들거나 file 이름만 보고 추측해요.
 
-**우회 방법:** `git diff origin/main..origin/develop`으로 diff를 로컬에서 생성하고 도메인별로 review agent에 나눠서 전달해요. API 제한을 완전히 우회하면서 각 reviewer에게 처리 가능한 크기의 chunk를 보낼 수 있어요.
+**우회 방법:** `git diff origin/main..origin/develop`으로 diff를 로컬에서 생성하고 도메인별로 review agent에 나눠서 전달해요. API 제한을 비껴가면서, 각 reviewer가 실제로 읽어낼 수 있는 크기의 chunk를 넘길 수 있어요.
 
 ### 11. Release PR에서의 Authorship 범위 지정
 
 **어떻게 보이나:** review 지적이 다른 팀원이 작성한 코드를 지적해요.
 
-**왜 중요한가:** Release PR은 보통 여러 작성자의 squash merge예요. 팀 전체가 작성한 모든 줄을 review하면 시간 낭비이고 처리할 수 없는 noise만 생겨요. 다른 사람의 구현 결정에 대한 full context가 없으니까요. severity가 CRITICAL인 경우를 제외하고는 자기 commit에 집중하는 게 좋아요.
+**왜 중요한가:** Release PR은 보통 여러 작성자의 squash merge예요. 팀 전체가 쓴 코드를 줄 단위로 다 보면 시간만 태우고, 처리할 수도 없는 noise가 쌓여요. 다른 사람의 구현 결정은 제가 맥락을 모르니까요. 그래서 severity가 CRITICAL이 아닌 이상 제 commit에만 집중해요.
 
 **방법:** 분류 전에 authorship을 확인해요.
 
@@ -235,15 +235,15 @@ PR #712에서 실제로 겪은 사례예요. Claude가 `main` branch 코드를 �
 git log origin/main..HEAD -- {file} --format="%h %ae %s"
 ```
 
-다른 작성자의 지적은 finding registry에서 N/A로 표시해요. 작성자와 관계없이 CRITICAL 지적만 에스컬레이션하면 돼요. PR #710에서는 15개 고유 지적 중 7개가 authorship scoping으로 N/A 처리돼서 상당한 시간을 절약했어요.
+다른 사람이 쓴 코드에 대한 지적은 finding registry에서 N/A로 표시하고, 작성자와 관계없이 CRITICAL만 에스컬레이션해요. PR #710에서는 이 방식으로 15개 고유 지적 중 7개가 분류를 시작하기도 전에 손에서 떨어져 나갔어요.
 
 ### 12. 마크다운 포매팅 환각
 
 **어떻게 보이나:** Reviewer가 마크다운 테이블에 포매팅 문제가 있다고 주장해요(예: "앞에 `||`가 와서 빈 첫 번째 열이 생김"). 실제로는 테이블이 완벽하게 유효한데도요.
 
-**왜 이런 일이 생기나:** Copilot이 실제 file 내용을 파싱하지 않고, 흔한 마크다운 문제에 대한 패턴 매칭으로 포매팅 지적을 만들어내는 경우가 있어요. 다른 혼동 패턴이 코드 로직을 잘못 읽는 것과 달리, 이건 순수하게 날조된 거예요 -- file 어디에도 없는 구문 문제를 만들어내는 거죠.
+**왜 이런 일이 생기나:** Copilot이 실제 file 내용을 파싱하지 않고, 흔한 마크다운 문제에 대한 패턴 매칭으로 포매팅 지적을 만들어내는 경우가 있어요. 다른 혼동 패턴이 코드 로직을 잘못 읽는 것과 달리, 이건 순수하게 날조된 거예요. file 어디에도 없는 구문 문제를 reviewer가 지어내는 거죠.
 
-이 패턴이 특히 비용이 큰 이유는 비슷한 file 수에 비례해서 늘어나기 때문이에요. 비슷한 구조의 file이 많은 문서 전용 PR(예: 11개 README)을 review할 때, 환각이 모든 file에서 반복되면서 지적 수가 급증해요.
+이 패턴이 특히 비용이 큰 이유는 비슷한 file 수에 비례해서 늘어나기 때문이에요. 비슷한 구조의 file이 많은 문서 전용 PR(예: 11개 README)을 review할 때, 환각이 모든 file에서 반복되면서 지적 수가 부풀어 올라요.
 
 **예시:**
 
@@ -258,7 +258,7 @@ crucio PR #40에서 실제로 겪은 사례예요. 18개 Copilot 지적 중 12�
 
 ### 13. Cross-Skill Name Confusion (Phantom Comparison)
 
-**어떻게 보이나:** Reviewer가 권위 있어 보이는 line 번호와 field 이름을 인용해요 — 그런데 실제 file에 `grep -n` 해보면 완전히 다른 내용이 나와요. Reviewer가 제안하는 "누락된 fix"는 review 중인 file을 깨뜨리지만, 이름 root를 공유하는 *다른* skill이나 module에는 맞을 거예요.
+**어떻게 보이나:** Reviewer가 권위 있어 보이는 line 번호와 field 이름을 인용해요. 그런데 실제 file에 `grep -n` 해보면 완전히 다른 내용이 나와요. Reviewer가 제안하는 "누락된 fix"는 review 중인 file을 깨뜨리지만, 이름 root를 공유하는 *다른* skill이나 module에는 맞을 거예요.
 
 **왜 이런 일이 생기나:** 두 skill이 이름 root를 공유하고 둘 다 세션의 skill registry에 있을 때, AI reviewer가 그 schema들을 mental하게 merge해서 PR을 *다른* 쪽 skill의 동작에 대해 review할 수 있어요. 모델이 line-level "finding"을 만들어내는데, 그 내용이 우리 file에는 없지만 conflated된 sibling에는 있는 거예요.
 
@@ -266,10 +266,10 @@ crucio PR #40에서 실제로 겪은 사례예요. 18개 Copilot 지적 중 12�
 
 Codex가 `/interview`(markdown 전용 Socratic skill, 런타임 의존성 0) import를 살펴봤어요. Codex가 내놓은 지적은 다음과 같았어요.
 
-- "SKILL.md:33의 curl 버전 체크" — 33번 줄은 `## Instructions` 헤더였어요. 소스 어디에도 curl은 없어요.
-- "SKILL.md:93의 MCP 질문" — 93번 줄은 code-confirmation 예시였어요. 소스 38번 줄에는 "MCP tools 없음"이라고 명시되어 있어요.
-- "summary를 `ooo seed` 산출물로 교체" — `ooo seed`는 `/ouroboros:interview`의 산출물이에요. 같은 세션 registry에 있는 다른 skill 거예요.
-- "MCP 응답 계약 — `meta.session_id`, `meta.is_complete` 강화" — 소스에는 MCP 계층이 없어요. 순수한 conversation engine이거든요.
+- "SKILL.md:33의 curl 버전 체크". 33번 줄은 `## Instructions` 헤더였고, 소스 어디에도 curl은 없어요.
+- "SKILL.md:93의 MCP 질문". 93번 줄은 code-confirmation 예시였고, 소스 38번 줄에는 "MCP tools 없음"이라고 못 박혀 있어요.
+- "summary를 `ooo seed` 산출물로 교체". 그런데 `ooo seed`는 같은 세션 registry에 있는 다른 skill, `/ouroboros:interview`의 산출물이에요.
+- "MCP 응답 계약 강화: `meta.session_id`, `meta.is_complete`". 소스에는 MCP 계층 자체가 없어요. 순수한 conversation engine이거든요.
 
 네 finding 전부 `/ouroboros:interview`(Python/MCP/`ooo seed` 생성)에 적용될 내용이었어요. Codex가 이름이 같다는 점과 같은 세션에 둘 다 떠 있다는 점 때문에 두 skill을 섞어서 본 것 같아요. 5개 중 1개(dead filesystem link)만 유효했어요.
 
@@ -277,10 +277,10 @@ Codex가 `/interview`(markdown 전용 Socratic skill, 런타임 의존성 0) imp
 
 - Skill registry가 이름이 겹치는 여러 skill을 노출해요(`/interview`와 `/ouroboros:interview`).
 - LLM reviewer가 가끔 어느 skill인지 grounding 없이 "the skill"이라고 인용해요.
-- *다른* skill이 internally consistent하니까 confidence가 높게 유지돼요 — reviewer의 mental model이 깨진 게 아니라 잘못된 target을 가리킬 뿐이에요.
+- *다른* skill이 internally consistent하니까 confidence가 높게 유지돼요. reviewer의 mental model이 깨진 게 아니라, 잘못된 target을 가리키고 있을 뿐이에요.
 - output이 specific해 보여요(line 번호, field 이름) 하지만 review 중인 file에 대해서는 fabricated예요.
 
-**예방 — 교차 확인 규율.** 특정 라인, 파일, API를 인용한 AI 리뷰 finding이라면 모두 다음을 실행하세요.
+**예방: 교차 확인 규율.** 특정 라인, 파일, API를 인용한 AI 리뷰 finding이라면 모두 다음을 실행하세요.
 
 ```bash
 grep -n -i '<claimed-string>' <claimed-file>
@@ -289,19 +289,19 @@ sed -n '<claimed-line>p' <claimed-file>
 
 grep이 비어 있거나 line이 다른 내용을 보여주면, finding은 hallucinated이거나 phantom version과 비교 중이에요. grep이 확인할 때까지 모든 미검증 주장을 INVALID로 다루세요. finding당 ~5초 추가되고, 그렇지 않으면 30+ 분 낭비할 cross-skill confusion을 잡아요.
 
-**Reviewer 비대칭(같은 PR의 데이터 포인트):** 같은 PR의 3b-forge plugin review는 grounded였어요 — 5개 중 4개 valid finding. 실제 repo file 구조에서 동작하는 plugin reviewer가 세션 scope reviewer (Codex)보다 — 세션이 skill 이름 충돌을 포함할 때 — 더 높은 정밀도 output을 만들어요.
+**Reviewer 비대칭(같은 PR의 데이터 포인트):** 같은 PR의 3b-forge plugin review는 grounded였어요. 5개 finding 중 4개가 valid였죠. 세션에 skill 이름 충돌이 있을 때는, 실제 repo file 구조 위에서 도는 plugin reviewer가 세션 scope reviewer(Codex)보다 정밀도 높은 output을 내요.
 
 ### 14. 병렬 세션이 작업 중인 checkout에서의 Stale Local Read
 
 **어떻게 보이나:** 방금 읽은 function이 commit된 버전과 달라요. `git status` 결과가 연속으로 실행한 두 명령 사이에 달라져요. `--limit 1`로 확인한 CI run은 skip된 것처럼 보이는데, 진짜 run은 목록 한 줄 아래에서 진행 중이에요.
 
-**왜 이런 일이 생기나:** 이 패턴은 나머지 열세 개와 방향이 달라요 — 이번엔 stale한 게 AI reviewer가 아니라 저예요. 다른 세션이 같은 working checkout을 공유하며 활발하게 commit하고 있으면, file과 git·CI 상태를 담아둔 in-memory model이 읽은 시점과 다음 주장 사이에 stale해져요. 그러면 HEAD와 더 이상 일치하지 않는 bytes를 놓고 review하거나 보고하게 돼요.
+**왜 이런 일이 생기나:** 이 패턴은 나머지 열세 개와 방향이 달라요. 이번엔 stale한 게 AI reviewer가 아니라 저예요. 다른 세션이 같은 working checkout을 공유하며 활발하게 commit하고 있으면, file과 git·CI 상태를 담아둔 in-memory model이 읽은 시점과 다음 주장 사이에 stale해져요. 그러면 HEAD와 더 이상 일치하지 않는 bytes를 놓고 review하거나 보고하게 돼요.
 
 **예시 (codex-hud PR #20):**
 
 제가 읽은 `syncPatchedRuntime` body는 병렬 lane이 수정 중이던 working-tree 상태(reconcile-first)였어요. commit된 버전(`b51e659`)은 이미 reconcile-after-repair로 순서를 바꾼 뒤였죠. 이제는 존재하지도 않는 코드를 막겠다고 불필요한 guard를 추가할 뻔했어요. 같은 PR에서 "Claude review가 skip됐다?!" 경보는 `gh run list --limit 1`이 skip된 중복 `issue_comment` event를 잡은 것이었고, 진짜 run은 목록 한 줄 아래에서 진행 중이었어요.
 
-같은 실패 모드는 반대 방향으로도 작동해요. 이 블로그 repo의 PR #22에서는 bare working-tree read에 깨끗한 코드가 보인다는 이유로 Claude review finding을 오탐으로 기각했어요. 그런데 그 finding은 진짜였어요 — 공유 checkout의 다른 세션이 버그를 이미 로컬에서 고쳐둔 상태(`47e90be`)라, reviewer가 분석한 pushed head에는 버그가 그대로 있었거든요. 두 번째 reviewer pass가 이 오판을 잡았어요. stale read에서 나온 과잉 회의(over-skepticism)는 과잉 신뢰만큼 비싸요. multi-session tree에서는 AI finding을 bare working-tree read가 아니라 `git show origin/<branch>:<file>`과 `git log`로 검증하세요.
+같은 실패 모드는 반대 방향으로도 작동해요. 이 블로그 repo의 PR #22에서는 bare working-tree read에 깨끗한 코드가 보인다는 이유로 Claude review finding을 오탐으로 기각했어요. 그런데 그 finding은 진짜였어요. 공유 checkout의 다른 세션이 버그를 이미 로컬에서 고쳐둔 상태(`47e90be`)라, reviewer가 분석한 pushed head에는 버그가 그대로 있었거든요. 두 번째 reviewer pass가 이 오판을 잡았어요. stale read에서 나온 과잉 회의(over-skepticism)는 과잉 신뢰만큼 비싸요. multi-session tree에서는 AI finding을 bare working-tree read가 아니라 `git show origin/<branch>:<file>`과 `git log`로 검증하세요.
 
 **예방:** 공유 checkout에서 "done", "남은 것 없음", "이게 그 코드다" 같은 주장을 하기 전에 ground truth를 다시 확인하세요.
 
@@ -312,7 +312,17 @@ git log --oneline
 git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
 ```
 
-그다음 실제 file을 다시 읽으세요. in-memory model은 절대 믿지 말고요. CI는 `--limit 1`이 아니라 여러 run을 나열해서 확인하세요. 병렬 lane이 같은 file에서 앞서가고 있다면 작업을 중복하지 말고 물러서세요 — 한창 구현 중인 세션이 그 변경의 주인이니까요.
+그다음 실제 file을 다시 읽으세요. in-memory model은 절대 믿지 말고요. CI는 `--limit 1`이 아니라 여러 run을 나열해서 확인하세요. 병렬 lane이 같은 file에서 앞서가고 있다면 작업을 중복하지 말고 물러서세요. 한창 구현 중인 세션이 그 변경의 주인이니까요.
+
+## Agent 간 convergence를 severity 신호로 읽기
+
+위 패턴들은 대부분 PR에 코멘트를 다는 bot 하나에서 나왔어요. proactive review는 결이 좀 달라요. 독립적인 slice agent 여러 개가 같은 diff를 다른 누구보다 먼저 읽어요. 이때는 *agent들의 의견이 어디서 모이고 어디서 갈리는지* 자체가 개별 finding에 없는 정보를 담고 있어요.
+
+의견이 모이면 확신이 올라가요. `/v1/sync` 변경을 proactive review했을 때, 역할이 서로 다른 agent 셋(safety, structure, runtime)이 각자 다른 근거로 똑같은 `lastSyncedAt` starvation 결함을 짚었어요. agent 하나가 같은 말을 세 가지 방식으로 반복하는 것과는 무게가 다르죠. 몇 달 묵은 timestamp 버그가 "누군가의 의견"에서 "제일 먼저 고쳐야 할 것"으로 올라선 것도 이 때문이에요.
+
+의견이 갈릴 때도 신호가 있었어요. test assertion 하나를 두고 두 agent가 severity를 HIGH와 LOW로 정반대로 매겼어요. 한쪽은 조용히 통과해버리는 구멍을 봤고, 다른 쪽은 앞선 assertion이 그 구멍을 가리고 있다는 걸 봤어요. 둘 다 맞았고, 갈린 지점이 곧 가림막이 있던 자리였어요. 중간 severity로 평균 내는 것보다 불일치를 그대로 기록해두는 편이 나았어요.
+
+짚고 넘어갈 게 두 가지 있어요. 의견이 모였다는 건 그 지점이 눈에 띈다는 증거지, 그게 참이라는 증거는 아니에요. 그 review에서 결정을 만든 finding은 분류 전에 전부 소스와 다시 대조했고, client의 retry 동작을 두고 어떤 agent가 내놓은 주장은 repo로는 확인할 수 없는 가정으로 드러났어요. 같은 prompt 틀을 받은 agent들은 그 틀의 시야를 그대로 물려받기도 해요. 그래서 prompt가 한 번도 언급하지 않은 주제에서 나온 만장일치 침묵은 가장 약한 증거예요.
 
 ## 워크플로
 
@@ -350,11 +360,11 @@ git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
 
 **통계:** 14개 항목(6 CodeRabbit, 8 Claude Bot), 1 VALID BUG, 2 CONTROVERSIAL→FIX, 3 GTH→FIX, 1 SKIP, 6 INVALID, 1 DUP
 
-세 가지 새로운 혼동 패턴이 동시에 나타난 PR이에요. Python 프로젝트에서 Celery prefork worker, Pydantic v2 모델, factory pattern을 사용한 서비스 초기화 — AI reviewer가 일관되게 틀리는 세 가지였어요.
+세 가지 새로운 혼동 패턴이 동시에 나타난 PR이에요. Python 프로젝트에서 Celery prefork worker, Pydantic v2 모델, factory pattern 기반 서비스 초기화를 쓰는데, 전부 AI reviewer가 일관되게 틀리는 것들이에요.
 
 **주요 VALID BUG:**
 
-- `extract_tags`에 `ValueError` handler 누락 — 영구적 실패(잘못된 config, safety filter)를 fast-fail 대신 재시도
+- `extract_tags`에 `ValueError` handler 누락. 영구적 실패(잘못된 config, safety filter)를 fast-fail 대신 재시도
 
 **주요 INVALID (새 패턴):**
 
@@ -363,7 +373,7 @@ git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
 - Factory default(#7): factory가 명시적 값을 전달하므로 constructor default는 무관
 - GitHub Actions format: 쉼표 구분 `"Tool1,Tool2"`는 공식 문서와 일치
 
-**결과:** 6개 수정, 6개 INVALID 근거와 함께 기각. 정확도가 혼재 — CodeRabbit 4/6 INVALID, Claude Bot 1 VALID BUG + 2 INVALID.
+**결과:** 6개 수정, 6개 INVALID 근거와 함께 기각. 정확도는 엇갈렸어요. CodeRabbit은 6개 중 4개가 INVALID, Claude Bot은 1 VALID BUG + 2 INVALID였어요.
 
 ### 사례 4: moba-nestjs PR #710 Round 1+2 (Copilot + Claude)
 
@@ -373,7 +383,7 @@ GitHub API 406 이슈(#10)를 유발한 release PR이에요. 로컬에서 diff�
 
 **주요 VALID BUG:**
 
-- `moveCrossIntegration`에서 `blockRepo.count()`에 `withDeleted: true` 누락 — soft-deleted T block(취소된 반복 인스턴스)이 count되지 않아서 parent가 `moveCrossIntegrationSingle`로 잘못 라우팅
+- `moveCrossIntegration`에서 `blockRepo.count()`에 `withDeleted: true` 누락. soft-deleted T block(취소된 반복 인스턴스)이 count되지 않아서 parent가 `moveCrossIntegrationSingle`로 잘못 라우팅
 
 **주요 INVALID:**
 
@@ -397,13 +407,13 @@ Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`de
 
 - Cross-Branch 혼동(#9): Reviewer가 PR target(`develop`) 대신 `main` branch 코드를 분석. `toBeNull()`이 796-800번 줄 구현과 모순된다고 주장했지만, `develop`에서 해당 줄은 NOTE 주석(`deletedAt` 설정 코드는 PR #711에서 제거됨)
 
-**결과:** 양쪽 round에서 3개 수정, 6개 INVALID 기각. 새 패턴 문서화: Cross-Branch 혼동 — AI reviewer가 PR target이 `develop`인데도 `main` branch context를 기본으로 사용.
+**결과:** 양쪽 round에서 3개 수정, 6개 INVALID 기각. 새 패턴도 문서화했어요. Cross-Branch 혼동은 PR target이 `develop`인데도 AI reviewer가 `main` branch context를 기본으로 삼는 경우예요.
 
 ### 사례 6: 3b-forge PR #3 Round 1 (4 reviewers — Claude + Copilot + Codex + CodeRabbit)
 
 **통계:** 16개 항목: 9 VALID BUG/IMPROVEMENT, 6 GTH→FIX, 1 CONTROVERSIAL→VALID(user redirect 후). 0 INVALID. 0 DEFER. 18개 thread 해결: 11개 명시적 reply + 7개 CodeRabbit auto-resolve. 16개 atomic fix commit. `f56e066`으로 merge.
 
-**범위:** Wave 3 SSoT flip tooling: `scripts/flip-to-forge.sh`, refactor된 `scripts/check-3b-drift.sh`, docs. YAML manifest를 통해 별도 git repo에 destructive `rm`과 `ln -s`를 수행하는 shell script였어요. 고위험, 낮은 test coverage, 좁은 범위라 4-reviewer pass에 적합했어요.
+**범위:** Wave 3 SSoT flip tooling: `scripts/flip-to-forge.sh`(신규, 322줄), refactor된 `scripts/check-3b-drift.sh`, docs. YAML manifest를 통해 별도 git repo에 destructive `rm`과 `ln -s`를 수행하는 shell script였어요. 고위험, 낮은 test coverage, 좁은 범위라 4-reviewer pass에 적합했어요.
 
 **Cross-reviewer convergence:**
 
@@ -417,7 +427,7 @@ Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`de
 
 **CONTROVERSIAL은 user redirect로 처리:** R1-16은 `scripts/check-3b-drift.sh:25`에서 exit code 2가 advisory drift와 pre-flight failure를 모두 의미하는 문제였어요. 바로 수정하지 않고 CONTROVERSIAL로 분류한 뒤, code 분리, code 2 의미 축소, reinforcing comment 유지, follow-up issue defer 네 가지 선택지를 제시했어요. 사용자는 code 분리를 선택했고, fix는 VALID 수정 이후 GOOD-TO-HAVE batch 전에 반영했어요.
 
-**스레드 해결에서 배운 점:** Copilot과 Codex 스레드는 GitHub GraphQL `resolveReviewThread` mutation으로 명시적으로 닫아주기 전까지 열린 상태로 남아요. CodeRabbit은 참조 코드가 바뀌면 일부 스레드를 자동으로 닫았고, 5개 중 3개가 답글 없이 해결됐어요. commit이 쌓이면서 라인 번호도 이동해요. 그래서 finding과 commit을 매핑할 안정적인 키는 `path:line`이 아니라 GraphQL 스레드 ID였어요.
+**스레드 해결에서 배운 점:** Copilot과 Codex 스레드는 GitHub GraphQL `resolveReviewThread` mutation으로 명시적으로 닫아주기 전까지 열린 상태로 남아요. CodeRabbit은 참조 코드가 바뀌면 일부 스레드를 자동으로 닫았고, 5개 중 3개가 답글 없이 해결됐어요. commit이 쌓이면서 라인 번호도 이동해요. 그래서 finding과 commit을 매핑할 안정적인 키는 `path:line`이 아니라 GraphQL 스레드 ID였어요. 마무리로는 round summary를 올린 뒤 `@claude review` 트리거 코멘트와 claude[bot]의 구조화된 review를 `minimizeComment(..., classifier: RESOLVED)`로 접었어요. 그러면 PR 대화에는 사람이 읽을 audit trail만 남아요.
 
 **핵심 INVALID count: 0.** 이 PR에서는 3개 이상 agent의 convergence가 valid finding의 완전한 positive predictor였어요. 이유는 범위가 좁아 agent들이 end-to-end로 추론할 수 있었고, script가 destructive operation을 수행해 reviewer들이 보수적으로 판단했으며, 4개의 독립 reviewer가 개별 false positive를 줄였기 때문으로 보여요.
 

@@ -5,7 +5,7 @@ description: >-
   macOS. Apple Pages is the obvious built-in path (`open` + AppleScript export),
   but...
 date: 2026-07-22T00:00:00.000Z
-updated: 2026-07-23T00:00:00.000Z
+updated: "2026-07-31"
 tags:
   - devops
   - tooling
@@ -22,7 +22,7 @@ references:
       https://help.libreoffice.org/latest/en-US/text/shared/guide/start_parameters.html
     title: LibreOffice command-line parameters
     type: official
-source_content_hash: 1232be4ac30152a61b91095e70cb68ebff74783aec211385735f2ff68ebdd05f
+source_content_hash: bc4e38512748259f0ee5be3cc1126e999ce0bf432ff706fddc9bbfabdf1a89f5
 ---
 
 I needed a stable PDF from a Word-list-formatted resume on macOS. The obvious
@@ -30,9 +30,9 @@ path was to open the DOCX in Pages and export it, but the resulting artifact
 failed two checks that mattered for this submission: repeatable layout and an
 intact searchable text layer.
 
-This is one document and toolchain, not a universal renderer comparison. The
-useful part is the verification pipeline: it turns a visual export into an
-artifact I can check before sending.
+This is one document and one toolchain, not a general comparison of PDF
+renderers. What mattered more than the renderer choice was the verification
+step, which let me check the export instead of eyeballing it before sending.
 
 ## What failed in the Pages path
 
@@ -41,15 +41,19 @@ layouts. One looked correct; the other displaced list markers to the end of a
 previous bullet.
 
 The searchable text also changed. `pdftotext` split terms such as `Airflow` into
-`Air ow` and `Actions` into `Ac ons`, with a large token-count difference from
-the source mirror. A human could still infer the words visually, but a parser
-would receive different text.
+`Air ow` and `Actions` into `Ac ons`, and the token count came out well off the
+source mirror. The splits all landed on ligature pairs — fl in `Airflow`, ti in
+`Actions` and `real-time` — so the glyph rendered but the extracted character
+did not. A human could still infer the words visually, but a parser would
+receive different text.
 
-One OOXML detail contributed to the layout behavior. In this file,
-`paragraph_format.keep_with_next = False` produced
+One OOXML detail contributed to the layout behavior. In this file, setting
+`paragraph_format.keep_with_next = False` in python-docx produced
 `<w:keepNext w:val="0"/>`, while removing the element with `None` avoided the
-problem in Pages. That observation is version- and document-specific, so I kept
-it in the test case rather than treating it as a general OOXML rule.
+problem in Pages. The implied reading is that Pages ignores the `val` attribute
+here and treats the element as present-therefore-true, so an explicit "off"
+lands as "on". That observation is version- and document-specific, so I kept it
+in the test case rather than treating it as a general OOXML rule.
 
 ## Export with LibreOffice headless
 
@@ -62,36 +66,40 @@ brew install --cask libreoffice
   --convert-to pdf --outdir "$OUT_DIR" resume.docx
 ```
 
-LibreOffice documents `--headless`, `--convert-to`, and `--outdir`, which makes
-the renderer suitable for a scripted export. The command alone is not the gate,
-though. I still verified the resulting file.
+LibreOffice documents `--headless`, `--convert-to`, and `--outdir`, so the
+export is easy to script. The four checks below are not part of that documented
+surface; they came out of this failure. Running the command was not the part I
+trusted, though. I still checked the file it produced.
 
 ## Verify the artifact, not the command
 
 The check had four parts:
 
-1. **Repeatability:** convert twice; compare per-page raster hashes (PyMuPDF
-   `page.get_pixmap(dpi=140).samples` md5).
-2. **Dual-renderer visual check:** rasterize with PyMuPDF and Poppler
-   (`pdftoppm`), then inspect every page.
+1. **Repeatability:** convert twice and compare per-page raster hashes (PyMuPDF
+   `page.get_pixmap(dpi=140).samples` md5) to see whether the output repeats.
+2. **Dual-renderer visual check:** rasterize with both PyMuPDF and Poppler
+   (`pdftoppm`), then look at every page. A defect that one renderer smooths
+   over tends to show up in the other.
 3. **Text-layer regression scan:**
-   `pdftotext file.pdf - | grep -cE "Air ow|Ac ons|real- me"` must be 0;
-   spot-check that important terms survived intact.
-4. **Token parity:** normalized word-token count of `pdftotext` output must
-   match the source text mirror, with reviewed exceptions for line-break
-   hyphenation.
+   `pdftotext file.pdf - | grep -cE "Air ow|Ac ons|real- me"` must return 0, and
+   important terms have to survive a spot check intact.
+4. **Token parity:** compare the normalized word-token count of `pdftotext`
+   output against the source text mirror, with reviewed exceptions for
+   line-break hyphenation. A split like `auto-scaling` becoming `autoscaling`
+   was the only difference I was willing to accept.
 
-Hash equality across two conversions is useful evidence of repeatability, but it
-does not prove visual correctness. That is why the visual and text-layer checks
-remain separate.
+Two identical hashes tell me the conversion repeats. They say nothing about
+whether the page actually looks right, so the visual and text-layer checks stay
+separate.
 
 ## Practical takeaway
 
-This workflow fits automated DOCX-to-PDF exports where both layout and
-searchable text matter. Keep the DOCX as the editable source and the verified
-PDF as a frozen submission artifact; any source edit invalidates the PDF and
-restarts the checks.
+This fits automated DOCX-to-PDF exports where both the layout and the searchable
+text matter and the renderer version can be pinned. The DOCX stays the editable
+source and the verified PDF is a frozen submission artifact, so any edit to the
+source invalidates the PDF and sends me back through the checks.
 
-For a document that only humans will read, the four-part gate may be more than
-you need. For a new template, font set, or application version, rerun the
-comparison instead of assuming this result still holds.
+For a document only a person will read, four checks is probably more machinery
+than the job deserves. And if the template, the fonts, or either application's
+version changes, I would rerun the comparison rather than assume this result
+carries over.

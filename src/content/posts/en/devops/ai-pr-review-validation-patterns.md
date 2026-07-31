@@ -2,7 +2,7 @@
 title: AI PR Review Validation Patterns
 description: Fourteen patterns where AI code reviewers (Claude, Copilot, Codex) produce false positives, plus the classification framework and reinforcing-comment templates that keep triage fast.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-07-02T00:00:00.000Z
+updated: "2026-07-31"
 tags:
   - devops
   - ai
@@ -11,7 +11,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 5622a3af80f8ff795f932f1e97fd10f30555d7da23fdfb873a39eac3c718f9d1
+source_content_hash: 9656a0e783c206b852fc3f0fcfe0632c088c89093274aeed44bdb754cf31ff1c
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -20,18 +20,18 @@ references:
 
 ## Classification Framework
 
-Not every AI review comment deserves the same treatment. Some are genuine bugs, others are stylistic preferences, and some are flat-out wrong. Over time, I've found that a simple VALID/INVALID binary isn't enough — you need more granularity to make quick triage decisions.
+Not every AI review comment deserves the same treatment. Some are genuine bugs, others are stylistic preferences, and some are flat-out wrong. A simple VALID/INVALID binary stopped being enough for me fairly quickly. I needed more granularity to keep triage fast.
 
 | Classification        | Criteria                                           | Action                             |
 | --------------------- | -------------------------------------------------- | ---------------------------------- |
 | **VALID BUG**         | Real bug, security issue, will cause failure       | Fix immediately                    |
 | **VALID IMPROVEMENT** | Correct suggestion, improves code quality          | Fix immediately                    |
 | **GOOD-TO-HAVE**      | Correct but low-priority improvement               | Fix if easy, skip if risky         |
-| **CONTROVERSIAL**     | Debatable — valid concern but cost/benefit unclear | Evaluate case-by-case              |
+| **CONTROVERSIAL**     | Debatable: valid concern but cost/benefit unclear  | Evaluate case-by-case              |
 | **OPTIONAL**          | Nice-to-have, stylistic, not urgent                | Ask user                           |
 | **INVALID**           | Wrong, misunderstood context, doesn't apply        | Document + add reinforcing comment |
 
-The two tiers I added later — GOOD-TO-HAVE and CONTROVERSIAL — turned out to be essential for release PRs. In a feature branch review, you can afford to address everything. But when you're triaging 19 findings on a develop-to-main merge, you need to quickly separate "correct and worth the risk" from "correct but not worth touching right now." GOOD-TO-HAVE covers improvements where the fix is easy and the risk is low. CONTROVERSIAL is for findings where the AI has a valid point, but the cost of fixing outweighs the benefit in the current context — things like adding type guards to 27 test files during a release.
+The two tiers I added later, GOOD-TO-HAVE and CONTROVERSIAL, turned out to matter most on release PRs. On a feature branch I can usually address everything. Triaging 19 findings on a develop-to-main merge is a different job, and there I had to separate "correct and worth the risk" from "correct but not worth touching right now." GOOD-TO-HAVE covers improvements where the fix is easy and the risk is low. CONTROVERSIAL is for findings where the AI has a valid point, but the cost of fixing outweighs the benefit in the current context: adding type guards to 27 test files during a release, say.
 
 ## Common AI Confusion Patterns
 
@@ -120,7 +120,7 @@ resyncOccurred = true;
 
 **What it looks like:** Agent flags module-level singletons as thread-unsafe or suggests adding locks.
 
-**Why it happens:** AI defaults to a threading mental model, but many production setups use process-based workers. Celery with prefork, gunicorn with worker processes — each worker gets its own memory space. There's no shared state to protect.
+**Why it happens:** AI defaults to a threading mental model, but many production setups use process-based workers. Celery with prefork, or gunicorn with worker processes, gives each worker its own memory space, so there is no shared state to protect.
 
 **Example:**
 
@@ -129,7 +129,7 @@ Agent: "Global _llm_service is not thread-safe — use threading.Lock"
 Reality: Celery prefork = separate processes; each gets its own global namespace
 ```
 
-This one came up in a Python project where CodeRabbit flagged every module-level variable as a thread-safety issue. In a Django/Celery stack running prefork workers, each process has its own copy of the global namespace. No threads, no sharing, no problem.
+This one came up in a Python project where CodeRabbit flagged every module-level variable as a thread-safety issue. In a Django/Celery stack running prefork workers, each process has its own copy of the global namespace, so nothing is shared across threads and there is nothing to lock.
 
 **Prevention:** Add reinforcing comment:
 
@@ -142,7 +142,7 @@ This one came up in a Python project where CodeRabbit flagged every module-level
 
 **What it looks like:** Agent claims that assigning attributes to a Pydantic model after construction will fail or raise an error.
 
-**Why it happens:** AI assumes Pydantic models are immutable by default. In reality, Pydantic v2 models are mutable unless you explicitly set `model_config = ConfigDict(frozen=True)`. Without that config, attribute assignment works just fine.
+**Why it happens:** AI assumes Pydantic models are immutable by default. Pydantic v2 models are mutable unless you explicitly set `model_config = ConfigDict(frozen=True)`. Without that config, attribute assignment works just fine.
 
 **Example:**
 
@@ -157,7 +157,7 @@ If you're using Pydantic v2 without `frozen=True`, post-construction assignment 
 
 **What it looks like:** Agent flags a constructor's default parameter value as inconsistent with production configuration.
 
-**Why it happens:** AI compares the constructor signature in isolation, ignoring that a factory function always provides an explicit value. The default only exists as a fallback for testing or direct instantiation — it never reaches production.
+**Why it happens:** AI compares the constructor signature in isolation, ignoring that a factory function always provides an explicit value. The default only exists as a fallback for testing or direct instantiation, and it never reaches production.
 
 **Example:**
 
@@ -193,7 +193,7 @@ Agent: "Lines 796-800 set deletedAt unconditionally — toBeNull() should fail"
 Reality: Those lines are a NOTE comment on develop; the if-block was removed in PR #711
 ```
 
-I hit this on PR #712 where Claude analyzed `main` branch code and flagged a test assertion as incorrect. On `develop`, the lines it cited were already replaced by a comment — the production code had changed in the previous PR. The assertion was correct for the current `develop` state.
+I hit this on PR #712 where Claude analyzed `main` branch code and flagged a test assertion as incorrect. On `develop`, the lines it cited were already replaced by a comment, because the production code had changed in the previous PR. The assertion was correct for the current `develop` state.
 
 **Prevention:** Add reinforcing comment at the test site:
 
@@ -206,15 +206,15 @@ I hit this on PR #712 where Claude analyzed `main` branch code and flagged a tes
 
 **What it looks like:** AI reviewer returns no comments or very sparse feedback on release PRs.
 
-**Why it happens:** GitHub's API returns HTTP 406 when a PR diff exceeds 20,000 lines. Release PRs (develop to main) often hit this limit. AI reviewers that rely on the diff API endpoint simply get no data to work with, so they either produce empty reviews or hallucinate based on file names alone.
+**Why it happens:** GitHub's API returns HTTP 406 when a PR diff exceeds 20,000 lines. Release PRs (develop to main) often hit this limit. AI reviewers that rely on the diff API endpoint get no data to work with, so they either produce empty reviews or hallucinate based on file names alone.
 
-**Workaround:** Generate diffs locally with `git diff origin/main..origin/develop` and split across review agents by domain. This bypasses the API limitation entirely and lets you feed manageable chunks to each reviewer.
+**Workaround:** Generate diffs locally with `git diff origin/main..origin/develop` and split across review agents by domain. That sidesteps the API limit and gives each reviewer a chunk it can actually read.
 
 ### 11. Authorship Scoping for Release PRs
 
 **What it looks like:** Review findings flag code written by other team members.
 
-**Why it matters:** Release PRs are often multi-author squash merges. Reviewing every line of code written by the entire team wastes time and creates noise you can't act on — you don't have full context on someone else's implementation decisions. Focus on your own commits unless the severity is CRITICAL.
+**Why it matters:** Release PRs are often multi-author squash merges. Reviewing every line the whole team wrote burns time and produces noise I can't act on, because I don't have the context behind someone else's implementation decisions. I stick to my own commits unless the severity is CRITICAL.
 
 **Technique:** Check authorship before triaging:
 
@@ -222,15 +222,15 @@ I hit this on PR #712 where Claude analyzed `main` branch code and flagged a tes
 git log origin/main..HEAD -- {file} --format="%h %ae %s"
 ```
 
-Mark non-your-author findings as N/A in the finding registry. Only escalate CRITICAL findings regardless of author. This saved significant time on PR #710, where 7 out of 15 unique findings were N/A due to authorship scoping.
+Mark findings on other people's code as N/A in the finding registry, and escalate only CRITICAL ones regardless of author. On PR #710 that took 7 of 15 unique findings off my plate before triage started.
 
 ### 12. Markdown Formatting Hallucination
 
 **What it looks like:** Reviewer claims markdown tables have formatting issues (e.g., "leading `||` produces empty first column") when the tables are perfectly valid.
 
-**Why it happens:** Copilot sometimes generates formatting complaints by pattern-matching against common markdown issues without actually parsing the file content. Unlike other confusion patterns where the AI misreads code logic, this one is purely fabricated -- the reviewer invents a syntax problem that does not exist anywhere in the file.
+**Why it happens:** Copilot sometimes generates formatting complaints by pattern-matching against common markdown issues without actually parsing the file content. Unlike other confusion patterns where the AI misreads code logic, this one is purely fabricated. The reviewer invents a syntax problem that does not exist anywhere in the file.
 
-What makes this pattern especially costly is that it scales with the number of similar files. When reviewing documentation-only PRs with many identical file structures (e.g., 11 READMEs generated from the same template), the hallucination repeats across every file, inflating the finding count dramatically.
+What makes this pattern especially costly is that it scales with the number of similar files. When reviewing documentation-only PRs with many identical file structures (e.g., 11 READMEs generated from the same template), the hallucination repeats across every file and the finding count balloons.
 
 **Example:**
 
@@ -246,7 +246,7 @@ I hit this on crucio PR #40, where 12 of 18 Copilot findings (67%) were this exa
 
 ### 13. Cross-Skill Name Confusion (Phantom Comparison)
 
-**What it looks like:** The reviewer cites specific line numbers and field names that look authoritative — but `grep -n` against the actual file shows entirely different content. The "missing fix" the reviewer suggests would actually break the file under review, but it would be correct for a *different* skill or module that shares a name root.
+**What it looks like:** The reviewer cites specific line numbers and field names that look authoritative, but `grep -n` against the actual file shows entirely different content. The "missing fix" the reviewer suggests would actually break the file under review, but it would be correct for a *different* skill or module that shares a name root.
 
 **Why it happens:** When two skills share a name root and both are available in the session's skill registry, AI reviewers can mentally merge their schemas and review the PR against the OTHER one's behavior. The model produces line-level "findings" that reference content which doesn't exist in your file but DOES exist in the conflated sibling.
 
@@ -254,10 +254,10 @@ I hit this on crucio PR #40, where 12 of 18 Copilot findings (67%) were this exa
 
 Codex reviewed an import of `/interview` (a markdown-only Socratic skill, zero runtime dependencies). Its findings claimed:
 
-- "curl version check at SKILL.md:33" — line 33 was a `## Instructions` header. No curl anywhere in source.
-- "MCP asks questions at SKILL.md:93" — line 93 was a code-confirmation example. Source explicitly says "no MCP tools" at line 38.
-- "Replace summary with `ooo seed` artifact" — `ooo seed` is the artifact of `/ouroboros:interview`, a different skill in the same session's registry.
-- "Tighten MCP response contract — `meta.session_id`, `meta.is_complete`" — source has no MCP layer; it's a pure conversation engine.
+- "curl version check at SKILL.md:33". Line 33 was a `## Instructions` header, and there is no curl anywhere in the source.
+- "MCP asks questions at SKILL.md:93". Line 93 was a code-confirmation example, and the source explicitly says "no MCP tools" at line 38.
+- "Replace summary with `ooo seed` artifact". But `ooo seed` is the artifact of `/ouroboros:interview`, a different skill in the same session's registry.
+- "Tighten MCP response contract: `meta.session_id`, `meta.is_complete`". The source has no MCP layer; it's a pure conversation engine.
 
 All four findings would apply to `/ouroboros:interview` (Python/MCP/produces ooo seeds). Codex appears to have conflated the two skills based on shared name root plus shared session availability. Only one of five findings (a dead filesystem link) was valid.
 
@@ -265,10 +265,10 @@ All four findings would apply to `/ouroboros:interview` (Python/MCP/produces ooo
 
 - Skill registries surface multiple skills with overlapping names (`/interview` and `/ouroboros:interview`).
 - LLM reviewers sometimes cite "the skill" without grounding which one.
-- Confidence stays high because the OTHER skill IS internally consistent — the reviewer's mental model isn't broken, it's just pointed at the wrong target.
+- Confidence stays high because the OTHER skill IS internally consistent. The reviewer's mental model isn't broken, it's just pointed at the wrong target.
 - Output looks specific (line numbers, field names) but is fabricated for the file under review.
 
-**Prevention — cross-check discipline.** For every AI review finding that references specific lines, files, or APIs, run:
+**Prevention: cross-check discipline.** For every AI review finding that references specific lines, files, or APIs, run:
 
 ```bash
 grep -n -i '<claimed-string>' <claimed-file>
@@ -277,19 +277,19 @@ sed -n '<claimed-line>p' <claimed-file>
 
 If the grep returns empty or the line shows different content, the finding is either hallucinated or comparing against a phantom version. Treat every unverified claim as INVALID until grep confirms it. This adds about 5 seconds per finding and catches cross-skill confusion that would otherwise drive 30+ minutes of wasted fix work.
 
-**Reviewer asymmetry (data point, same PR):** the 3b-forge plugin review on the same PR was grounded — 4 of 5 findings valid. Plugin reviewers operating on the actual repo file structure produce higher-precision output than session-scope reviewers (Codex) when the session contains skill name collisions.
+**Reviewer asymmetry (data point, same PR):** the 3b-forge plugin review on the same PR was grounded, with 4 of 5 findings valid. Plugin reviewers operating on the actual repo file structure produce higher-precision output than session-scope reviewers (Codex) when the session contains skill name collisions.
 
 ### 14. Stale Local Read Under a Live Parallel-Lane Checkout
 
 **What it looks like:** A function you "just read" doesn't match the committed version. `git status` flips between two consecutive commands. A CI run you checked with `--limit 1` looks skipped while the real run is in progress one line down.
 
-**Why it happens:** This one is different from the other thirteen — the stale state is yours, not the AI reviewer's. When another session shares the same working checkout and is actively committing, your in-memory model of a file — or of git and CI state — goes stale between your read and your next claim. You end up reviewing or reporting against bytes that no longer match HEAD.
+**Why it happens:** This one is different from the other thirteen, because the stale state is yours, not the AI reviewer's. When another session shares the same working checkout and is actively committing, your in-memory model of a file (or of git and CI state) goes stale between your read and your next claim. You end up reviewing or reporting against bytes that no longer match HEAD.
 
 **Example (codex-hud PR #20):**
 
-The `syncPatchedRuntime` body I read was the parallel lane's mid-edit working-tree state (reconcile-first); the committed version (`b51e659`) had already reordered it to reconcile-after-repair. I nearly added a redundant guard against code that no longer existed. On the same PR, a "Claude review skipped?!" alarm turned out to be `gh run list --limit 1` catching a skipped duplicate `issue_comment` event — the real run was in progress, one line further down the list.
+The `syncPatchedRuntime` body I read was the parallel lane's mid-edit working-tree state (reconcile-first); the committed version (`b51e659`) had already reordered it to reconcile-after-repair. I nearly added a redundant guard against code that no longer existed. On the same PR, a "Claude review skipped?!" alarm turned out to be `gh run list --limit 1` catching a skipped duplicate `issue_comment` event, while the real run was in progress one line further down the list.
 
-The same failure mode cuts the other way, too. On PR #22 of this blog's own repo, I dismissed a Claude review finding as a false positive because a bare working-tree read showed clean code. The finding was real — a concurrent session on the shared checkout had already fixed the bug locally (`47e90be`), so the pushed head the reviewer analyzed still had it. A second reviewer pass caught the miscall. Over-skepticism from a stale read costs just as much as over-trust: in a multi-session tree, validate AI findings against `git show origin/<branch>:<file>` and `git log`, never a bare working-tree read.
+The same failure mode cuts the other way, too. On PR #22 of this blog's own repo, I dismissed a Claude review finding as a false positive because a bare working-tree read showed clean code. The finding was real. A concurrent session on the shared checkout had already fixed the bug locally (`47e90be`), so the pushed head the reviewer analyzed still had it. A second reviewer pass caught the miscall. Over-skepticism from a stale read costs just as much as over-trust: in a multi-session tree, validate AI findings against `git show origin/<branch>:<file>` and `git log`, never a bare working-tree read.
 
 **Prevention:** Before any "done" / "nothing left" / "this is the code" claim on a shared checkout, re-verify ground truth:
 
@@ -300,7 +300,17 @@ git log --oneline
 git show origin/<branch>:<file>   # the bytes the reviewer actually saw
 ```
 
-Then read the actual file again — never trust the in-memory model. For CI, list several runs, not `--limit 1`. And when a parallel lane is out-pacing you on the same files, stand down rather than duplicate the work — the session actively implementing owns those changes.
+Then read the actual file again, and don't trust the in-memory model. For CI, list several runs, not `--limit 1`. And when a parallel lane is out-pacing you on the same files, stand down rather than duplicate the work; the session actively implementing owns those changes.
+
+## Cross-Agent Convergence as a Severity Signal
+
+Most of the patterns above come from a single bot commenting on a PR. Proactive review behaves differently, with several independent slice agents reading the same diff before anyone else sees it. There the *agreement pattern between agents* carries information none of the individual findings do.
+
+Convergence raises confidence. On a proactive review of a `/v1/sync` change, three agents with different mandates (safety, structure, runtime) each surfaced the same `lastSyncedAt` starvation defect from different evidence. That is a much stronger signal than one agent asserting the same thing three ways, and it is what promoted a latent, months-old timestamp bug from "someone's opinion" to the thing worth fixing first.
+
+Divergence carried signal too. Two agents split HIGH versus LOW on the severity of a single test assertion: one saw a silent-pass hole, the other saw the same hole masked by a preceding assertion. Both were right, and the split pointed straight at where the masking lived. Recording the disagreement was worth more than averaging it into a middle severity.
+
+Two caveats I would not skip. Convergence is evidence of salience, not of truth. Every finding that drove a decision on that review still got re-checked against the source before triage, and one agent's claim about client retry behavior turned out to be an assumption the repo cannot confirm. And agents handed the same prompt scaffold inherit its framing, so unanimous silence about something the prompt never named is the weakest evidence in the pile.
 
 ## Reinforcing Comment Templates
 
@@ -347,11 +357,11 @@ Then read the actual file again — never trust the in-memory model. For CI, lis
 
 **Stats:** 14 items (6 CodeRabbit, 8 Claude Bot), 1 VALID BUG, 2 CONTROVERSIAL→FIX, 3 GTH→FIX, 1 SKIP, 6 INVALID, 1 DUP
 
-This was the PR where three new confusion patterns emerged at once. The Python project uses Celery with prefork workers, Pydantic v2 models, and a factory pattern for service initialization — three things AI reviewers consistently get wrong.
+This was the PR where three new confusion patterns emerged at once. The Python project uses Celery with prefork workers, Pydantic v2 models, and a factory pattern for service initialization, which are three things AI reviewers consistently get wrong.
 
 **Key VALID BUG:**
 
-- `extract_tags` missing `ValueError` handler — retried permanent failures (bad config, safety filter) instead of failing fast
+- `extract_tags` missing `ValueError` handler: retried permanent failures (bad config, safety filter) instead of failing fast
 
 **Key INVALID (new patterns):**
 
@@ -360,17 +370,17 @@ This was the PR where three new confusion patterns emerged at once. The Python p
 - Factory default (#7): constructor default irrelevant when factory passes explicit value
 - GitHub Actions format: comma-separated `"Tool1,Tool2"` matches official docs
 
-**Outcome:** 6 fixes applied, 6 INVALID items dismissed with evidence. Mixed accuracy — CodeRabbit had 4/6 INVALID, Claude Bot had 1 VALID BUG + 2 INVALID.
+**Outcome:** 6 fixes applied, 6 INVALID items dismissed with evidence. Mixed accuracy: CodeRabbit had 4/6 INVALID, Claude Bot had 1 VALID BUG + 2 INVALID.
 
 ### Example 4: moba-nestjs PR #710 Round 1+2 (Copilot + Claude)
 
 **Stats:** 19 raw findings → 15 unique after dedup. 1 VALID BUG, 2 GTH→FIX, 3 CONTROVERSIAL→SKIP, 1 INVALID, 3 DEFER, 7 N/A (authorship)
 
-This was a release PR (develop to main) with a large diff that triggered the GitHub API 406 issue (#10). The workaround — generating diffs locally and splitting across agents by domain — worked well but introduced the authorship scoping challenge (#11). Nearly half the findings were N/A because they flagged code written by other team members.
+This was a release PR (develop to main) with a large diff that triggered the GitHub API 406 issue (#10). The workaround, generating diffs locally and splitting across agents by domain, worked well but introduced the authorship scoping challenge (#11). Nearly half the findings were N/A because they flagged code written by other team members.
 
 **Key VALID BUG:**
 
-- `blockRepo.count()` missing `withDeleted: true` in `moveCrossIntegration` — soft-deleted T blocks (cancelled recurring instances) not counted, causing parent to route incorrectly to `moveCrossIntegrationSingle`
+- `blockRepo.count()` missing `withDeleted: true` in `moveCrossIntegration`: soft-deleted T blocks (cancelled recurring instances) not counted, causing parent to route incorrectly to `moveCrossIntegrationSingle`
 
 **Key INVALID:**
 
@@ -388,19 +398,19 @@ This was a release PR (develop to main) with a large diff that triggered the Git
 
 **Stats:** Round 1: 8 items (5 INVALID, 2 CONTROVERSIAL→FIX, 1 GTH→FIX). Round 2: 2 items (1 INVALID, 1 GTH→FIX)
 
-This is where Cross-Branch Confusion (#9) first showed up. Claude analyzed `main` branch code instead of the PR's target (`develop`) and claimed a test assertion contradicted the implementation at lines 796-800. On `develop`, those lines were already a NOTE comment — the `deletedAt`-setting code had been removed in the previous PR (#711).
+This is where Cross-Branch Confusion (#9) first showed up. Claude analyzed `main` branch code instead of the PR's target (`develop`) and claimed a test assertion contradicted the implementation at lines 796-800. On `develop`, those lines were already a NOTE comment, because the `deletedAt`-setting code had been removed in the previous PR (#711).
 
 **Key INVALID (new pattern):**
 
-- Cross-Branch Confusion (#9): Reviewer analyzed `main` branch code instead of PR's target (`develop`). Claimed `toBeNull()` contradicts implementation at lines 796-800 — but those lines are a NOTE comment on `develop` (the `deletedAt`-setting code was removed in PR #711)
+- Cross-Branch Confusion (#9): Reviewer analyzed `main` branch code instead of PR's target (`develop`). Claimed `toBeNull()` contradicts implementation at lines 796-800, but those lines are a NOTE comment on `develop` (the `deletedAt`-setting code was removed in PR #711)
 
-**Outcome:** 3 fixes applied across both rounds, 6 INVALID dismissed. New pattern documented: Cross-Branch Confusion — AI reviewers default to `main` branch context even when PR targets `develop`.
+**Outcome:** 3 fixes applied across both rounds, 6 INVALID dismissed. New pattern documented: Cross-Branch Confusion, where AI reviewers default to `main` branch context even when PR targets `develop`.
 
 ### Example 6: 3b-forge PR #3 Round 1 (4 reviewers — Claude + Copilot + Codex + CodeRabbit)
 
 **Stats:** 16 items: 9 VALID BUG/IMPROVEMENT, 6 GTH→FIX, 1 CONTROVERSIAL→VALID after user redirect. 0 INVALID. 0 DEFER. 18 threads resolved: 11 explicit replies plus 7 CodeRabbit auto-resolves. 16 atomic fix commits. Merged `f56e066`.
 
-**Scope:** Wave 3 SSoT flip tooling: `scripts/flip-to-forge.sh`, a refactored `scripts/check-3b-drift.sh`, and docs. The scripts performed destructive `rm` and `ln -s` operations on a separate git repo through a YAML manifest. High-stakes, low-tests, narrow scope: ideal territory for a four-reviewer pass.
+**Scope:** Wave 3 SSoT flip tooling: `scripts/flip-to-forge.sh` (new, 322 lines), a refactored `scripts/check-3b-drift.sh`, and docs. The scripts performed destructive `rm` and `ln -s` operations on a separate git repo through a YAML manifest. High-stakes, low-tests, narrow scope: ideal territory for a four-reviewer pass.
 
 **Cross-reviewer convergence:**
 
@@ -414,7 +424,7 @@ This is where Cross-Branch Confusion (#9) first showed up. Claude analyzed `main
 
 **Controversial handled via user redirect:** R1-16 flagged `scripts/check-3b-drift.sh:25`, where exit code 2 covered both advisory drift and pre-flight failure. I classified it CONTROVERSIAL instead of immediately fixing it, then surfaced four options: split the codes, narrow code 2, keep the overload with a reinforcing comment, or defer to a follow-up issue. The user chose the split, so the fix landed after the VALID fixes and before the GOOD-TO-HAVE batch.
 
-**Thread-resolution learning:** Copilot and Codex threads stay open until explicitly resolved through GitHub GraphQL's `resolveReviewThread` mutation. CodeRabbit auto-closes some threads when referenced code changes; three of its five threads resolved without a reply. Line numbers also shifted as commits landed, so GraphQL thread IDs were the stable key for mapping findings to commits.
+**Thread-resolution learning:** Copilot and Codex threads stay open until explicitly resolved through GitHub GraphQL's `resolveReviewThread` mutation. CodeRabbit auto-closes some threads when referenced code changes; three of its five threads resolved without a reply. Line numbers also shifted as commits landed, so GraphQL thread IDs were the stable key for mapping findings to commits. As a cleanup step, the `@claude review` trigger comment and claude[bot]'s structured review both got minimized via `minimizeComment(..., classifier: RESOLVED)` once the round summary was posted, which leaves the PR conversation showing only the human-readable audit trail.
 
 **Key INVALID count: 0.** Convergence across three or more agents was a perfect positive predictor on this PR. The likely reason: the scope was narrow enough for agents to reason end-to-end, the scripts performed destructive operations that biased reviewers toward caution, and four independent reviewers reduced individual false positives.
 
