@@ -2170,7 +2170,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 				kicker: 'Module 12 · Pattern Matching',
 				title: 'Pattern Matching Algorithms',
 				summary:
-					'Finding a pattern of length m inside a text of length n, where overlapping occurrences all count. Brute force retries every alignment at O(mn); Boyer-Moore skips ahead using a last occurrence table, KMP realigns using a failure table for an O(m + n) guarantee, and Rabin-Karp screens each window with a rolling hash before comparing characters.',
+					'Finding a pattern of length m inside a text of length n, where overlapping occurrences all count. Brute force retries every alignment, O(mn) in the worst case; Boyer-Moore skips ahead using a last occurrence table, KMP realigns using a failure table for an O(m + n) guarantee, and Rabin-Karp screens each window with a rolling hash before comparing characters.',
 				recall: [
 					{
 						q: 'Why does Boyer-Moore compare from the back of the pattern?',
@@ -2178,7 +2178,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 					},
 					{
 						q: 'What does a KMP failure table store, and what does it guarantee?',
-						a: 'f[i] is the length of the longest proper suffix of p[0..i] that is also a prefix of p[0..i]. On a mismatch at pattern index j > 0 the search jumps to f[j−1] instead of restarting, so the text index never moves backward — that is what makes KMP O(m + n) in the worst case, best and worst alike.',
+						a: 'f[i] is the length of the longest proper suffix of p[0..i] that is also a prefix of p[0..i]. On a mismatch at pattern index j > 0 the search jumps to f[j−1] instead of restarting, so the text index never moves backward — that is what makes KMP O(m + n) in the worst case, with best and worst both linear.',
 					},
 					{
 						q: 'Why is the Rabin-Karp rolling hash O(1) per shift?',
@@ -2202,7 +2202,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 					},
 					{
 						q: 'Why do sources disagree between O(|E| log |E|) and O(|E| log |V|) for Dijkstra?',
-						a: 'The course implementation has no decreaseKey, so the priority queue can hold one entry per considered edge: O(|E| log |E|). With decreaseKey the queue never exceeds O(|V|) entries, giving O((|V| + |E|) log |V|), which collapses to O(|E| log |V|) on a connected graph.',
+						a: 'The course implementation has no decreaseKey, so the priority queue can hold one entry per considered edge: O(|E| log |E|). Two separate things collapse that to log |V|. On a simple graph log |E| ≤ log |V|² = 2 log |V|, so the two forms are the same bound. And with decreaseKey the queue never exceeds O(|V|) entries, giving O((|V| + |E|) log |V|), which becomes O(|E| log |V|) on a connected graph.',
 					},
 				],
 			},
@@ -2265,7 +2265,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 			},
 			{
 				title: 'Clusters, not a visited set',
-				body: "Kruskal's takes edges in weight order and keeps any that does not close a cycle, which the cycle property justifies: the heaviest edge of a cycle belongs to no MST. Its clusters grow globally instead of outward from one source, so every vertex can be visited while the MST is still incomplete, and a visited set cannot tell a cluster merge from a cycle. A disjoint set answers that with find and union at amortized O(α(n)), so the heap dominates at O(|E| log |E|), or O(|E| log |V|) on a simple graph.",
+				body: "Kruskal's takes edges in weight order and keeps any that does not close a cycle, which the cycle property justifies: given distinct edge weights, the heaviest edge of a cycle belongs to no MST. Its clusters grow globally instead of outward from one source, so every vertex can be visited while the MST is still incomplete, and a visited set cannot tell a cluster merge from a cycle. A disjoint set answers that with find and union at amortized O(α(n)), so the heap dominates at O(|E| log |E|), or O(|E| log |V|) on a simple graph.",
 				source: 'Module 14 · MST',
 			},
 			{
@@ -2428,7 +2428,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 		metaDescription:
 			'pattern matching, graph 알고리즘과 Dijkstra의 shortest path, minimum spanning tree, 그리고 dynamic programming을 다루는 인터랙티브 DSA IV 노트입니다.',
 		eyebrow: 'Data Structures & Algorithms',
-		title: 'DSA IV: pattern matching, graph, 그리고 dynamic programming.',
+		title: 'DSA IV: pattern matching, graph 알고리즘, 그리고 dynamic programming.',
 		subtitle:
 			'pattern을 먼저 전처리해 두면 무작정 다시 훑는 대신 근거를 가지고 건너뛸 수 있고, graph 알고리즘과 dynamic programming은 둘 다 평범한 재귀라면 버렸을 계산을 다시 쓰면서 빨라집니다. Georgia Tech DSA IV에서 공부한 내용을 단계별로 따라가는 데모로 정리했습니다.',
 		sections: {
@@ -2442,7 +2442,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 			'type erasure 아래의 Java generic, reference semantics, Comparable/Comparator, 그리고 가장 타이트한 upper bound로서의 Big-O를 다시 짚는 Module 0 복습.',
 			'Pattern matching: 모든 alignment를 다시 시도하는 brute force, Boyer-Moore의 last occurrence table, KMP의 failure table, 그리고 Rabin-Karp의 rolling hash.',
 			'Graph 알고리즘: adjacency list·adjacency matrix·edge list 표현, O(|V| + |E|)의 DFS와 BFS, 그리고 음수가 아닌 weight에서 동작하는 Dijkstra의 shortest path.',
-			'Minimum spanning tree: cut property 위에 선 Prim, cycle property 위에 선 Kruskal, greedy paradigm과 그것이 실패하는 지점, 그리고 path compression과 union by rank를 쓰는 disjoint set.',
+			'Minimum spanning tree: cut property에 기반한 Prim, cycle property에 기반한 Kruskal, greedy paradigm과 그것이 실패하는 지점, 그리고 path compression과 union by rank를 쓰는 disjoint set.',
 			'Dynamic programming: memoization과 optimal substructure, backtracking까지 포함한 O(nm) LCS table, 0-1 knapsack, 그리고 Bellman-Ford와 Floyd-Warshall shortest path 알고리즘.',
 		],
 		modules: [
@@ -2450,15 +2450,15 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 				kicker: 'Module 12 · Pattern Matching',
 				title: 'Pattern Matching Algorithms',
 				summary:
-					'길이 n인 text 안에서 길이 m인 pattern을 찾는 문제입니다. 겹치는 등장도 모두 세고, brute force는 모든 alignment를 O(mn)으로 다시 시도합니다. Boyer-Moore는 last occurrence table로 앞질러 건너뛰고, KMP는 failure table로 다시 맞춰 O(m + n)을 보장하며, Rabin-Karp는 rolling hash로 각 window를 걸러 낸 뒤에 문자를 비교합니다.',
+					'길이 n인 text 안에서 길이 m인 pattern을 찾는 문제이고, 겹쳐서 나타나는 것도 모두 셉니다. brute force는 모든 alignment를 다시 시도해 최악의 경우 O(mn)입니다. Boyer-Moore는 last occurrence table로 앞질러 건너뛰고, KMP는 failure table로 다시 맞춰 O(m + n)을 보장하며, Rabin-Karp는 rolling hash로 각 window를 걸러 낸 뒤에 문자를 비교합니다.',
 				recall: [
 					{
 						q: 'Boyer-Moore는 왜 pattern의 뒤에서부터 비교하나요?',
-						a: '오른쪽에서 왼쪽으로 비교하면 window에서 가장 먼저 보는 문자가 text 상에서 가장 뒤에 있는 문자입니다. 그래서 거기서 mismatch가 나면 pattern을 최대 m칸까지 밀 수 있습니다. last occurrence table이 찾아보는 것이 바로 그 mismatch된 text 문자이고, pattern에 없는 문자라면 table 값이 −1이라 pattern이 그 문자를 완전히 지나쳐 이동합니다.',
+						a: '오른쪽에서 왼쪽으로 비교하면 window에서 가장 먼저 보는 문자가 text에서 가장 뒤에 있는 문자입니다. 그래서 거기서 mismatch가 나면 pattern을 최대 m칸까지 밀 수 있습니다. last occurrence table이 찾아보는 것이 바로 그 mismatch된 text 문자이고, pattern에 없는 문자라면 table 값이 −1이라 pattern이 그 문자를 완전히 지나쳐 이동합니다.',
 					},
 					{
 						q: 'KMP의 failure table은 무엇을 저장하고, 무엇을 보장하나요?',
-						a: 'f[i]는 p[0..i]의 proper suffix 중 동시에 p[0..i]의 prefix이기도 한 가장 긴 것의 길이입니다. pattern index j > 0에서 mismatch가 나면 처음부터 다시 하지 않고 f[j−1]로 건너뛰기 때문에 text index가 뒤로 되돌아가는 일이 없습니다. KMP가 최선이든 최악이든 O(m + n)인 이유가 이것입니다.',
+						a: 'f[i]는 p[0..i]의 proper suffix 중 동시에 p[0..i]의 prefix이기도 한 가장 긴 것의 길이입니다. pattern index j > 0에서 mismatch가 나면 처음부터 다시 하지 않고 f[j−1]로 건너뛰기 때문에 text index가 뒤로 되돌아가는 일이 없습니다. KMP의 최악이 O(m + n)이고 최선도 linear인 이유가 이것입니다.',
 					},
 					{
 						q: 'Rabin-Karp의 rolling hash는 왜 한 칸 이동에 O(1)인가요?',
@@ -2470,7 +2470,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 				kicker: 'Module 13 · Graph Algorithms',
 				title: 'Graph Algorithms',
 				summary:
-					'graph는 vertex 집합과 edge 집합이고, adjacency list·adjacency matrix·edge list 중 하나로 저장합니다. DFS와 BFS는 전부 훑는 탐색의 두 가지 템플릿이고 둘 다 O(|V| + |E|)입니다. Dijkstra 알고리즘은 queue를 priority queue로 바꿔 BFS를 weighted graph로 일반화한 것입니다.',
+					'graph는 vertex 집합과 edge 집합이고, adjacency list·adjacency matrix·edge list 중 하나로 저장됩니다. DFS와 BFS는 전부 훑는 탐색의 두 가지 템플릿이고 둘 다 O(|V| + |E|)입니다. Dijkstra 알고리즘은 queue를 priority queue로 바꿔 BFS를 weighted graph로 일반화한 것입니다.',
 				recall: [
 					{
 						q: 'BFS와 DFS는 각각 무엇을 쓰고 비용은 얼마인가요?',
@@ -2482,7 +2482,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 					},
 					{
 						q: 'Dijkstra의 복잡도를 두고 자료마다 O(|E| log |E|)와 O(|E| log |V|)로 갈리는 이유는?',
-						a: '수업에서 쓴 구현에는 decreaseKey가 없어서 priority queue가 살펴본 edge마다 항목을 하나씩 담을 수 있습니다. 그래서 O(|E| log |E|)입니다. decreaseKey가 있으면 queue 크기가 O(|V|)를 넘지 않아 O((|V| + |E|) log |V|)가 되고, connected graph에서는 이것이 O(|E| log |V|)로 정리됩니다.',
+						a: '수업에서 쓴 구현에는 decreaseKey가 없어서 priority queue가 살펴본 edge마다 항목을 하나씩 담을 수 있습니다. 그래서 O(|E| log |E|)입니다. 이것이 log |V|로 바뀌는 경로는 둘입니다. simple graph에서는 log |E| ≤ log |V|² = 2 log |V|이므로 두 표기가 같은 bound입니다. 그리고 decreaseKey가 있으면 queue 크기가 O(|V|)를 넘지 않아 O((|V| + |E|) log |V|)가 되고, connected graph에서는 이것이 O(|E| log |V|)가 됩니다.',
 					},
 				],
 			},
@@ -2510,7 +2510,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 				kicker: 'Module 15 · Dynamic Programming',
 				title: 'Dynamic Programming',
 				summary:
-					'부분 문제가 겹치는 문제를 위한 divide-and-conquer입니다. 부분 문제의 답을 다시 계산하지 않고 저장해 두면, 공간을 더 쓰는 대신 지수 시간 재귀 상당수가 다항 시간이 됩니다. LCS, 0-1 knapsack, Bellman-Ford, Floyd-Warshall 모두 이 하나의 아이디어 위에 서 있습니다.',
+					'부분 문제가 겹치는 문제를 위한 divide-and-conquer입니다. 부분 문제의 답을 다시 계산하지 않고 저장해 두면, 공간을 더 쓰는 대신 지수 시간 재귀 상당수가 다항 시간이 됩니다. LCS, 0-1 knapsack, Bellman-Ford, Floyd-Warshall 모두 이 아이디어 하나에서 나옵니다.',
 				recall: [
 					{
 						q: '어떤 문제가 그냥 divide-and-conquer가 아니라 dynamic programming에 맞나요?',
@@ -2530,12 +2530,12 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 		concepts: [
 			{
 				title: '알고리즘 셋, 전략 둘',
-				body: 'Boyer-Moore와 KMP는 둘 다 pattern을 미리 전처리해 두고, mismatch가 났을 때 그만큼 똑똑하게 밀어냅니다. Rabin-Karp는 대신 rolling hash로 각 window를 걸러 내고 hash가 같을 때만 문자를 비교합니다. Boyer-Moore는 보통의 경우 O(m + n/m)으로 sublinear지만 최악에는 O(mn)까지 떨어지고, KMP는 입력과 무관하게 O(m + n)이며, Rabin-Karp는 hash가 좋으면 선형이지만 매번 collision이 나면 O(mn)입니다. alphabet이 크면 Boyer-Moore, alphabet이 작거나 text가 스트림으로 들어오면 KMP, pattern 여러 개를 한 번에 찾으면 Rabin-Karp가 맞습니다.',
+				body: 'Boyer-Moore와 KMP는 둘 다 pattern을 미리 전처리해 두기 때문에, mismatch가 났을 때 pattern을 똑똑하게 밀어낼 수 있습니다. Rabin-Karp는 대신 rolling hash로 각 window를 걸러 내고 hash가 같을 때만 문자를 비교합니다. Boyer-Moore는 보통의 경우 O(m + n/m)으로 sublinear지만 최악에는 O(mn)까지 떨어지고, KMP는 입력과 무관하게 O(m + n)이며, Rabin-Karp는 hash가 좋으면 선형이지만 매번 collision이 나면 O(mn)입니다. alphabet이 크면 Boyer-Moore, alphabet이 작거나 text가 스트림으로 들어오면 KMP, pattern 여러 개를 한 번에 찾으면 Rabin-Karp가 맞습니다.',
 				source: 'Module 12 · Pattern Matching',
 			},
 			{
 				title: 'priority queue에서 나오는 것이 곧 증명',
-				body: 'Dijkstra는 vertex를 아직 보지 않은 것, frontier(priority queue 안에 있고 최적이 아닌 경로일 수도 있는 것), 그리고 방문한 것으로 나눕니다. dequeue되는 순간 그 vertex는 확정됩니다. 더 싼 경로가 있었다면 이미 방문한 이웃을 지나 더 작은 값으로 enqueue됐을 것이기 때문입니다. 음수 edge는 정확히 그 보증을 깨뜨립니다. Dijkstra는 한 번 확정한 vertex를 다시 보지 않기 때문입니다. 음수 weight에 Bellman-Ford(O(|V|·|E|))나 Floyd-Warshall(O(|V|³))이 필요한 이유가 이것입니다.',
+				body: 'Dijkstra는 vertex를 아직 보지 않은 것, frontier(priority queue 안에 있고 최적이 아닌 경로일 수도 있는 것), 그리고 방문한 것으로 나눕니다. dequeue되는 순간 그 vertex는 확정됩니다. 더 싼 경로가 있었다면 이미 방문한 이웃을 지나 더 작은 값으로 enqueue됐을 것이기 때문입니다. 음수 edge는 정확히 그 확정 근거를 깨뜨립니다. Dijkstra는 한 번 확정한 vertex를 다시 보지 않기 때문입니다. 음수 weight에 Bellman-Ford(O(|V|·|E|))나 Floyd-Warshall(O(|V|³))이 필요한 이유가 이것입니다.',
 				source: 'Module 13 · Graph Algorithms',
 			},
 			{
@@ -2545,7 +2545,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 			},
 			{
 				title: 'visited set이 아니라 cluster',
-				body: 'Kruskal은 edge를 weight 순으로 꺼내서 cycle을 만들지 않는 것만 남깁니다. cycle property가 그 근거입니다. cycle에서 가장 무거운 edge는 어떤 MST에도 들어가지 않습니다. cluster는 한 시작점에서 바깥으로 자라는 대신 전역적으로 커지기 때문에, MST가 아직 완성되지 않았는데도 모든 vertex가 이미 방문 상태일 수 있습니다. 그래서 visited set만으로는 cluster를 합치는 edge인지 cycle을 닫는 edge인지 구분하지 못합니다. disjoint set이 amortized O(α(n))의 find와 union으로 그 질문에 답해 주므로, 비용은 heap이 지배해서 O(|E| log |E|), simple graph에서는 O(|E| log |V|)가 됩니다.',
+				body: 'Kruskal은 edge를 weight 순으로 꺼내서 cycle을 만들지 않는 것만 남깁니다. cycle property가 그 근거입니다. edge weight가 모두 다르다면 cycle에서 가장 무거운 edge는 어떤 MST에도 들어가지 않습니다. cluster는 한 시작점에서 바깥으로 자라는 대신 전역적으로 커지기 때문에, MST가 아직 완성되지 않았는데도 모든 vertex가 이미 방문 상태일 수 있습니다. 그래서 visited set만으로는 cluster를 합치는 edge인지 cycle을 닫는 edge인지 구분하지 못합니다. disjoint set이 amortized O(α(n))의 find와 union으로 그 질문에 답해 주므로, 비용은 heap이 지배해서 O(|E| log |E|), simple graph에서는 O(|E| log |V|)가 됩니다.',
 				source: 'Module 14 · MST',
 			},
 			{
@@ -2555,13 +2555,13 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 			},
 			{
 				title: 'bottom-up으로 푸는 shortest path',
-				body: 'Bellman-Ford는 모든 edge를 |V|−1번 relax합니다. shortest path가 edge를 많아야 |V|−1개 쓰기 때문입니다. Dijkstra가 다루지 못하는 음수 weight를 시간 O(|V|·|E|), 공간 O(|V|)에 처리합니다. Floyd-Warshall은 바깥 반복마다 경유할 수 있는 중간 vertex를 하나씩 늘려 가며 모든 쌍을 시간 O(|V|³), 공간 O(|V|²)에 풉니다. 그 반복이 반드시 가장 바깥에 있어야 하는 이유이기도 합니다. 둘 다 negative cycle을 잡아냅니다. Bellman-Ford는 한 라운드를 더 돌렸는데도 거리가 줄어드는 것으로, Floyd-Warshall은 대각선에 음수가 나타나는 것으로 알아냅니다.',
+				body: 'Bellman-Ford는 모든 edge를 |V|−1번 relax합니다. shortest path가 edge를 많아야 |V|−1개 쓰기 때문입니다. Dijkstra가 다루지 못하는 음수 weight를 시간 O(|V|·|E|), 공간 O(|V|)에 처리합니다. Floyd-Warshall은 바깥 반복마다 경유할 수 있는 중간 vertex를 하나씩 늘려 가며 모든 쌍을 시간 O(|V|³), 공간 O(|V|²)에 풉니다. 그 반복이 반드시 가장 바깥에 있어야 하는 이유가 이것입니다. 둘 다 negative cycle을 잡아냅니다. Bellman-Ford는 한 라운드를 더 돌렸는데도 거리가 줄어드는 것으로, Floyd-Warshall은 대각선에 음수가 나타나는 것으로 알아냅니다.',
 				source: 'Module 15 · Dynamic Programming',
 			},
 		],
 		visuals: {
 			patternMatch: {
-				title: 'Boyer-Moore: last occurrence로 건너뛰기',
+				title: 'Boyer-Moore: last occurrence로 이동 폭 정하기',
 				description:
 					'abacadbaabacab 안에서 abacab을 찾습니다. pattern 뒤에서부터 비교하고, 얼마나 밀지는 last occurrence table이 정합니다.',
 				textLabel: 'text',
@@ -2634,10 +2634,10 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 					'D를 dequeue합니다. B와 C는 이미 표시돼 있어 E만 enqueue됩니다. Queue: E.',
 					'E를 dequeue하는데 유일한 이웃 D가 이미 표시돼 있습니다. queue가 비면서 BFS가 A, B, C, D, E로 끝납니다. A에서의 edge 거리 순서 그대로입니다. A는 0, B와 C는 1, D는 2, E는 3입니다.',
 					'초기화하고 A에서 DFS를 돌립니다. DFS는 방문하는 순간에 표시하고, 이웃을 모두 queue에 넣는 대신 아직 방문하지 않은 첫 이웃으로 바로 내려갑니다. Call stack: A.',
-					'A의 첫 이웃 B로 내려가 방문합니다. B의 목록은 A로 시작하는데 이미 방문했으므로 건너뜁니다. Call stack: A, B.',
+					'A의 첫 이웃 B로 내려가 방문합니다. B의 이웃 목록은 A로 시작하는데 이미 방문했으므로 건너뜁니다. Call stack: A, B.',
 					'B에서 D로 재귀해 들어갑니다. 시작점의 바로 이웃인 C를 아직 건드리지도 않았는데 DFS는 벌써 세 단계 깊이입니다. Call stack: A, B, D.',
 					'D의 이웃 목록은 B, C, E입니다. B는 방문했으니 C로 재귀해 들어가는데, C의 이웃 A와 D가 둘 다 방문 상태라 바로 backtrack합니다. Call stack: A, B, D, C.',
-					'D로 돌아오면 마지막 이웃 E가 아직 방문 전이라 방문한 뒤 스택을 되감습니다. A에게 남은 이웃 C는 이미 표시돼 있습니다. DFS 순서는 A, B, D, C, E입니다. BFS와 같은 다섯 vertex를 다른 순서로 훑고, 둘 다 O(|V| + |E|)입니다.',
+					'D로 돌아오면 마지막 이웃 E가 아직 방문 전이라 방문한 뒤 call stack을 되감습니다. A의 남은 이웃 C는 이미 표시돼 있습니다. DFS 순서는 A, B, D, C, E입니다. BFS와 같은 다섯 vertex를 다른 순서로 훑고, 둘 다 O(|V| + |E|)입니다.',
 				],
 			},
 			mst: {
@@ -2665,13 +2665,13 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 					'A에서 시작합니다. A가 방문 집합에 들어가고 A의 edge 두 개가 priority queue로 들어갑니다. A–C 1과 A–B 4입니다. Prim의 우선순위는 Dijkstra처럼 누적 거리가 아니라 edge weight 하나뿐입니다.',
 					'최솟값인 A–C 1을 dequeue합니다. C가 아직 방문 전이라 이 edge가 MST에 들어가고 C도 방문 집합에 들어가면서, C에서 방문하지 않은 vertex로 가는 edge들을 넣습니다. C–B 2, C–D 8, C–E 10입니다.',
 					'C–B 2를 dequeue합니다. B가 아직 방문 전이라 이 edge도 MST에 들어가고, B가 새 frontier edge B–D 5를 하나 더합니다.',
-					'A–B 4를 dequeue합니다. B는 이미 C를 거쳐 2에 도달해 방문 상태라 이 edge는 버립니다. B가 트리에 들어오기 전에 queue에 넣었던 edge이고, 방문 여부를 dequeue 시점에 확인하는 이유가 이것입니다.',
+					'A–B 4를 dequeue합니다. B는 이미 C–B 2로 연결돼 방문 상태라 이 edge는 버립니다. B가 트리에 들어오기 전에 queue에 넣었던 edge이고, 방문 여부를 dequeue 시점에 확인하는 이유가 이것입니다.',
 					'B–D 5를 dequeue합니다. cut을 건너는 나머지 edge인 C–D 8, C–E 10보다 싸므로 D가 트리에 들어오고 D–E 3을 넣습니다.',
 					'D–E 3을 dequeue합니다. E가 마지막 남은 미방문 vertex라 이 edge가 MST에 들어가고 방문 집합이 완성됩니다. 반복은 여기서 멈춥니다. edge 네 개, 총 weight 11이고, C–D 8과 C–E 10은 queue에 그대로 남아 끝내 dequeue되지 않습니다.',
 				],
 			},
 			lcsTable: {
-				title: 'LCS table: 채우고, backtrack하기',
+				title: 'LCS table: 채우고 backtrack하기',
 				description:
 					'"BLOG"와 "BOG"의 longest common subsequence table을 한 행씩 채운 뒤, 오른쪽 아래 칸에서부터 되짚어 올라가며 subsequence 자체를 읽어 냅니다.',
 				takenLabel: '선택한 문자',
@@ -2698,7 +2698,7 @@ const dsaIVContent: Record<StudyLocale, DsaIVContent> = {
 					'backtracking은 L[4][3]에서 시작합니다. 문자가 일치하므로(G = G) G가 LCS에 들어가고, 대각선으로 L[3][2]로 이동합니다.',
 					'L[3][2]에서도 문자가 일치해(O = O) O가 LCS에 들어가고, 다시 대각선으로 L[2][1]로 이동합니다.',
 					'L[2][1]에서는 문자가 다릅니다(L과 B). 위가 1, 왼쪽이 0이라 값이 위에서 온 것이므로 L[1][1]로 올라가고 문자는 가져가지 않습니다.',
-					'L[1][1]에서 B가 B와 일치하므로 B가 LCS에 들어가고, 0행에 닿으면서 걸음이 멈춥니다. 가져간 문자를 거꾸로 읽으면 "BOG"입니다.',
+					'L[1][1]에서 B가 B와 일치하므로 B가 LCS에 들어가고, 0행에 닿으면서 backtracking이 멈춥니다. 가져간 문자를 거꾸로 읽으면 "BOG"입니다.',
 				],
 			},
 		},
