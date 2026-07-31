@@ -34,8 +34,51 @@
 - [x] AI PR review validation post refreshed — 3b-forge four-reviewer example added (EN + KO)
 - [x] Cloudflare build fix — dropped stale `package-lock.json`, added `packageManager: pnpm@10.32.1`, switched CI + husky pre-push to pnpm
 - [x] Header i18n root-cause fix — locale resolved from the URL only (dropped `cookie` strategy + `setLocale` pin)
+- [x] Study section complete — GT DSA I–IV, 17 interactive visualizers, EN + KO
 
 ## Session Log
+
+### 2026-08-01 (Session 28)
+
+**Study section: DSA IV (EN + KO) — the fourth and final GT DSA course**
+
+- **Shipped (`2118e62`, direct to main):** `/study/dsa-iv` + `/ko/study/dsa-iv`,
+  built from `3b/personal/study/gt-dsa/dsa-iv/` (modules 12–15). Four
+  visualizers, one per module, matching the existing one-representative-algorithm
+  -per-module convention: `PatternMatchVisualizer` (Boyer-Moore searching
+  `abacab` in `abacadbaabacab`, sliding pattern row + live last-occurrence
+  table), `GraphTraversalVisualizer` (BFS and DFS over one 5-vertex graph behind
+  a mode toggle), `MstVisualizer` (Prim's on a 5-vertex weighted graph, total 11,
+  two edges deliberately stranded in the queue), `LcsTableVisualizer` (LCS of
+  `BLOG`/`BOG` with per-cell provenance arrows, then backtrack).
+- **Structure:** followed the DSA I–III shape exactly — two five-line locale
+  wrappers around one `DsaIVStudyPage`, all copy in
+  `Record<StudyLocale, DsaIVContent>` in `study.ts` (+699 lines), zero
+  user-visible English inside any component. Plus six source hashes in
+  `study-sources.ts`, a fourth validator group (`study:check` now verifies 42
+  files across 4 courses), and the sitemap row.
+- **Also refreshed the `/study` index copy** in both locales — it still said
+  "starting with Data Structures and Algorithms I" and "the first section", stale
+  since DSA II and plainly wrong beside four cards.
+- **Re-audit (`7cbfe95`):** five independent read-only lanes. Algorithm traces
+  (re-derived against the course's own Java), registration (47/47), and component
+  copy contracts came back clean. Source fidelity and Korean copy did not — four
+  claims had dropped a qualifier their source note carries (`O(mn)` stated flat;
+  the cycle property stated without "for distinct edge weights"), all four
+  mirrored in Korean because the translation was faithful. One Korean string was
+  semantically wrong while structurally perfect: `C를 거쳐 2에 도달해` reads as a
+  cumulative distance the previous step had ruled out, and is numerically wrong
+  under that reading.
+- **Process note:** built by a 5-phase workflow, 18 agents, 0 errors. Parallel
+  extraction and parallel component builds on disjoint files; the one shared
+  2000-line data module got a single owner per pass, passes serial, with the
+  independent route wiring running alongside.
+- **Verification:** `format`, `lint`, `study:check`, `build`, `check` all green
+  before and after the repair; both locales prerender; EN/KO shape diff clean
+  (0 en-only, 0 ko-only; step counts 9/10/7/9 in both).
+
+**Next:** none for this section — the GT DSA certificate is complete through IV.
+A fifth course would reuse the same template.
 
 ### 2026-06-22 (Session 27)
 
