@@ -35,7 +35,7 @@ AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진�
 | **OPTIONAL**          | 있으면 좋은 수준, 스타일 관련, 긴급하지 않음       | 사용자에게 확인         |
 | **INVALID**           | 틀림, context 오해, 해당 안 됨                     | 문서화 + 보강 주석 추가 |
 
-나중에 추가한 GOOD-TO-HAVE와 CONTROVERSIAL 두 등급은 release PR에서 특히 값을 했어요. feature branch에서는 보통 전부 처리할 수 있어요. 그런데 develop-to-main merge에서 19개 지적을 분류하는 건 성격이 다른 일이라, "맞고 수정할 가치가 있는 것"과 "맞지만 지금 건드릴 가치가 없는 것"을 갈라야 했어요. GOOD-TO-HAVE는 수정이 쉽고 위험이 낮은 개선이에요. CONTROVERSIAL은 AI 지적이 타당하지만 현재 context에서 수정 비용이 이점을 넘는 경우예요. release 중에 27개 test file에 type guard를 추가하라는 지적 같은 거죠.
+나중에 추가한 GOOD-TO-HAVE와 CONTROVERSIAL 두 등급은 release PR에서 특히 제값을 했어요. feature branch에서는 보통 전부 처리할 수 있어요. 그런데 develop-to-main merge에서 19개 지적을 분류하는 건 성격이 다른 일이라, "맞고 수정할 가치가 있는 것"과 "맞지만 지금 건드릴 가치가 없는 것"을 갈라야 했어요. GOOD-TO-HAVE는 수정이 쉽고 위험이 낮은 개선이에요. CONTROVERSIAL은 AI 지적이 타당하지만 현재 context에서 수정 비용이 이점을 넘는 경우예요. release 중에 27개 test file에 type guard를 추가하라는 지적 같은 거죠.
 
 ## AI가 흔히 혼동하는 패턴
 
@@ -278,9 +278,9 @@ Codex가 `/interview`(markdown 전용 Socratic skill, 런타임 의존성 0) imp
 - Skill registry가 이름이 겹치는 여러 skill을 노출해요(`/interview`와 `/ouroboros:interview`).
 - LLM reviewer가 가끔 어느 skill인지 grounding 없이 "the skill"이라고 인용해요.
 - *다른* skill이 internally consistent하니까 confidence가 높게 유지돼요. reviewer의 mental model이 깨진 게 아니라, 잘못된 target을 가리키고 있을 뿐이에요.
-- output이 specific해 보여요(line 번호, field 이름) 하지만 review 중인 file에 대해서는 fabricated예요.
+- output이 specific해 보이지만(line 번호, field 이름) review 중인 file에 대해서는 fabricated예요.
 
-**예방: 교차 확인 규율.** 특정 라인, 파일, API를 인용한 AI 리뷰 finding이라면 모두 다음을 실행하세요.
+**예방: 교차 확인 규율.** 특정 line, file, API를 인용한 AI review finding이라면 모두 다음을 실행하세요.
 
 ```bash
 grep -n -i '<claimed-string>' <claimed-file>
@@ -427,7 +427,7 @@ Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`de
 
 **CONTROVERSIAL은 user redirect로 처리:** R1-16은 `scripts/check-3b-drift.sh:25`에서 exit code 2가 advisory drift와 pre-flight failure를 모두 의미하는 문제였어요. 바로 수정하지 않고 CONTROVERSIAL로 분류한 뒤, code 분리, code 2 의미 축소, reinforcing comment 유지, follow-up issue defer 네 가지 선택지를 제시했어요. 사용자는 code 분리를 선택했고, fix는 VALID 수정 이후 GOOD-TO-HAVE batch 전에 반영했어요.
 
-**스레드 해결에서 배운 점:** Copilot과 Codex 스레드는 GitHub GraphQL `resolveReviewThread` mutation으로 명시적으로 닫아주기 전까지 열린 상태로 남아요. CodeRabbit은 참조 코드가 바뀌면 일부 스레드를 자동으로 닫았고, 5개 중 3개가 답글 없이 해결됐어요. commit이 쌓이면서 라인 번호도 이동해요. 그래서 finding과 commit을 매핑할 안정적인 키는 `path:line`이 아니라 GraphQL 스레드 ID였어요. 마무리로는 round summary를 올린 뒤 `@claude review` 트리거 코멘트와 claude[bot]의 구조화된 review를 `minimizeComment(..., classifier: RESOLVED)`로 접었어요. 그러면 PR 대화에는 사람이 읽을 audit trail만 남아요.
+**스레드 해결에서 배운 점:** Copilot과 Codex 스레드는 GitHub GraphQL `resolveReviewThread` mutation으로 명시적으로 닫아주기 전까지 열린 상태로 남아요. CodeRabbit은 참조 코드가 바뀌면 일부 스레드를 자동으로 닫았고, 5개 중 3개가 답글 없이 해결됐어요. commit이 쌓이면서 line 번호도 이동해요. 그래서 finding과 commit을 매핑할 안정적인 키는 `path:line`이 아니라 GraphQL 스레드 ID였어요. 마무리로는 round summary를 올린 뒤 `@claude review` 트리거 코멘트와 claude[bot]의 구조화된 review를 `minimizeComment(..., classifier: RESOLVED)`로 접었어요. 그러면 PR 대화에는 사람이 읽을 audit trail만 남아요.
 
 **핵심 INVALID count: 0.** 이 PR에서는 3개 이상 agent의 convergence가 valid finding의 완전한 positive predictor였어요. 이유는 범위가 좁아 agent들이 end-to-end로 추론할 수 있었고, script가 destructive operation을 수행해 reviewer들이 보수적으로 판단했으며, 4개의 독립 reviewer가 개별 false positive를 줄였기 때문으로 보여요.
 

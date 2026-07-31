@@ -105,7 +105,7 @@ for (let i = 0; i < rows.length; i += CHUNK) {
 
 This failure repeats what made the `IN` clause version hard to diagnose: the driver error never mentions the parameter ceiling, so the symptom points nowhere near the cause. If you know the column count, you can compute a safe chunk size yourself as `floor(60000 / columns)` instead of guessing at one.
 
-For a one-shot load, `COPY ... FROM STDIN` sidesteps the question entirely. It streams and uses no bind parameters at all, which is why it stays sub-second where chunked inserts take a few seconds. It bypasses the ORM path entirely, so it fits an import job better than application code.
+For a one-shot load, `COPY ... FROM STDIN` sidesteps the question entirely. It streams and uses no bind parameters at all, which is why it stays sub-second where chunked inserts take a few seconds. It bypasses the ORM path, so it fits an import job better than application code.
 
 ### `ON CONFLICT` upserts count the same way
 

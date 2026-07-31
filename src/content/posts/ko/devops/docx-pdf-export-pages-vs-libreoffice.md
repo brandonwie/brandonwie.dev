@@ -28,12 +28,12 @@ references:
 
 macOS에서 Word list 형식의 이력서를 안정적인 PDF로 만들어야 했어요. DOCX를
 Pages로 열어 내보내는 경로가 가장 먼저 떠올랐지만, 결과는 이번 제출에서
-중요했던 두 검사를 통과하지 못했어요. layout이 반복할 때마다 같지 않았고
+중요했던 두 검사를 통과하지 못했어요. 반복해도 layout이 같지 않았고
 검색 가능한 text layer도 손상됐어요.
 
 renderer 전반을 비교한 글은 아니에요. 문서 하나, toolchain 하나에서 겪은
-일이에요. renderer를 뭘 고르느냐보다 중요했던 건 검증 단계였어요. 덕분에
-보내기 전에 눈대중으로 넘기지 않고 결과물을 확인할 수 있었어요.
+일이에요. renderer를 뭘 고르느냐보다 검증 단계가 더 크게 작용했어요.
+덕분에 보내기 전에 눈대중으로 넘기지 않고 결과물을 확인할 수 있었어요.
 
 ## Pages 경로에서 실패한 것
 
@@ -46,7 +46,7 @@ renderer 전반을 비교한 글은 아니에요. 문서 하나, toolchain 하�
 `real-time`의 ti가 그랬어요. 글자 모양은 그려졌는데 뽑아낸 문자는 빠진
 거예요. 사람은 화면에서 단어를 짐작할 수 있지만 parser가 받는 text는 달라져요.
 
-이 문서에서는 OOXML 요소 하나도 영향을 줬어요. python-docx에서
+이 파일에서는 OOXML 요소 하나가 layout 동작에 영향을 줬어요. python-docx에서
 `paragraph_format.keep_with_next = False`로 두면 `<w:keepNext w:val="0"/>`가
 만들어지고, `None`으로 요소 자체를 없애니 Pages 문제가 사라졌어요. Pages가
 `val` 값은 보지 않고 요소가 있으면 켜진 것으로 처리한다는 뜻으로 읽혀요.
@@ -64,10 +64,10 @@ brew install --cask libreoffice
   --convert-to pdf --outdir "$OUT_DIR" resume.docx
 ```
 
-LibreOffice는 `--headless`, `--convert-to`, `--outdir`를 공식 문서에
-설명하고 있어서 script로 묶기 쉬워요. 아래 네 가지 검사는 그 문서에 없는
-것들이고, 이번 실패를 겪으면서 나왔어요. command가 잘 돌아갔다는 것만으로는
-믿기 어려웠어요. 그래서 그게 만들어낸 file을 따로 확인했어요.
+LibreOffice는 `--headless`, `--convert-to`, `--outdir`를 공식 문서에서
+설명하고 있어서 script로 묶기 쉬워요. 아래 네 가지 검사는 그 문서에 없고,
+이번 실패를 겪으면서 나왔어요. command가 잘 돌아갔다는 것만으로는 믿기
+어려웠어요. 그래서 그게 만들어낸 file을 따로 확인했어요.
 
 ## command가 아니라 artifact를 검증해요
 

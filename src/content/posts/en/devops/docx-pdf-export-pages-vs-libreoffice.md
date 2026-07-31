@@ -42,8 +42,8 @@ previous bullet.
 
 The searchable text also changed. `pdftotext` split terms such as `Airflow` into
 `Air ow` and `Actions` into `Ac ons`, and the token count came out well off the
-source mirror. The splits all landed on ligature pairs — fl in `Airflow`, ti in
-`Actions` and `real-time` — so the glyph rendered but the extracted character
+source mirror. The splits all landed on ligature pairs (fl in `Airflow`, ti in
+`Actions` and `real-time`), so the glyph rendered but the extracted character
 did not. A human could still infer the words visually, but a parser would
 receive different text.
 

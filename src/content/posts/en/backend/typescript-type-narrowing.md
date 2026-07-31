@@ -18,7 +18,7 @@ source_content_hash: 50a995ca15b6f84f8f942f9f3e84d387ae578c1d1417de09261c3e23162
 expanded: true
 ---
 
-A stale block cleanup helper I worked on used `block.gcalId!`, the non-null assertion operator, justified by a comment: "guaranteed non-null by DB query." The compiler was happy and the code looked clean. What stuck with me is that the comment was the entire guarantee — nothing the compiler could verify, and DB queries do change. I replaced the assertion with a guard clause, and writing this up is mostly an attempt to say why that trade felt worth one extra line.
+A stale block cleanup helper I worked on used `block.gcalId!`, the non-null assertion operator, justified by a comment: "guaranteed non-null by DB query." The compiler was happy and the code looked clean. What stuck with me is that the comment was the entire guarantee: nothing the compiler could verify, and DB queries do change. I replaced the assertion with a guard clause, and writing this up is mostly an attempt to say why that trade felt worth one extra line.
 
 Non-null assertions (`!`) and forced casting (`as Type`) tell TypeScript "trust me, I know better." They suppress the type error without adding any runtime safety. Type narrowing gives you the compile-time check and the runtime protection, and it usually costs one extra line.
 
@@ -182,7 +182,7 @@ private isEnqueueableGoogleEvent<
 
 The part I would not have predicted: an inline `if (...) return;` is a control-flow statement *and* a type-level statement, while a function returning `boolean` can only replace the first half. So whenever a nullness or shape check gets lifted out of a function body, it is worth asking whether anything downstream depended on the narrowing. Reaching for a predicate by default seems like the cheaper habit, since it costs nothing when nobody uses the narrowing.
 
-Worth naming honestly: the test suite in that repo could not have caught this, and that is a property of its configuration rather than of test suites in general. ts-jest ran with `diagnostics.warnOnly`, so a type error downgrades to a warning and the run still goes green, and the diagnostics were scoped to spec files anyway, so type errors in source files never surfaced during a test run at all. ESLint does not type-check either. So "all tests pass, lint clean" was never evidence that this refactor was safe — in that repo, the build was the only gate that could fail on it.
+Worth naming honestly: the test suite in that repo could not have caught this, and that is a property of its configuration rather than of test suites in general. ts-jest ran with `diagnostics.warnOnly`, so a type error downgrades to a warning and the run still goes green, and the diagnostics were scoped to spec files anyway, so type errors in source files never surfaced during a test run at all. ESLint does not type-check either. So "all tests pass, lint clean" was never evidence that this refactor was safe. In that repo, the build was the only gate that could fail on it.
 
 ## When Assertions ARE Acceptable
 

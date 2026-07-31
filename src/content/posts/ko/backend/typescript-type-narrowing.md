@@ -113,7 +113,7 @@ if (hasCalendar(block)) {
 ```
 
 커스텀 type guard는 쓸모가 있지만, 타입이 바뀔 때마다 같이 맞춰줘야 하는
-boilerplate이기도 해요. 함수 하나 안에서 null 체크 한 번 하는 정도라면
+boilerplate이기도 해요. 함수 하나 안에서 null 검사 한 번 하는 정도라면
 `if (!x) return` 쪽이 코드도 짧고 안전성도 똑같아요. guard 함수가 값을 하는 건
 여러 호출 지점이 같은 모양을 확인해야 할 때, 또는 좁혀진 타입이 매번 적기 싫은
 intersection일 때예요.
@@ -131,8 +131,8 @@ function validateBlock(block: Block): BlockWithCalendar {
 }
 ```
 
-이것은 `as Type`이 허용되는 몇 안 되는 경우 중 하나예요 -- 같은 스코프에서
-명시적 검증 직후에 사용하는 경우.
+같은 스코프에서 명시적 검증 직후에 쓰는 경우는 `as Type`이 허용되는 몇 안 되는
+자리 중 하나예요.
 
 ## 실제 코드 예시
 
@@ -155,7 +155,7 @@ export function identifyStaleBlockIds(
 }
 ```
 
-변경 후:
+고친 버전은 assertion 대신 가드를 써요.
 
 ```typescript
 export function identifyStaleBlockIds(
@@ -241,7 +241,7 @@ test suite 일반의 성질이라기보다 그 설정의 성질이에요. ts-jes
 
 | 시나리오                | 허용 | 예시                                             |
 | ----------------------- | ---- | ------------------------------------------------ |
-| 명시적 검증 후          | Yes  | null 체크 후 `return block as BlockWithCalendar` |
+| 명시적 검증 후          | Yes  | null 검사 후 `return block as BlockWithCalendar` |
 | 테스트 파일에서         | Yes  | `expect(result!.id).toBe(1)`                     |
 | Type narrowing 헬퍼     | Yes  | 적절한 type guard와 함께                         |
 | 검증 없는 프로덕션 코드 | No   | `block.gcalId!`                                  |

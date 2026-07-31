@@ -21,10 +21,10 @@ translation_date: '2026-07-31'
 ---
 
 `ContactCacheService.refreshFromGoogle`이 Postgres에 contacts를 쓰고,
-이메일별 이벤트를 큐 리스너로 fire-and-forget 했고, 그 다음에
+이메일별 이벤트를 큐 리스너로 fire-and-forget했고, 그 다음에
 `contactsSyncedAt = now()`를 스탬프했어요. 코드가 맞아 보였어요. 그런데
-Redis가 잠깐 끊겼을 때 리스너의 `queue.add`가 허공으로 reject 됐고(emit이
-sync fire-and-forget이라 promise가 detached 됐거든요) 스탬프는 그대로
+Redis가 잠깐 끊겼을 때 리스너의 `queue.add`가 허공으로 reject됐고(emit이
+sync fire-and-forget이라 promise가 detached됐거든요) 스탬프는 그대로
 떨어졌어요. 다음 호출은 스탬프에서 short-circuit해서 다시 fan-out하지 않았고,
 다운스트림 Typesense 인덱스는 비어 있는 채로 남았어요. 사용자들이 검색하면
 zero results였는데 어디에도 예외가 표면화되지 않았어요.
@@ -37,14 +37,14 @@ fire-and-forget이면 조용히 실패하는 구멍이 하나 생겨요.
 1. 서비스가 DB에 행을 써요.
 2. 서비스가 행마다 `eventEmitter.emit('topic', evt)`를 루프 돌려요.
    `emit`은 sync고 리스너 return을 await하지 **않아요**. 리스너는
-   `await queue.add(...)`를 하지만, 그 promise가 detached 돼요.
+   `await queue.add(...)`를 하지만, 그 promise가 detached돼요.
 3. 서비스가 `bootstrapped_at = now()`를 써요.
 4. 리스너의 `queue.add`가 reject (Redis 도달 불가). Promise가 어디로도
-   reject되지 않고, 서비스는 이미 스탬프를 commit 했어요.
+   reject되지 않고, 서비스는 이미 스탬프를 commit했어요.
 5. 다음 요청이 `bootstrapped_at IS NOT NULL`을 보고 "로컬 상태에서 읽기"로
    short-circuit해서 다시 fan-out하지 않아요. 다운스트림 시스템(Typesense,
-   검색 인덱스, 캐시, audit log)이 그 행들에 대해 영구적으로 stale
-   해져요.
+   검색 인덱스, 캐시, audit log)이 그 행들에 대해 영구적으로
+   stale해져요.
 
 DB 행은 맞고 sentinel도 set돼 있는데, 다운스트림은 비어 있고 아무것도 던지지
 않아요. 버그는 사용자가 나중에 검색해서 zero results를 받을 때만 드러나고,
@@ -54,7 +54,7 @@ DB 행은 맞고 sentinel도 set돼 있는데, 다운스트림은 비어 있고 
 
 `EventEmitter2.emitAsync`를 쓰고 sentinel 쓰기를 그 resolution에 게이트
 해요. 계약이 이렇게 돼요: 모든 리스너의 returned promise가 resolve된
-경우에만 스탬프가 떨어져요. 어디서든 reject되면 스탬프가 un-set로 남아서
+경우에만 스탬프가 떨어져요. 어디서든 reject되면 스탬프가 un-set으로 남아서
 다음 호출이 부트스트랩 전체를 재시도해요.
 
 ### 1단계: Publisher가 `*Async` variant를 노출
@@ -83,7 +83,7 @@ export class ContactEventPublisher {
 ```
 
 `emitAsync`는 `Promise<unknown[]>`을 반환해요. 모든 리스너의 return value가
-담긴 resolved array죠. 어떤 리스너든 어디서든 reject하면 전체가 reject 돼요.
+담긴 resolved array죠. 어떤 리스너든 어디서든 reject하면 전체가 reject돼요.
 
 ### 2단계: 호출자가 emit을 await하고 그 다음 스탬프
 
@@ -126,7 +126,7 @@ fire-and-forget)는 게이팅을 무력화해요.
 ## 핵심 포인트
 
 - **게이팅 계약:** sentinel 쓰기는 `await emitAsync`가 resolve할 때만
-  떨어져요. 어떤 리스너에서든 reject되면 sentinel이 un-set로 남고, 그래서
+  떨어져요. 어떤 리스너에서든 reject되면 sentinel이 un-set으로 남고, 그래서
   다음 호출이 재시도해요.
 - **멱등성은 필수.** 재시도가 안전해야 하니까 `bulkUpsert`에는 `ON CONFLICT
   DO UPDATE`가, 다운스트림 upsert에는 `action: 'upsert'`가 필요해요. 멱등성이
@@ -196,7 +196,7 @@ const result = await this.fetchOrCacheOne(
 chunk로 쪼개서 bind-parameter 상한에 아예 닿지 않게 만들었어요. 처음부터
 넣어둘 만한 진단이 두 개 보이는데, 그때 있었으면 좋았겠다 싶어요.
 
-- **재시도 횟수를 세기.** 같은 키에서 sentinel을 N번 연속 un-set로 남긴
+- **재시도 횟수를 세기.** 같은 키에서 sentinel을 N번 연속 un-set으로 남긴
   게이트는 불안정한 의존성이 아니라 결정적 실패를 신고하고 있는 거예요. 작은
   N을 넘기면 severity를 올려서 로그를 찍었다면 이건 바로 시끄러워졌을 거예요.
 - **`catch`가 구분할 수 있는지 묻기.** "token 만료"(일시적, 사용자가 고칠 수

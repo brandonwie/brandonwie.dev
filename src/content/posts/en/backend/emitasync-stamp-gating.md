@@ -230,7 +230,7 @@ so the txn wraps a single statement (already atomic via Postgres
 autocommit). The real bug is sequencing (sentinel between writes), not
 atomicity. A txn doesn't fix the gating problem, and it adds a
 long-running transaction holding row locks across an `await` to a queue
-server — bad practice.
+server, which is bad practice.
 
 ## When to Use
 
@@ -257,8 +257,8 @@ server — bad practice.
 - When the failure on the gated path is deterministic rather than
   transient. An un-stamped gate only heals a gap the next call can
   plausibly close, so a failure that reproduces on identical input turns
-  the gate into a permanent retry loop instead — see "A Deterministic
-  Failure Turns the Gate Into a Permanent Loop" above.
+  the gate into a permanent retry loop instead (see "A Deterministic
+  Failure Turns the Gate Into a Permanent Loop" above).
 
 ## Takeaway
 
