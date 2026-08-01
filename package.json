@@ -30,6 +30,7 @@
 		"media:gen:check": "tsx scripts/media-gen-cover.ts --check",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
+		"audit:posts": "tsx scripts/audit-posts.ts",
 		"validate:dates": "tsx scripts/validate-dates.ts",
 		"validate:dates:fix": "tsx scripts/validate-dates.ts --fix",
 		"format": "prettier --write .",
