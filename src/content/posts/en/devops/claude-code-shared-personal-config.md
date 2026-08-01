@@ -2,7 +2,7 @@
 title: "Claude Code: Shared + Personal AI Config Pattern"
 description: Split AI instructions into committed (shared) and gitignored (personal) layers
 date: 2026-02-04T00:00:00.000Z
-updated: "2026-07-23"
+updated: "2026-08-02"
 tags:
   - devops
   - claude-code
@@ -14,8 +14,14 @@ lang: en
 expanded: true
 source_content_hash: dcbe64a1d4804ca000c8bd25992698e9f82f45e4b8b816980e208de3d0ca6037
 references:
-  - url: "https://docs.anthropic.com/en/docs/claude-code"
-    title: Claude Code Documentation
+  - url: "https://code.claude.com/docs/en/memory"
+    title: "Claude Code docs — How Claude remembers your project (CLAUDE.md load order)"
+    type: official
+  - url: "https://code.claude.com/docs/en/permissions"
+    title: "Claude Code docs — Configure permissions (deny → ask → allow evaluation order)"
+    type: official
+  - url: "https://code.claude.com/docs/en/settings"
+    title: "Claude Code docs — Settings files and settings precedence"
     type: official
 ---
 
@@ -121,16 +127,19 @@ project repo:
 
 ```text
 3b/.claude/project-claude/
-├── backend-project.md          # Shared SoT → backend-v2/CLAUDE.md (symlink)
-├── backend-project.local.md    # Personal SoT → backend-v2/CLAUDE.local.md (symlink)
-├── backend-project.mcp.json    # MCP SoT → backend-v2/.mcp.json (symlink)
+├── backend-project.md          # Shared SoT → {backend-repo}/CLAUDE.md (symlink)
+├── backend-project.local.md    # Personal SoT → {backend-repo}/CLAUDE.local.md (symlink)
+├── backend-project.mcp.json    # MCP SoT → {backend-repo}/.mcp.json (symlink)
 ├── infra-project.md            # Combined (personal-only repo)
-├── infra-project.mcp.json      # MCP SoT → backend-infra/.mcp.json (symlink)
+├── infra-project.mcp.json      # MCP SoT → {infra-repo}/.mcp.json (symlink)
 ├── orchestration-project.md    # Combined (personal-only repo)
 ├── etl-project.md              # Combined (personal-only repo)
-├── crucio.mcp.json         # MCP SoT → crucio/.mcp.json (symlink)
+├── crucio.mcp.json             # MCP SoT → crucio/.mcp.json (symlink)
 └── ...
 ```
+
+`{backend-repo}` and `{infra-repo}` stand in for the checkout directory names of
+the team repos on disk — the pattern doesn't care what they're called.
 
 Only repos with other team members need the shared/local split. Personal-only
 repos use a single combined file. `.mcp.json` follows the same pattern: the
@@ -257,7 +266,7 @@ precedence (`deny > ask > allow`) makes that catch-all safe.
 
 ```text
 3b/.claude/settings.local.json  ← source file
-  ↑ symlinked from 8 projects (brandonwie, crucio, backend-v2, etc.)
+  ↑ symlinked from 8 projects (brandonwie, crucio, {backend-repo}, etc.)
 + 5 independent files (dev/, personal/, dotfiles/, frontend/, mobile/)
 ```
 

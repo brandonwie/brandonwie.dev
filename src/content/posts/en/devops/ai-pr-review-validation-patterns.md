@@ -2,7 +2,7 @@
 title: AI PR Review Validation Patterns
 description: Fourteen patterns where AI code reviewers (Claude, Copilot, Codex) produce false positives, plus the classification framework and reinforcing-comment templates that keep triage fast.
 date: 2026-01-23T00:00:00.000Z
-updated: "2026-07-31"
+updated: "2026-08-02"
 tags:
   - devops
   - ai
@@ -86,7 +86,7 @@ Reality: NestJS HTTP requests execute synchronously in single-threaded event loo
 
 ```text
 Agent: "softDeleteAllByUserId not wrapped in transaction with subscription creation"
-Reality: LemonSqueezy already committed subscription; our code just syncs state
+Reality: the payment provider already committed the subscription; our code just syncs state
 ```
 
 **Prevention:** Add reinforcing comment:
@@ -190,15 +190,15 @@ This pattern shows up whenever you have a constructor with sensible defaults pai
 
 ```text
 Agent: "Lines 796-800 set deletedAt unconditionally — toBeNull() should fail"
-Reality: Those lines are a NOTE comment on develop; the if-block was removed in PR #711
+Reality: Those lines are a NOTE comment on develop; the if-block was removed in an earlier PR
 ```
 
-I hit this on PR #712 where Claude analyzed `main` branch code and flagged a test assertion as incorrect. On `develop`, the lines it cited were already replaced by a comment, because the production code had changed in the previous PR. The assertion was correct for the current `develop` state.
+I hit this on a release-track PR where Claude analyzed `main` branch code and flagged a test assertion as incorrect. On `develop`, the lines it cited were already replaced by a comment, because the production code had changed in the previous PR. The assertion was correct for the current `develop` state.
 
 **Prevention:** Add reinforcing comment at the test site:
 
 ```typescript
-// NOTE: The deletedAt-setting code was removed in PR #711. This test verifies
+// NOTE: The deletedAt-setting code was removed in an earlier PR. This test verifies
 // the post-removal behavior: Event blocks only get itemStatus=Deleted, no deletedAt.
 ```
 
@@ -222,7 +222,7 @@ I hit this on PR #712 where Claude analyzed `main` branch code and flagged a tes
 git log origin/main..HEAD -- {file} --format="%h %ae %s"
 ```
 
-Mark findings on other people's code as N/A in the finding registry, and escalate only CRITICAL ones regardless of author. On PR #710 that took 7 of 15 unique findings off my plate before triage started.
+Mark findings on other people's code as N/A in the finding registry, and escalate only CRITICAL ones regardless of author. On one release PR that took 7 of 15 unique findings off my plate before triage started.
 
 ### 12. Markdown Formatting Hallucination
 
@@ -331,7 +331,7 @@ Two caveats I would not skip. Convergence is evidence of salience, not of truth.
 
 ## Real-World Examples
 
-### Example 1: moba-nestjs PR #629 (claude[bot])
+### Example 1: A NestJS API service (claude[bot])
 
 **Stats:** 12 comments, 3 INVALID, 5 OPTIONAL, 4 VALID IMPROVEMENT
 
@@ -341,7 +341,7 @@ Two caveats I would not skip. Convergence is evidence of salience, not of truth.
 - Request lifecycle misunderstanding (no race condition in single-threaded event loop)
 - Webhook flow misunderstanding (external service already committed)
 
-### Example 2: moba-etl PR #5 (GitHub Copilot)
+### Example 2: A Python ETL pipeline (GitHub Copilot)
 
 **Stats:** 10 comments, 0 INVALID, 4 VALID BUG, 3 VALID IMPROVEMENT, 1 ALREADY FIXED, 2 OPTIONAL
 
@@ -372,7 +372,7 @@ This was the PR where three new confusion patterns emerged at once. The Python p
 
 **Outcome:** 6 fixes applied, 6 INVALID items dismissed with evidence. Mixed accuracy: CodeRabbit had 4/6 INVALID, Claude Bot had 1 VALID BUG + 2 INVALID.
 
-### Example 4: moba-nestjs PR #710 Round 1+2 (Copilot + Claude)
+### Example 4: A release PR on a NestJS API service, Rounds 1+2 (Copilot + Claude)
 
 **Stats:** 19 raw findings → 15 unique after dedup. 1 VALID BUG, 2 GTH→FIX, 3 CONTROVERSIAL→SKIP, 1 INVALID, 3 DEFER, 7 N/A (authorship)
 
@@ -380,7 +380,7 @@ This was a release PR (develop to main) with a large diff that triggered the Git
 
 **Key VALID BUG:**
 
-- `blockRepo.count()` missing `withDeleted: true` in `moveCrossIntegration`: soft-deleted T blocks (cancelled recurring instances) not counted, causing parent to route incorrectly to `moveCrossIntegrationSingle`
+- A `count()` on the cross-integration move path was missing `withDeleted: true`: soft-deleted child rows (cancelled recurring instances) went uncounted, so the parent routed to the single-item move instead of the batch move
 
 **Key INVALID:**
 
@@ -388,21 +388,21 @@ This was a release PR (develop to main) with a large diff that triggered the Git
 
 **Key SKIP decisions (CONTROVERSIAL):**
 
-- Soft-deleted records for sync: WebSocket event handles deletions, not `getBlocksByIds`
+- Soft-deleted records for sync: the WebSocket event handles deletions, not the batch fetch
 - Type assertion for Google API: no type-safe alternative for `null` conferenceData clearing
 - Non-null assertions in tests: correct observation but 27 occurrences = wrong timing for release PR
 
 **Process learning:** Claude's structured review must be parsed per-finding (STEP 1C), not collapsed into one CR-1. Round 1 missed this; corrected in Round 2.
 
-### Example 5: moba-nestjs PR #712 Round 1+2 (Claude)
+### Example 5: A feature PR on the same NestJS API service, Rounds 1+2 (Claude)
 
 **Stats:** Round 1: 8 items (5 INVALID, 2 CONTROVERSIAL→FIX, 1 GTH→FIX). Round 2: 2 items (1 INVALID, 1 GTH→FIX)
 
-This is where Cross-Branch Confusion (#9) first showed up. Claude analyzed `main` branch code instead of the PR's target (`develop`) and claimed a test assertion contradicted the implementation at lines 796-800. On `develop`, those lines were already a NOTE comment, because the `deletedAt`-setting code had been removed in the previous PR (#711).
+This is where Cross-Branch Confusion (#9) first showed up. Claude analyzed `main` branch code instead of the PR's target (`develop`) and claimed a test assertion contradicted the implementation at lines 796-800. On `develop`, those lines were already a NOTE comment, because the `deletedAt`-setting code had been removed in the previous PR.
 
 **Key INVALID (new pattern):**
 
-- Cross-Branch Confusion (#9): Reviewer analyzed `main` branch code instead of PR's target (`develop`). Claimed `toBeNull()` contradicts implementation at lines 796-800, but those lines are a NOTE comment on `develop` (the `deletedAt`-setting code was removed in PR #711)
+- Cross-Branch Confusion (#9): Reviewer analyzed `main` branch code instead of PR's target (`develop`). Claimed `toBeNull()` contradicts implementation at lines 796-800, but those lines are a NOTE comment on `develop` (the `deletedAt`-setting code was removed in the previous PR)
 
 **Outcome:** 3 fixes applied across both rounds, 6 INVALID dismissed. New pattern documented: Cross-Branch Confusion, where AI reviewers default to `main` branch context even when PR targets `develop`.
 

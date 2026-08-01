@@ -2,7 +2,7 @@
 title: Bash set -e and Command Substitution
 description: 'When using `set -e` (exit on error), command substitution behaves unexpectedly'
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - bash
@@ -11,16 +11,22 @@ category: devops
 draft: false
 lang: en
 references:
-  - url: 'https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html'
-    title: The Set Builtin — Bash Reference Manual
+  - url: 'https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html#set'
+    title: 'POSIX.1-2024 Shell Command Language — the set special built-in (-e)'
     type: official
+  - url: 'https://man7.org/linux/man-pages/man1/bash.1.html'
+    title: 'bash(1) manual page — set -e (errexit)'
+    type: authoritative
+  - url: 'https://mywiki.wooledge.org/BashFAQ/105'
+    title: "Greg's Wiki, BashFAQ 105 — Why doesn't set -e do what I expected?"
+    type: authoritative
 source_content_hash: 1fa83f639be79165a2b72592eef9ff3758ee16215ba8bd3273c32e19dfc90946
 expanded: true
 ---
 
 I was writing an `entrypoint.sh` for an Airflow Docker container and added `set -e` at the top for safety — exit immediately if any command fails. Then I wrote careful error handling for the AWS CLI calls, with custom error messages explaining what went wrong and which IAM permissions were needed. None of those error messages ever appeared. The script silently exited before reaching them.
 
-The culprit is an interaction between `set -e` and command substitution that's well-documented but consistently surprising: when a command inside `$(...)` fails, `set -e` terminates the script at that line. Your `if` check on the next line never runs.
+The culprit is an interaction between `set -e` and command substitution that's well-documented but consistently surprising: when the command inside a `VAR=$(...)` assignment fails, `set -e` terminates the script at that line. Your `if` check on the next line never runs.
 
 ## The Problem
 
@@ -62,7 +68,9 @@ The `2>/dev/null` suppresses stderr from the AWS CLI, so the user only sees your
 
 ## Why This Works
 
-The behavior comes from how Bash defines "exit on error." Per the Bash manual, `set -e` does NOT trigger when the failing command is part of an `if` condition, a `while`/`until` condition, or part of a `&&`/`||` list. The `if` statement explicitly tells Bash "I'm handling this exit status" — so `set -e` stands down.
+The behavior comes from how the shell defines "exit on error." The `bash(1)` man page lists the exemptions directly: the shell does not exit if the failing command is part of the test following `if` or `elif`, part of the list following `while` or `until`, part of a `&&`/`||` list other than the command after the final operator, or if its return value is being inverted with `!`. POSIX words it the same way — `-e` is ignored while executing the compound list following `while`, `until`, `if`, or `elif`, and for a pipeline beginning with `!`. The `if` statement explicitly tells the shell "I'm handling this exit status" — so `set -e` stands down.
+
+The other half is easier to get backwards. Command substitution on its own does not arm `set -e`: POSIX says the failure of a subshell in which command substitution was performed during word expansion shall not cause the shell to exit, and `echo $(false) two` really does still print `two`. What makes `VAR=$(cmd)` different is that a simple command with no command name completes with the exit status of the last command substitution it ran. The assignment itself is the command that failed — and nothing is consuming its status.
 
 | Pattern           | set -e Behavior              | Custom Message |
 | ----------------- | ---------------------------- | -------------- |
@@ -96,4 +104,6 @@ When combining `set -e` with command substitution, custom error messages after `
 
 ## References
 
-- [Bash Reference Manual — The Set Builtin](https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html)
+- [POSIX.1-2024 Shell Command Language — the `set` special built-in](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html#set)
+- [`bash(1)` manual page — `set -e` (errexit)](https://man7.org/linux/man-pages/man1/bash.1.html)
+- [Greg's Wiki, BashFAQ 105 — Why doesn't `set -e` do what I expected?](https://mywiki.wooledge.org/BashFAQ/105)

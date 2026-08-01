@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { Component } from 'svelte';
 import socialLinksBySlug from '$lib/data/social-links.json';
@@ -43,6 +44,10 @@ export const load: PageLoad = async ({ params }) => {
 	for (const [path, resolver] of Object.entries(modules)) {
 		if (path.endsWith(`/${params.slug}.md`)) {
 			const post = (await resolver()) as PostModule;
+			// Retired posts (draft: true) are already hidden from listings, RSS, and
+			// the sitemap. Make the direct URL unreachable too, so retiring a post
+			// that failed a content-integrity gate actually withdraws it.
+			if (post.metadata.draft) error(404, `Post not found: ${params.slug}`);
 			const { headings, ...meta } = post.metadata;
 			return {
 				content: post.default,

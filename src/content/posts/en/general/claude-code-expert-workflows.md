@@ -2,9 +2,10 @@
 title: Claude Code Expert Workflows
 description: >-
   Synthesized patterns from three complementary expert sources: Boris Cherny
-  (tool
+  (tool configuration), Mia Heidenstedt (process discipline), and YK Dojo
+  (practitioner workflows)
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - general
   - claude-code
@@ -18,9 +19,7 @@ references:
   - url: 'https://x.com/bcherny/status/2007179832300581177'
     title: Boris Cherny's Claude Code setup
     type: authoritative
-  - url: >-
-      https://heidenstedt.org/posts/2026/
-      how-to-effectively-write-quality-code-with-ai/
+  - url: 'https://heidenstedt.org/posts/2026/how-to-effectively-write-quality-code-with-ai/'
     title: How to effectively write quality code with AI
     type: authoritative
   - url: 'https://github.com/ykdojo/claude-code-tips'

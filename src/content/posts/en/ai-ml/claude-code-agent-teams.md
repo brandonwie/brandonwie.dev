@@ -2,7 +2,7 @@
 title: Claude Code Agent Teams
 description: Experimental feature for orchestrating multiple Claude Code instances as a coordinated team with shared task lists and inter-agent messaging
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-07-23'
+updated: '2026-08-02'
 tags:
   - ai-ml
   - claude-code
@@ -17,10 +17,6 @@ references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
     type: official
-  - url: "internal://claude-binary-strings/v2.1.138"
-    title: BackendRegistry + persistent-macro evidence (binary strings dump)
-    type: verified
-    notes: "strings $(which claude) reveals [BackendRegistry] Selected: tmux log + functions yk7/hk7/vk7 managing S_()/e_() macros (preferTmuxOverIterm2, iterm2It2SetupComplete) outside settings.json"
 ---
 
 I needed three independent code reviews running in parallel: security,

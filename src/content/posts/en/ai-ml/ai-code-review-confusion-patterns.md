@@ -6,7 +6,7 @@ description: >-
   class. With detection signals and the empirical tiebreaker that resolves
   factual disagreements.
 date: 2026-04-08T00:00:00.000Z
-updated: "2026-06-14"
+updated: "2026-08-02"
 tags:
   - ai-ml
   - code-review
@@ -21,9 +21,6 @@ lang: en
 expanded: true
 source_content_hash: f75da1cbffe4bd2b9c14344b729aae106af0efa7907266174f8c6169ec312537
 references:
-  - url: 'https://github.com/brandonwie/crucio/pull/83'
-    title: 'crucio PR #83 — Claude vs Codex disagreement on Starlette ordering'
-    type: internal
   - url: 'https://github.com/encode/starlette/blob/master/starlette/applications.py'
     title: 'Starlette add_middleware source — authoritative reference'
     type: authoritative
@@ -31,7 +28,7 @@ references:
 
 Recently I started running a `/pr-review-rectify` workflow that takes every inline comment Claude, Copilot, and Codex leave on a diff and classifies each as valid, invalid, controversial, or good-to-have. The point is to catch real bugs from the signal side while filtering out false positives with structure.
 
-Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR (#858) surfaced something different: a *productive* behavior worth amplifying. May added three more failure modes — including the first analyst-side error class — and one PR-body-vs-source-conflation pattern. Mid-May added two more: a cross-reviewer convergence on a phantom formatting bug, and a second productive behavior where the reviewer audits siblings the analyst missed. I can now point at ten failure modes, two productive behaviors, and one analyst-side class, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one to three samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
+Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR surfaced something different: a *productive* behavior worth amplifying. May added three more failure modes — including the first analyst-side error class — and one PR-body-vs-source-conflation pattern. Mid-May added two more: a cross-reviewer convergence on a phantom formatting bug, and a second productive behavior where the reviewer audits siblings the analyst missed. I can now point at ten failure modes, two productive behaviors, and one analyst-side class, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one to three samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
 
 ## The setup
 
@@ -45,13 +42,13 @@ The validation workflow looks at every AI reviewer comment on a PR and, for each
 | Confidently Wrong on Library Internals   | failure  | Starlette PR    | Articulate reassurance about framework behavior that contradicts source |
 | Stale Snapshot Review                    | failure  | Python PR       | Review indexed against an earlier revision that no longer is HEAD       |
 | `isOutdated` Is Not a Correctness Signal | failure  | NestJS DTO PR   | GitHub marked thread outdated but the underlying concern was still real |
-| Cross-Round Twin Detection               | strength | NestJS PR #858  | Bot applies prior-round fix as template, catches same shape on sibling  |
+| Cross-Round Twin Detection               | strength | Multi-round NestJS PR | Bot applies prior-round fix as template, catches same shape on sibling |
 | PR Diff Scope Confusion                  | analyst  | 3B PR #45       | Analyst used local-base diff instead of origin-base diff                |
 | Cross-File Mirror Drift                  | failure  | 3B PR #45       | Mirror prose enumerated 4 of 7 canonical rows; reviewer caught          |
 | Issue-Comment vs Inline Thread Gap       | failure  | 3B PR #45       | Bot posted findings as one issue-comment summary, not inline threads    |
 | PR-Body-Source-Conflation                | failure  | 3B PR #47       | Reviewer treated PR description prose as source-code commentary         |
 | Long-Row Formatting Hallucination        | failure  | 3B PR #84       | Two reviewers converge on phantom "missing backticks" on a long row     |
-| Sibling-Fix Holdout                      | strength | Frontend PR #2799 | Reviewer catches analyst's missed siblings of a folder-scoped fix     |
+| Sibling-Fix Holdout                      | strength | Multi-round frontend PR | Reviewer catches analyst's missed siblings of a folder-scoped fix   |
 
 What follows is each pattern, with the PR evidence and what I learned about detecting (or amplifying) it.
 
@@ -61,7 +58,7 @@ What follows is each pattern, with the PR evidence and what I learned about dete
 
 On a NestJS PR, Copilot flagged a controller parameter `clientTypeHeader?: string` as needing array normalization, citing Express's raw type signature `string | string[] | undefined`. The flag was technically consistent with the Express type, but it was wrong in context: NestJS's `@Headers('key')` decorator returns `string | undefined` for custom headers, precisely because Express normalizes duplicates by joining them with comma-space. The reviewer analyzed the parameter's annotation without following the decorator into its implementation.
 
-The same pattern showed up again in a different shape on PR #872. Claude traced `fromEntity` into `create()` and argued that a plain all-day block could throw 400 because `dto.detail === undefined` would make `isAllDay` false. The two-file trace was internally consistent, but it missed the entity-level invariant: `hasDetailFields` includes `block.priority`, a NOT-NULL enum column with a default truthy value. A DB-loaded entity always carries that field, `{ ...block }` preserves it, and `detail` is therefore created. The missing context was not another function call; it was the `@Column({ default })` declaration that made the guard's input shape stronger than the local DTO trace suggested.
+The same pattern showed up again in a different shape on a later NestJS PR. Claude traced `fromEntity` into `create()` and argued that a plain all-day block could throw 400 because `dto.detail === undefined` would make `isAllDay` false. The two-file trace was internally consistent, but it missed the entity-level invariant: `hasDetailFields` includes `block.priority`, a NOT-NULL enum column with a default truthy value. A DB-loaded entity always carries that field, `{ ...block }` preserves it, and `detail` is therefore created. The missing context was not another function call; it was the `@Column({ default })` declaration that made the guard's input shape stronger than the local DTO trace suggested.
 
 **Why it happens.** Most AI reviewers work with a single-file or single-diff context window. They can see the types flowing through the current file but cannot trace a decorator call into its implementation in a dependency package. So "what does this decorator actually return at runtime?" becomes a question they cannot answer, and the type signature at the nearest reachable point (often a raw framework type) becomes the default assumption.
 
@@ -179,7 +176,7 @@ Operationally, `isOutdated` is correlated with cross-PR line shifts (stacked PRs
 
 The first six patterns are all things you want to *suppress*. Pattern 7 is the opposite — a behavior worth deliberately *amplifying*, because it converts one fix into a structural cleanup across a codebase.
 
-Pattern 7 emerged on PR #858 (April 28). Across four rounds, the bot kept applying earlier fixes as templates:
+Pattern 7 emerged on a multi-round NestJS PR in late April. Across four rounds, the bot kept applying earlier fixes as templates:
 
 - **R3-1:** bot flagged a per-ref `publishContactUpserted` loop on `SyncAttendeeContactListener`. Fix: bulk emit.
 - **R4-1:** bot flagged a per-ref `publishContactUpserted` loop on `AttendeeContactListener` — different class, different `@OnEvent` topic, but the same shape. Fixed identically.
@@ -297,7 +294,7 @@ This one shifted my mental model on convergence — *what kind* of convergence m
 
 Pattern 13 is the second productive behavior in the catalog. Like Pattern 7, it's worth amplifying. Unlike Pattern 7, the blind spot belongs to the analyst (me, doing the validation), not to the reviewer.
 
-On the moba-frontend onboarding-tutorial PR #2799, three independent instances of this pattern surfaced across rounds 10 through 14 of a single session. Same antipattern shape, three different convention fixes:
+On a frontend onboarding-tutorial PR, three independent instances of this pattern surfaced across rounds 10 through 14 of a single session. Same antipattern shape, three different convention fixes:
 
 | Round            | Fixed by analyst                                                                | Missed sibling caught by reviewer                                                 |
 | ---------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -309,7 +306,7 @@ This is the **reviewer-side mirror of Pattern 8 (PR Diff Scope Confusion)**. The
 
 **Prevention (analyst-side).** When applying any folder-scoped convention or fix, audit ALL siblings in the same directory before committing. The reviewer will catch the holdouts next round, but each holdout costs a full round-trip — commit, push, workflow, bot review, validation cycle. Cheaper to sweep the folder once.
 
-**Amplification (reviewer-side).** Reinforce the productive behavior. When the bot flags a convention fix, encourage it to scan the folder for other instances of the same pattern and surface them in ONE cross-file thread. R13 thread B on PR #2799 is a clean example: one comment listed 4 files, one reply covered 4 commits, one resolve closed the loop.
+**Amplification (reviewer-side).** Reinforce the productive behavior. When the bot flags a convention fix, encourage it to scan the folder for other instances of the same pattern and surface them in ONE cross-file thread. R13 thread B on that frontend PR is a clean example: one comment listed 4 files, one reply covered 4 commits, one resolve closed the loop.
 
 **Why I'm treating this as a strength, not a process gap.** I could read this as "my validation process should never miss siblings" and try to engineer that out. But the round-trip cost is real, and the bot's structural folder read is genuinely cheap. The honest move is to keep my sweep discipline tight while *also* leaving the bot's audit running as a safety net. Patterns 7 and 13 together are the two cases where multi-round PR validation pays for itself by amplifying what the reviewer does well.
 

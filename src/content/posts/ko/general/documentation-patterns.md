@@ -4,7 +4,7 @@ description: >-
   Buffer Pattern은 AI 지원 세션에서 중요한 발견을 보존해요. 세션이 끝나거나 연결이 끊겨도 소중한 인사이트를 잃지 않도록
   해주죠.
 date: 2025-01-15T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - general
   - documentation
@@ -15,11 +15,14 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: documentation-patterns
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-03-04'
 references:
-  - url: 'https://www.writethedocs.org/guide/index.html'
-    title: Software documentation guide — Write the Docs
+  - url: 'https://code.claude.com/docs/en/memory'
+    title: How Claude remembers your project — Claude Code documentation
+    type: official
+  - url: 'https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions'
+    title: Documenting Architecture Decisions — Michael Nygard
     type: authoritative
 ---
 
@@ -45,6 +48,10 @@ references:
 
 결과: 모든 컨텍스트 유실
 ```
+
+제 환경만의 문제가 아니라 도구가 원래 그렇게 동작해요. [Claude Code memory 문서](https://code.claude.com/docs/en/memory)에도 세션은 매번 새로운 context window로 시작하고, 세션을 넘어 지식을 옮겨주는 건 디스크에 있는 파일이라고 적혀 있어요. 대화 안에만 있던 건 대화가 끝나면 같이 사라지죠.
+
+그리고 잃어버리는 건 "무슨 일이 있었는지"가 아니라 "왜 그렇게 했는지"예요. Michael Nygard도 2011년 ADR 글에서 [프로젝트를 진행하는 동안 추적하기 가장 어려운 것 중 하나가 결정의 동기](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)라고 썼고, 해법도 같았어요 — 결정을 내리는 그 순간에 근거를 적어두는 것. Buffer는 같은 아이디어를 훨씬 짧은 시간 단위에 적용한 거예요. ADR이 몇 년 단위라면 buffer는 몇 시간 단위죠.
 
 ### 해결책
 
@@ -132,5 +139,6 @@ references:
 
 ## 참고
 
-- `.claude/buffer.md` - buffer 파일
-- `.claude/skills/wrap/SKILL.md` - 세션 끝에 buffer를 처리
+- [How Claude remembers your project](https://code.claude.com/docs/en/memory) - Claude Code memory 문서: 세션은 fresh context window로 시작하고, 디스크의 파일만 세션을 넘어감
+- [Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) - Michael Nygard, 결정의 근거가 사라지기 전에 기록하기
+- 제 개인 tooling 저장소에서는 `.claude/buffer.md`가 buffer 파일이고, `wrap` skill이 세션 끝에 이를 처리해요

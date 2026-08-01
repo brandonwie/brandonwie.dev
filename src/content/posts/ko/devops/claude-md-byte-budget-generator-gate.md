@@ -5,7 +5,7 @@ description: >-
   byte budget을 author discipline에서 파일을 조립하는 generator로 옮기고 나서야 — per-rule
   warning, total hard-fail, rendered-file ceiling으로 — 완전히 멈췄어요.
 date: 2026-05-13T00:00:00.000Z
-updated: '2026-06-07'
+updated: '2026-08-02'
 tags:
   - devops
   - claude-code
@@ -15,13 +15,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-md-byte-budget-generator-gate
-source_updated: '2026-06-07'
+source_updated: '2026-08-02'
 translation_date: '2026-06-14'
 ---
 
 CLAUDE.md 같은 always-on 컨텍스트 파일은 trim해도 시간이 지나면 다시 부풀어 올라요. 한 번 줄여서 경고가 사라져도, 몇 주 뒤면 어김없이 돌아왔어요. 두 번째로 같은 일을 겪고 나서야 trim을 멈추고, 방금 줄인 파일이 왜 자꾸 선을 넘어 다시 자라는지 찾아 나섰어요.
 
-always-on 컨텍스트 파일을 로드하는 agent 도구들 — Claude Code의 `CLAUDE.md`, Codex의 `AGENTS.md`, Gemini의 `GEMINI.md` — 은 그 파일을 [모든 세션의 컨텍스트 윈도우](https://docs.anthropic.com/en/docs/claude-code/memory)에 넣어요. 그게 이 파일의 핵심이고, 동시에 유한한 budget이에요. Claude Code는 파일이 커지면 세션 시작 때 성능 경고를 띄워요. 제 셋업에선 4만 자 근처에서 "Large CLAUDE.md will impact performance"를 보기 시작했어요.
+always-on 컨텍스트 파일을 로드하는 agent 도구들 — Claude Code의 `CLAUDE.md`, Codex의 `AGENTS.md`, Gemini의 `GEMINI.md` — 은 그 파일을 [모든 세션의 컨텍스트 윈도우](https://code.claude.com/docs/en/memory)에 넣어요. 그게 이 파일의 핵심이고, 동시에 유한한 budget이에요. Claude Code는 파일이 커지면 세션 시작 때 성능 경고를 띄워요. 제 셋업에선 4만 자 근처에서 "Large CLAUDE.md will impact performance"를 보기 시작했어요.
 
 ## 손으로 관리하는 걸로는 부족했던 이유
 
@@ -104,4 +104,4 @@ if (renderedBytes > CLAUDE_TEMPLATE_MAX_BYTES) {
 
 ## References
 
-- [Claude Code memory — how CLAUDE.md loads into every session's context](https://docs.anthropic.com/en/docs/claude-code/memory)
+- [Claude Code memory — how CLAUDE.md loads into every session's context](https://code.claude.com/docs/en/memory)

@@ -2,7 +2,7 @@
 title: Sync Token Invalidation Recovery (410 GONE)
 description: 'When Google Calendar API returns 410 GONE, the sync token is invalidated and a'
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - google-calendar
@@ -34,7 +34,7 @@ The key insight: 410 GONE isn't limited to time-based expiration. ACL changes (p
 The original resync handler was brutally simple — delete everything and recreate from Google:
 
 ```typescript
-// ❌ DANGEROUS: Loses Moba-specific data
+// ❌ DANGEROUS: Loses app-specific data
 async handleResync(calendarId: string) {
   await this.blockRepo.delete({ calendarId });  // Gone!
   const events = await this.googleApi.listEvents(calendarId);
@@ -53,7 +53,7 @@ async handleResync(calendar: Calendar) {
   const accessRole = calendar.accessRole;
 
   if (isEditableCalendar(accessRole)) {
-    // MERGE: Preserve Moba-specific fields
+    // MERGE: Preserve app-specific fields
     await this.mergeResync(calendar);
   } else {
     // CLEAN-SLATE: Safe for read-only calendars
@@ -84,7 +84,7 @@ async mergeResync(calendar: Calendar) {
     });
 
     if (existing) {
-      // UPDATE: Keep Moba fields, update Google fields
+      // UPDATE: Keep app fields, update Google fields
       await this.updateBlockFromEvent(existing, event);
     } else {
       // INSERT: New event from Google
@@ -100,7 +100,7 @@ For read-only calendars, there's no application-specific data to protect. A clea
 
 ```typescript
 async cleanSlateResync(calendar: Calendar) {
-  // Safe: Read-only calendars have no Moba-specific data
+  // Safe: Read-only calendars have no app-specific data
   await this.blockRepo.delete({ calendarId: calendar.id });
   const events = await this.googleApi.listEvents(calendar.gcalId);
   await this.createBlocksFromEvents(events);

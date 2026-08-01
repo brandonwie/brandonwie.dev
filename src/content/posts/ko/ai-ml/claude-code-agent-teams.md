@@ -4,7 +4,7 @@ description: >-
   Agent Teams의 현재 동작과 version별 pane 문제, 작업 소유권, 결과 전달
   실패를 구분해서 정리한 사용 기록이에요.
 date: 2026-02-09T00:00:00.000Z
-updated: 2026-07-23
+updated: '2026-08-02'
 tags:
   - ai-ml
   - claude-code
@@ -15,18 +15,12 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: 2026-07-23
+source_updated: '2026-08-02'
 translation_date: 2026-07-23
 references:
   - url: 'https://code.claude.com/docs/en/agent-teams'
     title: Claude Code Agent Teams 공식 문서
     type: official
-  - url: 'internal://claude-binary-strings/v2.1.138'
-    title: BackendRegistry와 persistent macro를 확인한 binary strings 기록
-    type: verified
-    notes: >-
-      v2.1.138 binary에서 BackendRegistry 선택 log와 settings.json 밖의
-      preferTmuxOverIterm2, iterm2It2SetupComplete flag를 확인한 version별 증거
 ---
 
 PR 하나를 보안, 성능, test coverage 세 방향에서 동시에 review해야 했어요.

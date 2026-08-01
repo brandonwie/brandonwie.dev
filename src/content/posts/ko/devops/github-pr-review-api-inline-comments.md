@@ -2,7 +2,7 @@
 title: GitHub PR Review API - 인라인 코멘트
 description: GitHub API와 gh CLI로 PR 리뷰에 인라인 코멘트를 다는 방법
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-02-04T00:00:00.000Z
+updated: "2026-08-02"
 tags:
   - devops
   - github
@@ -13,7 +13,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: github-pr-review-api-inline-comments
-source_updated: "2026-02-04"
+source_updated: "2026-08-02"
 translation_date: "2026-02-12"
 references:
   - url: >-
@@ -156,9 +156,9 @@ gh pr diff {PR_NUMBER} -- {file_path}
 ## 완전한 작동 예제
 
 ```bash
-PR_NUMBER=644
+PR_NUMBER=123
 OWNER=example-org
-REPO=backend-v2
+REPO=example-repo
 
 cat << 'REVIEW_JSON' | gh api repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews -X POST --input -
 {
@@ -166,16 +166,16 @@ cat << 'REVIEW_JSON' | gh api repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews 
   "body": "## Self Review\n\nKey implementation points explained below.",
   "comments": [
     {
-      "path": "src/common/utils/calendar/calendar-normalization.util.ts",
+      "path": "src/lib/calendar/normalize-timezone.ts",
       "line": 244,
       "side": "RIGHT",
       "body": "### TZID Normalization\n\n**Why this implementation:**\n\nConverts non-standard TZID to IANA format."
     },
     {
-      "path": "src/common/utils/calendar/calendar-normalization.util.ts",
+      "path": "src/lib/calendar/normalize-timezone.ts",
       "line": 307,
       "side": "RIGHT",
-      "body": "### DST Gap Detection\n\n**Problem:**\n\nDuring DST transition, dayjs adjusts non-existent times."
+      "body": "### DST Gap Detection\n\n**Problem:**\n\nDuring a DST transition the date library adjusts non-existent times."
     }
   ]
 }
@@ -187,7 +187,7 @@ REVIEW_JSON
 ```json
 {
   "id": 3751032477,
-  "html_url": "https://github.com/org/repo/pull/644#pullrequestreview-3751032477",
+  "html_url": "https://github.com/example-org/example-repo/pull/123#pullrequestreview-3751032477",
   "state": "COMMENTED",
   "submitted_at": "2026-02-04T13:19:25Z"
 }

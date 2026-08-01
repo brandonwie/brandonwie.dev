@@ -2,7 +2,7 @@
 title: Checklist beats prose for LLM-robust skill preconditions
 description: Compound preconditions written in prose form get silently misapplied under context pressure. Restructuring them as explicit checkbox checklists with one box per clause makes the precondition LLM-robust — and surfaces implicit clauses that turn out to be the actual bugs.
 date: 2026-04-25T00:00:00.000Z
-updated: 2026-05-06
+updated: "2026-08-02"
 tags:
   - general
   - skill-authoring
@@ -15,17 +15,19 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: >-
-      https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/slash-commands
-    title: Claude Code — Slash Commands
+  - url: "https://code.claude.com/docs/en/skills"
+    title: Claude Code — Extend Claude with skills
     type: official
-  - url: 'https://www.anthropic.com/research/checklist-prompts'
-    title: Anthropic — Prompting Best Practices for Long Instructions
+  - url: "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct"
+    title: Anthropic — Prompting best practices (Be clear and direct)
+    type: official
+  - url: "https://www.who.int/teams/integrated-health-services/patient-safety/research/safe-surgery"
+    title: WHO — Safe Surgery Saves Lives and the Surgical Safety Checklist
     type: authoritative
 source_content_hash: ca5171fb85830a6974d29fc960a42275cd1052e617e1c5f25b8ee5bdc5071cb8
 ---
 
-Skills written for Claude Code are markdown text interpreted by the LLM each invocation. Compound preconditions written in prose form (`If A AND B → do X`) get silently misapplied under context pressure. There is no compiler, no type checker, and no test that catches a misread.
+A [Claude Code skill](https://code.claude.com/docs/en/skills) is a `SKILL.md` file of instructions the model reads when the skill is used — markdown text interpreted by the LLM each invocation. Compound preconditions written in prose form (`If A AND B → do X`) get silently misapplied under context pressure. There is no compiler, no type checker, and no test that catches a misread.
 
 The symptom that surfaced this: a `/wrap` skill instruction wrote
 
@@ -33,7 +35,9 @@ The symptom that surfaced this: a `/wrap` skill instruction wrote
 
 Across multiple sessions, six entries ended up with `needs_resync: true` despite `published_at: null`. The precondition was clear in the text and the LLM "knew" it, but the compound form invited skipping the first clause when the second clause was salient. Drift accumulated.
 
-This is not a Claude-specific failure mode. Long instructions with implicit conjunctions are misapplied by humans too. Checklists exist in surgery and aviation precisely because compound preconditions get silently dropped under load.
+This is not a Claude-specific failure mode. Long instructions with implicit conjunctions are misapplied by humans too. Checklists exist in surgery and aviation precisely because compound preconditions get silently dropped under load — the WHO reports its [Surgical Safety Checklist](https://www.who.int/teams/integrated-health-services/patient-safety/research/safe-surgery) cuts complications and mortality by over 30 percent, and it takes under two minutes to run.
+
+Anthropic's own prompting guidance points the same direction: it asks for [clear, explicit instructions](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct) and recommends providing them "as sequential steps using numbered lists or bullet points when the order or completeness of steps matters." Completeness of steps is exactly what a compound prose precondition hides.
 
 ## Restructure compound preconditions as checkboxes
 
@@ -89,5 +93,6 @@ Compound prose preconditions in skill markdown get silently misapplied under con
 
 ## References
 
-- [Claude Code — Slash Commands](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/slash-commands)
-- [Anthropic — Prompting Best Practices for Long Instructions](https://www.anthropic.com/research/checklist-prompts)
+- [Claude Code — Extend Claude with skills](https://code.claude.com/docs/en/skills)
+- [Anthropic — Prompting best practices (Be clear and direct)](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct)
+- [WHO — Safe Surgery Saves Lives and the Surgical Safety Checklist](https://www.who.int/teams/integrated-health-services/patient-safety/research/safe-surgery)

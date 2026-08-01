@@ -5,7 +5,7 @@ description: >-
   behavior + 한 가지 analyst-side error class. 탐지 신호와 사실관계 충돌을 해결하는 empirical
   tiebreaker까지 정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: "2026-06-14"
+updated: "2026-08-02"
 tags:
   - ai-ml
   - code-review
@@ -19,13 +19,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-code-review-confusion-patterns
-source_updated: "2026-06-14"
+source_updated: "2026-08-02"
 translation_date: "2026-06-14"
 ---
 
 최근에 `/pr-review-rectify`라는 workflow를 돌리기 시작했어요. Claude, Copilot, Codex가 diff에 남긴 inline 코멘트를 전부 가져와서 valid / invalid / controversial / good-to-have로 분류하는 흐름이에요. 진짜 bug는 놓치지 않으면서 false positive는 구조적으로 걸러내는 게 목적이에요.
 
-4월 초에 연달아 올라간 PR 두 개에서 failure mode의 이름을 붙일 수 있을 만큼의 분류 자료가 쌓였어요. 같은 달 뒤쪽에 올라간 PR 두 개가 또 다른 class의 실패를 보여줬어요 — semantic이 아니라 temporal이에요. 4월 말에는 multi-round PR(#858)이 또 다른 종류의 관찰을 줬어요: amplify할 가치가 있는 *productive* 행동이요. 5월에 세 가지 failure mode가 더 추가됐어요 — 첫 analyst-side error class 포함 — 그리고 PR-body-vs-source-conflation 패턴 하나도. 5월 중순에는 두 개가 더 붙었어요: phantom formatting bug에 두 reviewer가 cross-converge하는 케이스 하나, 그리고 reviewer가 analyst가 놓친 sibling을 audit해 주는 두 번째 productive behavior 하나예요. 이제는 열 가지 실패 유형, 두 가지 productive behavior, 한 가지 analyst-side class를 가리킬 수 있어요. 각 패턴마다 구체적인 예시, 탐지 신호, 예방(또는 amplify) 기법이 있어요. 아직 샘플은 패턴당 하나에서 셋 정도예요. 앞으로 더 많은 PR을 validate하면서 catalog도 늘어날 거라고 봐요. 오늘 공유하고 싶은 건 이 관찰의 모양이에요. 실패 유형에 이름을 붙이고 나니 다음 triage가 훨씬 빨라졌거든요.
+4월 초에 연달아 올라간 PR 두 개에서 failure mode의 이름을 붙일 수 있을 만큼의 분류 자료가 쌓였어요. 같은 달 뒤쪽에 올라간 PR 두 개가 또 다른 class의 실패를 보여줬어요 — semantic이 아니라 temporal이에요. 4월 말에는 multi-round PR 하나가 또 다른 종류의 관찰을 줬어요: amplify할 가치가 있는 *productive* 행동이요. 5월에 세 가지 failure mode가 더 추가됐어요 — 첫 analyst-side error class 포함 — 그리고 PR-body-vs-source-conflation 패턴 하나도. 5월 중순에는 두 개가 더 붙었어요: phantom formatting bug에 두 reviewer가 cross-converge하는 케이스 하나, 그리고 reviewer가 analyst가 놓친 sibling을 audit해 주는 두 번째 productive behavior 하나예요. 이제는 열 가지 실패 유형, 두 가지 productive behavior, 한 가지 analyst-side class를 가리킬 수 있어요. 각 패턴마다 구체적인 예시, 탐지 신호, 예방(또는 amplify) 기법이 있어요. 아직 샘플은 패턴당 하나에서 셋 정도예요. 앞으로 더 많은 PR을 validate하면서 catalog도 늘어날 거라고 봐요. 오늘 공유하고 싶은 건 이 관찰의 모양이에요. 실패 유형에 이름을 붙이고 나니 다음 triage가 훨씬 빨라졌거든요.
 
 ## 설정
 
@@ -39,13 +39,13 @@ validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐�
 | Confidently Wrong on Library Internals   | failure  | Starlette PR      | source에 반하는 framework 동작을 자신 있게 재보증                  |
 | Stale Snapshot Review                    | failure  | Python PR         | 더 이상 HEAD가 아닌 이전 리비전을 기준으로 리뷰가 indexing됐어요    |
 | `isOutdated`는 correctness 신호가 아니에요 | failure  | NestJS DTO PR     | GitHub가 스레드를 outdated로 마크했지만 실제 concern은 여전히 유효  |
-| Cross-Round Twin Detection               | strength | NestJS PR #858    | bot이 이전 라운드 fix를 template으로 sibling에서 같은 shape 잡아냄  |
+| Cross-Round Twin Detection               | strength | multi-round NestJS PR | bot이 이전 라운드 fix를 template으로 sibling에서 같은 shape 잡아냄 |
 | PR Diff Scope Confusion                  | analyst  | 3B PR #45         | analyst가 origin-base diff 대신 local-base diff 사용                 |
 | Cross-File Mirror Drift                  | failure  | 3B PR #45         | mirror prose가 canonical 7개 row 중 4개만 enumerate; reviewer 잡음   |
 | Issue-Comment vs Inline Thread Gap        | failure  | 3B PR #45         | bot이 inline thread가 아니라 issue-comment summary 하나로 finding 게시 |
 | PR-Body-Source-Conflation                | failure  | 3B PR #47         | reviewer가 PR description prose를 source-code commentary로 다룸      |
 | Long-Row Formatting Hallucination        | failure  | 3B PR #84         | 두 reviewer가 긴 row에 phantom "backtick 누락"을 converge함         |
-| Sibling-Fix Holdout                      | strength | Frontend PR #2799 | reviewer가 폴더 단위 fix에서 analyst가 놓친 sibling을 잡아냄        |
+| Sibling-Fix Holdout                      | strength | multi-round frontend PR | reviewer가 폴더 단위 fix에서 analyst가 놓친 sibling을 잡아냄      |
 
 이제 각 패턴을 PR 증거와 함께, 그리고 탐지(또는 amplify)하면서 배운 점과 함께 살펴볼게요.
 
@@ -55,7 +55,7 @@ validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐�
 
 NestJS PR에서 Copilot이 컨트롤러 parameter `clientTypeHeader?: string`에 배열 정규화가 필요하다고 flag를 걸었어요. 근거는 Express의 raw type signature `string | string[] | undefined`였어요. flag 자체는 Express type과 어긋나지 않았지만, 맥락에서는 틀렸어요. NestJS의 `@Headers('key')` decorator는 custom header라면 정확히 `string | undefined`를 리턴해요. Express가 중복을 쉼표로 합쳐 normalize해 주기 때문이에요. reviewer는 parameter의 annotation을 보면서도, decorator가 구현된 곳까지 따라가진 않았어요.
 
-같은 패턴은 PR #872에서 다른 모양으로 다시 나왔어요. Claude는 `fromEntity`에서 `create()`로 이어지는 trace를 따라가며, plain all-day block이 400을 던질 수 있다고 봤어요. `dto.detail === undefined`면 `isAllDay`가 false가 된다는 reasoning이었죠. 두 파일만 놓고 보면 trace는 그럴듯했지만, entity-level invariant를 놓쳤어요. `hasDetailFields`에는 `block.priority`가 들어가고, 이 필드는 default truthy 값을 가진 NOT-NULL enum column이에요. DB에서 로드된 entity에는 항상 그 값이 있고, `{ ...block }`도 그 값을 보존하니까 `detail`은 만들어져요. 빠진 context는 다른 함수 호출이 아니라, guard 입력 shape를 더 강하게 만드는 `@Column({ default })` 선언이었어요.
+같은 패턴은 이후 다른 NestJS PR에서 또 다른 모양으로 나왔어요. Claude는 `fromEntity`에서 `create()`로 이어지는 trace를 따라가며, plain all-day block이 400을 던질 수 있다고 봤어요. `dto.detail === undefined`면 `isAllDay`가 false가 된다는 reasoning이었죠. 두 파일만 놓고 보면 trace는 그럴듯했지만, entity-level invariant를 놓쳤어요. `hasDetailFields`에는 `block.priority`가 들어가고, 이 필드는 default truthy 값을 가진 NOT-NULL enum column이에요. DB에서 로드된 entity에는 항상 그 값이 있고, `{ ...block }`도 그 값을 보존하니까 `detail`은 만들어져요. 빠진 context는 다른 함수 호출이 아니라, guard 입력 shape를 더 강하게 만드는 `@Column({ default })` 선언이었어요.
 
 **왜 이런 일이 생길까요.** 대부분의 AI reviewer는 single-file 또는 single-diff context window로 동작해요. 현재 파일을 흐르는 타입은 볼 수 있지만, decorator 호출을 따라 dependency 패키지 내부 구현까지 들어가진 못해요. 그래서 "이 decorator가 runtime에서 실제로 뭘 리턴하지?" 하는 질문은 답할 수 없는 질문이 되고, 가장 가까운 도달 가능한 지점의 type signature(보통 raw framework type)가 기본 가정이 돼 버려요.
 
@@ -173,7 +173,7 @@ GitHub은 flag된 줄이 현재 diff에 없어지면 review 스레드를 `isOutd
 
 앞의 여섯 패턴은 모두 *suppress*해야 할 것들이에요. Pattern 7은 그 반대 — 일부러 *amplify*할 가치가 있는 행동이에요. 한 번의 fix를 코드베이스 전체의 구조적 정리로 바꿔주거든요.
 
-Pattern 7은 PR #858에서 나타났어요(4월 28일). 네 라운드에 걸쳐 bot이 이전 fix들을 template으로 계속 적용했어요:
+Pattern 7은 4월 말 multi-round NestJS PR에서 나타났어요. 네 라운드에 걸쳐 bot이 이전 fix들을 template으로 계속 적용했어요:
 
 - **R3-1:** bot이 `SyncAttendeeContactListener`의 per-ref `publishContactUpserted` 루프를 flag함. Fix: bulk emit.
 - **R4-1:** bot이 `AttendeeContactListener`의 per-ref `publishContactUpserted` 루프를 flag함 — 다른 클래스, 다른 `@OnEvent` 토픽, 같은 shape. 동일하게 수정.
@@ -291,7 +291,7 @@ Pattern 1부터 11까지는 대부분 단일 reviewer의 실패예요. Pattern 1
 
 Pattern 13은 catalog에서 두 번째로 productive한 행동이에요. Pattern 7처럼 amplify할 가치가 있어요. 다른 점이 하나 있다면, 놓치는 쪽이 reviewer가 아니라 검증을 돌리는 저, 즉 analyst라는 거예요.
 
-moba-frontend onboarding-tutorial PR #2799에서 한 세션 안에 같은 antipattern shape의 인스턴스 세 개가 라운드 10부터 14까지 떴어요. 세 가지 다른 convention fix지만 모양은 같아요:
+어떤 frontend onboarding-tutorial PR에서 한 세션 안에 같은 antipattern shape의 인스턴스 세 개가 라운드 10부터 14까지 떴어요. 세 가지 다른 convention fix지만 모양은 같아요:
 
 | Round            | analyst가 fix함                                                                | reviewer가 잡은 missed sibling                                                          |
 | ---------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
@@ -303,7 +303,7 @@ moba-frontend onboarding-tutorial PR #2799에서 한 세션 안에 같은 antipa
 
 **예방 (analyst-side).** 폴더 단위 convention이나 fix를 적용할 때는, commit 전에 같은 디렉토리의 모든 sibling을 audit하세요. 다음 라운드에서 reviewer가 holdout을 잡아 주겠지만, 각 holdout은 full round-trip 비용이에요 — commit, push, workflow, bot review, validation cycle. 폴더를 한 번에 sweep하는 게 더 싸요.
 
-**Amplify (reviewer-side).** productive behavior를 보강하세요. bot이 convention fix를 flag할 때, 같은 패턴의 다른 인스턴스를 폴더에서 스캔해 cross-file 스레드 하나에 surface하도록 유도하세요. PR #2799의 R13 thread B가 깨끗한 예예요: 한 코멘트가 파일 4개를 나열했고, 답글 하나가 commit 4개를 cover했고, resolve 한 번으로 loop가 닫혔어요.
+**Amplify (reviewer-side).** productive behavior를 보강하세요. bot이 convention fix를 flag할 때, 같은 패턴의 다른 인스턴스를 폴더에서 스캔해 cross-file 스레드 하나에 surface하도록 유도하세요. 그 frontend PR의 R13 thread B가 깨끗한 예예요: 한 코멘트가 파일 4개를 나열했고, 답글 하나가 commit 4개를 cover했고, resolve 한 번으로 loop가 닫혔어요.
 
 **왜 process gap이 아니라 strength로 다루나.** "내 validation process가 절대 sibling을 놓치면 안 돼"라고 읽고 engineer-out하려고 시도할 수도 있어요. 하지만 round-trip 비용은 실제이고, bot의 구조적 폴더 읽기는 진짜 cheap해요. 정직한 선택은 sweep discipline은 tight하게 유지하면서 *동시에* bot의 audit을 safety net으로 켜 두는 거예요. Pattern 7과 13이 multi-round PR validation이 reviewer의 강점을 amplify해서 자기 비용을 회수하는 두 케이스예요.
 

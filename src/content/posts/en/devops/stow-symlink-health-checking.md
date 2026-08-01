@@ -2,7 +2,7 @@
 title: Stow Symlink Health Checking
 description: 'GNU Stow creates symlinks from system config paths back to a dotfiles repo,'
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-04-09'
+updated: '2026-08-02'
 tags:
   - devops
   - dotfiles
@@ -12,8 +12,11 @@ category: devops
 draft: false
 lang: en
 references:
-  - url: 'https://www.gnu.org/software/stow/manual/'
-    title: GNU Stow Manual
+  - url: 'https://manpages.debian.org/bookworm/stow/stow.8.en.html'
+    title: 'stow(8) manual page — --adopt, --restow, and tree folding'
+    type: official
+  - url: 'https://github.com/aspiers/stow/blob/master/doc/stow.texi'
+    title: 'GNU Stow manual source (doc/stow.texi) — tree folding and ignore lists'
     type: official
   - url: null
     title: stow-doctor.sh implementation
@@ -84,7 +87,7 @@ I assumed `--adopt` was a general "import everything that's currently here" flag
 
 ### Trap 2: Tree folding produces false positives in leaf-only checks
 
-This is the one that had me convinced for a full session that my packages were corrupted. By default, Stow uses **tree folding**: when an entire subtree is owned by one package, it creates a single symlink at the highest possible directory level instead of per-file symlinks. So instead of:
+This is the one that had me convinced for a full session that my packages were corrupted. By default, Stow uses **tree folding**: when an entire subtree is owned by one package, it creates a single symlink at the highest possible directory level instead of per-file symlinks. The [stow(8) man page](https://manpages.debian.org/bookworm/stow/stow.8.en.html) states it plainly — "if Stow can create a single symlink that points to an entire subtree within the package tree, it will choose to do that rather than create a directory in the target tree and populate it with symlinks." So instead of:
 
 ```text
 ~/.config/gh/config.yml → ~/dotfiles/gh/.config/gh/config.yml
@@ -180,7 +183,7 @@ Remember that `--adopt` only handles file conflicts. If the failure was a direct
 
 ## Handling `.stow-local-ignore`
 
-Stow packages often contain non-config files (documentation, scripts, READMEs). The `.stow-local-ignore` file lists Perl regex patterns for files that Stow should skip during linking. When running health checks, you need to exclude these same patterns — otherwise your doctor script reports "missing" files that were intentionally excluded.
+Stow packages often contain non-config files (documentation, scripts, READMEs). The `.stow-local-ignore` file lists [Perl regular expressions, one per line](https://github.com/aspiers/stow/blob/master/doc/stow.texi), and any file or directory in the package matching one of them is skipped during linking. When running health checks, you need to exclude these same patterns — otherwise your doctor script reports "missing" files that were intentionally excluded.
 
 ## When to Run Health Checks
 
@@ -209,4 +212,7 @@ If you manage dotfiles with GNU Stow, applications will silently break your syml
 
 ## References
 
-- [GNU Stow Manual](https://www.gnu.org/software/stow/manual/)
+- [stow(8) man page](https://manpages.debian.org/bookworm/stow/stow.8.en.html) —
+  `--adopt`, `-R`/`--restow`, and the tree-folding rule
+- [GNU Stow manual source (`doc/stow.texi`)](https://github.com/aspiers/stow/blob/master/doc/stow.texi)
+  — tree-folding example and the ignore-list rules

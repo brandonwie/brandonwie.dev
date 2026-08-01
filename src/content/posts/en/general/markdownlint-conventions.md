@@ -2,7 +2,7 @@
 title: Markdownlint Conventions
 description: 7,500 markdownlint errors across 200 markdown files. The rules that mattered, the configuration that stuck, two pre-commit traps that surface only in nested scopes, and the strict-preset migration that collapsed a 14-rule custom config into one extends + five carve-outs.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-05-06
+updated: '2026-08-02'
 tags:
   - general
   - documentation
@@ -299,10 +299,10 @@ Why this surprises:
 
 Pre-commit lint sees folder renames as "newly added" files. If the renamed folder contains human-authored `.me.md` files (Notion exports, brain dumps, PRD seeds) with inline HTML (`<aside>`, `<details>`) or duplicate headings, markdownlint blocks the commit even though the content is unchanged from its prior path.
 
-A reproduction from late April: renaming `projects/moba/actives/onboarding/` to `frontend-onboarding/` triggered pre-commit lint on `notion-requirements.me.md` (a Notion export with inline `<aside>` HTML and duplicate Korean headings). lint-staged saw the file as "newly added" even though its content was unchanged.
+A reproduction from late April: renaming a task folder from `actives/onboarding/` to `actives/frontend-onboarding/` triggered pre-commit lint on `notion-requirements.me.md` (a Notion export with inline `<aside>` HTML and duplicate Korean headings). lint-staged saw the file as "newly added" even though its content was unchanged.
 
 ```bash
-git add projects/moba/actives/onboarding/ projects/moba/actives/frontend-onboarding/
+git add actives/onboarding/ actives/frontend-onboarding/
 git commit
 # → markdownlint-cli2 fails on notion-requirements.me.md:
 #   MD041 first-line-heading

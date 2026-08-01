@@ -2,7 +2,7 @@
 title: Symmetric Redis ↔ Kafka Bridge Pair for Cross-Cloud Event Flow
 description: Cloud Run can't reach an internal Kafka broker — `advertised.listeners` always wins. A pair of unidirectional bridges through Redis keeps every invariant intact.
 date: 2026-04-29T00:00:00.000Z
-updated: 2026-04-29T00:00:00.000Z
+updated: '2026-08-02'
 tags:
   - backend
   - distributed-systems
@@ -13,11 +13,14 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://engineering.linkedin.com/blog/topic/event-streaming'
-    title: LinkedIn Engineering — Hybrid storage solutions
+  - url: 'https://www.linkedin.com/blog/engineering/open-source/kafka-ecosystem-at-linkedin'
+    title: LinkedIn Engineering — Kafka Ecosystem at LinkedIn
     type: official
-  - url: 'https://slack.engineering/real-time-messaging/'
-    title: Slack Engineering — Real-time messaging architecture
+  - url: 'https://slack.engineering/scaling-slacks-job-queue/'
+    title: Slack Engineering — Scaling Slack's Job Queue
+    type: official
+  - url: 'https://discord.com/blog/how-discord-stores-trillions-of-messages'
+    title: Discord Engineering — How Discord Stores Trillions of Messages
     type: official
 source_content_hash: ce8e57030eda26dd5b0b9b425f7f02e6949a994d7f8fe15ee62693c9c8da804c
 ---
@@ -188,14 +191,26 @@ contract was violated.
 
 ## Pattern Precedents
 
-- **LinkedIn** — hybrid storage solutions; Kafka as durable backbone
-  with edge-friendly transport (Espresso, Voldemort) for fan-out.
-- **Slack** — real-time messaging; Kafka beneath, edge transport
-  above.
-- **Discord** — billions of messages stored on Cassandra/ScyllaDB
-  with ephemeral pub/sub at the edge.
-- **Stripe** — audit pipeline routes all writes through a durable
-  bus regardless of origin tier.
+The split isn't novel. Larger systems keep landing on the same
+separation between a durable log and whatever actually moves messages
+around.
+
+- **LinkedIn** calls Kafka its
+  [central data pipeline](https://www.linkedin.com/blog/engineering/open-source/kafka-ecosystem-at-linkedin),
+  far enough that Espresso's replication moved off MySQL replication
+  and onto Kafka. The durable log sits underneath; the serving stores
+  are their own tier.
+- **Slack** added
+  [Kafka in front of Redis](https://slack.engineering/scaling-slacks-job-queue/)
+  for their job queue instead of replacing Redis outright — Kafka is
+  the durable buffer against job loss, Redis stays the fast in-flight
+  layer. Same division of labour as the bridge pair, without a network
+  boundary in the middle.
+- **Discord** keeps
+  [trillions of messages](https://discord.com/blog/how-discord-stores-trillions-of-messages)
+  in a dedicated durable store — Cassandra, then ScyllaDB — chosen on
+  its own merits rather than to suit whatever delivers messages to
+  clients.
 
 ## Anti-Patterns
 

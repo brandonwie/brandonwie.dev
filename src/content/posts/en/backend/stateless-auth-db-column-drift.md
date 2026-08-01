@@ -2,7 +2,7 @@
 title: Stateless Auth DB-Column Drift
 description: Auth migrated from stateful to stateless JWT validation. Tests pass. Mobile users have access_token populated; web users have NULL. The drift is invisible until ops queries the column.
 date: 2026-04-29T00:00:00.000Z
-updated: 2026-04-29T00:00:00.000Z
+updated: '2026-08-02'
 tags:
   - backend
   - auth
@@ -15,8 +15,11 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://github.com/moba-works/backend-v2/pull/860'
-    title: PR #860 — fixing the asymmetry on web flow
+  - url: 'https://www.oauth.com/oauth2-servers/access-tokens/self-encoded-access-tokens/'
+    title: OAuth 2.0 Simplified — Self-Encoded Access Tokens
+    type: authoritative
+  - url: 'https://datatracker.ietf.org/doc/html/rfc7519'
+    title: RFC 7519 — JSON Web Token (JWT)
     type: official
   - url: 'https://oauth.net/2/access-tokens/'
     title: OAuth 2.0 — Access Tokens
@@ -99,9 +102,9 @@ The wrong choice is "ambient" — neither documented nor enforced.
 
 Grep for the column name (`access_token`, `accessToken`, etc.) and
 inspect every callsite. If the helper that wraps the write changed
-semantics — for example, `generateRefreshToken` now preserves
-whatever was there instead of writing fresh — every caller of that
-helper inherits the change silently.
+semantics — say a `rotateRefreshToken` helper now preserves whatever
+was already in the row instead of writing fresh — every caller of
+that helper inherits the change silently.
 
 ## Fix #3: Pin the Contract with a Test
 
@@ -150,37 +153,63 @@ as evidence about the local code, not the subsystem-wide contract.
 
 ## A Specific Trap: Helper Preserves the Old Value
 
-`generateRefreshToken` accepts no token argument and uses
-`user.accessToken` (which is NULL on fresh users). The caller's
-freshly generated JWT is never persisted because the helper doesn't
-see it. Subtle: the bug is in the helper's signature (no token
-parameter) plus its choice of source (DB column instead of fresh
-JWT), not in any one obvious line.
+The shape that produces this is a refresh-token helper that takes no
+access-token argument and reads `user.accessToken` off the row it
+just loaded — NULL for a user who has never been through the writing
+path. The caller's freshly issued JWT is never persisted because the
+helper never sees it. Subtle: the bug lives in the helper's signature
+(no token parameter) plus its choice of source (DB column instead of
+the fresh JWT), not in any one obvious line.
 
 ## Worked Example
 
+Here is the asymmetry reduced to the smallest version that still
+shows the mechanism. Two login paths, one shared helper:
+
 ```ts
-// auth.service.ts (mobile path) — writes JWT to DB
-const mAccessToken = this.getAccessToken(user); // fresh JWT
-const mRefreshToken = user.refreshToken || randomUUID();
-await this.usersService.updateToken(user.id, mAccessToken, mRefreshToken); // ← writes JWT
+// The path that persists the issued token
+async function loginFromMobile(user: User) {
+  const accessToken = issueAccessToken(user); // fresh JWT
+  const refreshToken = user.refreshToken ?? randomUUID();
+  await users.updateTokens(user.id, accessToken, refreshToken); // ← column written
+  return { accessToken, refreshToken };
+}
 
-// auth-v1.service.ts (web path, before fix) — does NOT write JWT
-const mAccessToken = this.getAccessToken(user); // fresh JWT (discarded for DB purposes)
-const mRefreshToken = await this.usersService.generateRefreshToken(user.id);
-// ↑ helper internally calls updateToken(userId, user.accessToken /* NULL */, refreshToken).
-//   Web users end up with users.access_token = NULL.
+// The path that does not
+async function loginFromWeb(user: User) {
+  const accessToken = issueAccessToken(user); // fresh JWT — returned, never persisted
+  const refreshToken = await rotateRefreshToken(user.id);
+  return { accessToken, refreshToken };
+}
 
-// Fix: web path mirrors mobile pattern.
-const mAccessToken = this.getAccessToken(user);
-const mRefreshToken = user.refreshToken || randomUUID();
-await this.usersService.updateToken(user.id, mAccessToken, mRefreshToken); // ← now writes JWT
+// The helper both paths trust
+async function rotateRefreshToken(userId: string) {
+  const user = await users.findById(userId);
+  const refreshToken = randomUUID();
+  // It has no access token to write, so it re-writes whatever the row
+  // already held — NULL for anyone who only ever logs in via the web.
+  await users.updateTokens(userId, user.accessToken, refreshToken);
+  return refreshToken;
+}
 ```
 
-The fix is mechanical — make the web path mirror the mobile path
-explicitly. The next step (which the ADR should commit to) is
-deciding whether the column should exist at all once both paths
-agree.
+Both users are logged in. Both can call protected endpoints. Only one
+of them has a non-NULL `users.access_token`.
+
+The fix is mechanical — the web path writes the token it just issued,
+the same way the mobile path does:
+
+```ts
+async function loginFromWeb(user: User) {
+  const accessToken = issueAccessToken(user);
+  const refreshToken = user.refreshToken ?? randomUUID();
+  await users.updateTokens(user.id, accessToken, refreshToken); // ← column written
+  return { accessToken, refreshToken };
+}
+```
+
+The next step (which the ADR should commit to) is deciding whether
+the column should exist at all once both paths agree.
 
 ## Key Points
 

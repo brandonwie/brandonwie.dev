@@ -2,7 +2,7 @@
 title: Redis and BullMQ Queue Patterns
 description: Comprehensive guide to Redis-backed job queues with BullMQ in Node.js/NestJS
 date: 2025-01-11T00:00:00.000Z
-updated: '2026-03-26'
+updated: '2026-08-02'
 tags:
   - backend
   - redis
@@ -18,11 +18,14 @@ references:
   - url: "https://docs.bullmq.io/"
     title: docs.bullmq.io
     type: official
+  - url: "https://docs.bullmq.io/patterns/stop-retrying-jobs"
+    title: Stop retrying jobs (UnrecoverableError)
+    type: official
   - url: "https://docs.nestjs.com/techniques/queues"
     title: queues
     type: official
-  - url: "https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/"
-    title: event loop timers and nexttick
+  - url: "https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick"
+    title: The Node.js Event Loop, Timers, and process.nextTick()
     type: official
 ---
 
@@ -566,8 +569,8 @@ async process(job: Job): Promise<void> {
   try {
     await this.executeJob(job);
   } catch (error) {
-    // Business logic errors (ArchException hierarchy) are permanent
-    if (error instanceof ArchException) {
+    // Business logic errors (AppException hierarchy) are permanent
+    if (error instanceof AppException) {
       throw new UnrecoverableError(error.message);
     }
     // Lock contention, network errors → let BullMQ retry
@@ -576,9 +579,9 @@ async process(job: Job): Promise<void> {
 }
 ```
 
-The key pattern here is the **exception hierarchy boundary**. All business logic exceptions extend a common base class (`ArchException`), while infrastructure errors are plain `Error`. This makes `instanceof ArchException` a reliable separator between retryable and non-retryable errors without maintaining an explicit error-type list. When you add a new business exception (e.g., `ResourceNotFoundException`), it automatically inherits `ArchException` and gets the `UnrecoverableError` treatment.
+The key pattern here is the **exception hierarchy boundary**. All business logic exceptions extend a common base class (`AppException` above), while infrastructure errors stay plain `Error`. That makes a single `instanceof` check a reliable separator between retryable and non-retryable errors, with no explicit error-type list to maintain. When you add a new business exception (e.g., `ResourceNotFoundException`), it inherits the base class and gets the `UnrecoverableError` treatment for free.
 
-I learned this the hard way. A stale `gcalId` caused `updateEvent()` to throw `ServerLogicException` (an `ArchException` subclass) 20 times in 10 seconds -- the retry config (`attempts: 20, delay: 100ms`) was designed for Redis lock contention, but it also retried permanent business logic failures. Adding `UnrecoverableError` eliminated the retry storm entirely.
+The failure mode this fixes is a retry storm. A stale external event ID made the update call throw a business logic exception 20 times in 10 seconds -- the retry config (`attempts: 20, delay: 100ms`) had been tuned for Redis lock contention, and it happily retried a permanent failure at the same rate. Throwing `UnrecoverableError` for that class of error ended the storm.
 
 ### Layered Retry Strategy
 
@@ -659,5 +662,6 @@ after the specified duration, preserving your retry budget for genuine failures.
 ## References
 
 - [BullMQ Documentation](https://docs.bullmq.io/)
+- [BullMQ — Stop retrying jobs (`UnrecoverableError`)](https://docs.bullmq.io/patterns/stop-retrying-jobs)
 - [NestJS Queues](https://docs.nestjs.com/techniques/queues)
-- [Node.js Event Loop](https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/)
+- [The Node.js Event Loop, Timers, and `process.nextTick()`](https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick)

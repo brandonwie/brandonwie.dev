@@ -1,8 +1,10 @@
 ---
 title: Python 툴링 스택
-description: 애플리케이션 프로젝트를 위한 표준 Python 개발 툴링 구성
+description: >-
+  파편화된 Python 툴링을 asdf, uv, ruff, ty, pre-commit 다섯 개로 정리한 과정과
+  각각을 선택한 이유
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - python
@@ -12,7 +14,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: python-tooling-stack
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: 'https://astral.sh/uv/install.sh'
@@ -166,7 +168,7 @@ uv run pre-commit install
 
 ```bash
 # venv 내에서 명령 실행
-uv run python -m cli amplitude-etl
+uv run python -m cli daily-export
 uv run pre-commit run --all-files
 uv run pytest
 

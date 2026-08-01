@@ -2,7 +2,7 @@
 title: RAG Hybrid Search 아키텍처
 description: 단일 검색 방식이 왜 실패하는지, 그리고 dense, sparse, fuzzy, managed search를 Reciprocal Rank Fusion으로 결합해서 시맨틱 이해와 키워드 정확도를 모두 잡는 검색 파이프라인을 만드는 방법.
 date: 2026-03-23T00:00:00.000Z
-updated: '2026-03-24'
+updated: '2026-08-02'
 tags:
   - ai-ml
   - rag
@@ -13,7 +13,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: rag-hybrid-search-architecture
-source_updated: '2026-03-24'
+source_updated: '2026-08-02'
 translation_date: '2026-03-24'
 source_content_hash: b810baeb1c6d126cff7c1759ae3585731cd67162eeabfb6fec97e6d33572a503
 ---

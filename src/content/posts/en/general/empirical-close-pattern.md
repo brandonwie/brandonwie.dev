@@ -2,7 +2,7 @@
 title: 'Empirical Close: Defer Skill-Side Tests to Natural Exercise'
 description: 'Some verification tests need a real trigger that no fixture replicates faithfully — interactive prompts, conversation parsing, AskUserQuestion flows. Marking the test [~] empirical-close-pending and trusting the next natural trigger to verify is hygienic when paired with a friction-log reopen.'
 date: 2026-04-30T00:00:00.000Z
-updated: 2026-05-06
+updated: '2026-08-02'
 tags:
   - general
   - process
@@ -16,9 +16,6 @@ references:
   - url: 'https://martinfowler.com/articles/practical-test-pyramid.html'
     title: The Practical Test Pyramid
     type: authoritative
-  - url: 'https://github.com/brandonwie/3b/commit/46e23c05'
-    title: 'feat(wrap): persist follow-ups across sessions — Tests 4+5 deferred'
-    type: experience
 source_content_hash: 76349e064b41c745d3cce01e24d898a32c3a9326d973fb58d002ae9cc5e72f74
 ---
 
@@ -73,7 +70,7 @@ Four things made this messy when there was no recognized name for it:
 
 4. **Wire the reopen mechanism:** add a friction-log pattern OR a /wrap warning that fires if the regression signal appears post-archive.
 
-A concrete instance from `wrap-followup-persistence-fix` close-out (2026-04-30):
+A concrete instance from my own tooling repo — the `wrap-followup-persistence-fix` close-out (2026-04-30), where the `/wrap` skill learned to persist follow-ups across sessions and Tests 4+5 shipped deferred:
 
 ```markdown
 - [~] **Test 4 — Conversation extraction**: empirical close pending
@@ -113,4 +110,3 @@ Empirical close is task hygiene, not test laziness. The test still exists — it
 ## References
 
 - [The Practical Test Pyramid (Ham Vocke / Martin Fowler)](https://martinfowler.com/articles/practical-test-pyramid.html)
-- [feat(wrap): persist follow-ups across sessions — Tests 4+5 deferred](https://github.com/brandonwie/3b/commit/46e23c05)

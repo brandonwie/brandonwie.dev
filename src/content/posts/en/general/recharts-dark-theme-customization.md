@@ -2,7 +2,7 @@
 title: Recharts Dark Theme Customization
 description: Techniques for styling Recharts charts to match a dark terminal theme with CSS
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: "2026-08-02"
 tags:
   - general
   - react
@@ -19,10 +19,13 @@ references:
   - url: null
     title: Recharts dark theme implementation in Crucio dashboard
     type: experience
-  - url: "https://recharts.org/en-US/api"
-    title: Recharts API Documentation
+  - url: "https://recharts.github.io/en-US/api/Tooltip/"
+    title: "Recharts Tooltip API — content prop for custom tooltips"
     type: official
-  - url: "https://developer.mozilla.org/en-US/docs/Web/SVG/Element/linearGradient"
+  - url: "https://recharts.github.io/en-US/api/XAxis/"
+    title: "Recharts XAxis API — tick, tickLine, and axisLine props"
+    type: official
+  - url: "https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/linearGradient"
     title: MDN SVG linearGradient Element
     type: authoritative
 ---

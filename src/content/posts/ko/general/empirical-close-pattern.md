@@ -5,7 +5,7 @@ description: >-
   파싱, AskUserQuestion flow. test를 [~] empirical-close-pending으로 표시하고 다음 자연스러운
   trigger가 verify해 주리라 믿는 건, friction-log reopen과 짝지을 때 위생적인 선택이에요.
 date: 2026-04-30T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-08-02'
 tags:
   - general
   - process
@@ -16,7 +16,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: empirical-close-pattern
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 ---
 
@@ -105,7 +105,9 @@ friction-log reopen이 뒤를 받쳐 주면, empirical close가 제일 깔끔해
 4. **reopen 메커니즘을 미리 엮어두기:** archive 후에 regression 신호가
    나타나면 fire되는 friction-log 패턴이나 /wrap 경고를 추가해 둬요.
 
-`wrap-followup-persistence-fix` close-out(2026-04-30)의 실제 예시:
+제 개인 tooling repo에 있는 `wrap-followup-persistence-fix` close-out
+(2026-04-30)의 실제 예시예요. `/wrap` skill이 session 사이로 follow-up을
+넘겨받게 만든 작업이고, Test 4와 5는 deferred 상태로 나갔어요.
 
 ```markdown
 - [~] **Test 4 — Conversation extraction**: empirical close pending
@@ -163,4 +165,3 @@ test 상태가 아니라 merge 상태에 적용한 거예요. 둘 다 결국, �
 ## References
 
 - [The Practical Test Pyramid (Ham Vocke / Martin Fowler)](https://martinfowler.com/articles/practical-test-pyramid.html)
-- [feat(wrap): persist follow-ups across sessions — Tests 4+5 deferred](https://github.com/brandonwie/3b/commit/46e23c05)

@@ -5,7 +5,7 @@ description: >-
   merge-with-carry-forward — 는 정반대 방향으로 실패해요. 제가 정착한 규칙, 그리고 결국
   dashboard를 git에서 아예 추적하지 않게 된 이유를 정리했어요.
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-06-07'
+updated: '2026-08-02'
 tags:
   - general
   - session-state
@@ -16,11 +16,11 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: session-state-merge-vs-overwrite-pattern
-source_updated: '2026-06-07'
+source_updated: '2026-08-02'
 translation_date: '2026-06-14'
 ---
 
-세션을 가로질러 작업을 요약해 주는 dashboard가 하나 있어요 — 뭐가 진행 중이고, 뭐가 아직 열려 있고, 최근에 뭐가 끝났는지요. 세션이 끝날 때마다 스크립트가 이 파일을 다시 생성해요. 그 스크립트를 처음 짤 때 저는 뻔한 방법을 골랐어요: 현재 source를 읽고, 파일을 렌더링하고, overwrite. 끝.
+세션을 가로질러 작업을 요약해 주는 dashboard가 하나 있어요 — 뭐가 진행 중이고, 뭐가 아직 열려 있고, 최근에 뭐가 끝났는지요. 세션이 끝날 때마다 제 개인 tooling repo에 있는 session-wrap 스크립트가 이 파일을 다시 생성해요. 그 스크립트를 처음 짤 때 저는 뻔한 방법을 골랐어요: 현재 source를 읽고, 파일을 렌더링하고, overwrite. 끝.
 
 그게 잘 돌아가다가, 어느 세션에서 제가 아직 신경 쓰던 내용을 조용히 지워버렸어요. 알고 보니 이 regeneration 전략이 기능 전체에서 가장 핵심적인(load-bearing) 결정이었고, "그냥 overwrite해"는 dashboard가 실제로 담고 있던 데이터 종류에는 잘못된 기본값이었어요.
 
@@ -91,4 +91,3 @@ merge는 open-state surface엔 맞는 기본값이지만, 이럴 땐 틀린 도�
 ## References
 
 - [Render Optimizations — Structural Sharing (TanStack Query)](https://tanstack.com/query/latest/docs/framework/react/guides/render-optimizations)
-- [feat(wrap): persist follow-ups across sessions](https://github.com/brandonwie/3b/commit/46e23c05)

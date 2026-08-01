@@ -2,7 +2,7 @@
 title: 'Session-State Dashboards: Merge, Don''t Overwrite'
 description: 'Regenerating a cross-session dashboard two ways — overwrite, or merge-with-carry-forward — fails in opposite directions. Here is the rule I settled on, and why I eventually stopped tracking the dashboard in git at all.'
 date: 2026-04-25T00:00:00.000Z
-updated: 2026-06-07
+updated: '2026-08-02'
 tags:
   - general
   - session-state
@@ -17,16 +17,14 @@ references:
       https://tanstack.com/query/latest/docs/framework/react/guides/render-optimizations
     title: Render Optimizations — Structural Sharing (TanStack Query)
     type: official
-  - url: 'https://github.com/brandonwie/3b/commit/46e23c05'
-    title: 'feat(wrap): persist follow-ups across sessions'
-    type: experience
 source_content_hash: 470857247dee307e9f9cd90991b387fb7386846287eb2e74cd57e3403dd7b922
 ---
 
 I have a dashboard that summarizes work across sessions — what's in progress,
-what's still open, what got finished recently. Every time a session ends, a
-script regenerates it. The first time I wrote that script, I reached for the
-obvious thing: read the current sources, render the file, overwrite it. Done.
+what's still open, what got finished recently. Every time a session ends, the
+session-wrap script in my own tooling repo regenerates it. The first time I
+wrote that script, I reached for the obvious thing: read the current sources,
+render the file, overwrite it. Done.
 
 That worked until the session where it quietly erased something I still cared
 about. The regeneration strategy turned out to be the load-bearing decision in
@@ -175,4 +173,3 @@ simpler than any of the intermediate designs I was defending along the way.
 ## References
 
 - [Render Optimizations — Structural Sharing (TanStack Query)](https://tanstack.com/query/latest/docs/framework/react/guides/render-optimizations)
-- [feat(wrap): persist follow-ups across sessions](https://github.com/brandonwie/3b/commit/46e23c05)

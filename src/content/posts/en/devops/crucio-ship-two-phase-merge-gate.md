@@ -2,7 +2,7 @@
 title: Two-Phase Invocation as a Manual Merge Gate
 description: 'When a CI/CD automation skill supports an "all-in-one" mode (`/skill +flag`), the all-in-one mode should be opt-in, not the default. Splitting invocations preserves a meaningful pause point between CI green and the irreversible merge.'
 date: 2026-05-05T00:00:00.000Z
-updated: 2026-05-06
+updated: '2026-08-02'
 tags:
   - devops
   - automation
@@ -14,8 +14,14 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://github.com/brandonwie/crucio/pull/138'
-    title: 'PR #138 — TF.5.7 Google integration token refresh (the ship case)'
+  - url: 'https://cli.github.com/manual/gh_pr_merge'
+    title: 'gh pr merge — GitHub CLI manual'
+    type: official
+  - url: 'https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/reverting-a-pull-request'
+    title: 'Reverting a pull request — GitHub Docs'
+    type: official
+  - url: 'https://docs.renovatebot.com/configuration-options/#automerge'
+    title: 'automerge — Renovate configuration options'
     type: official
 source_content_hash: 203e433da9adb3117c78ba17d046a1a1d350d56d5cde89f4552c36d13df5cb34
 ---
@@ -27,6 +33,8 @@ source_content_hash: 203e433da9adb3117c78ba17d046a1a1d350d56d5cde89f4552c36d13df
 | 1     | Dispatch + watch CI on the PR branch  | Read-only                            |
 | 1.5   | `gh pr merge --merge --delete-branch` | **Irreversible** (without revert PR) |
 | 2     | Dispatch deploy + verify chain fires  | **Production-affecting**             |
+
+Phase 1.5 is the one that matters. Once `gh pr merge --merge` lands the commit on the base branch, the way back is a second pull request that reverts the merge commit — cheap, but no longer free, and it leaves a trail.
 
 The skill supports `+merge` as an arg that runs all three phases in one invocation. Convenient — but it removes the "operator looks at green CI and decides to authorize merge" step. For a portfolio prod environment with manual smoke tests, that gate has real value. The skill itself doesn't need modification — invoking with vs without `+merge` IS the gate.
 
@@ -82,4 +90,6 @@ For high-stakes automation, opt-in for the all-in-one path and split invocation 
 
 ## References
 
-- [PR #138 — TF.5.7 Google integration token refresh (the ship case)](https://github.com/brandonwie/crucio/pull/138)
+- [`gh pr merge` — GitHub CLI manual](https://cli.github.com/manual/gh_pr_merge) — the Phase 1.5 command, including `-m, --merge` and `-d, --delete-branch`
+- [Reverting a pull request — GitHub Docs](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/reverting-a-pull-request) — a merged PR is undone by a new PR that reverts the merge commit, which is why Phase 1.5 is the gate
+- [`automerge` — Renovate configuration options](https://docs.renovatebot.com/configuration-options/#automerge) — the unattended case where a human gate has nothing to gate

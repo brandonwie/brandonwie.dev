@@ -5,7 +5,7 @@ description: >-
   follow-up이 rebuild할 때마다 조용히 사라져요. 단일 source 탐색 + 대화에서만 언급된 항목과 겹치면 동시에 세 갈래로
   증발해요. 해결책은 4-layer 아키텍처예요.
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-08-02'
 tags:
   - devops
   - claude-code
@@ -16,7 +16,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: wrap-followup-persistence-architecture
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 ---
 
@@ -37,6 +37,8 @@ translation_date: '2026-05-10'
 2. **Single source of truth.** Carry-forward는 대시보드의 이전 내용을 암묵적으로 상태로 신뢰했어요. durable-source 전용 방식은 journal과 project todos.md, actives 폴더를 직접 읽어요. 대시보드는 그것들을 비추는 거지, 반대가 아니에요.
 
 Test 1 (carry-forward)은 이 변화로 자연히 폐기됐어요. 남은 머지 로직 — 다중 source 스캔, 해결된 항목 drop, 중복 제거, 태그 도출 — 은 전부 generator의 `collectPriorities` + `collectProjectFollowups` + `withProject` 함수로 옮겼어요. `scripts/regenerate-active-status.test.js`의 unit test 20개로 다 cover돼요. 2026-04-30 마감 시점에 모두 green이었어요.
+
+두 단계 모두 제 개인 tooling repo의 commit으로 올라갔는데, 그 repo는 private이에요. 그래서 여기서 가져갈 수 있는 건 diff가 아니라 설계 쪽이에요.
 
 ## 4-layer pipeline
 
@@ -78,9 +80,9 @@ Test 1 (carry-forward)은 이 변화로 자연히 폐기됐어요. 남은 머지
 
 rollout하면서 세 가지에 걸렸어요.
 
-- **pre-commit hook이 머지 commit을 평탄화했어요.** clean fast-forward 경로에 `--no-ff`를 줬을 때 일어났어요. 효과는 외형적이에요. 선형 history vs branch 맥락이 빠졌다는 정도지만, 알고는 있어야 해요.
+- **pre-commit hook이 머지 commit을 평탄화했어요.** clean fast-forward 경로에 `--no-ff`를 줬을 때 일어났어요. Git 문서는 `--no-ff`를 [fast-forward로 처리할 수 있는 경우에도 항상 merge commit을 만든다](https://git-scm.com/docs/git-merge)고 설명하는데, hook이 그걸 다시 덮어썼어요. 효과는 외형적이에요. 선형 history vs branch 맥락이 빠졌다는 정도지만, 알고는 있어야 해요.
 - **`.me.md` 보호 hook이 수정뿐 아니라 새로 만드는 것까지 막아요.** 우회는 이렇게 했어요. AI가 쓴 task 요약은 그냥 `index.md`로 두고, `.me.md`는 사람이 손으로 쓴 seed doc 전용으로만 남겨요. 관련 글에 더 적어뒀어요.
-- **Markdownlint MD041은 frontmatter 직후의 첫 줄을 검사해요.** H1 없이 H2가 먼저 나오면 실패해요. plan file은 frontmatter 다음에 H1을 바로 둬야 해요. 관련 글에 더 적어뒀어요.
+- **Markdownlint [MD041](https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md)은 frontmatter 직후의 첫 줄을 검사해요.** H1 없이 H2가 먼저 나오면 실패해요. plan file은 frontmatter 다음에 H1을 바로 둬야 해요. frontmatter에 `title` 속성이 있으면 이 rule을 건너뛰기 때문에, blog 형식 문서는 통과하고 plan file은 걸려요. 관련 글에 더 적어뒀어요.
 
 ## 이런 상황에 맞아요
 
@@ -92,6 +94,5 @@ Cross-session 상태는 누락 모드마다 따로 방어막이 있을 때만 �
 
 ## References
 
-- [GitHub Actions — Using workflows](https://docs.github.com/en/actions/using-workflows)
-- [feat(wrap): persist follow-ups across sessions](https://github.com/brandonwie/3b/commit/46e23c05)
-- [feat(wrap): durable-source ACTIVE-STATUS generator with parsing fixes](https://github.com/brandonwie/3b/commit/28ab7012)
+- [git-merge documentation — `--ff` / `--no-ff`](https://git-scm.com/docs/git-merge)
+- [markdownlint MD041 — first-line-heading](https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md)

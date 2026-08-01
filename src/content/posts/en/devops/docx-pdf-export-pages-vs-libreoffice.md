@@ -1,11 +1,11 @@
 ---
-title: A Reproducible DOCX-to-PDF Resume Export with LibreOffice Headless
+title: A Reproducible DOCX-to-PDF Export with LibreOffice Headless
 description: >-
-  Export a Word-list-formatted `.docx` (resume) to a submission-ready PDF on
-  macOS. Apple Pages is the obvious built-in path (`open` + AppleScript export),
-  but...
+  Export a Word-list-formatted `.docx` to a PDF whose page layout and searchable
+  text layer both survive, on macOS. Apple Pages is the obvious built-in path
+  (`open` + AppleScript export), but in this document it failed both checks.
 date: 2026-07-22T00:00:00.000Z
-updated: "2026-07-31"
+updated: "2026-08-02"
 tags:
   - devops
   - tooling
@@ -14,8 +14,7 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: >-
-      https://support.apple.com/guide/pages/export-to-word-pdf-or-another-file-format-tan3b922d4ad/mac
+  - url: "https://support.apple.com/guide/pages/export-to-word-pdf-or-another-file-format-tance1161f26/mac"
     title: Apple Pages export guide
     type: official
   - url: >-
@@ -25,10 +24,10 @@ references:
 source_content_hash: bc4e38512748259f0ee5be3cc1126e999ce0bf432ff706fddc9bbfabdf1a89f5
 ---
 
-I needed a stable PDF from a Word-list-formatted resume on macOS. The obvious
-path was to open the DOCX in Pages and export it, but the resulting artifact
-failed two checks that mattered for this submission: repeatable layout and an
-intact searchable text layer.
+I needed a stable PDF from a Word-list-formatted DOCX on macOS. The obvious path
+was to open the file in Pages and export it, but the resulting artifact failed
+the two checks that mattered here: repeatable layout and an intact searchable
+text layer.
 
 This is one document and one toolchain, not a general comparison of PDF
 renderers. What mattered more than the renderer choice was the verification
@@ -63,7 +62,7 @@ searchable text:
 ```bash
 brew install --cask libreoffice
 /Applications/LibreOffice.app/Contents/MacOS/soffice --headless \
-  --convert-to pdf --outdir "$OUT_DIR" resume.docx
+  --convert-to pdf --outdir "$OUT_DIR" document.docx
 ```
 
 LibreOffice documents `--headless`, `--convert-to`, and `--outdir`, so the

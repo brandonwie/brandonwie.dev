@@ -2,7 +2,7 @@
 title: Bash set -e와 명령어 치환
 description: 'set -e(에러 시 종료)를 사용할 때, 명령어 치환이 커스텀 에러 메시지와 함께 예상과 다르게 동작하는 경우.'
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - bash
@@ -12,12 +12,18 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: bash-set-e-command-substitution
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-03-04'
 references:
-  - url: 'https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html'
-    title: The Set Builtin — Bash Reference Manual
+  - url: 'https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html#set'
+    title: 'POSIX.1-2024 Shell Command Language — the set special built-in (-e)'
     type: official
+  - url: 'https://man7.org/linux/man-pages/man1/bash.1.html'
+    title: 'bash(1) manual page — set -e (errexit)'
+    type: authoritative
+  - url: 'https://mywiki.wooledge.org/BashFAQ/105'
+    title: "Greg's Wiki, BashFAQ 105 — Why doesn't set -e do what I expected?"
+    type: authoritative
 ---
 
 ## 문제
@@ -63,7 +69,9 @@ fi
 | `VAR=$(cmd)`      | 실패 시 즉시 종료 | 표시 안 됨    |
 | `if ! VAR=$(cmd)` | if가 실패를 캡처  | 표시됨        |
 
-`if` 문이 종료 상태를 "소비"해서 `set -e`가 트리거되는 걸 막아요.
+`if` 문이 종료 상태를 "소비"해서 `set -e`가 트리거되는 걸 막아요. `bash(1)` man page와 POSIX 모두 같은 예외를 명시해요. `if`나 `elif` 뒤의 test, `while`/`until` 뒤의 list, `&&`/`||` list에서 마지막이 아닌 명령, 그리고 `!`로 반전된 명령에서는 `-e`가 무시돼요.
+
+반대 방향은 헷갈리기 쉬워요. 명령어 치환 자체가 `set -e`를 발동시키는 건 아니에요. POSIX는 word expansion 중에 실행된 command substitution subshell의 실패로는 셸이 종료되지 않는다고 못박고 있고, 실제로 `echo $(false) two`는 여전히 `two`를 출력해요. `VAR=$(cmd)`가 다른 이유는, command name이 없는 simple command는 마지막 command substitution의 종료 상태를 그대로 자기 종료 상태로 갖기 때문이에요. 실패한 명령은 치환이 아니라 assignment 자체이고, 그 상태를 받아주는 곳이 없는 거예요.
 
 ## 핵심 포인트
 

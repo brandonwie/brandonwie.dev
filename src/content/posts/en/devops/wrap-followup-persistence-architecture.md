@@ -2,7 +2,7 @@
 title: Wrap Skill Follow-Up Persistence Architecture
 description: 'When a session-state dashboard regenerates from a single source (today''s journal), unresolved follow-ups from prior sessions vanish silently on every rebuild. Compounded with single-source discovery and conversation-only mentions, follow-ups disappear three ways at once. The fix is a 4-layer architecture.'
 date: 2026-04-25T00:00:00.000Z
-updated: 2026-05-06
+updated: '2026-08-02'
 tags:
   - devops
   - claude-code
@@ -13,15 +13,12 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://docs.github.com/en/actions/using-workflows'
-    title: GitHub Actions — Using workflows
+  - url: 'https://git-scm.com/docs/git-merge'
+    title: 'git-merge documentation — --ff / --no-ff'
     type: official
-  - url: 'https://github.com/brandonwie/3b/commit/46e23c05'
-    title: 'feat(wrap): persist follow-ups across sessions'
-    type: experience
-  - url: 'https://github.com/brandonwie/3b/commit/28ab7012'
-    title: 'feat(wrap): durable-source ACTIVE-STATUS generator with parsing fixes'
-    type: experience
+  - url: 'https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md'
+    title: 'markdownlint MD041 — first-line-heading'
+    type: official
 source_content_hash: 94b743d389bb5aa18c4b92817a7fc24f5d9dde6cad40e80ff74b05eacccfd517
 ---
 
@@ -42,6 +39,8 @@ The original v1.3.0 design did in-skill carry-forward merge of prior ACTIVE-STAT
 2. **Single source of truth.** Carry-forward implicitly trusted the dashboard's prior content as state; durable-source-only reads journal + project todos.md + actives folders directly. The dashboard reflects them, not the other way around.
 
 Tests 1 (carry-forward) became design-obsolete with this shift; the remaining merge logic (multi-source scan, resolution drop, dedup, tag derivation) all moved into the generator's `collectPriorities` + `collectProjectFollowups` + `withProject` functions, covered by 20 unit tests in `scripts/regenerate-active-status.test.js` (all green as of 2026-04-30 close).
+
+Both steps shipped as commits in my own tooling repo, which is private — so the design is the transferable part here, not the diff.
 
 ## The four-layer pipeline
 
@@ -83,9 +82,9 @@ Tests 1 (carry-forward) became design-obsolete with this shift; the remaining me
 
 Three things tripped the rollout:
 
-- **Pre-commit hook flattened the merge commit** when `--no-ff` was specified on a clean fast-forward path. Effect was cosmetic (linear history vs branch context lost) but worth knowing.
+- **Pre-commit hook flattened the merge commit** when `--no-ff` was specified on a clean fast-forward path. Git documents `--no-ff` as creating a merge commit [in all cases, even when the merge could instead be resolved as a fast-forward](https://git-scm.com/docs/git-merge) — the hook rewrote it anyway. Effect was cosmetic (linear history vs branch context lost) but worth knowing.
 - **`.me.md` protection hook blocks creation** as well as edits. Workaround: use plain `index.md` for AI-authored task summaries; reserve `.me.md` for human-authored seed docs only. See related entry.
-- **Markdownlint MD041** counts the first non-frontmatter line; H2 before H1 fails. Plan files need H1 immediately after frontmatter. See related entry.
+- **Markdownlint [MD041](https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md)** counts the first non-frontmatter line; H2 before H1 fails. Plan files need H1 immediately after frontmatter. The rule does skip files whose front matter carries a `title` property, which is why blog-style docs pass and plan files do not. See related entry.
 
 ## When this fits
 
@@ -97,6 +96,5 @@ Cross-session state survives only when every loss mode has a defense. Durable-so
 
 ## References
 
-- [GitHub Actions — Using workflows](https://docs.github.com/en/actions/using-workflows)
-- [feat(wrap): persist follow-ups across sessions](https://github.com/brandonwie/3b/commit/46e23c05)
-- [feat(wrap): durable-source ACTIVE-STATUS generator with parsing fixes](https://github.com/brandonwie/3b/commit/28ab7012)
+- [git-merge documentation — `--ff` / `--no-ff`](https://git-scm.com/docs/git-merge)
+- [markdownlint MD041 — first-line-heading](https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md)

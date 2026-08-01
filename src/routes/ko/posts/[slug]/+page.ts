@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { Component } from 'svelte';
 import socialLinksBySlug from '$lib/data/social-links.json';
@@ -43,6 +44,8 @@ export const load: PageLoad = async ({ params }) => {
 	for (const [path, resolver] of Object.entries(koModules)) {
 		if (path.endsWith(`/${slug}.md`)) {
 			const post = (await resolver()) as PostModule;
+			// Retired posts are withdrawn from the direct URL too, not just listings.
+			if (post.metadata.draft) error(404, `Post not found: ${slug}`);
 			const { headings, ...meta } = post.metadata;
 			return {
 				content: post.default,
@@ -64,6 +67,7 @@ export const load: PageLoad = async ({ params }) => {
 	for (const [path, resolver] of Object.entries(enModules)) {
 		if (path.endsWith(`/${slug}.md`)) {
 			const post = (await resolver()) as PostModule;
+			if (post.metadata.draft) error(404, `Post not found: ${slug}`);
 			const { headings: enHeadings, ...enMeta } = post.metadata;
 			return {
 				content: post.default,

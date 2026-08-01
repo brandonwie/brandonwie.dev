@@ -5,7 +5,7 @@ description: >-
   도중에 바뀌고, 범위는 옮겨가고, branch는 어느새 merge돼요. 3분짜리 pre-flight check 하나면 한참 동안
   obsolete된 작업을 붙들고 있는 시간을 막아줘요.
 date: 2026-04-30T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-08-02'
 tags:
   - general
   - process
@@ -16,7 +16,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: plan-vs-shipped-divergence
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 ---
 
@@ -47,7 +47,7 @@ Pre-flight check는 비용은 3분 정도로 작고 효과는 커요. 어긋남�
 
 ## 실제로 어긋난 모습은 어땠을까
 
-2026-04-30의 구체적인 case예요. 2026-04-25의 plan.md는 "Phase 5는 Path A/B/C 결정에 막혀 있다"고 적혀 있었어요. 5일 뒤의 현실은 이랬어요.
+제 개인 tooling repo(private)에서 2026-04-30에 실제로 있었던 case예요. 2026-04-25의 plan.md는 "Phase 5는 Path A/B/C 결정에 막혀 있다"고 적혀 있었어요. 5일 뒤의 현실은 이랬어요.
 
 - branch `feat/wrap-followup-persistence`는 로컬에서 사라졌음
 - 구현은 commit `46e23c05`로 이미 main에 들어갔음
@@ -121,5 +121,5 @@ repo 상태가 canonical이에요. plan.md는 의도의 historical record, ship�
 
 ## References
 
-- [GitHub — Planning and tracking with Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
-- [Implementation that diverged from plan.md A-G framing](https://github.com/brandonwie/3b/commit/46e23c05)
+- [Git — `git branch`](https://git-scm.com/docs/git-branch) — branch 상태 check에서 쓰는 `-a`, `--show-current`, `--merged` 문서
+- [Git — `git log`](https://git-scm.com/docs/git-log) — two-dot range(`main..HEAD`), `--oneline`, path로 history 좁히기

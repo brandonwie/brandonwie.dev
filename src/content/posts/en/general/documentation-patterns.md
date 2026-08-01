@@ -2,7 +2,7 @@
 title: Documentation Patterns
 description: The **Buffer Pattern** preserves important discoveries during AI-assisted
 date: 2025-01-15T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - general
   - documentation
@@ -13,8 +13,11 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://www.writethedocs.org/guide/index.html'
-    title: Software documentation guide — Write the Docs
+  - url: 'https://code.claude.com/docs/en/memory'
+    title: How Claude remembers your project — Claude Code documentation
+    type: official
+  - url: 'https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions'
+    title: Documenting Architecture Decisions — Michael Nygard
     type: authoritative
 source_content_hash: 8c4ff53bed570f7fcd59b64d5123c3d36fcc4344013c4acbbe220b8db6f68df8
 ---
@@ -28,6 +31,8 @@ This happened enough times that I built a system to stop the bleeding. I call it
 When you work with an AI coding assistant, valuable things happen throughout the session. You make a decision to use library X over library Y, and the reasoning is clear in the moment. You discover that the root cause of a bug was a race condition in the event loop. You find an official API endpoint that is not in the top search results.
 
 Then the session ends. Maybe you close the terminal. Maybe the connection drops. Maybe you start a new session the next morning. In all cases, the context that made those moments valuable is lost.
+
+This is not a quirk of my setup. It is how the tool is documented to work: [Claude Code's memory docs](https://code.claude.com/docs/en/memory) state that each session begins with a fresh context window, and that the things which carry knowledge across sessions are files on disk. Anything that lived only in the conversation goes when the conversation goes.
 
 ```text
 SCENARIO: Working session with Claude
@@ -43,6 +48,8 @@ RESULT: All context LOST
 ```
 
 The problem is not that you forget things happened. You remember that you solved something. The problem is that you forget the *why* -- the reasoning, the alternatives you considered, the specific detail that made the solution work.
+
+That failure mode is not new, and it is not specific to AI tooling. Michael Nygard opened his 2011 post on architecture decision records with the observation that ["one of the hardest things to track during the life of a project is the motivation behind certain decisions"](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) -- and his answer was to write the rationale down at the moment the decision is made. A session buffer is the same idea on a much shorter clock: years for an architecture record, hours for a coding session.
 
 ## The Solution: Write to a Buffer Immediately
 
@@ -142,5 +149,6 @@ The buffer file is the safety net. Everything else -- journals, knowledge bases,
 
 **References:**
 
-- `.claude/buffer.md` - The buffer file
-- `.claude/skills/wrap/SKILL.md` - Processes buffer at session end
+- [How Claude remembers your project](https://code.claude.com/docs/en/memory) - Claude Code memory docs: sessions start with a fresh context window, and only on-disk files carry across
+- [Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) - Michael Nygard on capturing decision rationale before it evaporates
+- In my own tooling repo, `.claude/buffer.md` is the buffer file and the `wrap` skill processes it at session end

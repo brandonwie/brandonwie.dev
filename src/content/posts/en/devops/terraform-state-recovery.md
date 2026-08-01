@@ -2,7 +2,7 @@
 title: Terraform State Recovery
 description: Procedures for recovering from Terraform state drift when state file doesn't
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - terraform
@@ -62,10 +62,10 @@ For resources that exist in AWS but aren't in Terraform state (Terraform wants t
 
 ```bash
 # RDS Cluster
-terraform import aws_rds_cluster.main moba-rds-prod-cluster
+terraform import aws_rds_cluster.main app-rds-prod-cluster
 
 # RDS Instance
-terraform import aws_rds_cluster_instance.main moba-rds-prod
+terraform import aws_rds_cluster_instance.main app-rds-prod
 
 # EC2 Instance
 terraform import aws_instance.main i-0123456789abcdef0

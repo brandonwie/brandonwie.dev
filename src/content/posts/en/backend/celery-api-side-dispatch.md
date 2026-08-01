@@ -2,9 +2,9 @@
 title: Celery API-Side Dispatch Pattern
 description: >-
   Creating a send-only Celery client in an API service that dispatches tasks to
-  a
+  a separate worker service, without importing the worker's task modules.
 date: 2026-02-03T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - celery
@@ -14,11 +14,14 @@ category: backend
 draft: false
 lang: en
 references:
-  - url: 'https://docs.celeryq.dev/en/stable/userguide/calling.html#basics'
-    title: Celery - Calling Tasks
+  - url: 'https://raw.githubusercontent.com/celery/celery/main/docs/userguide/calling.rst'
+    title: 'Celery documentation source - Calling Tasks'
     type: official
-  - url: 'https://docs.celeryq.dev/en/stable/userguide/routing.html'
-    title: Celery - Routing Tasks
+  - url: 'https://raw.githubusercontent.com/celery/celery/main/docs/userguide/routing.rst'
+    title: 'Celery documentation source - Routing Tasks'
+    type: official
+  - url: 'https://raw.githubusercontent.com/celery/celery/main/docs/userguide/tasks.rst'
+    title: 'Celery documentation source - Tasks'
     type: official
 source_content_hash: 448344f22a84c2828808f0507e50adee0bafb8a46ae20f0d5273f6638e256f5a
 expanded: true
@@ -41,7 +44,7 @@ This coupling isn't obvious until you hit the import error. The task function it
 
 ## The Solution: `send_task()`
 
-Celery's `send_task()` method dispatches tasks by string name, with no import required:
+Celery's `send_task()` method dispatches tasks by string name, with no import required. The calling guide mentions it almost in passing — if the task isn't registered in the current process, call it by name — which turns out to be exactly the microservices case:
 
 ```python
 # API side: celery_client.py (send-only, no worker)
@@ -126,5 +129,9 @@ When your API and worker services have incompatible dependency trees (async vs s
 
 ## References
 
-- [Celery — Calling Tasks](https://docs.celeryq.dev/en/stable/userguide/calling.html#basics)
-- [Celery — Routing Tasks](https://docs.celeryq.dev/en/stable/userguide/routing.html)
+Links point at the documentation source in the `celery/celery` repository — the
+same text the docs site renders.
+
+- [Celery documentation source — Calling Tasks](https://raw.githubusercontent.com/celery/celery/main/docs/userguide/calling.rst) — the `delay()` / `apply_async()` API, and the note that `send_task()` is the way to call a task that isn't registered in the current process
+- [Celery documentation source — Routing Tasks](https://raw.githubusercontent.com/celery/celery/main/docs/userguide/routing.rst) — `task_routes` mapping task names (and glob patterns) to queues
+- [Celery documentation source — Tasks](https://raw.githubusercontent.com/celery/celery/main/docs/userguide/tasks.rst) — explicit `name=` on the task decorator vs. names auto-generated from the module path

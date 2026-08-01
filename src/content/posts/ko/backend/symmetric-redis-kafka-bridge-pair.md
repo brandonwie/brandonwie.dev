@@ -4,7 +4,7 @@ description: >-
   Cloud Run은 내부 Kafka 브로커에 못 닿아요 — `advertised.listeners`가 항상 이겨요. Redis를 통과하는
   단방향 브리지 한 쌍이 모든 invariant를 지켜줘요.
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-04-29'
+updated: '2026-08-02'
 tags:
   - backend
   - distributed-systems
@@ -15,7 +15,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: symmetric-redis-kafka-bridge-pair
-source_updated: 2026-04-29T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 ---
 
@@ -174,14 +174,23 @@ partition key를 뽑으려면 **반드시** parse를 해야 하거든요. 깨진
 
 ## 비슷한 패턴을 쓰는 곳
 
-- **LinkedIn**은 하이브리드 저장 구조를 써요. Kafka가 내구성 backbone을
-  맡고, fan-out은 edge에 친화적인 transport(Espresso, Voldemort)가 받아요.
-- **Slack**의 실시간 메시징도 비슷해요. 아래에 Kafka, 위에 edge transport를
-  올렸어요.
-- **Discord**는 Cassandra와 ScyllaDB에 수십억 개 메시지를 쌓으면서,
-  edge에서는 휘발성 pub/sub을 써요.
-- **Stripe**의 audit 파이프라인은 어디서 시작된 쓰기든 전부 내구성 버스로
-  돌려보내요.
+새로운 구조는 아니에요. 규모가 큰 시스템일수록 내구성 로그와 실제로
+메시지를 옮기는 계층을 따로 두는 쪽으로 계속 수렴하더라고요.
+
+- **LinkedIn**은 Kafka를
+  [central data pipeline](https://www.linkedin.com/blog/engineering/open-source/kafka-ecosystem-at-linkedin)
+  이라고 부를 정도예요. Espresso의 replication도 MySQL replication에서
+  Kafka로 옮겼어요. 내구성 로그가 아래에 깔리고, serving store는 자기
+  계층으로 따로 있어요.
+- **Slack**은 job queue에서 Redis를 걷어내는 대신
+  [Kafka를 Redis 앞에](https://slack.engineering/scaling-slacks-job-queue/)
+  뒀어요. Kafka가 job 유실을 막는 내구성 버퍼를 맡고, Redis는 빠른
+  in-flight 계층으로 남았어요. 네트워크 경계만 없을 뿐, 브리지 페어와
+  역할 분담이 같아요.
+- **Discord**는
+  [수조 개의 메시지](https://discord.com/blog/how-discord-stores-trillions-of-messages)
+  를 전용 내구성 저장소(Cassandra, 그다음 ScyllaDB)에 쌓아요. 전달
+  계층에 맞추기보다 저장소 자체 기준으로 고른 선택이에요.
 
 ## 안티패턴
 

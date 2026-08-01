@@ -2,7 +2,7 @@
 title: 'When CLAUDE.md keeps overflowing, move the budget into your generator'
 description: 'The "Large CLAUDE.md will impact performance" warning kept coming back weeks after every trim. It stopped for good once the byte budget moved out of author discipline and into the generator that assembles the file — as a per-rule warning, a total hard-fail, and a rendered-file ceiling.'
 date: 2026-05-13T00:00:00.000Z
-updated: 2026-06-07
+updated: 2026-08-02
 tags:
   - devops
   - claude-code
@@ -12,23 +12,15 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://docs.anthropic.com/en/docs/claude-code/memory'
+  - url: 'https://code.claude.com/docs/en/memory'
     title: Claude Code memory — how CLAUDE.md loads into every session's context
     type: official
-  - url: 'https://github.com/brandonwie/3b/commit/698bdb65'
-    title: >-
-      Commit 698bdb65 — downgrade pr-review-lifecycle + tag-taxonomy +
-      step-handoff to claude_lazy
-    type: experience
-  - url: 'https://github.com/brandonwie/3b/commit/32e1599b'
-    title: Commit 32e1599b — enforce universal-tier byte budget in sync-agents-md
-    type: experience
 source_content_hash: 0940f30c7678e7d1b50d31154512b7fa2f60267d1848ce00c34c10153fc1379e
 ---
 
 Agent tools that load an always-on context file — Claude Code's `CLAUDE.md`,
 Codex's `AGENTS.md`, Gemini's `GEMINI.md` — put that file into
-[every session's context window](https://docs.anthropic.com/en/docs/claude-code/memory).
+[every session's context window](https://code.claude.com/docs/en/memory).
 That's the point of it, and it's also a finite budget. Claude Code shows a
 session-start performance warning once the file gets large; in my setup I started
 seeing "Large CLAUDE.md will impact performance" around 40,000 characters.
@@ -171,4 +163,4 @@ mode that actually bites is the one no single edit looks responsible for.
 
 ## References
 
-- [Claude Code memory — how CLAUDE.md loads into every session's context](https://docs.anthropic.com/en/docs/claude-code/memory)
+- [Claude Code memory — how CLAUDE.md loads into every session's context](https://code.claude.com/docs/en/memory)

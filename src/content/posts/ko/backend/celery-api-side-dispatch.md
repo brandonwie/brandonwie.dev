@@ -4,7 +4,7 @@ description: >-
   Worker의 task 모듈을 import하지 않고 API 서비스에서 별도의 worker 서비스로 task를 전달하는 send-only
   Celery 클라이언트 만들기
 date: 2026-02-03T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - celery
@@ -15,14 +15,17 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: celery-api-side-dispatch
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 references:
-  - url: 'https://docs.celeryq.dev/en/stable/userguide/calling.html#basics'
-    title: Celery - Calling Tasks
+  - url: 'https://raw.githubusercontent.com/celery/celery/main/docs/userguide/calling.rst'
+    title: 'Celery documentation source - Calling Tasks'
     type: official
-  - url: 'https://docs.celeryq.dev/en/stable/userguide/routing.html'
-    title: Celery - Routing Tasks
+  - url: 'https://raw.githubusercontent.com/celery/celery/main/docs/userguide/routing.rst'
+    title: 'Celery documentation source - Routing Tasks'
+    type: official
+  - url: 'https://raw.githubusercontent.com/celery/celery/main/docs/userguide/tasks.rst'
+    title: 'Celery documentation source - Tasks'
     type: official
 ---
 
@@ -74,8 +77,10 @@ signature를 정의하고 API와 worker 둘 다 의존하게 하는 거예요. �
 ## 해결책: send_task()
 
 `send_task()`는 worker에서 아무것도 import하지 않고 이름으로 task를
-dispatch해요. API는 broker URL과 task routing이 설정된 Celery
-클라이언트만 필요해요:
+dispatch해요. Celery의 calling 가이드에도 현재 프로세스에 task가 등록되어
+있지 않으면 `send_task()`로 이름을 써서 호출하라고 짧게 적혀 있는데,
+microservices 구조가 딱 그 경우예요. API는 broker URL과 task routing이
+설정된 Celery 클라이언트만 필요해요:
 
 ```python
 # API side: celery_client.py (send-only, no worker)

@@ -4,7 +4,7 @@ description: >-
   산문 형태로 쓴 복합 전제조건은 컨텍스트 부담이 커지면 조용히 어긋나요. 절 하나당 체크박스 하나로 명시적인 체크리스트로 바꾸면 전제조건이
   LLM 앞에서도 견고해지고, 실제 버그였던 숨은 절들도 드러나요.
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-05-06'
+updated: "2026-08-02"
 tags:
   - general
   - skill-authoring
@@ -17,13 +17,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: skill-instruction-checklist-pattern
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: "2026-08-02"
 translation_date: '2026-05-10'
 ---
 
 `/wrap`을 돌리고 나서 6개 블로그 엔트리가 `published_at`은 null인데 `needs_resync`만 true로 떠 있었어요. 이상해서 들여다봤어요. 원인은 코드가 아니라 skill instruction 안에 숨어 있었어요.
 
-Claude Code skill은 매번 LLM이 다시 읽어내는 markdown 문서예요. 산문 형태(`If A AND B → do X`)로 쓴 복합 전제조건은 컨텍스트 부담이 커지면 조용히 어긋나요. 컴파일러도 없고, type checker도 없고, 잘못 읽힌 걸 잡아낼 test도 없어요.
+[Claude Code skill](https://code.claude.com/docs/en/skills)은 skill을 쓸 때마다 모델이 읽어내는 `SKILL.md` instruction 파일이에요. 결국 매번 LLM이 다시 해석하는 markdown 문서죠. 산문 형태(`If A AND B → do X`)로 쓴 복합 전제조건은 컨텍스트 부담이 커지면 조용히 어긋나요. 컴파일러도 없고, type checker도 없고, 잘못 읽힌 걸 잡아낼 test도 없어요.
 
 증상이 드러난 자리는 한 `/wrap` skill instruction이었어요. 이렇게 쓰여 있었거든요.
 
@@ -31,7 +31,9 @@ Claude Code skill은 매번 LLM이 다시 읽어내는 markdown 문서예요. �
 
 여러 세션에 걸쳐, 6개 엔트리가 `published_at: null`인데도 `needs_resync: true`로 끝났어요. 텍스트만 보면 전제조건은 명확했고 LLM도 그걸 "알고" 있었지만, 두 절을 하나로 묶어 놓은 형태라서 두 번째 절이 두드러질 때 첫 번째 절을 건너뛰는 일이 생겼어요. 이렇게 어긋남이 쌓였어요.
 
-Claude만의 문제는 아니에요. 묵시적 AND가 들어간 긴 지시문은 사람도 잘못 적용해요. 외과 수술과 항공 분야에 체크리스트가 있는 이유가 정확히 이거예요 — 부하가 걸리면 복합 전제조건은 조용히 떨어져 나가거든요.
+Claude만의 문제는 아니에요. 묵시적 AND가 들어간 긴 지시문은 사람도 잘못 적용해요. 외과 수술과 항공 분야에 체크리스트가 있는 이유가 정확히 이거예요 — 부하가 걸리면 복합 전제조건은 조용히 떨어져 나가거든요. WHO는 [Surgical Safety Checklist](https://www.who.int/teams/integrated-health-services/patient-safety/research/safe-surgery)가 합병증과 사망률을 30퍼센트 넘게 줄였다고 밝히고 있어요. 체크리스트를 끝까지 돌리는 데 걸리는 시간은 2분이 안 되고요.
+
+Anthropic의 prompting 가이드도 같은 방향을 가리켜요. [명확하고 명시적인 지시](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct)를 권하면서, "순서나 완결성이 중요할 때는 numbered list나 bullet point로 순차적인 단계를 제시하라"고 해요. 산문으로 묶인 복합 전제조건이 감추는 게 바로 그 완결성이에요.
 
 ## 복합 전제조건을 체크박스로 재구성하기
 
@@ -87,5 +89,6 @@ skill markdown 안에 산문으로 쓴 복합 전제조건은 컨텍스트 부�
 
 ## References
 
-- [Claude Code — Slash Commands](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/slash-commands)
-- [Anthropic — Prompting Best Practices for Long Instructions](https://www.anthropic.com/research/checklist-prompts)
+- [Claude Code — Extend Claude with skills](https://code.claude.com/docs/en/skills)
+- [Anthropic — Prompting best practices (Be clear and direct)](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct)
+- [WHO — Safe Surgery Saves Lives and the Surgical Safety Checklist](https://www.who.int/teams/integrated-health-services/patient-safety/research/safe-surgery)

@@ -5,7 +5,7 @@ description: >-
   새 개발자는 즉시 AI 지시사항을 사용하고 기존 개발자는 개인 확장을
   유지하는 패턴입니다.
 date: 2026-02-04T00:00:00.000Z
-updated: "2026-07-23"
+updated: "2026-08-02"
 tags:
   - devops
   - claude-code
@@ -16,11 +16,17 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-shared-personal-config
-source_updated: "2026-07-23"
+source_updated: "2026-08-02"
 translation_date: "2026-07-23"
 references:
-  - url: "https://docs.anthropic.com/en/docs/claude-code"
-    title: Claude Code 공식 문서
+  - url: "https://code.claude.com/docs/en/memory"
+    title: "Claude Code 공식 문서 — CLAUDE.md 로드 순서"
+    type: official
+  - url: "https://code.claude.com/docs/en/permissions"
+    title: "Claude Code 공식 문서 — 권한 규칙 평가 순서 (deny → ask → allow)"
+    type: official
+  - url: "https://code.claude.com/docs/en/settings"
+    title: "Claude Code 공식 문서 — settings 파일과 우선순위"
     type: official
 ---
 
@@ -119,16 +125,19 @@ CLAUDE.local.md
 
 ```text
 3b/.claude/project-claude/
-├── backend-project.md          # Shared SoT → backend-v2/CLAUDE.md (symlink)
-├── backend-project.local.md    # Personal SoT → backend-v2/CLAUDE.local.md (symlink)
-├── backend-project.mcp.json    # MCP SoT → backend-v2/.mcp.json (symlink)
+├── backend-project.md          # Shared SoT → {backend-repo}/CLAUDE.md (symlink)
+├── backend-project.local.md    # Personal SoT → {backend-repo}/CLAUDE.local.md (symlink)
+├── backend-project.mcp.json    # MCP SoT → {backend-repo}/.mcp.json (symlink)
 ├── infra-project.md            # Combined (personal-only repo)
-├── infra-project.mcp.json      # MCP SoT → backend-infra/.mcp.json (symlink)
+├── infra-project.mcp.json      # MCP SoT → {infra-repo}/.mcp.json (symlink)
 ├── orchestration-project.md    # Combined (personal-only repo)
 ├── etl-project.md              # Combined (personal-only repo)
-├── crucio.mcp.json         # MCP SoT → crucio/.mcp.json (symlink)
+├── crucio.mcp.json             # MCP SoT → crucio/.mcp.json (symlink)
 └── ...
 ```
+
+`{backend-repo}`와 `{infra-repo}`는 팀 저장소가 디스크에 체크아웃된 디렉토리
+이름 자리예요. 이 패턴은 이름이 뭐든 상관없어요.
 
 다른 팀원이 있는 저장소만 공유/로컬 분리를 적용해요. 개인 전용 저장소는 하나의
 통합 파일로 충분해요. `.mcp.json`도 같은 패턴을 따라요. 지식 베이스가 정본을
@@ -248,7 +257,7 @@ settings는 실패 범위를 줄이고 identity를 더 엄격하게 확인해야
 
 ```text
 3b/.claude/settings.local.json  ← 소스 파일
-  ↑ 8개 프로젝트에서 symlink (brandonwie, crucio, backend-v2 등)
+  ↑ 8개 프로젝트에서 symlink (brandonwie, crucio, {backend-repo} 등)
 + 5개 독립 파일 (dev/, personal/, dotfiles/, frontend/, mobile/)
 ```
 

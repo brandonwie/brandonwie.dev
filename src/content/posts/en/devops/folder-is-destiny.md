@@ -5,7 +5,7 @@ description: >-
   time, then uses frontmatter overrides for the cases where physical location
   and...
 date: 2026-06-15T00:00:00.000Z
-updated: 2026-06-15T00:00:00.000Z
+updated: '2026-08-02'
 expanded: true
 tags:
   - 3b
@@ -104,9 +104,10 @@ can read it. It tells graph builders, retrieval layers, embedding jobs, and
 model-backed tools whether they are allowed to ingest the content.
 
 The matrix is path-keyed. `personal/**`, `journals/**`, `tmp/**`,
-`.agents/metrics/**`, and `knowledge/moba/**` are private by default. General
-`knowledge/**`, `guides/**`, and 3B decision records are public by default, with
-per-entry overrides where the matrix allows them.
+`.agents/metrics/**`, and the work-scoped knowledge subtree
+(`knowledge/{work}/**`, where `{work}` is the folder holding day-job notes) are
+private by default. General `knowledge/**`, `guides/**`, and 3B decision records
+are public by default, with per-entry overrides where the matrix allows them.
 
 The important part is not the exact row list. The important part is that there
 is one matrix.
@@ -133,8 +134,8 @@ eventually be publishable after redaction, generalization, or manual review. A
 file can be indexable inside 3B and still not ready for a public blog because it
 lacks references, contains company examples, or is unfinished.
 
-The blog-publishing rule has its own decision tree. Company-specific `moba/`
-content is excluded. Transferable concepts with company-shaped examples need
+The blog-publishing rule has its own decision tree. Work-specific content is
+excluded outright. Transferable concepts with work-shaped examples need
 generalization. Experience-only notes may need outside references. Ready-to-sync
 knowledge must pass publication gates, not just privacy gates.
 
@@ -184,7 +185,7 @@ the shared loader.
 
 If every tool copied the privacy matrix, the repo would eventually have several
 privacy policies. One would include `journals/**`. Another would forget
-`.agents/metrics/**`. A third would treat `knowledge/moba/**` as ordinary
+`.agents/metrics/**`. A third would treat the work-scoped subtree as ordinary
 knowledge. The difference might not show up until a model-backed index uploaded
 the wrong folder.
 

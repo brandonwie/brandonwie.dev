@@ -5,7 +5,7 @@ description: >-
   scope에서만 표면화되는 두 가지 pre-commit 함정, 그리고 14-rule custom config를 한 줄 extends + 5개
   carve-out으로 collapse한 strict-preset 마이그레이션.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-08-02'
 tags:
   - general
   - documentation
@@ -16,7 +16,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: markdownlint-conventions
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 references:
   - url: 'https://github.com/DavidAnson/markdownlint'
@@ -355,14 +355,14 @@ Pre-commit lint는 폴더 이름 변경을 "newly added" 파일로 봐요. 이�
 `.me.md` 파일(Notion export, brain dump, PRD seed)을 포함하면, 콘텐츠가
 이전 경로에서 unchanged여도 markdownlint가 commit을 막아요.
 
-4월 말의 재현: `projects/moba/actives/onboarding/`을
-`frontend-onboarding/`로 이름 변경하니 pre-commit lint가
+4월 말의 재현: 태스크 폴더를 `actives/onboarding/`에서
+`actives/frontend-onboarding/`로 이름 변경하니 pre-commit lint가
 `notion-requirements.me.md`(인라인 `<aside>` HTML과 중복 한국어 헤딩이
 있는 Notion export)를 트리거했어요. lint-staged가 콘텐츠가 unchanged여도
 파일을 "newly added"로 봤어요.
 
 ```bash
-git add projects/moba/actives/onboarding/ projects/moba/actives/frontend-onboarding/
+git add actives/onboarding/ actives/frontend-onboarding/
 git commit
 # → markdownlint-cli2가 notion-requirements.me.md에서 실패:
 #   MD041 first-line-heading

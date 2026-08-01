@@ -5,7 +5,7 @@ description: >-
   mode는 default가 아니라 opt-in이어야 해요. 호출을 분리하면 CI green과 되돌릴 수 없는 merge 사이에 의미 있는
   일시정지 지점을 보존해요.
 date: 2026-05-05T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-08-02'
 tags:
   - devops
   - automation
@@ -17,7 +17,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: crucio-ship-two-phase-merge-gate
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 ---
 
@@ -28,6 +28,8 @@ translation_date: '2026-05-10'
 | 1     | Dispatch + watch CI on the PR branch  | Read-only                            |
 | 1.5   | `gh pr merge --merge --delete-branch` | **Irreversible** (without revert PR) |
 | 2     | Dispatch deploy + verify chain fires  | **Production-affecting**             |
+
+중요한 건 Phase 1.5예요. `gh pr merge --merge`가 base branch에 commit을 올리고 나면, 되돌리는 방법은 merge commit을 revert하는 두 번째 pull request예요 — 저렴하지만 더 이상 공짜는 아니고, 기록이 남아요.
 
 skill은 `+merge`를 arg로 지원해서 한 번의 invocation으로 세 phase를 모두 실행할 수 있어요. 편하지만 — "operator가 green CI를 보고 merge를 authorize하는 결정을 내리는" 단계가 사라져요. 수동 smoke test가 있는 portfolio prod 환경에서는 그 게이트에 실제 가치가 있어요. skill 자체를 수정할 필요는 없어요 — `+merge` 없이 vs 있이 호출하는 게 게이트예요.
 
@@ -83,4 +85,6 @@ high-stakes automation에는 all-in-one을 opt-in으로 두고 split invocation�
 
 ## References
 
-- [PR #138 — TF.5.7 Google integration token refresh (the ship case)](https://github.com/brandonwie/crucio/pull/138)
+- [`gh pr merge` — GitHub CLI manual](https://cli.github.com/manual/gh_pr_merge) — Phase 1.5 커맨드, `-m, --merge`와 `-d, --delete-branch` 포함
+- [Reverting a pull request — GitHub Docs](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/reverting-a-pull-request) — merge된 PR은 merge commit을 revert하는 새 PR로 되돌려요. Phase 1.5가 게이트인 이유예요
+- [`automerge` — Renovate configuration options](https://docs.renovatebot.com/configuration-options/#automerge) — 사람 게이트가 게이트할 대상이 없는 무인 케이스

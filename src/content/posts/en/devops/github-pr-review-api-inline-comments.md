@@ -4,7 +4,7 @@ description: >-
   How to create PR reviews with inline comments using the GitHub API via `gh`
   CLI.
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-02-04T00:00:00.000Z
+updated: "2026-08-02"
 tags:
   - devops
   - github
@@ -149,26 +149,26 @@ REVIEW_JSON
 ## Complete Example
 
 ```bash
-PR_NUMBER=644
+PR_NUMBER=123
 OWNER=example-org
-REPO=backend-v2
+REPO=example-repo
 
 cat << 'REVIEW_JSON' | gh api repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews -X POST --input -
 {
   "event": "COMMENT",
-  "body": "## 셀프 리뷰 (Self Review) 🔍\n\n이 PR의 핵심 구현 포인트를 설명합니다.",
+  "body": "## Self Review 🔍\n\nExplaining the key implementation points of this PR.",
   "comments": [
     {
-      "path": "src/common/utils/calendar/calendar-normalization.util.ts",
+      "path": "src/lib/calendar/normalize-timezone.ts",
       "line": 244,
       "side": "RIGHT",
-      "body": "### 📌 TZID 정규화\n\n**왜 이렇게 구현했는가:**\n\n비표준 TZID를 IANA 형식으로 변환합니다."
+      "body": "### 📌 TZID normalization\n\n**Why it is written this way:**\n\nNon-standard TZID values get mapped to IANA identifiers before parsing."
     },
     {
-      "path": "src/common/utils/calendar/calendar-normalization.util.ts",
+      "path": "src/lib/calendar/normalize-timezone.ts",
       "line": 307,
       "side": "RIGHT",
-      "body": "### 📌 DST Gap 감지\n\n**문제 상황:**\n\nDST 전환 시 존재하지 않는 시간을 dayjs가 조정합니다."
+      "body": "### 📌 DST gap detection\n\n**The problem:**\n\nDuring a DST transition the date library silently shifts times that do not exist."
     }
   ]
 }
@@ -182,7 +182,7 @@ On success, the API returns the created review object:
 ```json
 {
   "id": 3751032477,
-  "html_url": "https://github.com/org/repo/pull/644#pullrequestreview-3751032477",
+  "html_url": "https://github.com/example-org/example-repo/pull/123#pullrequestreview-3751032477",
   "state": "COMMENTED",
   "submitted_at": "2026-02-04T13:19:25Z"
 }

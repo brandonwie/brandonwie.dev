@@ -4,7 +4,7 @@ description: >-
   라우트 allowlist를 사용한 block-by-default WAF 접근 방식. 알 수 없는 라우트가 자동 차단되어 blocklist보다
   보안이 강해요.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-07-02'
+updated: '2026-08-02'
 tags:
   - aws
   - waf
@@ -15,12 +15,20 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: waf-allowlist-patterns
-source_updated: '2026-07-02'
+source_updated: '2026-08-02'
 translation_date: '2026-07-02'
 references:
-  - url: >-
-      https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
-    title: Creating and managing an IP set in AWS WAF
+  - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-processing-order.html'
+    title: Setting rule priority — AWS WAF Developer Guide
+    type: official
+  - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-statement-type-string-match.html'
+    title: String match rule statement — AWS WAF Developer Guide
+    type: official
+  - url: 'https://docs.aws.amazon.com/waf/latest/APIReference/API_ByteMatchStatement.html'
+    title: ByteMatchStatement — AWS WAF API Reference
+    type: official
+  - url: 'https://aws.amazon.com/waf/pricing/'
+    title: AWS WAF Pricing
     type: official
 ---
 

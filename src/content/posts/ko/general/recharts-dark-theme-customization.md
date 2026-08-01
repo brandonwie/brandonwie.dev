@@ -4,7 +4,7 @@ description: >-
   Recharts 차트를 다크 터미널 테마에 맞게 스타일링하는 방법을 CSS 변수와
   커스텀 컴포넌트를 통해 설명합니다.
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-03-09T00:00:00.000Z
+updated: "2026-08-02"
 tags:
   - general
   - react
@@ -17,16 +17,19 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: recharts-dark-theme-customization
-source_updated: 2026-03-09T00:00:00.000Z
+source_updated: "2026-08-02"
 translation_date: "2026-03-10"
 references:
   - url: null
     title: Recharts dark theme implementation in Crucio dashboard
     type: experience
-  - url: "https://recharts.org/en-US/api"
-    title: Recharts API Documentation
+  - url: "https://recharts.github.io/en-US/api/Tooltip/"
+    title: "Recharts Tooltip API — content prop for custom tooltips"
     type: official
-  - url: "https://developer.mozilla.org/en-US/docs/Web/SVG/Element/linearGradient"
+  - url: "https://recharts.github.io/en-US/api/XAxis/"
+    title: "Recharts XAxis API — tick, tickLine, and axisLine props"
+    type: official
+  - url: "https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/linearGradient"
     title: MDN SVG linearGradient Element
     type: authoritative
 ---

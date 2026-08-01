@@ -2,7 +2,7 @@
 title: emitAsync Stamp Gating for Idempotent Bootstrap Retries
 description: A bootstrap that emits sync to a queue then stamps "done" silently strands downstream when Redis blips. emitAsync gates the stamp on enqueue admission.
 date: 2026-04-28T00:00:00.000Z
-updated: "2026-07-31"
+updated: "2026-08-02"
 tags:
   - backend
   - nestjs
@@ -14,20 +14,25 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://github.com/EventEmitter/EventEmitter2#emitasyncevent--args'
-    title: EventEmitter2 emitAsync
+  - url: "https://github.com/EventEmitter2/EventEmitter2#emitteremitasyncevent--eventns-arg1-arg2-"
+    title: "EventEmitter2 — emitter.emitAsync"
+    type: official
+  - url: "https://www.postgresql.org/docs/current/protocol-message-formats.html"
+    title: "PostgreSQL — Bind message format (Int16 parameter count)"
+    type: official
+  - url: "https://docs.bullmq.io/guide/queues/adding-bulks"
+    title: "BullMQ — adding jobs in bulk"
     type: official
 source_content_hash: 3285f906bc61fcf8432b700b6ac14e8c87bbbc1e5fcc08379f6136bd030952a7
 ---
 
-`ContactCacheService.refreshFromGoogle` wrote contacts to Postgres, fired
-off per-email events to a queue listener, then stamped
-`contactsSyncedAt = now()`. The code looked correct. But when Redis blipped,
-the listener's `queue.add` rejected into the void (the promise was detached
-because the emit was synchronous fire-and-forget) and the stamp landed
-anyway. The next call short-circuited on the stamp, never re-fanned-out, and
-the downstream Typesense index stayed empty. Users searched and got zero
-results with no exception surfaced anywhere.
+A bootstrap path I worked on wrote rows to Postgres, fired off per-row events
+to a queue listener, then stamped a `syncedAt` sentinel. The code looked
+correct. But when Redis blipped, the listener's `queue.add` rejected into the
+void — the emit was synchronous fire-and-forget, so the promise was detached —
+and the stamp landed anyway. The next call short-circuited on the stamp, never
+re-fanned-out, and the downstream search index stayed empty. Users searched and
+got zero results with no exception surfaced anywhere.
 
 ## How the Silent Failure Plays Out
 
@@ -42,9 +47,8 @@ afterwards has a silent failure mode when the emit is sync fire-and-forget:
 4. Listener's `queue.add` rejects (Redis unreachable). The promise rejects
    to nowhere; the service has already committed the stamp.
 5. Next request sees `bootstrapped_at IS NOT NULL`, short-circuits to "read
-   from local state", and never re-fans-out. The downstream system
-   (Typesense, search index, cache, audit log) is permanently stale for
-   those rows.
+   from local state", and never re-fans-out. The downstream system (search
+   index, cache, audit log) is permanently stale for those rows.
 
 The DB rows are correct and the sentinel is set, but downstream has nothing
 in it, and nothing throws. The bug only shows up when a user later searches
@@ -58,55 +62,61 @@ The contract becomes: the stamp only lands if every listener's returned
 promise resolved. Any rejection anywhere leaves the stamp un-set, so the
 next call retries the whole bootstrap.
 
+The examples below are a stripped-down version of the shape, with neutral
+names — a per-tenant sync source whose rows have to reach a queue before the
+"synced" stamp is allowed to land.
+
 ### Step 1: Publisher exposes an `*Async` variant
 
 ```ts
 @Injectable()
-export class ContactEventPublisher {
+export class RecordEventPublisher {
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
   // Sync fire-and-forget — fine for hot paths where caller doesn't care
-  publishContactUpserted(userId: number, email: string): void {
-    this.eventEmitter.emit("contact.upserted", { userId, email });
+  publishRecordUpserted(tenantId: number, recordId: string): void {
+    this.eventEmitter.emit("record.upserted", { tenantId, recordId });
   }
 
   // Awaited — caller blocks until every listener's returned promise resolves
-  async publishContactsBulkUpsertedAsync(
-    userId: number,
-    emails: string[]
+  async publishRecordsBulkUpsertedAsync(
+    tenantId: number,
+    sourceId: number,
+    recordIds: string[]
   ): Promise<void> {
-    await this.eventEmitter.emitAsync("contact.bulk.upserted", {
-      userId,
-      emails
+    await this.eventEmitter.emitAsync("record.bulk.upserted", {
+      tenantId,
+      sourceId,
+      recordIds
     });
   }
 }
 ```
 
-`emitAsync` returns `Promise<unknown[]>`: the resolved array of every
-listener's return value. Reject anywhere in any listener and the whole
-thing rejects.
+`emitAsync` collects the listeners' return values through `Promise.all`, so
+it resolves to an array of whatever each listener returned. Reject anywhere
+in any listener and the whole thing rejects.
 
 ### Step 2: Caller awaits the emit, then stamps
 
 ```ts
-async refreshFromGoogle(integration: Integration): Promise<void> {
-  const contacts = await this.googlePeople.getContacts(integration.id);
-  if (contacts.length > 0) {
-    await this.userContactsService.bulkUpsert(integration.userId, contacts);
-    // Awaited — if listener's queue.add rejects, this rejects, stamp below
-    // never runs, the integration's contactsSyncedAt stays NULL, next call
-    // retries the whole bootstrap.
-    await this.contactEventPublisher.publishContactsBulkUpsertedAsync(
-      integration.userId,
-      integration.id,
-      contacts.map(c => c.email),
+async syncFromProvider(source: SyncSource): Promise<void> {
+  const records = await this.provider.fetchRecords(source.id);
+  if (records.length > 0) {
+    await this.recordsService.bulkUpsert(source.tenantId, records);
+    // Awaited — if the listener's queue.add rejects, this rejects, the stamp
+    // below never runs, recordsSyncedAt stays NULL, and the next call retries
+    // the whole bootstrap.
+    await this.recordEvents.publishRecordsBulkUpsertedAsync(
+      source.tenantId,
+      source.id,
+      records.map((r) => r.id),
     );
   }
-  // Only lands if emit succeeded — gates the sentinel on enqueue admission
-  await this.integrationRepo.update(
-    { id: integration.id },
-    { contactsSyncedAt: new Date() },
+  // Only lands if the emit succeeded — gates the sentinel on enqueue admission
+  await this.sourceRepo.update(
+    { id: source.id },
+    { recordsSyncedAt: new Date() },
   );
 }
 ```
@@ -114,9 +124,9 @@ async refreshFromGoogle(integration: Integration): Promise<void> {
 ### Step 3: Listener does its work inside an awaited handler
 
 ```ts
-@OnEvent('contact.bulk.upserted')
-async onBulkUpserted(evt: ContactsBulkUpsertedEvent): Promise<void> {
-  if (evt.emails.length === 0) return;
+@OnEvent('record.bulk.upserted')
+async onRecordsBulkUpserted(evt: RecordsBulkUpsertedEvent): Promise<void> {
+  if (evt.recordIds.length === 0) return;
   await this.queue.addBulk(/* N chunked jobs */);
 }
 ```
@@ -131,9 +141,9 @@ makes `emitAsync` actually wait. A handler that swallows the promise
   resolves. Any rejection in any listener leaves the sentinel un-set, so the
   next call retries.
 - **Idempotency is mandatory.** The retry has to be safe, so `bulkUpsert`
-  needs `ON CONFLICT DO UPDATE` and downstream upserts need
-  `action: 'upsert'`. Without idempotency, retry creates duplicates
-  instead of healing the gap.
+  needs `ON CONFLICT DO UPDATE` and the downstream writes need upsert
+  semantics rather than plain inserts. Without idempotency, retry creates
+  duplicates instead of healing the gap.
 - **Transience is mandatory too.** This is the precondition I never wrote
   down. "Un-stamped gate, so the next call retries" only heals if the next
   call can plausibly succeed. Redis being unreachable qualifies. A
@@ -172,31 +182,31 @@ from the other side. That one surprised me, because the gate itself never
 misbehaved.
 
 `bulkUpsert` built a single `INSERT ... ON CONFLICT` binding six params per
-contact, so any account above 10,922 contacts exceeded Postgres'
-65,535 bind-parameter ceiling and threw. That throw is *deterministic*:
-same input, same failure, every time. The gate did precisely what it
-promised. `contactsSyncedAt` stayed `NULL`, so the next call retried, and
-the retry re-fetched from Google People and threw again. Every request,
+row, so any source above 10,922 rows exceeded Postgres' 65,535
+bind-parameter ceiling and threw. That ceiling is not a tunable: the wire
+protocol's Bind message counts parameters in an `Int16`, so one statement
+can never carry more. And that throw is *deterministic*: same input, same
+failure, every time. The gate did precisely what it promised.
+`recordsSyncedAt` stayed `NULL`, so the next call retried, and the retry
+re-fetched from the upstream provider and threw again. Every request,
 indefinitely.
 
 What made it invisible was the caller's error isolation, which read as
 correct on its own:
 
 ```ts
-// Degrade to an empty wrapper so one expired integration can't 500 the endpoint
-const result = await this.fetchOrCacheOne(
-  userId,
-  integrationId,
-  integration
-).catch((err) => {
-  this.logger.error(`Bootstrap failed for user=${userId}: ${err.message}`);
-  return { userId, integrationId, account: integration.account, contacts: [] };
-});
+// Degrade to an empty wrapper so one broken source can't 500 the endpoint
+const result = await this.bootstrapOne(tenantId, sourceId, source).catch(
+  (err) => {
+    this.logger.error(`Bootstrap failed for tenant=${tenantId}: ${err.message}`);
+    return { tenantId, sourceId, label: source.label, records: [] };
+  },
+);
 ```
 
 Composed with the gate, those two reasonable pieces produce a state no
-reviewer of either one would predict: affected users get zero contacts
-forever, every request burns a full Google People fetch, and the only trace
+reviewer of either one would predict: affected tenants get zero records
+forever, every request burns a full upstream fetch, and the only trace
 is a log line that reads like a transient blip precisely because it recurs
 so often.
 

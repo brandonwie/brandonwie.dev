@@ -2,7 +2,7 @@
 title: Fallback-Branch Test Coverage Gap
 description: Tests pass. Coverage hits 100%. Removing the `|| randomUUID()` would still pass everything. How builder-driven fixtures hide the falsy branch.
 date: 2026-04-29T00:00:00.000Z
-updated: 2026-04-29T00:00:00.000Z
+updated: '2026-08-02'
 tags:
   - backend
   - testing
@@ -13,20 +13,30 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://github.com/moba-works/backend-v2/pull/860#discussion_r3159522325'
-    title: PR #860 — claude[bot] inline comment that surfaced the gap
+  - url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_OR'
+    title: 'MDN — Logical OR (||): short-circuit evaluation'
+    type: official
+  - url: 'https://jestjs.io/docs/configuration#coveragethreshold-object'
+    title: Jest configuration — coverageThreshold (branches vs. lines are separate metrics)
+    type: official
+  - url: 'https://jestjs.io/docs/expect#expectstringmatchingstring--regexp'
+    title: Jest — expect.stringMatching(string | regexp)
+    type: official
+  - url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/source'
+    title: MDN — RegExp.prototype.source
     type: official
 source_content_hash: 0a82d28046173b995ad44641a3ba6a9bedfe069041434f5028fcf66cdca2655e
 ---
 
-`claude[bot]` left an inline comment on PR #860: the test for
-`mRefreshToken = user.refreshToken || randomUUID()` only exercised the
-truthy branch. Every existing test built users via
-`UserBuilder.aBeliever().withRefreshToken('x')`. Drop the
-`|| randomUUID()` from production and every test still passes. The
-fallback was load-bearing in production (fresh signups have null refresh
-tokens) but invisible to the suite. This is a structural coverage gap
-that line-coverage tools never catch and AI reviewers spot mechanically.
+An AI reviewer left an inline comment on a pull request of mine: the
+test for `refreshToken = user.refreshToken || randomUUID()` only
+exercised the truthy branch. Every existing test built its user through
+a fluent builder that set a refresh token — `aUser().withRefreshToken('x')`.
+Drop the `|| randomUUID()` from production and every test still passes.
+The fallback was load-bearing in production (fresh signups have null
+refresh tokens) but invisible to the suite. This is a structural
+coverage gap that line-coverage tools never catch and AI reviewers spot
+mechanically.
 
 ## Who, When, Where
 
@@ -56,13 +66,20 @@ This is a structural coverage blind spot that:
 - Is invisible to line-coverage gates and even to most branch-coverage
   tools when the LHS is a fixture-controlled variable
 
+Short-circuiting is the whole reason the line still counts as executed:
+[MDN's `||` reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_OR)
+spells out that when the left operand is truthy the right operand is
+"not evaluated, hence any side effects of doing so do not take effect."
+The line ran; the call inside it never did. That is also why Jest keeps
+[`branches` and `lines` as separate coverage thresholds](https://jestjs.io/docs/configuration#coveragethreshold-object)
+— a 100% line number tells you nothing about the branch number.
+
 ## Why It's a Gotcha
 
 Three things conspire to hide the gap:
 
 1. **Builder fluency biases tests toward "complete" objects.** When you
-   have
-   `UserBuilder.aBeliever().withEmail(x).withRefreshToken(y).build()`,
+   have `aUser().withEmail(x).withRefreshToken(y).build()`,
    calling `.withRefreshToken(y)` is the ergonomic path. Future test
    authors copy-paste from existing tests and inherit the pre-populated
    state. The builder makes "complete" the default; "partial" requires
@@ -100,10 +117,10 @@ exercise that code and check:
 - Does every test pre-populate the LHS via the builder?
 - If yes — add one parallel test with the LHS omitted.
 
-When you receive an AI review flagging this gap (claude[bot], copilot,
-codex), it's almost always real. The pattern is mechanical and AI
-reviewers spot it reliably — much more reliably than a human reviewer
-scanning a long diff.
+When you receive an AI review flagging this gap, it's almost always
+real — that has held across Claude, Copilot, and Codex reviews for me.
+The pattern is mechanical, and AI reviewers spot it reliably — much
+more reliably than a human reviewer scanning a long diff.
 
 ## When the Fallback Uses `randomUUID()` or Random Output
 
@@ -114,6 +131,12 @@ You can't assert the exact output, but you CAN:
   `expect(updateMock).toHaveBeenCalledWith(id, accessToken, expect.any(String))`
 - Assert the redirect URL includes a UUID-shaped param:
   `expect(result).toMatch(/refreshToken=[0-9a-f-]{36}/i)`
+
+`expect.stringMatching` is an asymmetric matcher, so it slots straight
+into `toHaveBeenCalledWith` and `toEqual` — Jest documents it as
+matching "the received value if it is a string that matches the
+expected string or regular expression"
+([Jest expect docs](https://jestjs.io/docs/expect#expectstringmatchingstring--regexp)).
 
 Don't skip the test because "the value is random" — the **branch
 executing** is what you're proving, not the specific value.
@@ -126,8 +149,12 @@ the `^...$` anchors into the URL match, which fails:
 ```ts
 const uuidPattern = /^[0-9a-f-]{36}$/i;
 // Wrong: anchors carry into the substring match
-new RegExp(`mRefreshToken=${uuidPattern.source}`, 'i');
+new RegExp(`refreshToken=${uuidPattern.source}`, 'i');
 ```
+
+That is exactly what `source` promises: MDN defines it as
+["a string containing the source text of this regular expression, without the two forward slashes on both sides or any flags"](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/source)
+— the flags are stripped, the anchors are not.
 
 Strip the anchors when composing — keep them only for standalone-arg matching:
 
@@ -140,17 +167,18 @@ expect(url).toMatch(new RegExp(`token=${uuidBody}`, "i")); // unanchored for sub
 
 ## Worked Example
 
-Production code on `auth-v1.service.ts:277`:
+Here is the shape of it, reduced to the parts that matter. The
+production line:
 
 ```ts
-const mRefreshToken = user.refreshToken || randomUUID();
+const refreshToken = user.refreshToken || randomUUID();
 ```
 
 The existing test only exercised the truthy branch:
 
 ```ts
 it("should issue tokens for new user", () => {
-  const newUser = UserBuilder.aBeliever()
+  const newUser = aUser()
     .withEmail("test@example.com")
     .withRefreshToken("existing-token") // ← LHS pre-populated
     .build();
@@ -162,7 +190,7 @@ The missing test exercises the falsy branch:
 
 ```ts
 it("should generate new refresh token when user has none", () => {
-  const newUser = UserBuilder.aBeliever()
+  const newUser = aUser()
     .withEmail("test@example.com")
     // ← .withRefreshToken() OMITTED — refreshToken stays null
     .build();
@@ -181,9 +209,9 @@ it("should generate new refresh token when user has none", () => {
 ```
 
 The precondition guard (`expect(newUser.refreshToken).toBeNull()`) is
-load-bearing — without it, a future change to `UserBuilder.aBeliever()`
-defaults could populate `refreshToken` and silently turn the test into
-a duplicate of the truthy case.
+load-bearing — without it, a future change to the builder's defaults
+could populate `refreshToken` and silently turn the test into a
+duplicate of the truthy case.
 
 ## Key Points
 
@@ -220,6 +248,12 @@ The most useful thing AI reviewers do today isn't catching novel bugs
 — it's catching mechanical patterns that humans skim past. Fallback
 branch coverage is one of those patterns: easy to define, easy to
 mechanically check, easy to miss when you're reading a diff for
-intent. When `claude[bot]` (or copilot, or codex) flags this kind of
-gap, treat the suggestion as a near-certain real find and add the
-parallel test.
+intent. When a review bot flags this kind of gap, treat the suggestion
+as a near-certain real find and add the parallel test.
+
+## References
+
+- [MDN — Logical OR (||), short-circuit evaluation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_OR)
+- [Jest configuration — `coverageThreshold` (branches and lines are separate metrics)](https://jestjs.io/docs/configuration#coveragethreshold-object)
+- [Jest — `expect.stringMatching(string | regexp)`](https://jestjs.io/docs/expect#expectstringmatchingstring--regexp)
+- [MDN — `RegExp.prototype.source`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/source)

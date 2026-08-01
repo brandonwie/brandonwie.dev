@@ -2,7 +2,7 @@
 title: S3 Path Normalization Pattern
 description: S3 key prefixes need consistent trailing slashes when building hierarchical
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - aws
@@ -14,7 +14,13 @@ draft: false
 lang: en
 references:
   - url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html'
-    title: UsingObjects.html
+    title: Amazon S3 objects overview
+    type: official
+  - url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html'
+    title: Organizing objects in the Amazon S3 console by using folders
+    type: official
+  - url: 'https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/list_objects_v2.html'
+    title: boto3 S3 client list_objects_v2
     type: official
 source_content_hash: 374e67093a954372407282a3ecc2a021fe1a5895b4347edf94ffec2c549d6011
 expanded: true
@@ -24,19 +30,21 @@ I spent an embarrassing amount of time debugging why an ETL pipeline couldn't fi
 
 S3 doesn't have real directories — it uses key prefixes that look like paths. But unlike real filesystems, S3 won't auto-correct `s3://bucket/prefix` to `s3://bucket/prefix/`. That missing slash silently produces malformed keys, and S3 returns empty results instead of errors.
 
+Throughout the examples below, `raw-events` is a stand-in for whatever partition key your pipeline puts at the top of the prefix — a dataset name, a feed ID, a tenant ID. The pattern is the same whatever the value is.
+
 ```python
-# User provides: s3://bucket/714756 (no trailing slash)
-prefix = "714756"
-file_key = f"{prefix}714756_2026-01-27_10#0.json.gz"
-# Result: "714756714756_2026-01-27_10#0.json.gz" ❌ WRONG
-# Expected: "714756/714756_2026-01-27_10#0.json.gz" ✅
+# User provides: s3://bucket/raw-events (no trailing slash)
+prefix = "raw-events"
+file_key = f"{prefix}raw-events_2026-01-27_10#0.json.gz"
+# Result: "raw-eventsraw-events_2026-01-27_10#0.json.gz" ❌ WRONG
+# Expected: "raw-events/raw-events_2026-01-27_10#0.json.gz" ✅
 ```
 
 ## Why This Is Hard to Debug
 
 The difficulties I encountered all share a common theme: the failures are silent.
 
-**Silent data corruption** — Missing trailing slashes don't cause errors. They produce valid-looking but wrong S3 keys (e.g., `714756714756_...` instead of `714756/714756_...`). Objects get uploaded to the wrong path without any exception.
+**Silent data corruption** — Missing trailing slashes don't cause errors. They produce valid-looking but wrong S3 keys (e.g., `raw-eventsraw-events_...` instead of `raw-events/raw-events_...`). Objects get uploaded to the wrong path without any exception.
 
 **Inconsistent user input** — Some callers pass `s3://bucket/prefix`, others pass `s3://bucket/prefix/`. Without normalization, every place that builds keys must handle both forms, leading to repeated ad-hoc fixes scattered across the codebase.
 
@@ -78,18 +86,18 @@ The function uses Python's `urlparse` to extract the bucket and prefix, then ens
 
 ```python
 # Both forms now work correctly
-bucket, prefix = parse_s3_path("s3://my-bucket/714756")
-# prefix = "714756/"
+bucket, prefix = parse_s3_path("s3://my-bucket/raw-events")
+# prefix = "raw-events/"
 
-bucket, prefix = parse_s3_path("s3://my-bucket/714756/")
-# prefix = "714756/"
+bucket, prefix = parse_s3_path("s3://my-bucket/raw-events/")
+# prefix = "raw-events/"
 
 # Build file keys correctly
-data_key = f"{prefix}714756_2026-01-27_10#0.json.gz"
-# Result: "714756/714756_2026-01-27_10#0.json.gz" ✅
+data_key = f"{prefix}raw-events_2026-01-27_10#0.json.gz"
+# Result: "raw-events/raw-events_2026-01-27_10#0.json.gz" ✅
 
-complete_key = f"{prefix}714756_2026-01-27_10_complete"
-# Result: "714756/714756_2026-01-27_10_complete" ✅
+complete_key = f"{prefix}raw-events_2026-01-27_10_complete"
+# Result: "raw-events/raw-events_2026-01-27_10_complete" ✅
 ```
 
 ## Before and After
@@ -99,33 +107,33 @@ The difference is subtle but important. Without normalization, search prefixes a
 ### Before Normalization
 
 ```python
-# User input: s3://bucket/714756
-prefix = "714756"  # No trailing slash
+# User input: s3://bucket/raw-events
+prefix = "raw-events"  # No trailing slash
 
 # list_objects_v2 search
-search_prefix = f"{prefix}714756_2026-01-27"
-# Result: "714756714756_2026-01-27" ❌
-# Won't match objects under "714756/"
+search_prefix = f"{prefix}raw-events_2026-01-27"
+# Result: "raw-eventsraw-events_2026-01-27" ❌
+# Won't match objects under "raw-events/"
 
 # File key construction
 file_key = f"{prefix}/{prefix}_2026-01-27_10#0.json.gz"
-# Result: "714756/714756_2026-01-27_10#0.json.gz"
+# Result: "raw-events/raw-events_2026-01-27_10#0.json.gz"
 # But search prefix still wrong!
 ```
 
 ### After Normalization
 
 ```python
-# User input: s3://bucket/714756
-prefix = "714756/"  # Normalized
+# User input: s3://bucket/raw-events
+prefix = "raw-events/"  # Normalized
 
 # list_objects_v2 search
-search_prefix = f"{prefix}714756_2026-01-27"
-# Result: "714756/714756_2026-01-27" ✅
+search_prefix = f"{prefix}raw-events_2026-01-27"
+# Result: "raw-events/raw-events_2026-01-27" ✅
 
 # File key construction
 file_key = f"{prefix}{prefix.rstrip('/')}_2026-01-27_10#0.json.gz"
-# Result: "714756/714756_2026-01-27_10#0.json.gz" ✅
+# Result: "raw-events/raw-events_2026-01-27_10#0.json.gz" ✅
 ```
 
 ## Common Patterns
@@ -136,15 +144,15 @@ Once you have a normalized prefix, two patterns cover most S3 operations:
 
 ```python
 bucket, prefix = parse_s3_path(source_path)
-# prefix = "714756/" (normalized)
+# prefix = "raw-events/" (normalized)
 
 # Search for files matching pattern
-search_prefix = f"{prefix}714756_{date_prefix}"
-# Result: "714756/714756_2026-01-27" ✅
+search_prefix = f"{prefix}raw-events_{date_prefix}"
+# Result: "raw-events/raw-events_2026-01-27" ✅
 
 paginator = s3_client.get_paginator("list_objects_v2")
 for page in paginator.paginate(Bucket=bucket, Prefix=search_prefix):
-    # Finds all objects under 714756/ matching the pattern
+    # Finds all objects under raw-events/ matching the pattern
     pass
 ```
 
@@ -152,12 +160,12 @@ for page in paginator.paginate(Bucket=bucket, Prefix=search_prefix):
 
 ```python
 bucket, prefix = parse_s3_path(source_path)
-# prefix = "714756/" (normalized)
+# prefix = "raw-events/" (normalized)
 
 # Strip trailing slash when building file names
-base_name = prefix.rstrip("/")  # "714756"
+base_name = prefix.rstrip("/")  # "raw-events"
 file_key = f"{prefix}{base_name}_{date}_{hour}#0.json.gz"
-# Result: "714756/714756_2026-01-27_10#0.json.gz" ✅
+# Result: "raw-events/raw-events_2026-01-27_10#0.json.gz" ✅
 ```
 
 ## Edge Cases
@@ -179,13 +187,13 @@ You might be tempted to use `os.path.join` for cleaner path construction:
 ```python
 import os
 
-prefix = "714756"
+prefix = "raw-events"
 date = "2026-01-27"
 hour = 10
 
 # Use os.path.join for cleaner path construction
 file_key = os.path.join(prefix, f"{prefix}_{date}_{hour}#0.json.gz")
-# Result: "714756/714756_2026-01-27_10#0.json.gz" ✅
+# Result: "raw-events/raw-events_2026-01-27_10#0.json.gz" ✅
 ```
 
 This works on Linux and macOS, but `os.path.join` uses OS-specific separators. On Windows it produces backslashes (`\`), which S3 treats as literal characters in the key name — not path separators. For S3 paths, explicit `/` concatenation is the safer choice.
@@ -210,4 +218,6 @@ Normalize S3 prefixes once at the entry point, and every downstream key construc
 
 ## References
 
-- [AWS S3 Working with Objects](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html)
+- [Amazon S3 objects overview](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html) — the key is the object's whole name; there is nothing underneath it
+- [Organizing objects in the Amazon S3 console by using folders](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html) — buckets have a flat structure, and the "folder" you see is a shared name prefix ending in `/`
+- [boto3 `list_objects_v2`](https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/list_objects_v2.html) — `Prefix` limits the response to keys that begin with the string you pass, nothing more

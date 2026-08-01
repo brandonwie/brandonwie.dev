@@ -4,7 +4,7 @@ description: >-
   한 페이지의 `onMount`로만 채우는 공유 `writable` store는 다른 모든 route에서 비어 있어요. 루트 `+layout`에서
   한 번만 hydration하면 모든 navigation에서 데이터가 따라와요.
 date: 2026-06-04T00:00:00.000Z
-updated: '2026-06-05'
+updated: '2026-08-02'
 tags:
   - frontend
   - sveltekit
@@ -17,7 +17,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: sveltekit-global-store-hydration
-source_updated: '2026-06-05'
+source_updated: '2026-08-02'
 translation_date: '2026-06-14'
 ---
 
@@ -102,4 +102,4 @@ SSG라서 챙길 디테일이 하나 더 있어요. eager `import.meta.glob` 묶
 ## 참고 자료
 
 - [SvelteKit — layout data (load)](https://svelte.dev/docs/kit/load#layout-data)
-- [SvelteKit — generated $types (LayoutLoad)](https://svelte.dev/docs/kit/$types)
+- [SvelteKit — generated $types (LayoutLoad)](https://svelte.dev/docs/kit/types#Generated-types)

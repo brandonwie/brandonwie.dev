@@ -2,7 +2,7 @@
 title: RAG Hybrid Search Architecture
 description: Why single-method retrieval fails and how fusing dense, sparse, fuzzy, and managed search with Reciprocal Rank Fusion builds a retrieval pipeline that handles both semantic understanding and keyword precision.
 date: 2026-03-23T00:00:00.000Z
-updated: '2026-03-24'
+updated: '2026-08-02'
 tags:
   - ai-ml
   - rag
@@ -13,11 +13,14 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://docs.langchain.com/oss/python/integrations/retrievers/bm25'
-    title: LangChain BM25 Retriever
-    type: authoritative
+  - url: 'https://github.com/dorianbrown/rank_bm25/blob/master/rank_bm25.py'
+    title: rank_bm25 source - BM25 index is built from the full corpus at construction
+    type: official
   - url: 'https://github.com/pgvector/pgvector'
     title: pgvector - Open-source vector similarity search for Postgres
+    type: official
+  - url: 'https://www.elastic.co/docs/reference/elasticsearch/rest-apis/reciprocal-rank-fusion'
+    title: Elasticsearch - Reciprocal Rank Fusion (formula and default rank constant)
     type: official
 source_content_hash: 387c1d977abb69c1904812ea1e6229fdd556c14236e942744a35531d48479c42
 ---

@@ -2,7 +2,7 @@
 title: 'SvelteKit: hydrate a shared store site-wide from `+layout.ts`'
 description: A shared `writable` store populated by a single page's `onMount` is empty on every other route. Hydrate it once in the root `+layout` so every navigation carries it.
 date: 2026-06-04T00:00:00.000Z
-updated: '2026-06-05'
+updated: '2026-08-02'
 tags:
   - frontend
   - sveltekit
@@ -17,7 +17,7 @@ references:
   - url: 'https://svelte.dev/docs/kit/load#layout-data'
     title: SvelteKit — layout data (load)
     type: official
-  - url: 'https://svelte.dev/docs/kit/$types'
+  - url: 'https://svelte.dev/docs/kit/types#Generated-types'
     title: SvelteKit — generated $types (LayoutLoad)
     type: official
 source_content_hash: 9306ec36476c069f92c00f09935612e4475259a232adf963ba2f303ad60f39db
@@ -140,4 +140,4 @@ the boring lesson, but it is the one that actually mattered here.
 ## References
 
 - [SvelteKit — layout data (load)](https://svelte.dev/docs/kit/load#layout-data)
-- [SvelteKit — generated $types (LayoutLoad)](https://svelte.dev/docs/kit/$types)
+- [SvelteKit — generated $types (LayoutLoad)](https://svelte.dev/docs/kit/types#Generated-types)

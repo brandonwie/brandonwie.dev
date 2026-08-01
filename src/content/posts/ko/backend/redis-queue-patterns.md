@@ -2,7 +2,7 @@
 title: "Redis와 BullMQ 큐 패턴"
 description: "Node.js/NestJS에서 Redis 기반 BullMQ 작업 큐를 사용한 백그라운드 작업 처리 가이드"
 date: 2025-01-11T00:00:00.000Z
-updated: '2026-03-26'
+updated: '2026-08-02'
 tags:
   - backend
   - redis
@@ -14,17 +14,20 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: redis-queue-patterns
-source_updated: "2026-03-26"
+source_updated: "2026-08-02"
 translation_date: "2026-03-26"
 references:
   - url: "https://docs.bullmq.io/"
     title: docs.bullmq.io
     type: official
+  - url: "https://docs.bullmq.io/patterns/stop-retrying-jobs"
+    title: Stop retrying jobs (UnrecoverableError)
+    type: official
   - url: "https://docs.nestjs.com/techniques/queues"
     title: queues
     type: official
-  - url: "https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/"
-    title: event loop timers and nexttick
+  - url: "https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick"
+    title: The Node.js Event Loop, Timers, and process.nextTick()
     type: official
 ---
 
@@ -411,8 +414,8 @@ async process(job: Job): Promise<void> {
   try {
     await this.executeJob(job);
   } catch (error) {
-    // 비즈니스 로직 에러(ArchException 계층)는 영구적
-    if (error instanceof ArchException) {
+    // 비즈니스 로직 에러(AppException 계층)는 영구적
+    if (error instanceof AppException) {
       throw new UnrecoverableError(error.message);
     }
     // Lock contention, 네트워크 에러 → BullMQ가 재시도
@@ -421,9 +424,9 @@ async process(job: Job): Promise<void> {
 }
 ```
 
-핵심 패턴은 **예외 계층 경계**예요. 모든 비즈니스 로직 예외가 공통 기본 클래스(`ArchException`)를 확장하고, 인프라 에러는 일반 `Error`로 남겨요. 이렇게 하면 `instanceof ArchException`이 명시적 에러 타입 목록을 유지하지 않고도 재시도 가능/불가능을 안정적으로 구분하는 분리자가 돼요. 새 비즈니스 예외(예: `ResourceNotFoundException`)를 추가하면 자동으로 `ArchException`을 상속해서 `UnrecoverableError` 처리를 받아요.
+핵심 패턴은 **예외 계층 경계**예요. 모든 비즈니스 로직 예외가 공통 기본 클래스(위 예시의 `AppException`)를 확장하고, 인프라 에러는 일반 `Error`로 남겨요. 이렇게 하면 `instanceof` 하나로 재시도 가능/불가능을 안정적으로 구분할 수 있고, 명시적인 에러 타입 목록을 따로 관리하지 않아도 돼요. 새 비즈니스 예외(예: `ResourceNotFoundException`)를 추가하면 기본 클래스를 상속하면서 `UnrecoverableError` 처리를 그대로 받아요.
 
-실제 사례로 배운 교훈이에요. 오래된 `gcalId` 때문에 `updateEvent()`가 `ServerLogicException`(`ArchException` 하위 클래스)을 10초 안에 20번 던졌어요 -- 재시도 설정(`attempts: 20, delay: 100ms`)이 Redis lock contention용이었는데, 영구적인 비즈니스 로직 실패까지 재시도한 거예요. `UnrecoverableError`를 추가하면서 재시도 폭풍이 완전히 사라졌어요.
+이 패턴이 막아주는 건 재시도 폭풍이에요. 오래된 외부 이벤트 ID 때문에 업데이트 호출이 비즈니스 로직 예외를 10초 안에 20번 던진 적이 있어요 -- 재시도 설정(`attempts: 20, delay: 100ms`)은 Redis lock contention에 맞춰 튜닝한 값이었는데, 영구적인 실패까지 같은 속도로 재시도한 거죠. 그 부류의 에러에 `UnrecoverableError`를 던지면서 폭풍이 멈췄어요.
 
 ### 계층적 재시도 전략
 

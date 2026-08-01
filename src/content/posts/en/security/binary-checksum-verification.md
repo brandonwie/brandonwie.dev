@@ -2,7 +2,7 @@
 title: Binary Checksum Verification
 description: Verify downloaded binaries haven't been tampered with using SHA256 checksums.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - security
   - devops
@@ -12,9 +12,14 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: >-
-      https://www.gnu.org/software/coreutils/manual/html_node/sha2-utilities.html
-    title: GNU sha256sum utility
+  - url: 'https://man7.org/linux/man-pages/man1/sha256sum.1.html'
+    title: 'sha256sum(1) manual page — --check and the output line format'
+    type: authoritative
+  - url: 'https://csrc.nist.gov/pubs/fips/180-4/upd1/final'
+    title: 'FIPS 180-4: Secure Hash Standard (SHA-256 and digest change detection)'
+    type: official
+  - url: 'https://about.codecov.io/security-update/'
+    title: 'Codecov security update — unauthorized modification of the Bash Uploader'
     type: official
 source_content_hash: eaf170a839345794a5672ee7bd3b460251db6d7a81495a8aa80a88794d9e494e
 ---
@@ -37,6 +42,8 @@ This is not theoretical. The [Codecov breach](https://about.codecov.io/security-
 ## How Checksum Verification Works
 
 The concept is straightforward: the publisher computes a SHA256 hash of the binary and publishes it alongside the download. You download the binary, compute its hash yourself, and compare. If they match, the file is intact. If they differ, someone changed the file.
+
+That comparison is only worth anything because of a property of the hash itself. [FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final), the standard that specifies SHA-256, puts it plainly: any change to a message will, with very high probability, produce a different digest. One flipped byte, a completely different hash.
 
 ```mermaid
 flowchart LR
@@ -83,6 +90,8 @@ Some projects, like the ECR credential helper, publish no checksums at all. In t
 This should be a five-minute task, but several sharp edges made it take much longer.
 
 **The two-space delimiter is invisible.** The `sha256sum -c` command requires exactly two spaces between the hash and the filepath: `"abc123  /path/to/file"`. One space silently fails with a cryptic "no properly formatted checksum lines found" error. The error message never mentions spacing. I stared at a correct-looking hash for twenty minutes before discovering this.
+
+It stops looking arbitrary once you read the [sha256sum manual page](https://man7.org/linux/man-pages/man1/sha256sum.1.html): the line is the checksum, a space, then a character marking the input mode (`*` for binary, a space for text), then the name. So the "two spaces" are really one delimiter plus the text-mode marker — and a single space leaves the parser with no mode character at all.
 
 **Architecture-specific checksums are easy to miss.** When supporting both `amd64` and `arm64`, each architecture produces a different binary with a different hash. My first attempt used a single checksum, and the build failed only on ARM. It looked like a download issue, not a checksum mismatch, because I was not expecting architecture to matter.
 

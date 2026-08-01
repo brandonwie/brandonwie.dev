@@ -4,7 +4,7 @@ description: >-
   3B stores the link an author can maintain, derives the reverse edge later, and
   makes the struggle behind a note part of the knowledge itself.
 date: 2026-06-15T00:00:00.000Z
-updated: 2026-06-15T00:00:00.000Z
+updated: '2026-08-02'
 expanded: true
 tags:
   - 3b
@@ -14,8 +14,8 @@ category: devops
 draft: false
 lang: en
 references:
-  - url: 'https://spec.commonmark.org/'
-    title: CommonMark specification
+  - url: 'https://spec.commonmark.org/0.31.2/#links'
+    title: 'CommonMark Spec 0.31.2 — §6.3 Links'
     type: authoritative
 source_content_hash: fe22db4d738ce2e3a1010aafbcfb3093ebf730a3afb5cc72e12c14fb1a68d534
 ---
@@ -132,8 +132,9 @@ Forward links solve edge maintenance. They do not solve placement.
 3B uses 15 category folders in the June 11 model snapshot. Categories are not
 arbitrary personal moods; they are documented in `knowledge/_categories.md` with
 examples and exclusions. `devops`, `backend`, `ai-ml`, and `general` dominate
-the distribution, while `moba` is explicitly non-transferable and excluded from
-public publishing by default.
+the distribution. One category collects work-specific material that does not
+transfer outside the system it came from, so it is excluded from public
+publishing by default.
 
 There is also a threshold for creating a new category: five or more orphan
 notes. That constraint matters. Without it, every note can argue for its own

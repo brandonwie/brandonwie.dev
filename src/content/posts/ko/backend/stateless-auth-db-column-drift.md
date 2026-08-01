@@ -2,7 +2,7 @@
 title: Stateless Auth DB 컬럼 Drift
 description: 인증이 stateful에서 stateless JWT 검증으로 마이그레이트했어요. 테스트는 통과해요. 모바일 사용자는 access_token이 채워져 있고; 웹 사용자는 NULL이에요. Drift는 사용자 동작에는 invisible하다가 ops가 컬럼을 쿼리할 때까지요.
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-04-29'
+updated: '2026-08-02'
 tags:
   - backend
   - auth
@@ -15,7 +15,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: stateless-auth-db-column-drift
-source_updated: 2026-04-29T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-04-29'
 ---
 
@@ -86,8 +86,8 @@ Stateless auth로 마이그레이트할 때 두 가지 옵션:
 
 컬럼 이름(`access_token`, `accessToken` 등)을 grep하고 모든 callsite를
 검사해요. 쓰기를 wrap하는 helper가 semantics를 바꿨다면 — 예를 들어
-`generateRefreshToken`이 이제 새로 쓰는 대신 거기 있던 걸 보존한다면 — 그
-helper의 모든 호출자가 그 변경을 silently 상속해요.
+`rotateRefreshToken` 같은 helper가 이제 새로 쓰는 대신 row에 이미 있던 걸
+보존한다면 — 그 helper의 모든 호출자가 그 변경을 silently 상속해요.
 
 ## 수정 #3: 테스트로 계약을 못 박아요
 
@@ -133,33 +133,60 @@ grep하고 경로 사이에 그들의 동작을 diff하는 거예요.
 
 ## 구체적 함정: helper가 옛 값을 보존
 
-`generateRefreshToken`은 토큰 인자를 받지 않고 `user.accessToken`(fresh
-사용자에서는 NULL)을 사용해요. 호출자가 새로 생성한 JWT는 helper가 보지
+이걸 만드는 모양은 access token 인자를 받지 않고, 방금 로드한 row의
+`user.accessToken`(쓰는 경로를 한 번도 안 거친 사용자에서는 NULL)을 읽는
+refresh-token helper예요. 호출자가 새로 발급한 JWT는 helper가 보지
 못해서 절대 persist되지 않아요. 미묘함: 버그는 helper의 signature(토큰
 파라미터 없음)와 source 선택(fresh JWT 대신 DB 컬럼)에 있지, 어떤 한
 명백한 라인에 있지 않아요.
 
 ## 실제 예시
 
+Mechanism이 보이는 가장 작은 버전으로 줄인 asymmetry예요. 로그인 경로 두
+개, 공유 helper 하나:
+
 ```ts
-// auth.service.ts (mobile path) — JWT를 DB에 씀
-const mAccessToken = this.getAccessToken(user); // 새 JWT
-const mRefreshToken = user.refreshToken || randomUUID();
-await this.usersService.updateToken(user.id, mAccessToken, mRefreshToken); // ← JWT 씀
+// 발급한 토큰을 persist하는 경로
+async function loginFromMobile(user: User) {
+  const accessToken = issueAccessToken(user); // 새 JWT
+  const refreshToken = user.refreshToken ?? randomUUID();
+  await users.updateTokens(user.id, accessToken, refreshToken); // ← 컬럼 씀
+  return { accessToken, refreshToken };
+}
 
-// auth-v1.service.ts (web path, 수정 전) — JWT를 안 씀
-const mAccessToken = this.getAccessToken(user); // 새 JWT (DB 목적으로는 버려짐)
-const mRefreshToken = await this.usersService.generateRefreshToken(user.id);
-// ↑ helper가 내부적으로 updateToken(userId, user.accessToken /* NULL */, refreshToken)을 호출.
-//   웹 사용자는 users.access_token = NULL로 끝남.
+// persist하지 않는 경로
+async function loginFromWeb(user: User) {
+  const accessToken = issueAccessToken(user); // 새 JWT — 반환만 되고 persist 안 됨
+  const refreshToken = await rotateRefreshToken(user.id);
+  return { accessToken, refreshToken };
+}
 
-// 수정: web path가 mobile pattern을 mirror.
-const mAccessToken = this.getAccessToken(user);
-const mRefreshToken = user.refreshToken || randomUUID();
-await this.usersService.updateToken(user.id, mAccessToken, mRefreshToken); // ← 이제 JWT 씀
+// 두 경로가 믿고 쓰는 helper
+async function rotateRefreshToken(userId: string) {
+  const user = await users.findById(userId);
+  const refreshToken = randomUUID();
+  // 쓸 access token이 없으니 row에 이미 있던 값을 다시 써요 —
+  // 웹으로만 로그인하는 사용자에겐 NULL이죠.
+  await users.updateTokens(userId, user.accessToken, refreshToken);
+  return refreshToken;
+}
 ```
 
-수정은 mechanical — web path가 mobile path를 명시적으로 mirror하게 만들어요.
+둘 다 로그인돼 있어요. 둘 다 protected endpoint를 호출할 수 있어요. 그런데
+`users.access_token`이 non-NULL인 건 한 쪽뿐이에요.
+
+수정은 mechanical — web path가 방금 발급한 토큰을 mobile path와 똑같이
+쓰면 돼요:
+
+```ts
+async function loginFromWeb(user: User) {
+  const accessToken = issueAccessToken(user);
+  const refreshToken = user.refreshToken ?? randomUUID();
+  await users.updateTokens(user.id, accessToken, refreshToken); // ← 컬럼 씀
+  return { accessToken, refreshToken };
+}
+```
+
 다음 단계(ADR이 commit해야 하는 것)는 두 경로가 동의하면 컬럼이 아예
 존재해야 하는지 결정하는 거예요.
 

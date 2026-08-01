@@ -2,7 +2,7 @@
 title: '포워드 링크만 저장하기: 백링크를 계산하는 Zettelkasten'
 description: 3B는 작성자가 관리할 수 있는 링크만 저장하고, 역방향 연결은 나중에 계산해요. 그래서 노트에 담긴 고민의 흔적까지 지식의 일부로 남아요.
 date: 2026-06-15T00:00:00.000Z
-updated: 2026-06-15T00:00:00.000Z
+updated: '2026-08-02'
 tags:
   - 3b
   - devops
@@ -12,11 +12,11 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: computed-backlinks-zettelkasten
-source_updated: 2026-06-15T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-06-17'
 references:
-  - url: 'https://spec.commonmark.org/'
-    title: CommonMark specification
+  - url: 'https://spec.commonmark.org/0.31.2/#links'
+    title: 'CommonMark Spec 0.31.2 — §6.3 Links'
     type: authoritative
 source_content_hash: bd86b8fb4669b80dfd2d8f4125ce690fac9148ca7423d3f60e2f32b7d7e002ed
 ---
@@ -91,7 +91,7 @@ flowchart LR
 
 포워드 링크는 연결 관리 문제를 풀어줘요. 하지만 노트를 어디에 둘지는 풀어주지 못해요.
 
-3B는 6월 11일 모델 스냅샷 기준으로 15개의 category 폴더를 써요. category는 그날그날 기분 따라 정하는 게 아니에요. `knowledge/_categories.md`에 예시와 제외 기준까지 문서로 남아 있죠. `devops`, `backend`, `ai-ml`, `general`이 분포의 대부분을 차지하고, `moba`는 다른 데로 옮겨 쓸 수 없는 내용이라 기본적으로 공개 발행에서 빠져요.
+3B는 6월 11일 모델 스냅샷 기준으로 15개의 category 폴더를 써요. category는 그날그날 기분 따라 정하는 게 아니에요. `knowledge/_categories.md`에 예시와 제외 기준까지 문서로 남아 있죠. `devops`, `backend`, `ai-ml`, `general`이 분포의 대부분을 차지해요. 그리고 category 하나는 work 관련 내용을 모아두는데, 원래 있던 시스템 밖으로는 옮겨 쓸 수 없어서 기본적으로 공개 발행에서 빠져요.
 
 새 category를 만드는 기준도 있어요. 어디에도 속하지 못한 노트가 다섯 개 넘게 쌓여야 하죠. 이 조건이 중요해요. 이게 없으면 모든 노트가 자기만의 폴더를 주장할 수 있고, 분류 체계 자체가 또 하나의 관리 대상이 돼버려요. 조건이 있으니 압력이 충분히 쌓인 뒤에야 category가 생겨나요.
 

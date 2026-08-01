@@ -2,7 +2,7 @@
 title: Plan-vs-Shipped Divergence Detection on Task Resume
 description: 'When resuming a multi-session task, the plan.md written at task start may not reflect what is actually shipped now. Implementations evolve mid-flight, scope shifts, branches merge. A 3-minute pre-flight check prevents hours of executing obsolete work.'
 date: 2026-04-30T00:00:00.000Z
-updated: 2026-05-06
+updated: '2026-08-02'
 tags:
   - general
   - process
@@ -13,12 +13,12 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://docs.github.com/en/issues/planning-and-tracking-with-projects'
-    title: GitHub — Planning and tracking with Projects
+  - url: 'https://git-scm.com/docs/git-branch'
+    title: 'Git — git-branch (-a, --show-current, --merged)'
     type: official
-  - url: 'https://github.com/brandonwie/3b/commit/46e23c05'
-    title: Implementation that diverged from plan.md A-G framing
-    type: experience
+  - url: 'https://git-scm.com/docs/git-log'
+    title: 'Git — git-log (two-dot ranges, --oneline, path limiting)'
+    type: official
 source_content_hash: eaa9652fbf940a0320328fd19be4d47da2e13153e476105c0d0a5187215bdca4
 ---
 
@@ -47,7 +47,7 @@ Pre-flight check is cheap (3 min) and high-leverage (saves hours on missed-diver
 
 ## What "divergence" looks like in practice
 
-Concrete case from 2026-04-30: plan.md from 2026-04-25 said "Phase 5 blocks on Path A/B/C decision." Reality 5 days later:
+Concrete case from 2026-04-30, in my own (private) tooling repo: plan.md from 2026-04-25 said "Phase 5 blocks on Path A/B/C decision." Reality 5 days later:
 
 - Branch `feat/wrap-followup-persistence` no longer existed locally
 - Implementation merged to main as commit `46e23c05`
@@ -121,5 +121,5 @@ Repo state is canonical. Plan.md is a historical record of intent; shipped state
 
 ## References
 
-- [GitHub — Planning and tracking with Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
-- [Implementation that diverged from plan.md A-G framing](https://github.com/brandonwie/3b/commit/46e23c05)
+- [Git — `git branch`](https://git-scm.com/docs/git-branch) — `-a`, `--show-current`, and `--merged`, the flags the branch-state check leans on
+- [Git — `git log`](https://git-scm.com/docs/git-log) — two-dot ranges (`main..HEAD`), `--oneline`, and limiting history to a path

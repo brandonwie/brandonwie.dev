@@ -4,7 +4,7 @@ description: >-
   Google Calendar API가 410 GONE을 반환하면 sync token이 무효화되고 전체 재동기화가 필요해요. 올바른 처리
   방법을 알아봐요.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - google-calendar
@@ -15,7 +15,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: sync-token-invalidation-recovery
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 references:
   - url: 'https://developers.google.com/workspace/calendar/api/guides/sync'

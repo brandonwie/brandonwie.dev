@@ -2,7 +2,7 @@
 title: WAF Allowlist Patterns
 description: Block-by-default WAF approach using route allowlisting. Stronger security than
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-07-02'
+updated: '2026-08-02'
 tags:
   - aws
   - waf
@@ -13,9 +13,17 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: >-
-      https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html
-    title: Creating and managing an IP set in AWS WAF
+  - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-processing-order.html'
+    title: Setting rule priority — AWS WAF Developer Guide
+    type: official
+  - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-statement-type-string-match.html'
+    title: String match rule statement — AWS WAF Developer Guide
+    type: official
+  - url: 'https://docs.aws.amazon.com/waf/latest/APIReference/API_ByteMatchStatement.html'
+    title: ByteMatchStatement — AWS WAF API Reference
+    type: official
+  - url: 'https://aws.amazon.com/waf/pricing/'
+    title: AWS WAF Pricing
     type: official
 source_content_hash: 29eb344a05030ee2ea72a6dcc61fce3a9c7efd271ba587c659870059989ad9fd
 ---
@@ -251,7 +259,7 @@ After deploying WAF changes, verify that the rules are active and working as exp
 
 ```bash
 aws wafv2 get-web-acl \
-  --name moba-prod-waf \
+  --name app-prod-waf \
   --scope REGIONAL \
   --id <webacl-id> \
   --region ap-northeast-2 \
@@ -263,7 +271,7 @@ This returns the rule definition so you can confirm the byte match statements ar
 One thing to know before you grep the output: `get-web-acl` returns each `ByteMatchStatement.SearchString` base64-encoded. Searching the JSON for `/today-zero` finds nothing even when the rule is live. Either grep for the encoded value (`/today-zero` encodes to `L3RvZGF5LXplcm8=`) or base64-decode the field:
 
 ```bash
-aws wafv2 get-web-acl --name moba-prod-waf --scope REGIONAL --id <id> \
+aws wafv2 get-web-acl --name app-prod-waf --scope REGIONAL --id <id> \
   --region ap-northeast-2 --query 'WebACL.Rules' --output json \
   | grep -c "L3RvZGF5LXplcm8="   # 1 = present
 ```

@@ -4,7 +4,7 @@ description: >-
   AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 14가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크
   + 보강 주석 템플릿.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-07-31'
+updated: '2026-08-02'
 tags:
   - devops
   - ai
@@ -14,7 +14,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
-source_updated: '2026-07-31'
+source_updated: '2026-08-02'
 translation_date: '2026-07-31'
 references:
   - url: 'https://docs.github.com/en/rest/pulls/reviews'
@@ -90,7 +90,7 @@ AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진�
 
 ```text
 에이전트: "softDeleteAllByUserId가 구독 생성과 transaction으로 감싸져 있지 않음"
-현실: LemonSqueezy가 이미 구독을 commit함. 우리 코드는 상태를 동기화할 뿐
+현실: 결제 서비스가 이미 구독을 commit함. 우리 코드는 상태를 동기화할 뿐
 ```
 
 **예방:** 보강 주석을 추가해요.
@@ -203,15 +203,15 @@ constructor에 합리적인 default가 있고 factory가 이를 override하는 �
 
 ```text
 에이전트: "Lines 796-800 set deletedAt unconditionally — toBeNull() should fail"
-현실: 해당 줄은 develop에서 NOTE 주석임. if 블록은 PR #711에서 제거됨
+현실: 해당 줄은 develop에서 NOTE 주석임. if 블록은 이전 PR에서 제거됨
 ```
 
-PR #712에서 실제로 겪은 사례예요. Claude가 `main` branch 코드를 분석해서 test assertion이 잘못됐다고 지적했어요. 하지만 `develop`에서는 인용한 줄이 이미 주석으로 교체된 상태였어요. 이전 PR에서 production 코드가 바뀌었거든요. assertion은 현재 `develop` 상태 기준으로는 정확했어요.
+release 계열 PR에서 실제로 겪은 사례예요. Claude가 `main` branch 코드를 분석해서 test assertion이 잘못됐다고 지적했어요. 하지만 `develop`에서는 인용한 줄이 이미 주석으로 교체된 상태였어요. 이전 PR에서 production 코드가 바뀌었거든요. assertion은 현재 `develop` 상태 기준으로는 정확했어요.
 
 **예방:** test 위치에 보강 주석을 추가해요.
 
 ```typescript
-// NOTE: The deletedAt-setting code was removed in PR #711. This test verifies
+// NOTE: The deletedAt-setting code was removed in an earlier PR. This test verifies
 // the post-removal behavior: Event blocks only get itemStatus=Deleted, no deletedAt.
 ```
 
@@ -235,7 +235,7 @@ PR #712에서 실제로 겪은 사례예요. Claude가 `main` branch 코드를 �
 git log origin/main..HEAD -- {file} --format="%h %ae %s"
 ```
 
-다른 사람이 쓴 코드에 대한 지적은 finding registry에서 N/A로 표시하고, 작성자와 관계없이 CRITICAL만 에스컬레이션해요. PR #710에서는 이 방식으로 15개 고유 지적 중 7개가 분류를 시작하기도 전에 손에서 떨어져 나갔어요.
+다른 사람이 쓴 코드에 대한 지적은 finding registry에서 N/A로 표시하고, 작성자와 관계없이 CRITICAL만 에스컬레이션해요. 어느 release PR에서는 이 방식으로 15개 고유 지적 중 7개가 분류를 시작하기도 전에 손에서 떨어져 나갔어요.
 
 ### 12. 마크다운 포매팅 환각
 
@@ -334,7 +334,7 @@ git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
 
 ## 실제 사례
 
-### 사례 1: moba-nestjs PR #629 (claude[bot])
+### 사례 1: NestJS API 서비스 (claude[bot])
 
 **통계:** 12개 코멘트, 3개 INVALID, 5개 OPTIONAL, 4개 VALID IMPROVEMENT
 
@@ -344,7 +344,7 @@ git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
 - request 라이프사이클 오해(단일 스레드 event loop에서 race condition 없음)
 - webhook 흐름 오해(외부 서비스가 이미 commit)
 
-### 사례 2: moba-etl PR #5 (GitHub Copilot)
+### 사례 2: Python ETL 파이프라인 (GitHub Copilot)
 
 **통계:** 10개 코멘트, 0개 INVALID, 4개 VALID BUG, 3개 VALID IMPROVEMENT, 1개 ALREADY FIXED, 2개 OPTIONAL
 
@@ -375,7 +375,7 @@ git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
 
 **결과:** 6개 수정, 6개 INVALID 근거와 함께 기각. 정확도는 엇갈렸어요. CodeRabbit은 6개 중 4개가 INVALID, Claude Bot은 1 VALID BUG + 2 INVALID였어요.
 
-### 사례 4: moba-nestjs PR #710 Round 1+2 (Copilot + Claude)
+### 사례 4: NestJS API 서비스의 release PR, Round 1+2 (Copilot + Claude)
 
 **통계:** 19개 raw 지적 → dedup 후 15개 고유. 1 VALID BUG, 2 GTH→FIX, 3 CONTROVERSIAL→SKIP, 1 INVALID, 3 DEFER, 7 N/A(authorship)
 
@@ -383,7 +383,7 @@ GitHub API 406 이슈(#10)를 유발한 release PR이에요. 로컬에서 diff�
 
 **주요 VALID BUG:**
 
-- `moveCrossIntegration`에서 `blockRepo.count()`에 `withDeleted: true` 누락. soft-deleted T block(취소된 반복 인스턴스)이 count되지 않아서 parent가 `moveCrossIntegrationSingle`로 잘못 라우팅
+- cross-integration 이동 경로의 `count()`에 `withDeleted: true` 누락. soft-deleted 자식 row(취소된 반복 인스턴스)가 count되지 않아서, parent가 batch 이동 대신 단건 이동으로 라우팅
 
 **주요 INVALID:**
 
@@ -391,21 +391,21 @@ GitHub API 406 이슈(#10)를 유발한 release PR이에요. 로컬에서 diff�
 
 **주요 SKIP 결정 (CONTROVERSIAL):**
 
-- Sync용 soft-deleted record: WebSocket event가 삭제를 처리하지 `getBlocksByIds`가 아님
+- Sync용 soft-deleted record: 삭제는 WebSocket event가 처리하지 batch 조회가 아님
 - Google API type assertion: `null` conferenceData clearing에 type-safe 대안이 없음
 - test의 non-null assertion: 올바른 지적이지만 27개 = release PR 시점에 적절하지 않음
 
 **프로세스 학습:** Claude의 구조화된 review는 finding별로 개별 파싱(STEP 1C)이 필요하고, 하나의 CR-1으로 합치면 안 돼요. Round 1에서 이걸 놓쳤고, Round 2에서 수정했어요.
 
-### 사례 5: moba-nestjs PR #712 Round 1+2 (Claude)
+### 사례 5: 같은 NestJS API 서비스의 feature PR, Round 1+2 (Claude)
 
 **통계:** Round 1: 8개(5 INVALID, 2 CONTROVERSIAL→FIX, 1 GTH→FIX). Round 2: 2개(1 INVALID, 1 GTH→FIX)
 
-Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`develop`) 대신 `main` branch 코드를 분석해서, test assertion이 796-800번 줄의 구현과 모순된다고 주장했어요. `develop`에서는 해당 줄이 이미 NOTE 주석이었고, `deletedAt` 설정 코드는 이전 PR(#711)에서 제거된 상태였어요.
+Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`develop`) 대신 `main` branch 코드를 분석해서, test assertion이 796-800번 줄의 구현과 모순된다고 주장했어요. `develop`에서는 해당 줄이 이미 NOTE 주석이었고, `deletedAt` 설정 코드는 이전 PR에서 제거된 상태였어요.
 
 **주요 INVALID (새 패턴):**
 
-- Cross-Branch 혼동(#9): Reviewer가 PR target(`develop`) 대신 `main` branch 코드를 분석. `toBeNull()`이 796-800번 줄 구현과 모순된다고 주장했지만, `develop`에서 해당 줄은 NOTE 주석(`deletedAt` 설정 코드는 PR #711에서 제거됨)
+- Cross-Branch 혼동(#9): Reviewer가 PR target(`develop`) 대신 `main` branch 코드를 분석. `toBeNull()`이 796-800번 줄 구현과 모순된다고 주장했지만, `develop`에서 해당 줄은 NOTE 주석(`deletedAt` 설정 코드는 이전 PR에서 제거됨)
 
 **결과:** 양쪽 round에서 3개 수정, 6개 INVALID 기각. 새 패턴도 문서화했어요. Cross-Branch 혼동은 PR target이 `develop`인데도 AI reviewer가 `main` branch context를 기본으로 삼는 경우예요.
 

@@ -2,7 +2,7 @@
 title: 바이너리 체크섬 검증
 description: SHA256 체크섬을 사용해 다운로드한 바이너리가 변조되지 않았는지 검증하는 방법
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - security
   - devops
@@ -12,12 +12,17 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: binary-checksum-verification
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
-  - url: >-
-      https://www.gnu.org/software/coreutils/manual/html_node/sha2-utilities.html
-    title: GNU sha256sum utility
+  - url: 'https://man7.org/linux/man-pages/man1/sha256sum.1.html'
+    title: 'sha256sum(1) manual page — --check와 출력 라인 형식'
+    type: authoritative
+  - url: 'https://csrc.nist.gov/pubs/fips/180-4/upd1/final'
+    title: 'FIPS 180-4: Secure Hash Standard (SHA-256과 다이제스트 변화 감지)'
+    type: official
+  - url: 'https://about.codecov.io/security-update/'
+    title: 'Codecov security update — Bash Uploader 무단 변조 사고'
     type: official
 ---
 
@@ -25,7 +30,7 @@ Dockerfile에 ECR credential helper를 추가하다가, S3 버킷에서 바이�
 
 ## 왜 중요한가
 
-다운로드한 바이너리에 대한 공급망 공격은 이론적인 이야기가 아니에요. 공격자가 다운로드 서버나 CDN을 침해하면 정상 바이너리를 악성 버전으로 교체할 수 있어요. Dockerfile이 이를 다운로드하고 설치하면, 악성 코드가 컨테이너의 권한으로 실행돼요. 체크섬 검증은 가장 간단한 방어 수단이에요. 해시가 일치하지 않으면 바이너리가 실행되기 전에 빌드가 실패해요.
+다운로드한 바이너리에 대한 공급망 공격은 이론적인 이야기가 아니에요. [Codecov 사고](https://about.codecov.io/security-update/)가 그랬어요. 제3자가 Bash Uploader 스크립트를 무단으로 변조했고, 그걸 내려받아 실행한 CI 환경의 정보가 빠져나갔죠. 공격자가 다운로드 서버나 CDN을 침해하면 정상 바이너리를 악성 버전으로 교체할 수 있어요. Dockerfile이 이를 다운로드하고 설치하면, 악성 코드가 컨테이너의 권한으로 실행돼요. 체크섬 검증은 가장 간단한 방어 수단이에요. 해시가 일치하지 않으면 바이너리가 실행되기 전에 빌드가 실패해요.
 
 ## 해결 방법
 
@@ -49,6 +54,8 @@ RUN curl -sL "https://example.com/binary" -o /usr/local/bin/binary \
 세 줄짜리 패턴이 시사하는 것보다 네 가지 문제가 일을 더 어렵게 만들었어요.
 
 **보이지 않는 공백 두 개 구분자.** `sha256sum -c`는 해시와 파일 경로 사이에 정확히 공백 두 개를 요구해요. 공백 하나면 "no properly formatted checksum lines found"라는 원인을 알 수 없는 에러가 조용히 발생해요. 처음에 이것 때문에 30분을 잃었어요.
+
+[sha256sum 매뉴얼 페이지](https://man7.org/linux/man-pages/man1/sha256sum.1.html)를 읽으면 이유가 보여요. 한 줄의 형식은 체크섬, 공백 하나, 입력 모드를 표시하는 문자 하나(바이너리는 `*`, 텍스트는 공백), 그리고 파일 이름이에요. 즉 "공백 두 개"는 구분자 하나에 텍스트 모드 표시 문자가 붙은 거고, 공백을 하나만 쓰면 모드 문자가 아예 없는 셈이 돼요.
 
 **아키텍처별 체크섬을 놓치기 쉬움.** `amd64`와 `arm64`를 모두 지원할 때는 각각에 대한 별도 체크섬이 필요해요. 처음에 하나의 체크섬만 사용했더니 한 아키텍처에서만 빌드가 실패해서, 체크섬 불일치가 아닌 다운로드 문제처럼 보였어요.
 
@@ -92,7 +99,7 @@ RUN ARCH=$(dpkg --print-architecture) \
 
 ## 이 방식이 동작하는 이유
 
-SHA256은 어떤 파일이든 고유한 256비트 지문을 생성해요. 단 1바이트만 바뀌어도 완전히 다른 해시가 나와요. Dockerfile에 예상 해시를 내장함으로써 빌드 시점의 게이트를 만드는 거예요. 바이너리가 정확히 일치해야 이미지가 빌드돼요. 공격자가 원본과 같은 SHA256 해시를 가진 악성 바이너리를 만들어야 하는데, 이는 계산적으로 불가능해요.
+SHA256은 어떤 파일이든 256비트 지문을 생성해요. SHA-256을 규정한 [FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final)는 이 점을 분명히 해요. 메시지가 조금이라도 바뀌면 아주 높은 확률로 다른 다이제스트가 나온다고요. 단 1바이트만 바뀌어도 완전히 다른 해시가 나오는 거예요. Dockerfile에 예상 해시를 내장함으로써 빌드 시점의 게이트를 만드는 거예요. 바이너리가 정확히 일치해야 이미지가 빌드돼요. 공격자가 원본과 같은 SHA256 해시를 가진 악성 바이너리를 만들어야 하는데, 이는 계산적으로 불가능해요.
 
 ## 언제 검증해야 하는가 (그리고 안 해도 되는 경우)
 

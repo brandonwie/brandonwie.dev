@@ -2,7 +2,7 @@
 title: S3 경로 정규화 패턴
 description: S3 key prefix에 일관된 trailing slash를 보장하는 정규화 패턴
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - aws
@@ -14,11 +14,17 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: s3-path-handling
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html'
-    title: UsingObjects.html
+    title: Amazon S3 objects overview
+    type: official
+  - url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html'
+    title: Organizing objects in the Amazon S3 console by using folders
+    type: official
+  - url: 'https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/list_objects_v2.html'
+    title: boto3 S3 client list_objects_v2
     type: official
 ---
 
@@ -34,15 +40,19 @@ S3에는 실제 디렉토리가 없어요. 폴더 구조처럼 보이는
 네임스페이스예요. 즉, S3는 prefix가 슬래시로 끝나든 안 끝나든 상관하지 않아요.
 둘 다 유효한 key prefix로 취급하죠. 바로 이게 문제예요.
 
+아래 예시에서 `raw-events`는 파이프라인이 prefix 최상단에 두는 partition key
+자리를 대신하는 값이에요. dataset 이름이든 feed ID든 tenant ID든, 값이 무엇이든
+패턴은 똑같아요.
+
 prefix와 파일명을 f-string으로 연결해서 object key를 만들 때, trailing slash가
 빠지면 조용히 잘못된 key가 생성돼요:
 
 ```python
-# 사용자 입력: s3://bucket/714756 (trailing slash 없음)
-prefix = "714756"
-file_key = f"{prefix}714756_2026-01-27_10#0.json.gz"
-# 결과: "714756714756_2026-01-27_10#0.json.gz"  -- 잘못됨
-# 기대값: "714756/714756_2026-01-27_10#0.json.gz"
+# 사용자 입력: s3://bucket/raw-events (trailing slash 없음)
+prefix = "raw-events"
+file_key = f"{prefix}raw-events_2026-01-27_10#0.json.gz"
+# 결과: "raw-eventsraw-events_2026-01-27_10#0.json.gz"  -- 잘못됨
+# 기대값: "raw-events/raw-events_2026-01-27_10#0.json.gz"
 ```
 
 예외도 없고 경고도 없어요. 잘못된 key로 객체가 성공적으로 업로드돼요.
@@ -104,18 +114,18 @@ slash가 없으면 추가해요.
 
 ```python
 # 두 형태 모두 올바르게 동작
-bucket, prefix = parse_s3_path("s3://my-bucket/714756")
-# prefix = "714756/"
+bucket, prefix = parse_s3_path("s3://my-bucket/raw-events")
+# prefix = "raw-events/"
 
-bucket, prefix = parse_s3_path("s3://my-bucket/714756/")
-# prefix = "714756/"
+bucket, prefix = parse_s3_path("s3://my-bucket/raw-events/")
+# prefix = "raw-events/"
 
 # 파일 key를 올바르게 구성
-data_key = f"{prefix}714756_2026-01-27_10#0.json.gz"
-# 결과: "714756/714756_2026-01-27_10#0.json.gz"
+data_key = f"{prefix}raw-events_2026-01-27_10#0.json.gz"
+# 결과: "raw-events/raw-events_2026-01-27_10#0.json.gz"
 
-complete_key = f"{prefix}714756_2026-01-27_10_complete"
-# 결과: "714756/714756_2026-01-27_10_complete"
+complete_key = f"{prefix}raw-events_2026-01-27_10_complete"
+# 결과: "raw-events/raw-events_2026-01-27_10_complete"
 ```
 
 ## 정규화 전후 비교
@@ -123,17 +133,17 @@ complete_key = f"{prefix}714756_2026-01-27_10_complete"
 ### 정규화 전
 
 ```python
-# 사용자 입력: s3://bucket/714756
-prefix = "714756"  # trailing slash 없음
+# 사용자 입력: s3://bucket/raw-events
+prefix = "raw-events"  # trailing slash 없음
 
 # list_objects_v2 검색
-search_prefix = f"{prefix}714756_2026-01-27"
-# 결과: "714756714756_2026-01-27"  -- 잘못됨
-# "714756/" 아래의 객체와 매칭 안 됨
+search_prefix = f"{prefix}raw-events_2026-01-27"
+# 결과: "raw-eventsraw-events_2026-01-27"  -- 잘못됨
+# "raw-events/" 아래의 객체와 매칭 안 됨
 
 # 파일 key 구성
 file_key = f"{prefix}/{prefix}_2026-01-27_10#0.json.gz"
-# 결과: "714756/714756_2026-01-27_10#0.json.gz"
+# 결과: "raw-events/raw-events_2026-01-27_10#0.json.gz"
 # 하지만 검색 prefix는 여전히 잘못됨!
 ```
 
@@ -143,16 +153,16 @@ file_key = f"{prefix}/{prefix}_2026-01-27_10#0.json.gz"
 ### 정규화 후
 
 ```python
-# 사용자 입력: s3://bucket/714756
-prefix = "714756/"  # 정규화됨
+# 사용자 입력: s3://bucket/raw-events
+prefix = "raw-events/"  # 정규화됨
 
 # list_objects_v2 검색
-search_prefix = f"{prefix}714756_2026-01-27"
-# 결과: "714756/714756_2026-01-27"  -- 올바름
+search_prefix = f"{prefix}raw-events_2026-01-27"
+# 결과: "raw-events/raw-events_2026-01-27"  -- 올바름
 
 # 파일 key 구성
 file_key = f"{prefix}{prefix.rstrip('/')}_2026-01-27_10#0.json.gz"
-# 결과: "714756/714756_2026-01-27_10#0.json.gz"  -- 올바름
+# 결과: "raw-events/raw-events_2026-01-27_10#0.json.gz"  -- 올바름
 ```
 
 prefix를 경계에서 한 번 정규화했기 때문에 검색과 파일 key 모두 일관적이에요.
@@ -163,15 +173,15 @@ prefix를 경계에서 한 번 정규화했기 때문에 검색과 파일 key �
 
 ```python
 bucket, prefix = parse_s3_path(source_path)
-# prefix = "714756/" (정규화됨)
+# prefix = "raw-events/" (정규화됨)
 
 # 패턴에 맞는 파일 검색
-search_prefix = f"{prefix}714756_{date_prefix}"
-# 결과: "714756/714756_2026-01-27"
+search_prefix = f"{prefix}raw-events_{date_prefix}"
+# 결과: "raw-events/raw-events_2026-01-27"
 
 paginator = s3_client.get_paginator("list_objects_v2")
 for page in paginator.paginate(Bucket=bucket, Prefix=search_prefix):
-    # 714756/ 아래에서 패턴에 매칭되는 모든 객체를 찾음
+    # raw-events/ 아래에서 패턴에 매칭되는 모든 객체를 찾음
     pass
 ```
 
@@ -179,12 +189,12 @@ for page in paginator.paginate(Bucket=bucket, Prefix=search_prefix):
 
 ```python
 bucket, prefix = parse_s3_path(source_path)
-# prefix = "714756/" (정규화됨)
+# prefix = "raw-events/" (정규화됨)
 
 # 파일 이름 구성 시 trailing slash 제거
-base_name = prefix.rstrip("/")  # "714756"
+base_name = prefix.rstrip("/")  # "raw-events"
 file_key = f"{prefix}{base_name}_{date}_{hour}#0.json.gz"
-# 결과: "714756/714756_2026-01-27_10#0.json.gz"
+# 결과: "raw-events/raw-events_2026-01-27_10#0.json.gz"
 ```
 
 prefix 이름을 파일명의 일부로 포함하는 경우처럼 슬래시 없는 prefix가 필요하면,
@@ -211,17 +221,17 @@ f-string 보간이 파일명만 생성하는데, 이게 올바른 동작이에�
 ```python
 import os
 
-prefix = "714756"
+prefix = "raw-events"
 date = "2026-01-27"
 hour = 10
 
 # os.path.join으로 깔끔한 경로 구성
 file_key = os.path.join(prefix, f"{prefix}_{date}_{hour}#0.json.gz")
-# 결과: "714756/714756_2026-01-27_10#0.json.gz"  -- Unix에서는 동작
+# 결과: "raw-events/raw-events_2026-01-27_10#0.json.gz"  -- Unix에서는 동작
 ```
 
 macOS와 Linux에서는 동작해요. 하지만 Windows에서 `os.path.join`은
-`714756\714756_2026-01-27_10#0.json.gz`를 생성해요. S3는 백슬래시를 구분자가
+`raw-events\raw-events_2026-01-27_10#0.json.gz`를 생성해요. S3는 백슬래시를 구분자가
 아닌 리터럴 문자로 취급해요. CI는 Linux에서 돌아갈 수 있지만, 개발자가
 Windows에서 테스트를 실행하면 key가 잘못돼요.
 
@@ -239,3 +249,12 @@ SDK(JavaScript용 AWS SDK v3 같은)를 사용할 때예요.
 
 핵심 교훈: 경계에서 정규화하고, 그 외 모든 곳에서 불변 조건을 가정하세요.
 `parse_s3_path` 호출 한 번으로 버그의 한 카테고리 전체를 제거할 수 있어요.
+
+## 참고 자료
+
+- [Amazon S3 objects overview](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html)
+  — key가 곧 객체의 전체 이름이고, 그 아래에 별도의 구조는 없어요
+- [Organizing objects in the Amazon S3 console by using folders](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html)
+  — bucket은 평면 구조이고, 콘솔에서 보이는 "폴더"는 `/`로 끝나는 공통 prefix예요
+- [boto3 `list_objects_v2`](https://docs.aws.amazon.com/boto3/latest/reference/services/s3/client/list_objects_v2.html)
+  — `Prefix`는 전달한 문자열로 시작하는 key만 응답에 포함시켜요

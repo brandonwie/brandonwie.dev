@@ -1,8 +1,10 @@
 ---
 title: Python Tooling Stack
-description: Standard Python development tooling for all MOBA projects.
+description: >-
+  Consolidating fragmented Python tooling into five tools — asdf, uv, ruff, ty,
+  and pre-commit — and why each one won.
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - python
@@ -39,7 +41,7 @@ source_content_hash: 269a8ae05596c621827bbc69511f9e34aff95874d9b756beb997a9bdfa6
 expanded: true
 ---
 
-Every new Python project in our organization started with the same tedious setup ritual: install pyenv for version management, pip or poetry for packages, black for formatting, flake8 for linting, isort for import sorting, and mypy for type checking. Each tool had its own config format, update cycle, and quirks. Across multiple repositories (ETL pipelines, Airflow DAGs, services), no two projects had the same tooling setup.
+Every new Python project started with the same tedious setup ritual: install pyenv for version management, pip or poetry for packages, black for formatting, flake8 for linting, isort for import sorting, and mypy for type checking. Each tool had its own config format, update cycle, and quirks. Across multiple repositories (ETL pipelines, Airflow DAGs, services), no two projects had the same tooling setup.
 
 I consolidated everything into a five-tool stack that's fast, consistent, and mostly from a single ecosystem. Here's what it looks like and why each choice was made.
 
@@ -120,7 +122,7 @@ uv run pre-commit install
 
 ```bash
 # Run commands in venv
-uv run python -m cli amplitude-etl
+uv run python -m cli daily-export
 uv run pre-commit run --all-files
 uv run pytest
 
