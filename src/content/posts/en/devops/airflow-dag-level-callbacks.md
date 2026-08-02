@@ -1,13 +1,14 @@
 ---
 title: Airflow DAG-Level Callbacks
 description: Airflow 2.x silently ignores `on_success_callback` at the DAG level. Only
+  task-level success callbacks fired for me, so the success alert has to hang off the
+  last task in the pipeline.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
   - callbacks
-  - work
 category: devops
 draft: false
 lang: en
@@ -20,7 +21,7 @@ source_content_hash: f0bb7669a11d37bd2e35f2e4df8a8cb84f7d9a53a5367c5bbf6fd6c1b12
 expanded: true
 ---
 
-I wired up Slack notifications for an Airflow DAG — failure alerts worked fine, but the success alert never fired. The DAG ran, all tasks succeeded, but no notification. I checked the Slack webhook, verified the callback function, and reviewed task logs. Everything looked correct. The problem? `on_success_callback` at the DAG level is silently ignored in Airflow 2.x.
+I wired up Slack notifications for an Airflow DAG — failure alerts worked fine, but the success alert never fired. The DAG ran, all tasks succeeded, but no notification. I checked the Slack webhook, verified the callback function, and reviewed task logs. Everything looked correct. The problem turned out to be the DAG-level `on_success_callback` itself — on Airflow 2.11.0 it was silently ignored.
 
 No error. No warning. The callback parameter is accepted without complaint and then completely ignored when all tasks succeed.
 
@@ -55,14 +56,14 @@ Task-level callbacks work reliably for both success and failure. By placing the 
 
 ## The Key Rules
 
-- `on_failure_callback` at DAG level **works** (for task failures)
-- `on_success_callback` at DAG level **does not work** (silently ignored)
+- `on_failure_callback` at DAG level **worked** (for task failures)
+- `on_success_callback` at DAG level **did not** (silently ignored)
 - For success alerts, attach the callback to the final task in the DAG
 - This behavior exists in Airflow 2.11.0 (and likely other 2.x versions)
 
 ## Real-World Pattern
 
-Here's the pattern I settled on for the Amplitude ETL DAG. Failure handling goes in `default_args` (so every task gets it), and the success callback goes on the last task:
+Here's the pattern I settled on for an analytics ETL DAG. Failure handling goes in `default_args` (so every task gets it), and the success callback goes on the last task:
 
 ```python
 # default_args handles failures for all tasks
@@ -70,11 +71,11 @@ default_args = {
     'on_failure_callback': send_failure_alert,
 }
 
-with DAG('amplitude_etl', default_args=default_args):
+with DAG('analytics_etl', default_args=default_args):
     validate = PythonOperator(task_id='validate', ...)
 
     etl = DockerOperator(
-        task_id='amplitude-etl',
+        task_id='run-etl',
         on_success_callback=send_success_alert,  # Success callback here
     )
 
@@ -83,13 +84,19 @@ with DAG('amplitude_etl', default_args=default_args):
 
 The `default_args` approach means every task gets the failure callback without repeating it. The success callback only needs to be on `etl` (the last task) — if `validate` fails, the pipeline stops before reaching `etl`, so the success callback won't fire.
 
-## Why This Works
+## What I Verified, and What I Didn't
 
-The difference comes down to how Airflow evaluates callbacks at each level. DAG-level callbacks are triggered by the DagRun state change, but the success state transition has a known gap in Airflow 2.x where the callback dispatch is not fully implemented. Task-level callbacks, on the other hand, are triggered by the TaskInstance state machine, which handles both success and failure transitions correctly.
+I want to be careful here, because I never found an explanation and I did not isolate the cause.
+
+The official callbacks page documents `on_success_callback` as a DAG-level callback — "Invoked when the Dag succeeds" — so on paper it is supported, and a reader who follows my reference link will read the opposite of what I hit. What I observed on Airflow 2.11.0 was that the DAG-level failure callback fired, the DAG-level success callback never did, and moving the success callback onto the last task made it fire on every run.
+
+The one documented caveat I did find (in the current stable docs, which now track Airflow 3.x) is unrelated to my case but worth knowing: callbacks only run when the DAG or task state changes because a worker executed something, so marking a run successful from the UI or the CLI will not trigger them.
+
+So take all of this as an observation pinned to one version, not a claim about Airflow internals. If DAG-level success callbacks fire in your version, use them — the last-task pattern is what I fell back on when they didn't.
 
 ## Takeaway
 
-If your Airflow success alerts aren't firing, check whether they're set at the DAG level. Move `on_success_callback` to the last task in your pipeline. It's a one-line change that fixes a silent, undocumented behavior gap in Airflow 2.x. The general rule: use DAG-level for failure callbacks (via `default_args`) and task-level for success callbacks (on the final task).
+If your Airflow success alerts aren't firing, check whether they're set at the DAG level. Moving `on_success_callback` to the last task in the pipeline is a one-line change, and it worked around the silence I ran into on 2.11.0. The rule I use now: failure callbacks at the DAG level (via `default_args`), success callbacks at the task level (on the final task).
 
 ## References
 

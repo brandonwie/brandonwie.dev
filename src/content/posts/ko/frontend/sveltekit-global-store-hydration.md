@@ -101,5 +101,5 @@ SSG라서 챙길 디테일이 하나 더 있어요. eager `import.meta.glob` 묶
 
 ## 참고 자료
 
-- [SvelteKit — layout data (load)](https://svelte.dev/docs/kit/load#layout-data)
+- [SvelteKit — layout data (load)](https://svelte.dev/docs/kit/load#Layout-data)
 - [SvelteKit — generated $types (LayoutLoad)](https://svelte.dev/docs/kit/types#Generated-types)

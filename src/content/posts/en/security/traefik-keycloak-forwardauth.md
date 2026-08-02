@@ -2,7 +2,7 @@
 title: 'Understanding Traefik, Keycloak, and ForwardAuth'
 description: 'How to add centralized authentication to Kubernetes services using Traefik ForwardAuth, Keycloak, and OAuth2-Proxy.'
 date: 2026-01-18T00:00:00.000Z
-updated: 2026-03-15T00:00:00.000Z
+updated: '2026-08-02'
 expanded: true
 tags:
   - security
@@ -191,8 +191,8 @@ valid.
 │    "I verify if cards are real"             │
 │                                             │
 │    📋 Member Database:                      │
-│    - testuser (password: testpassword)      │
-│    - admin (password: crucio_admin_dev)     │
+│    - testuser (a standard member)           │
+│    - admin (the realm administrator)        │
 │                                             │
 └─────────────────────────────────────────────┘
 ```
@@ -592,12 +592,19 @@ With the architecture understood, here's the step-by-step deployment guide for s
 
 ### Prerequisites
 
+Everything below uses the namespaces and manifest paths from my own cluster —
+`crucio-security`, `crucio-system`, `infra/k3s/...`. Substitute your own as you
+read; nothing in the flow depends on those names.
+
 Before deploying OAuth2-Proxy, ensure:
 
 1. **Keycloak is running**:
    `kubectl get pods -n crucio-security -l app.kubernetes.io/name=keycloak`
-2. **'crucio' realm exists**: Created in T3.1.2
-3. **Test user exists**: Created in T3.1.3
+2. **A realm exists**: in the admin console, Realm settings → Create realm. The
+   steps below assume a realm called `crucio`; swap in your own name and adjust
+   the URLs accordingly.
+3. **A test user exists**: Users → Add user, then set a password on the
+   Credentials tab so you have something to log in with.
 
 ### Step 1: Create OAuth2-Proxy Client in Keycloak
 
@@ -611,9 +618,8 @@ This is a **MANUAL STEP** that must be done before deploying OAuth2-Proxy.
 
    Then open: <http://localhost:8080/auth/admin/>
 
-2. **Login as admin**:
-   - Username: `admin`
-   - Password: `crucio_admin_dev`
+2. **Log in as the Keycloak admin**, pulling the credentials from your Keycloak
+   deployment's admin secret rather than hardcoding them anywhere
 
 3. **Select 'crucio' realm** (dropdown in top-left)
 
@@ -717,7 +723,7 @@ kubectl apply -f infra/k3s/system/traefik/ingressroute-grafana.yaml
 2. **Test Grafana with auth**:
    - Visit: <https://grafana.brandonwie.dev/>
    - Should redirect to Keycloak login page
-   - Login with: `testuser` / `testpassword`
+   - Log in with the test user you created in the prerequisites
    - Should redirect back to Grafana
 
 3. **Test logout**:
@@ -753,12 +759,14 @@ kubectl exec -n crucio-security deploy/oauth2-proxy -- \
 
 ## Next Steps
 
-After completing T3.1.4:
+Once the gate is up, two follow-ups are worth doing:
 
-1. **T3.1.5**: Update API to validate Keycloak tokens (replace local JWT)
-2. **T3.2.1**: Create guardrails service (PII masking + injection detection)
-3. **Enable Grafana Auth Proxy**: Configure Grafana to use X-Auth-Request-User
-   header
+1. **Move the API onto Keycloak tokens.** If a backend still mints its own JWTs,
+   have it validate Keycloak-issued tokens instead, so there is one issuer
+   rather than two.
+2. **Let Grafana trust the proxy.** Configure Grafana's auth proxy mode to read
+   the `X-Auth-Request-User` header OAuth2-Proxy sets, so authenticated users
+   are not asked to log in a second time.
 
 ### Optional: Enable Grafana Auth Proxy Mode
 

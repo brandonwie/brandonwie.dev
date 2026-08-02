@@ -5,7 +5,7 @@ description: >-
   markdownlint 규칙. 둘 다 조용히 fire되고, --fix로 자동 수정되지 않으며, 보통 같이 나타나요 — 하나를 고치면 다른
   하나가 노출돼요.
 date: 2026-04-19T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-08-02'
 tags:
   - devops
   - markdown
@@ -16,7 +16,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: markdownlint-pre-commit-heading-rules
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: 2026-08-02T00:00:00.000Z
 translation_date: '2026-05-10'
 ---
 
@@ -67,14 +67,14 @@ invariant:
 
 ## prettier × proseWrap 함정
 
-별개의 함정이 또 있어요. 본문에서 GitHub issue나 PR을 `#NNN`로 참조하는 경우예요. prettier의 `proseWrap: always`는 문단을 ~80 컬럼에서 다시 줄바꿈해요. 그래서 `"Completed via #838 (PR #839) + follow-up #850 (PR #851)"` 같은 문장이 이렇게 쪼개져요:
+별개의 함정이 또 있어요. 본문에서 GitHub issue나 PR을 `#NNN`로 참조하는 경우예요. prettier의 `proseWrap: always`는 문단을 ~80 컬럼에서 다시 줄바꿈해요. 그래서 changelog 스타일 문장이 이렇게 쪼개져요:
 
 ```markdown
-Completed via #838 (PR #839 merged 2026-04-17) + follow-up #850 (PR #851 merged
-2026-04-21).
+Completed via #101 (PR #102) after the schema changes landed, plus follow-up
+#110 (PR #111).
 ```
 
-두 번째 줄이 `#850`으로 시작해 버려요. H1 heading과 똑같은 모양이에요. 그러면 markdownlint가 이렇게 잡아내요:
+두 번째 줄이 `#110`으로 시작해 버려요. H1 heading과 똑같은 모양이에요. 그러면 markdownlint가 이렇게 잡아내요:
 
 - **MD022** (blanks-around-headings)
 - **MD025** (single-title/single-h1 — 여러 top-level heading)
@@ -85,13 +85,13 @@ Completed via #838 (PR #839 merged 2026-04-17) + follow-up #850 (PR #851 merged
 가장 깔끔한 해결책은, 줄 첫머리에 떨어질 수 있는 issue 번호를 backtick으로 감싸는 거예요:
 
 ```markdown
-Completed via `#838` (PR `#839` merged 2026-04-17) + follow-up `#850` (PR `#851`
-merged 2026-04-21).
+Completed via `#101` (PR `#102`) after the schema changes landed, plus follow-up
+`#110` (PR `#111`).
 ```
 
 앞에 inline code가 붙으면 markdownlint가 더 이상 heading으로 해석하지 않아요. 줄바꿈은 prettier가 그대로 처리하고요.
 
-다른 방법들은 다 별로예요. `\#850`처럼 escape를 쓰면 동작은 하지만 원문 가독성이 떨어져요. `#NNN`을 피해서 다시 쓰는 방식은 깨지기 쉬워요. 나중에 한 줄만 고쳐도 충돌이 다시 생겨요. `<!-- prettier-ignore -->`로 막으면 문단 전체의 줄바꿈이 꺼지니까, 토큰 하나 때문에 쓰기엔 너무 광범위해요.
+다른 방법들은 다 별로예요. `\#110`처럼 escape를 쓰면 동작은 하지만 원문 가독성이 떨어져요. `#NNN`을 피해서 다시 쓰는 방식은 깨지기 쉬워요. 나중에 한 줄만 고쳐도 충돌이 다시 생겨요. `<!-- prettier-ignore -->`로 막으면 문단 전체의 줄바꿈이 꺼지니까, 토큰 하나 때문에 쓰기엔 너무 광범위해요.
 
 ## 이게 중요한 상황
 

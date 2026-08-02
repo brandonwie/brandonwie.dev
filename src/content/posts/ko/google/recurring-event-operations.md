@@ -2,18 +2,17 @@
 title: Google Calendar 반복 일정 연산
 description: '반복 일정의 `all`, `this`, `thisAndFollowing` 업데이트 구현 패턴이에요.'
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - google-api
   - calendar
   - recurring-events
-  - work
 category: google
 draft: false
 lang: ko
 source_lang: en
 source_slug: recurring-event-operations
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-03-04'
 references:
   - url: >-
@@ -22,7 +21,14 @@ references:
     type: official
 ---
 
-## Block 관계
+## 최소 저장 모델
+
+이후 내용을 구체적으로 설명하기 위해 간단한 저장 모델을 가정할게요. 저장된 이벤트 레코드 하나를 block이라고 부르고, 여기서 중요한 필드는 두 개예요.
+
+- `originalId` — 이 block이 속한 block을 가리키거나 `null`
+- `recurrence` — RRULE이거나 `null`
+
+모델은 이게 전부예요. 아래 내용은 모두 이 위에 얹히고, block들의 관계는 트리를 이뤄요.
 
 ```text
 Parent Block (originalId = null)
@@ -37,22 +43,26 @@ Exception (`this`)              Sub-series (`thisAndAfter`)
 • 단일 항목 오버라이드          • 시리즈의 새 분기
 ```
 
-### Partial Invitation Edge Case (2026-02-20 발견)
+### Partial Invitation Edge Case
 
-사용자가 반복 시리즈의 일부에만 초대받으면, Google이 exception이나 sub-series처럼 보이지만 다르게 동작하는 block을 만들어요.
+사용자가 반복 시리즈의 일부에만 초대받으면, Google이 exception이나 sub-series처럼 보이지만 다르게 동작하는 이벤트를 만들어요.
 
-| 타입           | gcalId 패턴          | originalId            | recurrence | 동작                           |
-| -------------- | -------------------- | --------------------- | ---------- | ------------------------------ |
-| "TA-as-parent" | `{parentId}_R{date}` | 자기 참조 또는 `null` | `!= null`  | 해당 사용자의 root parent 역할 |
-| "T-as-single"  | `{parentId}_{date}`  | `null`                | `null`     | 일반 단일 block처럼 동작       |
+아래 표의 첫 번째 열은 Google Events 리소스의 이벤트 `id`예요. 나머지 두 개는 앞 절에서 정의한 모델 필드고요 — parent 포인터와 recurrence rule을 로컬에서 어떤 컬럼으로 미러링하든 그 컬럼이라고 보면 돼요.
 
-**"TA-as-parent"**(프로덕션 14,935개): 사용자가 "이후 모든 일정" 부분에만 초대된 경우예요. TA 스타일 gcalId를 갖지만 `originalId`가 자기 참조해요. 이 사용자의 T block들은 이 block을 parent로 가리켜요.
+| 형태           | Google 이벤트 `id`   | `originalId`          | `recurrence` | 동작                           |
+| -------------- | -------------------- | --------------------- | ------------ | ------------------------------ |
+| "TA-as-parent" | `{parentId}_R{date}` | 자기 참조 또는 `null` | `!= null`    | 해당 사용자의 root parent 역할 |
+| "T-as-single"  | `{parentId}_{date}`  | `null`                | `null`       | 일반 단일 block처럼 동작       |
 
-**"T-as-single"**(프로덕션 529,801개): 사용자가 단일 항목에만 초대된 경우예요. Exception 스타일 gcalId를 갖지만 `originalId`나 `recurrence`가 없어요. Recurring event 처리 파이프라인에 들어가지 않아요.
+**"TA-as-parent"**: 사용자가 "이후 모든 일정" 부분에만 초대된 경우예요. 무시하고 넘어갈 수 없을 만큼 흔했어요. TA 스타일 `id`를 갖지만 `originalId`가 자기 참조해요. 이 사용자의 T block들은 이 block을 parent로 가리켜요.
+
+**"T-as-single"**: 사용자가 단일 항목에만 초대된 경우예요. 이상한 형태들 중에서는 이게 압도적으로 많았어요. Exception 스타일 `id`를 갖지만 `originalId`나 `recurrence`가 없어요. Recurring event 처리 파이프라인에 들어가지 않아요.
+
+핵심은 이거예요. `id` 패턴만으로는 block 타입을 판별할 수 없고, 필드 조합을 봐야 해요.
 
 ### Block 타입 식별 (코드 레벨)
 
-Block 타입은 gcalId 패턴이 아니라 필드 조합으로 결정돼요:
+Block 타입은 `id` 패턴이 아니라 필드 조합으로 결정돼요:
 
 | 타입           | originalId | recurrence |
 | -------------- | ---------- | ---------- |
@@ -62,15 +72,11 @@ Block 타입은 gcalId 패턴이 아니라 필드 조합으로 결정돼요:
 | "TA-as-parent" | 자기 참조  | `!= null`  |
 | "T-as-single"  | `null`     | `null`     |
 
-**분석/확장의 핵심 인사이트:** `expandBlocks()`는 `instance.blockId = 확장 중인 block의 ID`를 찍어요. TA block의 경우 이것은 root parent가 아니라 TA ID예요. T block을 인스턴스에 매칭할 때(예: 취소된 항목 제거) 양쪽 모두 root parent ID로 해석해야 해요. `recurring-chain-resolver.util.ts`에서 해석 유틸리티를 확인하세요.
+인스턴스 확장에서 중요한 함의가 하나 있어요. 시리즈를 인스턴스로 확장하는 코드는 보통 생성된 인스턴스마다 그것을 만든 block의 id를 찍어요. Sub-series라면 그 id는 root parent가 아니라 sub-series 자신이에요.
 
-**프로덕션 데이터 분포(T block, 2026-02-20):**
+그래서 exception block을 인스턴스에 매칭할 때(예: 확장 목록에서 취소된 항목 제거) 양쪽 모두 먼저 root parent id로 해석해야 해요. 작은 chain resolver가 필요한 지점이에요 — `originalId`가 없는 block에 도달할 때까지 위로 거슬러 올라가고, 자기 참조 케이스를 위해 cycle 보호를 넣는 거죠.
 
-- 504,161 — T → Root parent(일반 케이스)
-- 14,935 — T → "TA-as-parent"(자기 참조, cycle 보호 처리)
-- 1,755 — T → TA → Root(체인 깊이 1)
-- 88 — T → TA → TA(체인 깊이 2)
-- 1 — 더 깊은 체인
+이게 단순 조회가 아니라 루프여야 하는 이유는 체인 분포에 있어요. 거의 모든 exception은 root parent를 곧바로 가리켜요. 자기 참조하는 "TA-as-parent"가 그다음으로 많고요. 한 홉보다 깊은 체인은 드물지만 0은 아니고, 두 홉보다 깊은 것도 있었어요. 한 번만 역참조하면 압도적 다수에는 맞고 나머지에는 조용히 틀려요 — 생각해낼 만한 테스트에서는 전부 통과하니까, 실패 양상 중에 제일 나쁜 쪽이에요.
 
 ## 연산 유형
 
@@ -218,14 +224,14 @@ Sub-series(15-24, UNTIL=24)
 
 ### 3. TypeORM update() vs save()
 
-엔티티가 변경됐을 수 있으면 `blockRepo.update(id, { field })`를 사용하세요:
+엔티티가 변경됐을 수 있으면 `repo.update(id, { field })`를 사용하세요:
 
 ```typescript
 // 잘못됨 - 변경된 엔티티를 저장할 수 있음
-await this.blockRepo.save(requestedBlock);
+await repo.save(block);
 
 // 올바름 - 대상 지정 업데이트
-await this.blockRepo.update(requestedBlock.id, {
+await repo.update(block.id, {
   recurrence: updatedRecurrence,
 });
 ```

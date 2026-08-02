@@ -2,13 +2,12 @@
 title: DAG Deployment Strategies
 description: 'Different approaches to deploying Airflow DAGs, with trade-offs analysis.'
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
   - deployment
   - gitops
-  - work
 category: devops
 draft: false
 lang: en
@@ -17,13 +16,21 @@ references:
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/production-deployment.html
     title: Airflow Production Deployment
     type: official
+  - url: >-
+      https://airflow.apache.org/docs/apache-airflow/2.10.5/configurations-ref.html
+    title: 'Airflow 2.10.5 Configuration Reference (scheduler intervals)'
+    type: official
+  - url: >-
+      https://airflow.apache.org/docs/apache-airflow/stable/configurations-ref.html
+    title: 'Airflow Configuration Reference (dag_processor intervals)'
+    type: official
 source_content_hash: 9fdce2e03f592d622a5b1e8d102e3bbd1e3977afdc2c7baa4b2c45f4c298dbc5
 expanded: true
 ---
 
 When setting up Airflow on EC2 with Docker Compose, the first question was: how do DAG files get from the Git repository onto the running containers? Airflow documentation describes multiple approaches without recommending one. Picking the wrong strategy early means painful migration later as the team or infrastructure grows.
 
-I evaluated four common approaches, chose the simplest one for our two-person team, and documented the decision tree so future-me (or future-team) knows when to migrate.
+I evaluated four common approaches, chose the simplest one that fit a two-person team on EC2, and wrote down the decision tree so future-me knows when to migrate.
 
 ## The Difficulty
 
@@ -48,7 +55,12 @@ EC2 /opt/airflow/          ← Full Git repository
 └── .git/
 ```
 
-Changes sync via `git pull`. The Airflow scheduler detects new/changed DAGs within ~30 seconds. No container restart needed.
+Changes sync via `git pull`, and the scheduler picks them up with no container restart. How fast it picks them up depends on two separate settings rather than one, which is easy to miss:
+
+- `[scheduler] min_file_process_interval` (default `30`) — how often a DAG file Airflow already knows about gets re-parsed. The config reference states plainly that "updates to DAGs are reflected after this interval."
+- `[scheduler] dag_dir_list_interval` (default `300`) — how often the DAGs directory is scanned for _new_ files.
+
+So editing an existing DAG shows up in roughly half a minute, but a brand-new DAG file can sit unnoticed for up to five minutes on stock config. Both defaults carried into Airflow 3.x, where parsing moved into a standalone dag-processor: the same 30-second `min_file_process_interval` now lives under `[dag_processor]`, and the directory scan became `[dag_processor] refresh_interval`, still 300 seconds.
 
 **Best for:** Small teams (2-10), EC2-based, frequent DAG changes.
 
@@ -107,9 +119,11 @@ AWS-native and works across regions, but adds infrastructure (S3 bucket or EFS m
 | **Best environment**  | EC2 small team  | Immutable infra | Kubernetes | AWS native   |
 | **Team size**         | 2-10            | Any             | Large      | Medium-Large |
 
-## Our Choice: Full Git Repo on EC2
+Airflow doesn't publish a matrix like this, so treat it as my read of the trade-offs rather than doctrine. The setup-complexity ratings and especially the team-size bands are judgement calls — they're where each approach stopped feeling proportionate to me, not thresholds anyone has measured.
 
-We chose the simplest option because:
+## What I Chose: Full Git Repo on EC2
+
+I picked the simplest option because:
 
 - Small team (2 people) on EC2, not Kubernetes
 - DAG changes are frequent and need fast iteration (seconds, not minutes)
@@ -148,12 +162,13 @@ What's your infrastructure?
 3. SSM command to EC2
    └─► cd /opt/airflow && git pull
 
-4. Scheduler detects (~30 seconds)
-   └─► New DAG parsed and ready
+4. Scheduler re-parses the changed file (~30s)
+   └─► Updated DAG ready
 
 Container restart: NOT NEEDED
 Downtime: NONE
-Reflection time: ~30 seconds
+Reflection time: ~30s for an edit
+                 up to ~5 min for a brand-new DAG file
 ```
 
 ### Pros
@@ -188,12 +203,14 @@ Reflection time: ~30 seconds
 
 ## When to Migrate
 
-| Situation               | Recommended Change |
-| ----------------------- | ------------------ |
-| Kubernetes adoption     | Git-Sync Sidecar   |
-| Security hardening      | Bake into Image    |
-| Multi-Region deployment | S3 + CloudFront    |
-| DAG 10+, team 5+        | Git-Sync or S3     |
+Triggers I'd watch for, with the same caveat as the matrix — these are the points where the current approach starts costing more than it saves, not measured limits.
+
+| Situation                          | Recommended Change                       |
+| ---------------------------------- | ---------------------------------------- |
+| Kubernetes adoption                | Git-Sync Sidecar                         |
+| Security hardening                 | Bake into Image                          |
+| Multi-region deployment            | S3 sync with cross-region replication    |
+| Roughly 10+ DAGs and 5+ authors    | Git-Sync or S3                           |
 
 ## When NOT to Use Each Strategy
 

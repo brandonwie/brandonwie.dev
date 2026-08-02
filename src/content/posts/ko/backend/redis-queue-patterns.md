@@ -23,6 +23,18 @@ references:
   - url: "https://docs.bullmq.io/patterns/stop-retrying-jobs"
     title: Stop retrying jobs (UnrecoverableError)
     type: official
+  - url: "https://docs.bullmq.io/guide/rate-limiting"
+    title: Rate limiting (manual rate-limit for 429 responses)
+    type: official
+  - url: "https://docs.bullmq.io/guide/parallelism-and-concurrency"
+    title: Parallelism and Concurrency
+    type: official
+  - url: "https://docs.bullmq.io/patterns/process-step-jobs"
+    title: Process Step Jobs (moveToDelayed + DelayedError)
+    type: official
+  - url: "https://github.com/taskforcesh/bullmq/blob/master/src/classes/errors/delayed-error.ts"
+    title: bullmq/src/classes/errors/delayed-error.ts
+    type: official
   - url: "https://docs.nestjs.com/techniques/queues"
     title: queues
     type: official
@@ -31,16 +43,14 @@ references:
     type: official
 ---
 
-Google Calendar API를 호출하는 백그라운드 작업이 있었어요. 서버가 요청 중간에
-크래시되자 작업이 사라졌어요. 재시도도, 로그도, 흔적도 없었죠. 사용자의
-캘린더는 업데이트되지 않았고, 며칠 후 사용자가 신고할 때까지 저희는 전혀
-몰랐어요.
-
 Node.js 애플리케이션의 백그라운드 작업들 -- API 호출, 동기화 작업, 알림 --
 은 프로세스 내 실행으로는 제공할 수 없는 안정성 보장이 필요해요. 서버가 작업
 도중에 크래시하면 작업은 사라져요. 외부 API가 rate limit을 걸면 기본 재시도
 메커니즘이 없어요. 트래픽이 급증하면 시스템이 부하를 흡수하고 분산할 방법이
 없죠. 바로 여기서 Redis 기반 작업 큐가 필요해져요.
+
+이 글은 Redis와 BullMQ가 그 문제를 어떻게 푸는지 정리해요. 데이터 구조와
+스레딩 모델부터 에러 분류와 dead letter queue까지 다뤄요.
 
 ## 단순한 접근법의 한계
 
@@ -234,6 +244,8 @@ export class QueueProcessor extends WorkerHost {
   }
 }
 ```
+
+BullMQ 문서는 이 설정의 성격을 분명하게 말해요. `concurrency`는 "NodeJS 이벤트 루프를 활용"하는 거라서, IO 위주 작업의 처리량은 올려주지만 CPU 위주 작업에서는 오히려 처리량을 *떨어뜨려요*. 진짜 병렬 처리를 얻는 두 번째 방법은 worker 자체를 여러 개(더 많은 코어나 여러 머신에) 띄우는 거예요 ([Parallelism and Concurrency](https://docs.bullmq.io/guide/parallelism-and-concurrency)).
 
 ## 검토한 옵션들
 
@@ -446,19 +458,33 @@ Layer 3: DLQ (manual inspection + alerting)
 
 API가 `429 Too Many Requests`를 반환할 때, 보통 `Retry-After` 헤더로 정확히 얼마나 기다려야 하는지 알려줘요. 이 헤더를 무시하고 자체 고정 백오프를 사용하면 비효율적이에요 -- 너무 오래 기다리거나 충분히 기다리지 않거나.
 
-BullMQ의 `DelayedError`를 사용하면 API가 요청한 정확한 지연 시간으로 작업을 다시 스케줄링할 수 있어요:
+BullMQ 문서는 바로 이 상황을 [manual rate limiting](https://docs.bullmq.io/guide/rate-limiting)으로 다뤄요. API가 알려준 지연 시간으로 `worker.rateLimit(duration)`을 호출하고, 그다음 `Worker.RateLimitError()`를 던지는 방식이에요. 이 특수한 에러가 핵심이에요 -- 이 에러가 있어야 BullMQ가 "실패"가 아니라 "rate limit에 걸린 것"으로 구분해서, 시도 횟수를 소모하지 않고 작업을 다시 waiting 상태로 되돌려요.
 
 ```typescript
-if (error.response?.status === 429) {
-  const retryAfter = parseInt(
-    error.response.headers["retry-after"] ?? "60",
-    10,
-  );
-  throw new DelayedError(retryAfter * 1000);
-}
+const worker = new Worker(
+  "sync",
+  async (job) => {
+    try {
+      await callExternalApi(job.data);
+    } catch (error) {
+      if (error.response?.status !== 429) throw error;
+
+      const retryAfter = parseInt(
+        error.response.headers["retry-after"] ?? "60",
+        10,
+      );
+      await worker.rateLimit(retryAfter * 1000);
+      throw Worker.RateLimitError();
+    }
+  },
+  // limiter.max를 여기 설정하지 않으면 BullMQ가 rate limit 검사를 건너뛰어요
+  { connection, limiter: { max: 100, duration: 60000 } },
+);
 ```
 
-이건 일반적인 재시도와 달라요: `DelayedError`는 시도 횟수를 차감하지 않아요. 작업이 delayed set으로 이동하고 지정된 시간 후에 대기 목록으로 다시 들어가서, 진짜 실패를 위한 재시도 예산을 보존해요.
+rate limiter는 큐 전체에 적용돼요. 그래서 이 방식은 해당 큐의 모든 worker를 함께 멈춰요. rate limit이 개별 작업이 아니라 API 키에 걸린 제한이라면 보통 그게 원하는 동작이에요.
+
+작업 하나만 지연시키고 싶다면 `DelayedError`를 쓰는데, 순서가 중요해요. [문서에 나온 순서](https://docs.bullmq.io/patterns/process-step-jobs)는 `await job.moveToDelayed(Date.now() + ms, token)`를 먼저 호출하고, 그다음 `throw new DelayedError()`예요. 여기서 `token`은 processor 함수의 두 번째 인자예요. 지연 시간은 `moveToDelayed`에 넘기고, 에러는 "이 작업은 이미 옮겨졌다"고 worker에 알리는 신호일 뿐이에요. 헷갈리기 쉬운 부분인데, `new DelayedError(retryAfter * 1000)`은 컴파일도 되고 그럴듯해 보이지만 [생성자가 받는 건 message 문자열](https://github.com/taskforcesh/bullmq/blob/master/src/classes/errors/delayed-error.ts)이라서, 그 숫자는 `error.message`에 들어가고 지연은 전혀 일어나지 않아요.
 
 ## 실전 가이드
 
@@ -478,7 +504,7 @@ exactly-once가 아니에요. 중복 처리가 데이터 손상을 일으킬 수
 
 1. **Redis는 캐시가 아니에요** - 조정 시스템(coordination system)이에요
 2. **단일 스레드 Redis** = 원자적 연산 = Race condition 없음
-3. **멀티 프로세스 worker** = 안전한 병렬 처리
+3. **worker concurrency는 병렬 처리가 아니에요** = worker의 `concurrency` 설정은 하나의 이벤트 루프를 나눠 쓰는 거예요. 진짜 병렬 처리는 worker 프로세스를 여러 개 띄울 때 나오고, 그 안전성은 Redis가 보장해요
 4. **영속성** = 작업이 크래시와 재시작에서 살아남아요
 5. **내장 패턴** = 재시도, rate limit, 중복 제거, 우선순위
 6. **관찰 가능성** = 시스템에서 무슨 일이 일어나는지 알 수 있어요
@@ -493,3 +519,14 @@ exactly-once가 아니에요. 중복 처리가 데이터 손상을 일으킬 수
 - **Redis Cluster** -- 데이터를 여러 노드에 샤딩해서 수평 확장. 단일 Redis 인스턴스가 처리량이나 메모리 요구사항을 감당할 수 없을 때 필요해요
 - **BullMQ Pro 기능** -- Job group(그룹별 rate limit), 중첩 큐, 고급 흐름 제어
 - **대안 큐 시스템** -- RabbitMQ(AMQP 프로토콜, 복잡한 라우팅), Kafka(대규모 이벤트 스트리밍), AWS SQS(관리형, 인프라 불필요)
+
+## 참고 자료
+
+- [BullMQ 공식 문서](https://docs.bullmq.io/)
+- [BullMQ — Stop retrying jobs (`UnrecoverableError`)](https://docs.bullmq.io/patterns/stop-retrying-jobs)
+- [BullMQ — Rate limiting (`429` 응답에 대한 manual rate-limit)](https://docs.bullmq.io/guide/rate-limiting)
+- [BullMQ — Parallelism and Concurrency](https://docs.bullmq.io/guide/parallelism-and-concurrency)
+- [BullMQ — Process Step Jobs (`moveToDelayed` + `DelayedError`)](https://docs.bullmq.io/patterns/process-step-jobs)
+- [BullMQ 소스 — `delayed-error.ts`](https://github.com/taskforcesh/bullmq/blob/master/src/classes/errors/delayed-error.ts)
+- [NestJS Queues](https://docs.nestjs.com/techniques/queues)
+- [The Node.js Event Loop, Timers, and `process.nextTick()`](https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick)

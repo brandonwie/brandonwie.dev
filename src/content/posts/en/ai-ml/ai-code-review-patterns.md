@@ -4,7 +4,7 @@ description: >-
   Patterns observed when AI reviewers (Claude, Copilot, Codex) generate invalid
   or misleading feedback, and how to handle each one.
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-03-05T00:00:00.000Z
+updated: "2026-08-02"
 tags:
   - ai
   - code-review
@@ -50,7 +50,7 @@ implementing unnecessary changes or dismiss everything and miss real issues.
 **Example**:
 
 ```text
-AI Review: "Hardcoded account ID '325908307049' should be dynamic"
+AI Review: "Hardcoded account ID '123456789012' should be dynamic"
 Reality: Account ID was made dynamic in commit abc123, 2 commits ago
 ```
 
@@ -76,7 +76,7 @@ without checking whether subsequent commits already addressed the issue.
 
 ```text
 AI Review: "Consider adding checksum verification for the binary download"
-Reality: Checksum verification already exists on lines 80-85
+Reality: Checksum verification already exists a few dozen lines up in the same file
 ```
 
 **Cause**: AI analyzed code in chunks, missing context from other sections of
@@ -154,8 +154,8 @@ handles.
 **Example**:
 
 ```text
-AI Review: "startParam derived from UTC parsing misses events for negative-offset timezones"
-Reality: ±1 day timezone buffer intentionally over-fetches — max IANA offset (±14h) < 24h buffer
+AI Review: "The query's start bound, parsed as UTC midnight, misses events for negative-offset timezones"
+Reality: a ±1 day timezone buffer intentionally over-fetches — max IANA offset (±14h) < 24h buffer
 ```
 
 **Cause**: AI sees the mechanism (UTC midnight parsing) but misses the holistic
@@ -184,8 +184,9 @@ already-constrained path.
 **Example**:
 
 ```text
-AI Review: "Add partial indexes for originalStartDateTime/originalStartDate"
-Reality: userId (indexed) + originalId IS NOT NULL pre-filters to small T block subset
+AI Review: "Add partial indexes for the recurrence-start columns"
+Reality: an indexed user column plus a NOT NULL filter on the recurrence-parent
+column already narrows this to a handful of rows
 ```
 
 **Cause**: AI applies general best practices without evaluating the specific

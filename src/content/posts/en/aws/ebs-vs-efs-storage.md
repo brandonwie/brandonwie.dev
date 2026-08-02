@@ -2,12 +2,11 @@
 title: 'EBS vs EFS: AWS Storage Comparison'
 description: Understanding when to use EBS (block storage) vs EFS (network filesystem).
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - aws
   - storage
   - devops
-  - work
 category: aws
 draft: false
 lang: en
@@ -22,7 +21,7 @@ references:
 source_content_hash: b21e4b0c5f5b18ca96f4ccb62a23f0956dc2508b704014c5c84f7112e2324019
 ---
 
-We had an Airflow cluster with a master node and two worker nodes. A developer updated a DAG file on the master, the scheduler picked up the new version and dispatched a task to a worker -- and the task failed. The worker was still running the old version of the DAG. The file existed on the master's local disk, but the workers had their own separate copies. Nobody synced them.
+Picture an Airflow cluster with a master node and two worker nodes, each on its own EC2 instance with its own local disk. A developer updates a DAG file on the master, the scheduler picks up the new version and dispatches a task to a worker -- and the task fails. The worker is still running the old version of the DAG. The file exists on the master's local disk, but each worker keeps its own separate copy, and nothing syncs them.
 
 This is the exact problem that EFS solves: shared storage across multiple EC2 instances. But EFS is not the answer for everything. Databases on EFS perform terribly, and the cost is 4x higher per gigabyte than EBS. Understanding which storage type to use for which workload prevents both outages and wasted money.
 
@@ -35,7 +34,7 @@ At a high level, EBS and EFS serve fundamentally different roles:
 | Storage | Type                 | Shared?                  | Purpose                             |
 | ------- | -------------------- | ------------------------ | ----------------------------------- |
 | **EBS** | Block (like HDD/SSD) | No (1 instance only)     | OS, Docker, PostgreSQL, Redis, logs |
-| **EFS** | Network (NFS)        | Yes (multiple instances) | DAG files shared between master     |
+| **EFS** | Network (NFS)        | Yes (multiple instances) | DAG files shared by master + workers |
 
 Think of EBS as the hard drive inside your computer. It is fast, it is local, and only that one computer can access it. EFS is more like a network drive that everyone in the office mounts -- any machine can read and write to it simultaneously, but there is a performance penalty for going over the network.
 
@@ -47,7 +46,7 @@ EBS provides block-level storage volumes attached to individual EC2 instances. E
 
 ### Typical Sizes
 
-For our Airflow deployment, here is how we sized the EBS volumes:
+For an Airflow deployment of that shape, one workable sizing looks like this:
 
 | Instance | EBS Size | Contents                                   |
 | -------- | -------- | ------------------------------------------ |
@@ -59,7 +58,7 @@ The master gets the largest volume because it runs PostgreSQL (Airflow metadata)
 
 ### What Lives on EBS
 
-Here is the actual disk layout of the master node:
+A master node's volume typically fills up like this:
 
 ```text
 100 GB EBS Volume
@@ -88,7 +87,7 @@ Losing the master's EBS volume means losing **everything** stored on it:
 - User accounts and passwords
 - Airflow Variables and Connections
 
-Recovery requires restoring from an EBS snapshot or rebuilding the entire environment from scratch. This is why automated EBS snapshots are non-negotiable for the master node. We take daily snapshots with a 7-day retention policy.
+Recovery requires restoring from an EBS snapshot or rebuilding the entire environment from scratch. This is why automated EBS snapshots are non-negotiable for the master node. Daily snapshots with a 7-day retention window are a reasonable baseline.
 
 ---
 
@@ -175,7 +174,7 @@ It would also cost 4x more per gigabyte for worse performance. AWS documentation
 
 ## Cost Breakdown
 
-For our Airflow cluster, the total storage cost is modest:
+For a cluster this size, the total storage cost is modest:
 
 | Storage    | Size   | Rate     | Monthly Cost   |
 | ---------- | ------ | -------- | -------------- |

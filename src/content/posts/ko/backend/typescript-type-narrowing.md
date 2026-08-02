@@ -2,7 +2,7 @@
 title: TypeScript Type Narrowing을 Assertion보다 우선하기
 description: 프로덕션 코드에서 non-null assertion(!)과 강제 캐스팅(as Type) 대신 type narrowing을 사용해야 하는 이유
 date: 2026-02-05T00:00:00.000Z
-updated: '2026-07-31'
+updated: '2026-08-02'
 tags:
   - backend
   - typescript
@@ -12,7 +12,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: typescript-type-narrowing
-source_updated: '2026-07-31'
+source_updated: '2026-08-02'
 translation_date: '2026-07-31'
 references:
   - url: 'https://www.typescriptlang.org/docs/handbook/2/narrowing.html'
@@ -181,11 +181,11 @@ export function identifyStaleBlockIds(
 
 ## 가드를 밖으로 빼면 narrowing이 조용히 사라져요
 
-몇 달 뒤 #960으로 추적한 refactoring에서 같은 codebase가 두 번째 교훈을 줬어요.
-이번엔 가드 자체에 대한 이야기예요. 중복된 가드를 한곳으로 모으는 건
-refactoring 중에서도 가장 평범한 축에 들어요. handler 여섯 개가 똑같은 검사를
-들고 있었으니 helper로 옮긴 거죠. 놓치기 쉬운 지점은 runtime 동작이 정말로
-똑같다는 데 있어요. 원래의 inline 가드는 두 가지 일을 동시에 하고 있었거든요.
+몇 달 뒤 같은 codebase가 두 번째 교훈을 줬어요. 이번엔 가드 자체에 대한
+이야기예요. 중복된 가드를 한곳으로 모으는 건 refactoring 중에서도 가장 평범한
+축에 들어요. handler 여섯 개가 똑같은 검사를 들고 있었으니 helper로 옮긴 거죠.
+놓치기 쉬운 지점은 runtime 동작이 정말로 똑같다는 데 있어요. 원래의 inline
+가드는 두 가지 일을 동시에 하고 있었거든요.
 
 ```typescript
 // refuses the enqueue AND narrows both fields to non-null below this line

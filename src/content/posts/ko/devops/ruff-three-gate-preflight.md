@@ -4,7 +4,7 @@ description: >-
   한 번의 push가 CI 사이클 세 번으로 늘어나면서 깨달은 사실 — CI에서 Ruff는 독립적인 게이트 세 개예요. 4줄짜리 셸 함수면 이
   루프를 막을 수 있어요.
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-04-29'
+updated: '2026-08-02'
 tags:
   - devops
   - python
@@ -16,14 +16,14 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ruff-three-gate-preflight
-source_updated: 2026-04-29T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 ---
 
 > CI에서 Ruff는 보통 검사 세 개를 따로 돌려요. `ruff check`(린트), `ruff format --check`(포매터 드라이런), 그리고 lockfile/의존성 무결성 검사예요.
 > 게이트마다 따로 실패할 수 있어요. 로컬에서 `ruff check`만 통과해도 포맷 실패는 그대로 빠져나가서, 놓친 게이트마다 CI 사이클 한 번씩 더 쓰게 돼요.
 
-PR #134에 처음 push했더니 CI가 `ruff check`에서 빨갛게 떴어요. `I001` import 정렬 위반이었어요. 쉬운 수정이라 다시 push. 두 번째 사이클에서는 `ruff check`는 초록인데 같은 파일이 `ruff format --check`에 걸렸어요. 포맷을 고치고 다시 push. 세 번째 사이클에는 또 포맷이 빨갛게 떴는데, 이번엔 이 PR에서 건드린 적도 없는 `ml/` 디렉토리였어요. CI를 세 번 돌리고서야 알았어요. CI에서 "ruff"는 사실 게이트 세 개고, 로컬 프리플라이트도 그 셋을 다 비춰야 한다는 걸요.
+PR에 처음 push했더니 CI가 `ruff check`에서 빨갛게 떴어요. `I001` import 정렬 위반이었어요. 쉬운 수정이라 다시 push. 두 번째 사이클에서는 `ruff check`는 초록인데 같은 파일이 `ruff format --check`에 걸렸어요. 포맷을 고치고 다시 push. 세 번째 사이클에는 또 포맷이 빨갛게 떴는데, 이번엔 그 브랜치에서 건드린 적도 없는 디렉토리였어요. CI를 세 번 돌리고서야 알았어요. CI에서 "ruff"는 사실 게이트 세 개고, 로컬 프리플라이트도 그 셋을 다 비춰야 한다는 걸요.
 
 ## 게이트 세 개
 
@@ -56,14 +56,14 @@ push 직전에 로컬에서 **세 게이트를 모두** 돌려요.
 ruff check {dir}                 # Gate 1: lint
 ruff format --check {dir}        # Gate 2: format dry-run
 
-# 레포 전체 프리플라이트 (suite=all로 잡히는 게이트들)
+# 레포 전체 프리플라이트 (레포 전체를 도는 CI 실행이 잡는 게이트들)
 ruff check . --quiet
 ruff format --check .
 ```
 
 게이트 중 빨강이 있으면 고치고 다시 돌려요. 모든 게이트가 초록일 때만 push해요.
 
-레포 전체 패스가 중요한 이유가 있어요. CI `suite=all`은 보통 레포 전체로 검사 범위를 잡는데, 로컬 직관은 "방금 편집한 파일들"로 좁혀져 있거든요. 관련 없는 디렉토리에서의 어긋남 — 예를 들면 Markdown 린터가 수정과 CI 사이에 `.agents/rules/*.md`를 자동으로 다시 줄바꿈하는 경우 — 은 `git diff`가 깨끗해 보여도 CI에서 실패해요.
+레포 전체 패스가 중요한 이유가 있어요. CI 잡은 보통 레포 전체로 검사 범위를 잡는데, 로컬 직관은 "방금 편집한 파일들"로 좁혀져 있거든요. 관련 없는 디렉토리에서의 어긋남 — 예를 들면 제 개인 도구 레포에서 Markdown 린터가 제 수정과 CI 사이에 `.agents/rules/*.md`를 자동으로 다시 줄바꿈하는 경우 — 은 `git diff`가 깨끗해 보여도 CI에서 실패해요.
 
 ## 재사용 가능한 프리플라이트 스크립트
 
@@ -85,7 +85,7 @@ ruff_preflight() {
 }
 
 # 사용법
-ruff_preflight apps/api ml
+ruff_preflight src tests
 ```
 
 `Makefile` 타겟으로 두는 방법도 있어요.
@@ -104,7 +104,7 @@ preflight:
 
 - **Ruff의 세 게이트는 직교해요.** Lint와 format은 서로 다른 diff 셋을 만들어요. Lint는 사용 안 한 import를 잡고, format은 줄바꿈을 잡아요. 겹치지 않으니까 한쪽 통과가 다른 쪽 통과를 의미하지 않아요.
 - **자동 수정 플래그가 달라요.** Lint는 `ruff check --fix`(그리고 `--unsafe-fixes`). Format은 `ruff format`(`--fix` 플래그 없음 — 포매터 자체가 수정이에요). 헷갈리면 시간 낭비예요.
-- **CI 범위 ≠ git diff 범위.** `apps/api/`만 건드린 리베이스가 `ml/`에서 포맷 실패를 일으킬 수 있어요. 스위트 전체 포맷 검사는 어떤 파일을 바꿨는지 신경 안 써요. 그래서 레포 전체로 프리플라이트해요.
+- **CI 범위 ≠ git diff 범위.** 서비스 디렉토리 하나만 건드린 리베이스가 한 번도 열어본 적 없는 다른 디렉토리에서 포맷 실패를 일으킬 수 있어요. 스위트 전체 포맷 검사는 어떤 파일을 바꿨는지 신경 안 써요. 그래서 레포 전체로 프리플라이트해요.
 - **Lockfile 게이트는 format이 통과하기 전엔 숨어 있어요.** 대부분의 CI 설정에서 Lint 실패가 format을 막고, format이 lock-check를 막아요(순차 잡 의존성). 앞 게이트들이 통과해야 lockfile 실패가 보여요.
 - **Format은 협상 불가.** Ruff의 포매터는 의견이 강하고 안정적이에요. 로컬에서 손으로 포매팅하면 `ruff format`과 어긋나요. 저장할 때마다 포매터를 돌리는 에디터 통합을 깔고 거기 맞춰가는 게 편해요.
 
@@ -124,7 +124,7 @@ preflight:
 
 `main`이 이미 Ruff 게이트에서 빨갛게 떠 있으면, 브랜치 diff가 깨끗해도 CI 시점에 하드 블록이 걸려요. 게이트는 작업 delta가 아니라 레포 전체 상태에 대해 돌거든요. 두 가지 길이 있어요.
 
-- **같은 PR 안에서 처리.** 명시적인 scope-creep 커밋(`fix(ml): ruff format pre-existing files`)으로 미리 깨진 부분을 PR 안에서 같이 고쳐요. 어디까지가 본 작업이고 어디까지가 청소인지 리뷰어가 구분할 수 있어요.
+- **같은 PR 안에서 처리.** 명시적인 scope-creep 커밋(`fix(format): ruff format pre-existing files`)으로 미리 깨진 부분을 PR 안에서 같이 고쳐요. 어디까지가 본 작업이고 어디까지가 청소인지 리뷰어가 구분할 수 있어요.
 - **별도 hotfix.** 청소 작업을 작은 독립 PR로 먼저 머지하고, 그 후에 피처 브랜치를 리베이스해요.
 
 PR 크기와 리뷰 긴급도에 따라 고르면 돼요. 절대 안 되는 선택지는 "게이트 스킵"이에요. `pyproject.toml`에서 Ruff를 비활성화하면 안전망 자체가 사라지고, 그 디렉토리는 어긋남이 누적되는 자리가 돼요.

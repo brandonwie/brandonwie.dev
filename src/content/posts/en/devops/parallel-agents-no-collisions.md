@@ -1,11 +1,11 @@
 ---
 title: 'Parallel Agents Without Collisions: Tasks, Worktrees, and Locks'
 description: >-
-  Parallel agent work usually looks like a Git problem. Two sessions edit the
-  same repository, one lands first, the other gets a conflict, and everyone
-  learns...
+  Parallel agent work looks like a Git problem, but the harder failure is that a
+  session cannot tell which task is already owned. Tasks, worktrees, and lock
+  directories make that ownership explicit.
 date: 2026-06-15T00:00:00.000Z
-updated: 2026-06-15T00:00:00.000Z
+updated: '2026-08-02'
 expanded: true
 tags:
   - 3b
@@ -20,6 +20,10 @@ references:
     type: official
 source_content_hash: 3bb7666d8c45c88b5b425aa58963af26d3dc9e53802082deda238c60624456f0
 ---
+
+Parallel agent work usually looks like a Git problem. Two sessions edit the same
+repository, one lands first, the other gets a conflict, and everyone learns to
+say "check the branch before you start."
 
 That advice is too small for the actual failure mode.
 
@@ -84,7 +88,7 @@ extra path segment did not carry enough value. Git already enforces one
 worktree per branch, and no real shared-branch scenario appeared that needed an
 agent directory level.
 
-So ADR-035 flattened the path.
+So a later decision flattened the path.
 
 That simplified navigation and tooling, but it removed a convenient accident:
 ownership was no longer visible from the path. A worktree path now tells you

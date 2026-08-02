@@ -1,8 +1,8 @@
 ---
 title: pandas itertuples() vs iterrows()
-description: '`iterrows()` is the most common way to iterate over DataFrame rows, but it'
+description: '`iterrows()` is the most common way to iterate over DataFrame rows, but it builds a pd.Series for every row. Switching to `itertuples()` cut one ~10K-row step from 2s to 20ms.'
 date: 2026-02-06T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - python
@@ -61,22 +61,22 @@ The type preservation difference is worth highlighting. `iterrows()` casts all v
 
 ## Performance Hierarchy
 
-Here's where each approach sits in the pandas performance spectrum:
+Roughly, here's where each approach sits:
 
 ```text
 vectorized ops  >>  itertuples()  >>  apply()  >>  iterrows()
-   (fastest)          (~100x)         (~10x)        (1x baseline)
 ```
+
+The only gap I actually measured is the one at the far end — about 100x between `iterrows()` and `itertuples()` on that ~10K-row step. `apply()` lands somewhere in the middle because it skips per-row Series construction, but I never benchmarked it, so read its position as an ordering rather than a number. If the exact margin matters for your data, measure it on your own DataFrame; the ratio depends on row count, column count, and dtypes.
 
 If your logic can be expressed as column-wise operations (boolean indexing, `.str` accessor, vectorized math), skip iteration entirely — it will be orders of magnitude faster than either `iterrows()` or `itertuples()`. But when row-by-row iteration is unavoidable (complex conditional logic, stateful accumulation), `itertuples()` is the right choice.
 
 ## Real Example
 
-Here's the actual code change from the ETL pipeline that motivated this:
+Here's the change that produced those numbers, reduced to the lines that mattered:
 
 ```python
-# schedule_changes_aggregation.py
-# Processing ~10K daily events
+# Aggregation step over ~10K daily events
 
 # BEFORE: ~2s for 10K rows
 for _, row in filtered.iterrows():

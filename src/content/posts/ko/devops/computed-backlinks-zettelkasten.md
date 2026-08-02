@@ -15,9 +15,12 @@ source_slug: computed-backlinks-zettelkasten
 source_updated: '2026-08-02'
 translation_date: '2026-06-17'
 references:
-  - url: 'https://spec.commonmark.org/0.31.2/#links'
-    title: 'CommonMark Spec 0.31.2 — §6.3 Links'
-    type: authoritative
+  - url: 'https://www.postgresql.org/docs/current/indexes-intro.html'
+    title: 'PostgreSQL Documentation — Indexes: Introduction'
+    type: official
+  - url: 'https://obsidian.md/help/plugins/backlinks'
+    title: 'Obsidian Help — Backlinks'
+    type: official
 source_content_hash: bd86b8fb4669b80dfd2d8f4125ce690fac9148ca7423d3f60e2f32b7d7e002ed
 ---
 
@@ -71,9 +74,11 @@ related:
 
 노트 B가 자기를 가리키는 게 누군지 알고 싶다면 시스템은 저장된 `related:` 링크를 전부 훑어서 B를 가리키는 항목만 골라내면 돼요. 이건 query예요. 작성자가 직접 관리할 필드가 아니죠.
 
-데이터베이스 index와 똑같은 발상이에요. 정규화된 사실은 한 번만 저장하고, 나중에 필요한 조회 형태는 거기서 끌어내요. 역방향 index는 다시 만들 수 있어요. 하지만 손으로 고친 역방향 연결은 그냥 믿는 수밖에 없죠.
+데이터베이스 index와 똑같은 발상이에요. PostgreSQL 문서는 index를 이렇게 설명해요. "index를 한 번 만들어두면 그다음엔 손댈 일이 없다. table이 바뀌면 시스템이 알아서 index를 갱신한다." 그리고 index는 "언제든 table에 추가하거나 제거할 수 있다"고요. 정규화된 사실은 table이 들고 있고, index는 거기서 끌어낸 조회 형태예요. 지웠다가 다시 만들어도 잃는 게 없죠. 노트 위에 올린 역방향 index도 똑같이 동작해요. 반면 손으로 고친 역방향 연결은 달라요. 다시 만들어낼 근거가 없으니 그냥 믿는 수밖에 없거든요.
 
-3B의 schema는 이 규칙을 분명하게 못박아요. 포워드 링크는 저장하고, 백링크는 계산한다고요. markdown 작성 rule도 링크를 frontmatter 안으로 밀어넣고 wiki 스타일 단축 표기를 금지하면서 같은 생각을 강화해요. YAML schema는 링크 전략을 직접 문서로 남겨요. 외부 references는 URL로, 포워드 링크는 내부 `related:` 항목으로, 역방향 연결은 그 포워드 링크에서 계산한다고요.
+노트 앱들도 같은 결론에 도달했어요. 다만 한 층 위에서요. Obsidian 문서는 백링크를 "다른 노트에서 그 노트로 향하는 링크"라고 정의하고, 지금 보고 있는 노트로 내부 링크를 건 노트들을 모아 패널을 채워요. 역방향 뷰가 존재하는 건 도구가 계산해주기 때문이지, 누가 손으로 적어서가 아니에요. 3B는 이 구분을 한 층 아래인 schema에서 해요. 고칠 수 있는 역방향 필드 자체가 없으니, 포워드 링크와 어긋날 여지도 없죠.
+
+3B의 schema는 이 규칙을 분명하게 못박아요. 포워드 링크는 저장하고, 백링크는 계산한다고요. 3B의 markdown 작성 rule도 링크를 frontmatter 안으로 밀어넣고 본문에서 wiki 스타일 `[[단축 표기]]`를 금지하면서 같은 생각을 강화해요. YAML schema는 링크 전략을 직접 문서로 남겨요. 외부 references는 URL로, 포워드 링크는 내부 `related:` 항목으로, 역방향 연결은 그 포워드 링크에서 계산한다고요.
 
 자동 생성되는 `knowledge/_index.md`도 그 선택이 만들어낸 하류의 한 면이에요. graph 도구와 검색 layer는 같은 포워드 링크 사실을 읽어서 필요한 역방향 뷰를 알아서 만들어요. 소스 노트는 단순한 채로 남고요.
 

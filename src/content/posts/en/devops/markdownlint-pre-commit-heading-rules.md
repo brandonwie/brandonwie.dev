@@ -2,7 +2,7 @@
 title: 'Markdownlint Pre-Commit: MD041 + MD001 Heading Gotchas'
 description: 'Two markdownlint rules that repeatedly block husky pre-commit on newly-created markdown files with YAML frontmatter. Both fire silently, neither is auto-fixed by --fix, and they tend to appear together — fixing one exposes the other.'
 date: 2026-04-19T00:00:00.000Z
-updated: 2026-05-06
+updated: 2026-08-02
 tags:
   - devops
   - markdown
@@ -69,14 +69,14 @@ For a fast bulk fix when demoting every `###` to `##`: `Edit(replace_all=true, o
 
 ## The prettier × proseWrap trap
 
-A separate failure mode hits when paragraphs reference GitHub issues or PRs by `#NNN`. Prettier's `proseWrap: always` rewraps paragraphs at ~80 columns, so a paragraph like `"Completed via #838 (PR #839) + follow-up #850 (PR #851)"` can wrap to:
+A separate failure mode hits when paragraphs reference GitHub issues or PRs by `#NNN`. Prettier's `proseWrap: always` rewraps paragraphs at ~80 columns, so a changelog-style line can wrap to:
 
 ```markdown
-Completed via #838 (PR #839 merged 2026-04-17) + follow-up #850 (PR #851 merged
-2026-04-21).
+Completed via #101 (PR #102) after the schema changes landed, plus follow-up
+#110 (PR #111).
 ```
 
-The second line now starts with `#850` — identical syntax to an H1 heading. Markdownlint then reports:
+The second line now starts with `#110` — identical syntax to an H1 heading. Markdownlint then reports:
 
 - **MD022** (blanks-around-headings)
 - **MD025** (single-title/single-h1 — multiple top-level headings)
@@ -87,13 +87,13 @@ All three fire from one proseWrap-induced line break. The markdown is semantical
 The cleanest fix is to backtick-wrap issue numbers that may land at line start:
 
 ```markdown
-Completed via `#838` (PR `#839` merged 2026-04-17) + follow-up `#850` (PR `#851`
-merged 2026-04-21).
+Completed via `#101` (PR `#102`) after the schema changes landed, plus follow-up
+`#110` (PR `#111`).
 ```
 
 Inline code prefix blocks heading interpretation. Prettier still wraps normally.
 
-The other fixes are worse: `\#850` (escape works but hurts prose readability in the source), reword to avoid `#NNN` (brittle — one later edit can reintroduce the collision), or `<!-- prettier-ignore -->` (disables wrap for the whole paragraph; over-broad for a single token).
+The other fixes are worse: `\#110` (escape works but hurts prose readability in the source), reword to avoid `#NNN` (brittle — one later edit can reintroduce the collision), or `<!-- prettier-ignore -->` (disables wrap for the whole paragraph; over-broad for a single token).
 
 ## When this matters
 

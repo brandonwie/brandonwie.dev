@@ -37,8 +37,10 @@ Google Calendar API는 sync token으로 incremental sync를 해요. 직전에 �
 무효화되면 변경분 대신 `410 GONE`이 날아와요. Google 문서엔 이렇게 적혀
 있어요.
 
-> "Sync token은 **토큰 만료**나 **관련 ACL 변경** 등 다양한 이유로 서버에 의해
-> 무효화돼요."
+> "Sometimes sync tokens are invalidated by the server, for various reasons
+> including token expiration or changes in related ACLs."
+
+토큰 만료뿐 아니라 관련 ACL 변경도 무효화 사유가 된다는 뜻이에요.
 
 핵심은 이거예요. 410 GONE은 단순히 시간이 지나서 나는 게 아니에요. 캘린더의
 ACL 변경(공유 권한이 바뀌거나 빠지거나)으로도 무효화돼요. 사용자가 다른
@@ -117,6 +119,16 @@ async mergeResync(calendar: Calendar) {
 }
 ```
 
+한 가지는 솔직하게 짚고 갈게요. 410에 대한 Google 문서의 안내는 이보다 단호해요.
+410 응답은 "should trigger a full wipe of the client's store and a new full
+sync"라고 적혀 있고, Google 데이터를 그대로 미러링한 부분에 대해서는 그 말이
+맞아요.
+
+위 merge 루프는 그 부분을 빼먹고 있어요. upsert만 돌리면 Google이 더 이상
+돌려주지 않는 이벤트의 로컬 레코드는 영영 남아요. 그래서 merge 경로에도 새로
+받은 목록에 없는 event ID를 지우는 단계가 필요해요. merge로 되찾는 건 앱이
+소유한 필드지, 오래된 이벤트를 그대로 둘 명분이 아니에요.
+
 ### Clean-slate 전략(읽기 전용 캘린더)
 
 읽기 전용 캘린더는 보호할 앱 고유 데이터가 없어요. 그냥 지우고 다시 만드는 게
@@ -175,6 +187,11 @@ clean-slate를 돌려서 데이터를 잃거나요.
 
 Google Calendar의 sync API에서 `410 GONE`을 받았을 때, 무작정 다 지우고 다시
 만들면 안 돼요. 복구를 두 갈래로 쪼개세요. 편집 가능한 캘린더는 merge로
-앱 고유 데이터를 살리고, 읽기 전용은 clean-slate로 빠르게 끝내요. 그리고
-전략을 고르기 전에 항상 캘린더 메타데이터를 새로 가져오세요. 410을 일으킨
+앱 고유 데이터를 살리되 Google이 더 이상 주지 않는 이벤트는 같이 정리하고,
+읽기 전용은 clean-slate로 빠르게 끝내요. 그리고 전략을 고르기 전에 항상
+캘린더 메타데이터를 새로 가져오세요. 410을 일으킨
 원인 자체가 access role을 바꾼 ACL 변경일 수 있으니까요.
+
+## 참고
+
+- [Synchronize resources efficiently — Google Calendar](https://developers.google.com/workspace/calendar/api/guides/sync)

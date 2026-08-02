@@ -1,8 +1,11 @@
 ---
 title: Partial Access Recurring Events
-description: 'When users are invited to recurring events from the middle of a series, Google'
+description: >-
+  Google Calendar hides the parent of a recurring series from users who were
+  invited partway through, and orphan cleanup that reads a missing parent as a
+  deleted series will delete live events.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - google-calendar
@@ -13,183 +16,173 @@ draft: false
 lang: en
 expanded: true
 references:
+  - url: 'https://developers.google.com/workspace/calendar/api/guides/recurringevents'
+    title: Recurring events — Google Calendar API
+    type: official
   - url: 'https://developers.google.com/workspace/calendar/api/concepts/sharing'
     title: Calendar sharing — Google Calendar
     type: official
 source_content_hash: b87482d11f0f9c804e693c9df74afa3e4ccf4bc2bca0d05a412fc7d33877f1ca
 ---
 
-I watched a user lose a week of calendar events because our sync logic assumed something that turns out to be wrong: if a recurring event has no parent, it must be an orphan. That assumption holds most of the time. But when Google Calendar silently filters out events a user does not have permission to see, "no parent" does not mean "orphan." It means the user was invited to the series partway through.
+Orphan cleanup in a calendar sync I worked on rested on an assumption that looks safe: if a recurring event instance has no parent, the series is gone and the instance is garbage. That holds most of the time. It stops holding when Google Calendar filters out the parent because the user has no permission to see it — and then the cleanup deletes events the user still has on their calendar.
 
 ---
 
 ## The Scenario
 
-Picture this. A recurring event runs from day 1 through day 10. User A owns it. On day 5, User A invites User B to the remaining occurrences. When User B syncs their calendar, here is what happens:
+Picture a recurring event that runs from day 1 through day 10. User A owns it. On day 5, User A invites User B to the remaining occurrences. When User B's calendar syncs:
 
-1. The Google Calendar API returns instances for days 5 through 10
-2. The API **filters out the parent event** -- User B has no access to it
-3. Each returned instance still has a `recurringEventId` pointing to the parent
+1. The API returns the instances for days 5 through 10
+2. It does **not** return the parent recurring event — User B has no access to it
+3. Each returned instance still carries a `recurringEventId` pointing at that parent
 
-That `recurringEventId` reference is a dangling pointer. The parent event is not missing from Google's side; it exists, but User B cannot see it. The API does not return an error. It does not set a "partial access" flag. It silently omits the parent and gives you the instances as if everything is normal.
+Both halves of that are documented. Instances carry `recurringEventId`, described in the API guide as "the ID of the parent recurring event this instance belongs to." And the caller's access level changes what `events.list()` returns at all:
 
-> "When a user who has free/busy permissions queries events.list(), it behaves as if singleEvent is true." -- Google Calendar API Documentation
+> "When a user who has free/busy permissions queries events.list(), it behaves as if singleEvent is true." — [Recurring events, Google Calendar API](https://developers.google.com/workspace/calendar/api/guides/recurringevents)
+
+The same page spells out what that mode means: with `singleEvents` behavior, all individual instances appear in the result and the underlying recurring events do not.
+
+So from the syncing side, `recurringEventId` is a dangling pointer. The parent is not missing on Google's side — it exists, this user just cannot see it. The API returns no error and sets no "partial access" flag. It omits the parent and hands you the instances as if everything were normal.
 
 ---
 
 ## The Bug
 
-Our orphan detection logic was straightforward and seemed correct:
+The snippets below use a small illustrative model: an `event` row with `parentId`, a `recurrence` rule, a business `status`, and the raw `googleEvent` payload it came from. Substitute whatever your own schema calls them.
+
+The orphan detection was straightforward and looked correct:
 
 ```typescript
-// BUG: Assumes missing parent = orphan
-if (!parentBlock && !skipOrphanDetection) {
-  orphansToDelete.push(block); // WRONG! Active event deleted!
+// BUG: a missing parent is treated as proof the series is gone
+if (!parent) {
+  orphans.push(event); // an active event, on its way to deletion
 }
 ```
 
-If a recurring event instance had no parent in our database, we treated it as an orphan and deleted it. For most cases -- a series gets deleted, instances linger -- that is the right behavior.
+If a recurring instance had no parent row in the local database, it was an orphan and it went. For the common case — a series gets deleted, its instances linger — that is the right behavior.
 
-But for partial-access users, this logic deleted legitimate events. User B's days 5 through 10 had no parent in our system because we could not sync the parent. The cleanup routine swept through and removed them all.
+For partial-access users it was destructive. User B's days 5 through 10 had no parent row, because the parent could never be synced in the first place. The cleanup pass swept through and removed all of them.
 
 ---
 
 ## The Fix: Check Status Before Deleting
 
-The key insight is that orphans and partial-access instances differ in one observable way: their status. A cancelled instance with no parent is an orphan. An active instance with no parent is likely partial access.
+Orphans and partial-access instances differ in one observable way: status. A cancelled instance with no parent is an orphan. An active instance with no parent is far more likely to be partial access.
+
+It helps to keep two kinds of "gone" apart here. One is the business status — the occurrence was cancelled, by the organizer or by the user. The other is the row's own storage lifecycle, the soft-delete timestamp that says this record is scheduled for cleanup. A cancelled occurrence usually still needs its row, because the cancellation itself has to keep syncing. Deletion logic has to read the business status rather than infer intent from whether a row exists.
 
 ```typescript
-// CORRECT: Check status before marking orphan
-if (!parentBlock && !skipOrphanDetection) {
-  if (block.itemStatus === BlockStatus.Deleted) {
-    // Truly cancelled, no parent = orphan
-    orphansToDelete.push(block);
+// Check the business status before calling a parentless row an orphan
+if (!parent) {
+  if (event.status === 'cancelled') {
+    // cancelled and unparented: a real orphan
+    orphans.push(event);
   } else {
-    // Active block, no parent = likely partial access
-    // Preserve as standalone event
-    Sentry.captureMessage("Partial access detected", {
-      extra: { blockId: block.id }
-    });
+    // active and unparented: likely partial access, keep it standalone
+    keepAsStandalone(event);
+    logger.warn('partial access instance preserved', { eventId: event.id });
   }
 }
 ```
 
-The fix adds one condition. Instead of deleting every parentless instance, we check whether the instance is still active. If it is active, we preserve it and log it to Sentry so we can monitor how often this occurs.
+The fix adds one condition. Instead of deleting every parentless instance, it checks whether the instance is still active, preserves it if so, and logs the case — so how often this happens is a number rather than a guess.
 
 ---
 
 ## Understanding the "Effective Parent" Pattern
 
-Partial access creates an interesting data structure in your system. The user cannot see the true root event, but they still have a recurring series with its own hierarchy.
+Partial access produces a specific shape in your data. The user cannot see the true series master, but they still hold a recurring series with its own small hierarchy.
+
+Two terms for the rest of this post. A **series master** is the row that carries the recurrence rule. An **exception instance** is a single occurrence that was modified on its own — no recurrence rule of its own, pointing at its master.
 
 ```text
-True Root (days 1-4)  <-- User has NO access
-  | (originalId link MISSING)
-TA Block (days 5-10)  <-- originalId = null, but HAS recurrence
-  | (originalId = TA.id)
-T Block (day 7)       <-- originalId = TA.id
+true series master (days 1-10)   <-- filtered out: no permission
+  | parent link missing
+visible master (days 5-10)       <-- no parent, but carries the recurrence rule
+  | parent = visible master
+exception instance (day 7)       <-- one occurrence, modified on its own
 ```
 
-The TA block becomes what I call the "effective parent." It is not the original parent of the series, but it functions as one within the user's access scope. The T block (an exception instance, like a modified single occurrence on day 7) correctly points to the TA block, not to the true root.
+The visible master becomes what I think of as the effective parent. It is not the original master of the series, but it functions as one inside the user's access scope. The exception instance on day 7 correctly points at it rather than at the invisible true master.
 
-This pattern matters because most recurring event operations still work. The effective parent has the recurrence rule. It has the base event data. Children point to it.
+This pattern matters because most recurring-event operations still work. The effective parent holds the recurrence rule and the base event data, and children point at it.
 
 ### Operations That Work
 
-| Operation                | Status   | Why                               |
-| ------------------------ | -------- | --------------------------------- |
-| "This" (single instance) | Works | Creates T with originalId = TA.id |
-| "All" (all occurrences)  | Works | Updates TA + T children           |
-| Remove recurrence        | Works | Converts TA to single event       |
-| Delete                   | Works | Cleans up T children              |
+| Operation           | Status | Why                                                   |
+| ------------------- | ------ | ----------------------------------------------------- |
+| "This occurrence"   | Works  | creates an exception instance under the visible master |
+| "All occurrences"   | Works  | updates the visible master and its exception instances |
+| Remove recurrence   | Works  | converts the visible master into a single event        |
+| Delete              | Works  | cleans up the exception instances under it             |
 
-### Operations That Need Blocking
+### The Operation That Needs Blocking
 
-| Operation      | Status  | Why                       |
-| -------------- | ------- | ------------------------- |
-| "ThisAndAfter" | Broken  | Needs true root's DTSTART |
+| Operation            | Status | Why                                    |
+| -------------------- | ------ | -------------------------------------- |
+| "This and following" | Broken | needs the true master's original start |
 
-"ThisAndAfter" is the one operation that breaks. It needs to split the series at a point, which requires knowing the original start date from the true root. Since the user cannot access the true root, this operation produces incorrect results.
+"This and following" splits a series at a chosen occurrence, which requires the original start date held by the true master. The user cannot read that record, so the split lands in the wrong place and the result is quietly wrong.
 
-The solution is to block it explicitly:
+The honest option is to block it:
 
 ```typescript
-// Block ThisAndAfter for partial access
-if (isPartialAccessBlock(requestedBlock)) {
-  throw new ConflictException(
-    "ThisAndAfter not supported for limited access events. " +
-      'Use "This occurrence" or "All occurrences" instead.'
+if (isPartialAccessMaster(event)) {
+  throw new ConflictError(
+    'This-and-following is not supported for a series you were added to partway through. ' +
+      'Use "this occurrence" or "all occurrences" instead.'
   );
 }
 ```
 
-A clear error message is better than silently corrupting data.
+A clear error message beats silently corrupting data.
 
 ---
 
-## Detection Utilities
+## Detecting the Two Shapes
 
-To handle partial access consistently across the codebase, I centralized the detection logic into two utility functions.
-
-### T Block Detection
-
-T blocks are exception instances in a recurring series -- a single occurrence that was modified independently. They have no recurrence rule of their own and point to a parent via `originalId`.
+Both branches above need to recognize these rows consistently, so it is worth having one predicate for each rather than a hand-rolled check at every call site.
 
 ```typescript
-function isTBlock(block: {
-  recurrence: string[] | null;
-  originalId: number | null;
-  googleEventData?: { recurringEventId?: string | null } | null;
-}): boolean {
-  // T block = no recurrence, has parent
-  if (block.recurrence !== null || block.originalId === null) {
-    return false;
-  }
+type SyncedEvent = {
+  id: string;
+  parentId: string | null;
+  recurrence: string[] | null; // RRULE lines; null on instances
+  status: 'confirmed' | 'cancelled';
+  googleEvent?: { recurringEventId?: string | null } | null;
+};
 
-  const recurringEventId = block.googleEventData?.recurringEventId;
-  if (!recurringEventId) return false;
+function isExceptionInstance(event: SyncedEvent): boolean {
+  // no recurrence rule of its own, and it hangs off a master that synced
+  if (event.recurrence !== null || event.parentId === null) return false;
+  return Boolean(event.googleEvent?.recurringEventId);
+}
 
-  // Pattern: base_YYYYMMDDTHHmmssZ or base_YYYYMMDD
-  return /^[A-Z0-9]{26}_(\d{8}T\d{6}Z|\d{8})$/.test(recurringEventId);
+function isPartialAccessMaster(event: SyncedEvent): boolean {
+  // no parent row, yet it carries a recurrence rule of its own
+  if (event.parentId !== null || !event.recurrence) return false;
+  // and it still references a parent that never arrived
+  return Boolean(event.googleEvent?.recurringEventId);
 }
 ```
 
-### Partial Access Block Detection
+There is a second, tempting signal I want to flag rather than recommend. In the data I worked with, the `recurringEventId` on a partial-access series ended in `_R` followed by a UTC timestamp, so a regex like `/_R\d{8}T\d{6}Z$/` matched every case I saw. I could not find that format documented anywhere in Google's Calendar API reference, and an undocumented ID shape is exactly the kind of thing that changes without a changelog entry.
 
-A partial-access TA block looks different from a normal TA block. It has no `originalId` (because the true root is invisible), but it does have a recurrence rule. The `recurringEventId` from Google follows a distinctive pattern.
-
-```typescript
-function isPartialAccessBlock(block: {
-  originalId: number | null;
-  recurrence: string[] | null;
-  googleEventData?: { recurringEventId?: string | null } | null;
-}): boolean {
-  // Partial access TA: no parent, but has recurrence
-  if (block.originalId !== null || !block.recurrence) {
-    return false;
-  }
-
-  const recurringEventId = block.googleEventData?.recurringEventId;
-  if (!recurringEventId) return false;
-
-  return /_R\d{8}T\d{6}Z$/.test(recurringEventId);
-}
-```
-
-The regex `/_R\d{8}T\d{6}Z$/` matches Google's specific naming convention for partial-access recurring event IDs. That trailing `_R` followed by a timestamp is the fingerprint.
+The structural test — no parent row, a recurrence rule present, and a `recurringEventId` that never resolved — is the part worth relying on. If the ID shape is useful to you, let it decide what gets logged, not what gets deleted.
 
 ---
 
 ## Takeaway
 
-Google Calendar's permission filtering is silent. When a user has limited access to a recurring series, the API omits events they cannot see without any indication that data is missing. If your sync logic equates "no parent" with "orphan," you will delete legitimate events for partial-access users.
+Google Calendar's permission filtering is silent. When a user has limited access to a recurring series, the API omits what they cannot see with no indication that anything is missing. If sync logic equates "no parent" with "orphan," it will delete legitimate events for those users.
 
-The fix is a one-line status check, but the design principle is broader: **absence of data is not the same as evidence of deletion.** Check the business state of an entity before removing it. Log the ambiguous cases so you can monitor them. And block operations that require data the user cannot access rather than letting them produce silently wrong results.
+The fix is a one-line status check, but the principle behind it is broader: **absence of data is not evidence of deletion.** Check the business state of an entity before removing it. Log the ambiguous cases so they become measurable. And block operations that need data the user cannot access, rather than letting them produce silently wrong results.
 
 Five lessons from this bug:
 
-1. **Absence of parent does not equal orphan** -- check business state (itemStatus) first
-2. **Google API permission filtering is silent** -- no error, no flag, just missing data
-3. **Status and deletion are different things** -- `itemStatus=Deleted` is not the same as `deletedAt`
-4. **Document edge cases in code** -- comments on why the status check exists prevent future regressions
-5. **Centralize detection logic** -- one function for T block detection, one for partial access, used everywhere
+1. **A missing parent is not proof of an orphan** — check the record's business status first
+2. **Permission filtering is silent** — no error, no flag, just fewer rows than you expected
+3. **A cancelled occurrence and a row scheduled for cleanup are different states** — one is business status, the other is storage lifecycle; deletion logic should read the former
+4. **Leave the reason in the code** — a comment on why the status check exists is what stops the next person from simplifying it back into the bug
+5. **Centralize the detection** — one predicate for exception instances, one for partial-access masters, used everywhere

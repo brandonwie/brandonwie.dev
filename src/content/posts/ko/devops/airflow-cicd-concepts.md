@@ -2,19 +2,18 @@
 title: Airflow CI/CD 개념
 description: 주방 비유를 통해 Airflow 배포와 CI/CD 개념을 이해해 봐요.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
   - cicd
   - docker
-  - work
 category: devops
 draft: false
 lang: ko
 source_lang: en
 source_slug: airflow-cicd-concepts
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-03-04'
 references:
   - url: >-
@@ -35,10 +34,10 @@ DAG(Directed Acyclic Graph)는 레시피 카드와 같아요.
 
 ```python
 # DAG는 그저 지시사항이에요. 실제 작업이 아니에요
-with DAG('amplitude_pipeline', schedule='@daily'):
-    task1 = "Fetch data from Amplitude"      # Step 1
-    task2 = "Transform the data"              # Step 2
-    task3 = "Save to database"                # Step 3
+with DAG('analytics_pipeline', schedule='@daily'):
+    task1 = "Fetch events from the analytics API"  # Step 1
+    task2 = "Transform the data"                   # Step 2
+    task3 = "Save to database"                     # Step 3
     task1 >> task2 >> task3   # 이 순서대로 실행
 ```
 
@@ -54,14 +53,16 @@ ETL(Extract, Transform, Load)은 실제 작업을 수행하는 코드에요.
 
 ## Hot-Reload vs 재시작
 
-### 재시작이 필요 없는 경우 (90%)
+먼저 짚고 갈 게 있어요. 아래 내용은 전부 self-managed Airflow 기준이에요. scheduler, webserver, worker가 한 호스트 위에서 컨테이너로 돌고, DAG 폴더는 공유 네트워크 스토리지에서 마운트하고, ETL 이미지는 container registry에서 pull해 오는 구성이에요. MWAA나 Cloud Composer, Astronomer 같은 managed 서비스는 배포 방식이 달라요. DAG를 버킷에 올리거나 플랫폼이 알아서 동기화하고, 재시작도 플랫폼이 관리해요. 그대로 통하는 건 hot-reload와 리빌드를 가르는 경계고, 안 통하는 건 파일을 전달하는 방법이에요.
+
+### 재시작이 필요 없는 경우 (대부분의 변경)
 
 | 변경 사항                   | 동작                              |
 | --------------------------- | --------------------------------- |
 | `dags/my_dag.py`(신규/수정) | 스케줄러가 ~30초 내 자동 감지     |
-| ETL 코드(arch-etl)          | 다음 DAG 실행 시 새 컨테이너 사용 |
+| ETL 코드(`etl-repo`)        | 다음 DAG 실행 시 새 컨테이너 사용 |
 
-### 재시작이 필요한 경우 (10%)
+### 재시작이 필요한 경우 (이미지 레벨 변경)
 
 | 변경 사항        | 재시작 이유                             |
 | ---------------- | --------------------------------------- |
@@ -72,6 +73,8 @@ ETL(Extract, Transform, Load)은 실제 작업을 수행하는 코드에요.
 
 ## 배포 시나리오
 
+위에서 설명한 self-managed 구성 기준이에요.
+
 | 시나리오           | 조치                   | 재시작? | 다운타임    |
 | ------------------ | ---------------------- | ------- | ----------- |
 | DAG 변경           | EC2에서 git pull       | 아니오  | 없음(~30초) |
@@ -80,12 +83,12 @@ ETL(Extract, Transform, Load)은 실제 작업을 수행하는 코드에요.
 
 ## 세 저장소 패턴
 
-| 저장소          | 포함 내용      | 배포 방법            | 재시작?                      |
-| --------------- | -------------- | -------------------- | ---------------------------- |
-| `arch-airflow`  | DAG 파일       | EFS로 git pull       | 아니오                       |
-| `arch-airflow`  | Airflow 이미지 | ECR + docker restart | 예(드묾)                     |
-| `arch-etl`      | ETL 작업 코드  | ECR push             | 아니오(자동으로 latest pull) |
-| `backend-infra` | 인프라         | Terraform(1회)       | 해당 없음                    |
+| 저장소       | 포함 내용      | 배포 방법            | 재시작?                      |
+| ------------ | -------------- | -------------------- | ---------------------------- |
+| `dags-repo`  | DAG 파일       | EFS로 git pull       | 아니오                       |
+| `dags-repo`  | Airflow 이미지 | ECR + docker restart | 예(드묾)                     |
+| `etl-repo`   | ETL 작업 코드  | ECR push             | 아니오(자동으로 latest pull) |
+| `infra-repo` | 인프라         | Terraform(1회)       | 해당 없음                    |
 
 ## 핵심 정리
 
@@ -93,4 +96,4 @@ ETL(Extract, Transform, Load)은 실제 작업을 수행하는 코드에요.
 2. **DAG는 데이터를 건드리지 않아요** - 워커에게 "이 컨테이너를 지금 실행해"라고 지시할 뿐
 3. **대부분의 배포는 재시작이 필요 없어요** - DAG와 ETL은 hot-reload돼요
 4. **Airflow 이미지 변경 시에만 재시작** (버전 업그레이드, 새 패키지)
-5. **arch-etl 컨테이너는 일회성** - 실행하고, 작업하고, 종료되고, 삭제돼요
+5. **ETL 컨테이너는 일회성** - 실행하고, 작업하고, 종료되고, 삭제돼요

@@ -2,7 +2,7 @@
 title: FastAPI Non-blocking Startup Dependencies
 description: 'FastAPI lifespan code runs before the application accepts requests. If startup awaits an optional dependency such as Kafka, Cloud Run cold starts can fail health checks and E2E probes even when the API would happily serve routes without it.'
 date: 2026-04-29T00:00:00.000Z
-updated: 2026-05-06
+updated: '2026-08-02'
 tags:
   - backend
   - python
@@ -24,7 +24,7 @@ references:
 source_content_hash: de981162f6c789fe8af46da7f97fe49f1ac1df25cf901e5c092c5f352bd83e71
 ---
 
-FastAPI lifespan code runs before the application starts accepting requests. If startup awaits an optional dependency such as Kafka, Cloud Run cold starts can fail user-facing health checks and E2E probes even when the API could safely serve routes without that dependency. The misleading signal: a Kafka producer failure during startup looks like a service startup failure, even though the actual contract was narrower — note creation should not wait for Kafka when events are best-effort observability.
+FastAPI lifespan code runs before the application starts accepting requests. If startup awaits an optional dependency such as Kafka, Cloud Run cold starts can fail user-facing health checks and E2E probes even when the API could safely serve routes without that dependency. The misleading signal: a Kafka producer failure during startup looks like a service startup failure, even though the actual contract was narrower — the core write path should not wait for Kafka when the events it emits are best-effort observability.
 
 The transferable lesson is the distinction between dependencies that gate correctness (database, auth) and dependencies that gate observability (event bus, audit fan-out, cache warmer). The first must block startup. The second must not.
 
@@ -33,12 +33,21 @@ The transferable lesson is the distinction between dependencies that gate correc
 Start optional producers as background tasks during lifespan and keep the task handle on `app.state` for shutdown cleanup. The request path treats event publishing as fire-and-forget, logging failures without failing the business operation.
 
 ```python
-app.state.kafka_init_task = asyncio.create_task(start_kafka_producer())
+from contextlib import asynccontextmanager, suppress
 
-with suppress(asyncio.CancelledError):
-    app.state.kafka_init_task.cancel()
-    await app.state.kafka_init_task
-await stop_kafka_producer()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup: schedule the producer, do not await it
+    app.state.kafka_init_task = asyncio.create_task(start_kafka_producer())
+
+    yield  # the app accepts requests for the whole of this yield
+
+    # shutdown: init may still be in flight, so cancel before cleanup
+    with suppress(asyncio.CancelledError):
+        app.state.kafka_init_task.cancel()
+        await app.state.kafka_init_task
+    await stop_kafka_producer()
 ```
 
 Two things make this work. First, `asyncio.create_task` schedules the producer initialization without blocking the lifespan continuation — the app finishes coming up while the producer connects in the background. Second, the cancel-then-await shutdown sequence is needed because `stop_kafka_producer()` may also need to run cleanly, and we want to handle the case where init is still in flight when shutdown fires.

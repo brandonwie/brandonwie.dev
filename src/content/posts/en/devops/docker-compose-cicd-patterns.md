@@ -4,13 +4,12 @@ description: >-
   Patterns for using Docker Compose in CI/CD pipelines: separating dev and prod
   configurations, ECR integration, and deployment strategies.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-07-13'
+updated: '2026-08-02'
 expanded: true
 tags:
   - devops
   - docker
   - cicd
-  - work
 category: devops
 draft: false
 lang: en
@@ -21,7 +20,7 @@ references:
 source_content_hash: 76ec9fec63e38d6be42a31406b9e136f0ee6272bb3aa9fa2262c716fe6256be7
 ---
 
-Our CI/CD pipeline ran `docker-compose pull` and then `docker-compose up -d` on the production server. The logs showed success, but the container was running an old image built locally, not the fresh one we'd just pushed to ECR. The culprit was our `docker-compose.yml`: it used `build:` instead of `image:`, so `pull` silently did nothing.
+On an Airflow deployment I worked on, a pipeline ran `docker-compose pull` and then `docker-compose up -d` on the production host. Both commands exited clean, but the container came back on an old locally built image rather than the one just pushed to ECR. The cause sat in the Compose file: it used `build:` instead of `image:`, so `pull` had nothing to fetch and silently did nothing.
 
 This is one of those mistakes that wastes hours because everything _looks_ correct. This post covers the pattern that prevents it: separating your Docker Compose files into development (`build:`) and production (`image:`) configurations, along with CI/CD pipeline strategies for Airflow deployments on EC2.
 
@@ -39,7 +38,7 @@ services:
   webserver:
     build: # ← "Build locally"
       context: ..
-      dockerfile: master/Dockerfile
+      dockerfile: docker/Dockerfile
 ```
 
 ```bash
@@ -56,8 +55,11 @@ The fix is to maintain two separate Compose files. One for local development tha
 
 ```text
 project/
-├── docker-compose.yml       # Local development (build:)
-└── docker-compose.prod.yml  # Production (image:)
+├── dags/
+└── docker/
+    ├── Dockerfile
+    ├── docker-compose.yml       # Local development (build:)
+    └── docker-compose.prod.yml  # Production (image:)
 ```
 
 **Local Development** uses `build:` so you can iterate on Dockerfile changes without pushing to a registry:
@@ -68,7 +70,7 @@ services:
   webserver:
     build:
       context: ..
-      dockerfile: master/Dockerfile
+      dockerfile: docker/Dockerfile
 ```
 
 **Production** uses `image:` with an ECR registry URL. The `${ECR_REGISTRY}` variable is injected by CI/CD at deploy time:
@@ -77,7 +79,7 @@ services:
 # docker-compose.prod.yml
 services:
   webserver:
-    image: ${ECR_REGISTRY}/airflow-master:latest # ← Pull from ECR
+    image: ${ECR_REGISTRY}/my-airflow-webserver:latest # ← Pull from ECR
 ```
 
 With the Compose files separated, the CI/CD pipeline can use the right file for each environment. The full flow for an Airflow deployment supports both DAG-only changes (fast, no restart) and image changes (full rebuild and deploy).
@@ -85,28 +87,28 @@ With the Compose files separated, the CI/CD pipeline can use the right file for 
 ## CI/CD pipeline flow
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    GitHub Actions (deploy.yml)                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. detect-changes                                               │
-│     └─ Detect if dags/ or master/, worker/ changed              │
-│                                                                  │
-│  2a. sync-dags (DAG only changes)                               │
-│      └─ EC2: git pull                                           │
-│      └─ No restart, ~30s reflection                             │
-│                                                                  │
-│  2b. build-images (image changes)                               │
-│      └─ GitHub Actions: Docker build                            │
-│      └─ Push to ECR (airflow-master:latest, airflow-worker:latest)│
-│                                                                  │
-│  3. deploy-ec2 (image changes)                                  │
-│      ├─ Secrets Manager → .env file                             │
-│      ├─ Add ECR_REGISTRY to .env                                │
-│      ├─ docker-compose.prod.yml pull  ← KEY CHANGE              │
-│      └─ docker-compose.prod.yml up -d                           │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                  GitHub Actions (deploy.yml)                   │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  1. detect-changes                                             │
+│     └─ Detect whether dags/ or docker/ changed                 │
+│                                                                │
+│  2a. sync-dags (DAG-only changes)                              │
+│      └─ EC2: git pull                                          │
+│      └─ No restart, ~30s reflection                            │
+│                                                                │
+│  2b. build-images (image changes)                              │
+│      └─ GitHub Actions: docker build                           │
+│      └─ Push to ECR (webserver + worker images)                │
+│                                                                │
+│  3. deploy-ec2 (image changes)                                 │
+│      ├─ Secrets Manager → .env file                            │
+│      ├─ Add ECR_REGISTRY to .env                               │
+│      ├─ docker-compose.prod.yml pull  ← KEY CHANGE             │
+│      └─ docker-compose.prod.yml up -d                          │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ## ECR_REGISTRY environment variable
@@ -115,7 +117,7 @@ The `${ECR_REGISTRY}` variable in the production Compose file needs to resolve t
 
 ```bash
 # In deploy.yml
-echo "ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> master/.env
+echo "ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> docker/.env
 ```
 
 Then docker-compose.prod.yml uses it:
@@ -123,12 +125,12 @@ Then docker-compose.prod.yml uses it:
 ```yaml
 services:
   webserver:
-    image: ${ECR_REGISTRY}/airflow-master:latest
+    image: ${ECR_REGISTRY}/my-airflow-webserver:latest
 ```
 
 ## Trigger strategy
 
-One decision for production deployments is whether they should run automatically on every push or require manual approval. We started with automatic triggers and learned the hard way why manual is safer.
+One decision for production deployments is whether they should run automatically on every push or require manual approval. I started with automatic triggers on every push to main and later moved to manual only.
 
 ### Before: auto + manual
 
@@ -169,26 +171,18 @@ The production server needs environment variables (database credentials, API key
 ```bash
 # In deploy.yml
 aws secretsmanager get-secret-value \
-  --secret-id prod/airflow/master \
+  --secret-id <your-secret-id> \
   --query SecretString --output text | \
-  jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > master/.env
+  jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > docker/.env
 ```
 
-### Required secrets
+The secret ID is whatever naming convention your account already uses. The shape of the command doesn't change with it.
 
-**Master:**
+### What goes in the bundle
 
-```text
-prod/airflow/master:
-├── POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB
-├── POSTGRES_USER, POSTGRES_PASSWORD
-├── REDIS_HOST, REDIS_PORT
-├── AIRFLOW_ADMIN_USER, AIRFLOW_ADMIN_PASSWORD, AIRFLOW_ADMIN_EMAIL
-├── AIRFLOW_SECRET_KEY
-├── AWS_DEFAULT_REGION
-├── AWS_ACCOUNT_ID          ← For DAG ECR image paths
-└── GITHUB_PAT              ← For git pull
-```
+For an Airflow stack the secret holds roughly five categories of value: the metadata database connection (host, port, database, user, password), the Redis connection used as the Celery broker, the Airflow admin account plus the webserver secret key, the AWS region and account ID (the account ID is what lets DAGs construct ECR image paths), and a git token so the server can pull DAG changes on its own.
+
+Keeping them in one bundle matters more than the exact key names: one `get-secret-value` call produces the entire `.env`, so there's no partial-write state where the container starts with half its configuration.
 
 ## Deployment scenarios
 
@@ -219,7 +213,7 @@ Image changes require the full pipeline: build a new Docker image, push it to EC
 
 ```bash
 # 1. Push code
-git add master/Dockerfile requirements.txt
+git add docker/Dockerfile requirements.txt
 git commit -m "feat: add new dependency"
 git push origin main
 
@@ -242,19 +236,19 @@ When a deployment goes wrong, you need to get back to a known-good state fast. T
 For image-related issues, pin the Compose file to a specific image tag (git SHA) instead of `:latest`:
 
 ```bash
-ssh airflow-master
-cd /opt/airflow
+ssh <deploy-host>
+cd <deploy-dir>
 
 # Edit docker-compose.prod.yml: :latest → :abc123 (specific commit SHA)
-docker-compose -f master/docker-compose.prod.yml pull
-docker-compose -f master/docker-compose.prod.yml up -d
+docker-compose -f docker/docker-compose.prod.yml pull
+docker-compose -f docker/docker-compose.prod.yml up -d
 ```
 
 ### DAG rollback
 
 ```bash
-ssh airflow-master
-cd /opt/airflow
+ssh <deploy-host>
+cd <deploy-dir>
 
 # Rollback specific files
 git checkout <commit-sha> -- dags/
@@ -272,9 +266,9 @@ git reset --hard <commit-sha>
 
 ## CI/CD gotchas
 
-One lesson learned the hard way: floating action tags break builds silently. We used `cloudflare/wrangler-action@v3` in a GitHub Actions workflow, and one day builds started failing with "bun not found." The action had changed its default `packageManager` from npm to bun, and since `ubuntu-latest` doesn't ship with bun, the action failed immediately.
+Floating action tags break builds silently. I was using `cloudflare/wrangler-action@v3` in a GitHub Actions workflow, and in March 2026 builds started failing with "bun not found." The action had changed its default `packageManager` from npm to bun, and since `ubuntu-latest` doesn't ship with bun, the step failed immediately. (That default may well have moved again since; the point is the tag moved, not that this specific default is still wrong.)
 
-The fix was to pin `packageManager: npm` explicitly. The broader rule: always pin action versions or explicitly set all configurable defaults. A `@v3` tag can shift under your feet without a single line of your code changing.
+The fix was to pin `packageManager: npm` explicitly. The broader rule: pin action versions, or explicitly set every configurable default you depend on. A `@v3` tag can shift under your feet without a single line of your code changing.
 
 A second gotcha costs far more than a failed build: it threatens data. A Docker Compose project name stays stable only within one Compose major version. Compose v1 derives the project name from the current working directory's basename; v2 derives it from the compose file's directory. Swap the Compose binary from v1 to v2 on the host (an innocent-looking upgrade) and the project name flips underneath you. Three things break, in ascending order of pain. `docker-compose down` finds nothing under the new name, so the old stack keeps running. `docker-compose up -d` collides on any explicit `container_name`. And the worst case: a named volume rebinds to a brand-new empty `<newproject>_<volume>` instead of the live one, handing your database a fresh empty disk.
 

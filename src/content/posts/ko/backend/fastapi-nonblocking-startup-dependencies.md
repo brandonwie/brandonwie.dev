@@ -2,7 +2,7 @@
 title: FastAPI에서 startup dependency를 non-blocking으로 만들기
 description: 'FastAPI의 lifespan code는 application이 request를 받기 전에 실행돼요. startup이 Kafka 같은 optional dependency를 await하면, 그 dependency 없이도 안전하게 route를 serve할 수 있는데도 Cloud Run cold start가 health check + E2E probe를 실패시킬 수 있어요.'
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-05-06'
+updated: '2026-08-02'
 tags:
   - backend
   - python
@@ -15,11 +15,11 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: fastapi-nonblocking-startup-dependencies
-source_updated: 2026-05-06T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-05-06'
 ---
 
-FastAPI의 lifespan은 앱이 요청을 받기 전에 실행돼요. 그래서 startup이 Kafka 같은 optional dependency를 await하면, 그 dependency 없이도 라우트를 안전하게 처리할 수 있는데도 Cloud Run cold start에서 health check와 E2E probe가 실패하기도 해요. 헷갈리는 부분은 신호 자체예요. Kafka producer 실패가 마치 서비스 startup 실패처럼 보이지만, 실제 계약은 더 좁아요 — 노트 생성은 이벤트가 best-effort 관측용일 뿐이라면 Kafka를 기다리면 안 돼요.
+FastAPI의 lifespan은 앱이 요청을 받기 전에 실행돼요. 그래서 startup이 Kafka 같은 optional dependency를 await하면, 그 dependency 없이도 라우트를 안전하게 처리할 수 있는데도 Cloud Run cold start에서 health check와 E2E probe가 실패하기도 해요. 헷갈리는 부분은 신호 자체예요. Kafka producer 실패가 마치 서비스 startup 실패처럼 보이지만, 실제 계약은 더 좁아요 — 핵심 쓰기 경로는, 거기서 발행하는 이벤트가 best-effort 관측용일 뿐이라면 Kafka를 기다리면 안 돼요.
 
 여기서 얻을 수 있는 교훈은 정합성을 좌우하는 dependency(database, auth)와 관측성을 좌우하는 dependency(event bus, audit fan-out, cache warmer)를 구분하는 거예요. 앞쪽은 startup을 막아야 해요. 뒤쪽은 절대 막으면 안 되고요.
 
@@ -28,12 +28,21 @@ FastAPI의 lifespan은 앱이 요청을 받기 전에 실행돼요. 그래서 st
 optional producer는 lifespan 동안 background task로 띄우고, task handle은 shutdown 정리를 위해 `app.state`에 보관하세요. 요청 경로는 이벤트 발행을 fire-and-forget으로 처리하고, 실패는 비즈니스 작업을 실패시키지 않으면서 로그만 남겨요.
 
 ```python
-app.state.kafka_init_task = asyncio.create_task(start_kafka_producer())
+from contextlib import asynccontextmanager, suppress
 
-with suppress(asyncio.CancelledError):
-    app.state.kafka_init_task.cancel()
-    await app.state.kafka_init_task
-await stop_kafka_producer()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup: producer를 예약만 하고 await하지 않아요
+    app.state.kafka_init_task = asyncio.create_task(start_kafka_producer())
+
+    yield  # 이 yield 구간 동안 앱이 요청을 받아요
+
+    # shutdown: 초기화가 아직 진행 중일 수 있으니 취소 후 정리해요
+    with suppress(asyncio.CancelledError):
+        app.state.kafka_init_task.cancel()
+        await app.state.kafka_init_task
+    await stop_kafka_producer()
 ```
 
 이게 동작하는 이유는 두 가지예요. 첫째, `asyncio.create_task`는 producer 초기화를 예약만 하고 lifespan 진행을 막지 않아요 — producer가 백그라운드에서 연결되는 동안 앱은 올라오는 절차를 마저 끝내요. 둘째, cancel 후 await하는 shutdown 순서가 필요한 이유는 `stop_kafka_producer()`도 깔끔하게 돌아가야 할 수 있고, shutdown이 떨어질 때 초기화가 아직 진행 중인 경우도 다뤄야 하기 때문이에요.

@@ -2,7 +2,7 @@
 title: State-invariant flag drift — recovery via reconciliation pass
 description: 'A boolean lifecycle flag kept getting stuck on entries that could never reach the code path that clears it. Symptom-only fixes recurred. The durable fix was a third workflow that enforces the invariant the flag implies, independent of how the flag got set.'
 date: 2026-04-25T00:00:00.000Z
-updated: 2026-06-07
+updated: '2026-08-02'
 tags:
   - devops
   - sync
@@ -15,10 +15,8 @@ draft: false
 lang: en
 expanded: true
 references:
-  - url: 'https://martinfowler.com/eaaCatalog/identityField.html'
-    title: >-
-      Patterns of Enterprise Application Architecture — state lifecycle
-      discipline
+  - url: 'https://kubernetes.io/docs/concepts/architecture/controller/'
+    title: 'Kubernetes — Controllers (reconciliation control loops)'
     type: authoritative
 source_content_hash: a89d45272b059b35f99b910439bfe9479694c1b2fbbedb77a30f85a96a219d1f
 ---
@@ -37,6 +35,8 @@ The bug is structural: the setter and clearer evolved on different schedules, an
 
 The durable fix is a third workflow whose only job is to enforce the **state invariant** that the flag implies, independently of how the flag got set. This is defense-in-depth at the data layer, not the workflow layer.
 
+The shape is the one Kubernetes controllers use: a loop that watches current state and moves it toward the desired state, without asking how the current state came to be. That indifference to provenance is the whole point — it is what makes the pass immune to a setter it has never heard of.
+
 For `needs_resync: true` the invariant is:
 
 > "Re-sync" is meaningful only if there was a prior sync. Therefore the flag implies `published_at` is non-null. If `published_at` is null, the flag is logically impossible and can be cleared without consulting the setter.
@@ -53,7 +53,7 @@ The pass is opt-in. It does not run during normal sync — it is operator-initia
 
 Three concrete things tripped the first draft — and a fourth surfaced weeks later, during a routine audit:
 
-- **YAML round-trip serialization corrupted unquoted strings.** The first draft used `stringifyYaml(frontmatter)` to write back. Unquoted strings containing `#` (for example, `context: PR #103 Round 1...`) got truncated at the `#` because YAML treats it as a comment marker. The lesson is documented separately in `general/yaml-serializer-unquoted-hash-corruption.md`.
+- **YAML round-trip serialization corrupted unquoted strings.** The first draft used `stringifyYaml(frontmatter)` to write back. Unquoted strings containing `#` (for example, `context: PR #103 Round 1...`) got truncated at the `#`, because YAML reads an unquoted `#` as the start of a comment. A value like that only survives a round-trip if the writer quotes it — so a serializer that decides quoting on its own is one you have to verify field by field.
 - **Surgical regex on the frontmatter substring beat YAML round-trip.** Replacing the round-trip with a scoped regex that flips a single key reduced diff size from 348 lines to 12 lines (1 per file), and body content stayed byte-identical regardless of unquoted special characters. The general principle: when the field set is fixed and small, point edits avoid the round-trip blast radius entirely.
 - **`replace_all: true` matched one of two near-identical write blocks.** The two blocks sat at different nesting depths — 3 tabs vs 4 tabs — and indent-sensitive matching caught one site while silently missing the other. The defense is mechanical: always grep after `replace_all` to verify the expected match count.
 - **Counting the drift by grepping the flag over-counted.** Running `grep -rl "needs_resync: true"` across the knowledge base flagged five files — but four were entries that _describe_ the flag (this post among them), so the string matched their body prose, not any real frontmatter field. Only one was a genuine stuck flag. In a knowledge base that documents its own metadata, a raw string grep can't separate a live field from a sentence about that field; scoping the scan to the frontmatter block — for example `awk '/^---$/{c++; next} c==1'` — before counting is the fix.
@@ -74,4 +74,4 @@ A stuck-state flag means the setter and clearer have diverged. The fastest durab
 
 ## References
 
-- [Patterns of Enterprise Application Architecture — state lifecycle discipline](https://martinfowler.com/eaaCatalog/identityField.html)
+- [Kubernetes — Controllers (reconciliation control loops)](https://kubernetes.io/docs/concepts/architecture/controller/)

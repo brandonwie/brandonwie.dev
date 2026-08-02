@@ -21,6 +21,18 @@ references:
   - url: "https://docs.bullmq.io/patterns/stop-retrying-jobs"
     title: Stop retrying jobs (UnrecoverableError)
     type: official
+  - url: "https://docs.bullmq.io/guide/rate-limiting"
+    title: Rate limiting (manual rate-limit for 429 responses)
+    type: official
+  - url: "https://docs.bullmq.io/guide/parallelism-and-concurrency"
+    title: Parallelism and Concurrency
+    type: official
+  - url: "https://docs.bullmq.io/patterns/process-step-jobs"
+    title: Process Step Jobs (moveToDelayed + DelayedError)
+    type: official
+  - url: "https://github.com/taskforcesh/bullmq/blob/master/src/classes/errors/delayed-error.ts"
+    title: bullmq/src/classes/errors/delayed-error.ts
+    type: official
   - url: "https://docs.nestjs.com/techniques/queues"
     title: queues
     type: official
@@ -296,6 +308,12 @@ export class QueueProcessor extends WorkerHost {
   }
 }
 ```
+
+The BullMQ docs are blunt about what this setting buys you: `concurrency`
+"exploits the NodeJS event loop," so it raises throughput for IO-heavy jobs and
+*lowers* it for CPU-heavy ones. The docs' second lever is the one that gives
+real parallelism -- running several workers, on more cores or more machines
+([Parallelism and Concurrency](https://docs.bullmq.io/guide/parallelism-and-concurrency)).
 
 ---
 
@@ -609,22 +627,49 @@ When an API returns `429 Too Many Requests`, it often includes a `Retry-After`
 header telling you exactly how long to wait. Ignoring this header and using your
 own fixed backoff is wasteful -- you either wait too long or not long enough.
 
-BullMQ's `DelayedError` lets you reschedule the job with the exact delay the API
-requested:
+BullMQ documents this exact case under
+[manual rate limiting](https://docs.bullmq.io/guide/rate-limiting): call
+`worker.rateLimit(duration)` with the delay the API asked for, then throw
+`Worker.RateLimitError()`. The special error is the part that matters -- it is
+what tells BullMQ the job was rate limited rather than failed, so the job goes
+back to the waiting state instead of burning an attempt.
 
 ```typescript
-if (error.response?.status === 429) {
-  const retryAfter = parseInt(
-    error.response.headers["retry-after"] ?? "60",
-    10
-  );
-  throw new DelayedError(retryAfter * 1000);
-}
+const worker = new Worker(
+  "sync",
+  async (job) => {
+    try {
+      await callExternalApi(job.data);
+    } catch (error) {
+      if (error.response?.status !== 429) throw error;
+
+      const retryAfter = parseInt(
+        error.response.headers["retry-after"] ?? "60",
+        10
+      );
+      await worker.rateLimit(retryAfter * 1000);
+      throw Worker.RateLimitError();
+    }
+  },
+  // limiter.max must be set here, or BullMQ skips the rate-limit check
+  { connection, limiter: { max: 100, duration: 60000 } }
+);
 ```
 
-This is different from a normal retry: `DelayedError` does not decrement the
-attempt counter. The job moves to the delayed set and re-enters the waiting list
-after the specified duration, preserving your retry budget for genuine failures.
+The rate limiter is queue-wide, so this pauses every worker on that queue.
+Usually that is what you want, because the limit belongs to the API key rather
+than to one job.
+
+To delay a single job instead, `DelayedError` is the tool -- and the order
+matters. The
+[documented sequence](https://docs.bullmq.io/patterns/process-step-jobs) is
+`await job.moveToDelayed(Date.now() + ms, token)` first, then
+`throw new DelayedError()` -- `token` is the processor function's second
+argument. The delay goes to `moveToDelayed`; the error only signals the worker
+that the job already moved. This is easy to get backwards:
+`new DelayedError(retryAfter * 1000)` compiles and reads plausibly, but
+[the constructor takes a message string](https://github.com/taskforcesh/bullmq/blob/master/src/classes/errors/delayed-error.ts),
+so the number lands in `error.message` and nothing is delayed at all.
 
 ---
 
@@ -632,7 +677,9 @@ after the specified duration, preserving your retry budget for genuine failures.
 
 1. **Redis is not just a cache** - It's a coordination system
 2. **Single-threaded Redis** = Atomic operations = No race conditions
-3. **Multi-process workers** = Parallel processing with safety
+3. **Worker concurrency is not parallelism** = A worker's `concurrency` setting
+   shares one event loop; real parallelism comes from running several worker
+   processes, which Redis keeps safe
 4. **Persistence** = Jobs survive crashes and restarts
 5. **Built-in patterns** = Retry, rate limit, deduplication, priority
 6. **Observability** = Know what's happening in your system
@@ -663,5 +710,9 @@ after the specified duration, preserving your retry budget for genuine failures.
 
 - [BullMQ Documentation](https://docs.bullmq.io/)
 - [BullMQ — Stop retrying jobs (`UnrecoverableError`)](https://docs.bullmq.io/patterns/stop-retrying-jobs)
+- [BullMQ — Rate limiting (manual rate-limit for `429` responses)](https://docs.bullmq.io/guide/rate-limiting)
+- [BullMQ — Parallelism and Concurrency](https://docs.bullmq.io/guide/parallelism-and-concurrency)
+- [BullMQ — Process Step Jobs (`moveToDelayed` + `DelayedError`)](https://docs.bullmq.io/patterns/process-step-jobs)
+- [BullMQ source — `delayed-error.ts`](https://github.com/taskforcesh/bullmq/blob/master/src/classes/errors/delayed-error.ts)
 - [NestJS Queues](https://docs.nestjs.com/techniques/queues)
 - [The Node.js Event Loop, Timers, and `process.nextTick()`](https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick)

@@ -1,8 +1,8 @@
 ---
 title: boto3 S3 put_object() Body Parameter Encoding
-description: An ETL pipeline that uploaded JSON manifest files to S3 was failing with a
+description: 'An ETL pipeline uploading JSON manifests to S3 failed parameter validation with an error that never mentions encoding — the fix is one .encode("utf-8") call.'
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - aws
@@ -21,7 +21,7 @@ source_content_hash: 27bf5ca16ca0554a562034c8e1ce516280ebc6d3a5e9fc78a1019c0ed36
 expanded: true
 ---
 
-Our ETL pipeline had a bug that GitHub Copilot caught during a PR review, not our test suite. The `put_object()` call that uploaded JSON manifests to S3 was passing a Python string where boto3 expected bytes. The error message — "Invalid type for parameter Body" — never mentions encoding, making the fix non-obvious if you don't already know the `str` vs `bytes` distinction in Python 3.
+I hit this in an ETL pipeline that uploaded JSON manifests to S3: the `put_object()` call was passing a Python string where boto3 expects bytes, and GitHub Copilot flagged it in a pull request review before any test did. The error message — "Invalid type for parameter Body" — never mentions encoding, making the fix non-obvious if you don't already know the `str` vs `bytes` distinction in Python 3.
 
 ## The Problem
 
@@ -59,7 +59,7 @@ valid types: <class 'bytes'>, <class 'bytearray'>, file-like object
 
 **Many online examples skip the encode step.** Especially older ones. The bug gets silently introduced when copying example code that worked in a different Python version or context.
 
-**Tests may not catch it.** In our case, the `put_object` call was in a code path that only ran during actual S3 uploads. Local tests mocked the S3 client, so the parameter validation never triggered until the code hit a real S3 endpoint.
+**Tests may not catch it.** In my case, the `put_object` call sat in a code path that only ran during real S3 uploads. Local tests mocked the S3 client, so parameter validation never fired until the code reached a real S3 endpoint.
 
 ## The Fix
 

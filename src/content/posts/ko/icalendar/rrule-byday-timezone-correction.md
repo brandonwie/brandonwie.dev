@@ -2,7 +2,7 @@
 title: rrule BYDAY 타임존 보정
 description: rrule JavaScript 라이브러리가 BYDAY 요일을 이벤트 타임존이 아닌 UTC로 해석하는 문제와 해결 방법을 정리했어요.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - rrule
@@ -13,7 +13,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: rrule-byday-timezone-correction
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 references:
   - url: 'https://github.com/jkbrzt/rrule/issues/556'
@@ -79,7 +79,7 @@ rrule 라이브러리는 `tzid` 파라미터를 받아요. 이걸로 문제가 �
 ```text
 1. BYDAY 규칙에 대해 rrule 기간을 +/-1일 확장 (타임존 경계 결과 포착)
 2. UTC dtstart로 결과 생성 (tzid 없이)
-3. 일 오프셋 계산: blockTimezone.date() - UTC.date()
+3. 일 오프셋 계산: eventTimezone.date() - UTC.date()
 4. 모든 결과를 일 오프셋의 역방향으로 이동
 5. 필터링:
    a. 이벤트 타임존의 요일이 BYDAY 값과 일치
@@ -94,19 +94,20 @@ rrule 라이브러리는 `tzid` 파라미터를 받아요. 이걸로 문제가 �
 
 핵심 부분이에요. 일 오프셋은 로컬 날짜와 UTC 날짜가 며칠 차이 나는지 알려줘요.
 
+아래 코드는 dayjs의 `utc`, `timezone` 플러그인을 쓰지만 dayjs여야만 하는 건
+아니에요. 이름 있는 타임존으로 날짜를 렌더링하고 두 날짜를 일 단위로 diff할 수
+있는 date 라이브러리면 방식은 똑같아요.
+
 ```typescript
 // 예시: 금요일 08:00 KST = 목요일 23:00 UTC
-const dtstartInBlockTz = DateUtil.tz(parentStart, timeZone); // 1월 16일 (KST 금요일)
-const dtstartInUTC = DateUtil.utc(parentStart); // 1월 15일 (UTC 목요일)
+const dtstartInEventTz = dayjs.tz(parentStart, timeZone); // 1월 16일 (KST 금요일)
+const dtstartInUtc = dayjs.utc(parentStart); // 1월 15일 (UTC 목요일)
 
 // 월 경계를 올바르게 처리하기 위해 날짜 문자열 비교 사용
 // (예: 1월 31일 UTC → 2월 1일 KST는 -30이 아닌 +1)
-const localDateStr = dtstartInBlockTz.format("YYYY-MM-DD");
-const utcDateStr = dtstartInUTC.format("YYYY-MM-DD");
-const dayOffset = DateUtil.utc(localDateStr).diff(
-  DateUtil.utc(utcDateStr),
-  "day",
-); // 1
+const localDateStr = dtstartInEventTz.format("YYYY-MM-DD");
+const utcDateStr = dtstartInUtc.format("YYYY-MM-DD");
+const dayOffset = dayjs.utc(localDateStr).diff(dayjs.utc(utcDateStr), "day"); // 1
 
 // 보정을 위해 결과를 뒤로 이동
 // rrule 생성: 금 23:00 UTC (KST 토요일) - 오류

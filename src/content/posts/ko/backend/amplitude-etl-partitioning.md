@@ -2,7 +2,7 @@
 title: Amplitude ETL 파티셔닝
 description: Amplitude 이벤트 데이터를 raw에서 refined 스토리지로 이동할 때 파티셔닝하는 방법
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - etl
@@ -14,7 +14,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: amplitude-etl-partitioning
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: 'https://amplitude.com/docs/analytics/apis/export-api'
@@ -25,10 +25,13 @@ references:
     type: official
 ---
 
-analytics 대시보드에서 월요일마다 이벤트가 10% 감소하고, 화요일에 대응하는
-스파이크가 나타나는 걸 보고 있었어요. 이벤트가 사라진 게 아니라, 잘못된
-날짜에 들어가고 있었어요. ETL이 event time이 아니라 arrival time으로
-파티셔닝하고 있었거든요.
+Amplitude Export API가 주는 파일 이름은 날짜처럼 보여요.
+`{PROJECT_ID}_2026-01-25_18#0.json.gz`라는 파일은 "1월 25일 오후 6시
+이벤트"처럼 읽히죠. 아니에요. 그 시간은 Amplitude가 파일을 _export한_
+시간이고, 안에 들어 있는 이벤트는 며칠 더 오래된 것일 수 있어요.
+
+Amplitude ETL 파이프라인의 파티셔닝 로직을 들여다봤는데, 이 구분 하나가
+refined 레이어가 정확한지 조용히 틀리는지를 가르더라고요.
 
 Amplitude Export API 데이터를 data lake에 수집할 때, raw 파일은 export
 API가 반환한 시간 기준으로 정리돼요. 하지만 그 파일 안의 이벤트는 더 이른
@@ -39,18 +42,13 @@ API가 반환한 시간 기준으로 정리돼요. 하지만 그 파일 안의 �
 
 ## 두 가지 타임스탬프 이해하기
 
-혼란은 raw 파일 이름에서 시작돼요.
-`{PROJECT_ID}_2026-01-25_18#0.json.gz`라는 파일은 1월 25일 오후 6시
-이벤트를 포함하는 것처럼 보여요. 그렇지 않아요. 그 시간에 _export된_
-이벤트를 포함하는 거예요. 실제 이벤트는 며칠에 걸쳐 있을 수 있어요.
-
 핵심 구분은 이거예요:
 
 - **Arrival time** (파일명 날짜): Amplitude가 파일을 export한 시간
 - **Event time** (`event_time` 필드): 사용자 기기에서 이벤트가 발생한 시간
 
 모바일 SDK에서는 늦게 도착하는 데이터가 흔해요. 오프라인 사용자, 배치
-업로드, 네트워크 재시도로 인해 이벤트의 5-10%가 발생 후 수 시간에서 수일
+업로드, 네트워크 재시도로 인해 상당수의 이벤트가 발생 후 수 시간에서 수일
 뒤에 도착해요.
 
 ## 검토한 옵션들
@@ -64,12 +62,14 @@ API가 반환한 시간 기준으로 정리돼요. 하지만 그 파일 안의 �
 arrival time으로 파티셔닝하는 게 가장 간단한 접근이에요 -- 파일명에서
 날짜를 사용하고 event payload를 파싱하지 않아도 되니까요. 하지만
 analytical 쿼리는 거의 항상 "이벤트가 언제 발생했는지"로 필터링하지, "파일을
-언제 받았는지"로 필터링하지 않아요. 이벤트의 5-10%가 지속적으로 잘못
-배치되면, 이 데이터 위에 만들어진 모든 대시보드가 잘못된 트렌드를 보여줘요.
+언제 받았는지"로 필터링하지 않아요. 제가 본 파이프라인에서는 자기 event
+date보다 늦게 도착하는 이벤트 비율이 5-10% 정도였어요. 일 단위 비즈니스
+지표를 움직이기에 충분한 수치라서, arrival time 파티셔닝은 선택지가 되지
+못했어요.
 
 dual-write는 raw 디버깅과 깨끗한 analytics를 모두 지원하기 위해
-고려했어요. 이중 스토리지 비용은 수용할 수 있었지만, DAG에서 두 파티션
-스킴을 유지하는 복잡성이 arrival time으로 쿼리하는 빈도가 얼마나 낮은지를
+고려했어요. 이중 스토리지 비용은 수용할 수 있었지만, 두 파티션 스킴을
+유지하는 복잡성이 arrival time으로 쿼리하는 빈도가 얼마나 낮은지를
 고려하면 정당화되지 않았어요.
 
 ## 해결책: Event Time으로 파티셔닝
@@ -124,63 +124,97 @@ flowchart LR
 늦은 도착). ETL은 각 이벤트를 발생 시간 기준으로 올바른 파티션에
 라우팅해요.
 
+## 직접 확인해 보기
+
+이 동작은 순수 PySpark로 로컬에서 재현할 수 있어요. 늦게 도착한 이벤트가
+섞인 배치 하나를 event date 기준으로 써보면 돼요:
+
+```python
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, to_date
+
+spark = SparkSession.builder.appName("event-time-partitioning").getOrCreate()
+
+# One "arrival batch": both rows showed up in the same export file
+events = spark.createDataFrame(
+    [
+        ("a1", "2026-01-25T09:12:00"),
+        ("a2", "2026-01-20T22:40:00"),  # five days late
+    ],
+    ["event_id", "event_time"],
+)
+
+(
+    events.withColumn("dt", to_date(col("event_time")))
+    .write.mode("append")
+    .partitionBy("dt")
+    .parquet("/tmp/refined/events")
+)
+```
+
+출력 디렉토리에 `dt=2026-01-25/`와 `dt=2026-01-20/`가 생겨요. 늦게 도착한
+이벤트가 배치가 도착한 날이 아니라 실제로 발생한 날 아래에 들어가요.
+파일명 날짜로 파티셔닝하면 두 행 모두 `dt=2026-01-25/` 하나로 뭉쳐요.
+
 ## Backfill 갭
 
-파이프라인에 알려진 갭이 있어요: weekly backfill job이 누락된 raw 파일을
-가져오지만 refine하지는 않아요.
+설계할 때 미리 막아둘 만한 실패 모드가 하나 있어요. 누락된 raw 파일만
+다시 가져오는 backfill은 그 자체로 refined 데이터를 만들지 않아요. Export
+API에서 파일을 raw 스토리지로 되가져오고 거기서 끝나거든요.
 
 ```mermaid
 flowchart TB
-    subgraph Backfill["Weekly Backfill"]
-        BF[amplitude-backfill] -->|Fetch missing| API[Amplitude Export API]
+    subgraph Backfill["Backfill job"]
+        BF[Refetch missing files] -->|Fetch| API[Amplitude Export API]
         API -->|Save to| RAW[(Raw S3)]
     end
 
     subgraph Daily["Daily ETL"]
-        ETL[amplitude-etl] -->|"Reads only yesterday_ds"| RAW
+        ETL[Transform] -->|"Reads yesterday only"| RAW
         ETL -->|Writes to| REFINED[(Refined S3)]
     end
 
     RAW -.->|"Old dates never processed"| DEAD[Dead data]
 ```
 
-daily ETL은 `yesterday_ds`(어제 날짜)만 처리해요. 더 오래된 날짜의
-backfill 데이터는 refined로 가는 경로 없이 raw 버킷에 머물러요. 세 가지
-잠재적 해결책이 있어요:
+daily ETL이 하루치 날짜(어제)만 처리하도록 되어 있으면, 더 오래된 raw
+파일은 영영 다시 읽히지 않아요. backfill한 데이터가 refined로 가는 경로
+없이 raw에 남아요. 에러는 나지 않아요. 누군가 오래된 파티션을 조회하고
+데이터가 비어 있는 걸 발견할 때에야 드러나는 구멍이 생길 뿐이에요.
 
-1. Backfill job이 ETL transformation도 실행
-2. Backfill이 영향받는 날짜에 대한 re-processing DAG를 트리거
-3. refined에서 누락된 raw 파일을 처리하는 별도 "catchup ETL" DAG
+backfill에는 항상 catch-up transform을 짝지어 주세요. 세 가지 방법이
+있어요:
 
-## DAG-Job 변수 불일치
+1. Backfill job이 transformation도 직접 실행
+2. Backfill이 영향받는 날짜에 대한 re-processing job을 트리거
+3. raw와 refined를 비교해 차이만 처리하는 별도 catch-up job 실행
 
-디버깅 중 발견한 또 다른 문제: DAG가 환경 변수를 전달하지만 Spark job이
-무시해요.
+## Job까지 닿지 않는 설정
 
-| 변수            | DAG에서 전달 | Job에서 사용      |
-| --------------- | ------------ | ----------------- |
-| `SOURCE_PATH`   | 예           | 아니오 (하드코딩) |
-| `TARGET_PATH`   | 예           | 아니오 (하드코딩) |
-| `MANIFEST_PATH` | 예           | 아니오 (하드코딩) |
+또 다른 함정은 더 조용해요. 오케스트레이터가 Spark job에 경로를 환경
+변수로 넘기는데, 정작 job은 모듈 레벨 상수를 읽는 경우예요:
 
-해결은 간단해요 -- `amplitude_backfill.py`를 상수 대신 `os.getenv()`에서
-읽도록 업데이트하면 돼요. 그때까지는 DAG 설정에서 경로를 변경해도 효과가
-없어서, 테스트와 디버깅이 불안정해요.
-
-## 수동 테스트
-
-```bash
-# Test ETL for specific date
-python cli.py amplitude-etl \
-  --execution-date 2026-01-26 \
-  --source-path "s3://amplitude-raw-bucket/{PROJECT_ID}/" \
-  --target-path "s3://amplitude-refined-bucket/event/"
-
-# Test backfill for date range
-python cli.py amplitude-backfill \
-  --start-date 2026-01-20 \
-  --end-date 2026-01-26
+```python
+# The scheduler sets SOURCE_PATH in the job's environment.
+# The job never looks at it.
+SOURCE_PATH = "s3://example-raw-bucket/events/"
 ```
+
+에러는 안 나요. 변수는 설정되고, job은 실행되고, 상수가 이겨요. test
+경로를 가리켰다고 생각하지만 실제로는 소스에 박혀 있는 경로 -- production
+경로까지 포함해서 -- 를 그대로 읽고 쓰고 있어요.
+
+상수를 fallback으로 두고 `os.getenv()`로 읽으면 기본값은 유지하면서
+override가 실제로 먹혀요:
+
+```python
+import os
+
+SOURCE_PATH = os.getenv("SOURCE_PATH", "s3://example-raw-bucket/events/")
+```
+
+두 줄짜리 변경이지만, 진짜로 격리된 테스트와 격리된 것처럼 보이기만 하는
+테스트를 가르는 차이예요.
 
 ## 이 패턴을 사용할 때
 
@@ -205,5 +239,5 @@ GCS, HDFS)에 수집하는 모든 ETL 파이프라인에 적용돼요. 특히 �
 
 arrival time이 아닌 `event_time`으로 파티셔닝하세요. raw 버킷의 파일
 이름은 Amplitude가 데이터를 export한 시간이지, 이벤트가 발생한 시간이
-아니에요. 이걸 잘못 처리하면 이벤트의 5-10%가 조용히 잘못된 날짜로
+아니에요. 이걸 잘못 처리하면 늦게 도착한 이벤트가 조용히 잘못된 날짜로
 이동하고, 모든 downstream 대시보드가 그 오류를 상속받아요.

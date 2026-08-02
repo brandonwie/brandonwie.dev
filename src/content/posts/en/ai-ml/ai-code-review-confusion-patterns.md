@@ -56,9 +56,9 @@ What follows is each pattern, with the PR evidence and what I learned about dete
 
 > **One-line definition:** The reviewer analyzes a function in isolation without checking the related files that shape its behavior.
 
-On a NestJS PR, Copilot flagged a controller parameter `clientTypeHeader?: string` as needing array normalization, citing Express's raw type signature `string | string[] | undefined`. The flag was technically consistent with the Express type, but it was wrong in context: NestJS's `@Headers('key')` decorator returns `string | undefined` for custom headers, precisely because Express normalizes duplicates by joining them with comma-space. The reviewer analyzed the parameter's annotation without following the decorator into its implementation.
+On a NestJS PR, Copilot flagged a controller parameter bound to a custom request header via `@Headers()` as needing array normalization, citing Express's raw type signature `string | string[] | undefined`. The flag was technically consistent with the Express type, but it was wrong in context: NestJS's `@Headers('key')` decorator returns `string | undefined` for custom headers, precisely because Express normalizes duplicates by joining them with comma-space. The reviewer analyzed the parameter's annotation without following the decorator into its implementation.
 
-The same pattern showed up again in a different shape on a later NestJS PR. Claude traced `fromEntity` into `create()` and argued that a plain all-day block could throw 400 because `dto.detail === undefined` would make `isAllDay` false. The two-file trace was internally consistent, but it missed the entity-level invariant: `hasDetailFields` includes `block.priority`, a NOT-NULL enum column with a default truthy value. A DB-loaded entity always carries that field, `{ ...block }` preserves it, and `detail` is therefore created. The missing context was not another function call; it was the `@Column({ default })` declaration that made the guard's input shape stronger than the local DTO trace suggested.
+The same pattern showed up again in a different shape on a later NestJS PR. Claude traced a mapper into the constructor it delegates to and argued that a request without the optional detail payload could throw 400, because the mapper's field-presence check would come out false. The two-file trace was internally consistent, but it missed the entity-level invariant: the field-presence helper also counted a NOT-NULL enum column with a truthy default. An entity loaded from the database always carries that column, the object spread preserves it, and the detail branch is therefore always taken. The missing context was not another function call; it was a `@Column({ default })` declaration that made the guard's input shape stronger than the local DTO trace suggested.
 
 **Why it happens.** Most AI reviewers work with a single-file or single-diff context window. They can see the types flowing through the current file but cannot trace a decorator call into its implementation in a dependency package. So "what does this decorator actually return at runtime?" becomes a question they cannot answer, and the type signature at the nearest reachable point (often a raw framework type) becomes the default assumption.
 
@@ -72,9 +72,9 @@ I wrote the technical deep-dive for this specific case in a separate post — se
 
 > **One-line definition:** The reviewer flags a known, already-documented trade-off as a problem.
 
-On the same NestJS PR, Claude flagged a mobile header bypass in an auth guard as a security issue. Two lines above the flagged line, an inline NOTE already said: *"known accepted risk (pre-existing) — mobile bypass predates the tier model."* The NOTE was two lines above the flagged code and written in plain English.
+On the same NestJS PR, Claude flagged a client-type shortcut in an auth guard as a security issue. Two lines above the flagged code, an inline NOTE already recorded the same risk as a pre-existing, accepted trade-off — written in plain English, in the same file, immediately adjacent.
 
-**Why it happens.** AI reviewers do not reliably process inline documentation that acknowledges risk. They will read the NOTE and flag the risk anyway, as though the NOTE were not there. This is a philosophical failure more than a technical one — the reviewer weights "is this risky?" over "has the team already acknowledged this risk?"
+**Why it happens.** AI reviewers do not reliably process inline documentation that acknowledges risk. They will read the NOTE and flag the risk anyway, as though the NOTE were not there. This is a philosophical failure more than a technical one — the reviewer weights "is this risky?" over "has this risk already been acknowledged in the codebase?"
 
 **Detection signal.** Check whether the flagged region is immediately preceded or followed by a NOTE, TODO, or comment that acknowledges the same issue. If yes, the flag is redundant with existing documentation.
 
@@ -178,20 +178,20 @@ The first six patterns are all things you want to *suppress*. Pattern 7 is the o
 
 Pattern 7 emerged on a multi-round NestJS PR in late April. Across four rounds, the bot kept applying earlier fixes as templates:
 
-- **R3-1:** bot flagged a per-ref `publishContactUpserted` loop on `SyncAttendeeContactListener`. Fix: bulk emit.
-- **R4-1:** bot flagged a per-ref `publishContactUpserted` loop on `AttendeeContactListener` — different class, different `@OnEvent` topic, but the same shape. Fixed identically.
-- **F-T-4 (proactive):** bot flagged missing `addBulkWithSentry` on `BlockSearchListener`. Fix landed.
-- **R2-1:** bot flagged the same gap on `ContactSearchListener`. Same fix applied.
+- **Round 3:** the bot flagged a per-item event emit inside a loop in one domain event listener. Fix: emit once in bulk.
+- **Round 4:** the bot flagged the identical shape in a sibling listener — different class, different `@OnEvent` topic, same loop. Fixed identically.
+- **Proactive pass:** the bot flagged a missing bulk-with-error-capture helper in one search-index listener. Fix landed.
+- **Next round:** the bot flagged the same gap in a sibling search-index listener. Same fix applied.
 
 **Why it works.** The bot reads the PR's diff context — prior commits plus summary comments — when it reviews a new round. When a fix lands in commit N, commit N+1's review prompt includes that fix as input. The bot applies it as a template, looking for the same shape elsewhere in changed files. The PR diff context is acting as semantic memory across rounds.
 
 **How to amplify.**
 
-- **Use the round summary comment to describe the fix shape, not just the file:line.** The bot reads the comment. "Replaced per-ref emit with `publishBulkAsync` + listener `addBulk`" is a template; "Fixed N+1 emit in attendee listener" is not.
+- **Use the round summary comment to describe the fix shape, not just the file:line.** The bot reads the comment. "Replaced the per-item emit inside the loop with a single bulk publish, consumed by the listener's bulk handler" is a template; "Fixed N+1 emit in the listener" is not.
 - **After fixing one site, deliberately leave nearby twin code for the next cascade.** Let the bot find it. Triggering `@claude review` on every commit gives it the surface to scan.
 - **Multi-round validation (R1 → R5+) is what surfaces these.** Single-round PRs miss the twins entirely. Plan for multiple rounds when the change shape is likely to repeat.
 
-**Anti-pattern that suppresses Pattern 7.** Marking R4-1-style findings as `DUPLICATE` of R3-1 by location/file alone. They're not duplicates — they're the same shape on a different surface. Dedup rules in `/pr-review-rectify` Phase 1.5 should distinguish "exact location match" (real duplicate) from "pattern repeat" (twin detection). Mark as RELATED-NOT-DUP and classify as a new finding.
+**Anti-pattern that suppresses Pattern 7.** Marking the round-4 finding as a `DUPLICATE` of the round-3 one by location/file alone. They're not duplicates — they're the same shape on a different surface. Dedup rules in `/pr-review-rectify` Phase 1.5 should distinguish "exact location match" (real duplicate) from "pattern repeat" (twin detection). Mark as RELATED-NOT-DUP and classify as a new finding.
 
 ## Pattern 8 — PR Diff Scope Confusion (analyst-side)
 
@@ -294,19 +294,19 @@ This one shifted my mental model on convergence — *what kind* of convergence m
 
 Pattern 13 is the second productive behavior in the catalog. Like Pattern 7, it's worth amplifying. Unlike Pattern 7, the blind spot belongs to the analyst (me, doing the validation), not to the reviewer.
 
-On a frontend onboarding-tutorial PR, three independent instances of this pattern surfaced across rounds 10 through 14 of a single session. Same antipattern shape, three different convention fixes:
+On a multi-round frontend PR, three independent instances of this pattern surfaced across rounds 10 through 14 of a single session. Same antipattern shape, three different convention fixes:
 
-| Round            | Fixed by analyst                                                                | Missed sibling caught by reviewer                                                 |
-| ---------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| R10-2            | `isUserProfileReady` guard in `CalendarConnectModal` + `CalendarReconnectModal` | `CalendarConnectButton` in same folder → R12-2 (P2 bug, `userId="undefined"`)     |
-| R1, R10-1, R10-4 | `const` arrow → `function` declaration across tutorial components + modal/index | 4 calendar-connection components → R13-2..R13-5 (one cross-file review thread)    |
-| R12-4            | Relative imports → `@/` alias on `ConnectedCalendarAccount.tsx`                 | Group order left inverted (`@/assets` first instead of canonical last) → R14-1    |
+| Round      | Fixed by analyst                                                        | Missed sibling caught by reviewer                                                        |
+| ---------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Round 10   | A readiness guard added to two modal components                          | A sibling button component in the same folder — two rounds later it surfaced as a real bug, an undefined id reaching the URL |
+| Rounds 1, 10 | `const` arrow → `function` declaration across one component group      | Four sibling components in the adjacent feature folder, all raised in one cross-file thread |
+| Round 12   | Relative imports → `@/` path alias in one component                     | The alias group order left inverted against the project convention, caught the next round   |
 
 This is the **reviewer-side mirror of Pattern 8 (PR Diff Scope Confusion)**. The analyst's blind spot is "I only touched what the prior reviewer named"; the reviewer's productive behavior is "are there other instances of this pattern in scope that the analyst missed?" Distinct from Pattern 1 (reviewer analyzes in isolation) and Pattern 9 (manual prose drift) — in those, the **reviewer** is the one missing context. Here, the **reviewer** is doing the structural read and catching what the **analyst** missed.
 
 **Prevention (analyst-side).** When applying any folder-scoped convention or fix, audit ALL siblings in the same directory before committing. The reviewer will catch the holdouts next round, but each holdout costs a full round-trip — commit, push, workflow, bot review, validation cycle. Cheaper to sweep the folder once.
 
-**Amplification (reviewer-side).** Reinforce the productive behavior. When the bot flags a convention fix, encourage it to scan the folder for other instances of the same pattern and surface them in ONE cross-file thread. R13 thread B on that frontend PR is a clean example: one comment listed 4 files, one reply covered 4 commits, one resolve closed the loop.
+**Amplification (reviewer-side).** Reinforce the productive behavior. When the bot flags a convention fix, encourage it to scan the folder for other instances of the same pattern and surface them in ONE cross-file thread. The second row above is a clean example of that shape: one comment listed 4 files, one reply covered 4 commits, one resolve closed the loop.
 
 **Why I'm treating this as a strength, not a process gap.** I could read this as "my validation process should never miss siblings" and try to engineer that out. But the round-trip cost is real, and the bot's structural folder read is genuinely cheap. The honest move is to keep my sweep discipline tight while *also* leaving the bot's audit running as a safety net. Patterns 7 and 13 together are the two cases where multi-round PR validation pays for itself by amplifying what the reviewer does well.
 
@@ -330,7 +330,7 @@ The most surprising observation is that articulation and confidence are not prox
 - **Cross-round twin detection is multi-round PR validation's killer feature.** Single-round PRs miss the second and third twins entirely. The bot needs prior-fix context (commits + summary comment trailer) to apply the pattern. Always use the round summary comment to describe the fix *shape* so the next cascade has it as template input.
 - **Read INFO comments closely when they touch library internals.** They are the natural home for Pattern 4.
 - **Don't trust tooling heuristics as correctness signals.** `isOutdated` (Pattern 6) feels like it means "concern resolved" but means "comment cannot be anchored to a current diff line." Log skipped threads so you can re-examine them on a second pass.
-- **Institutional rules can override AI flags.** AI reviewers correctly flag documented best practices (e.g., `CREATE INDEX CONCURRENTLY` on hot tables) but cannot see institutional rules ("don't touch generated migration files unless inevitable"). When a flag conflicts with such a rule, the rule wins — even when the flag's technical content is correct. Save such rules as durable feedback memories so future validation rounds default-skip the flag instead of re-litigating it.
+- **Project conventions can override AI flags.** AI reviewers correctly flag documented best practices (e.g., `CREATE INDEX CONCURRENTLY` on hot tables) but cannot see conventions that live outside the diff — for example, a standing policy against editing generated migration files unless it is unavoidable. When a technically-correct flag conflicts with a standing convention, the convention decides. Save those conventions as durable feedback memories so future validation rounds default-skip the flag instead of re-litigating it.
 - **Always verify PR scope against `origin/{base}`, not local `{base}`.** Pattern 8 is the analyst-side mirror of Pattern 5 — the failure mode is the same shape (stale view of HEAD), only the actor differs. The remediation is mechanical: use `git fetch origin` + `git diff origin/{base}..HEAD --name-only` or `gh pr view --json files`.
 - **Mirror systems need a parity check.** Pattern 9's prose-table drift is the same class of bug as docstring-vs-code drift. Treat it the same way: a CI check is the only durable defense; back-references are a useful interim.
 - **Convergence isn't always signal.** Pattern 12 (Long-Row Formatting Hallucination) showed that two reviewers can converge on a false positive when both share a prior — "long table rows often have formatting drift" — rather than each independently observing the content. The Pattern 7 / Pattern 13 kind of convergence (each reviewer reasoning about actual content) is the productive shape. Distinguish them by checking whether the reviewer's `suggestion` block actually changes anything.

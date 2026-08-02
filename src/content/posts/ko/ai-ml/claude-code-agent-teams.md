@@ -111,8 +111,10 @@ contract로 사용하면 안 돼요.
 ### 실험 기능의 경계
 
 in-process로 실행한 팀원이 중단되거나 terminal이 닫히면 이어갈 수 없어요.
-팀원은 생성할 때 리드의 권한 mode를 그대로 상속해요. 읽기 전용 reviewer와
-쓰기가 가능한 implementer에게 서로 다른 권한을 줄 수 없어요.
+팀원은 생성할 때 리드의 permission 설정을 그대로 상속해요. 공식 문서는
+spawn 시점에 팀원별 permission mode를 따로 지정할 수는 없지만, 띄운 뒤에는
+개별 팀원의 mode를 바꿀 수 있다고 설명해요. 읽기 전용 reviewer와 쓰기가
+가능한 implementer를 나누려면 spawn 이후에 한 단계를 더 거쳐야 해요.
 
 Git worktree에는 tracked file만 들어와요. `CLAUDE.local.md`,
 `.claude/settings.local.json`, `.claude/skills`처럼 gitignore된 symlink는
@@ -166,7 +168,10 @@ team 대신 background subagent를 쓰는 session이 이어졌어요.
 
 2.1.138 당시에는 `Agent`에 `team_name`을 주지 않으면 in-process subprocess,
 `team_name`을 주면 tmux teammate가 됐어요. 이 역시 version별 기록이에요.
-현재 release에서는 공식 문서와 live tool schema를 먼저 확인해야 해요.
+공식 문서는 v2.1.178에서 `TeamCreate`와 `TeamDelete`가 사라졌고 `Agent`의
+`team_name` 입력은 받아들여지되 무시된다고 설명해요. 그러니 저 순서를 지금
+설정에 그대로 옮기면 안 되고, 남는 교훈은 "보이는 tool을 먼저 집는 편향"
+쪽이에요.
 
 ### summary field에 결과가 사라질 수 있어요
 

@@ -1,7 +1,7 @@
 ---
 title: Gemini Asymmetric Embeddings
 description: >-
-  Gemini's embedding API exposes a task_type parameter that encodes queries and documents differently, which lifts retrieval quality over symmetric embeddings.
+  Retrieval gets better when queries and documents are encoded differently. Gemini expressed that with a task_type parameter, and its newer model moved the same idea into the prompt.
 date: 2026-03-23T00:00:00.000Z
 updated: '2026-08-02'
 tags:
@@ -14,13 +14,22 @@ lang: en
 expanded: true
 references:
   - url: 'https://cloud.google.com/vertex-ai/generative-ai/docs/embeddings/task-types'
-    title: Choose an embeddings task type
+    title: Choose an embeddings task type — asymmetric and symmetric formats
     type: official
   - url: 'https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/text-embeddings'
-    title: Text embeddings API reference
+    title: Text embeddings API reference — task_type default and autoTruncate
     type: official
   - url: 'https://cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-text-embeddings'
     title: Get text embeddings — dimensions and request limits
+    type: official
+  - url: 'https://cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-multimodal-embeddings'
+    title: Get multimodal embeddings — gemini-embedding-2 task instructions
+    type: official
+  - url: 'https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/embedding-2'
+    title: Gemini Embedding 2 model page — release date and limits
+    type: official
+  - url: 'https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions'
+    title: Model versions and lifecycle — embedding model retirement dates
     type: official
   - url: 'https://huggingface.co/nomic-ai/nomic-embed-text-v1.5'
     title: nomic-embed-text-v1.5 model card
@@ -28,30 +37,34 @@ references:
 source_content_hash: 4382b37c4535c74008abd96bc30d40f49e1ee79a19494fa1b86ba0c1c36f61f5
 ---
 
-I was building a RAG pipeline and my retrieval quality was mediocre. Queries like "how do I handle database migrations" would return tangentially related documents instead of the ones that directly answered the question. I was using symmetric embeddings — the same encoding for both queries and documents — and it turned out that was the bottleneck.
+I was building a RAG pipeline and my retrieval quality was mediocre. Queries like "how do I handle database migrations" would come back with tangentially related documents instead of the ones that actually answered the question. I was embedding both sides the same way — one call, no distinction between a question and a passage — and that was the bottleneck.
 
-Switching to Gemini's task-type-aware embeddings fixed it. I first wired this up with `text-embedding-004`, which Google has since retired; `gemini-embedding-001` carries the same `task_type` mechanism, so that is the model in the code below. Here is how and why it works.
+Encoding the two sides differently fixed it. Here is how that works, and a correction to what I first wrote about it.
 
-## Symmetric vs. Asymmetric Embeddings
+**Models first, because they moved.** I wired this up with `text-embedding-004`, which is on its way out on both of Google's surfaces — the Gemini API [shut it down in January 2026](https://ai.google.dev/gemini-api/docs/deprecations), and Vertex AI lists it for retirement on 2027-04-01. So the code below uses `gemini-embedding-001`, which carries the same `task_type` mechanism and whose Vertex retirement date is "No sooner than May 20, 2028."
 
-Most embedding models are **symmetric**: they produce the same vector regardless of whether the input is a short query or a long document. The model treats "how to handle migrations" and a 500-word guide about Alembic migrations as the same kind of text. Both get encoded into the same vector space with the same optimization.
+The current model is `gemini-embedding-2`, GA since 2026-04-22, and it does not accept `task_type` at all — the task instruction moved into the prompt. Both mechanisms are below, but check the lifecycle page before you commit to either. This area moves faster than blog posts do.
 
-**Asymmetric embeddings** break that assumption. They recognize that queries and documents are fundamentally different — a query is a short question expressing an information need, while a document is a longer passage containing the answer. The model encodes each one differently so that queries naturally "point toward" matching documents in the vector space.
+## Symmetric vs. Asymmetric Encoding
 
-Google's own task-type documentation makes the problem concrete: "Why is the sky blue?" and "The scattering of sunlight causes the blue color" are not semantically similar *as statements*, so a plain similarity search does not automatically connect them. Task types pull the question and its answer into a shared space instead of forcing you to fine-tune a model or bolt on query expansion.
+Symmetric encoding produces the same vector for a piece of text regardless of the role it plays. The model treats "how to handle migrations" and a 500-word guide about Alembic migrations as the same kind of input, in the same space, under the same optimization.
 
-Gemini implements this through a `task_type` parameter:
+Asymmetric encoding breaks that assumption. A query is a short question expressing an information need; a document is a longer passage that contains the answer. Encode each one for its role and queries naturally point toward matching documents in the vector space.
+
+Google's task-type documentation makes the problem concrete: "Why is the sky blue?" and "The scattering of sunlight causes the blue color" "have distinctly different meanings as statements," so a plain similarity search does not automatically recognize their relationship. The same page splits use cases into an **asymmetric format** — search, question answering, fact checking, code retrieval — and a **symmetric format** — classification, clustering, semantic similarity. That split belongs to the use case, not to a vendor.
+
+## The task_type Parameter
+
+On `gemini-embedding-001` the split is an API field:
 
 | task_type            | Purpose                                | Optimized For         |
 | -------------------- | -------------------------------------- | --------------------- |
 | `RETRIEVAL_QUERY`    | Encode a search query                  | Short text, questions |
 | `RETRIEVAL_DOCUMENT` | Encode a document for the search index | Long text, passages   |
 
-The same text embedded with `RETRIEVAL_QUERY` vs. `RETRIEVAL_DOCUMENT` produces **different vectors**. This is intentional — each side of the retrieval problem gets its own optimized representation. If you leave `task_type` blank, the API defaults to `RETRIEVAL_QUERY`, which is the wrong side of the pair for your corpus, so the indexing call is the one you must not forget.
+The same text embedded with `RETRIEVAL_QUERY` vs. `RETRIEVAL_DOCUMENT` produces **different vectors**. That is the point — each side of the retrieval problem gets its own representation. The Vertex API reference is explicit that when `task_type` is "left blank, the default used is `RETRIEVAL_QUERY`," which is the wrong side of the pair for your corpus. The indexing call is the one you must not forget.
 
-## How to Use It
-
-At indexing time, embed all your documents with `RETRIEVAL_DOCUMENT`. At query time, embed the user's question with `RETRIEVAL_QUERY`. The API handles the rest.
+At indexing time, embed documents with `RETRIEVAL_DOCUMENT`. At query time, embed the user's question with `RETRIEVAL_QUERY`.
 
 ```python
 from google import genai
@@ -74,26 +87,51 @@ query_result = client.models.embed_content(
 )
 ```
 
-Two limits are worth knowing before you write the indexing loop. On Vertex AI, a `gemini-embedding-001` request takes a single input text, so the batching you can do depends on which surface you call. And each input text is capped at 2,048 tokens with silent truncation on by default — if you would rather a too-long chunk fail loudly than get quietly cut, set `autoTruncate` to `false`.
+Three limits are worth knowing before you write the indexing loop. On Vertex AI a `gemini-embedding-001` request "can only include a single input text," so how much you can batch depends on which surface you call. Each input text is capped at 2,048 tokens, and `autoTruncate` defaults to `true` — set it to `false` if you would rather an over-long chunk fail loudly than get quietly cut. And if you shrink the vector with `output_dimensionality`, you have to normalize the result yourself: only the full 3,072-dimension output comes back normalized on this model.
 
-One more thing to check before you build on `task_type`: Google's task-type page lists exactly which models support it. Newer embedding models are moving away from the parameter and expect the task to be written into the text as a prefix instead, so the list is worth re-reading whenever you pick a model.
+## What the Newer Model Changed
 
-## Why Not Symmetric?
+`gemini-embedding-2` keeps the asymmetry and drops the parameter. The docs put it plainly: "You cannot use the `task_type` field to specify an embedding task for the `gemini-embedding-2` model. Instead, include the task as an instruction in your prompt." The documented retrieval format is a prefix on each side:
 
-Symmetric models work well for **document-to-document** similarity — finding articles similar to another article, clustering, or deduplication. When both sides of the comparison are the same type of content, symmetric encoding makes sense. Gemini has a `SEMANTIC_SIMILARITY` task type for exactly that, and the docs are blunt that it is not meant for retrieval.
+```python
+# gemini-embedding-2: the task lives in the text
+def prepare_query(query):
+    return f"task: search result | query: {query}"
 
-But retrieval is inherently asymmetric. A three-word query and a three-paragraph answer serve different roles. Encoding them identically forces the model to compromise between two objectives. Asymmetric embeddings eliminate that compromise.
+def prepare_document(content, title="none"):
+    return f"title: {title} | text: {content}"
+```
 
-## Switching From Ollama (or Other Symmetric Models)
+Same asymmetry, different surface. The newer model also raises the input limit to 8,192 tokens, and its output is "already L2 normalized for non-default dimensions (unlike `gemini-embedding-001`)," so the manual normalization step above goes away. If you are starting a pipeline today, that is the path; `task_type` is what you keep for an index you already built on `gemini-embedding-001`.
 
-If you started with a local model like Ollama's **nomic-embed-text** and want to switch to Gemini, the dimensions are the first thing to check. nomic-embed-text produces **768-dimensional vectors**. `gemini-embedding-001` returns **3,072 dimensions** by default, but the `output_dimensionality` parameter lets you ask for a smaller vector — so you can keep an existing 768-wide column and its index instead of migrating the schema.
+One batching difference is worth a note before you port an indexing loop over. On the Gemini API, [the embeddings guide](https://ai.google.dev/gemini-api/docs/embeddings) says `gemini-embedding-001` gives you individual embeddings for a list of strings while `gemini-embedding-2` "produces a single aggregated embedding for multiple inputs," and points you at the Batch API when you want many embeddings at once. A loop that passed a list and got a list back would quietly collapse a whole batch into one vector.
 
-You still have to **re-embed every document**. Vectors from different models are not comparable even when they share a width. The numbers occupy different regions of the vector space, and cosine similarity across the two is meaningless.
+The lesson that survives both APIs: pick a convention and use it consistently. The docs are explicit that the task has to be applied the same way on both sides — if your documents were embedded under one task format, your queries have to follow it too. Mixing conventions across the index and the query side puts you back in the mismatch this whole mechanism exists to remove.
 
-That makes the switch mostly mechanical: swap the embedding call, pick a dimensionality that matches your storage, re-embed the corpus, and leave the rest — pgvector tables, HNSW indexes, retrieval logic — alone.
+## Where Symmetric Formatting Still Applies
 
-## When to Reach for This
+Symmetric formatting is for single-input use cases — classification, clustering, deduplication, and text-similarity scoring, where both sides of the comparison are the same kind of content. Google's own page marks `SEMANTIC_SIMILARITY` as "not intended for retrieval use cases," and the `gemini-embedding-2` table repeats the warning for the equivalent `task: sentence similarity` prefix.
 
-Use asymmetric embeddings when you are building a **search or RAG system** where retrieval quality matters and an API round-trip per chunk is acceptable.
+Retrieval is the asymmetric case. A three-word query and a three-paragraph answer serve different roles, and encoding them identically forces the model to compromise between two objectives.
 
-Stick with a symmetric local model like nomic-embed-text via Ollama when you need **offline operation**, document-to-document similarity, or an air-gapped environment where calling an external API is not an option.
+## A Correction: nomic-embed-text Is Not Symmetric
+
+When I first wrote this up, I filed Ollama's **nomic-embed-text** under "symmetric" and treated asymmetry as the thing Gemini added. That was wrong, and the model card says so directly.
+
+The `nomic-embed-text-v1.5` card states that "the text prompt _must_ include a _task instruction prefix_, instructing the model which task is being performed" — `search_query:` for questions, `search_document:` for corpus text. That is the identical query/document split, expressed as a text prefix instead of an API field — which is exactly where Gemini's newer model ended up.
+
+So "symmetric model, needs an asymmetric API" was the wrong shape for the problem. A model can be asymmetric and still be used symmetrically — no prefixes, both sides encoded the same — and that produces precisely the mediocre retrieval I started with. Reading the model card is cheaper than switching providers. If your retrieval is weak, check what your current model expects of you before you conclude the API is the thing holding it back.
+
+## Switching Between Models
+
+Dimensions come first. `nomic-embed-text-v1.5` produces **768-dimensional vectors** and supports Matryoshka truncation down to 512, 256, 128, or 64. `gemini-embedding-001` returns **3,072 dimensions** by default, and `output_dimensionality` lets you ask for a smaller vector — so you can keep an existing 768-wide column and its index instead of migrating the schema, as long as you normalize what comes back.
+
+You still have to **re-embed every document**. Vectors from different models are not comparable even when they share a width; the numbers occupy different regions of the space, and cosine similarity across the two is meaningless. The same is true across `gemini-embedding-001` and `gemini-embedding-2`.
+
+That makes the switch mostly mechanical: swap the embedding call, carry over the query/document convention in whichever form the new model wants it, pick a dimensionality that matches your storage, re-embed the corpus, and leave the rest — pgvector tables, HNSW indexes, retrieval logic — alone.
+
+## When to Reach for the Hosted API
+
+Use a hosted embedding API when you want someone else to own model upgrades and you can afford a network round-trip per chunk.
+
+Run a local model when you need **offline operation** or an air-gapped environment where calling an external API is not an option. That decision is about where the compute lives and who pays for it — not about symmetric versus asymmetric. Both sides of that choice can give you the asymmetric split. The part you have to get right is using it.

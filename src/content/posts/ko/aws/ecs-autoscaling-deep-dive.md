@@ -2,7 +2,7 @@
 title: "ECS Auto-Scaling 심층 분석"
 description: "ECS auto-scaling의 알고리즘, 쿨다운, 비용 최적화 — 비례 제어를 이해하면 flapping과 과금 폭탄을 피할 수 있어요."
 date: 2025-08-23T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: 2026-08-02T00:00:00.000Z
 tags:
   - aws
   - ecs
@@ -13,7 +13,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ecs-autoscaling-deep-dive
-source_updated: "2026-02-24"
+source_updated: "2026-08-02"
 translation_date: "2026-02-25"
 references:
   - url: "https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/"
@@ -24,9 +24,7 @@ references:
     type: official
 ---
 
-CPU auto-scaling에 `target_value = 70`을 설정하고 "CPU가 70%를 넘으면 컨테이너 하나 추가"라는 의미인 줄 알았어요. 아니었어요. 알고리즘이 한 번에 컨테이너 세 개가 필요하다고 계산했고, 데이터베이스 커넥션 풀이 즉시 고갈됐어요. 이 오해 때문에 프로덕션에서 한 시간을 디버깅에 쓰고 민망한 장애를 겪었어요.
-
-ECS auto-scaling은 온도 조절기가 아니에요. 비례 제어예요. 이 차이가 중요해요.
+ECS auto-scaling은 온도 조절기처럼 보이지만, 실제로 동작하는 방식은 비례 제어예요. 설정이 납득되기까지 제가 먼저 정리해야 했던 것들을 모았어요. Target tracking 알고리즘, 두 쿨다운을 왜 다르게 잡아야 하는지, scaling policy와 CloudWatch alarm이 어떻게 다른지, 그리고 그렇게 늘어난 task 수가 얼마의 비용이 되는지요.
 
 ## 왜 중요한가
 
@@ -34,9 +32,9 @@ ECS auto-scaling은 온도 조절기가 아니에요. 비례 제어예요. 이 �
 
 잘못 설정하면 flapping(빠른 scale-out/in 반복), 무제한 스케일링으로 인한 비용 폭주, 또는 필요할 때 스케일링되지 않는 무응답 서비스가 돼요.
 
-## 직접 겪은 실수들
+## 헷갈렸던 지점들
 
-전부 실제 프로덕션 사고에서 나온 거예요:
+설정을 만지면서 직관과 어긋났던 부분들이에요:
 
 - **Target tracking은 임계값 기반이 아니에요.** "CPU > 70%면 컨테이너 하나 추가"라고 생각했는데, 실제 알고리즘은 메트릭을 목표로 되돌리기 위해 필요한 비례적 task 수를 계산해요. 한 번에 여러 개를 추가할 수 있어요.
 - **쿨다운 비대칭이 눈에 안 들어와요.** Scale-in과 scale-out에 같은 쿨다운을 쓰면 flapping이 생겨요. Scale-in은 훨씬 길어야(300초 이상) 해요 -- 용량을 너무 빨리 제거하면 바로 scale-out이 다시 일어나요.
@@ -270,30 +268,22 @@ Scale-in은 제거 사이에 300초 쿨다운을 두고 보수적으로 진행�
 
 Auto-scaling이 메모리를 더 많은 task에 분산해서 누수를 일시적으로 가려주지만, 각 task의 메모리는 계속 증가해요. 결국 90% alarm이 발동해서 더 많은 용량이 아니라 코드 수정이 필요하다는 신호를 줘요.
 
-## 업계 표준 설정
+## 시작점으로 삼는 값
 
-### 설정값 비교
+제가 출발점으로 쓰는 값과 그 이유예요. "흔한 범위" 열은 AWS가 정해둔 기준이 아니라 관례에 가까우니, 맞춰야 할 목표가 아니라 조정해 들어갈 구간으로 봐주세요.
 
-| 메트릭           | 설정값 | 업계 표준 | 평가             |
-| ---------------- | ------ | --------- | ---------------- |
-| CPU Target       | 70%    | 65-75%    | 훌륭             |
-| Memory Target    | 80%    | 75-85%    | 훌륭             |
-| Scale-Out 쿨다운 | 60초   | 60-120초  | 좋음             |
-| Scale-In 쿨다운  | 300초  | 300-600초 | 표준             |
-| Min Task         | 1      | 1-2       | HA를 위해 2 고려 |
-| Max Task         | 4      | 다양      | 애플리케이션별   |
+| 메트릭           | 시작값   | 흔한 범위 | 이유                                      |
+| ---------------- | -------- | --------- | ----------------------------------------- |
+| CPU Target       | 70%      | 65-75%    | 새 task가 준비될 때까지 버틸 여유         |
+| Memory Target    | 80%      | 75-85%    | 메모리는 CPU보다 천천히 빠져요            |
+| Scale-Out 쿨다운 | 60초     | 60-120초  | 새 task 하나가 트래픽을 받기 시작할 시간  |
+| Scale-In 쿨다운  | 300초    | 300-600초 | 빠른 제거가 flapping의 원인               |
+| Min Task         | 1        | 1-2       | Task 하나가 죽어도 서비스가 살아야 하면 2 |
+| Max Task         | 4 (예시) | 다양      | 여유분이 아니라 다운스트림 한계에서 역산  |
 
-### 대형 기업의 설정
+**여기서 `4`에 대해.** 이 글 뒤쪽의 시나리오와 비용 표에서 계속 쓰는 예시용 상한이지, 권장값이 아니에요. 실제 상한은 다운스트림 계산에서 나와요. Task 수 × task당 여는 커넥션 수가 데이터베이스 커넥션 풀 한도 아래여야 하고, 외부 API rate limit도 같은 방식으로 따져야 해요. Terraform 섹션에서 연결한 후속 글이 그 계산을 끝까지 풀어놨어요.
 
-참고로 대규모 서비스에서 일반적으로 사용하는 값이에요:
-
-```text
-Netflix:    CPU 60-75%, Scale-Out 60s, Scale-In 300s
-Uber:       CPU 65-70%, Scale-Out 30s, Scale-In 600s
-Airbnb:     CPU 65%,    Scale-Out 90s, Scale-In 600s
-```
-
-패턴이 명확해요: 공격적인 scale-out, 보수적인 scale-in.
+개별 숫자보다 중요한 건 비대칭이에요: scale-out은 빠르게, scale-in은 천천히. Task를 조금 일찍 추가하는 비용은 몇 센트지만, 조금 일찍 제거하면 scale-out 한 번과 콜드 스타트, 그리고 레이턴시 스파이크까지 따라와요.
 
 ## 비용 최적화
 
@@ -351,7 +341,7 @@ CloudWatch 대시보드:
 │   ├── CPU Utilization (목표: 70%)
 │   └── Memory Usage (목표: 80%)
 ├── 스케일링 메트릭
-│   ├── Task Count (1-4 범위)
+│   ├── Task Count (min~max 범위)
 │   └── Scaling Events (이력)
 ├── 상태 메트릭
 │   ├── HTTP 5xx Rate
@@ -534,7 +524,7 @@ Terraform은 인프라 상태를 추적하고 차이점만 적용해요:
   -> 상태 업데이트: 3 task
 ```
 
-Terraform 설정에 마이그레이션 task 분리와 커넥션 풀 계산까지 포함된 전체 구성은 ECS 오토스케일링 패턴 포스트(준비 중)를 참고하세요.
+Terraform 설정에 마이그레이션 task 분리와 커넥션 풀 계산까지 포함된 전체 구성은 [ECS 오토스케일링 패턴](/ko/posts/ecs-autoscaling-patterns) 글을 참고하세요.
 
 ## 트러블슈팅
 

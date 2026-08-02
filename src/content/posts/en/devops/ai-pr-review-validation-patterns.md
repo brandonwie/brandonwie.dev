@@ -16,6 +16,12 @@ references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
     type: authoritative
+  - url: "https://docs.github.com/en/repositories/creating-and-managing-repositories/repository-limits"
+    title: Repository limits — GitHub Docs
+    type: official
+  - url: "https://docs.github.com/en/rest/pulls/pulls"
+    title: REST API endpoints for pull requests — GitHub Docs
+    type: official
 ---
 
 ## Classification Framework
@@ -44,15 +50,15 @@ The two tiers I added later, GOOD-TO-HAVE and CONTROVERSIAL, turned out to matte
 **Example:**
 
 ```text
-Agent: "CRITICAL: Analytics service methods return Promise.reject('Not implemented')"
-Reality: Service has 1449 lines of full implementation
+Agent: "CRITICAL: the analytics methods return Promise.reject('Not implemented')"
+Reality: the service is fully implemented, ~1,400 lines
 ```
 
 **Prevention:** Add reinforcing comment:
 
 ```typescript
-// NOTE: This service IS FULLY IMPLEMENTED. All 5 analytics calculations
-// are complete and production-ready via the consolidated getAnalytics() method.
+// NOTE: This service IS FULLY IMPLEMENTED. All five metric calculations
+// are complete and production-ready via the consolidated summary method below.
 ```
 
 ### 2. Request Lifecycle Misunderstanding
@@ -85,7 +91,7 @@ Reality: NestJS HTTP requests execute synchronously in single-threaded event loo
 **Example:**
 
 ```text
-Agent: "softDeleteAllByUserId not wrapped in transaction with subscription creation"
+Agent: "the bulk soft-delete call is not wrapped in a transaction with subscription creation"
 Reality: the payment provider already committed the subscription; our code just syncs state
 ```
 
@@ -105,15 +111,15 @@ Reality: the payment provider already committed the subscription; our code just 
 **Example:**
 
 ```text
-Agent: "resyncOccurred can be undefined after retry"
-Reality: Line 327 explicitly sets resyncOccurred = true (not from retryResult)
+Agent: "didResync can be undefined after the retry"
+Reality: the recovery branch below sets it explicitly, not from the retry result
 ```
 
 **Prevention:** Add reinforcing comment:
 
 ```typescript
-// NOTE: Explicitly set to true (not from retryResult) because 410 recovery IS a resync event.
-resyncOccurred = true;
+// NOTE: Set explicitly here (not from retryResult) because a 410 recovery IS a resync event.
+didResync = true;
 ```
 
 ### 5. Process Model Misunderstanding
@@ -177,7 +183,7 @@ This pattern shows up whenever you have a constructor with sensible defaults pai
 **Prevention:** Add cross-reference comment:
 
 ```typescript
-// NOTE: Related logic in sync-blocks.helper.ts:232 handles resyncRequired
+// NOTE: Related logic in reconcile.helper.ts:120 handles the resync flag
 ```
 
 ### 9. Cross-Branch Confusion
@@ -189,8 +195,8 @@ This pattern shows up whenever you have a constructor with sensible defaults pai
 **Example:**
 
 ```text
-Agent: "Lines 796-800 set deletedAt unconditionally — toBeNull() should fail"
-Reality: Those lines are a NOTE comment on develop; the if-block was removed in an earlier PR
+Agent: "The implementation sets deletedAt unconditionally — toBeNull() should fail"
+Reality: on develop those lines are a NOTE comment; the if-block was removed in an earlier PR
 ```
 
 I hit this on a release-track PR where Claude analyzed `main` branch code and flagged a test assertion as incorrect. On `develop`, the lines it cited were already replaced by a comment, because the production code had changed in the previous PR. The assertion was correct for the current `develop` state.
@@ -199,14 +205,16 @@ I hit this on a release-track PR where Claude analyzed `main` branch code and fl
 
 ```typescript
 // NOTE: The deletedAt-setting code was removed in an earlier PR. This test verifies
-// the post-removal behavior: Event blocks only get itemStatus=Deleted, no deletedAt.
+// the post-removal behavior: child records only get status = Deleted, no deletedAt.
 ```
 
 ### 10. Large Diff Blindness (GitHub API 406)
 
 **What it looks like:** AI reviewer returns no comments or very sparse feedback on release PRs.
 
-**Why it happens:** GitHub's API returns HTTP 406 when a PR diff exceeds 20,000 lines. Release PRs (develop to main) often hit this limit. AI reviewers that rely on the diff API endpoint get no data to work with, so they either produce empty reviews or hallucinate based on file names alone.
+**Why it happens:** GitHub caps how much of a pull request diff it will serve. The docs put it at 20,000 lines or 1 MB of raw diff data, with a further cap of 300 files in a single diff. Release PRs (develop to main) cross that line easily, and when they do, asking for the diff media type on "Get a pull request" comes back `406` — one of the documented status codes for that endpoint.
+
+One caveat on that sentence. GitHub documents the size limits, and separately documents the 406; it does not document a link between them. The causal story is my reading of repeated hits between January and July 2026, not a contract you can rely on. The effect is the same either way: a reviewer that depends on that endpoint gets no data, so it either produces an empty review or falls back to guessing from file names.
 
 **Workaround:** Generate diffs locally with `git diff origin/main..origin/develop` and split across review agents by domain. That sidesteps the API limit and gives each reviewer a chunk it can actually read.
 
@@ -222,7 +230,7 @@ I hit this on a release-track PR where Claude analyzed `main` branch code and fl
 git log origin/main..HEAD -- {file} --format="%h %ae %s"
 ```
 
-Mark findings on other people's code as N/A in the finding registry, and escalate only CRITICAL ones regardless of author. On one release PR that took 7 of 15 unique findings off my plate before triage started.
+Mark findings on other people's code as N/A in the finding registry, and escalate only CRITICAL ones regardless of author. On one release PR, that took 7 of 15 unique findings off my plate before triage started.
 
 ### 12. Markdown Formatting Hallucination
 
@@ -306,7 +314,7 @@ Then read the actual file again, and don't trust the in-memory model. For CI, li
 
 Most of the patterns above come from a single bot commenting on a PR. Proactive review behaves differently, with several independent slice agents reading the same diff before anyone else sees it. There the *agreement pattern between agents* carries information none of the individual findings do.
 
-Convergence raises confidence. On a proactive review of a `/v1/sync` change, three agents with different mandates (safety, structure, runtime) each surfaced the same `lastSyncedAt` starvation defect from different evidence. That is a much stronger signal than one agent asserting the same thing three ways, and it is what promoted a latent, months-old timestamp bug from "someone's opinion" to the thing worth fixing first.
+Convergence raises confidence. On a proactive review of a sync-endpoint change, three agents with different mandates (safety, structure, runtime) each surfaced the same sync-cursor starvation defect from different evidence: under sustained load the cursor timestamp never advanced past the oldest pending record. That is a much stronger signal than one agent asserting the same thing three ways, and it is what promoted a latent, months-old timestamp bug from "someone's opinion" to the thing worth fixing first.
 
 Divergence carried signal too. Two agents split HIGH versus LOW on the severity of a single test assertion: one saw a silent-pass hole, the other saw the same hole masked by a preceding assertion. Both were right, and the split pointed straight at where the masking lived. Recording the disagreement was worth more than averaging it into a middle severity.
 
@@ -398,11 +406,11 @@ This was a release PR (develop to main) with a large diff that triggered the Git
 
 **Stats:** Round 1: 8 items (5 INVALID, 2 CONTROVERSIAL→FIX, 1 GTH→FIX). Round 2: 2 items (1 INVALID, 1 GTH→FIX)
 
-This is where Cross-Branch Confusion (#9) first showed up. Claude analyzed `main` branch code instead of the PR's target (`develop`) and claimed a test assertion contradicted the implementation at lines 796-800. On `develop`, those lines were already a NOTE comment, because the `deletedAt`-setting code had been removed in the previous PR.
+This is where Cross-Branch Confusion (#9) first showed up. Claude analyzed `main` branch code instead of the PR's target (`develop`) and claimed a test assertion contradicted the implementation at the lines it cited. On `develop`, those lines were already a NOTE comment, because the `deletedAt`-setting code had been removed in the previous PR.
 
 **Key INVALID (new pattern):**
 
-- Cross-Branch Confusion (#9): Reviewer analyzed `main` branch code instead of PR's target (`develop`). Claimed `toBeNull()` contradicts implementation at lines 796-800, but those lines are a NOTE comment on `develop` (the `deletedAt`-setting code was removed in the previous PR)
+- Cross-Branch Confusion (#9): Reviewer analyzed `main` branch code instead of PR's target (`develop`). Claimed `toBeNull()` contradicts the implementation at the lines it cited, but those lines are a NOTE comment on `develop` (the `deletedAt`-setting code was removed in the previous PR)
 
 **Outcome:** 3 fixes applied across both rounds, 6 INVALID dismissed. New pattern documented: Cross-Branch Confusion, where AI reviewers default to `main` branch context even when PR targets `develop`.
 

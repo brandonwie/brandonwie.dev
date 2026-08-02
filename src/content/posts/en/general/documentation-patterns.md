@@ -1,6 +1,9 @@
 ---
 title: Documentation Patterns
-description: The **Buffer Pattern** preserves important discoveries during AI-assisted
+description: >-
+  The Buffer Pattern preserves important discoveries during AI-assisted
+  sessions. It keeps insights from evaporating when a session ends or a
+  connection drops.
 date: 2025-01-15T00:00:00.000Z
 updated: '2026-08-02'
 tags:
@@ -49,7 +52,7 @@ RESULT: All context LOST
 
 The problem is not that you forget things happened. You remember that you solved something. The problem is that you forget the *why* -- the reasoning, the alternatives you considered, the specific detail that made the solution work.
 
-That failure mode is not new, and it is not specific to AI tooling. Michael Nygard opened his 2011 post on architecture decision records with the observation that ["one of the hardest things to track during the life of a project is the motivation behind certain decisions"](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) -- and his answer was to write the rationale down at the moment the decision is made. A session buffer is the same idea on a much shorter clock: years for an architecture record, hours for a coding session.
+That failure mode is not new, and it is not specific to AI tooling. Michael Nygard observed in his 2011 post on architecture decision records that ["one of the hardest things to track during the life of a project is the motivation behind certain decisions"](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) -- and his answer was to write the rationale down at the moment the decision is made. A session buffer is the same idea on a much shorter clock: years for an architecture record, hours for a coding session.
 
 ## The Solution: Write to a Buffer Immediately
 

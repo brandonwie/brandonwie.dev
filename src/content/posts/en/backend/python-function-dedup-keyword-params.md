@@ -4,7 +4,7 @@ description: >-
   Two modules contain near-identical functions with slight behavioral
   differences.
 date: 2026-02-06T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - python
@@ -18,13 +18,13 @@ references:
     title: Python Keyword-Only Arguments
     type: official
   - url: null
-    title: Applied in moba-etl deduplication
+    title: Applied in a production ETL deduplication
     type: experience
 source_content_hash: a1b542f23c6c6fbb135bce1464ed479275b073a31edadfdbfad3157f191264b0
 expanded: true
 ---
 
-I needed to fix a bug in our ETL pipeline's S3 upload function and realized the exact same bug existed in a second copy of the function in a different module. One was for regular automated exports (`amplitude_common`), the other for manual backfills (`amplitude_backfill`). They were 90% identical — the only differences were the S3 prefix and whether to extract data from a ZIP archive. Classic copy-paste duplication, and fixing the bug twice was the nudge I needed to merge them.
+I needed to fix a bug in an ETL pipeline's S3 upload function and realized the exact same bug existed in a second copy of the function in a different module. One handled regular automated exports, the other manual backfills. They were 90% identical — the only differences were the S3 prefix and whether to extract data from a ZIP archive. Classic copy-paste duplication, and fixing the bug twice was the nudge I needed to merge them.
 
 ## The Problem
 

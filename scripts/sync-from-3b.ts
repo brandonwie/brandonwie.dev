@@ -250,6 +250,18 @@ function shouldSync(
 	return { sync: true, reason: 'ok' };
 }
 
+/**
+ * Tags that exist for internal filing in the knowledge base and must never ship.
+ * `work` is the important one: the blog renders tags on cards and post pages, so
+ * syncing it publicly labels a post as employer-derived content — a G1 leak the
+ * prose-level generalization pass does not catch because it lives in metadata.
+ */
+const INTERNAL_ONLY_TAGS = new Set(['work', 'company', 'internal', 'private', 'confidential']);
+
+function publishableTags(tags: string[] | undefined): string[] {
+	return (tags ?? []).filter((tag) => !INTERNAL_ONLY_TAGS.has(tag.trim().toLowerCase()));
+}
+
 function transformFrontmatter(
 	source: SourceFrontmatter,
 	body: string,
@@ -260,7 +272,7 @@ function transformFrontmatter(
 		description: extractDescription(body),
 		date: source.created,
 		updated: source.updated,
-		tags: source.tags,
+		tags: publishableTags(source.tags),
 		category,
 		draft: source.status !== 'completed',
 		lang: 'en',

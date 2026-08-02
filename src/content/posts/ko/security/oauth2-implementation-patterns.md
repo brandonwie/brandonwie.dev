@@ -2,7 +2,7 @@
 title: OAuth 2.0 구현 패턴
 description: 백엔드 서비스에서 OAuth 2.0 플로우를 구현하기 위한 실용적 패턴
 date: 2026-02-02T00:00:00.000Z
-updated: '2026-03-15'
+updated: '2026-08-02'
 tags:
   - security
   - oauth
@@ -12,7 +12,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: oauth2-implementation-patterns
-source_updated: '2026-03-15'
+source_updated: '2026-08-02'
 translation_date: '2026-02-25'
 references:
   - url: 'https://api.slack.com/authentication/oauth-v2'
@@ -256,7 +256,7 @@ if (dto.iss && dto.iss !== "https://accounts.google.com") {
 }
 ```
 
-이것은 mix-up 공격에 대한 심층 방어를 추가하지만, 핫픽스(검증 통과)와는 별도의 변경사항(동작 로직)으로 다뤄야 해요.
+이것은 mix-up 공격에 대한 심층 방어를 추가하지만, `iss`를 검증에서 통과시키는 최소 수정과는 별도의 변경으로 배포하는 게 좋아요 -- 하나는 validation passthrough이고, 다른 하나는 새로운 동작 로직이니까요.
 
 ## 이 방식이 동작하는 이유
 

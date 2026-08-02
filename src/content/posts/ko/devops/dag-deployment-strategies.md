@@ -2,32 +2,39 @@
 title: DAG 배포 전략
 description: Airflow DAG를 배포하는 다양한 방법과 트레이드오프 분석
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
   - deployment
   - gitops
-  - work
 category: devops
 draft: false
 lang: ko
 source_lang: en
 source_slug: dag-deployment-strategies
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/production-deployment.html
     title: Airflow Production Deployment
     type: official
+  - url: >-
+      https://airflow.apache.org/docs/apache-airflow/2.10.5/configurations-ref.html
+    title: 'Airflow 2.10.5 Configuration Reference (scheduler intervals)'
+    type: official
+  - url: >-
+      https://airflow.apache.org/docs/apache-airflow/stable/configurations-ref.html
+    title: 'Airflow Configuration Reference (dag_processor intervals)'
+    type: official
 ---
 
-EC2에서 Docker Compose로 Airflow를 셋업하면서 반나절을 블로그, Helm chart
-기본값, GitHub issues를 읽는 데 썼어요. 딱 하나의 질문에 답하려고요: Git에
-있는 DAG 파일을 실행 중인 Airflow 컨테이너에 어떻게 전달하지? Airflow
-공식 문서는 여러 방법을 설명하면서도 하나를 추천하지 않고, 초반에 잘못된
-전략을 고르면 나중에 마이그레이션이 고통스러워져요.
+EC2에서 Docker Compose로 Airflow를 셋업하면서 제일 먼저 막힌 질문은
+이거였어요: Git에 있는 DAG 파일을 실행 중인 Airflow 컨테이너에 어떻게
+전달하지? Airflow 공식 문서는 여러 방법을 설명하면서도 하나를 추천하지
+않아서, 블로그와 Helm chart 기본값, GitHub issues를 뒤져야 했어요. 초반에
+잘못된 전략을 고르면 나중에 마이그레이션이 고통스러워지고요.
 
 ## 왜 중요한가
 
@@ -100,6 +107,21 @@ EC2 인스턴스에 `git clone`으로 전체 repository를 두고, `git pull`로
 사항을 동기화해요. 컨테이너가 `dags/` 폴더를 volume-mount하기 때문에
 Airflow가 재시작 없이 변경을 감지해요.
 
+얼마나 빨리 감지하는지는 하나가 아니라 두 개의 설정에 달려 있는데, 놓치기
+쉬운 부분이에요.
+
+- `[scheduler] min_file_process_interval` (기본값 `30`) -- Airflow가 이미
+  알고 있는 DAG 파일을 다시 파싱하는 주기예요. 공식 config 문서도 "updates
+  to DAGs are reflected after this interval"이라고 명시해요.
+- `[scheduler] dag_dir_list_interval` (기본값 `300`) -- DAG 디렉토리에서
+  _새 파일_ 을 찾는 스캔 주기예요.
+
+그래서 기존 DAG를 수정하면 30초쯤 뒤에 반영되지만, 완전히 새로운 DAG
+파일은 기본 설정에서 최대 5분까지 안 보일 수 있어요. 두 기본값은 Airflow
+3.x에도 그대로 이어졌어요. 파싱이 별도 dag-processor로 옮겨가면서 같은
+30초짜리 `min_file_process_interval`이 `[dag_processor]` 아래로 갔고,
+디렉토리 스캔은 `[dag_processor] refresh_interval`(여전히 300초)이 됐어요.
+
 소규모 팀(2-10명)이 EC2 기반 인프라에서 잦은 DAG 변경을 할 때 적합해요.
 
 ### 2. Docker Image에 DAG 포함 (Bake into Image)
@@ -153,6 +175,11 @@ DAG 파일을 S3에 업로드하고, EC2가 `aws s3 sync`로 동기화해요. �
 | **적합한 환경**     | EC2 소규모 팀   | 불변 인프라   | Kubernetes | AWS 네이티브 |
 | **팀 규모**         | 2-10            | 무관          | 대규모     | 중-대규모    |
 
+Airflow가 이런 매트릭스를 공식으로 제공하지는 않아요. 정답표가 아니라 제가
+정리한 트레이드오프 해석으로 봐주세요. 특히 셋업 복잡도 등급과 팀 규모
+구간은 누가 측정한 임계값이 아니라, 각 방식이 과하다고 느껴지기 시작한
+지점이에요.
+
 ---
 
 ## 결정 트리
@@ -203,17 +230,18 @@ EC2 /opt/airflow/
 3. SSM 명령으로 EC2에 전달
    └── cd /opt/airflow && git pull
 
-4. 스케줄러 감지 (~30초)
-   └── 새 DAG 파싱 완료
+4. 스케줄러가 변경된 파일 재파싱 (~30초)
+   └── 수정된 DAG 반영 완료
 
 컨테이너 재시작: 불필요
 다운타임: 없음
-반영 시간: ~30초
+반영 시간: 수정은 ~30초
+          새 DAG 파일은 최대 ~5분
 ```
 
-핵심은 Airflow 스케줄러가 설정 가능한 간격(기본 ~30초)으로 `dags/`
-디렉토리를 폴링한다는 거예요. 단순한 `git pull` 하나면 DAG 변경이 배포돼요.
-이미지 빌드도, 컨테이너 재시작도, 다운타임도 없어요.
+핵심은 Airflow가 설정 가능한 간격으로 DAG 파일을 다시 파싱한다는 거예요.
+단순한 `git pull` 하나면 DAG 변경이 배포돼요. 이미지 빌드도, 컨테이너
+재시작도, 다운타임도 없어요.
 
 ### 장점
 
@@ -269,12 +297,15 @@ EC2 /opt/airflow/
 
 ### 마이그레이션 시점
 
-| 상황               | 추천 변경        |
-| ------------------ | ---------------- |
-| Kubernetes 도입    | Git-Sync Sidecar |
-| 보안 강화          | Image에 포함     |
-| 멀티 리전 배포     | S3 + CloudFront  |
-| DAG 10개+, 팀 5명+ | Git-Sync 또는 S3 |
+매트릭스와 같은 단서를 붙여둘게요. 측정된 한계치가 아니라, 지금 방식이
+아껴주는 것보다 더 많은 비용을 물리기 시작하는 지점이에요.
+
+| 상황                 | 추천 변경             |
+| -------------------- | --------------------- |
+| Kubernetes 도입      | Git-Sync Sidecar      |
+| 보안 강화            | Image에 포함          |
+| 멀티 리전 배포       | S3 sync + 리전 간 복제 |
+| 대략 DAG 10개+, 작성자 5명+ | Git-Sync 또는 S3 |
 
 ### 각 전략을 쓰면 안 되는 경우
 

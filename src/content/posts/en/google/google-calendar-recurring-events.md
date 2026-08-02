@@ -7,7 +7,6 @@ tags:
   - backend
   - google-api
   - calendar
-  - work
 category: google
 draft: false
 lang: en

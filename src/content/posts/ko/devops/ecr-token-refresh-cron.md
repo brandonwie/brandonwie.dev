@@ -2,20 +2,19 @@
 title: ECR 토큰 갱신 Cron
 description: AWS ECR 인증 토큰은 12시간 후 만료돼요. 오래 실행되는 Docker 호스트에서는 자동 토큰 갱신을 구현해야 해요.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - aws
   - ecr
   - docker
   - cron
-  - work
 category: devops
 draft: false
 lang: ko
 source_lang: en
 source_slug: ecr-token-refresh-cron
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-03-04'
 references:
   - url: 'https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html'
@@ -63,8 +62,10 @@ sudo -u ec2-user crontab -e
 
 ## 구현 위치
 
-1. **CI/CD 파이프라인**(`deploy.yml`): DAG 동기화 job 시 설치
-2. **초기 설정 스크립트**(`setup-git-credentials.sh`): EC2 부트스트랩 시 설치
+인스턴스가 교체돼도 cron이 살아남도록 두 곳에 설치해요.
+
+1. **배포 job**: 호스트를 다시 프로비저닝하는 파이프라인 단계에서 cron을 재설치해요. 인스턴스가 교체돼도 자동으로 복구돼요.
+2. **부트스트랩 스크립트**: EC2 user-data에서도 설치해요. 다음 배포를 기다리지 않고 첫 부팅부터 갱신이 동작해요.
 
 ## 트러블슈팅
 
@@ -84,8 +85,8 @@ cat ~/.docker/config.json
 
 ## 흔한 실수
 
-| 이슈                      | 해결                               |
-| ------------------------- | ---------------------------------- |
-| 잘못된 사용자로 cron 설치 | `sudo -u ec2-user crontab` 사용    |
-| SSM에서 셸 이스케이핑     | 인라인 대신 임시 파일 사용         |
-| cronie 미설치             | AL2023에서 `yum install -y cronie` |
+| 이슈                                                  | 해결                                               |
+| ----------------------------------------------------- | -------------------------------------------------- |
+| 잘못된 사용자로 cron 설치                             | `sudo -u ec2-user crontab` 사용                    |
+| 원격(AWS SSM Run Command)으로 설치할 때 따옴표가 깨짐 | 인라인 대신 임시 파일에 항목을 쓰고 그 파일로 설치 |
+| cronie 미설치                                         | AL2023에서 `yum install -y cronie`                 |

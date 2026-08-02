@@ -1,8 +1,8 @@
 ---
 title: rrule BYDAY Timezone Correction
-description: 'The rrule JavaScript library interprets `BYDAY` weekday names in UTC, not the'
+description: "The rrule JavaScript library interprets `BYDAY` weekday names in UTC, not the event's own timezone."
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - rrule
@@ -14,13 +14,13 @@ lang: en
 expanded: true
 references:
   - url: 'https://github.com/jkbrzt/rrule/issues/556'
-    title: '556'
+    title: 'rrule issue #556'
     type: official
   - url: 'https://github.com/jkbrzt/rrule/issues/523'
-    title: '523'
+    title: 'rrule issue #523'
     type: official
   - url: 'https://github.com/jkbrzt/rrule/issues/364'
-    title: '364'
+    title: 'rrule issue #364'
     type: official
   - url: 'https://github.com/jkbrzt/rrule'
     title: rrule
@@ -31,7 +31,7 @@ references:
 source_content_hash: 97540fcc8da09b9f8817549cf180cc2d5f4c22f10f5735775647a03d2c1852e1
 ---
 
-A user reported that their Friday recurring event was showing up on Saturday. The event was set for Friday 08:00 KST, which is Thursday 23:00 UTC. When the rrule library expanded the `BYDAY=FR` rule, it interpreted "Friday" as Friday in UTC -- generating occurrences at Friday 23:00 UTC, which is Saturday 08:00 KST. The user saw their Friday meeting on Saturday. That is how I learned the rrule JavaScript library does not handle timezones the way its API suggests.
+A weekly event set for Friday 08:00 KST expanded onto Saturday. Friday 08:00 KST is Thursday 23:00 UTC, and when the rrule library expanded the `BYDAY=FR` rule it read "Friday" as Friday in UTC -- generating occurrences at Friday 23:00 UTC, which is Saturday 08:00 KST. Not a few hours off; a whole day off. That is how I found out the rrule JavaScript library does not handle timezones the way its API suggests.
 
 ---
 
@@ -39,7 +39,7 @@ A user reported that their Friday recurring event was showing up on Saturday. Th
 
 The core issue is a mismatch between what the rrule library promises and what it delivers. When you have an event in a timezone ahead of UTC, the date can cross midnight.
 
-| Block Setup                      | rrule Interpretation           | Result                                              |
+| Event Setup                      | rrule Interpretation           | Result                                              |
 | -------------------------------- | ------------------------------ | --------------------------------------------------- |
 | Friday 08:00 KST (Thu 23:00 UTC) | `BYDAY=FR` = Friday in **UTC** | Generates Fri 23:00 UTC = **Sat** 08:00 KST (WRONG) |
 | Expected                         | `BYDAY=FR` = Friday in **KST** | Should generate Thu 23:00 UTC = **Fri** 08:00 KST   |
@@ -82,10 +82,10 @@ Since the library cannot handle timezones correctly during generation, the worka
 ```text
 1. Expand rrule period by +/-1 day for BYDAY rules (catch cross-timezone occurrences)
 2. Generate occurrences using UTC dtstart (no tzid)
-3. Calculate day offset: blockTimezone.date() - UTC.date()
+3. Calculate day offset: eventTimezone.date() - UTC.date()
 4. Shift all occurrences by negative of day offset
 5. Filter by:
-   a. Weekday in block's timezone matches BYDAY values
+   a. Weekday in the event's timezone matches BYDAY values
    b. Occurrence date falls within requested period
 ```
 
@@ -97,19 +97,18 @@ The expanded period in step 1 prevents the silent exclusion problem. The day off
 
 This is the core of the correction. The offset tells you how many days the local date differs from the UTC date for the event's start time.
 
+The snippet below uses dayjs with its `utc` and `timezone` plugins, but nothing here is dayjs-specific -- any date library that can render a date in a named timezone and diff two dates in whole days works the same way.
+
 ```typescript
-// Example: Block at Friday 08:00 KST = Thursday 23:00 UTC
-const dtstartInBlockTz = DateUtil.tz(parentStart, timeZone); // Jan 16 (Fri in KST)
-const dtstartInUTC = DateUtil.utc(parentStart); // Jan 15 (Thu in UTC)
+// Example: event at Friday 08:00 KST = Thursday 23:00 UTC
+const dtstartInEventTz = dayjs.tz(parentStart, timeZone); // Jan 16 (Fri in KST)
+const dtstartInUtc = dayjs.utc(parentStart); // Jan 15 (Thu in UTC)
 
 // Use date string comparison to handle month boundaries correctly
 // (e.g., Jan 31 UTC -> Feb 1 KST gives +1, not -30)
-const localDateStr = dtstartInBlockTz.format("YYYY-MM-DD");
-const utcDateStr = dtstartInUTC.format("YYYY-MM-DD");
-const dayOffset = DateUtil.utc(localDateStr).diff(
-  DateUtil.utc(utcDateStr),
-  "day"
-); // 1
+const localDateStr = dtstartInEventTz.format("YYYY-MM-DD");
+const utcDateStr = dtstartInUtc.format("YYYY-MM-DD");
+const dayOffset = dayjs.utc(localDateStr).diff(dayjs.utc(utcDateStr), "day"); // 1
 
 // Shift occurrences backward to compensate
 // rrule generates: Fri 23:00 UTC (Sat in KST) - WRONG

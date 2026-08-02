@@ -136,7 +136,7 @@ CLAUDE.local.md
 └── ...
 ```
 
-`{backend-repo}`와 `{infra-repo}`는 팀 저장소가 디스크에 체크아웃된 디렉토리
+`{backend-repo}`와 `{infra-repo}`는 그 저장소들이 디스크에 체크아웃된 디렉토리
 이름 자리예요. 이 패턴은 이름이 뭐든 상관없어요.
 
 다른 팀원이 있는 저장소만 공유/로컬 분리를 적용해요. 개인 전용 저장소는 하나의
@@ -310,9 +310,16 @@ audit 스크립트가 깨진 symlink를 잡아내서 체인을 따라가 복구�
 - **업무 오버라이드** (`~/.claude-work/settings.local.json`): SoT 디렉토리의
   별도 `settings.local.work.json`로 향하는 symlink. 개인 프로필과 다른 두 키만
   들어있어요: `statusLine.command` (`CLAUDE_CONFIG_DIR=~/.claude-work` 접두사
-  포함)와 `enabledMcpjsonServers` (`postgres-aws-aurora-prod` 같은 업무 전용
-  데이터베이스 연결 whitelist). Claude Code가 로드 시점에 base `settings.json`
-  위에 deep merge해요.
+  포함)와 `enabledMcpjsonServers` (그 프로필이 로드할 수 있는 project 단위 MCP
+  서버 whitelist. 제 경우엔 읽기 전용 데이터베이스 서버 하나예요). Claude Code가
+  로드 시점에 base `settings.json` 위에 deep merge해요.
+
+짚고 넘어갈 게 있어요. user `settings.json` 옆에 두는 profile 단위
+`settings.local.json`은 공식 문서에 나오는 settings scope가 아니에요. 문서에
+있는 건 user(`~/.claude/settings.json`), project(`.claude/settings.json`),
+그리고 저장소 루트의 `.claude/settings.local.json`이에요. 제 머신에서는
+override가 동작해서 그대로 썼지만, 문서화된 계약이 아니라 관찰된 동작이었어요.
+chain을 폐기한 이유 중 하나이기도 해요.
 
 오버라이드가 아닌 모든 설정(env, permissions, hooks, plugins)은 단일
 공유 SoT의 symlink 체인으로 전달돼요. SoT를 편집하면 즉시 두 프로필에

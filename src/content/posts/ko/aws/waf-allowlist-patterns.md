@@ -21,6 +21,9 @@ references:
   - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-processing-order.html'
     title: Setting rule priority — AWS WAF Developer Guide
     type: official
+  - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-action.html'
+    title: Using rule actions in AWS WAF — AWS WAF Developer Guide
+    type: official
   - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-statement-type-string-match.html'
     title: String match rule statement — AWS WAF Developer Guide
     type: official
@@ -47,7 +50,7 @@ blocklist를 쓰면 계속 수비만 하게 돼요. 새로운 공격 벡터가 �
 
 allowlist를 쓰면 알 수 없는 라우트는 기본적으로 차단돼요. `/wp-admin`을 스캔하던 봇은 애플리케이션에 닿기도 전에 403을 받아요. 그 공격을 미리 알 필요도 없어요. allowlist에 없는 경로는 전부 자동으로 거부되니까요.
 
-**권장하는 방식은요**, 알려진 안정적인 라우트를 가진 API라면 allowlist를 쓰는 거예요. API가 `/users`, `/calendars`, `/blocks`, `/socket.io`를 제공한다면, 애플리케이션에 닿아도 되는 경로는 딱 그것들뿐이에요. 나머지는 전부 잡음이죠.
+**권장하는 방식은요**, 알려진 안정적인 라우트를 가진 API라면 allowlist를 쓰는 거예요. API가 `/users`, `/orders`, `/invoices`, `/socket.io`를 제공한다면, 애플리케이션에 닿아도 되는 경로는 딱 그것들뿐이에요. 나머지는 전부 잡음이죠.
 
 대신 유지보수라는 트레이드오프가 있어요. 새 API 라우트를 추가할 때마다 WAF allowlist도 같이 갱신해야 해요. 깜빡하면 새 라우트가 프로덕션에서 403을 반환하죠. 배포 체크리스트에 꼭 넣어둬야 할 단계지만, 보안 이득이 운영 비용을 훨씬 웃돌아요.
 
@@ -94,7 +97,7 @@ resource "aws_wafv2_regex_pattern_set" "allowed_routes" {
   scope = "REGIONAL"
 
   regular_expression {
-    regex_string = "^/(users|calendars|blocks|sync|socket\\.io)"
+    regex_string = "^/(users|orders|invoices|sync|socket\\.io)"
   }
 }
 ```
@@ -130,7 +133,7 @@ resource "aws_wafv2_web_acl" "prod" {
         }
         statement {
           byte_match_statement {
-            search_string         = "/calendars"
+            search_string         = "/orders"
             positional_constraint = "STARTS_WITH"
             field_to_match { uri_path {} }
             text_transformation {
@@ -186,7 +189,7 @@ resource "aws_wafv2_web_acl" "prod" {
 
 여기엔 짚고 넘어갈 보안적 함의가 있어요. allowlist에 포함된 라우트는 관리형 보호를 완전히 우회한다는 점이에요. OWASP나 SQL 인젝션 관리형 규칙 그룹을 allow 규칙보다 낮은 priority(뒤쪽)에 붙이면, 이 규칙들은 allowlist를 통과하지 못한 트래픽만 보게 돼요. 정작 신뢰해서 허용한 라우트는 검사하지 않죠. 신뢰 라우트는 WAF가 단락(short-circuit)되니 지연이 낮지만, 그만큼 관리형 규칙 보호도 전혀 받지 못해요.
 
-대부분의 공개 API 라우트라면 받아들일 만한 트레이드오프예요. 핸들러를 직접 통제하고, allowlist가 이미 나머지를 다 막았으니까요. 문제가 되는 건 `/internals/*` 같은 내부·권한 엔드포인트예요. 이런 경로를 allowlist에 넣으면 관리형 규칙과 rate limiting이 적용되지 않으니, 보호는 애플리케이션 계층이 직접 책임져야 해요. allow 항목을 추가하기 전에 위협 모델에서 한 번 따져볼 부분이에요.
+대부분의 공개 API 라우트라면 받아들일 만한 트레이드오프예요. 핸들러를 직접 통제하고, allowlist가 이미 나머지를 다 막았으니까요. 문제가 되는 건 `/admin/*` 같은 내부·권한 엔드포인트예요. 이런 경로를 allowlist에 넣으면 관리형 규칙과 rate limiting이 적용되지 않으니, 보호는 애플리케이션 계층이 직접 책임져야 해요. allow 항목을 추가하기 전에 위협 모델에서 한 번 따져볼 부분이에요.
 
 ## 경로 매칭 전략
 
@@ -214,9 +217,9 @@ search_string         = "/health"
 
 헬스 체크 엔드포인트처럼 하위 경로나 쿼리 파라미터가 절대 붙으면 안 되는 경로에 써요. 이 엄격함 덕분에 공격자가 `/health/../admin` 같은 경로를 덧붙이는 걸 막아줘요.
 
-`EXACTLY`를 골라야 하는 두 번째 이유가 있는데, 놓치기 쉬워요. `STARTS_WITH`는 경로와 그 하위 트리보다 더 많은 걸 매칭하거든요. `STARTS_WITH "/foo"`는 `/foo`와 `/foo/bar`를 매칭하지만, `/foo-bar`나 `/foobar` 같은 형제 접두사도 같이 매칭해요. 하위 트리가 없는 단일 라우트 엔드포인트 — 예를 들어 달랑 하나 있는 `POST /today-zero` — 를 `STARTS_WITH`로 허용하면, 접두사를 공유하는 미래의 형제 경로까지 조용히 다 들여보내는 거예요. `EXACTLY "/today-zero"`가 그 구멍을 막아요.
+`EXACTLY`를 골라야 하는 두 번째 이유가 있는데, 놓치기 쉬워요. `STARTS_WITH`는 경로와 그 하위 트리보다 더 많은 걸 매칭하거든요. `STARTS_WITH "/foo"`는 `/foo`와 `/foo/bar`를 매칭하지만, `/foo-bar`나 `/foobar` 같은 형제 접두사도 같이 매칭해요. 하위 트리가 없는 단일 라우트 엔드포인트 — 예를 들어 달랑 하나 있는 `POST /reindex` — 를 `STARTS_WITH`로 허용하면, 접두사를 공유하는 미래의 형제 경로(`/reindex-all` 같은)까지 조용히 다 들여보내는 거예요. `EXACTLY "/reindex"`가 그 구멍을 막아요.
 
-트레이드오프도 있어요. `EXACTLY`는 trailing slash 변형(`/today-zero/`)과 나중에 추가되는 하위 경로도 거부해서, 항목을 하나씩 따로 등록해야 해요. `/health` 옆에 가상의 `/health/websocket`을 유지하는 것과 같은 규율이죠. 제가 정착한 결정 규칙은 이래요.
+트레이드오프도 있어요. `EXACTLY`는 trailing slash 변형(`/reindex/`)과 나중에 추가되는 하위 경로도 거부해서, 항목을 하나씩 따로 등록해야 해요. `/health` 옆에 가상의 `/health/websocket`을 유지하는 것과 같은 규율이죠. 제가 정착한 결정 규칙은 이래요.
 
 - **하위 트리 없는 고정 경로 하나** → `EXACTLY "/foo"`
 - **하위 경로나 쿼리 파라미터가 예상됨** → `STARTS_WITH "/foo"`
@@ -231,7 +234,7 @@ search_string         = "/api/"
 
 매칭 대상: `/api/`를 어디든 포함하는 모든 경로.
 
-`/v1/api/users`나 `/v2/api/calendars` 같은 API 버전 패턴에 써요. 다만 `CONTAINS`는 조심해야 해요. 제약이 가장 느슨해서 의도보다 넓게 매칭될 수 있거든요.
+`/v1/api/users`나 `/v2/api/orders` 같은 API 버전 패턴에 써요. 다만 `CONTAINS`는 조심해야 해요. 제약이 가장 느슨해서 의도보다 넓게 매칭될 수 있거든요.
 
 ## WebSocket/Socket.IO 경로
 
@@ -272,12 +275,16 @@ aws wafv2 get-web-acl \
 
 규칙 정의를 돌려주니 byte match statement가 올바른지 확인할 수 있어요.
 
-출력을 grep하기 전에 알아둘 게 하나 있어요. `get-web-acl`은 각 `ByteMatchStatement.SearchString`을 base64로 인코딩해서 돌려줘요. 규칙이 살아 있어도 JSON에서 `/today-zero`를 검색하면 아무것도 안 나와요. 인코딩된 값으로 grep하거나(`/today-zero`는 `L3RvZGF5LXplcm8=`로 인코딩돼요), field를 base64로 디코딩하세요.
+이 출력을 grep하기 전에 알아둘 게 하나 있어요. 경로가 그대로 들어 있지 않을 수 있어요. 제 경우엔 각 `ByteMatchStatement.SearchString`이 base64로 인코딩돼서 돌아왔고, 그래서 규칙이 살아 있는데도 JSON에서 `/reindex`를 검색하면 아무것도 안 나왔어요.
+
+API 계약과는 일관돼요. `SearchString`의 타입 자체가 base64로 인코딩된 binary data object이고, 문서에도 CLI와 SDK가 값을 *넣을 때* 인코딩을 대신 해준다고 적혀 있거든요. 다만 값이 *나올 때* 어떻게 렌더링되는지는 문서에서 찾지 못했어요. 그러니 보장된 동작이 아니라 관찰한 동작으로 봐주세요. 2026년 6월에 AWS CLI v2에서 확인한 결과고, 스크립트로 자동화하기 전에 각자 환경에서 한 번 확인해 보는 게 좋아요.
+
+인코딩된 값으로 grep하거나(`/reindex`는 `L3JlaW5kZXg=`로 인코딩돼요), field를 base64로 디코딩하세요.
 
 ```bash
 aws wafv2 get-web-acl --name app-prod-waf --scope REGIONAL --id <id> \
   --region ap-northeast-2 --query 'WebACL.Rules' --output json \
-  | grep -c "L3RvZGF5LXplcm8="   # 1 = 존재
+  | grep -c "L3JlaW5kZXg="   # 1 = 존재
 ```
 
 ### 차단된 요청 확인
@@ -306,7 +313,7 @@ allowlist가 적용되면 요청은 세 계층을 거쳐요. WAF, 그다음 ALB,
 | 504               | ALB                 | WAF·ALB는 통과; **백엔드**가 `idle_timeout`(기본 60초) 안에 응답하지 못함  |
 | 502 / 503         | ALB                 | 정상 타겟이 없거나 타겟이 에러를 반환함                                    |
 
-헷갈리기 쉬운 건 504예요. 504는 절대 WAF 차단이 아니에요. 504가 보인다는 건 요청이 이미 allowlist를 통과해 백엔드까지 도달했다는 뜻이라, 문제는 WAF 규칙이 아니라 핸들러나 그 egress에 있어요. 반대로 커스텀 차단 본문과 함께 오는 403은 경로가 allowlist에서 빠졌다는 신호예요. 해당 `byte_match` 항목을 추가하면 되고, 버전 라우트라면 위에서 본 `/v2/` 접두사 함정을 기억해 두세요.
+헷갈리기 쉬운 건 504예요. 504는 절대 WAF 차단이 아니에요. 504가 보인다는 건 요청이 이미 allowlist를 통과해 백엔드까지 도달했다는 뜻이라, 문제는 WAF 규칙이 아니라 핸들러나 그 egress에 있어요. 반대로 커스텀 차단 본문과 함께 오는 403은 경로가 allowlist에서 빠졌다는 신호예요. 해당 `byte_match` 항목을 추가하면 되고, 버전 라우트라면 아래에서 다룰 `/v2/` 접두사 함정을 같이 확인하세요.
 
 ## 비용 최적화
 
@@ -315,7 +322,7 @@ WAF 요금은 예측 가능하지만 규칙이 많아지면 쌓여요.
 | 항목            | 월 비용(약) |
 | --------------- | ----------- |
 | Web ACL         | $5          |
-| 규칙(처음 10개) | 개당 $1     |
+| 규칙            | 개당 $1     |
 | 요청(백만 건당) | $0.60       |
 
 **전략은요**, dev에서는 regex 통합으로 비용을 줄이고, prod에서는 명시적 규칙으로 명확성과 유지보수성을 챙기는 거예요. regex 규칙 2개(월 $7)와 명시적 규칙 10개(월 $15)의 차이는 작아서, 프로덕션 환경이라면 언제나 디버깅 편의를 우선해도 돼요.
@@ -326,24 +333,24 @@ WAF 요금은 예측 가능하지만 규칙이 많아지면 쌓여요.
 
 ### 버전 경로 접두사 함정
 
-예상 밖이었던 문제 하나: `STARTS_WITH "/spaces"`는 `/v2/spaces`를 매칭하지 않아요. URI 경로가 문자 그대로 `/v2/`로 시작하지 `/spaces`로 시작하지 않거든요. 돌이켜보면 당연한 건데, 새 버전 API 라우트를 추가할 때 기존 `/spaces` allowlist 항목이 모든 버전을 커버한다고 넘겨짚기 쉬워요.
+예상 밖이었던 문제 하나: `STARTS_WITH "/reports"`는 `/v2/reports`를 매칭하지 않아요. URI 경로가 문자 그대로 `/v2/`로 시작하지 `/reports`로 시작하지 않거든요. 돌이켜보면 당연한 건데, 새 버전 API 라우트를 추가할 때 기존 `/reports` allowlist 항목이 모든 버전을 커버한다고 넘겨짚기 쉬워요.
 
 API 버전 접두사마다 별도의 allowlist 항목이 필요해요.
 
 ```hcl
 # 세 개의 별도 statement — 하나가 아님
-statement { byte_match_statement { search_string = "/spaces"    ... } }
-statement { byte_match_statement { search_string = "/v1/spaces" ... } }
-statement { byte_match_statement { search_string = "/v2/spaces" ... } }
+statement { byte_match_statement { search_string = "/reports"    ... } }
+statement { byte_match_statement { search_string = "/v1/reports" ... } }
+statement { byte_match_statement { search_string = "/v2/reports" ... } }
 ```
 
-명시적 `/v2/spaces` 항목이 없으면 프로덕션에서 요청이 조용히 403을 반환해요. 까다로운 점은, dev 환경에서는 regex로 `/v2/*`를 포괄 허용하는 경우가 많다는 거예요. 그래서 dev에서는 완벽하게 돌아가고, 명시적 규칙을 쓰는 prod에서만 실패해요.
+명시적 `/v2/reports` 항목이 없으면 프로덕션에서 요청이 조용히 403을 반환해요. 까다로운 점은, dev 환경에서는 regex로 `/v2/*`를 포괄 허용하는 경우가 많다는 거예요. 그래서 dev에서는 완벽하게 돌아가고, 명시적 규칙을 쓰는 prod에서만 실패해요.
 
-**v2 라우트 추가 체크리스트:** 백엔드에 v2 controller를 추가할 때는 항상 `waf/prod_waf.tf`에 대응하는 WAF allowlist 항목도 같이 넣어요. dev WAF는 `/v2/*`를 포괄 허용하니까 거기선 알아서 동작하는데, 바로 그래서 개발 단계에서는 이 문제가 안 잡혀요.
+**v2 라우트 추가 체크리스트:** 백엔드에 v2 controller를 추가할 때는, 프로덕션 web ACL이 정의된 Terraform 파일에 대응하는 항목도 같은 변경에서 같이 넣으세요. dev WAF가 `/v2/*`를 포괄 허용하고 있다면 거기선 알아서 동작하는데, 바로 그래서 개발 단계에서는 이 문제가 안 잡혀요.
 
 ### 반대 케이스: 이미 커버되는 하위 경로
 
-버전 경로 함정에는 Terraform을 건드리기 전에 확인할 가치가 있는 반대 케이스가 있어요. `STARTS_WITH` 항목은 그 아래 namespace 전체를 커버해요. `/blocks`가 이미 allowlist에 있다면 새 `/blocks/complete-overdue` 라우트는 이미 허용된 상태고, 전용 항목을 추가하는 건 중복이에요 — 동작은 그대로인데 WCU(web ACL capacity unit)만 더 쓰는 거죠.
+버전 경로 함정에는 Terraform을 건드리기 전에 확인할 가치가 있는 반대 케이스가 있어요. `STARTS_WITH` 항목은 그 아래 namespace 전체를 커버해요. `/invoices`가 이미 allowlist에 있다면 새 `/invoices/archive` 라우트는 이미 허용된 상태고, 전용 항목을 추가하는 건 중복이에요 — 동작은 그대로인데 WCU(web ACL capacity unit)만 더 쓰는 거죠.
 
 그러니까 확인은 양방향으로 해야 해요. 버전·루트 접두사는 자체 항목이 필요하고, 이미 허용된 접두사 아래 하위 경로는 필요 없어요. 반사적으로 라우트를 열기 전에 WAF `.tf`를 읽고 기존 namespace 항목이 커버하는지 보세요. `terraform plan`이 no-op으로 나오면 이미 허용되고 있다는 뜻이에요.
 
@@ -370,7 +377,7 @@ WAF allowlist 설정을 위한 아홉 가지 원칙이에요.
 3. **WebSocket을 잊지 마요.** Socket.IO는 쿼리 파라미터가 붙은 여러 하위 경로를 써요. `/socket.io`에 `STARTS_WITH` 규칙 하나면 다 덮어요.
 4. **dev와 prod는 패턴이 달라도 돼요.** regex 통합은 dev에서 비용을 줄여주고, 명시적 규칙은 prod에서 디버깅 시간을 줄여줘요.
 5. **배포할 때마다 검증해요.** AWS CLI로 규칙이 활성화됐는지 확인하고, 샘플 요청에서 false positive를 살펴봐요.
-6. **버전 라우트는 별도 항목이 필요해요.** `STARTS_WITH "/spaces"`는 `/v2/spaces`를 매칭하지 않아요. 버전 접두사마다 자체 allowlist statement가 있어야 해요.
+6. **버전 라우트는 별도 항목이 필요해요.** `STARTS_WITH "/reports"`는 `/v2/reports`를 매칭하지 않아요. 버전 접두사마다 자체 allowlist statement가 있어야 해요.
 7. **상태 코드로 거부 계층을 구분해요.** 커스텀 본문과 함께 오는 403은 allowlist 누락, 429는 WAF rate limiting, 504는 요청이 WAF를 통과한 뒤 백엔드가 타임아웃된 거예요. 규칙이 아니라 핸들러를 디버깅해요.
 8. **terminating `allow {}`는 이후 규칙을 건너뛰어요.** allowlist 규칙이 매칭되면 관리형 규칙 그룹과 rate limiting이 그 요청에는 실행되지 않으니, 권한 있는 내부 엔드포인트는 자체 보호를 갖춰야 해요.
-9. **이미 허용된 namespace의 하위 경로는 커버 완료.** `/blocks`에 걸린 `STARTS_WITH` 항목이 `/blocks/complete-overdue`를 이미 허용하니, 전용 항목은 동작 변화 없이 비용만 추가해요. 버전 라우트 규칙의 반대예요. 버전·루트 접두사는 자체 항목이 필요하지만 하위 경로는 아니에요. 규칙을 추가하기 전에 `.tf`와 `terraform plan` no-op으로 확인하세요.
+9. **이미 허용된 namespace의 하위 경로는 커버 완료.** `/invoices`에 걸린 `STARTS_WITH` 항목이 `/invoices/archive`를 이미 허용하니, 전용 항목은 동작 변화 없이 비용만 추가해요. 버전 라우트 규칙의 반대예요. 버전·루트 접두사는 자체 항목이 필요하지만 하위 경로는 아니에요. 규칙을 추가하기 전에 `.tf`와 `terraform plan` no-op으로 확인하세요.

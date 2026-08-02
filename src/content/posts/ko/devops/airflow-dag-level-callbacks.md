@@ -1,19 +1,18 @@
 ---
 title: Airflow DAG 수준 callback
-description: Airflow 2.x는 DAG 수준의 on_success_callback을 조용히 무시해요. 성공 알림은 마지막 task에 붙여야 동작해요.
+description: Airflow 2.x는 DAG 수준의 on_success_callback을 조용히 무시해요. 제 환경에서는 task 수준 성공 callback만 동작해서, 성공 알림은 파이프라인 마지막 task에 붙여야 했어요.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
   - callbacks
-  - work
 category: devops
 draft: false
 lang: ko
 source_lang: en
 source_slug: airflow-dag-level-callbacks
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 references:
   - url: >-
@@ -25,8 +24,8 @@ references:
 Airflow DAG에 Slack 알림을 붙였어요. 실패 알림은 잘 왔는데 성공 알림은 한 번도
 안 왔어요. DAG는 멀쩡히 돌고 모든 task가 success로 끝나는데, 알림만 안 오는
 거예요. Slack webhook도 확인하고, callback 함수도 검증하고, task 로그도 다
-훑어봤어요. 다 정상이었어요. 문제는 따로 있었어요. Airflow 2.x에서는 DAG 수준의
-`on_success_callback`이 조용히 무시돼요.
+훑어봤어요. 다 정상이었어요. 문제는 DAG 수준 `on_success_callback` 자체였어요.
+Airflow 2.11.0에서 이게 조용히 무시되고 있었어요.
 
 에러도 없고 경고도 없어요. callback 파라미터는 군말 없이 받아주고, 모든 task가
 성공하면 그냥 완전히 무시돼요.
@@ -68,14 +67,14 @@ task 수준 callback은 성공/실패 둘 다 안정적으로 동작해요. 성�
 
 ## 핵심 규칙
 
-- DAG 수준 `on_failure_callback`은 **동작해요**(task 실패 시).
-- DAG 수준 `on_success_callback`은 **동작하지 않아요**(조용히 무시됨).
+- DAG 수준 `on_failure_callback`은 **동작했어요**(task 실패 시).
+- DAG 수준 `on_success_callback`은 **동작하지 않았어요**(조용히 무시됨).
 - 성공 알림은 DAG의 마지막 task에 callback으로 붙이세요.
 - Airflow 2.11.0에서 확인된 동작이고, 다른 2.x 버전에서도 같을 가능성이 높아요.
 
 ## 실제 패턴
 
-Amplitude ETL DAG에 정착시킨 패턴이에요. 실패 처리는 `default_args`에 넣어서
+어떤 analytics ETL DAG에 정착시킨 패턴이에요. 실패 처리는 `default_args`에 넣어서
 모든 task가 받게 하고, 성공 callback은 마지막 task에만 붙여요.
 
 ```python
@@ -84,11 +83,11 @@ default_args = {
     'on_failure_callback': send_failure_alert,
 }
 
-with DAG('amplitude_etl', default_args=default_args):
+with DAG('analytics_etl', default_args=default_args):
     validate = PythonOperator(task_id='validate', ...)
 
     etl = DockerOperator(
-        task_id='amplitude-etl',
+        task_id='run-etl',
         on_success_callback=send_success_alert,  # 성공 callback은 여기
     )
 
@@ -100,20 +99,34 @@ with DAG('amplitude_etl', default_args=default_args):
 실패하면 파이프라인이 `etl`에 도달하기 전에 멈추니까, 성공 callback이 잘못
 울릴 일도 없어요.
 
-## 왜 이렇게 동작하는지
+## 확인한 것과 확인하지 못한 것
 
-차이는 Airflow가 각 레벨에서 callback을 평가하는 방식에서 와요. DAG 수준
-callback은 DagRun의 state 변화로 트리거되는데, 성공 state 전환은 Airflow 2.x에서
-callback dispatch가 완전히 구현되지 않은 알려진 빈틈을 갖고 있어요. 반면 task
-수준 callback은 TaskInstance의 state machine으로 트리거돼요. 이쪽은 성공/실패
-전환 둘 다 제대로 처리해요.
+여기는 조심해서 적어야 해요. 설명을 찾지 못했고, 원인도 끝까지 좁히지
+못했거든요.
+
+공식 callbacks 문서는 `on_success_callback`을 DAG 수준 callback으로 명시하고
+있어요("Invoked when the Dag succeeds"). 문서상으로는 지원되는 기능이라는
+뜻이고, 제가 링크한 reference를 따라가면 제가 겪은 것과 반대되는 내용을 보게
+돼요. Airflow 2.11.0에서 제가 관찰한 건 이거예요. DAG 수준 실패 callback은
+동작했고, DAG 수준 성공 callback은 끝내 한 번도 안 울렸고, 성공 callback을
+마지막 task로 옮기니 매 실행마다 정상으로 울렸어요.
+
+문서에서 찾은 유일한 caveat은 제 상황과는 무관하지만 알아둘 만해요(지금 stable
+문서는 Airflow 3.x 기준이에요). callback은 worker가 실제로 실행해서 DAG나 task의
+state가 바뀔 때만 돌아요. 그래서 UI나 CLI에서 수동으로 success로 표시하는 걸로는
+callback이 트리거되지 않아요.
+
+그러니 여기 적은 내용은 Airflow 내부 동작에 대한 주장이 아니라, 특정 버전에서
+관찰한 결과로 받아들여 주세요. 쓰시는 버전에서 DAG 수준 성공 callback이 잘
+울린다면 그대로 쓰시면 돼요. 마지막 task 패턴은 안 울릴 때 제가 택한
+우회로예요.
 
 ## 정리
 
 Airflow 성공 알림이 안 온다면, 우선 DAG 수준에 걸려 있는지 확인하세요.
-`on_success_callback`을 파이프라인 마지막 task로 옮기면 끝이에요. Airflow 2.x의
-조용하고 문서화도 안 된 빈틈을 한 줄 변경으로 메우는 거예요. 일반 규칙은 이래요.
-실패 callback은 DAG 수준(`default_args` 경유)에, 성공 callback은 task 수준(마지막
+`on_success_callback`을 파이프라인 마지막 task로 옮기는 건 한 줄 변경이고,
+2.11.0에서 겪은 침묵은 이걸로 우회됐어요. 지금 제가 쓰는 규칙은 이래요. 실패
+callback은 DAG 수준(`default_args` 경유)에, 성공 callback은 task 수준(마지막
 task)에 두세요.
 
 ## References

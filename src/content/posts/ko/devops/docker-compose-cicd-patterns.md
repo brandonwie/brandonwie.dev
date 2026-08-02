@@ -2,18 +2,17 @@
 title: "Docker Compose CI/CD 패턴"
 description: CI/CD 파이프라인에서 Docker Compose를 쓰는 패턴. 개발과 프로덕션 설정 분리, ECR 연동, 배포 전략을 다뤄요.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-07-13'
+updated: '2026-08-02'
 tags:
   - devops
   - docker
   - cicd
-  - work
 category: devops
 draft: false
 lang: ko
 source_lang: en
 source_slug: docker-compose-cicd-patterns
-source_updated: '2026-07-13'
+source_updated: '2026-08-02'
 translation_date: '2026-07-13'
 references:
   - url: 'https://docs.docker.com/compose/how-tos/production/'
@@ -21,7 +20,7 @@ references:
     type: official
 ---
 
-프로덕션 서버에서 CI/CD 파이프라인이 `docker-compose pull`을 돌리고 나서 `docker-compose up -d`를 실행했어요. 로그에는 성공이라고 찍혔는데, 정작 돌아가고 있던 건 방금 ECR에 올린 새 image가 아니라 로컬에서 빌드한 옛날 image였어요. 범인은 `docker-compose.yml`이었어요. `image:` 대신 `build:`를 쓰고 있어서 `pull`이 조용히 아무 일도 안 한 거예요.
+제가 작업하던 Airflow 배포에서, 파이프라인이 프로덕션 호스트에서 `docker-compose pull`을 돌리고 나서 `docker-compose up -d`를 실행했어요. 두 명령 모두 정상 종료됐는데, 정작 올라온 건 방금 ECR에 올린 새 image가 아니라 로컬에서 빌드한 옛날 image였어요. 원인은 Compose 파일에 있었어요. `image:` 대신 `build:`를 쓰고 있어서 `pull`이 가져올 게 없었고, 그래서 조용히 아무 일도 안 한 거예요.
 
 겉으로는 다 맞아 보여서 몇 시간씩 잡아먹는 부류의 실수예요. 이 글에서는 그걸 막아주는 패턴을 다뤄요. Docker Compose 파일을 개발용(`build:`)과 프로덕션용(`image:`)으로 나누는 방법, 그리고 EC2 위에서 돌아가는 Airflow 배포를 위한 CI/CD 파이프라인 전략까지 짚어볼게요.
 
@@ -39,7 +38,7 @@ services:
   webserver:
     build: # ← "로컬에서 빌드"
       context: ..
-      dockerfile: master/Dockerfile
+      dockerfile: docker/Dockerfile
 ```
 
 ```bash
@@ -55,8 +54,11 @@ docker-compose up -d # ← 로컬에서 빌드함
 
 ```text
 project/
-├── docker-compose.yml       # 로컬 개발용 (build:)
-└── docker-compose.prod.yml  # 프로덕션용 (image:)
+├── dags/
+└── docker/
+    ├── Dockerfile
+    ├── docker-compose.yml       # 로컬 개발용 (build:)
+    └── docker-compose.prod.yml  # 프로덕션용 (image:)
 ```
 
 **로컬 개발**은 `build:`를 써요. 덕분에 registry에 push하지 않고도 Dockerfile을 고치면서 반복 작업할 수 있어요.
@@ -67,7 +69,7 @@ services:
   webserver:
     build:
       context: ..
-      dockerfile: master/Dockerfile
+      dockerfile: docker/Dockerfile
 ```
 
 **프로덕션**은 ECR registry URL과 함께 `image:`를 써요. `${ECR_REGISTRY}` 변수는 배포 시점에 CI/CD가 주입해요.
@@ -76,7 +78,7 @@ services:
 # docker-compose.prod.yml
 services:
   webserver:
-    image: ${ECR_REGISTRY}/airflow-master:latest # ← ECR에서 풀
+    image: ${ECR_REGISTRY}/my-airflow-webserver:latest # ← ECR에서 풀
 ```
 
 Compose 파일을 분리하면 CI/CD 파이프라인이 환경마다 맞는 파일을 골라 쓸 수 있어요. Airflow 배포 흐름은 DAG만 바뀌는 경우(빠르고 재시작 없음)와 image가 바뀌는 경우(전체 재빌드 후 배포)를 둘 다 지원해요.
@@ -84,28 +86,28 @@ Compose 파일을 분리하면 CI/CD 파이프라인이 환경마다 맞는 파�
 ## CI/CD 파이프라인 흐름
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    GitHub Actions (deploy.yml)                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  1. detect-changes                                               │
-│     └─ dags/ 또는 master/, worker/ 변경 감지                    │
-│                                                                  │
-│  2a. sync-dags (DAG만 변경됨)                                   │
-│      └─ EC2: git pull                                           │
-│      └─ 재시작 없음, ~30초 반영                                 │
-│                                                                  │
-│  2b. build-images (이미지 변경됨)                               │
-│      └─ GitHub Actions: Docker build                            │
-│      └─ ECR에 push (airflow-master:latest, airflow-worker:latest)│
-│                                                                  │
-│  3. deploy-ec2 (이미지 변경됨)                                  │
-│      ├─ Secrets Manager → .env 파일                             │
-│      ├─ ECR_REGISTRY를 .env에 추가                              │
+┌────────────────────────────────────────────────────────────────┐
+│                  GitHub Actions (deploy.yml)                   │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  1. detect-changes                                             │
+│     └─ dags/ 또는 docker/ 변경 감지                            │
+│                                                                │
+│  2a. sync-dags (DAG만 변경됨)                                  │
+│      └─ EC2: git pull                                          │
+│      └─ 재시작 없음, ~30초 반영                                │
+│                                                                │
+│  2b. build-images (이미지 변경됨)                              │
+│      └─ GitHub Actions: docker build                           │
+│      └─ ECR에 push (webserver + worker 이미지)                 │
+│                                                                │
+│  3. deploy-ec2 (이미지 변경됨)                                 │
+│      ├─ Secrets Manager → .env 파일                            │
+│      ├─ ECR_REGISTRY를 .env에 추가                             │
 │      ├─ docker-compose.prod.yml pull  ← 핵심 변경              │
-│      └─ docker-compose.prod.yml up -d                           │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+│      └─ docker-compose.prod.yml up -d                          │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ## ECR_REGISTRY 환경 변수
@@ -114,7 +116,7 @@ Compose 파일을 분리하면 CI/CD 파이프라인이 환경마다 맞는 파�
 
 ```bash
 # deploy.yml에서
-echo "ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> master/.env
+echo "ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> docker/.env
 ```
 
 그러면 docker-compose.prod.yml에서 이 값을 써요.
@@ -122,12 +124,12 @@ echo "ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> mas
 ```yaml
 services:
   webserver:
-    image: ${ECR_REGISTRY}/airflow-master:latest
+    image: ${ECR_REGISTRY}/my-airflow-webserver:latest
 ```
 
 ## 트리거 전략
 
-프로덕션 배포에서 한 가지 정할 게 있어요. push마다 자동으로 돌릴지, 아니면 수동 승인을 받을지예요. 처음엔 자동 트리거로 시작했다가 왜 수동이 더 안전한지 뼈아프게 배웠어요.
+프로덕션 배포에서 한 가지 정할 게 있어요. push마다 자동으로 돌릴지, 아니면 수동 승인을 받을지예요. 저는 main에 push할 때마다 자동으로 돌리는 방식으로 시작했다가, 나중에 수동 전용으로 바꿨어요.
 
 ### 변경 전: 자동 + 수동
 
@@ -168,26 +170,18 @@ on:
 ```bash
 # deploy.yml에서
 aws secretsmanager get-secret-value \
-  --secret-id prod/airflow/master \
+  --secret-id <your-secret-id> \
   --query SecretString --output text | \
-  jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > master/.env
+  jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > docker/.env
 ```
 
-### 필요한 secret
+secret ID는 각자 계정에서 쓰는 네이밍 규칙을 그대로 따르면 돼요. 그게 뭐든 명령 모양은 달라지지 않아요.
 
-**Master:**
+### 번들에 뭐가 들어가나요
 
-```text
-prod/airflow/master:
-├── POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB
-├── POSTGRES_USER, POSTGRES_PASSWORD
-├── REDIS_HOST, REDIS_PORT
-├── AIRFLOW_ADMIN_USER, AIRFLOW_ADMIN_PASSWORD, AIRFLOW_ADMIN_EMAIL
-├── AIRFLOW_SECRET_KEY
-├── AWS_DEFAULT_REGION
-├── AWS_ACCOUNT_ID          ← DAG ECR 이미지 경로용
-└── GITHUB_PAT              ← git pull용
-```
+Airflow 스택이라면 대략 다섯 가지 범주가 들어가요. metadata database 연결 정보(host, port, database, user, password), Celery broker로 쓰는 Redis 연결 정보, Airflow admin 계정과 webserver secret key, AWS 리전과 계정 ID(계정 ID가 있어야 DAG 안에서 ECR image 경로를 조립할 수 있어요), 그리고 서버가 스스로 DAG 변경을 받아올 수 있게 해주는 git token이에요.
+
+정확한 key 이름보다 중요한 건 이걸 하나의 번들로 묶는다는 점이에요. `get-secret-value` 한 번으로 `.env` 전체가 만들어지니까, 설정이 반만 채워진 상태로 container가 뜨는 일이 없어요.
 
 ## 배포 시나리오
 
@@ -218,7 +212,7 @@ image가 바뀌면 전체 파이프라인이 돌아야 해요. 새 Docker image�
 
 ```bash
 # 1. 코드 push
-git add master/Dockerfile requirements.txt
+git add docker/Dockerfile requirements.txt
 git commit -m "feat: add new dependency"
 git push origin main
 
@@ -241,19 +235,19 @@ git push origin main
 image 관련 문제라면, Compose 파일을 `:latest` 대신 특정 image 태그(git SHA)로 고정하면 돼요.
 
 ```bash
-ssh airflow-master
-cd /opt/airflow
+ssh <deploy-host>
+cd <deploy-dir>
 
 # docker-compose.prod.yml 편집: :latest → :abc123 (특정 커밋 SHA)
-docker-compose -f master/docker-compose.prod.yml pull
-docker-compose -f master/docker-compose.prod.yml up -d
+docker-compose -f docker/docker-compose.prod.yml pull
+docker-compose -f docker/docker-compose.prod.yml up -d
 ```
 
 ### DAG rollback
 
 ```bash
-ssh airflow-master
-cd /opt/airflow
+ssh <deploy-host>
+cd <deploy-dir>
 
 # 특정 파일 rollback
 git checkout <commit-sha> -- dags/
@@ -271,9 +265,9 @@ git reset --hard <commit-sha>
 
 ## CI/CD 주의사항
 
-뼈아프게 배운 교훈이 하나 있어요. **floating action 태그가 빌드를 조용히 깨뜨려요.** GitHub Actions workflow에서 `cloudflare/wrangler-action@v3`를 쓰고 있었는데, 어느 날 갑자기 "bun not found"로 빌드가 실패했어요. 이 action이 기본 `packageManager`를 npm에서 bun으로 바꿔버린 거예요 — `ubuntu-latest`에는 bun이 없으니까 바로 실패한 거죠.
+**floating action 태그는 빌드를 조용히 깨뜨려요.** GitHub Actions workflow에서 `cloudflare/wrangler-action@v3`를 쓰고 있었는데, 2026년 3월에 갑자기 "bun not found"로 빌드가 실패했어요. 이 action이 기본 `packageManager`를 npm에서 bun으로 바꿔버린 거예요 — `ubuntu-latest`에는 bun이 없으니까 바로 실패한 거죠. (그 기본값은 지금 또 바뀌었을 수도 있어요. 핵심은 이 기본값 자체가 아니라 태그가 발밑에서 움직였다는 점이에요.)
 
-해결은 간단했어요. `packageManager: npm`을 명시적으로 설정하면 돼요. 더 넓은 원칙은 이거예요. 항상 action 버전을 고정하거나, 설정 가능한 기본값을 전부 명시적으로 지정하세요. `@v3` 태그는 코드 한 줄 안 바꿔도 발밑에서 바뀔 수 있어요.
+해결은 간단했어요. `packageManager: npm`을 명시적으로 설정하면 돼요. 더 넓은 원칙은 이거예요. action 버전을 고정하거나, 의존하는 설정 기본값을 전부 명시적으로 지정하세요. `@v3` 태그는 코드 한 줄 안 바꿔도 발밑에서 바뀔 수 있어요.
 
 두 번째 주의사항은 빌드 실패보다 훨씬 비싼 대가를 치러요. 데이터를 위협하거든요. Docker Compose 프로젝트 이름은 Compose 메이저 버전 하나 안에서만 안정적으로 유지돼요. Compose v1은 현재 작업 디렉터리 이름에서 프로젝트 이름을 뽑고, v2는 compose 파일이 있는 디렉터리에서 뽑아요. 호스트에서 Compose 바이너리를 v1에서 v2로 바꾸면(별거 아닌 것 같은 업그레이드죠) 프로젝트 이름이 슬그머니 바뀌어 버려요. 그러면 세 가지가 깨지는데, 고통이 커지는 순서대로예요. `docker-compose down`은 새 이름으로는 아무것도 못 찾아서 옛날 스택이 계속 돌아가요. `docker-compose up -d`는 명시적으로 지정한 `container_name`에서 충돌해요. 그리고 최악의 경우, named volume이 살아 있는 볼륨 대신 텅 빈 `<newproject>_<volume>`에 새로 연결돼서, database에 빈 디스크를 새로 쥐여줘요.
 

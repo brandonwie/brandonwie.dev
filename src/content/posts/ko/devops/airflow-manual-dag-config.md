@@ -2,7 +2,7 @@
 title: Airflow Manual DAG Config 패턴
 description: 수동 DAG 트리거 시 커스텀 파라미터를 전달하면서도 예약 실행은 그대로 유지하는 패턴이에요.
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
@@ -13,7 +13,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: airflow-manual-dag-config
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 references:
   - url: >-
@@ -22,7 +22,7 @@ references:
     type: official
 ---
 
-프로덕션 Amplitude ETL 파이프라인에서 특정 날짜를 재처리해야 했어요. 날짜를
+프로덕션 Airflow에서 특정 날짜의 데이터를 재처리해야 했어요. 날짜를
 하드코딩하면 이후 예약 실행을 오염시킬 위험이 있었어요. Airflow Variable은
 일회성 오버라이드에 쓰기엔 과한 느낌이었어요. 단 한 번의 실행에만 적용되고 이후
 사라지는 파라미터 전달 방법이 필요했어요.
@@ -47,7 +47,7 @@ Airflow의 `dag_run.conf`가 정확히 이 역할을 해줘요. 각 수동 트�
 알려주는 에러 메시지도 없어요.
 
 날짜 범위 기본값은 복잡도를 더 키워요. `yesterday_ds` 같은 단순한 기본값은
-괜찮지만, "10일 전 날짜를 YYYY-MM-DD 형식으로" 계산하려면
+괜찮지만, "7일 전 날짜를 YYYY-MM-DD 형식으로" 계산하려면
 `macros.timedelta()`와 `.strftime()`을 Jinja 표현식 안에 중첩해야 해요.
 문법이 틀리면 유용한 에러가 나오지 않아요.
 
@@ -78,15 +78,15 @@ with DAG(
 `yesterday_ds`를 반환해요. 수동으로 config와 함께 트리거하면 제공된 값을
 써요.
 
-## 실제 사례
+## 예시
 
 단일 날짜를 처리하는 ETL DAG예요.
 
 ```python
-# amplitude_etl_dag.py
+# analytics_etl_dag.py
 with DAG(
-    dag_id="amplitude_etl_dag",
-    schedule_interval="0 16 * * *",
+    dag_id="analytics_etl_dag",
+    schedule_interval="@daily",
     ...
 ) as dag:
     # Scheduled: uses yesterday_ds
@@ -94,7 +94,7 @@ with DAG(
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', yesterday_ds) }}"
 
     task = DockerOperator(
-        task_id="amplitude-etl",
+        task_id="analytics-etl",
         environment={
             "EXECUTION_DATE": EXECUTION_DATE,
             ...
@@ -106,19 +106,19 @@ with DAG(
 날짜 범위를 처리하는 주간 백필 DAG예요.
 
 ```python
-# amplitude_weekly_backfill_dag.py
+# analytics_weekly_backfill_dag.py
 with DAG(
-    dag_id="amplitude_weekly_backfill_dag",
-    schedule_interval="0 0 * * 3",  # Wednesday 00:00 UTC
+    dag_id="analytics_weekly_backfill_dag",
+    schedule_interval="@weekly",
     ...
 ) as dag:
-    # Scheduled: calculates 10-4 days ago
+    # Scheduled: covers the trailing week (7 days ago to 1 day ago)
     # Manual: uses provided start_date/end_date
-    START_DATE = '{{ dag_run.conf.get("start_date", (execution_date - macros.timedelta(days=10)).strftime("%Y-%m-%d")) }}'
-    END_DATE = '{{ dag_run.conf.get("end_date", (execution_date - macros.timedelta(days=4)).strftime("%Y-%m-%d")) }}'
+    START_DATE = '{{ dag_run.conf.get("start_date", (execution_date - macros.timedelta(days=7)).strftime("%Y-%m-%d")) }}'
+    END_DATE = '{{ dag_run.conf.get("end_date", (execution_date - macros.timedelta(days=1)).strftime("%Y-%m-%d")) }}'
 
     task = DockerOperator(
-        task_id="amplitude-backfill",
+        task_id="analytics-backfill",
         environment={
             "START_DATE": START_DATE,
             "END_DATE": END_DATE,
@@ -209,7 +209,7 @@ config 없이도 예약 실행이 동작하도록 합리적인 기본값을 제�
 
 ```python
 # GOOD - Scheduled runs work without config
-START_DATE = '{{ dag_run.conf.get("start_date", (execution_date - macros.timedelta(days=10)).strftime("%Y-%m-%d")) }}'
+START_DATE = '{{ dag_run.conf.get("start_date", (execution_date - macros.timedelta(days=7)).strftime("%Y-%m-%d")) }}'
 ```
 
 ## 실전 팁

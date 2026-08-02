@@ -2,13 +2,12 @@
 title: Airflow CI/CD Concepts
 description: Understanding Airflow deployment and CI/CD concepts through a kitchen analogy.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
   - cicd
   - docker
-  - work
 category: devops
 draft: false
 lang: en
@@ -37,10 +36,10 @@ A DAG (Directed Acyclic Graph) is like a recipe card. It defines:
 
 ```python
 # This is a DAG - it's just instructions, not the actual work
-with DAG('amplitude_pipeline', schedule='@daily'):
-    task1 = "Fetch data from Amplitude"      # Step 1
-    task2 = "Transform the data"              # Step 2
-    task3 = "Save to database"                # Step 3
+with DAG('analytics_pipeline', schedule='@daily'):
+    task1 = "Fetch events from the analytics API"  # Step 1
+    task2 = "Transform the data"                   # Step 2
+    task3 = "Save to database"                     # Step 3
     task1 >> task2 >> task3   # Do in this order
 ```
 
@@ -56,18 +55,20 @@ The key insight: **the DAG doesn't process data**. It tells the worker "run this
 
 ## What Needs a Restart?
 
-This is the question that confused me most. The answer depends on what changed:
+This is the question that confused me most. The answer depends on what changed — and on which Airflow you are running.
 
-### No Restart Needed (90% of cases)
+So, up front: everything below describes self-managed Airflow. Scheduler, webserver, and workers run as containers on a single host, the DAGs folder is mounted from shared network storage, and ETL images are pulled from a container registry. On a managed offering — MWAA, Cloud Composer, Astronomer — the shipping mechanics differ: you drop DAGs in a bucket or let the platform sync them, and the platform owns the restart. The hot-reload versus rebuild boundary is the part that carries over. How you deliver the file is the part that doesn't.
+
+### No Restart Needed (most changes)
 
 | Change                        | What happens                      |
 | ----------------------------- | --------------------------------- |
 | `dags/my_dag.py` (new/modify) | Scheduler auto-detects in ~30 sec |
-| ETL code (arch-etl)           | Next DAG run uses new container   |
+| ETL code (`etl-repo`)         | Next DAG run uses new container   |
 
 DAG file changes are hot-reloaded — the Airflow scheduler continuously scans the DAGs folder and picks up changes within ~30 seconds. ETL code changes are even simpler: since each task run pulls a fresh Docker image, pushing a new image to ECR means the next DAG run automatically uses the updated code.
 
-### Restart Required (10% of cases)
+### Restart Required (image-level changes)
 
 | Change           | Why restart                                     |
 | ---------------- | ----------------------------------------------- |
@@ -80,7 +81,7 @@ These changes affect the Airflow infrastructure itself (scheduler, webserver, wo
 
 ## Deployment Scenarios
 
-Putting it all together:
+Putting it all together, for the self-managed setup described above:
 
 | Scenario         | Action                  | Restart? | Downtime    |
 | ---------------- | ----------------------- | -------- | ----------- |
@@ -90,16 +91,16 @@ Putting it all together:
 
 ## The Three Repos Pattern
 
-In our setup, different types of code live in different repositories, each with their own deployment flow:
+Different types of code live in different repositories, each with their own deployment flow:
 
-| Repo            | Contains       | Deploy How           | Restart?               |
-| --------------- | -------------- | -------------------- | ---------------------- |
-| `arch-airflow`  | DAG files      | git pull to EFS      | No                     |
-| `arch-airflow`  | Airflow images | ECR + docker restart | Yes (rare)             |
-| `arch-etl`      | ETL job code   | ECR push             | No (auto-pulls latest) |
-| `backend-infra` | Infrastructure | Terraform (one-time) | N/A                    |
+| Repo          | Contains       | Deploy How           | Restart?               |
+| ------------- | -------------- | -------------------- | ---------------------- |
+| `dags-repo`   | DAG files      | git pull to EFS      | No                     |
+| `dags-repo`   | Airflow images | ECR + docker restart | Yes (rare)             |
+| `etl-repo`    | ETL job code   | ECR push             | No (auto-pulls latest) |
+| `infra-repo`  | Infrastructure | Terraform (one-time) | N/A                    |
 
-The separation matters because DAG files change frequently (daily), ETL code changes moderately (weekly), and infrastructure changes rarely (monthly). Each should deploy independently without affecting the others.
+The separation matters because the three change at very different rates — DAG files most often, ETL code less often, infrastructure rarely. Each should deploy independently without affecting the others, so a DAG tweak never waits on an infrastructure review.
 
 ## Why This Matters
 

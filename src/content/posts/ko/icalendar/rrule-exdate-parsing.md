@@ -4,7 +4,7 @@ description: >-
   rrule JavaScript 라이브러리에서 EXDATE가 RRULE보다 먼저 오거나 TZID 파라미터가 있으면 파싱이 제대로 안 됩니다.
   해결 방법을 알아봅니다.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
 category: icalendar
@@ -12,7 +12,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: rrule-exdate-parsing
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: 'https://github.com/jkbrzt/rrule/issues/556'
@@ -29,10 +29,10 @@ references:
     type: official
 ---
 
-분석 대시보드가 이벤트를 잘못된 시간에 보여주고 있었어요. 몇 시간 밀린 게
-아니라 완전히 틀렸습니다. 제외 날짜가 있는 모든 반복 이벤트가 예정된 시간 대신
-현재 타임스탬프에 결과를 생성하고 있었어요. `rrule` 라이브러리가 조용히 실패하고
-있었고, 원인을 알아내는 데 시간이 걸렸습니다.
+반복 이벤트가 예정된 날짜 대신 현재 타임스탬프에 결과를 생성하고 있었어요. 몇
+시간 밀린 게 아니라 완전히 틀렸습니다. 제외 날짜가 있는 반복 이벤트는 전부
+그랬어요. `rrule` 라이브러리가 조용히 실패하고 있었고, 원인을 알아내는 데 시간이
+걸렸습니다.
 
 ## 조용한 실패
 
@@ -87,14 +87,14 @@ EXDATE를 따로 파싱한 다음 `RRuleSet`으로 합칩니다:
 import { RRuleSet, rrulestr } from "rrule";
 
 // 1. RRULE 라인만 추출 (EXDATE, RDATE 제외)
-const rruleLines = extractRRulesOnly(block.recurrence);
+const rruleLines = extractRRulesOnly(event.recurrence);
 const rruleString = rruleLines.join("\n");
 
 // 2. RRULE만 파싱
 const baseRule = rrulestr(rruleString, { dtstart: parentStart });
 
 // 3. EXDATE 따로 파싱 (TZID 제대로 처리)
-const exdates = parseExdates(block.recurrence, timeZone);
+const exdates = parseExdates(event.recurrence, event.timeZone);
 
 // 4. RRuleSet에 합치기
 const ruleSet = new RRuleSet();
@@ -130,24 +130,69 @@ export function extractRRulesOnly(recurrence: string[] | null): string[] {
 
 Google Calendar이 생성하는 네 가지 EXDATE 형식을 모두 처리하는 함수입니다:
 
+| 형식 | 예시 | 파싱 전략 |
+| --- | --- | --- |
+| UTC | `EXDATE:20251219T090000Z` | 그대로 UTC로 파싱 |
+| 날짜만 | `EXDATE;VALUE=DATE:20251219` | 이벤트 타임존의 자정으로 처리 |
+| TZID 단일 | `EXDATE;TZID=Asia/Seoul:20251219T180000` | 지정된 타임존으로 파싱 후 UTC 변환 |
+| TZID 다중 | `EXDATE;TZID=Asia/Seoul:20251219T180000,20251226T180000` | 콤마로 분리해 각각 타임존으로 파싱 |
+
+EXDATE 라인은 모두 같은 모양이에요. 파라미터, 콜론, 그리고 콤마로 구분된 값 하나
+이상. 그래서 첫 콜론에서 자르고, 파라미터 쪽에서 `TZID`를 꺼낸 다음, 값마다
+분기하면 됩니다. 타임존 변환은 Luxon에 맡긴 최소 구현은 이런 모양이에요:
+
 ```typescript
+import { DateTime } from "luxon";
+
 export function parseExdates(
   recurrence: string[] | null,
-  blockTimeZone: string,
+  defaultTimeZone: string,
 ): Date[] {
-  // 지원하는 형식:
-  // - EXDATE:20251219T090000Z (UTC)
-  // - EXDATE;VALUE=DATE:20251219 (날짜만)
-  // - EXDATE;TZID=Asia/Seoul:20251219T180000 (타임존 포함)
-  // - EXDATE;TZID=Asia/Seoul:20251219T180000,20251226T180000 (여러 개)
-  // UTC Date 객체 배열 반환
+  if (!recurrence) return [];
+
+  const exdates: Date[] = [];
+
+  for (const line of recurrence) {
+    if (!line.startsWith("EXDATE")) continue;
+
+    const colon = line.indexOf(":");
+    const params = line.slice(0, colon); // EXDATE;TZID=Asia/Seoul
+    const values = line.slice(colon + 1); // 20251219T180000,20251226T180000
+    const zone = /TZID=([^;:]+)/.exec(params)?.[1] ?? defaultTimeZone;
+
+    for (const value of values.split(",")) {
+      const raw = value.trim();
+      if (!raw) continue;
+
+      if (raw.endsWith("Z")) {
+        // 20251219T090000Z -- 이미 UTC
+        exdates.push(
+          DateTime.fromFormat(raw, "yyyyMMdd'T'HHmmss'Z'", {
+            zone: "utc",
+          }).toJSDate(),
+        );
+      } else if (!raw.includes("T")) {
+        // 20251219 -- VALUE=DATE, 이벤트 타임존의 자정
+        exdates.push(DateTime.fromFormat(raw, "yyyyMMdd", { zone }).toJSDate());
+      } else {
+        // 20251219T180000 -- TZID 타임존 기준 로컬 시간
+        exdates.push(
+          DateTime.fromFormat(raw, "yyyyMMdd'T'HHmmss", { zone }).toJSDate(),
+        );
+      }
+    }
+  }
+
+  return exdates;
 }
 ```
 
-Google Calendar은 제외가 어떻게 생성되었느냐에 따라 네 가지 형식을 모두
-사용합니다. UTC 형식(`...Z`)은 라이브러리가 기본적으로 처리하지만 TZID 형식은
-안 됩니다. 커스텀 파서가 네 가지 모두를 처리하고 `RRuleSet.exdate()`가 받을 수
-있는 UTC Date 객체를 반환합니다.
+분기는 세 개지만 형식은 네 가지를 다 덮어요. TZID 다중은 콤마로 나뉜 값마다 TZID
+분기가 한 번씩 도는 것뿐이니까요.
+
+UTC 형식(`...Z`)은 라이브러리가 기본적으로 처리하지만 TZID 형식은 안 됩니다.
+직접 파싱하면 네 가지 모두를 처리하고 `RRuleSet.exdate()`가 받을 수 있는 UTC
+Date 객체를 반환할 수 있어요.
 
 ## 이런 경우에 사용하세요
 

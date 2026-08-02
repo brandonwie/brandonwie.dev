@@ -1,8 +1,10 @@
 ---
 title: Batch Processing Trade-offs
-description: "When processing multiple entities that share database operations, there's a"
+description: >-
+  Per-entity batching versus one cross-entity bulk INSERT — what I measured,
+  what I only estimated, and why the simpler shape stayed.
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-03-03T00:00:00.000Z
+updated: "2026-08-02"
 tags:
   - backend
   - performance
@@ -14,169 +16,195 @@ lang: en
 expanded: true
 source_content_hash: e7a60acfed7e209f0a40745f1ca4816ff9fdd56adc510428e06dec11d8b9e931
 references:
+  - url: https://www.postgresql.org/docs/current/populate.html
+    title: Populating a Database — PostgreSQL Documentation
+    type: official
   - url: >-
-      https://docs.aws.amazon.com/batch/latest/userguide/multi-node-parallel-jobs.html
-    title: Multi-node parallel jobs — AWS Batch
+      https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all
+    title: Promise.all() — MDN Web Docs
     type: official
 ---
 
-trade-off between per-entity batching and cross-entity batching.
+When several entities each need the same kind of database write, there are two
+shapes to pick from. Every entity can issue its own bulk INSERT, or every entity
+can hand its rows to one shared INSERT at the end. I had the first shape in a
+sync job and worked through whether the second was worth building.
 
-## The Scenario
+It wasn't — but the reason is more interesting than the verdict, and the number
+that decided it is thinner than I'd like.
 
-Syncing 18 calendars, each needs bulk INSERT:
+## The scenario
+
+A sync job pulls events from 18 calendar feeds in parallel. Each feed produces a
+batch of rows that has to land in one table.
 
 ```text
-Current: 18 parallel processes → 18 bulk INSERTs → 18 DB connections
-Alternative: 18 parallel processes → 1 bulk INSERT → 1 DB connection
+Approach A (what I had):      18 parallel fetches → 18 bulk INSERTs → 18 connections
+Approach B (what I weighed):  18 parallel fetches →  1 bulk INSERT  →  1 connection
 ```
 
-## Per-Entity Batching (Current)
+## Approach A — per-entity batching
 
 ```typescript
-// Each calendar processes independently
+// Each feed is processed independently.
 await Promise.all(
-  calendars.map(async (calendar) => {
-    const blocks = await fetchEvents(calendar);
-    await bulkInsertBlocks(blocks); // Called 18 times
+  feeds.map(async (feed) => {
+    const rows = await fetchEvents(feed);
+    await bulkInsert(rows); // called once per feed
   }),
 );
 ```
 
-### Pros
+What it buys: fetches run in parallel, which is what matters when the run is
+network-bound. Each feed gets its own transaction, so a failure stays inside the
+feed that caused it. Error handling is per-feed — one bad feed doesn't take the
+other 17 down with it. And the write is already batched *within* a feed, which
+turns out to be the part that carries most of the benefit.
 
-- ✅ Parallel processing (faster for network-bound operations)
-- ✅ Independent transactions (failure isolation)
-- ✅ Simpler error handling (one entity fails, others succeed)
-- ✅ Already batched within entity (better than per-event inserts)
+What it costs: N connections per run, N INSERT statements, and correspondingly
+more pressure on the connection pool.
 
-### Cons
+## Approach B — cross-entity batching
 
-- ❌ N database connections per sync
-- ❌ N bulk INSERT queries
-- ❌ Higher connection pool pressure
-
-## Cross-Entity Batching (Alternative)
-
-### Collect-then-Batch
+Collect everything first, write once.
 
 ```typescript
-// Collect all blocks first
-const allBlocks = [];
+const allRows = [];
+
 await Promise.all(
-  calendars.map(async (calendar) => {
-    const blocks = await processCalendar(calendar);
-    allBlocks.push(...blocks);
+  feeds.map(async (feed) => {
+    const rows = await fetchEvents(feed);
+    allRows.push(...rows);
   }),
 );
 
-// ONE bulk insert for all calendars
-await bulkInsertBlocks(allBlocks);
+// One bulk insert covering every feed.
+await bulkInsert(allRows);
 ```
 
-### Pros
+What it buys: one statement instead of N, one connection instead of N, and a
+bigger batch for the database to work with.
 
-- ✅ Single database query (1 vs N)
-- ✅ Lower connection pool usage
-- ✅ Better database batching efficiency
+What it costs: it's harder to tell which feed produced a bad row, the write
+becomes all-or-nothing so one failure rolls back the rest, every row sits in
+memory until the write happens, and error recovery gets meaningfully more
+complex.
 
-### Cons
+## The comparison in one table
 
-- ❌ Harder to track which entity failed
-- ❌ All-or-nothing transaction (one failure affects all)
-- ❌ Requires buffering all data in memory
-- ❌ More complex error recovery
+| Factor            | Per-entity              | Cross-entity           |
+| ----------------- | ----------------------- | ---------------------- |
+| Failure isolation | Yes                     | No                     |
+| Connections used  | N                       | 1                      |
+| Error tracking    | Straightforward         | Complex                |
+| Memory            | Lower (streams through) | Higher (buffers all)   |
+| Code complexity   | Low                     | Higher                 |
+| Statements        | N                       | 1                      |
 
-## Decision Framework
+Per-entity fits when failure isolation matters, entities are already processed
+in parallel, recovery needs to be per-entity, and network I/O dominates the run.
 
-| Factor            | Per-Entity        | Cross-Entity       |
-| ----------------- | ----------------- | ------------------ |
-| Failure isolation | ✅ Yes            | ❌ No              |
-| Connection usage  | Higher            | Lower              |
-| Error tracking    | ✅ Easy           | ❌ Complex         |
-| Memory usage      | Lower (streaming) | Higher (buffering) |
-| Code complexity   | ✅ Simple         | Complex            |
-| Query count       | N queries         | 1 query            |
+Cross-entity fits when the database is the bottleneck, the connection pool is
+constrained, all-or-nothing semantics are acceptable, and memory can comfortably
+hold the whole payload.
 
-## When to Choose Which
+## What the numbers said
 
-### Choose Per-Entity Batching When
+The per-entity column is measured over an 18-feed run. The cross-entity column
+is an estimate — I never built it, so this is a projection, not a result.
 
-- Failure isolation is important
-- Entities are processed in parallel
-- Error recovery needs to be per-entity
-- Network I/O dominates (not DB I/O)
+| Metric       | Per-entity (measured) | Cross-entity (estimated) |
+| ------------ | --------------------- | ------------------------ |
+| Total time   | 1.6-1.9s              | 1.5-1.8s                 |
+| Statements   | 18                    | 1                        |
+| Time savings | —                     | 34-119ms (2-6%)          |
+| Complexity   | Low                   | High                     |
 
-### Choose Cross-Entity Batching When
+Worth being honest about how thin that is. A 2-6% estimate held up against a
+measured baseline is not a strong result on its own; it moved the decision only
+because it pointed the same direction as everything else in the table. Had the
+estimate come out near 40%, the right move would have been to build a prototype
+and measure it properly rather than argue from a projection.
 
-- Database is the bottleneck
-- Connection pool is constrained
-- All-or-nothing semantics are acceptable
-- Memory can hold all data
+## Why the batching that mattered was already done
 
-## Performance Analysis
+The big jump is per-row INSERT to batched INSERT, not 18 batches to one. The
+PostgreSQL docs on populating a database make the shape of that curve visible:
+committing each insertion separately means "PostgreSQL is doing a lot of work
+for each row that is added," while `COPY` is "almost always faster than using
+`INSERT`, even if `PREPARE` is used and multiple insertions are batched into a
+single transaction."
 
-From real measurements (18 calendars):
+So the ladder runs roughly: one commit per row, then batched inserts in a
+transaction, then `COPY`. Collapsing 18 already-batched writes into one moves
+you a short distance along a rung you're mostly standing on already. That's the
+lesson I'd keep — measure where you actually are on the ladder before optimizing
+the step you happen to be looking at.
 
-| Metric       | Per-Entity | Cross-Entity (estimated) |
-| ------------ | ---------- | ------------------------ |
-| Total time   | 1.6-1.9s   | 1.5-1.8s                 |
-| DB queries   | 18         | 1                        |
-| Time savings | -          | 34-119ms (2-6%)          |
-| Complexity   | Low        | High                     |
+## Nested fan-out amplification
 
-**Verdict**: 2-6% improvement doesn't justify added complexity.
-
-## Key Lessons
-
-1. **Already batched is good enough** - Per-entity bulk INSERT is vastly better
-   than per-row INSERT
-2. **Parallel processing > single query** - For network-bound operations,
-   parallelism wins
-3. **Failure isolation matters** - One bad entity shouldn't affect others
-4. **Measure before optimizing** - The bottleneck may not be where you think
-
-## Nested Fan-Out Amplification
-
-A variant of the per-entity pattern: nested `Promise.all()` creates
-multiplicative connection demand.
+A variant of the per-entity pattern deserves its own warning: nested
+`Promise.all()` multiplies connection demand rather than adding to it.
 
 ```typescript
-// Outer: 2 calls in parallel
+// Outer: two ranges in parallel.
 const [current, previous] = await Promise.all([
-  fetchBlocks(currentPeriod), // Inner: 3 queries in parallel
-  fetchBlocks(previousPeriod), // Inner: 3 queries in parallel
+  loadRange(currentPeriod), // inner: 3 queries in parallel
+  loadRange(previousPeriod), // inner: 3 queries in parallel
 ]);
-// Peak connections: 2 × 3 = 6 (not 2, not 3)
+// Peak connections: 2 × 3 = 6 — not 2, not 3.
 ```
 
-**Fix:** Sequentialize the outer calls while keeping inner parallelism. Drops
-peak from 6 to 3 with ~50-80ms latency cost.
+MDN's note on `Promise.all()` is the detail to hold onto here: the promises are
+already running by the time they're passed in, since "if you are using it to run
+several async functions concurrently, you need to call the async functions and
+use the returned promises." Nothing in the outer `Promise.all()` throttles the
+inner fan-out on your behalf.
 
-**When this matters:** When cache is disabled or pool is small. Formula:
-`outer_parallelism × inner_parallelism × concurrent_users` must fit within pool
-size. With cache enabled (60s TTL), fan-out happens once per minute —
-acceptable. Without cache, every request fans out — dangerous.
+The fix is to sequentialize the outer calls while keeping the inner parallelism.
+Peak connections drop from 6 to 3, at a cost of roughly 50-80ms.
 
-See [Sentry N+1 Detection](/posts/sentry-n-plus-one-detection) for how
-this triggers Sentry false positives.
+This matters when the pool is small or a cache is disabled. The rough constraint
+is that `outer × inner × concurrent_users` has to fit inside the pool. With a
+60-second cache in front, the fan-out happens about once a minute and nobody
+notices. Without it, every single request fans out.
 
-## Code Documentation Pattern
+The same pattern also confuses N+1 detectors — I wrote about that in
+[Sentry N+1 Detection](/posts/sentry-n-plus-one-detection).
 
-When accepting a trade-off, document it:
+## Write the trade-off down next to the code
+
+A decision like this is invisible six months later unless it lives beside the
+code it explains:
 
 ```typescript
-// ARCHITECTURAL NOTE: Per-Calendar Batching Trade-off
+// ARCHITECTURAL NOTE: per-entity batching trade-off
 //
-// Each calendar processes independently and calls bulkInsertBlocks separately.
-// This results in N bulk INSERT queries (one per calendar) instead of one.
+// Each feed is processed independently and issues its own bulk INSERT, so a
+// run produces N statements instead of one.
 //
-// TRADE-OFF ANALYSIS:
-// - Current: N queries, parallel processing, fast UX
-// - Alternative: 1 query, but requires serial processing or complex buffering
+// TRADE-OFF:
+// - Per-entity:   N statements, parallel fetches, isolated failures.
+// - Cross-entity: 1 statement, but serial processing or a full in-memory buffer.
 //
-// DECISION: Keep per-calendar batching for simplicity and parallel processing.
-// Performance impact is minimal (34-119ms saved vs. added complexity).
-//
-// Sentry tracking: NODE-NESTJS-7, NODE-NESTJS-4C
+// DECISION: keep per-entity batching. The estimated upside of collapsing to a
+// single statement was 34-119ms on an 18-feed run — not enough to pay for the
+// loss of failure isolation.
 ```
+
+Without that note, the next person to read the code sees N queries where one
+would do and reasonably assumes nobody thought about it.
+
+## Takeaway
+
+The question was never "one query or N queries." It was which resource is
+actually scarce. When the run is network-bound and the pool has room, collapsing
+N batched writes into one buys a couple of percent and costs failure isolation.
+When the pool is the constraint — and nested fan-out is the quickest way to make
+it the constraint — the same change stops being a micro-optimization and becomes
+the whole fix.
+
+## References
+
+- [Populating a Database — PostgreSQL Documentation](https://www.postgresql.org/docs/current/populate.html)
+- [Promise.all() — MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all)

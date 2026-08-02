@@ -14,7 +14,7 @@ lang: en
 expanded: true
 references:
   - url: 'https://git-scm.com/docs/git-branch'
-    title: 'Git — git-branch (-a, --show-current, --merged)'
+    title: 'Git — git-branch (-a, --show-current)'
     type: official
   - url: 'https://git-scm.com/docs/git-log'
     title: 'Git — git-log (two-dot ranges, --oneline, path limiting)'
@@ -121,5 +121,5 @@ Repo state is canonical. Plan.md is a historical record of intent; shipped state
 
 ## References
 
-- [Git — `git branch`](https://git-scm.com/docs/git-branch) — `-a`, `--show-current`, and `--merged`, the flags the branch-state check leans on
+- [Git — `git branch`](https://git-scm.com/docs/git-branch) — `-a` and `--show-current`, the two flags the branch-state check leans on
 - [Git — `git log`](https://git-scm.com/docs/git-log) — two-dot ranges (`main..HEAD`), `--oneline`, and limiting history to a path

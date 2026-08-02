@@ -1,8 +1,11 @@
 ---
 title: class-transformer Undefined Own-Property Bug
-description: When `plainToInstance()` creates class instances under ES2022+ TypeScript
+description: >-
+  When `plainToInstance()` creates class instances under ES2022+ TypeScript
+  targets, every optional class field becomes an own property holding
+  `undefined` — and key-presence checks start lying.
 date: 2026-02-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - typescript
@@ -23,23 +26,41 @@ source_content_hash: 2be054a01cd4bb23ff9a62b5e53da863e06891189c9b03206155fc56947
 expanded: true
 ---
 
-I was building a sync-relevance guard that checked which DTO fields the client actually sent, so we could avoid unnecessary Google Calendar API calls. The logic was simple: iterate `Object.keys(dto.detail)` and see if any Google-relevant fields are present. It worked in unit tests with plain objects. Then I tested it with a real HTTP request, and every single field showed up as "present" — even fields the client never sent. The culprit was `class-transformer`'s `plainToInstance()` interacting with a TypeScript compiler change that happened in ES2022.
+I was building a sync-relevance guard that checked which DTO fields the client actually sent, so the service could skip unnecessary Google Calendar API calls. The logic was simple: iterate `Object.keys(dto.detail)` and see if any Google-relevant fields are present. It worked in unit tests with plain objects. Then I tested it with a real HTTP request, and every single field showed up as "present" — even fields the client never sent. The culprit was `class-transformer`'s `plainToInstance()` interacting with a TypeScript compiler change that happened in ES2022.
 
 ## The Problem
 
-When TypeScript targets ES2022 or later, the `useDefineForClassFields` compiler option defaults to `true`. This changes how TypeScript compiles optional class properties — instead of leaving them off the instance, it defines them as own properties with `undefined` values. Here's the chain of events:
+When TypeScript targets ES2022 or later, the `useDefineForClassFields` compiler option defaults to `true`. This changes how TypeScript compiles optional class properties — instead of leaving them off the instance, it defines them as own properties with `undefined` values.
+
+Here's a self-contained version of the shape I was working with — an update payload whose `detail` object carries five optional fields:
+
+```typescript
+class EventDetailDto {
+  allDay?: boolean;
+  title?: string;
+  location?: string;
+  attendees?: string[];
+  hangoutLink?: string;
+}
+
+class UpdateEventDto {
+  detail?: EventDetailDto;
+}
+```
+
+And here's the chain of events:
 
 ```text
 tsconfig.json → target: ES2023
   → useDefineForClassFields defaults to true (ES2022+)
   → TypeScript compiles optional properties as class field definitions
-  → new ReqBlockDetailDto() has ALL 8 fields as own properties (= undefined)
+  → new EventDetailDto() has all five fields as own properties (= undefined)
   → plainToInstance() preserves these own properties
-  → Object.keys(dto.detail) returns ALL field names
-  → hangoutLink, location, attendees detected as "present" even though undefined
+  → Object.keys(dto.detail) returns all five field names
+  → location, attendees, hangoutLink detected as "present" even though undefined
 ```
 
-The client sends `{ detail: { allDay: true, linkData: {...} } }` — only two fields. But `Object.keys(dto.detail)` returns all 8 field names including `hangoutLink`, `location`, and `attendees`, because they exist as own properties with `undefined` values on the class instance.
+The client sends `{ detail: { allDay: true, title: 'Standup' } }` — only two fields. But `Object.keys(dto.detail)` returns all five names, including `location`, `attendees`, and `hangoutLink`, because they exist as own properties with `undefined` values on the class instance.
 
 This is invisible in `tsconfig.json` because `useDefineForClassFields` isn't explicitly set — it's an implicit default tied to your target version. You can upgrade from ES2021 to ES2022 and break every `Object.keys()` check on class-transformer instances without touching a single line of application code.
 
@@ -50,14 +71,14 @@ The fix is to check `value !== undefined`, not key presence:
 ```typescript
 // Before (broken with class-transformer instances)
 for (const key of Object.keys(detailRecord)) {
-  if (GOOGLE_RELEVANT_DETAIL_KEYS.has(key)) {
+  if (SYNC_RELEVANT_KEYS.has(key)) {
     return true; // False positive! Key exists but value is undefined
   }
 }
 
 // After (correct — skips undefined class-field artifacts)
 for (const key of Object.keys(detailRecord)) {
-  if (GOOGLE_RELEVANT_DETAIL_KEYS.has(key) && detailRecord[key] !== undefined) {
+  if (SYNC_RELEVANT_KEYS.has(key) && detailRecord[key] !== undefined) {
     return true;
   }
 }
@@ -81,7 +102,7 @@ Any code that relies on key presence (`Object.keys()`, `in` operator, `hasOwnPro
 
 ## What's NOT Affected
 
-Functions that already check values rather than key presence are safe. If your code does `dto.itemStatus === undefined` to decide whether a field was sent, that comparison works correctly — it's testing the value, not the key's existence.
+Functions that already check values rather than key presence are safe. If your code does `dto.detail.location === undefined` to decide whether a field was sent, that comparison works correctly — it's testing the value, not the key's existence.
 
 Plain objects created with `{}` literals don't have this issue either. The bug only manifests when `plainToInstance()` creates class instances, because the class constructor is what defines all fields as own properties.
 

@@ -2,12 +2,11 @@
 title: Google Calendar Recurring Event Operations
 description: 'Implementation patterns for `all`, `this`, and `thisAndFollowing` recurring'
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - google-api
   - calendar
   - recurring-events
-  - work
 category: google
 draft: false
 lang: en
@@ -20,11 +19,16 @@ references:
 source_content_hash: 1f95df23468ce98bfde368ec0bc276da9afd28c9067efdec2c3fa86646805a2e
 ---
 
-I thought I understood recurring events after reading the Google Calendar API docs. Then I hit production data with half a million edge cases and realized the docs describe the happy path. This post covers the implementation patterns I built for handling `all`, `this`, and `thisAndFollowing` operations -- including the partial invitation edge cases that no documentation warned me about.
+I thought I understood recurring events after reading the Google Calendar API docs. Then I started handling real calendars and found shapes the guide never mentions -- the docs describe the happy path. This post covers the implementation patterns I ended up with for `all`, `this`, and `thisAndFollowing` operations, including the partial invitation cases I could not find documented anywhere.
 
-## Block Relationships
+## A Minimal Storage Model
 
-Every recurring event in our system is modeled as a "block." The relationships between blocks form a tree, and understanding this tree is essential for every operation.
+To make the rest of this concrete, assume a simple storage model. Each stored event record -- call it a block -- has two fields that matter here:
+
+- `originalId` -- points at the block this one belongs to, or `null`
+- `recurrence` -- an RRULE, or `null`
+
+That is the whole model. Everything below is built on it, and the relationships between blocks form a tree.
 
 ```text
 Parent Block (originalId = null)
@@ -45,22 +49,24 @@ This distinction -- whether a child block has a recurrence rule -- determines wh
 
 ## Partial Invitation Edge Cases
 
-This is where production data humbled me. When a user is invited to only part of a recurring series, Google creates blocks that look like exceptions or sub-series but behave differently.
+This is where the documentation stopped being enough. When a user is invited to only part of a recurring series, Google creates events that look like exceptions or sub-series but behave differently.
 
-| Type           | gcalId pattern       | originalId         | recurrence | Behavior                          |
-| -------------- | -------------------- | ------------------ | ---------- | --------------------------------- |
-| "TA-as-parent" | `{parentId}_R{date}` | self-ref or `null` | `!= null`  | Acts as root parent for that user |
-| "T-as-single"  | `{parentId}_{date}`  | `null`             | `null`     | Acts as regular single block      |
+The first column below is Google's own event `id` from the Events resource. The other two are the model fields from the previous section -- whatever local columns you use to mirror the invitation's parent pointer and its recurrence rule.
 
-**"TA-as-parent"** blocks appear when a user is invited to the "this and following" portion of a series. In our production database, we found 14,935 of these. The gcalId looks like a sub-series ID, but the `originalId` is self-referencing. From that user's perspective, this block IS the root parent -- other exception blocks point to it as their parent.
+| Shape          | Google event `id`    | `originalId`       | `recurrence` | Behavior                          |
+| -------------- | -------------------- | ------------------ | ------------ | --------------------------------- |
+| "TA-as-parent" | `{parentId}_R{date}` | self-ref or `null` | `!= null`    | Acts as root parent for that user |
+| "T-as-single"  | `{parentId}_{date}`  | `null`             | `null`       | Acts as regular single block      |
 
-**"T-as-single"** blocks appear when a user is invited to a single occurrence. We found 529,801 of these in production. The gcalId has the exception-style format with a date suffix, but `originalId` and `recurrence` are both null. These blocks never enter the recurring event processing pipeline at all -- they behave as standalone single events.
+**"TA-as-parent"** blocks appear when a user is invited to the "this and following" portion of a series. They were common enough that ignoring them was not an option. The id looks like a sub-series id, but the `originalId` is self-referencing. From that user's perspective, this block IS the root parent -- other exception blocks point to it as their parent.
 
-The lesson: you cannot determine block type from the gcalId pattern alone. You must look at the field combination.
+**"T-as-single"** blocks appear when a user is invited to a single occurrence. This was by far the most common of the odd shapes. The id has the exception-style format with a date suffix, but `originalId` and `recurrence` are both null. These blocks never enter the recurring event processing pipeline at all -- they behave as standalone single events.
+
+The lesson: you cannot determine block type from the id pattern alone. You must look at the field combination.
 
 ### Block Type Identification
 
-Block types are determined by field combinations, not ID patterns:
+Block types are determined by field combinations, not id patterns:
 
 | Type            | originalId | recurrence |
 | --------------- | ---------- | ---------- |
@@ -70,19 +76,11 @@ Block types are determined by field combinations, not ID patterns:
 | "TA-as-parent"  | self-ref   | `!= null`  |
 | "T-as-single"   | `null`     | `null`     |
 
-There is an important implication for instance expansion. The `expandBlocks()` function stamps each generated instance with `instance.blockId = expanding block's ID`. For sub-series blocks, this means the blockId is the sub-series ID, not the root parent ID.
+There is an important implication for instance expansion. Whatever code expands a series into instances will typically stamp each generated instance with the id of the block that generated it. For a sub-series, that id is the sub-series, not the root parent.
 
-When you need to match exception blocks to instances (for example, removing cancelled occurrences from the expanded list), both sides must be resolved to the root parent ID. We built a `recurring-chain-resolver.util.ts` utility to handle this resolution.
+So when you need to match exception blocks to instances -- removing cancelled occurrences from the expanded list, for example -- both sides have to be resolved to the root parent id first. That needs a small chain resolver: walk `originalId` upward until you reach a block that has none, with cycle protection for the self-referencing case.
 
-**Production data distribution for exception blocks (as of 2026-02-20):**
-
-- 504,161 -- Exception pointing to root parent (normal case)
-- 14,935 -- Exception pointing to "TA-as-parent" (self-ref, cycle protection handles)
-- 1,755 -- Exception -> Sub-series -> Root (chain depth 1)
-- 88 -- Exception -> Sub-series -> Sub-series (chain depth 2)
-- 1 -- deeper chain
-
-The chain resolver walks up from any block to find the true root parent, with cycle protection for the self-referencing "TA-as-parent" case.
+The distribution of those chains is the reason it has to be a loop. Nearly every exception points straight at the root parent. Self-referencing "TA-as-parent" blocks are the next largest group. Chains deeper than one hop are rare but not zero, and I found chains deeper than two. A single dereference is correct for the overwhelming majority and silently wrong for the rest -- which is the worst possible failure profile, because it looks fine in every test you would think to write.
 
 ## Operation Types
 
@@ -254,7 +252,7 @@ Pick day 20:
   RIGHT: UNTIL=24 from sub-series
 ```
 
-I hit this bug in production. The new block was created with `UNTIL=14` (inherited from the parent instead of the sub-series), which meant it generated zero visible occurrences. The block existed in the database but appeared nowhere in the UI.
+This one fails quietly. The new block gets created with `UNTIL=14` (inherited from the parent instead of the sub-series), so it generates zero visible occurrences. The row exists, the write reports success, and the block appears nowhere in the UI.
 
 ### 2. Query Filtering
 
@@ -266,10 +264,10 @@ When modifying blocks during a thisAndFollowing operation, use targeted updates 
 
 ```typescript
 // WRONG - may save mutated entity
-await this.blockRepo.save(requestedBlock);
+await repo.save(block);
 
 // RIGHT - targeted update
-await this.blockRepo.update(requestedBlock.id, {
+await repo.update(block.id, {
   recurrence: updatedRecurrence
 });
 ```
@@ -278,6 +276,6 @@ The problem with `save()` is that if the entity has been mutated earlier in the 
 
 ## Takeaway
 
-Recurring event operations look simple from the API docs but become deeply complex in production. The "thisAndFollowing" operation alone has four cases, a multi-step UNTIL algorithm, blocking block resolution, and exception handling. Partial invitations add two more block types that break assumptions about ID patterns.
+Recurring event operations look simple from the API docs but get deeply complex once real calendars are involved. The "thisAndFollowing" operation alone has four cases, a multi-step UNTIL algorithm, blocking block resolution, and exception handling. Partial invitations add two more block shapes that break assumptions about id patterns.
 
-The implementation strategy that worked: build a block type classifier based on field combinations (not ID patterns), implement the UNTIL algorithm as a deterministic pipeline with explicit rules, and use targeted database updates instead of entity saves to avoid accidental mutations. Test against real production data distributions -- the edge cases at 0.01% of volume are the ones that corrupt user calendars.
+The implementation strategy that worked: build a block type classifier based on field combinations (not id patterns), implement the UNTIL algorithm as a deterministic pipeline with explicit rules, and use targeted database updates instead of entity saves to avoid accidental mutations. Then test against the real distribution of shapes in your own data -- the rare ones, the fraction of a percent, are the ones that corrupt user calendars.

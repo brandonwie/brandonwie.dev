@@ -1,10 +1,11 @@
 ---
 title: '충돌 없이 agent 병렬로 굴리기: Task, Worktree, Lock'
 description: >-
-  agent 병렬 작업은 보통 Git 문제처럼 보여요. 두 session이 같은 repo를 건드리는
-  상황이죠.
+  agent 병렬 작업은 Git 문제처럼 보이지만, 더 어려운 실패는 어떤 task를 이미 누가
+  소유했는지 session이 모른다는 데 있어요. task, worktree, lock 디렉터리로 그 소유권을
+  명시적으로 만드는 이야기예요.
 date: 2026-06-15T00:00:00.000Z
-updated: 2026-06-15T00:00:00.000Z
+updated: '2026-08-02'
 tags:
   - 3b
   - devops
@@ -14,7 +15,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: parallel-agents-no-collisions
-source_updated: 2026-06-15T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: '2026-06-17'
 references:
   - url: 'https://git-scm.com/docs/git-worktree'
@@ -86,7 +87,7 @@ branch 결정, 그리고 어디서 다시 시작할지가 다 들어 있어요.
 경로 조각이 충분한 가치를 못 줬어요. Git은 이미 branch당 worktree 하나를 강제하고,
 agent 디렉터리 층이 필요할 만한 실제 공유 branch 시나리오도 나타나지 않았거든요.
 
-그래서 ADR-035가 경로를 평평하게 만들었어요.
+그래서 이후 결정에서 경로를 평평하게 만들었어요.
 
 덕분에 탐색과 도구 사용이 단순해졌지만 편리했던 우연 하나가 사라졌어요. 소유권이
 더 이상 경로에서 보이지 않게 된 거예요. 이제 worktree 경로는 checkout이 어디 있는지만

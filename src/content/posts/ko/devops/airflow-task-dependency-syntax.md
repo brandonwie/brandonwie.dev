@@ -7,7 +7,6 @@ tags:
   - devops
   - airflow
   - python
-  - work
 category: devops
 draft: false
 lang: ko

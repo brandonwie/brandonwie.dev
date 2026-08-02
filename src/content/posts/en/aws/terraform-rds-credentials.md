@@ -2,13 +2,12 @@
 title: Terraform RDS Credentials Management
 description: Managing RDS credentials securely using variables instead of hardcoding.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - aws
   - terraform
   - rds
   - security
-  - work
 category: aws
 draft: false
 lang: en
@@ -18,12 +17,18 @@ references:
       https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html
     title: Password management with Amazon RDS and AWS Secrets Manager
     type: official
+  - url: 'https://developer.hashicorp.com/terraform/language/values/variables'
+    title: 'Terraform: Input Variables'
+    type: official
+  - url: 'https://developer.hashicorp.com/terraform/language/state/sensitive-data'
+    title: 'Terraform: Sensitive Data in State'
+    type: official
 source_content_hash: 4eb3bcd5d3ac64a954c14f427420dbbf47aeb372113fa67fe5648097249dd5ad
 ---
 
-I once ran `git log -p` on a Terraform repo and found a database password in plaintext inside a `main.tf` file from six months ago. The password had been removed in a later commit, but Git never forgets. That password was in the repository history forever, accessible to anyone with read access. The developer who wrote it had moved on, the password was still active in production, and rotating it meant coordinating downtime across three services.
+Run `git log -p` over an old Terraform repository and there is a decent chance a database password shows up in plaintext inside some `main.tf`. Deleting it in a later commit does not undo that. Git never forgets: the value stays in history, readable by anyone who can clone the repo. And unless somebody rotated the credential, the password in that old commit is still the password.
 
-This is what happens when you hardcode credentials in Terraform. The fix is not complicated -- Terraform has several built-in mechanisms for handling sensitive values -- but you need to pick the right one for your situation.
+That is the failure mode Terraform's variable handling exists to prevent. The fix is not complicated -- Terraform has several built-in mechanisms for handling sensitive values -- but you need to pick the right one for your situation.
 
 ---
 
@@ -45,7 +50,7 @@ terraform apply
 
 This is the recommended approach for CI/CD pipelines. GitHub Actions, GitLab CI, and AWS CodeBuild all support injecting secrets as environment variables. The credentials never touch disk, never appear in Terraform files, and are scoped to the execution environment.
 
-The naming convention is strict: `TF_VAR_` prefix followed by the exact variable name from your `variables.tf`. For a variable named `rds_master_password`, the environment variable must be `TF_VAR_rds_master_password` -- case-sensitive.
+The naming convention is strict: `TF_VAR_` followed by the exact variable name from your `variables.tf`. For a variable named `rds_master_password`, the environment variable has to be `TF_VAR_rds_master_password`. A mismatched suffix does not raise an error -- Terraform simply treats the variable as unset and falls back to its default, or prompts for it.
 
 ### Method 2: terraform.tfvars (Best for Local Development)
 
@@ -58,11 +63,13 @@ rds_master_password = "your-password"
 
 This is convenient for local development because you set it once and forget it. But the file contains secrets in plaintext, so it must be in `.gitignore`. Every developer on the team needs their own copy, distributed through a secure channel (password manager, encrypted Slack message, etc.).
 
-The file is auto-loaded only if it is named exactly `terraform.tfvars` or `terraform.tfvars.json`. For any other name, you need the explicit flag:
+Auto-loading covers more filenames than the obvious one. Terraform picks up `terraform.tfvars`, `terraform.tfvars.json`, and anything ending in `.auto.tfvars` or `.auto.tfvars.json`. Any other name -- `prod.tfvars`, say -- needs the explicit flag:
 
 ```bash
 terraform apply -var-file="prod.tfvars"
 ```
+
+Precedence matters more here than it first looks. Terraform's documented order, lowest priority to highest, is: the variable's `default`, environment variables, `terraform.tfvars`, `terraform.tfvars.json`, `*.auto.tfvars` files in lexical order, then `-var` and `-var-file` on the command line. Environment variables sit near the bottom, so a stray `terraform.tfvars` left in the working directory silently overrides the `TF_VAR_` values a CI pipeline injected.
 
 ### Method 3: Command Line Variables (Best for One-Off Runs)
 
@@ -111,7 +118,7 @@ Here is how the four methods compare:
 
 ## Variable Configuration
 
-Regardless of which method you use to supply the values, you need corresponding variable declarations in `variables.tf`. The `sensitive = true` flag is critical -- it tells Terraform to redact the value from all output, including plan diffs and log files.
+Regardless of which method you use to supply the values, you need corresponding variable declarations in `variables.tf`. The `sensitive = true` flag is critical -- it tells Terraform to keep the value out of CLI output, plan diffs included.
 
 ```hcl
 # variables.tf
@@ -139,7 +146,7 @@ terraform plan
 # ~ master_password = (sensitive value)
 ```
 
-This redaction happens everywhere Terraform displays values: in plan output, in `terraform show`, and in state file representations shown to the user. Note that the value is still stored in the state file itself -- `sensitive = true` controls display, not storage. If you need the state file to be encrypted, use a remote backend with encryption (S3 with SSE, Terraform Cloud, etc.).
+The redaction applies wherever Terraform displays values: plan output, `terraform show`, and state representations printed to the user. The value is still written to the state file itself -- `sensitive = true` controls display, not storage, and Terraform's docs say so plainly. A local state file is plaintext, secrets included. If the state needs to be encrypted at rest, that comes from the backend: S3 with encryption enabled, GCS with customer-managed keys, HCP Terraform.
 
 ---
 

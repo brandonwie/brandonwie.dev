@@ -2,12 +2,11 @@
 title: Lemon Squeezy Subscription Management
 description: 'Subscription lifecycle, cancellation, expiration, and reactivation.'
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-07-23'
+updated: '2026-08-02'
 tags:
   - backend
   - payments
   - subscriptions
-  - work
 category: payments
 draft: false
 lang: en
@@ -26,13 +25,17 @@ references:
 source_content_hash: 7cbd909afedeecb5a7dffe62f6039e57777655cefd5e5e4eff5d806ac6a04ae3
 ---
 
-I was building a SaaS product with Lemon Squeezy handling payments when a user
-cancelled their subscription. Two weeks later, they changed their mind. I tried
-to resume it through the API, but the subscription had already expired. Lemon
-Squeezy would not reactivate it.
+Cancelling a Lemon Squeezy subscription is a single API call. Undoing that
+cancellation is also a single API call — until it silently stops being one.
 
-That failure forced me to map the full lifecycle: each status transition, the
-grace period, and the exact point after which a customer needs a new checkout.
+While implementing subscription billing on a SaaS product, the boundary I most
+needed to pin down was `cancelled` versus `expired`. Both mean the customer is
+on their way out, but only one of them is reversible through the API, and
+nothing in the calling code makes the difference obvious.
+
+So I mapped the whole lifecycle out of the docs: each status transition, the
+grace period, and the exact point after which a returning customer needs a new
+checkout.
 
 ---
 
@@ -55,7 +58,7 @@ When a renewal charge fails, Lemon Squeezy retries four times over two weeks. If
 all retries fail, the subscription moves to `unpaid`, and the configured dunning
 rules determine what happens next.
 
-But the status transition that bit me hardest was `cancelled` to `expired`. There is a narrow window between those two, and if you miss it, your user has to start from scratch.
+But the transition that shapes the most application logic is `cancelled` to `expired`. There is a window between those two, and once it closes, the customer starts from scratch.
 
 ---
 
@@ -99,7 +102,7 @@ This is the ideal reactivation path, and it is only available during the grace p
 
 ## What changes after expiration
 
-This is the part I learned the hard way.
+This is the boundary that everything else in the design has to respect.
 
 > Once a subscription reaches `expired` status, the API cannot resume it.
 

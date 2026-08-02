@@ -14,14 +14,14 @@ lang: ko
 source_lang: en
 source_slug: stow-symlink-health-checking
 source_updated: '2026-08-02'
-translation_date: '2026-04-09'
+translation_date: '2026-08-02'
 references:
   - url: 'https://manpages.debian.org/bookworm/stow/stow.8.en.html'
-    title: 'stow(8) manual page — --adopt, --restow, and tree folding'
+    title: 'stow(8) manual page (GNU Stow 2.3.1) — --adopt, --restow, and tree folding'
     type: official
-  - url: 'https://github.com/aspiers/stow/blob/master/doc/stow.texi'
-    title: 'GNU Stow manual source (doc/stow.texi) — tree folding and ignore lists'
-    type: official
+  - url: 'https://github.com/aspiers/stow/blob/v2.4.1/doc/stow.texi#L590'
+    title: 'GNU Stow 2.4.1 manual source (doc/stow.texi) — .stow-local-ignore ignore lists'
+    type: authoritative
   - url: null
     title: stow-doctor.sh implementation
     type: experience
@@ -89,7 +89,7 @@ existing target is not owned by stow: .config/{pkg}
 
 ### 함정 2: Tree folding이 leaf-only 점검에서 오탐을 만들어요
 
-이게 한 세션 내내 패키지가 손상됐다고 확신하게 만든 함정이에요. Stow는 기본적으로 **tree folding**을 사용해요: 전체 서브트리가 하나의 패키지에 속해 있으면, 파일별 symlink 대신 가능한 가장 높은 디렉토리 레벨에 단일 symlink를 만들어요. [stow(8) man page](https://manpages.debian.org/bookworm/stow/stow.8.en.html)에도 그대로 적혀 있어요 — "if Stow can create a single symlink that points to an entire subtree within the package tree, it will choose to do that rather than create a directory in the target tree and populate it with symlinks." 그래서 이런 모양 대신:
+이게 한 세션 내내 패키지가 손상됐다고 확신하게 만든 함정이에요. Stow는 기본적으로 **tree folding**을 사용해요: 전체 서브트리가 하나의 패키지에 속해 있으면, 파일별 symlink 대신 가능한 가장 높은 디렉토리 레벨에 단일 symlink를 만들어요. [stow(8) man page](https://manpages.debian.org/bookworm/stow/stow.8.en.html)에도 그대로 적혀 있어요 (이 페이지는 GNU Stow 2.3.1 기준이고, 2.4.1 페이지에도 같은 내용이 있어요) — "if Stow can create a single symlink that points to an entire subtree within the package tree, it will choose to do that rather than create a directory in the target tree and populate it with symlinks." 그래서 이런 모양 대신:
 
 ```text
 ~/.config/gh/config.yml → ~/dotfiles/gh/.config/gh/config.yml
@@ -142,7 +142,7 @@ check_file() {
         ancestor="$(dirname "$ancestor")"
     done
 
-    # 위에서 매치 안 되면 per-file 점검으로 fallthrough (위 Detection Pattern)
+    # folded ancestor가 없으면 앞의 단순 per-file 점검으로 fallthrough
     if [[ -L "$target" ]]; then
         # ... 원래 leaf 점검
     elif [[ -e "$target" ]]; then
@@ -185,7 +185,7 @@ stow --adopt -R -t "$HOME" -d "$STOW_DIR" "$package"
 
 ## `.stow-local-ignore` 처리
 
-Stow 패키지에는 설정이 아닌 파일(문서, 스크립트, README)이 포함될 수 있어요. `.stow-local-ignore` 파일에는 [한 줄에 하나씩 Perl 정규식](https://github.com/aspiers/stow/blob/master/doc/stow.texi)을 적고, 패키지 안에서 거기 매치되는 파일이나 디렉토리는 링킹할 때 건너뛰어요. symlink 상태를 점검할 때 이 패턴들도 똑같이 제외해야 해요 — 안 그러면 doctor 스크립트가 의도적으로 제외된 파일을 "누락"으로 보고해요.
+Stow 패키지에는 설정이 아닌 파일(문서, 스크립트, README)이 포함될 수 있어요. `.stow-local-ignore` 파일에는 한 줄에 하나씩 Perl 정규식을 적고, 패키지 안에서 거기 매치되는 파일이나 디렉토리는 링킹할 때 건너뛰어요. 이 규칙은 manual source에 적혀 있어요 — [v2.4.1 태그의 `doc/stow.texi`](https://github.com/aspiers/stow/blob/v2.4.1/doc/stow.texi#L590)인데, 렌더링된 문서가 아니라 Texinfo 마크업이에요. symlink 상태를 점검할 때 이 패턴들도 똑같이 제외해야 해요 — 안 그러면 doctor 스크립트가 의도적으로 제외된 파일을 "누락"으로 보고해요.
 
 ## 언제 점검을 실행할까
 
@@ -215,6 +215,7 @@ GNU Stow로 dotfiles를 관리한다면, 앱들이 업데이트하면서 symlink
 ## 참고 자료
 
 - [stow(8) man page](https://manpages.debian.org/bookworm/stow/stow.8.en.html) —
-  `--adopt`, `-R`/`--restow`, tree folding 규칙
-- [GNU Stow manual source (`doc/stow.texi`)](https://github.com/aspiers/stow/blob/master/doc/stow.texi)
-  — tree folding 예시와 ignore list 규칙
+  `--adopt`, `-R`/`--restow`, tree folding 규칙. 이 페이지는 GNU Stow 2.3.1 기준이에요.
+- [GNU Stow manual source, v2.4.1의 `doc/stow.texi`](https://github.com/aspiers/stow/blob/v2.4.1/doc/stow.texi#L590)
+  — `.stow-local-ignore` ignore list 규칙. Savannah 저장소를 미러링한 메인테이너의
+  GitHub 저장소이고, 인용한 줄이 밀리지 않도록 릴리스 태그에 고정했어요.

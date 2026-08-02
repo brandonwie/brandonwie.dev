@@ -36,6 +36,16 @@ import { homedir } from 'os';
 import matter from 'gray-matter';
 
 const EN_DIR = './src/content/posts/en';
+const KO_DIR = './src/content/posts/ko';
+
+/**
+ * Tags that exist for internal filing and must never ship. The blog renders tags
+ * on cards and post pages, so a `work` tag publicly labels a post as
+ * employer-derived content — a G1 leak that lives in metadata, where a prose
+ * review never looks. sync-from-3b.ts filters these on the way in; this catches
+ * a hand-edit that puts one back.
+ */
+const INTERNAL_ONLY_TAGS = new Set(['work', 'company', 'internal', 'private', 'confidential']);
 
 const TERMS_PATH =
 	process.env.BLOG_AUDIT_TERMS ??
@@ -206,6 +216,16 @@ function auditG1(fm: Record<string, unknown>, body: string, terms: Terms): Findi
 		}
 		// Personal-project links are intentionally NOT flagged here: they are
 		// attribution, not leakage. They just never satisfy G2 (see auditG2).
+	}
+
+	for (const tag of (fm.tags as string[] | undefined) ?? []) {
+		if (INTERNAL_ONLY_TAGS.has(String(tag).trim().toLowerCase())) {
+			findings.push({
+				gate: 'G1',
+				rule: 'internal-tag',
+				detail: `frontmatter carries the internal-only tag "${tag}" — it renders publicly on cards and post pages`,
+			});
+		}
 	}
 
 	// Ticket-tracker keys: ABC-1234 style, excluding common false friends.
@@ -392,10 +412,13 @@ async function main() {
 
 	const { terms, loaded } = loadTerms();
 
-	let files = walk(EN_DIR);
+	// Both locales. A leak in a Korean post is just as public as one in English,
+	// and KO carries content its EN twin does not — a KO-only internal project ID
+	// survived an EN-only audit on 2026-08-02.
+	let files = [...walk(EN_DIR), ...walk(KO_DIR)];
 	if (slugArg) files = files.filter((f) => f.endsWith(`/${slugArg}.md`));
 	if (files.length === 0) {
-		console.error(slugArg ? `No EN post matched slug "${slugArg}"` : `No posts under ${EN_DIR}`);
+		console.error(slugArg ? `No post matched slug "${slugArg}"` : `No posts under ${EN_DIR}`);
 		process.exit(1);
 	}
 
@@ -417,10 +440,15 @@ async function main() {
 
 	const reports: PostReport[] = inScope.map((p) => {
 		const refs = ((p.data.references as RefRow[] | undefined) ?? []).filter((r) => r?.url);
+		// A Korean post with no references block inherits its English twin's, and
+		// the twin is audited in the same run — so G2 there would double-report the
+		// same URLs and mislabel inheritance as "no references". G1 still applies to
+		// every KO post: Korean prose leaks just as publicly as English prose.
+		const inheritsRefs = p.file.includes('/posts/ko/') && refs.length === 0;
 		const findings = [
 			...(validateWorkReference(p.data) ?? []),
 			...auditG1(p.data, p.body, terms),
-			...(g1Only ? [] : auditG2(refs, statuses, terms)),
+			...(g1Only || inheritsRefs ? [] : auditG2(refs, statuses, terms)),
 		];
 		return {
 			file: p.file,

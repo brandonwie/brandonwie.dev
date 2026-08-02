@@ -4,7 +4,7 @@ description: >-
   `typeorm migration:generate` compares the entire database schema with the
   entire entity graph and emits SQL for every difference, including drift...
 date: 2026-04-17T00:00:00.000Z
-updated: 2026-07-23T00:00:00.000Z
+updated: 2026-08-02T00:00:00.000Z
 tags:
   - backend
   - typeorm
@@ -21,6 +21,9 @@ references:
     type: official
   - url: 'https://www.postgresql.org/docs/current/catalog-pg-constraint.html'
     title: PostgreSQL pg_constraint System Catalog
+    type: official
+  - url: 'https://github.com/typeorm/typeorm/blob/1.1.0/src/migration/MigrationExecutor.ts#L514-L547'
+    title: 'TypeORM MigrationExecutor — migrations table definition (v1.1.0)'
     type: official
 source_content_hash: 83344a6277c05b26544a7ca2adb865efa760f5da4db3ff39519a1ed544d8b08b
 ---
@@ -46,18 +49,17 @@ Then run `npm run migration:generate --name=AddGoogleSub`. The generated
 migration contains your column AND:
 
 ```sql
-ALTER TABLE "user" ALTER COLUMN "preference" SET DEFAULT '{"hasDismissedUpgradePopup":false, ...}';
+ALTER TABLE "user" ALTER COLUMN "settings" SET DEFAULT '{"hasSeenTour":false, ...}';
 ```
 
-You didn't touch `preference`. A prior developer added the
-`hasDismissedUpgradePopup` key to `defaultUserPreference` in TypeScript but
-never generated a migration to sync the DB default. The drift has been
-accumulating silently.
+You didn't touch `settings`. Someone had earlier added a key to the entity's
+default settings object in TypeScript without generating a migration to sync
+the DB default. The drift has been accumulating silently.
 
 ## The symptom
 
 - Your PR diff contains SQL that has nothing to do with your feature.
-- Reviewers ask "why are you changing `user.preference`?"
+- Reviewers ask "why are you changing `user.settings`?"
 - Reverting your PR would also revert the unrelated drift fix, coupling two
   independent changes.
 - `--name=AddGoogleSub` is misleading because the migration does two things.
@@ -78,16 +80,16 @@ Strip the unrelated drift from the generated migration and document why in the
 file header. Open a separate follow-up migration for just the drift.
 
 ```typescript
-// NOTE: TypeORM also detected an unrelated drift on user.preference JSONB
-// default (missing `hasDismissedUpgradePopup` key). That drift is out of scope
-// for #840 and was removed to keep the commit atomic. A separate PR should
-// regenerate just the preference default sync.
-export class AddGoogleSub1776389391540 implements MigrationInterface {
+// NOTE: TypeORM also detected an unrelated drift on user.settings JSONB
+// default (missing `hasSeenTour` key). That drift is out of scope for this
+// change and was removed to keep the commit atomic. A separate PR should
+// regenerate just the settings default sync.
+export class AddGoogleSub1700000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "user" ADD "google_sub" varchar`);
     await queryRunner.query(`CREATE UNIQUE INDEX "IDX_user_google_sub_unique"
       ON "user" ("google_sub") WHERE google_sub IS NOT NULL`);
-    // NOTE: `ALTER COLUMN "preference" SET DEFAULT ...` removed; see header.
+    // NOTE: `ALTER COLUMN "settings" SET DEFAULT ...` removed; see header.
   }
   // ...
 }
@@ -168,7 +170,8 @@ local but would fail on deploy.
 ### Recovery workflow
 
 1. **Stop and revert local DB state first.** Restore the deleted migration file
-   temporarily, register it in `src/database/index.ts`, then
+   temporarily, re-register it wherever your DataSource lists migrations (the
+   `migrations` array in the `DataSource` config), then
    `npm run migration:revert` to drop the columns.
 2. **Delete the restored migration file** (and its RENAME-based replacement).
 3. **Regenerate against the clean local DB.** Now `migration:generate` sees no
@@ -213,37 +216,33 @@ migration file keeps its old name and timestamp while its body silently changes.
 A developer needs to add a column or index to an existing table. Instead of
 generating a new migration, they edit the body of the migration that originally
 created the table, sliding the new column into the `CREATE TABLE` SQL. The
-commit message may even describe the choice as cleanup:
+commit message often frames it as cleanup — something like "fold the new column
+into the existing create-table migration."
 
-```text
-feat: add integration_id to user_contacts
-
-- merge the new column into the existing create-table migration
-```
-
-"Merged into the existing migration" is the anti-pattern. It looks like clean
-history, but every environment that already ran the original body stays on the
-old schema.
+That framing is the anti-pattern. It looks like clean history, but every
+environment that already ran the original body stays on the old schema.
 
 ### Why TypeORM cannot detect this
 
-The `migrations` table tracks applied migrations by **`name` and `timestamp`
-only**. There is no content hash, no checksum, no re-validation against the
-migration body. Once a row exists in `migrations` with timestamp
-`1773971579870`, TypeORM will refuse to re-run that migration regardless of
-whether its body has been edited.
+The `migrations` table tracks applied migrations by `id`, `timestamp`, and
+`name` — that is the whole table. TypeORM v1.1.0 creates exactly those three
+columns in
+[`MigrationExecutor`](https://github.com/typeorm/typeorm/blob/1.1.0/src/migration/MigrationExecutor.ts#L514-L547),
+and nothing in that file hashes or re-validates a migration body. Once a row
+exists in `migrations` for a given timestamp, TypeORM will refuse to re-run that
+migration regardless of whether its body has been edited.
 
-So:
+Take a `contacts` table as the example:
 
-- Dev DB ran the **original** body of `CreateUserContactsTable1773971579870`
-  weeks ago → schema has no `integration_id` column.
+- Dev DB ran the **original** body of `CreateContactsTable1690000000000`
+  weeks ago → schema has no `source_id` column.
 - Author edits the migration's `CREATE TABLE` to add
-  `"integration_id" integer NOT NULL`.
+  `"source_id" integer NOT NULL`.
 - Author re-runs `migration:run`. TypeORM sees the timestamp is already applied,
   prints "no migrations to run," exits clean.
-- Entity now declares `integrationId` as not null, but the database lacks the
+- Entity now declares `sourceId` as not null, but the database lacks the
   column.
-- Any query that references `integration_id` blows up at runtime.
+- Any query that references `source_id` blows up at runtime.
 
 The state diverges silently and stays diverged until something hits the column.
 
@@ -251,8 +250,9 @@ The state diverges silently and stays diverged until something hits the column.
 
 If you suspect inline-edit drift on a system you didn't author:
 
-1. `git log --all --oneline -- src/database/migrations/*.ts | grep -i "merge\|병합\|consolidate\|fold"`
-   flags commits that touch migration files for non-creation reasons.
+1. `git log --all --oneline -- <migrations-dir>/*.ts | grep -i "merge\|consolidate\|fold"`
+   flags commits that touch migration files for non-creation reasons. Adjust the
+   keywords for whatever language your team writes commit messages in.
 2. For each migration in `migrations` table, run
    `git log --follow --oneline -- <migration-file>`. A migration that has been
    amended shows multiple commits modifying the same file _after_ the migration
@@ -273,7 +273,8 @@ deployed it yet:
    `migration:generate --name=Add{Column}To{Table}`. TypeORM will see
    entity-vs-DB drift (entity has the column, DB doesn't) and emit a proper
    `ADD COLUMN` migration.
-3. Register the new migration in `src/database/index.ts`.
+3. Register the new migration in the `migrations` array of your `DataSource`
+   config.
 4. Commit the revert + new migration as separate logical commits so reviewers
    can see the chain.
 
@@ -289,9 +290,9 @@ environments equally.
 - **Never edit a migration file that has been merged to `main` or `develop`.**
   Once a migration ships, treat it as immutable. Add new columns via new
   migrations.
-- **Code review rule:** if a PR touches `src/database/migrations/{old}.ts` for
-  any reason other than typo fixes in comments, request changes and ask for a
-  new migration instead.
+- **Code review rule:** if a PR touches an already-merged migration file for any
+  reason other than typo fixes in comments, request changes and ask for a new
+  migration instead.
 - **CI check (suggested):** fail PRs that modify migration files older than N
   days (e.g., 7) unless the diff is whitespace / comments only.
 - **Defense in depth:** run `migration:run` on a fresh DB in CI from scratch.
@@ -301,10 +302,10 @@ environments equally.
 ### Constraint divergence with matching migration history
 
 The same failure mode can appear with a check constraint. Imagine development
-and production both record `CreateDailyCounterTable1781675561791`, while the
-repository's current migration body now creates `daily_counter_count_check`
-inline. Production reports `CHECK ((count >= 1))`; development has no
-corresponding catalog row.
+and production both record `CreateCounterTable1710000000000`, while the
+repository's current migration body now creates a `count >= 1` check inline.
+Production reports `CHECK ((count >= 1))`; development has no corresponding
+catalog row.
 
 This is consistent with environments having executed different historical bodies
 under the same migration identity. Querying the migrations table again cannot
@@ -317,7 +318,7 @@ distinguish them. The repair procedure is:
 4. Keep the already-shipped migration immutable so future drift remains
    observable and repairable through a forward change.
 
-If `SELECT ... FROM daily_counter WHERE count < 1` returns zero rows, the
+If `SELECT ... FROM counter WHERE count < 1` returns zero rows, the
 missing environment can receive a forward repair without modifying the
 environment that already has the constraint.
 

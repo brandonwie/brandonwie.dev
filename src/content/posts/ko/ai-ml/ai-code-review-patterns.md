@@ -2,7 +2,7 @@
 title: "AI 코드 리뷰 패턴"
 description: "AI 리뷰어(Claude, Copilot, Codex)가 잘못되거나 오해의 소지가 있는 피드백을 생성하는 패턴 정리."
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-03-05T00:00:00.000Z
+updated: "2026-08-02"
 tags:
   - ai
   - code-review
@@ -12,7 +12,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-code-review-patterns
-source_updated: "2026-03-05"
+source_updated: "2026-08-02"
 translation_date: "2026-03-10"
 references:
   - url: >-
@@ -40,7 +40,7 @@ AI 리뷰를 체계적으로 분류하는 방법이 없으면, 불필요한 변�
 **예시**:
 
 ```text
-AI Review: "Hardcoded account ID '325908307049' should be dynamic"
+AI Review: "Hardcoded account ID '123456789012' should be dynamic"
 실제: Account ID는 2커밋 전 abc123에서 이미 동적으로 변경됨
 ```
 
@@ -60,7 +60,7 @@ AI Review: "Hardcoded account ID '325908307049' should be dynamic"
 
 ```text
 AI Review: "Consider adding checksum verification for the binary download"
-실제: 체크섬 검증이 이미 80-85번째 줄에 있음
+실제: 체크섬 검증이 같은 파일 조금 위쪽에 이미 있음
 ```
 
 **원인**: AI가 코드를 청크 단위로 분석하면서 다른 섹션의 맥락을 놓친 거예요.
@@ -69,7 +69,7 @@ AI Review: "Consider adding checksum verification for the binary download"
 
 - 해당 기능이 있는 줄을 AI에게 알려주세요
 - 기능 근처에 목적을 설명하는 코멘트를 추가하세요
-- `/pr-review-rectify` 스킬로 체계적으로 리뷰를 검증하세요
+- 답변하기 전에 각 리뷰 코멘트를 전체 코드베이스와 대조해 체계적으로 검증하세요
 
 ## 패턴 3: Cross-File Blindness
 
@@ -116,7 +116,7 @@ AI Review: "What if AWS_DEFAULT_REGION is set to an invalid region?"
 **예시**:
 
 ```text
-AI Review: "startParam derived from UTC parsing misses events for negative-offset timezones"
+AI Review: "The query's start bound, parsed as UTC midnight, misses events for negative-offset timezones"
 실제: ±1일 타임존 버퍼가 의도적으로 과다 조회(over-fetch) — 최대 IANA 오프셋(±14h) < 24h 버퍼
 ```
 
@@ -135,8 +135,8 @@ AI Review: "startParam derived from UTC parsing misses events for negative-offse
 **예시**:
 
 ```text
-AI Review: "Add partial indexes for originalStartDateTime/originalStartDate"
-실제: userId (indexed) + originalId IS NOT NULL이 이미 작은 T block 서브셋으로 사전 필터링
+AI Review: "Add partial indexes for the recurrence-start columns"
+실제: 인덱스가 걸린 사용자 컬럼 + 반복 일정 부모 컬럼의 NOT NULL 필터가 이미 결과를 몇 행 수준으로 좁혀줌
 ```
 
 **원인**: AI가 특정 데이터 볼륨과 기존 필터 제약 조건을 평가하지 않고 일반적인 모범 사례를 적용해요. 특정 컬럼에 인덱스가 없는 쿼리를 보고 인덱스를 추천하지만, 업스트림 필터가 이미 결과 셋을 소수의 행으로 줄인다는 걸 고려하지 않아요.

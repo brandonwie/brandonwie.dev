@@ -31,12 +31,18 @@ references:
   - url: 'https://docs.astral.sh/ty/'
     title: ty
     type: official
+  - url: 'https://docs.astral.sh/ty/reference/configuration/'
+    title: ty configuration reference
+    type: official
   - url: 'https://astral.sh/blog/ty'
     title: ty
     type: verified
   - url: 'https://asdf-vm.com/'
     title: asdf-vm.com
     type: verified
+  - url: 'https://asdf-vm.com/guide/upgrading-to-v0-16.html'
+    title: Upgrading to asdf v0.16
+    type: official
 source_content_hash: 269a8ae05596c621827bbc69511f9e34aff95874d9b756beb997a9bdfa62f2a4
 expanded: true
 ---
@@ -95,7 +101,7 @@ asdf plugin add python
 
 # Install Python
 asdf install python 3.11.7
-asdf local python 3.11.7  # creates .tool-versions
+asdf set python 3.11.7  # writes .tool-versions in the current directory
 
 # uv (package manager)
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -103,6 +109,11 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # ty (type checker)
 uv tool install ty@latest
 ```
+
+Watch that `asdf set` line if you're following an older tutorial. asdf removed
+`asdf global` and `asdf local` in v0.16 and replaced both with `asdf set`, and
+Homebrew currently ships 0.20 — so `brew install asdf` followed by `asdf local`
+fails outright.
 
 ### 2. Project Setup
 
@@ -134,7 +145,7 @@ uv run ruff format .
 uv run ruff check --fix .
 
 # Type check
-ty check common/ jobs/
+ty check .
 ```
 
 ## Configuration
@@ -150,9 +161,13 @@ target-version = "py311"
 select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "DTZ", "SIM"]
 
 # ty configuration (when needed)
-[tool.ty]
+[tool.ty.environment]
 python-version = "3.11"
 ```
+
+The table name matters: ty reads `python-version` from `[tool.ty.environment]`,
+not from `[tool.ty]` directly. Put it one level up and the key sits in a table ty
+doesn't recognize.
 
 The ruff rule selection covers: errors (E), warnings (W), pyflakes (F), isort (I), naming (N), pyupgrade (UP), bugbear (B), comprehensions (C4), datetime (DTZ), and simplification (SIM). This set catches real issues without drowning you in style opinions.
 
@@ -263,5 +278,7 @@ The Astral ecosystem (uv + ruff + ty) replaces five separate Python tools with t
 - [uv Documentation](https://docs.astral.sh/uv/)
 - [Ruff Documentation](https://docs.astral.sh/ruff/)
 - [ty Documentation](https://docs.astral.sh/ty/)
+- [ty Configuration Reference](https://docs.astral.sh/ty/reference/configuration/)
 - [ty Announcement Blog](https://astral.sh/blog/ty)
 - [asdf Documentation](https://asdf-vm.com/)
+- [Upgrading to asdf v0.16](https://asdf-vm.com/guide/upgrading-to-v0-16.html)

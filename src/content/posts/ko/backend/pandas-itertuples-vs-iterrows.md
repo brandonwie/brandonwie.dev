@@ -2,7 +2,7 @@
 title: pandas itertuples() vs iterrows()
 description: '`iterrows()`는 DataFrame 행을 순회하는 가장 흔한 방법이지만, 매 행마다 pd.Series 객체를 생성해서 느립니다'
 date: 2026-02-06T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - python
@@ -13,7 +13,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: pandas-itertuples-vs-iterrows
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: >-
@@ -71,16 +71,17 @@ for row in df.itertuples(index=False):
 | ---------------- | ------------------------------------- | -------------------------------------- |
 | **itertuples()** | ~100배 빠름, 적은 메모리, 타입 보존   | attribute 접근만 가능, 불변 행         |
 | **iterrows()**   | dict 스타일 접근, 가변 Series, 익숙함 | ~100배 느림, 많은 메모리, 타입 손실    |
-| **apply()**      | 준벡터화, 유연함                      | itertuples보다 ~10배 느림, 모호한 의미 |
+| **apply()**      | 준벡터화, 유연함                      | itertuples보다 느림(미측정), 모호한 의미 |
 | **벡터화 연산**  | 가장 빠름, pandas답움                 | 복잡한 행 로직에는 항상 가능하지 않음  |
 
 벡터화 연산이 이상적이지만, 집계 로직에 열 단위 연산으로 표현할 수 없는
 조건 분기가 있었어요. 행별 순회가 불가피했고, `iterrows()`와 `itertuples()`
 사이의 선택이 결정적 요인이었어요.
 
-`apply()`는 중간에 위치해요. `iterrows()`보다는 빠르지만 `itertuples()`보다
-약 10배 느리고, 의미가 혼란스러울 수 있어요 -- `axis` 파라미터에 따라 행 단위로
-동작하기도 하고 열 단위로 동작하기도 해요.
+`apply()`는 중간에 위치해요. `iterrows()`보다는 빠르지만 `itertuples()`보다는
+느려요. 다만 그 차이를 직접 재보진 않아서 배수로 말하긴 어려워요. 그리고
+의미가 혼란스러울 수 있어요 -- `axis` 파라미터에 따라 행 단위로 동작하기도
+하고 열 단위로 동작하기도 해요.
 
 ## 주요 차이점
 
@@ -119,8 +120,7 @@ namedtuple에서 `getattr(row, "col", default)`가 돼요. 같은 방식으로
 ## 실제 예시
 
 ```python
-# schedule_changes_aggregation.py
-# Processing ~10K daily events
+# Aggregation step over ~10K daily events
 
 # BEFORE: ~2s for 10K rows
 for _, row in filtered.iterrows():
@@ -133,12 +133,17 @@ for row in filtered.itertuples(index=False):
     platform = getattr(row, "platform", None)
 ```
 
-참고로 성능 순위는 이래요:
+참고로 대략적인 성능 순위는 이래요:
 
 ```text
 vectorized ops  >>  itertuples()  >>  apply()  >>  iterrows()
-   (fastest)          (~100x)         (~10x)        (1x baseline)
 ```
+
+직접 측정한 건 양 끝의 차이 하나예요. ~10,000행 단계에서 `iterrows()`와
+`itertuples()` 사이가 약 100배였어요. `apply()`는 행마다 Series를 만들지
+않으니 중간 어딘가에 있지만 벤치마크를 돌려보진 않았어요. 그러니 숫자가
+아니라 순서로만 읽어주세요. 정확한 차이가 중요하다면 각자의 DataFrame에서
+측정해 보는 게 좋아요 -- 행 수, 컬럼 수, dtype에 따라 비율이 달라져요.
 
 ## 실전 가이드
 

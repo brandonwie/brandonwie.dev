@@ -2,7 +2,7 @@
 title: 스스로 고치고, 그 고침마저 정리하는 harness
 description: agent가 저지르는 가장 비싼 실수는 극적인 실수가 아니에요.
 date: 2026-06-15T00:00:00.000Z
-updated: 2026-06-15T00:00:00.000Z
+updated: '2026-08-02'
 tags:
   - 3b
   - devops
@@ -12,7 +12,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: a-harness-that-fixes-itself
-source_updated: 2026-06-15T00:00:00.000Z
+source_updated: '2026-08-02'
 translation_date: "2026-06-17"
 references:
   - url: 'https://nodejs.org/api/cli.html'
@@ -72,7 +72,7 @@ friction 시스템에는 두 가지 lifecycle 설명이 있어요.
 
 이건 무게를 떠받치는 rule이에요. friction 고침은 settings, rule, hook, skill instruction을 건드릴 때가 많아요. 전부 control-plane 영역이죠. 잘못된 고침은 앞으로의 session을 더 나쁘게 만들 수 있어요. 그래서 시스템은 선택지를 내놔요. 적용, 기각, 나중에, 강화, 되돌리기. 사람은 계속 그 고리 안에 남아 있어요.
 
-여기서 8편의 gate 이야기와 9편의 friction 이야기가 만나요. Gate B는 위험한 변경을 관장해요. friction lifecycle은 그런 변경 중 일부를 제안하고요. 제안은 똑똑할 수 있지만, 적용은 여전히 gate를 거쳐요.
+여기서 friction lifecycle이 거버넌스 gate와 만나요. [게이트 세 개와 감사 로그](/posts/three-gates-and-an-audit-log)에서 Gate B를 다뤘어요. rule, hook, skill, prompt, settings 같은 control-plane 영역이 바뀔 때 발동하고, 바꾸기 전에 설명하는 payload를 요구하는 사람 개입 gate예요. friction lifecycle은 바로 그런 종류의 변경을 제안하고요. 제안은 똑똑할 수 있지만, 적용은 여전히 gate를 거쳐요.
 
 ## 검증은 반복에 관한 거예요
 

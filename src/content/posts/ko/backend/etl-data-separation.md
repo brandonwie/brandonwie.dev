@@ -2,7 +2,7 @@
 title: ETL 데이터 분리 전략
 description: '자동화된 ETL 데이터와 수동 백필 데이터를 같은 S3 경로에 섞어두면 추적, 처리, 디버깅이 어려워집니다'
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - etl
@@ -14,11 +14,11 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: etl-data-separation
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html'
-    title: Amazon S3 폴더 사용하기
+    title: Amazon S3 콘솔에서 폴더로 객체 정리하기
     type: official
 ---
 
@@ -121,7 +121,6 @@ TARGET_PATH = "s3://amplitude-refined-bucket/event/"
 ### 백필 작업
 
 ```python
-# jobs/amplitude/amplitude_backfill.py
 RAW_PREFIX = "{PROJECT_ID}-backfill"  # 백필용 별도 prefix
 
 def save_to_raw_bucket(data: bytes, date: str, hour: int):
@@ -133,16 +132,17 @@ def save_to_raw_bucket(data: bytes, date: str, hour: int):
 
 ### 백필 데이터 처리
 
-백필 데이터를 처리하려면 백필 경로로 ETL을 실행하면 돼요:
+백필 데이터를 처리하려면 백필 경로로 ETL을 실행하면 돼요. 진입점도 코드도
+그대로고, `--source-path`만 바뀌어요:
 
 ```bash
-# 정기 일일 ETL (자동화)
-python cli.py amplitude-etl \
+# 정기 일일 실행 (자동화)
+python etl.py \
   --execution-date 2026-01-27 \
   --source-path s3://amplitude-raw-bucket/{PROJECT_ID}/
 
-# 백필 데이터 처리 (수동)
-python cli.py amplitude-etl \
+# 백필 실행 (수동)
+python etl.py \
   --execution-date 2026-01-20 \
   --source-path s3://amplitude-raw-bucket/{PROJECT_ID}-backfill/
 ```

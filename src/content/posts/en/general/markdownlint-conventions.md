@@ -1,6 +1,6 @@
 ---
 title: Markdownlint Conventions
-description: 7,500 markdownlint errors across 200 markdown files. The rules that mattered, the configuration that stuck, two pre-commit traps that surface only in nested scopes, and the strict-preset migration that collapsed a 14-rule custom config into one extends + five carve-outs.
+description: 7,500 markdownlint errors across 200 markdown files. The rules that mattered, the configuration that stuck, two pre-commit traps that surface only in nested scopes, and the strict-preset migration that collapsed an 18-rule custom config into one extends + five carve-outs.
 date: 2026-01-23T00:00:00.000Z
 updated: '2026-08-02'
 tags:
@@ -37,7 +37,7 @@ source_content_hash: 825b1e4db8ec013c222bdef69255a781d388d636b2a641093fb56219d7e
 
 I ran markdownlint on a knowledge base with about 200 markdown files and got back 7,500 errors. Seven thousand five hundred. The repository had accumulated formatting debt over months — missing blank lines around lists, code blocks without language specifiers, duplicate headings, inconsistent table spacing. Every contributor applied their own conventions, and the result was a codebase where diffs were noisy, GitHub rendering was unpredictable, and no one could tell "correct" formatting from "works on my machine" formatting.
 
-This post covers the rules that matter most, the configuration decisions I made, two non-obvious traps that show up later in nested config scopes, and a follow-up migration that replaced a 14-rule custom config with a one-line `extends:` plus five documented carve-outs.
+This post covers the rules that matter most, the configuration decisions I made, two non-obvious traps that show up later in nested config scopes, and a follow-up migration that replaced an 18-rule custom config with a one-line `extends:` plus five documented carve-outs.
 
 ## Why Consistent Markdown Formatting Matters
 
@@ -123,18 +123,29 @@ Heading text should be unique within a document. Duplicate headings break anchor
 
 This rule can be configured with `siblings_only: true` to allow duplicate headings under different parent sections. For example, multiple `### What I Did` headings under different `## Session` headings would be allowed. This is the configuration I recommend for knowledge bases and journals where repeated section structures are common.
 
-### MD060: Table Column Spacing
+### MD055 and MD060: Two Table Rules That Are Easy to Conflate
 
-Tables should use consistent spacing. The four styles are:
+Table formatting is split across two rules. Both are about pipe characters, so they blur together — an earlier version of this post had MD055's settings printed under an MD060 heading, which is exactly the mistake to avoid.
 
-| Style                    | Example                          |
-| ------------------------ | -------------------------------- |
-| `leading_and_trailing`   | `\| text \|` (spaces both sides) |
-| `leading_only`           | `\| text\|`                      |
-| `trailing_only`          | `\|text \|`                      |
-| `no_leading_or_trailing` | `\|text\|` (compact)             |
+`MD055`/table-pipe-style governs **where the pipes are**: whether a row has a leading pipe, a trailing pipe, both, or neither. As of markdownlint v0.41.1 its `style` values are `consistent` (the default — the first table in the document sets the style for the rest), plus four explicit choices:
 
-Use `leading_and_trailing` for readability:
+| `style` value            | Row shape           |
+| ------------------------ | ------------------- |
+| `leading_and_trailing`   | `\| Cell \| Cell \|` |
+| `leading_only`           | `\| Cell \| Cell`    |
+| `trailing_only`          | `Cell \| Cell \|`    |
+| `no_leading_or_trailing` | `Cell \| Cell`       |
+
+`MD060`/table-column-style governs **padding inside the cells**. It arrived later, in v0.39.0, and takes an entirely different set of values — `any` (the default), `aligned`, `compact`, and `tight`:
+
+| `style` value | What it requires                                            |
+| ------------- | ----------------------------------------------------------- |
+| `aligned`     | pipes line up vertically; cells padded out to column width  |
+| `compact`     | exactly one space around each cell; pipes stay ragged       |
+| `tight`       | no padding at all — `\|Y\|Yes\|`                             |
+| `any`         | accept any of the three, evaluated per table                |
+
+I settled on aligned columns with leading and trailing pipes:
 
 ```markdown
 | Header 1 | Header 2 |
@@ -142,7 +153,9 @@ Use `leading_and_trailing` for readability:
 | Cell 1   | Cell 2   |
 ```
 
-In my repository, MD060 accounted for 3,600 of the 7,500 errors — almost half. The violations were mechanical (inconsistent padding) and auto-fixable, but the sheer volume meant I had to decide on a canonical style before running any automated fixes.
+That was less a considered decision than a consequence of already running Prettier — Prettier's markdown formatter emits aligned tables, so any other choice would have meant fighting the formatter on every save.
+
+In my repository the column-style rule accounted for 3,600 of the 7,500 errors — almost half. The violations were mechanical (inconsistent padding) and auto-fixable, but the sheer volume meant I had to decide on a canonical style before running any automated fixes.
 
 ### MD031: Blank Lines Around Code Fences
 
@@ -180,7 +193,7 @@ MD013 (line length) deserves special mention. The default 80-character limit mak
 
 ## Adopting a Strict Preset (`style/all` + Carve-Outs)
 
-A 14-rule custom config like the one above accumulates entries that are no-ops, redundant, or quietly broken. After living with mine for a few months I migrated to the upstream `style/all` preset plus a small number of documented carve-outs. The migration collapsed sprawling per-rule configs into one `extends:` plus a handful of explicit exceptions, and surfaced 36 MD040 errors that had been hiding behind ineffective overrides.
+An 18-rule custom config like the one above accumulates entries that are no-ops, redundant, or quietly broken. After living with mine for a few months I migrated to the upstream `style/all` preset plus a small number of documented carve-outs. The migration collapsed sprawling per-rule configs into one `extends:` plus a handful of explicit exceptions, and surfaced 36 MD040 errors that had been hiding behind ineffective overrides.
 
 ### The recipe
 
@@ -232,24 +245,36 @@ When proposing a config simplification, run the proposed config FIRST against un
 
 | Config                                | Failures (reported)              |
 | ------------------------------------- | -------------------------------- |
-| Existing 14-rule custom               | 131                              |
+| Existing 18-rule custom               | 131                              |
 | `extends: "markdownlint/style/all"`   | **11,398** (MD013 alone: 10,491) |
 | `extends: "style/all"` + 5 carve-outs | 36 (MD040 only, sweepable)       |
 
-The first two should be identical if the 14 customizations were "no-op against defaults." Instead the existing config silenced ~11,000 failures via MD013 false (line-length), MD024 siblings_only=true, and MD025 front_matter_title="" — meaning those overrides were load-bearing, not redundant.
+The first two should be identical if the 18 customizations were "no-op against defaults." Instead the existing config silenced ~11,000 failures via MD013 false (line-length), MD024 siblings_only=true, and MD025 front_matter_title="" — meaning those overrides were load-bearing, not redundant.
 
 The workflow: write a temp config file (must include the `markdownlint-cli2` prefix in the filename, e.g., `pure-default.markdownlint-cli2.jsonc` — the CLI rejects arbitrary names), invoke `npx markdownlint-cli2 --config <temp-file> '<glob>'`, group failures by `MD###/rule-name`, then decide which to carve out vs. fix.
 
 ### The config-theater trap
 
-Custom rule values that LOOK valid but produce no effect because the value isn't recognized. markdownlint silently falls back to default behavior without warning. Hard to detect by reading the config alone. Examples seen in 3B's prior config:
+An override can look like it is steering the linter while doing nothing you intended. Nothing warns you: the file parses, the run succeeds, and the config reads like configuration. Two of these were sitting in my own pre-migration config:
 
-| Override                  | Issue                                                                 | Fix                                               |
-| ------------------------- | --------------------------------------------------------------------- | ------------------------------------------------- |
-| `MD060: { style: "any" }` | `"any"` not a valid value (valid: `compact`, `aligned`, `consistent`) | Use `MD060: false` if the rule should be disabled |
-| 11× `MD###: true` entries | Match defaults exactly — redundant noise                              | Drop them; rely on `default: true`                |
+| Override                  | What it actually did                 | Fix                                                      |
+| ------------------------- | ------------------------------------- | -------------------------------------------------------- |
+| `MD060: { style: "any" }` | Nothing — `any` is MD060's default   | Drop it; use `MD060: false` to actually disable the rule |
+| Ten `MD###: true` entries | Nothing — they match `default: true` | Drop them; rely on the preset                            |
 
-Diff-test rule: lint with vs. without the override. If failure count and distribution are identical, the override is broken or redundant. Fix or drop.
+The MD060 entry is the clearest case. I had written it with the comment "accept any consistent style per table," which is a fair description of what `any` does — it just was not a description of anything I was changing, because `any` is what I would have gotten by writing nothing at all.
+
+There is a second, nastier variant worth separating out: a value that is not recognized. I expected an unrecognized value to fall back to the rule's default. It does not. Testing on markdownlint-cli2 v0.23.1 (markdownlint v0.41.1) against one deliberately ragged table:
+
+| `MD060` config          | Result                    |
+| ----------------------- | ------------------------- |
+| `{ style: "aligned" }`  | 6 violations              |
+| `{ style: "any" }`      | 1 violation (the default) |
+| `{ style: "consistant" }` | 0 violations            |
+
+`consistant` is a typo for a value that does not exist on this rule at all — MD060 takes `aligned`/`any`/`compact`/`tight`, while `consistent` belongs to MD055. The run exits clean, reports nothing, and the rule is effectively off. A redundant override merely wastes a line; an unrecognized one hands you a green build that is not checking anything.
+
+Both share one tell, and it is cheap to check. Diff-test rule: lint with and without the override. If the failure count and distribution are identical, the override is doing nothing. If they drop to zero, be suspicious rather than pleased.
 
 ### Comparison with `@github/markdownlint-github`
 
@@ -356,7 +381,8 @@ When you encounter a markdownlint error and need to fix it fast, this table maps
 | List missing blank line    | MD032 | Add blank line before/after list  |
 | Code block no language     | MD040 | Add language after opening ```    |
 | Duplicate heading          | MD024 | Make heading text unique          |
-| Inconsistent table spacing | MD060 | Use `\| text \|` consistently     |
+| Missing leading/trailing pipe | MD055 | Pipe at the start and end of every row |
+| Inconsistent cell padding  | MD060 | Pick one column style (`aligned`) and hold to it |
 | No blank around code       | MD031 | Add blank line before/after fence |
 | Trailing spaces            | MD009 | Configure editor to trim          |
 | Hard tabs                  | MD010 | Use spaces (2 for md, 4 for code) |
@@ -365,4 +391,4 @@ When you encounter a markdownlint error and need to fix it fast, this table maps
 
 ## Takeaway
 
-Markdownlint is not about making markdown pretty. It is about making markdown predictable — consistent rendering across platforms, clean diffs in version control, and formatting conventions that scale across contributors. The initial investment is configuring the rules to match your project's needs and running a one-time cleanup. After that, the VS Code extension and CI integration keep the error count at zero. In my case, going from 7,500 errors to zero took one afternoon of automated fixes and one configuration file. The follow-up `style/all` migration replaced a sprawling 14-rule custom config with one `extends:` line plus five documented carve-outs, and surfaced ~11,000 failures that the prior overrides had been silencing — load-bearing, not redundant. The repository has stayed clean since, with the caveat that nested config scopes follow their own rules, so the first commit into a new tool-managed directory is worth lint-checking explicitly.
+Markdownlint is not about making markdown pretty. It is about making markdown predictable — consistent rendering across platforms, clean diffs in version control, and formatting conventions that scale across contributors. The initial investment is configuring the rules to match your project's needs and running a one-time cleanup. After that, the VS Code extension and CI integration keep the error count at zero. In my case, going from 7,500 errors to zero took one afternoon of automated fixes and one configuration file. The follow-up `style/all` migration replaced a sprawling 18-rule custom config with one `extends:` line plus five documented carve-outs, and surfaced ~11,000 failures that the prior overrides had been silencing — load-bearing, not redundant. The repository has stayed clean since, with the caveat that nested config scopes follow their own rules, so the first commit into a new tool-managed directory is worth lint-checking explicitly.

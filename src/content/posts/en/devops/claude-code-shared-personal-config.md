@@ -139,7 +139,7 @@ project repo:
 ```
 
 `{backend-repo}` and `{infra-repo}` stand in for the checkout directory names of
-the team repos on disk — the pattern doesn't care what they're called.
+those repos on disk — the pattern doesn't care what they're called.
 
 Only repos with other team members need the shared/local split. Personal-only
 repos use a single combined file. `.mcp.json` follows the same pattern: the
@@ -321,8 +321,16 @@ The corrected topology:
   separate `settings.local.work.json` in the SoT directory. It contains only the
   two keys that differ from personal: `statusLine.command` (with the
   `CLAUDE_CONFIG_DIR=~/.claude-work` prefix) and `enabledMcpjsonServers` (the
-  whitelist for work-specific database connections like `postgres-aws-aurora-prod`).
-  Claude Code deep-merges this over the base `settings.json` at load time.
+  whitelist of project-scoped MCP servers that profile may load — in my case a
+  single read-only database server). Claude Code deep-merges this over the base
+  `settings.json` at load time.
+
+Worth flagging: a profile-scope `settings.local.json` sitting next to the user
+`settings.json` is not one of the documented settings scopes. The docs list user
+(`~/.claude/settings.json`), project (`.claude/settings.json`), and a
+repository-root `.claude/settings.local.json`. The override worked on my machine,
+so I leaned on it — but it was observed behavior, not a documented contract.
+That's part of why the chain is retired.
 
 All non-override settings (env, permissions, hooks, plugins) come from the
 single shared SoT through the symlink chain. Editing the SoT instantly propagates

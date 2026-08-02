@@ -7,7 +7,6 @@ tags:
   - backend
   - nestjs
   - websockets
-  - work
 category: backend
 draft: false
 lang: en

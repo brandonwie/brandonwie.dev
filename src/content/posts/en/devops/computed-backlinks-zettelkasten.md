@@ -14,9 +14,12 @@ category: devops
 draft: false
 lang: en
 references:
-  - url: 'https://spec.commonmark.org/0.31.2/#links'
-    title: 'CommonMark Spec 0.31.2 — §6.3 Links'
-    type: authoritative
+  - url: 'https://www.postgresql.org/docs/current/indexes-intro.html'
+    title: 'PostgreSQL Documentation — Indexes: Introduction'
+    type: official
+  - url: 'https://obsidian.md/help/plugins/backlinks'
+    title: 'Obsidian Help — Backlinks'
+    type: official
 source_content_hash: fe22db4d738ce2e3a1010aafbcfb3093ebf730a3afb5cc72e12c14fb1a68d534
 ---
 
@@ -100,16 +103,28 @@ If note B wants to know who points at it, the system can answer by scanning all
 stored `related:` links and selecting entries whose path targets B. That is a
 query. It is not a field the author should maintain.
 
-This is the same basic move as a database index. You store the canonical fact
-once and derive the lookup shape you need later. A reverse index can be rebuilt.
-A manually edited reverse edge has to be trusted.
+This is the same basic move as a database index. PostgreSQL's documentation puts
+it plainly: "Once an index is created, no further intervention is required: the
+system will update the index when the table is modified," and indexes "can be
+added to and removed from tables at any time." The table holds the
+canonical fact. The index is a derived lookup shape you can drop and rebuild
+without losing anything. A reverse index over notes behaves the same way. A
+manually edited reverse edge does not — you have to trust it, because there is
+nothing to rebuild it from.
+
+Note-taking tools reached the same split, just higher up. Obsidian's backlinks
+documentation defines a backlink as "a link from another note to that note" and
+fills the pane from notes that contain an internal link to the active note. The
+reverse view exists because the tool computes it, not because anyone typed it.
+3B makes the split one layer lower, in the schema itself: there is no reverse
+field to edit, so there is nothing that can drift away from the forward links.
 
 3B's schema makes the rule explicit: forward links are stored; backlinks are
-computed. The Markdown authoring rule reinforces the same idea by pushing links
-into frontmatter and banning wiki-style shortcuts. The YAML schema documents the
-linking strategy directly: external references are URLs, forward links are
-internal `related:` entries, and reverse edges are computed from those forward
-links.
+computed. 3B's own Markdown authoring rule reinforces it by pushing links into
+frontmatter and banning wiki-style `[[shortcuts]]` in note bodies. The YAML
+schema documents the linking strategy directly: external references are URLs,
+forward links are internal `related:` entries, and reverse edges are computed
+from those forward links.
 
 The generated `knowledge/_index.md` is one downstream surface of that choice.
 Graph tools and retrieval layers can read the same forward-link facts and build

@@ -2,7 +2,7 @@
 title: A Harness That Fixes Itself - And Prunes Its Own Fixes
 description: The most expensive agent mistakes are not the dramatic ones.
 date: 2026-06-15T00:00:00.000Z
-updated: 2026-06-15T00:00:00.000Z
+updated: '2026-08-02'
 expanded: true
 tags:
   - 3b
@@ -100,8 +100,11 @@ or skill instructions. Those are control-plane surfaces. A bad fix can make
 future sessions worse. So the system presents options: apply, dismiss, later,
 strengthen, revert. The human remains in the loop.
 
-This is where post #8's gate story and post #9's friction story meet. Gate B
-governs risky mutations. The friction lifecycle proposes some of those
+This is where the friction lifecycle meets the governance gates. In
+[Three Gates and an Audit Log](/posts/three-gates-and-an-audit-log) I described
+Gate B, the human-in-the-loop gate that fires on control-plane surfaces — rules,
+hooks, skills, prompts, settings — and requires an explain-before-act payload
+before they change. The friction lifecycle proposes exactly those kinds of
 mutations. The proposal can be smart; the application is still gated.
 
 ## Verification is about recurrence

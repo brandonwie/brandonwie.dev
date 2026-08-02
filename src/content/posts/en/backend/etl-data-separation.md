@@ -1,8 +1,8 @@
 ---
 title: ETL Data Separation Strategy
-description: Mixing regular ETL data with manually recovered backfill data in the same S3
+description: Mixing automated ETL data with manually recovered backfill data in one S3 prefix breaks lineage and invites silent reprocessing. Separate prefixes fix it.
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - etl
@@ -14,7 +14,7 @@ draft: false
 lang: en
 references:
   - url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html'
-    title: using folders.html
+    title: Organizing objects in the Amazon S3 console by using folders
     type: official
 source_content_hash: e78604a370af7efd182627905f84d3dda8be5dd1bebc91540b7d331c6088253d
 expanded: true
@@ -51,7 +51,7 @@ This is the simplest possible separation — no code changes to the ETL reader, 
 
 ## Real-World Example: Amplitude ETL
 
-Here's what the migration looked like for our Amplitude data pipeline.
+Here's what the migration looked like for the Amplitude pipeline I was working on.
 
 **Before separation** — everything in one prefix:
 
@@ -96,7 +96,6 @@ TARGET_PATH = "s3://amplitude-refined-bucket/event/"
 The backfill job writes to its own prefix:
 
 ```python
-# jobs/amplitude/amplitude_backfill.py
 RAW_PREFIX = "{PROJECT_ID}-backfill"  # Separate prefix for backfill
 
 def save_to_raw_bucket(data: bytes, date: str, hour: int):
@@ -106,16 +105,16 @@ def save_to_raw_bucket(data: bytes, date: str, hour: int):
     # Saves to: s3://bucket/{PROJECT_ID}-backfill/{PROJECT_ID}-backfill_{date}_{hour}#0.json.gz
 ```
 
-Processing either source is just a matter of pointing the ETL at the right prefix:
+Processing either source is just a matter of pointing the ETL at the right prefix. Same entry point, same code — only `--source-path` changes:
 
 ```bash
-# Regular daily ETL (automated)
-python cli.py amplitude-etl \
+# Regular daily run (automated)
+python etl.py \
   --execution-date 2026-01-27 \
   --source-path s3://amplitude-raw-bucket/{PROJECT_ID}/
 
-# Process backfill data (manual)
-python cli.py amplitude-etl \
+# Backfill run (manual)
+python etl.py \
   --execution-date 2026-01-20 \
   --source-path s3://amplitude-raw-bucket/{PROJECT_ID}-backfill/
 ```
@@ -159,4 +158,4 @@ When your ETL pipeline handles both automated and manual data, separate them at 
 
 ## References
 
-- [Organizing objects using prefixes — AWS S3 Documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html)
+- [Organizing objects in the Amazon S3 console by using folders — AWS S3 User Guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-folders.html)

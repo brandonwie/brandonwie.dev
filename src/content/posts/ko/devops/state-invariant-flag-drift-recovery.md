@@ -6,7 +6,7 @@ description: >-
   clearer 어느 쪽이 어떻게 set했든 상관없이 flag가 함의하는 invariant를 강제하는
   세 번째 workflow를 추가하는 거였어요.
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-06-07'
+updated: '2026-08-02'
 tags:
   - devops
   - sync
@@ -19,7 +19,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: state-invariant-flag-drift-recovery
-source_updated: '2026-06-07'
+source_updated: '2026-08-02'
 translation_date: '2026-06-14'
 ---
 
@@ -37,6 +37,8 @@ translation_date: '2026-06-14'
 
 오래 버티는 fix는, flag가 어떻게 set됐든 상관없이 flag가 함의하는 **state invariant**를 강제하는 세 번째 workflow예요. workflow 층이 아니라 data 층에 둔 defense-in-depth죠.
 
+모양새는 Kubernetes controller가 쓰는 것과 같아요. 지금 state를 지켜보다가 desired state 쪽으로 밀어 주되, 그 state가 어쩌다 그렇게 됐는지는 묻지 않는 loop요. 출처를 따지지 않는다는 이 점이 핵심이에요. 덕분에 이 pass는 자기가 알지도 못하는 setter에게도 끄떡없어요.
+
 `needs_resync: true`가 함의하는 invariant는 이거예요:
 
 > "Re-sync"는 앞선 sync가 있었을 때만 말이 돼요. 그러니 이 flag는 `published_at`이 비어 있지 않다는 뜻을 품어요. `published_at`이 null이면 flag 자체가 논리적으로 불가능하니까, setter를 물어볼 것도 없이 클리어해도 돼요.
@@ -53,7 +55,7 @@ translation_date: '2026-06-14'
 
 첫 draft에서 걸린 세 가지, 그리고 몇 주 뒤 정기 점검에서 드러난 네 번째예요.
 
-- **YAML round-trip serialization이 따옴표 없는 문자열을 망가뜨렸어요.** 첫 draft는 `stringifyYaml(frontmatter)`로 다시 써 내려갔어요. 그랬더니 `#`이 든 따옴표 없는 문자열(예: `context: PR #103 Round 1...`)이 `#`에서 뚝 잘렸어요. YAML이 그 자리를 주석 표시로 읽거든요. 이 교훈은 `general/yaml-serializer-unquoted-hash-corruption.md`에 따로 적어 뒀어요.
+- **YAML round-trip serialization이 따옴표 없는 문자열을 망가뜨렸어요.** 첫 draft는 `stringifyYaml(frontmatter)`로 다시 써 내려갔어요. 그랬더니 `#`이 든 따옴표 없는 문자열(예: `context: PR #103 Round 1...`)이 `#`에서 뚝 잘렸어요. YAML은 따옴표 없는 `#`을 주석의 시작으로 읽거든요. 이런 값은 쓰는 쪽이 따옴표를 붙여 줘야만 round-trip에서 살아남아요. 그러니 따옴표를 알아서 판단하는 serializer는 필드 하나하나 확인해 봐야 하는 serializer예요.
 - **frontmatter 일부에만 surgical regex를 쓰니 YAML round-trip을 이겼어요.** round-trip을 키 하나만 뒤집는 scoped regex로 바꿨더니 diff가 348줄에서 12줄(파일당 1줄)로 줄었고, 본문은 따옴표 없는 특수문자가 있든 없든 byte 단위로 똑같이 남았어요. 일반 원칙은 이래요. 손댈 필드가 적고 정해져 있으면, 콕 집어 고치는 편이 round-trip이 일으키는 파장을 통째로 피해요.
 - **`replace_all: true`가 거의 똑같은 write block 둘 중 하나만 잡았어요.** 두 block이 들여쓰기 깊이가 달랐어요(3 tab vs 4 tab). 들여쓰기에 민감한 매칭이 한 곳만 잡고 다른 한 곳은 조용히 놓친 거죠. 방어는 기계적이에요. `replace_all` 뒤에는 늘 grep으로 잡힌 개수가 맞는지 확인해요.
 - **flag를 grep으로 세니 drift가 부풀려졌어요.** knowledge base 전체에 `grep -rl "needs_resync: true"`를 돌리니 파일 5개가 잡혔는데, 그중 4개는 그 flag를 _설명하는_ entry(이 글도 그래요)였어요. 문자열이 frontmatter 필드가 아니라 본문 문장에 걸린 거죠. 진짜로 끼어 있던 건 하나뿐이었어요. 자기 metadata를 스스로 문서로 남기는 knowledge base에서는, 단순 문자열 grep이 살아 있는 필드와 그 필드를 가리키는 문장을 가려내지 못해요. 세기 전에 스캔 범위를 frontmatter block으로 좁히는 것(예: `awk '/^---$/{c++; next} c==1'`)이 해법이에요.
@@ -74,4 +76,4 @@ stuck state flag가 보이면 setter와 clearer가 따로 놀고 있다는 뜻�
 
 ## References
 
-- [Patterns of Enterprise Application Architecture — state lifecycle discipline](https://martinfowler.com/eaaCatalog/identityField.html)
+- [Kubernetes — Controllers (reconciliation control loops)](https://kubernetes.io/docs/concepts/architecture/controller/)

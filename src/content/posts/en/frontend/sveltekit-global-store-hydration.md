@@ -14,7 +14,7 @@ category: frontend
 draft: false
 lang: en
 references:
-  - url: 'https://svelte.dev/docs/kit/load#layout-data'
+  - url: 'https://svelte.dev/docs/kit/load#Layout-data'
     title: SvelteKit — layout data (load)
     type: official
   - url: 'https://svelte.dev/docs/kit/types#Generated-types'
@@ -139,5 +139,5 @@ the boring lesson, but it is the one that actually mattered here.
 
 ## References
 
-- [SvelteKit — layout data (load)](https://svelte.dev/docs/kit/load#layout-data)
+- [SvelteKit — layout data (load)](https://svelte.dev/docs/kit/load#Layout-data)
 - [SvelteKit — generated $types (LayoutLoad)](https://svelte.dev/docs/kit/types#Generated-types)

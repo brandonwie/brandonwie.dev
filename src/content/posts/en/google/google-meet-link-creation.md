@@ -2,11 +2,10 @@
 title: Google Meet Link Creation
 description: Lesson learned from implementing programmatic Google Meet link creation.
 date: 2026-01-23T00:00:00.000Z
-updated: "2026-04-06"
+updated: "2026-08-02"
 tags:
   - backend
   - google-api
-  - work
 category: google
 draft: false
 lang: en
@@ -42,8 +41,9 @@ The Google Meet REST API **requires Google Workspace**. Free Gmail accounts
 cannot call `spaces.create`. The API returns a permission error with no
 indication that account type is the issue.
 
-Since our app serves both free Gmail and Workspace users, the Meet REST API was
-not an option. The Calendar API was the only approach that works universally.
+Because the app I was building had to serve both free Gmail and Workspace users,
+the Meet REST API was not an option. The Calendar API was the only approach that
+works universally.
 
 ## The Solution: Calendar API with conferenceData
 
@@ -78,7 +78,7 @@ One thing to know: free Gmail accounts impose a 60-minute limit on meetings with
 
 ## The Better Way: Piggyback on Existing Events
 
-Months after the initial implementation, I found a cleaner approach for the common case. If your application already creates a Google Calendar event — say, through a queue processor syncing blocks to calendars — you can generate the Meet link **atomically** by including `conferenceData.createRequest` in the same API call. No temporary event needed.
+Months after the initial implementation, I found a cleaner approach for the common case. If your application already creates a Google Calendar event — say, a background job that writes a user's scheduled time slots to their calendar — you can generate the Meet link **atomically** by including `conferenceData.createRequest` in the same API call. No temporary event needed.
 
 ```typescript
 // Instead of: create temp event → extract link → delete temp event

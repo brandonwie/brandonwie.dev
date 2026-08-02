@@ -31,6 +31,8 @@ When a session-state dashboard regenerates from a single source (e.g., today's j
 3. **Conversation-only follow-ups** — "next session: do X" mentioned but never journaled die at `/clear`.
 4. **Untagged items** — entries lacking `(project)` prefix can't route downstream.
 
+The system here is my own session-wrap skill. `/wrap` runs a fixed sequence of numbered steps at the end of a coding session — journal what happened, then regenerate `ACTIVE-STATUS.md`, a dashboard of what is still open across projects. The step numbers below (5.65, 5.7, 9) are positions in that sequence, and v1.3.0 is a version of that skill, not of anything you can install.
+
 ## Design evolution: 2026-04-28 → 2026-04-30
 
 The original v1.3.0 design did in-skill carry-forward merge of prior ACTIVE-STATUS Priorities. By 2026-04-28, Step 5.7 was replaced by `scripts/regenerate-active-status.js`, a Node generator with `.agents/locks/active-status.lock`. Two reasons drove the change:
@@ -38,7 +40,7 @@ The original v1.3.0 design did in-skill carry-forward merge of prior ACTIVE-STAT
 1. **Parallel-wrap concurrency safety.** When two /wrap sessions race on the same dashboard, carry-forward merge can lose updates. The generator acquires a lock + treats `ACTIVE-STATUS.md` as durable-source-only output (never reads prior dashboard state).
 2. **Single source of truth.** Carry-forward implicitly trusted the dashboard's prior content as state; durable-source-only reads journal + project todos.md + actives folders directly. The dashboard reflects them, not the other way around.
 
-Tests 1 (carry-forward) became design-obsolete with this shift; the remaining merge logic (multi-source scan, resolution drop, dedup, tag derivation) all moved into the generator's `collectPriorities` + `collectProjectFollowups` + `withProject` functions, covered by 20 unit tests in `scripts/regenerate-active-status.test.js` (all green as of 2026-04-30 close).
+The carry-forward test case became design-obsolete with this shift; the remaining merge logic (multi-source scan, resolution drop, dedup, tag derivation) all moved into the generator's `collectPriorities` + `collectProjectFollowups` + `withProject` functions, covered by 20 unit tests in `scripts/regenerate-active-status.test.js` (all green as of 2026-04-30 close).
 
 Both steps shipped as commits in my own tooling repo, which is private — so the design is the transferable part here, not the diff.
 
@@ -83,8 +85,8 @@ Both steps shipped as commits in my own tooling repo, which is private — so th
 Three things tripped the rollout:
 
 - **Pre-commit hook flattened the merge commit** when `--no-ff` was specified on a clean fast-forward path. Git documents `--no-ff` as creating a merge commit [in all cases, even when the merge could instead be resolved as a fast-forward](https://git-scm.com/docs/git-merge) — the hook rewrote it anyway. Effect was cosmetic (linear history vs branch context lost) but worth knowing.
-- **`.me.md` protection hook blocks creation** as well as edits. Workaround: use plain `index.md` for AI-authored task summaries; reserve `.me.md` for human-authored seed docs only. See related entry.
-- **Markdownlint [MD041](https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md)** counts the first non-frontmatter line; H2 before H1 fails. Plan files need H1 immediately after frontmatter. The rule does skip files whose front matter carries a `title` property, which is why blog-style docs pass and plan files do not. See related entry.
+- **`.me.md` protection hook blocks creation** as well as edits. Workaround: use plain `index.md` for AI-authored task summaries; reserve `.me.md` for human-authored seed docs only. The lesson generalizes: a guard written as "never touch this file" usually also means "never bring it into existence," so check which verb your hook actually blocks before you rely on it.
+- **Markdownlint [MD041](https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md)** counts the first non-frontmatter line; H2 before H1 fails. Plan files need H1 immediately after frontmatter. The rule does skip files whose front matter carries a `title` property, which is why blog-style docs pass and plan files do not. I wrote that rule up separately in [Markdownlint Pre-Commit: MD041 + MD001 Heading Gotchas](/posts/markdownlint-pre-commit-heading-rules).
 
 ## When this fits
 

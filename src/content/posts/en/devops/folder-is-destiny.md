@@ -3,7 +3,7 @@ title: 'Folder Is Destiny: A Six-Layer Information Lifecycle'
 description: >-
   3B lets folder placement decide retrieval, privacy, and staleness most of the
   time, then uses frontmatter overrides for the cases where physical location
-  and...
+  and semantic state disagree.
 date: 2026-06-15T00:00:00.000Z
 updated: '2026-08-02'
 expanded: true
@@ -15,9 +15,19 @@ category: devops
 draft: false
 lang: en
 references:
-  - url: 'https://yaml.org/spec/1.2.2/'
-    title: YAML 1.2.2 specification
+  - url: 'https://rubyonrails.org/doctrine'
+    title: 'The Rails Doctrine — Convention over Configuration'
     type: authoritative
+  - url: 'https://gohugo.io/content-management/front-matter/'
+    title: Hugo front matter reference
+    type: official
+  - url: 'https://www.rfc-editor.org/rfc/rfc9309.html'
+    title: 'RFC 9309 — Robots Exclusion Protocol'
+    type: official
+  - url: >-
+      https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag
+    title: Google Search Central — robots meta tag specifications
+    type: official
 source_content_hash: 6c663c440be2b894eb7ef92949498f6ef46196b8ff3b3538cb1fee0726efd71b
 ---
 
@@ -39,6 +49,13 @@ frontmatter overrides.
 
 That is the balance: folder defaults for the common case, frontmatter for the
 exception.
+
+None of that is a new idea. Rails calls the same bargain convention over
+configuration, and the Rails Doctrine is honest about where it runs out: "most
+applications worth building have some elements that are unique in some way. It
+may only be 5% or 1%, but it's there. The hard part is knowing when to stray
+from convention." Folder-as-policy is that trade applied to notes instead of
+classes, and it inherits the same hard part.
 
 ## The lifecycle path
 
@@ -95,6 +112,13 @@ source_type: distilled-pending
 The override is not a second classification system. It is the exception
 mechanism for the cases where folder and meaning temporarily diverge.
 
+Static site generators landed on the same shape. In Hugo, a page's content type
+is derived from the top-level section it sits in, and the front matter `type`
+field exists to override "the value derived from the top-level section in which
+the page resides" — that is the wording in Hugo's current front matter
+reference. Same deal: the directory decides, and one field overrules it when the
+directory is wrong.
+
 ## `privacy`: can a machine index this?
 
 Privacy is an indexing question.
@@ -117,6 +141,20 @@ is one matrix.
 gates, `.graphifyignore` generation, wrap freshness checks, and future vector
 indexes are supposed to read the same source. The system does not want five
 tools each carrying their own copy of "never upload journals."
+
+The web solved a narrower version of this long ago, and its solution ships with
+a warning. `robots.txt` rules are matched against the URL path, and RFC 9309
+specifies that the most specific matching rule wins — the same precedence a
+frontmatter override has over a folder default. But Google's robots meta tag
+documentation names the failure mode: if a page is disallowed in `robots.txt`,
+the crawler never fetches it, so any indexing rule written on that page "will
+not be found and will therefore be ignored." The path rule silently swallows the
+per-page rule.
+
+3B does not hit that particular ordering bug, because one loader resolves the
+path default and the file's own override together instead of two systems meeting
+at runtime. That is the transferable part: layered policy only works when
+something actually reads both layers.
 
 That is how a private folder stays private when new tooling appears.
 

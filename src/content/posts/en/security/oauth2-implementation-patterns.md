@@ -2,7 +2,7 @@
 title: OAuth 2.0 Implementation Patterns
 description: Practical patterns for implementing OAuth 2.0 flows in backend services.
 date: 2026-02-02T00:00:00.000Z
-updated: 2026-03-15T00:00:00.000Z
+updated: '2026-08-02'
 expanded: true
 tags:
   - security
@@ -36,7 +36,7 @@ references:
 source_content_hash: 96847b05828b3334cb0f5139080991323971e43a4dabce1211c30da016569c07
 ---
 
-Our Slack integration worked flawlessly for three months — until Google silently started appending an undocumented `iss` parameter to OAuth callbacks. Our strict DTO validation rejected the unknown field, and users started seeing a cryptic 400 error. No changelog, no deprecation notice, no mention in their discovery document. Welcome to OAuth 2.0 in production.
+A Slack OAuth connector I built ran quietly for months. The surprise came from a different integration entirely: Google started appending an undocumented `iss` parameter to OAuth callbacks, strict DTO validation rejected the unknown field, and the callback began returning a cryptic 400. No changelog, no deprecation notice, no mention in the discovery document. Welcome to OAuth 2.0 in production.
 
 This post covers the practical patterns I've learned implementing OAuth flows against real providers: the authorization code flow, CSRF protection with state parameters, secure token storage, and how to handle the inevitable surprises when providers evolve their protocol without telling you.
 
@@ -313,8 +313,9 @@ if (dto.iss && dto.iss !== "https://accounts.google.com") {
 }
 ```
 
-This adds defense-in-depth against mix-up attacks but should be treated as a
-separate change from the hotfix (behavioral logic vs. validation passthrough).
+This adds defense-in-depth against mix-up attacks, but it is worth shipping
+separately from the minimal fix of letting `iss` through validation — one is
+validation passthrough, the other is new behavioral logic.
 
 ---
 

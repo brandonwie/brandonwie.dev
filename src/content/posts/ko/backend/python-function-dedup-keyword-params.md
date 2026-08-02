@@ -2,7 +2,7 @@
 title: Keyword-Only 파라미터로 중복 함수 통합하기
 description: '두 모듈에 거의 동일한 함수가 존재할 때, Python의 keyword-only 파라미터로 하나로 통합하는 패턴을 소개합니다.'
 date: 2026-02-06T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - python
@@ -13,14 +13,14 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: python-function-dedup-keyword-params
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: 'https://docs.python.org/3/tutorial/controlflow.html#keyword-only-arguments'
     title: Python Keyword-Only Arguments
     type: official
   - url: null
-    title: Applied in etl-project deduplication
+    title: Applied in a production ETL deduplication
     type: experience
 ---
 
@@ -35,9 +35,9 @@ ETL 코드베이스에서 이런 일은 흔해요. "일반" 파이프라인 경�
 
 ## 이런 상황이 발생하는 이유
 
-두 함수가 별도 모듈(`amplitude_common`과 `amplitude_backfill`)에 있어서,
-거의 동일한 로직이 있다는 사실이 눈에 띄지 않았어요. 같은 버그 수정을 양쪽에
-적용해야 하는 시점이 되어서야 중복을 발견했죠.
+한쪽은 정기 자동 export, 다른 한쪽은 수동 백필을 담당했고, 서로 다른 모듈에
+있어서 거의 동일한 로직이 있다는 사실이 눈에 띄지 않았어요. 같은 버그 수정을
+양쪽에 적용해야 하는 시점이 되어서야 중복을 발견했죠.
 
 두 함수를 줄 단위로 비교해보니 차이점은 S3 prefix와 zip 아카이브 추출 여부
 뿐이었어요. 숨겨진 조건 로직도 없고, 구조적 차이도 없었어요. 딱 두 개의

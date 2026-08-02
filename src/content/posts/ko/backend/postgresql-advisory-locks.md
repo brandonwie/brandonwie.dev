@@ -7,7 +7,6 @@ tags:
   - backend
   - postgresql
   - database
-  - work
 category: backend
 draft: false
 lang: ko

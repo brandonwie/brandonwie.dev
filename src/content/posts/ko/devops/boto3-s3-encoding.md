@@ -2,7 +2,7 @@
 title: boto3 S3 put_object() Body 파라미터 인코딩
 description: ETL 파이프라인에서 JSON 매니페스트 파일을 S3에 업로드할 때 발생하는 파라미터 검증 에러와 해결 방법이에요.
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - aws
@@ -14,7 +14,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: boto3-s3-encoding
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 references:
   - url: >-
@@ -23,10 +23,11 @@ references:
     type: official
 ---
 
-ETL 파이프라인이 매번 실행 끝에 JSON 매니페스트 파일을 S3에 업로드하고
-있었어요. 개발 환경에서는 S3를 mock으로 가려놨더니 통과했는데, 프로덕션에
-나가니까 알 수 없는 파라미터 검증 에러로 떨어졌어요. 결국 `.encode("utf-8")`
-한 줄을 더 붙이는 게 정답이었는데, 원인을 찾기까지가 길었어요.
+JSON 매니페스트 파일을 S3에 업로드하는 ETL 파이프라인에서 만난 문제예요.
+`put_object()`에 Python 문자열을 그대로 넘기고 있었는데, boto3는 bytes를
+기대해요. 테스트는 S3를 mock으로 가려놔서 조용히 통과했고, GitHub Copilot의
+pull request 리뷰가 먼저 짚어줬어요. 정답은 `.encode("utf-8")` 한 줄이었지만,
+에러 메시지만 봐서는 그 연결이 잘 보이지 않아요.
 
 ## 왜 중요한가요
 
@@ -63,11 +64,12 @@ bytes였거든요. Python 3에서는 `str`이 Unicode 텍스트로 바뀌었어�
 "문자열"을 받는다는 API가 "문자열"(과거 의미의 bytes)을 거부하는 셈이라,
 Python 2→3 전환에서 흔히 만나는 패턴이에요.
 
-이 버그는 단위 테스트가 아니라 GitHub Copilot의 PR 리뷰에서 잡혔어요.
-`put_object` 호출이 실제로 S3에 업로드할 때만 타는 코드 경로에 들어 있었고,
-로컬 테스트에선 mock으로 가려져 있었어요. 온라인에 있는 S3 업로드 예제 중
-적지 않은 수가 `.encode("utf-8")` 단계를 그냥 건너뛰니까, 예제를 가져다 쓸
-때 이 버그가 조용히 따라붙어요.
+제 경우엔 `put_object` 호출이 실제로 S3에 업로드할 때만 타는 코드 경로에
+들어 있었어요. 로컬 테스트에선 S3 클라이언트를 mock으로 가려놨으니까 파라미터
+검증이 아예 돌지 않았고, 그래서 단위 테스트가 아니라 리뷰에서 먼저 잡혔어요.
+
+온라인에 있는 S3 업로드 예제 중 적지 않은 수가 `.encode("utf-8")` 단계를
+그냥 건너뛰어요. 그래서 예제를 가져다 쓸 때 이 버그가 조용히 따라붙어요.
 
 ## 해결 방법
 

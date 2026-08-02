@@ -53,9 +53,9 @@ validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐�
 
 > **한 줄 정의:** reviewer가 함수를 고립된 채로 분석해요. 동작을 결정짓는 관련 파일을 확인하지 않아요.
 
-NestJS PR에서 Copilot이 컨트롤러 parameter `clientTypeHeader?: string`에 배열 정규화가 필요하다고 flag를 걸었어요. 근거는 Express의 raw type signature `string | string[] | undefined`였어요. flag 자체는 Express type과 어긋나지 않았지만, 맥락에서는 틀렸어요. NestJS의 `@Headers('key')` decorator는 custom header라면 정확히 `string | undefined`를 리턴해요. Express가 중복을 쉼표로 합쳐 normalize해 주기 때문이에요. reviewer는 parameter의 annotation을 보면서도, decorator가 구현된 곳까지 따라가진 않았어요.
+NestJS PR에서 Copilot이 `@Headers()`로 custom request header에 바인딩된 컨트롤러 parameter에 배열 정규화가 필요하다고 flag를 걸었어요. 근거는 Express의 raw type signature `string | string[] | undefined`였어요. flag 자체는 Express type과 어긋나지 않았지만, 맥락에서는 틀렸어요. NestJS의 `@Headers('key')` decorator는 custom header라면 정확히 `string | undefined`를 리턴해요. Express가 중복을 쉼표로 합쳐 normalize해 주기 때문이에요. reviewer는 parameter의 annotation을 보면서도, decorator가 구현된 곳까지 따라가진 않았어요.
 
-같은 패턴은 이후 다른 NestJS PR에서 또 다른 모양으로 나왔어요. Claude는 `fromEntity`에서 `create()`로 이어지는 trace를 따라가며, plain all-day block이 400을 던질 수 있다고 봤어요. `dto.detail === undefined`면 `isAllDay`가 false가 된다는 reasoning이었죠. 두 파일만 놓고 보면 trace는 그럴듯했지만, entity-level invariant를 놓쳤어요. `hasDetailFields`에는 `block.priority`가 들어가고, 이 필드는 default truthy 값을 가진 NOT-NULL enum column이에요. DB에서 로드된 entity에는 항상 그 값이 있고, `{ ...block }`도 그 값을 보존하니까 `detail`은 만들어져요. 빠진 context는 다른 함수 호출이 아니라, guard 입력 shape를 더 강하게 만드는 `@Column({ default })` 선언이었어요.
+같은 패턴은 이후 다른 NestJS PR에서 또 다른 모양으로 나왔어요. Claude는 mapper에서 그 mapper가 위임하는 생성자로 이어지는 trace를 따라가며, optional detail payload가 없는 요청이 400을 던질 수 있다고 봤어요. mapper의 field-presence 체크가 false가 된다는 reasoning이었죠. 두 파일만 놓고 보면 trace는 그럴듯했지만, entity-level invariant를 놓쳤어요. 그 field-presence helper는 default 값이 truthy인 NOT-NULL enum column도 함께 세고 있었거든요. DB에서 로드된 entity에는 그 column이 항상 있고, object spread도 그 값을 보존하니까 detail 분기는 언제나 타요. 빠진 context는 다른 함수 호출이 아니라, guard 입력 shape를 더 강하게 만드는 `@Column({ default })` 선언이었어요.
 
 **왜 이런 일이 생길까요.** 대부분의 AI reviewer는 single-file 또는 single-diff context window로 동작해요. 현재 파일을 흐르는 타입은 볼 수 있지만, decorator 호출을 따라 dependency 패키지 내부 구현까지 들어가진 못해요. 그래서 "이 decorator가 runtime에서 실제로 뭘 리턴하지?" 하는 질문은 답할 수 없는 질문이 되고, 가장 가까운 도달 가능한 지점의 type signature(보통 raw framework type)가 기본 가정이 돼 버려요.
 
@@ -69,9 +69,9 @@ NestJS PR에서 Copilot이 컨트롤러 parameter `clientTypeHeader?: string`에
 
 > **한 줄 정의:** 이미 문서화된 trade-off를 reviewer가 문제로 flag해요.
 
-같은 NestJS PR에서, Claude가 auth guard의 mobile header bypass를 security 이슈로 flag했어요. flag된 줄의 두 줄 위에는 이미 inline NOTE가 있었어요. *"알려진 허용 리스크(기존부터 존재) — mobile bypass는 tier model보다 먼저 있었음."* NOTE는 flag된 코드 바로 위, 그것도 평범한 문장으로 써 있었어요.
+같은 NestJS PR에서, Claude가 auth guard의 client-type shortcut을 security 이슈로 flag했어요. flag된 코드의 두 줄 위에는 이미 inline NOTE가 있었고, 같은 리스크를 "기존부터 존재하는, 이미 수용된 trade-off"로 기록해 두고 있었어요. 같은 파일 안에, 바로 붙어서, 평범한 문장으로요.
 
-**왜 이런 일이 생길까요.** AI reviewer는 리스크를 인정하는 inline 문서를 안정적으로 처리하지 못해요. NOTE를 읽고도 마치 없던 것처럼 리스크를 flag해요. 기술적 실패라기보다 철학적 실패예요. reviewer는 "이건 위험해?"를 "팀이 이 리스크를 이미 인지하고 있어?"보다 더 가중치 있게 다뤄요.
+**왜 이런 일이 생길까요.** AI reviewer는 리스크를 인정하는 inline 문서를 안정적으로 처리하지 못해요. NOTE를 읽고도 마치 없던 것처럼 리스크를 flag해요. 기술적 실패라기보다 철학적 실패예요. reviewer는 "이건 위험해?"를 "이 리스크가 코드베이스에서 이미 인정된 적 있나?"보다 더 가중치 있게 다뤄요.
 
 **탐지 신호.** flag된 영역 바로 앞뒤에 같은 이슈를 인정하는 NOTE, TODO, comment가 있는지 확인해 보세요. 있으면 이 flag는 이미 있는 문서와 중복돼요.
 
@@ -175,20 +175,20 @@ GitHub은 flag된 줄이 현재 diff에 없어지면 review 스레드를 `isOutd
 
 Pattern 7은 4월 말 multi-round NestJS PR에서 나타났어요. 네 라운드에 걸쳐 bot이 이전 fix들을 template으로 계속 적용했어요:
 
-- **R3-1:** bot이 `SyncAttendeeContactListener`의 per-ref `publishContactUpserted` 루프를 flag함. Fix: bulk emit.
-- **R4-1:** bot이 `AttendeeContactListener`의 per-ref `publishContactUpserted` 루프를 flag함 — 다른 클래스, 다른 `@OnEvent` 토픽, 같은 shape. 동일하게 수정.
-- **F-T-4 (proactive):** bot이 `BlockSearchListener`의 `addBulkWithSentry` 누락을 flag함. Fix landed.
-- **R2-1:** bot이 `ContactSearchListener`의 같은 갭을 flag함. 같은 fix 적용.
+- **Round 3:** bot이 어떤 domain event listener의 루프 안에서 item마다 event를 emit하는 걸 flag함. Fix: 한 번에 bulk emit.
+- **Round 4:** bot이 sibling listener에서 똑같은 shape를 flag함 — 다른 클래스, 다른 `@OnEvent` 토픽, 같은 루프. 동일하게 수정.
+- **Proactive pass:** bot이 어떤 search-index listener에서 bulk + error capture helper가 빠진 걸 flag함. Fix landed.
+- **다음 라운드:** bot이 sibling search-index listener에서 같은 갭을 flag함. 같은 fix 적용.
 
 **왜 작동하나.** bot은 새 라운드를 review할 때 PR diff context — 이전 commit과 summary comment — 를 읽어요. commit N에 fix가 들어가면 commit N+1의 review prompt에 그 fix가 입력으로 딸려 와요. bot은 그걸 template 삼아 변경된 파일에서 같은 shape를 다른 자리에서 찾아내요. PR diff context가 라운드 사이를 잇는 기억 역할을 하는 셈이에요.
 
 **어떻게 amplify하나.**
 
-- **라운드 summary comment에 file:line이 아니라 fix shape를 써요.** bot이 그 comment를 읽어요. "per-ref emit을 `publishBulkAsync` + 리스너 `addBulk`로 교체"는 template이고; "attendee listener의 N+1 emit fix"는 아니에요.
+- **라운드 summary comment에 file:line이 아니라 fix shape를 써요.** bot이 그 comment를 읽어요. "루프 안의 item별 emit을 bulk publish 한 번으로 교체하고 리스너의 bulk handler가 받게 함"은 template이고; "리스너의 N+1 emit fix"는 아니에요.
 - **한 사이트를 fix한 후에 의도적으로 근처의 twin 코드를 다음 cascade를 위해 남겨두세요.** bot이 찾도록요. commit마다 `@claude review`를 트리거하면 스캔할 surface를 줘요.
 - **Multi-round validation(R1 → R5+)이 이걸 표면화해요.** Single-round PR은 twin을 통째로 놓쳐요. 변경 shape이 반복될 가능성이 있을 때 multi-round를 계획하세요.
 
-**Pattern 7을 suppress하는 anti-pattern.** R4-1 같은 finding을 위치/파일만으로 R3-1의 `DUPLICATE`로 마킹하는 거예요. 중복이 아니에요 — 다른 surface의 같은 shape이에요. `/pr-review-rectify` Phase 1.5의 dedup 룰이 "정확한 위치 매치"(진짜 중복)와 "패턴 반복"(twin detection)을 구별해야 해요. RELATED-NOT-DUP로 마킹하고 새 finding으로 분류하세요.
+**Pattern 7을 suppress하는 anti-pattern.** 라운드 4의 finding을 위치/파일만 보고 라운드 3 finding의 `DUPLICATE`로 마킹하는 거예요. 중복이 아니에요 — 다른 surface의 같은 shape이에요. `/pr-review-rectify` Phase 1.5의 dedup 룰이 "정확한 위치 매치"(진짜 중복)와 "패턴 반복"(twin detection)을 구별해야 해요. RELATED-NOT-DUP로 마킹하고 새 finding으로 분류하세요.
 
 ## Pattern 8 — PR Diff Scope Confusion (analyst-side)
 
@@ -291,19 +291,19 @@ Pattern 1부터 11까지는 대부분 단일 reviewer의 실패예요. Pattern 1
 
 Pattern 13은 catalog에서 두 번째로 productive한 행동이에요. Pattern 7처럼 amplify할 가치가 있어요. 다른 점이 하나 있다면, 놓치는 쪽이 reviewer가 아니라 검증을 돌리는 저, 즉 analyst라는 거예요.
 
-어떤 frontend onboarding-tutorial PR에서 한 세션 안에 같은 antipattern shape의 인스턴스 세 개가 라운드 10부터 14까지 떴어요. 세 가지 다른 convention fix지만 모양은 같아요:
+어떤 multi-round frontend PR에서 한 세션 안에 같은 antipattern shape의 인스턴스 세 개가 라운드 10부터 14까지 떴어요. 세 가지 다른 convention fix지만 모양은 같아요:
 
-| Round            | analyst가 fix함                                                                | reviewer가 잡은 missed sibling                                                          |
-| ---------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| R10-2            | `CalendarConnectModal` + `CalendarReconnectModal`의 `isUserProfileReady` guard | 같은 폴더의 `CalendarConnectButton` → R12-2 (P2 bug, `userId="undefined"`)              |
-| R1, R10-1, R10-4 | tutorial component + modal/index에서 `const` arrow → `function` 선언            | calendar-connection component 4개 → R13-2..R13-5 (cross-file 스레드 하나로 묶임)        |
-| R12-4            | `ConnectedCalendarAccount.tsx`의 relative import → `@/` alias                  | group order가 inverted된 채로 남음(`@/assets`가 canonical 마지막이 아니라 첫 번째) → R14-1 |
+| Round        | analyst가 fix함                                          | reviewer가 잡은 missed sibling                                                              |
+| ------------ | -------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 라운드 10    | modal component 두 개에 readiness guard 추가              | 같은 폴더의 sibling button component — 두 라운드 뒤에 실제 버그로 드러났어요(undefined id가 URL까지 흘러감) |
+| 라운드 1, 10 | 어떤 component group 전체에서 `const` arrow → `function` 선언 | 인접 feature 폴더의 sibling component 4개 → cross-file 스레드 하나로 묶여 올라옴                 |
+| 라운드 12    | 어떤 component에서 relative import → `@/` path alias      | alias group order가 프로젝트 convention과 반대로 남음, 다음 라운드에 잡힘                        |
 
 이건 **Pattern 8(PR Diff Scope Confusion)의 reviewer-side mirror**예요. analyst의 blind spot은 "이전 reviewer가 이름 붙인 것만 건드렸어요"이고, reviewer의 productive behavior는 "scope 안에 같은 패턴의 다른 인스턴스 중 analyst가 놓친 게 있나요?"예요. Pattern 1(reviewer가 isolation에서 분석)이나 Pattern 9(manual prose drift)와는 달라요 — 거기서는 **reviewer**가 맥락을 놓치는 쪽이었어요. 여기선 **reviewer**가 구조적 읽기를 하면서 **analyst**가 놓친 걸 잡아 줘요.
 
 **예방 (analyst-side).** 폴더 단위 convention이나 fix를 적용할 때는, commit 전에 같은 디렉토리의 모든 sibling을 audit하세요. 다음 라운드에서 reviewer가 holdout을 잡아 주겠지만, 각 holdout은 full round-trip 비용이에요 — commit, push, workflow, bot review, validation cycle. 폴더를 한 번에 sweep하는 게 더 싸요.
 
-**Amplify (reviewer-side).** productive behavior를 보강하세요. bot이 convention fix를 flag할 때, 같은 패턴의 다른 인스턴스를 폴더에서 스캔해 cross-file 스레드 하나에 surface하도록 유도하세요. 그 frontend PR의 R13 thread B가 깨끗한 예예요: 한 코멘트가 파일 4개를 나열했고, 답글 하나가 commit 4개를 cover했고, resolve 한 번으로 loop가 닫혔어요.
+**Amplify (reviewer-side).** productive behavior를 보강하세요. bot이 convention fix를 flag할 때, 같은 패턴의 다른 인스턴스를 폴더에서 스캔해 cross-file 스레드 하나에 surface하도록 유도하세요. 위 표의 두 번째 행이 딱 그 모양의 깨끗한 예예요: 한 코멘트가 파일 4개를 나열했고, 답글 하나가 commit 4개를 cover했고, resolve 한 번으로 loop가 닫혔어요.
 
 **왜 process gap이 아니라 strength로 다루나.** "내 validation process가 절대 sibling을 놓치면 안 돼"라고 읽고 engineer-out하려고 시도할 수도 있어요. 하지만 round-trip 비용은 실제이고, bot의 구조적 폴더 읽기는 진짜 cheap해요. 정직한 선택은 sweep discipline은 tight하게 유지하면서 *동시에* bot의 audit을 safety net으로 켜 두는 거예요. Pattern 7과 13이 multi-round PR validation이 reviewer의 강점을 amplify해서 자기 비용을 회수하는 두 케이스예요.
 
@@ -329,7 +329,7 @@ PR 두 개는 firm conclusion을 내리기엔 부족한 데이터지만, 초기 
 - **Cross-round twin detection이 multi-round PR validation의 killer feature예요.** Single-round PR은 두 번째, 세 번째 twin을 통째로 놓쳐요. bot은 패턴을 적용하기 위해 prior-fix context (commit + summary comment trailer)가 필요해요. 항상 round summary comment에 fix *shape*을 써서 다음 cascade가 그것을 template input으로 가질 수 있게 하세요.
 - **INFO comment가 library internals를 건드릴 땐 꼼꼼히 읽으세요.** Pattern 4가 가장 자연스럽게 자리 잡는 곳이에요.
 - **툴링 휴리스틱을 correctness 신호로 신뢰하지 마세요.** `isOutdated`(Pattern 6)는 "concern 해결됨"처럼 느껴지지만 실제로는 "현재 diff 줄에 anchor할 수 없음"을 뜻해요. skip된 스레드를 로그해서 두 번째 pass에서 재검토할 수 있게 하세요.
-- **제도적 룰이 AI flag를 override할 수 있어요.** AI reviewer는 문서화된 모범 사례(예: hot table에 `CREATE INDEX CONCURRENTLY`)를 정확히 flag하지만, 제도적 룰("필수가 아니면 generated migration 파일을 건드리지 말 것")은 볼 수 없어요. flag가 그런 룰과 충돌하면 룰이 이겨요 — flag의 기술적 내용이 맞아도요. 그런 룰을 durable feedback memory로 저장해서 미래 validation 라운드가 default-skip하게 하세요.
+- **프로젝트 convention이 AI flag를 override할 수 있어요.** AI reviewer는 문서화된 모범 사례(예: hot table에 `CREATE INDEX CONCURRENTLY`)를 정확히 flag하지만, diff 바깥에 사는 convention은 볼 수 없어요 — 예를 들면 "불가피한 게 아니면 generated migration 파일을 건드리지 말 것" 같은 상시 정책이요. 기술적으로 맞는 flag가 그런 convention과 충돌하면 convention이 이겨요. 그런 convention을 durable feedback memory로 저장해서 미래 validation 라운드가 default-skip하게 하세요.
 - **Convergence가 항상 신호인 건 아니에요.** Pattern 12 (Long-Row Formatting Hallucination)에서 봤듯이, 두 reviewer가 false positive에 converge할 수 있어요 — 둘 다 content를 독립적으로 관찰하는 게 아니라 "긴 table row는 formatting이 자주 어긋난다" 같은 prior를 공유할 때요. Pattern 7 / Pattern 13 식의 convergence(각 reviewer가 실제 content를 놓고 reasoning)가 productive shape이에요. 둘을 구분하려면 reviewer의 `suggestion` block이 실제로 뭔가 바꾸는지 확인하세요.
 - **Convention fix는 commit 전에 폴더 sweep하세요.** Pattern 13 (Sibling-Fix Holdout)은 두 번째 productive cross-round behavior지만, multi-round PR에서만 비용을 회수해요. single-round PR에서는 놓친 sibling이 그대로 ship돼요. 원칙은 단순해요: fix가 폴더의 A, B 파일을 건드리면 push 전에 폴더의 나머지를 audit하세요. reviewer의 구조적 읽기는 safety net이지 대체재가 아니에요.
 

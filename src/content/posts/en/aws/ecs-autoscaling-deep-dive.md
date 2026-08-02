@@ -1,8 +1,8 @@
 ---
 title: ECS Auto-Scaling Deep Dive
-description: "Comprehensive guide to ECS auto-scaling concepts, algorithms, and container"
+description: "How ECS auto-scaling actually decides task counts: the target tracking algorithm, cooldown asymmetry, and what the numbers cost."
 date: 2025-08-23T00:00:00.000Z
-updated: 2026-02-24T00:00:00.000Z
+updated: 2026-08-02T00:00:00.000Z
 tags:
   - aws
   - ecs
@@ -22,7 +22,11 @@ references:
     type: official
 ---
 
-orchestration.
+ECS auto-scaling looks like a thermostat and behaves like a proportional
+controller. This is a walk through the parts I had to get straight before the
+configuration made sense: the target tracking algorithm, why the two cooldowns
+should not match, how a scaling policy differs from a CloudWatch alarm, and what
+the resulting task counts cost.
 
 ---
 
@@ -273,26 +277,31 @@ Prevent over-provisioning and flapping:
 
 ---
 
-## Industry Standard Settings
+## A Reasonable Starting Point
 
-### Your Settings vs Industry
+These are the values I start from, with the reasoning attached. The "common
+range" column is convention rather than anything AWS publishes as a required
+value -- treat it as a band to tune inside, not a target to hit.
 
-| Metric             | Setting | Industry | Assessment           |
-| ------------------ | ------- | -------- | -------------------- |
-| CPU Target         | 70%     | 65-75%   | Excellent            |
-| Memory Target      | 80%     | 75-85%   | Excellent            |
-| Scale-Out Cooldown | 60s     | 60-120s  | Good                 |
-| Scale-In Cooldown  | 300s    | 300-600s | Standard             |
-| Min Tasks          | 1       | 1-2      | Consider 2 for HA    |
-| Max Tasks          | 4       | Varies   | Application-specific |
+| Metric             | Starting value | Common range | Why                                           |
+| ------------------ | -------------- | ------------ | --------------------------------------------- |
+| CPU target         | 70%            | 65-75%       | Headroom while a new task becomes healthy     |
+| Memory target      | 80%            | 75-85%       | Memory drains more slowly than CPU            |
+| Scale-out cooldown | 60s            | 60-120s      | Time for one new task to start taking traffic |
+| Scale-in cooldown  | 300s           | 300-600s     | Fast removal is what causes flapping          |
+| Min tasks          | 1              | 1-2          | 2 when one task failing must not be an outage |
+| Max tasks          | 4 (example)    | Varies       | Derived from downstream limits, not headroom  |
 
-### How Major Companies Configure
+**About that `4`.** It is the example ceiling used through the rest of this post
+-- in the scenarios and the cost table -- not a recommendation. The real ceiling
+comes from downstream math: task count multiplied by the connections each task
+opens has to stay under the database pool limit, and third-party API rate limits
+work the same way. The companion post linked from the Terraform section walks
+that calculation end to end.
 
-```text
-Netflix:    CPU 60-75%, Scale-Out 60s, Scale-In 300s
-Uber:       CPU 65-70%, Scale-Out 30s, Scale-In 600s
-Airbnb:     CPU 65%,    Scale-Out 90s, Scale-In 600s
-```
+The shape that matters more than any individual number is the asymmetry: scale
+out fast, scale in slowly. Adding a task early costs a few cents; removing one
+early costs a scale-out, a cold start, and possibly a latency spike.
 
 ---
 
@@ -442,7 +451,7 @@ flowchart TB
             B["Memory Usage\ntarget: 80%"]
         end
         subgraph Scale["Scaling Metrics"]
-            C["Task Count\n1-4 range"]
+            C["Task Count\nmin to max"]
             D["Scaling Events\nhistory"]
         end
         subgraph Health["Health Metrics"]
@@ -701,7 +710,7 @@ flowchart TD
     A["High CPU Alert?"] -->|"Yes"| B["Check Task Count"]
     A -->|"No"| C["Check Memory"]
 
-    B -->|"At Max 4"| D["Increase max_capacity\nor right-size tasks"]
+    B -->|"At max"| D["Increase max_capacity\nor right-size tasks"]
     B -->|"Not at Max"| E["Check IAM Permissions"]
 
     C -->|"High >80%"| F["Check for Memory Leaks"]

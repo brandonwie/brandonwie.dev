@@ -4,7 +4,7 @@ description: >-
   Typesense bulk import를 위한 두 가지 청킹 전략. 잘못된 걸 고르면 어떤 파워 유저가 멀티-MB 문서를 만드는 날 조용히
   실패해요.
 date: 2026-04-28T00:00:00.000Z
-updated: '2026-04-29'
+updated: '2026-08-02'
 tags:
   - backend
   - typesense
@@ -15,16 +15,17 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: typesense-import-byte-aware-chunking
-source_updated: '2026-04-29'
+source_updated: '2026-08-02'
 translation_date: '2026-04-29'
 ---
 
-contact-bulk-upsert 워커는 `CHUNK_SIZE = 500`으로 출시해서 몇 달 동안 잘
+어떤 contacts 동기화 워커가 `CHUNK_SIZE = 500`으로 출시해서 몇 달 동안 잘
 돌았어요 — 작은 고정 문자열 문서에 Typesense 40 MB import 캡 아래로
-여유로운 헤드룸. 그런데 calendar-block 워커가 같은 청킹 전략을 쓰면서
-산수가 깨졌어요. 단일 block이 멀티-MB 리치텍스트 노트를 가질 수 있는데,
-청크 하나가 캡을 넘는 순간 import 전체가 실패하고 부트스트랩이 멈췄어요.
-해결은 카운트를 줄이는 게 아니라 전략을 통째로 바꾸는 거였어요.
+여유로운 헤드룸. 그런데 calendar block을 인덱싱하는 두 번째 워커가 같은
+청킹 전략을 재사용하면서 산수가 깨졌어요. 단일 block이 멀티-MB 리치텍스트
+노트를 가질 수 있는데, 청크 하나가 캡을 넘는 순간 import 전체가 실패하고
+컬렉션을 빈 상태에서 채우는 초기 전체 백필(부트스트랩)이 멈췄어요. 해결은
+카운트를 줄이는 게 아니라 전략을 통째로 바꾸는 거였어요.
 
 ## 두 가지 전략
 
@@ -40,8 +41,8 @@ Typesense의 `documents/import` 엔드포인트는 하드 캡(이 글 작성 시
 
 흔한 실수는 "dev에서 500 docs가 괜찮아 보였다"는 이유로 모든 곳에 카운트
 기반을 기본으로 두는 거예요. 그러다 파워 유저가 멀티-MB 노트가 있는 단일
-문서를 만들면, 청크가 40 MB를 넘고, 배치 전체가 실패하고, 부트스트랩이
-영영 완료되지 않아요.
+문서를 만들면, 청크가 40 MB를 넘고, 배치 전체가 실패하고, 초기 인덱스
+빌드가 영영 완료되지 않아요.
 
 ## 카운트 기반이 괜찮을 때
 
@@ -52,7 +53,7 @@ Typesense의 `documents/import` 엔드포인트는 하드 캡(이 글 작성 시
 - 청크 사이즈 × 최악 문서 크기가 import 캡 아래 한 자릿수 헤드룸을 남김.
 
 연락처가 교과서적인 경우예요. 스키마는 작은 고정 문자열(`email`,
-`displayName`, `photoUrl`, `integrationId`). 최악 ~2 KB/doc; 500 × 2 KB =
+`displayName`, `photoUrl`, `sourceId`). 최악 ~2 KB/doc; 500 × 2 KB =
 1 MB; 40 MB 캡. 두 자릿수 헤드룸 — 카운트 기반으로 충분해요:
 
 ```ts
@@ -164,7 +165,7 @@ for (const group of groups) {
 
 CI seed fixture와 로컬 dev 데이터베이스는 prod가 몇 년 사용 후에 누적하는
 멀티-MB 문서를 거의 안 가지고 있어요. 잡당 500 카운트 기반 제한은 모든
-테스트를 통과하고 ship되지만, 프로덕션 부트스트랩은 단일 파워 유저 한
+테스트를 통과하고 ship되지만, 프로덕션 백필은 단일 파워 유저 한
 명에 day 1부터 실패해요. 유용한 코드 리뷰 휴리스틱: UI에서 textarea나
 markdown 에디터로 매핑되는 필드는 unbounded — 바이트 인식 사용해요.
 
@@ -179,20 +180,21 @@ projected docs)가 캡에 부딪쳐요. 둘을 섞지 마세요: 잡 데이터�
 ## 단일 문서 오버플로 경로의 Sentry 노이즈
 
 오버플로마다 `error` 레벨로 로깅하면 단일 bad 문서가 N번 재시도되며
-반복될 때 알림을 폭격해요. `warning` 레벨 + 태그
-`area: search-integration, issue: oversized_document`를 쓰면 docId로
-그루핑되고 suppress 돼요.
+반복될 때 알림을 폭격해요. `warning` 레벨로 낮추고 서브시스템과 이슈 종류로
+태깅하면 Sentry가 재시도마다 알리는 대신 반복을 그루핑해줘요. 프로젝트가
+이미 쓰는 태그 컨벤션이면 뭐든 괜찮아요 — 예를 들어
+`area: search-integration` + `issue: oversized_document` 같은 조합이 실제로
+docId 기준으로 묶여요.
 
 ## 호출자가 보지 못하는 silent skip 함정
 
 `splitByByteSize`의 첫 버전은 그냥 `T[][]`만 반환했어요. 오버사이즈 문서는
-Sentry 경고와 `continue`로 스킵됐어요. 호출자(`bulkUpsertBlocks`)는 신호가
-없어서 — 문서가 Typesense에서 잃어버려졌는데 프로세서 로그에 안 나타나고,
-`Bulk upserted N/M blocks`가 일부 문서가 drop돼도 `M = blockIds.length`로
-출력해서 차이를 숨겼어요.
+Sentry 경고와 `continue`로 스킵됐어요. 호출자 — 아래 스케치의
+`bulkUpsertDocs` — 는 신호가 없었어요. 문서가 Typesense에서 잃어버려졌는데
+프로세서 로그에 안 나타나고, 성공 로그가 실제 import된 개수가 아니라 요청한
+개수를 출력해서 차이가 드러나지 않았어요.
 
-PR #858의 proactive review가 이 점을 표시했어요(F-T-3). 반환 형태가 이렇게
-진화했어요:
+리뷰 과정에서 ship 전에 이걸 잡았고, 반환 형태가 이렇게 진화했어요:
 
 ```typescript
 export interface SplitByByteSizeResult<T> {
@@ -204,25 +206,28 @@ export interface SplitByByteSizeResult<T> {
 호출자 패턴:
 
 ```typescript
-const { groups, skippedIds } = splitByByteSize(docs);
-for (const group of groups) {
-  await import(group, { action: "upsert" });
-}
-if (skippedIds.length > 0) {
-  this.logger.warn(
-    `Bulk upsert dropped ${skippedIds.length} oversize block doc(s) ` +
-      `user=${userId} calendar=${calendarId} blockIds=[${skippedIds.join(",")}]`
+async function bulkUpsertDocs(docs: Doc[], docIds: string[]) {
+  const { groups, skippedIds } = splitByByteSize(docs);
+  for (const group of groups) {
+    await collection.documents().import(group, { action: "upsert" });
+  }
+  if (skippedIds.length > 0) {
+    logger.warn(
+      `Bulk upsert dropped ${skippedIds.length} oversize doc(s) ` +
+        `ids=[${skippedIds.join(",")}]`
+    );
+  }
+  logger.debug(
+    `Bulk upserted ${docs.length - skippedIds.length}/${docIds.length} docs`
   );
 }
-this.logger.debug(
-  `Bulk upserted ${rows.length - skippedIds.length}/${blockIds.length} blocks ...`
-);
 ```
 
 문서당 Sentry breadcrumb은 깊은 관측성을 위해 유지하고, 프로세서 레벨
-tail-warning은 util이 볼 수 없는 전체 `(userId, calendarId,
-skippedBlockIds)` 컨텍스트를 가진 배치당 한 줄의 로그를 운영자에게 줘요.
-`Bulk upserted` debug 로그가 skipped count를 빼서 비율이 정직해요.
+tail-warning은 배치당 한 줄의 로그를 운영자에게 줘요 — 어느 계정인지, 어느
+상위 레코드인지, 어떤 문서 ID인지 같은, util 자신은 볼 수 없는 소유 주체
+컨텍스트를 담아서요. 그리고 성공 로그가 skipped count를 빼서 출력하는 비율이
+정직해요.
 
 ## 일반화 가능한 교훈
 

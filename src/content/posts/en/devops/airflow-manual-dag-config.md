@@ -1,8 +1,9 @@
 ---
 title: Airflow Manual DAG Config Pattern
 description: Pattern for allowing manual DAG triggers with custom parameters while keeping
+  scheduled runs on their defaults.
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
@@ -54,13 +55,13 @@ with DAG(
 
 The key insight is that `dag_run.conf` is an empty dict `{}` for scheduled runs, so `.get()` always returns the default. For manual runs, it returns whatever you pass in the trigger config.
 
-### Real-World Example: ETL DAG
+### Example: Daily ETL DAG
 
 ```python
-# amplitude_etl_dag.py
+# analytics_etl_dag.py
 with DAG(
-    dag_id="amplitude_etl_dag",
-    schedule_interval="0 16 * * *",
+    dag_id="analytics_etl_dag",
+    schedule_interval="@daily",
     ...
 ) as dag:
     # Scheduled: uses yesterday_ds
@@ -68,7 +69,7 @@ with DAG(
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', yesterday_ds) }}"
 
     task = DockerOperator(
-        task_id="amplitude-etl",
+        task_id="analytics-etl",
         environment={
             "EXECUTION_DATE": EXECUTION_DATE,
             ...
@@ -77,24 +78,24 @@ with DAG(
     )
 ```
 
-### Real-World Example: Date Range DAG
+### Example: Date Range DAG
 
 For backfill DAGs that process a range of dates, the pattern extends naturally:
 
 ```python
-# amplitude_weekly_backfill_dag.py
+# analytics_weekly_backfill_dag.py
 with DAG(
-    dag_id="amplitude_weekly_backfill_dag",
-    schedule_interval="0 0 * * 3",  # Wednesday 00:00 UTC
+    dag_id="analytics_weekly_backfill_dag",
+    schedule_interval="@weekly",
     ...
 ) as dag:
-    # Scheduled: calculates 10-4 days ago
+    # Scheduled: covers the trailing week (7 days ago to 1 day ago)
     # Manual: uses provided start_date/end_date
-    START_DATE = '{{ dag_run.conf.get("start_date", (execution_date - macros.timedelta(days=10)).strftime("%Y-%m-%d")) }}'
-    END_DATE = '{{ dag_run.conf.get("end_date", (execution_date - macros.timedelta(days=4)).strftime("%Y-%m-%d")) }}'
+    START_DATE = '{{ dag_run.conf.get("start_date", (execution_date - macros.timedelta(days=7)).strftime("%Y-%m-%d")) }}'
+    END_DATE = '{{ dag_run.conf.get("end_date", (execution_date - macros.timedelta(days=1)).strftime("%Y-%m-%d")) }}'
 
     task = DockerOperator(
-        task_id="amplitude-backfill",
+        task_id="analytics-backfill",
         environment={
             "START_DATE": START_DATE,
             "END_DATE": END_DATE,
@@ -189,7 +190,7 @@ EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', yesterday_ds) }}"
 
 ```python
 # GOOD - Scheduled runs work without config
-START_DATE = '{{ dag_run.conf.get("start_date", (execution_date - macros.timedelta(days=10)).strftime("%Y-%m-%d")) }}'
+START_DATE = '{{ dag_run.conf.get("start_date", (execution_date - macros.timedelta(days=7)).strftime("%Y-%m-%d")) }}'
 ```
 
 ## When to Use This Pattern

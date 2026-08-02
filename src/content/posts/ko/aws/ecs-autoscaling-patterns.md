@@ -2,7 +2,7 @@
 title: ECS Autoscaling 패턴
 description: Race condition 방지를 위한 마이그레이션 태스크 분리와 ECS 서비스 autoscaling 구현 가이드.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - aws
   - ecs
@@ -13,12 +13,19 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ecs-autoscaling-patterns
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-03-04'
 references:
   - url: >-
       https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html
     title: Automatically scale your Amazon ECS service
+    type: official
+  - url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html
+    title: Quotas and constraints for Amazon RDS (maximum database connections)
+    type: official
+  - url: >-
+      https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-target-group-attributes.html
+    title: Edit target group attributes for your Application Load Balancer
     type: official
 ---
 
@@ -135,23 +142,25 @@ resource "aws_appautoscaling_policy" "memory" {
 
 ```text
 Max Connections = Max Tasks × Connections per Task
-RDS Limit = ~90-100 (db.t4g.medium)
+Connection ceiling = DB parameter group이 실제로 허용하는 값
 
-예시:
+예시(제 환경 기준):
 - 4 tasks × 20 connections = 80 connections
-- RDS limit = 90-100
+- Connection ceiling = ~90-100
 - 여유분 = 10-20 connections ✅
 ```
 
-항상 최대 용량을 데이터베이스 커넥션 제한과 비교해서 확인하세요.
+여기서 하나 정정할 게 있어요. 저는 이 90-100이라는 숫자를 `db.t4g.medium`의 한계인 것처럼 적어뒀는데, 사실이 아니에요. RDS는 `max_connections` 기본값을 인스턴스 메모리에서 계산해요. MySQL은 `{DBInstanceClassMemory/12582880}`, PostgreSQL은 `LEAST({DBInstanceClassMemory/9531392}, 5000)`이라서 4 GiB 클래스면 100이 아니라 수백 대가 나와요. 즉 90-100은 인스턴스 클래스의 특성이 아니라 제 환경에 설정돼 있던 ceiling이었어요.
+
+그러니 제 숫자를 그대로 가져다 쓰지 말고 본인 parameter group을 확인하세요(MySQL이면 `SHOW GLOBAL VARIABLES LIKE 'max_connections'`). 숫자는 환경마다 달라도, 데이터베이스에서 거꾸로 계산해서 최대 용량을 정한다는 방법 자체는 그대로 유효해요.
 
 ## WebSocket 고려사항
 
 ### Graceful 처리
 
 - 프론트엔드에서 scale 이벤트 중 재연결을 처리해야 해요
-- Session affinity 불필요(stateless 설계)
-- Scale-in 시 connection draining 필요
+- Session affinity 불필요(stateless 설계). 이미 연결된 WebSocket은 upgrade를 받아준 target에 그대로 붙어 있고, 그 컨테이너가 사라지면 ALB가 재연결을 아무 healthy target으로 보내주면 돼요
+- Scale-in 시 connection draining 필요. Target group의 deregistration delay는 [기본값이 300초](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-target-group-attributes.html#deregistration-delay)이고, ELB는 그 시간만큼 기다린 뒤에 deregistration을 끝내요. 가장 오래 걸리는 요청 기준으로 조정하세요
 
 ### WAF Allowlist
 

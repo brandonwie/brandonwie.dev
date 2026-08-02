@@ -2,7 +2,7 @@
 title: ETL 스케줄 타이밍
 description: 데이터 도착 패턴에 맞는 ETL 스케줄을 설정하는 방법을 알아봐요.
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
@@ -13,7 +13,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: etl-schedule-timing
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-03-04'
 references:
   - url: >-
@@ -24,9 +24,9 @@ references:
 
 ## 문제 상황
 
-**시나리오:** ETL 작업이 "누락된 시간"을 보고하는데, 실제로 S3에 데이터는 존재해요.
+**시나리오:** 제가 관리하던 ETL 작업이 "누락된 시간"을 보고하는데, 실제로 S3에 데이터는 존재해요.
 
-**근본 원인:** ETL 스케줄이 잘못 설정돼 있었어요. 마지막 시간대의 데이터가 도착하기 전에 실행되고 있었죠.
+**근본 원인:** 제가 설정한 ETL 스케줄이 잘못돼 있었어요. 마지막 시간대의 데이터가 도착하기 전에 실행되고 있었죠.
 
 ## 핵심 원칙
 
@@ -100,7 +100,7 @@ where:
 
 ### 예시: KST 혼동
 
-사용자가 처음에 생각한 것: "한국에 있으니까, KST로 스케줄링해야 하지 않을까?"
+처음에는 이렇게 생각했어요. "KST가 제 로컬 타임존이니까 KST로 스케줄링하면 되지 않을까?"
 
 **잘못된 접근:**
 
@@ -171,6 +171,6 @@ if missing_hours:
 
 ## 참고
 
-- Amplitude 프로젝트 714756 타임존: UTC (2026-01-27 확인)
-- S3 객체 타임스탬프: AWS Console에서 관찰
-- 구현: `arch-airflow/dags/amplitude_etl_dag.py`
+- [Airflow DAG Runs 문서](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html)
+- 소스 프로젝트 타임존은 UTC로 설정돼 있었고, S3 객체 타임스탬프는 AWS
+  Console에서 직접 확인했어요 (2026-01-27 기준).

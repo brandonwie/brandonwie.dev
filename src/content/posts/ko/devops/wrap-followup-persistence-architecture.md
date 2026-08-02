@@ -20,7 +20,7 @@ source_updated: '2026-08-02'
 translation_date: '2026-05-10'
 ---
 
-/wrap을 돌렸는데 어제 적어둔 follow-up 두 개가 ACTIVE-STATUS에서 사라져 있었어요. 어디로 갔는지 추적해 보니까, 같은 항목이 세 가지 다른 경로로 동시에 증발하고 있었어요. session-state 대시보드를 오늘 journal 하나만 보고 다시 그리면, 어제 처리 못 한 항목은 rebuild마다 조용히 빠져요. 여기에 단일 source 탐색과 대화에서만 언급된 항목까지 겹치면 누락 경로가 셋으로 늘어나요. 해결책은 각 누락 모드를 따로 막는 4-layer 아키텍처예요.
+session-state 대시보드를 오늘 journal 하나만 보고 다시 그리면, 어제 처리 못 한 항목은 rebuild마다 조용히 빠져요. 여기에 단일 source 탐색과 대화에서만 언급된 항목까지 겹치면 누락 경로가 셋으로 늘어나요. 해결책은 각 누락 모드를 따로 막는 4-layer 아키텍처예요.
 
 ## 누락이 일어나는 4가지 모드
 
@@ -29,6 +29,8 @@ translation_date: '2026-05-10'
 3. **대화에서만 언급된 follow-up** — "next session: do X"라고 말은 했지만 journal에 안 적으면 `/clear`에서 같이 죽어요.
 4. **태그 없는 항목** — `(project)` prefix가 없으면 downstream으로 라우팅이 안 돼요.
 
+여기서 다루는 시스템은 제가 직접 쓰는 session-wrap skill이에요. `/wrap`은 코딩 session이 끝날 때 번호가 붙은 step을 정해진 순서대로 돌려요. 그날 있었던 일을 journal에 적고, 프로젝트 전반에서 아직 열려 있는 항목을 모아 `ACTIVE-STATUS.md` 대시보드를 다시 그려요. 아래 나오는 step 번호(5.65, 5.7, 9)는 그 순서 안의 위치이고, v1.3.0도 그 skill의 버전이에요. 어디서 설치할 수 있는 물건은 아니에요.
+
 ## 디자인이 바뀐 흐름: 2026-04-28 → 2026-04-30
 
 처음 v1.3.0 설계는 이전 ACTIVE-STATUS의 Priorities를 skill 안에서 carry-forward로 합치는 방식이었어요. 2026-04-28에 Step 5.7을 `scripts/regenerate-active-status.js`로 옮겼어요. `.agents/locks/active-status.lock`으로 잠금을 거는 Node 스크립트예요. 이유는 두 가지였어요.
@@ -36,7 +38,7 @@ translation_date: '2026-05-10'
 1. **병렬 /wrap 동시성 안전성.** /wrap 두 개가 같은 대시보드를 동시에 건드리면 carry-forward 머지가 변경분을 잃어버릴 수 있어요. 스크립트는 잠금을 먼저 잡고, `ACTIVE-STATUS.md`는 durable-source 전용 출력으로만 다뤄요. 이전 대시보드 상태는 절대 다시 읽지 않아요.
 2. **Single source of truth.** Carry-forward는 대시보드의 이전 내용을 암묵적으로 상태로 신뢰했어요. durable-source 전용 방식은 journal과 project todos.md, actives 폴더를 직접 읽어요. 대시보드는 그것들을 비추는 거지, 반대가 아니에요.
 
-Test 1 (carry-forward)은 이 변화로 자연히 폐기됐어요. 남은 머지 로직 — 다중 source 스캔, 해결된 항목 drop, 중복 제거, 태그 도출 — 은 전부 generator의 `collectPriorities` + `collectProjectFollowups` + `withProject` 함수로 옮겼어요. `scripts/regenerate-active-status.test.js`의 unit test 20개로 다 cover돼요. 2026-04-30 마감 시점에 모두 green이었어요.
+carry-forward를 검증하던 test case는 이 변화로 자연히 폐기됐어요. 남은 머지 로직 — 다중 source 스캔, 해결된 항목 drop, 중복 제거, 태그 도출 — 은 전부 generator의 `collectPriorities` + `collectProjectFollowups` + `withProject` 함수로 옮겼어요. `scripts/regenerate-active-status.test.js`의 unit test 20개로 다 cover돼요. 2026-04-30 마감 시점에 모두 green이었어요.
 
 두 단계 모두 제 개인 tooling repo의 commit으로 올라갔는데, 그 repo는 private이에요. 그래서 여기서 가져갈 수 있는 건 diff가 아니라 설계 쪽이에요.
 
@@ -81,8 +83,8 @@ Test 1 (carry-forward)은 이 변화로 자연히 폐기됐어요. 남은 머지
 rollout하면서 세 가지에 걸렸어요.
 
 - **pre-commit hook이 머지 commit을 평탄화했어요.** clean fast-forward 경로에 `--no-ff`를 줬을 때 일어났어요. Git 문서는 `--no-ff`를 [fast-forward로 처리할 수 있는 경우에도 항상 merge commit을 만든다](https://git-scm.com/docs/git-merge)고 설명하는데, hook이 그걸 다시 덮어썼어요. 효과는 외형적이에요. 선형 history vs branch 맥락이 빠졌다는 정도지만, 알고는 있어야 해요.
-- **`.me.md` 보호 hook이 수정뿐 아니라 새로 만드는 것까지 막아요.** 우회는 이렇게 했어요. AI가 쓴 task 요약은 그냥 `index.md`로 두고, `.me.md`는 사람이 손으로 쓴 seed doc 전용으로만 남겨요. 관련 글에 더 적어뒀어요.
-- **Markdownlint [MD041](https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md)은 frontmatter 직후의 첫 줄을 검사해요.** H1 없이 H2가 먼저 나오면 실패해요. plan file은 frontmatter 다음에 H1을 바로 둬야 해요. frontmatter에 `title` 속성이 있으면 이 rule을 건너뛰기 때문에, blog 형식 문서는 통과하고 plan file은 걸려요. 관련 글에 더 적어뒀어요.
+- **`.me.md` 보호 hook이 수정뿐 아니라 새로 만드는 것까지 막아요.** 우회는 이렇게 했어요. AI가 쓴 task 요약은 그냥 `index.md`로 두고, `.me.md`는 사람이 손으로 쓴 seed doc 전용으로만 남겨요. 여기서 일반화할 수 있는 교훈이 하나 있어요. "이 파일은 건드리지 마"로 쓴 guard는 보통 "이 파일을 새로 만들지도 마"까지 같이 막아요. hook에 기대기 전에 그 hook이 실제로 어떤 동작을 막는지 확인해 보는 게 좋아요.
+- **Markdownlint [MD041](https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md)은 frontmatter 직후의 첫 줄을 검사해요.** H1 없이 H2가 먼저 나오면 실패해요. plan file은 frontmatter 다음에 H1을 바로 둬야 해요. frontmatter에 `title` 속성이 있으면 이 rule을 건너뛰기 때문에, blog 형식 문서는 통과하고 plan file은 걸려요. 이 rule은 [Markdownlint Pre-Commit: MD041 + MD001 Heading Gotchas](/posts/markdownlint-pre-commit-heading-rules)에 따로 정리해 뒀어요.
 
 ## 이런 상황에 맞아요
 

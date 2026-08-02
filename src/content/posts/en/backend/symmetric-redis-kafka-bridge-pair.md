@@ -206,11 +206,14 @@ around.
   the durable buffer against job loss, Redis stays the fast in-flight
   layer. Same division of labour as the bridge pair, without a network
   boundary in the middle.
-- **Discord** keeps
-  [trillions of messages](https://discord.com/blog/how-discord-stores-trillions-of-messages)
-  in a dedicated durable store — Cassandra, then ScyllaDB — chosen on
-  its own merits rather than to suit whatever delivers messages to
-  clients.
+- **Discord** moved its
+  [trillions of stored messages](https://discord.com/blog/how-discord-stores-trillions-of-messages)
+  from Cassandra to ScyllaDB, and argued the move entirely on
+  storage-engine grounds — repair speed, shard-per-core workload
+  isolation, no garbage-collection pauses. That write-up never touches
+  how a message reaches a client, so it isn't evidence for the split
+  itself. It's the weaker, adjacent version of the point: once the
+  durable tier is its own thing, you get to tune it on its own terms.
 
 ## Anti-Patterns
 

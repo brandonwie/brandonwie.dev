@@ -121,5 +121,5 @@ repo 상태가 canonical이에요. plan.md는 의도의 historical record, ship�
 
 ## References
 
-- [Git — `git branch`](https://git-scm.com/docs/git-branch) — branch 상태 check에서 쓰는 `-a`, `--show-current`, `--merged` 문서
+- [Git — `git branch`](https://git-scm.com/docs/git-branch) — branch 상태 check에서 쓰는 `-a`, `--show-current` 문서
 - [Git — `git log`](https://git-scm.com/docs/git-log) — two-dot range(`main..HEAD`), `--oneline`, path로 history 좁히기

@@ -26,9 +26,9 @@ references:
 ---
 
 macOS에서 Word list 형식의 DOCX를 안정적인 PDF로 만들어야 했어요. 파일을
-Pages로 열어 내보내는 경로가 가장 먼저 떠올랐지만, 결과는 여기서
-중요했던 두 검사를 통과하지 못했어요. 반복해도 layout이 같지 않았고
-검색 가능한 text layer도 손상됐어요.
+Pages로 열고 공식 문서에 나온 export 경로인 File > Export To > PDF를 쓰는 게
+가장 먼저 떠올랐어요. 그런데 결과는 여기서 중요했던 두 검사를 통과하지
+못했어요. 반복해도 layout이 같지 않았고 검색 가능한 text layer도 손상됐어요.
 
 renderer 전반을 비교한 글은 아니에요. 문서 하나, toolchain 하나에서 겪은
 일이에요. renderer를 뭘 고르느냐보다 검증 단계가 더 크게 작용했어요.

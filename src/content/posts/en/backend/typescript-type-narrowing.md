@@ -2,7 +2,7 @@
 title: TypeScript Type Narrowing Over Assertions
 description: Prefer type narrowing over non-null assertions (`!`) and forced casting
 date: 2026-02-05T00:00:00.000Z
-updated: '2026-07-31'
+updated: '2026-08-02'
 tags:
   - backend
   - typescript
@@ -151,7 +151,7 @@ The guard skips blocks with a null `gcalId` instead of crashing. In production t
 
 ## Extracting a Guard Can Silently Drop Its Narrowing
 
-Months later, on a refactor tracked as #960, the same codebase turned up a second lesson, this time about the guards themselves. Centralizing duplicated guards is about as routine a refactor as there is: six handlers carried the identical check, so it moved into a helper. What's easy to miss, because the runtime behavior really is identical, is that the inline version had been doing two jobs at once:
+Months later, the same codebase turned up a second lesson, this time about the guards themselves. Centralizing duplicated guards is about as routine a refactor as there is: six handlers carried the identical check, so it moved into a helper. What's easy to miss, because the runtime behavior really is identical, is that the inline version had been doing two jobs at once:
 
 ```typescript
 // refuses the enqueue AND narrows both fields to non-null below this line

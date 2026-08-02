@@ -1,8 +1,8 @@
 ---
 title: 타입 수준 필수 파라미터로 IDOR 방지하기
-description: API가 사용자에게 ID를 조작해서 다른 사용자의 리소스에 접근할 수 있게 허용하는 IDOR 취약점을 타입 레벨에서 방지하는 방법
+description: optional 파라미터 하나가 repository 메서드를 IDOR 위험으로 만들었어요. userId를 required로 바꾸니 보안 검사가 컴파일 타임으로 옮겨갔어요.
 date: 2026-02-11T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - security
   - backend
@@ -12,7 +12,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: idor-prevention-type-level
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: >-
@@ -21,7 +21,7 @@ references:
     type: official
 ---
 
-NestJS API에서 수동 테스트 중에 데이터 유출을 발견했어요. 요청이 다른 사용자의 콘텐츠 블록을 반환하고 있었죠. 근본 원인은 TypeScript 함수 시그니처에 있는 물음표 하나였어요: `userId?: number`. 컴파일러가 보안을 강제하도록 수정한 과정을 공유할게요.
+NestJS API에서 수동 테스트 중에 데이터 유출을 발견했어요. 요청이 다른 사용자의 레코드를 반환하고 있었죠. 근본 원인은 TypeScript 함수 시그니처에 있는 물음표 하나였어요: `userId?: number`. 컴파일러가 보안을 강제하도록 수정한 과정을 공유할게요.
 
 ## 왜 중요한가
 
@@ -39,7 +39,7 @@ async findByIds(ids: number[], includeDeleted = false, userId?: number) {
 }
 ```
 
-내부 서비스가 userId 없이 `findByIds([1,2,3])`를 호출하면 모든 사용자의 블록을 반환해요. 코드는 컴파일되고, 테스트는 통과하고, 취약점은 보이지 않았어요.
+내부 서비스가 userId 없이 `findByIds([1,2,3])`를 호출하면 모든 사용자의 레코드를 반환해요. 코드는 컴파일되고, 테스트는 통과하고, 취약점은 보이지 않았어요.
 
 ## 어려웠던 점들
 
@@ -93,10 +93,10 @@ async findByIdsAndUserId(ids: number[], userId: number, includeDeleted = false) 
 
 ```typescript
 // 이름이 userId가 필수임을 알려줌
-findByIdsAndUserIdWithCalendar(ids: number[], userId: number, ...)
+findByIdsAndUserIdWithRelations(ids: number[], userId: number, ...)
 
 // userId 필수 여부를 알 수 없는 모호한 이름
-findByIdsWithCalendar(ids: number[], ...)
+findByIdsWithRelations(ids: number[], ...)
 ```
 
 메서드 이름에 `AndUserId`가 포함되면 코드를 읽는 모든 개발자가 사용자 범위 지정이 의도적이고 필수적이라는 걸 즉시 이해해요.

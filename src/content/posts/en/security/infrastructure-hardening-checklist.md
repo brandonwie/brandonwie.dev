@@ -1,8 +1,9 @@
 ---
 title: Infrastructure Hardening Checklist
-description: Comprehensive security hardening checklist for AWS infrastructure. Covers
+description: "A security hardening checklist for AWS infrastructure: network
+  isolation, WAF deployment, and the cost cuts that fell out of the same work."
 date: 2026-01-26T00:00:00.000Z
-updated: 2026-01-26T00:00:00.000Z
+updated: "2026-08-02"
 tags:
   - security
   - aws
@@ -19,18 +20,39 @@ references:
     type: authoritative
 ---
 
-network isolation, WAF deployment, and cost-effective security improvements.
+In 2025 I ran a hardening pass over a single AWS environment: ECS services
+behind an ALB, with RDS and ElastiCache sitting behind them. This is the
+checklist that came out of that pass, grouped by area rather than by the order
+I worked through it.
 
-## Quick Impact Summary
+Nothing on the list is novel. It is ordinary AWS practice, and the exhaustive
+formal version of it lives in the [CIS
+Benchmarks](https://www.cisecurity.org/cis-benchmarks). The two items I would
+pull out are ordering constraints: add the developer IP rules before removing
+`0.0.0.0/0`, and test every route before flipping the WAF into block mode. The
+Implementation Order section at the end is a sequence I would recommend, not a
+log of what I did first.
 
-| Improvement         | Security Impact               | Cost Impact |
-| ------------------- | ----------------------------- | ----------- |
-| WAF deployment      | Blocked 1000+ daily attacks   | +$30/month  |
-| Database isolation  | 100% attack surface reduction | $0          |
-| NAT Gateway removal | -                             | -$90/month  |
-| **Net result**      | 95% risk reduction            | -$60/month  |
+## What Actually Changed
 
-Security and cost optimization can go hand-in-hand.
+These numbers come from that one environment. They are not properties of the
+checklist, and I would not expect them to transfer.
+
+| Change                      | What I observed                                                                     | Monthly cost |
+| --------------------------- | ----------------------------------------------------------------------------------- | ------------ |
+| WAF in block mode           | Over 1,000 blocked requests per day in the WAF logs                                 | +$30         |
+| RDS + ElastiCache isolation | Both stopped accepting `0.0.0.0/0`; reachable only from ECS and a few developer IPs | $0           |
+| Unused NAT Gateway removal  | No traffic at all in the metric window                                              | -$90         |
+| **Net**                     |                                                                                     | **-$60**     |
+
+My first draft of this note claimed a "95% risk reduction" and a "100% attack
+surface reduction." I cut both. Without a stated risk model those are not
+measurements, and I did not have one — what I had was a security group that
+stopped answering the whole internet.
+
+The cost column is worth reading on its own. Removing a NAT Gateway nobody was
+using paid for the WAF three times over, so this particular round of hardening
+came out cheaper than leaving the environment alone.
 
 ## Network Security Checklist
 
@@ -154,7 +176,8 @@ Long-term (recommended):
 
 ## Implementation Order
 
-Recommended sequence for minimal disruption:
+The sections above are grouped by area, not by sequence. This is the sequence I
+would recommend for minimal disruption:
 
 1. **WAF deployment** - Deploy in monitor mode first
 2. **Database isolation** - Update security groups (no downtime)

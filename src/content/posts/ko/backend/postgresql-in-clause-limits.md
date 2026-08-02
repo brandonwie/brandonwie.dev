@@ -2,7 +2,7 @@
 title: PostgreSQL IN 절 파라미터 제한
 description: 'PostgreSQL wire protocol은 파라미터 쿼리를 65,535개 바인드 파라미터로 제한해요. TypeORM의 `In([...])`을 500-1,000개로 쪼개면 실질적인 성능 한계 안에 머물러요.'
 date: 2026-02-11T00:00:00.000Z
-updated: '2026-07-31'
+updated: '2026-08-02'
 tags:
   - backend
   - postgresql
@@ -13,18 +13,21 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: postgresql-in-clause-limits
-source_updated: '2026-07-31'
+source_updated: '2026-08-02'
 translation_date: '2026-07-31'
 references:
   - url: 'https://www.postgresql.org/docs/current/protocol-message-formats.html'
     title: PostgreSQL Protocol Message Formats - Bind Message
     type: official
+  - url: 'https://www.postgresql.org/docs/current/populate.html'
+    title: PostgreSQL Documentation - Populating a Database
+    type: official
 ---
 
-Google Calendar에서 받은 블록 ID 수천 개를 데이터베이스에서 찾아오는 동기화
-기능을 만들고 있었어요. 쿼리는 TypeORM의 `In([...])` 연산자를 썼어요. ID가 수십
-개뿐인 개발 환경에서는 아무 문제가 없었고요. 그런데 캘린더를 무겁게 쓰는
-사용자는 한 번 동기화에 블록 ID가 수천 개씩 나올 수 있었어요. 이 쿼리 크기를
+Google Calendar에서 받은 이벤트 ID 수천 개를 애플리케이션 쪽 데이터베이스에서
+찾아오는 동기화 기능을 만들고 있었어요. 쿼리는 TypeORM의 `In([...])` 연산자를
+썼어요. ID가 수십 개뿐인 개발 환경에서는 아무 문제가 없었고요. 그런데 캘린더를
+무겁게 쓰는 사용자는 한 번 동기화에 ID가 수천 개씩 나올 수 있었어요. 이 쿼리 크기를
 가늠하다가 만난 상한선은 꽤 단단했어요. 수천 개를 넘어가면 플래닝이 눈에 띄게
 느려지고, 65,535개에서는 알아보기 힘든 프로토콜 수준 에러와 함께 쿼리가 아예
 실패해요.
@@ -93,9 +96,8 @@ PostgreSQL이 거부하게 내버려 둬요.
 ## 해결책: 500-1,000으로 배치
 
 배치를 선택한 이유는 raw SQL로 전환하지 않고 TypeORM의 `find()` API와 직접
-호환되기 때문이에요. `findByIdsAndUserIdWithCalendar` 메서드는 다른 쿼리
-빌더 조건과 조합 가능하고, `ANY(array)`로 전환하면 전체 쿼리를 다시 작성해야
-했을 거예요.
+호환되기 때문이에요. 기존 finder는 이미 다른 쿼리 빌더 조건과 조합돼 있었고,
+`ANY(array)`로 전환하면 쿼리를 통째로 다시 써야 했을 거예요.
 
 `SELECT ... WHERE id IN (...)` 쿼리 기준:
 
@@ -154,9 +156,13 @@ for (let i = 0; i < rows.length; i += CHUNK) {
 나와요. 감으로 정할 필요가 없어요.
 
 한 번만 적재하고 끝나는 경우라면 `COPY ... FROM STDIN`이 이 고민 자체를
-없애줘요. 스트리밍으로 넣기 때문에 바인드 파라미터를 아예 안 써요. 쪼갠
-`INSERT`가 몇 초 걸리는 구간에서도 1초 아래로 끝나는 이유죠. 대신 ORM 경로를
-완전히 벗어나니까 애플리케이션 코드보다는 import 작업에 어울려요.
+없애줘요. 스트리밍으로 넣기 때문에 바인드 파라미터를 아예 안 써서, 컬럼 수 ×
+행 수 계산이 처음부터 적용되지 않아요. 성능 쪽은 PostgreSQL 문서의
+[Populating a Database](https://www.postgresql.org/docs/current/populate.html)가
+분명하게 말해요. 많은 행을 넣을 때 `COPY`는 `PREPARE`와 배치를 쓴 `INSERT`보다도
+거의 항상 빠르다고요. 제가 둘을 나란히 놓고 벤치마킹한 건 아니라서, 문서가
+가리키는 방향으로만 받아들이는 게 맞아요. `COPY`는 ORM 경로도 완전히 벗어나니까
+애플리케이션 코드보다는 import 작업에 어울려요.
 
 ### `ON CONFLICT` upsert도 계산은 똑같아요
 
@@ -167,20 +173,20 @@ upsert도 `Bind` 메시지 하나라서 계산이 달라지지 않아요. 행당
 10,922행이에요:
 
 ```sql
-INSERT INTO "user_contacts"
-  ("user_id", "email", "display_name", "photo_url", "integration_id", "updated_at")
+INSERT INTO "contacts"
+  ("owner_id", "email", "name", "avatar_url", "source_id", "updated_at")
 VALUES ($1,$2,$3,$4,$5,$6), ($7,$8,$9,$10,$11,$12), ...   -- 6 params per row
-ON CONFLICT ("user_id", "integration_id", "email")         -- 0 params
-DO UPDATE SET "display_name" = COALESCE(EXCLUDED."display_name", ...)
+ON CONFLICT ("owner_id", "source_id", "email")             -- 0 params
+DO UPDATE SET "name" = COALESCE(EXCLUDED."name", "contacts"."name")
 ```
 
 ### 계산을 아는 레이어에서 쪼개기
 
 큰 배열을 들고 있는 호출부에서 쪼개고 싶어지는데, 지금 다시 한다면 statement를
 만드는 메서드 안에서 쪼갤 거예요. 행당 파라미터 수를 아는 레이어는 거기뿐이고,
-그래야 호출부마다 따로 기억할 필요 없이 전부 수정을 물려받아요. 저희는 네 곳이
-하나의 `bulkUpsert`를 함께 썼는데, 한 번도 쪼갠 적 없던 bootstrap 경로가 상한을
-넘긴 범인이었어요.
+그래야 호출부마다 따로 기억할 필요 없이 전부 수정을 물려받아요. 여러 호출부가
+하나의 bulk-upsert 헬퍼를 함께 쓰면, 평소에 잘 안 타는 경로가 결국 아무도 쪼개
+두지 않은 경로예요. 쪼개는 일이 헬퍼 안에 있어야 하는 이유죠.
 
 분기를 하나 두면 작은 배치는 여전히 statement 하나로 나가요:
 

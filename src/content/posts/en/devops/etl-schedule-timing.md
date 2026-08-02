@@ -2,7 +2,7 @@
 title: ETL Schedule Timing
 description: How to choose the correct ETL schedule based on data arrival patterns.
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - airflow
@@ -20,9 +20,9 @@ source_content_hash: 7c38cc57107c2ae8ce4b6d6f894c1f1029a231e0490e4d0db7c299acf6b
 expanded: true
 ---
 
-Our ETL job kept reporting "missing hours" — but the data was right there in S3. The pipeline ran, checked for 24 hours of data, found only 23, and fired a Slack alert. Every morning, the same false alarm. The fix wasn't a code change; it was a schedule change.
+An ETL job I maintained kept reporting "missing hours" — but the data was right there in S3. The pipeline ran, checked for 24 hours of data, found only 23, and fired a Slack alert. The fix wasn't a code change; it was a schedule change.
 
-The ETL was running before the last hour of data had arrived. The root cause was a mismatch between when we scheduled the job and when the source system finished writing data.
+The ETL was running before the last hour of data had arrived. The root cause was a mismatch between when I scheduled the job and when the source system finished writing data.
 
 ## The Key Principle
 
@@ -69,7 +69,7 @@ ETL runs:          01:00 UTC (48min BEFORE arrival)
 Result:            ❌ False "missing hours" detection
 ```
 
-This is exactly the bug we had. The ETL ran before the last hour arrived, reported missing data, and triggered unnecessary alerts.
+That second case is the one that produces the false alarm. The ETL starts before the last hour lands, counts 23 hours instead of 24, and reports data as missing when it simply hasn't been written yet. Any schedule that falls inside the arrival window has the same failure mode, whichever hour it happens to land on.
 
 ## The General Formula
 
@@ -87,7 +87,7 @@ The formula is simple, but the inputs require observation. You need to check you
 
 This is where it gets tricky, especially for teams working across timezones.
 
-When I first set up this ETL, my instinct was to think in KST (Korea Standard Time), since that's where the team is. The logs showed data arriving at 10:48 KST, so scheduling at 12:00 KST seemed natural.
+When I first set up this ETL, my instinct was to think in KST (Korea Standard Time), since KST is my local timezone. The logs showed data arriving at 10:48 KST, so scheduling at 12:00 KST seemed natural.
 
 **Wrong approach:**
 
@@ -137,7 +137,7 @@ with DAG(
     EXECUTION_DATE = "{{ dag_run.conf.get('execution_date', yesterday_ds) }}"
 ```
 
-The DAG uses `yesterday_ds` because at 03:00 UTC on day D+1, we want to process day D's data. All 24 hours of day D are complete by then, with a comfortable buffer.
+The DAG uses `yesterday_ds` because at 03:00 UTC on day D+1, the target is day D's data. All 24 hours of day D are complete by then, with a comfortable buffer.
 
 ## Adding Monitoring
 

@@ -1,6 +1,8 @@
 ---
 title: Sync Token Invalidation Recovery (410 GONE)
-description: 'When Google Calendar API returns 410 GONE, the sync token is invalidated and a'
+description:
+  'When Google Calendar API returns 410 GONE, the sync token is invalidated and a
+  full resync is required. Proper handling prevents data loss.'
 date: 2026-01-26T00:00:00.000Z
 updated: '2026-08-02'
 tags:
@@ -25,7 +27,7 @@ I was investigating a production bug where users were losing their custom notes 
 
 Google's Calendar API uses sync tokens for incremental synchronization — you pass the token from your last sync, and Google returns only the changes since then. But tokens can be invalidated, returning `410 GONE` instead of changes. From Google's documentation:
 
-> "Sync tokens are invalidated by the server for various reasons including **token expiration** or **changes in related ACLs**."
+> "Sometimes sync tokens are invalidated by the server, for various reasons including token expiration or changes in related ACLs."
 
 The key insight: 410 GONE isn't limited to time-based expiration. ACL changes (permission changes on a calendar) also invalidate tokens. A user getting shared access to a calendar, or losing it, can trigger a full resync on a completely unrelated integration.
 
@@ -94,6 +96,10 @@ async mergeResync(calendar: Calendar) {
 }
 ```
 
+One honest caveat: Google's own guidance for a 410 is blunter than this. The docs say the response "should trigger a full wipe of the client's store and a new full sync," and for the mirrored copy of Google's data that is exactly right.
+
+The merge loop above skips that part. Upserting alone never removes rows for events Google no longer returns, so a merge path also needs a delete pass for local records whose event IDs are missing from the fresh listing. Merge buys back the app-owned fields; it doesn't buy an excuse to keep stale events.
+
 ### Clean-Slate Strategy (Read-Only Calendars)
 
 For read-only calendars, there's no application-specific data to protect. A clean delete-and-recreate is safe and simpler:
@@ -146,7 +152,7 @@ Without this refresh step, you might run a merge strategy on a calendar that's n
 
 ## Takeaway
 
-When handling `410 GONE` from Google Calendar's sync API, never do a blind delete-and-recreate. Split your recovery into two strategies based on `accessRole`: merge for editable calendars (preserves application-specific data), clean-slate for read-only calendars (safe and fast). Always refresh calendar metadata before choosing a strategy, because the 410 itself might have been triggered by the ACL change that altered the access role.
+When handling `410 GONE` from Google Calendar's sync API, never do a blind delete-and-recreate. Split your recovery into two strategies based on `accessRole`: merge for editable calendars (preserves application-specific data, provided it also drops events Google stopped returning), clean-slate for read-only calendars (safe and fast). Always refresh calendar metadata before choosing a strategy, because the 410 itself might have been triggered by the ACL change that altered the access role.
 
 ## References
 

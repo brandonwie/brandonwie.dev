@@ -17,6 +17,16 @@ source_lang: en
 source_slug: symmetric-redis-kafka-bridge-pair
 source_updated: '2026-08-02'
 translation_date: '2026-05-10'
+references:
+  - url: 'https://www.linkedin.com/blog/engineering/open-source/kafka-ecosystem-at-linkedin'
+    title: LinkedIn Engineering — Kafka Ecosystem at LinkedIn
+    type: official
+  - url: 'https://slack.engineering/scaling-slacks-job-queue/'
+    title: Slack Engineering — Scaling Slack's Job Queue
+    type: official
+  - url: 'https://discord.com/blog/how-discord-stores-trillions-of-messages'
+    title: Discord Engineering — How Discord Stores Trillions of Messages
+    type: official
 ---
 
 > 내구성 있는 내부 이벤트 버스(Kafka)와 ephemeral edge 버스(Redis pub/sub)가
@@ -178,8 +188,8 @@ partition key를 뽑으려면 **반드시** parse를 해야 하거든요. 깨진
 메시지를 옮기는 계층을 따로 두는 쪽으로 계속 수렴하더라고요.
 
 - **LinkedIn**은 Kafka를
-  [central data pipeline](https://www.linkedin.com/blog/engineering/open-source/kafka-ecosystem-at-linkedin)
-  이라고 부를 정도예요. Espresso의 replication도 MySQL replication에서
+  [central data pipeline](https://www.linkedin.com/blog/engineering/open-source/kafka-ecosystem-at-linkedin)이라고
+  부를 정도예요. Espresso의 replication도 MySQL replication에서
   Kafka로 옮겼어요. 내구성 로그가 아래에 깔리고, serving store는 자기
   계층으로 따로 있어요.
 - **Slack**은 job queue에서 Redis를 걷어내는 대신
@@ -188,9 +198,12 @@ partition key를 뽑으려면 **반드시** parse를 해야 하거든요. 깨진
   in-flight 계층으로 남았어요. 네트워크 경계만 없을 뿐, 브리지 페어와
   역할 분담이 같아요.
 - **Discord**는
-  [수조 개의 메시지](https://discord.com/blog/how-discord-stores-trillions-of-messages)
-  를 전용 내구성 저장소(Cassandra, 그다음 ScyllaDB)에 쌓아요. 전달
-  계층에 맞추기보다 저장소 자체 기준으로 고른 선택이에요.
+  [수조 개의 메시지](https://discord.com/blog/how-discord-stores-trillions-of-messages)를
+  Cassandra에서 ScyllaDB로 옮겼는데, 그 근거를 전부 저장 엔진 얘기로
+  풀어요 — repair 속도, shard-per-core 워크로드 격리, GC 정지 없음.
+  메시지가 클라이언트까지 어떻게 가는지는 글에 아예 안 나와요. 그래서
+  이 사례는 분리 자체의 근거는 못 되고, 한 칸 옆의 약한 버전이에요.
+  내구성 계층이 독립하고 나면 그 계층만의 기준으로 튜닝할 수 있다는 것.
 
 ## 안티패턴
 

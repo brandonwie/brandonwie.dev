@@ -1,15 +1,15 @@
 ---
 title: ECR Token Refresh Cron
 description: AWS ECR authentication tokens expire after 12 hours. For long-running Docker
+  hosts, a cron job refreshing every 6 hours keeps `docker pull` working.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - devops
   - aws
   - ecr
   - docker
   - cron
-  - work
 category: devops
 draft: false
 lang: en
@@ -21,7 +21,7 @@ source_content_hash: ba6b1f4ef9bbe26415c3c8541a9a1e828bdc81479a9bbb7ba956fb0c2cd
 expanded: true
 ---
 
-Our Airflow workers ran fine for the first 12 hours after deployment. Then, around 2 AM, the `DockerOperator` tasks started failing with "authorization token has expired." The containers had authenticated with ECR at startup, but the token expired before the next DAG run pulled a fresh image.
+An Airflow worker host I set up ran fine for the first 12 hours. After that, `DockerOperator` tasks started failing with "authorization token has expired." The host had authenticated with ECR at startup, but the token expired before the next DAG run pulled a fresh image.
 
 AWS ECR authentication tokens have a hard 12-hour expiry. If your Docker host runs longer than that — which most production hosts do — you need automatic token refresh. A cron job is the simplest solution.
 
@@ -69,10 +69,10 @@ sudo -u ec2-user crontab -e
 
 ## Where to Set This Up
 
-The cron job should be installed in two places for reliability:
+Install the cron in two places so it survives instance replacement:
 
-1. **CI/CD Pipeline** (`deploy.yml`) — Re-install during DAG sync jobs so the cron survives instance replacements
-2. **Initial Setup Script** (`setup-git-credentials.sh`) — Install during EC2 bootstrap so it's active from first boot
+1. **The deployment job** — whatever pipeline step re-provisions the host should re-install the cron, so a replaced instance gets it back automatically.
+2. **The bootstrap script** — install it from EC2 user-data as well, so the refresh is active from first boot instead of waiting for the next deploy.
 
 ## Troubleshooting
 
@@ -92,11 +92,11 @@ cat ~/.docker/config.json
 
 ## Common Pitfalls
 
-| Issue                         | Solution                          |
-| ----------------------------- | --------------------------------- |
-| Cron installed for wrong user | Use `sudo -u ec2-user crontab`    |
-| Shell escaping in SSM         | Use temp file instead of inline   |
-| cronie not installed          | `yum install -y cronie` on AL2023 |
+| Issue                                                                      | Solution                                             |
+| -------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Cron installed for the wrong user                                          | Use `sudo -u ec2-user crontab`                       |
+| Quoting mangled when installing the crontab remotely (AWS SSM Run Command)  | Write the entry to a temp file and install from that |
+| cronie not installed                                                       | `yum install -y cronie` on AL2023                    |
 
 ## A Better Alternative Exists
 

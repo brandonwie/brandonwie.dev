@@ -1,8 +1,11 @@
 ---
 title: updatedAt Staleness Guard
-description: 'When receiving asynchronous updates (webhooks, message queues), compare the'
+description: >-
+  When receiving asynchronous updates (webhooks, message queues), compare the
+  source's last-modified timestamp against the local record's — if the local
+  record is newer, preserve the protected fields instead of overwriting them.
 date: 2026-02-13T00:00:00.000Z
-updated: '2026-07-02'
+updated: '2026-08-02'
 tags:
   - backend
   - sync
@@ -22,7 +25,7 @@ source_content_hash: f8472d723499e53b67d9e646ada8c4740103bb523e991af8fdcc7ae9d60
 expanded: true
 ---
 
-I was debugging a calendar sync bug where a user's event kept reverting to its old title after they'd already updated it. The webhook from Google Calendar was arriving with stale data — data from before the user's edit — and our system was blindly overwriting the local record. The fix was a timestamp comparison that took ten lines of code, but the concept behind it applies to any system that processes asynchronous updates.
+I was debugging a calendar sync bug where a user's event kept reverting to its old title after they'd already updated it. The webhook from Google Calendar was arriving with stale data — data from before the user's edit — and the sync path was blindly overwriting the local record with it. The fix was a timestamp comparison that took ten lines of code, but the concept behind it applies to any system that processes asynchronous updates.
 
 ## The Problem
 
@@ -79,9 +82,9 @@ If the remote source doesn't provide a timestamp, you can't compare — default 
 
 **Why not use locking instead?** This guard protects against stale async overwrites — it's complementary to locking, not a replacement. Pessimistic or optimistic locking handles concurrent writes from multiple writers. The staleness guard handles delayed async notifications that arrive after the local state has moved forward.
 
-**What about move-sensitive fields?** In calendar sync, this pattern extends beyond basic content fields. When a user moves an event between calendars, stale webhooks from the source calendar can carry `event.status='cancelled'`, which would overwrite the move result. Protecting `itemStatus`, `calendarId`, and `deletedAt` prevents these stale cancellation signals from undoing the move.
+**What about move-sensitive fields?** In calendar sync, this pattern extends beyond basic content fields. When a user moves an event between calendars, stale webhooks from the source calendar can carry `event.status='cancelled'`, which would overwrite the move result. Protecting the local record's status field, its parent-calendar reference, and its soft-delete marker keeps these stale cancellation signals from undoing the move.
 
-**Queue-side timestamp refresh:** After async API calls (like a Google Calendar move), explicitly update `block.updatedAt` before the response webhook arrives. This ensures `block.updatedAt > event.updated` for any subsequent webhooks, giving the staleness guard the right data to work with.
+**Queue-side timestamp refresh:** After an async API call (like a Google Calendar move), explicitly refresh the local record's `updatedAt` before the response webhook arrives. That guarantees `local.updatedAt > remote.updated` for any webhook the call itself triggers, giving the staleness guard the right data to work with.
 
 ## The ORM Gotcha
 

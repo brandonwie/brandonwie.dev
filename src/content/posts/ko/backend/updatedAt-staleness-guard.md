@@ -4,7 +4,7 @@ description: >-
   비동기 업데이트(웹훅, 메시지 큐)를 받을 때 소스의 updatedAt과 로컬 타임스탬프를 비교해서 stale 데이터가 최신 변경을 덮어쓰지
   않도록 보호하는 패턴.
 date: 2026-02-13T00:00:00.000Z
-updated: '2026-07-02'
+updated: '2026-08-02'
 tags:
   - backend
   - sync
@@ -15,7 +15,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: updatedAt-staleness-guard
-source_updated: '2026-07-02'
+source_updated: '2026-08-02'
 translation_date: '2026-07-02'
 references:
   - url: 'https://developers.google.com/calendar/api/v3/reference/events'
@@ -26,7 +26,7 @@ references:
     type: authoritative
 ---
 
-캘린더 동기화 버그를 디버깅하고 있었는데, 사용자가 이벤트 제목을 수정한 뒤에도 계속 원래 제목으로 돌아가는 현상이 있었어요. Google Calendar에서 오는 웹훅이 사용자의 수정 이전 데이터를 담고 있었고, 우리 시스템은 그걸 그대로 로컬 레코드에 덮어쓰고 있었거든요. 해결책은 타임스탬프 비교 코드 열 줄이었는데, 이 개념은 비동기 업데이트를 처리하는 모든 시스템에 적용할 수 있어요.
+캘린더 동기화 버그를 디버깅하고 있었는데, 사용자가 이벤트 제목을 수정한 뒤에도 계속 원래 제목으로 돌아가는 현상이 있었어요. Google Calendar에서 오는 웹훅이 사용자의 수정 이전 데이터를 담고 있었고, 동기화 경로가 그걸 그대로 로컬 레코드에 덮어쓰고 있었거든요. 해결책은 타임스탬프 비교 코드 열 줄이었는데, 이 개념은 비동기 업데이트를 처리하는 모든 시스템에 적용할 수 있어요.
 
 ## 문제
 
@@ -83,9 +83,9 @@ if (localUpdatedAt > remoteUpdatedAt) {
 
 **잠금(locking)을 쓰면 안 되나?** 이 가드는 stale한 비동기 덮어쓰기를 방지하는 건데, 잠금의 대체가 아니라 보완이에요. 비관적/낙관적 잠금은 여러 쓰기자의 동시 쓰기를 처리하고, staleness 가드는 로컬 상태가 이미 앞서간 후에 도착하는 지연된 비동기 알림을 처리해요.
 
-**이동에 민감한 필드는?** 캘린더 동기화에서 이 패턴은 기본 컨텐츠 필드를 넘어서 확장돼요. 사용자가 이벤트를 다른 캘린더로 이동하면, 소스 캘린더에서 오는 stale 웹훅이 `event.status='cancelled'`를 가져와서 이동 결과를 덮어쓸 수 있어요. `itemStatus`, `calendarId`, `deletedAt`을 보호하면 이런 stale 취소 시그널이 이동을 되돌리는 걸 방지할 수 있어요.
+**이동에 민감한 필드는?** 캘린더 동기화에서 이 패턴은 기본 컨텐츠 필드를 넘어서 확장돼요. 사용자가 이벤트를 다른 캘린더로 이동하면, 소스 캘린더에서 오는 stale 웹훅이 `event.status='cancelled'`를 가져와서 이동 결과를 덮어쓸 수 있어요. 로컬 레코드의 status 필드, 소속 캘린더 참조, soft-delete 마커를 보호하면 이런 stale 취소 시그널이 이동을 되돌리는 걸 막을 수 있어요.
 
-**큐 측 타임스탬프 갱신:** 비동기 API 호출(예: Google Calendar 이동) 이후에, 응답 웹훅이 도착하기 전에 명시적으로 `block.updatedAt`을 업데이트해요. 이렇게 하면 이후 웹훅에 대해 `block.updatedAt > event.updated`가 보장돼서, staleness 가드가 올바른 데이터로 판단할 수 있어요.
+**큐 측 타임스탬프 갱신:** 비동기 API 호출(예: Google Calendar 이동) 이후에, 응답 웹훅이 도착하기 전에 로컬 레코드의 `updatedAt`을 명시적으로 갱신해요. 이렇게 하면 그 호출이 유발한 웹훅에 대해 `local.updatedAt > remote.updated`가 보장돼서, staleness 가드가 올바른 데이터로 판단할 수 있어요.
 
 ## ORM 함정
 

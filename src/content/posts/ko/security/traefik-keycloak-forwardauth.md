@@ -2,7 +2,7 @@
 title: 'Traefik, Keycloak, ForwardAuth 이해하기'
 description: Traefik을 통해 노출된 Kubernetes 서비스에 인증 레이어가 없는 문제를 해결하는 방법
 date: 2026-01-18T00:00:00.000Z
-updated: '2026-03-15'
+updated: '2026-08-02'
 tags:
   - security
   - traefik
@@ -14,7 +14,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: traefik-keycloak-forwardauth
-source_updated: '2026-03-15'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: 'https://www.keycloak.org/documentation'
@@ -198,11 +198,17 @@ flowchart TB
 
 ### 사전 조건
 
+아래 내용은 제 클러스터의 namespace와 manifest 경로(`crucio-security`,
+`crucio-system`, `infra/k3s/...`)를 그대로 쓰고 있어요. 읽으면서 본인 환경에 맞게
+바꿔주세요. 이름에 의존하는 부분은 없어요.
+
 OAuth2-Proxy를 배포하기 전에 확인하세요:
 
 1. **Keycloak 실행 중**: `kubectl get pods -n crucio-security -l app.kubernetes.io/name=keycloak`
-2. **Realm 존재**: Keycloak realm이 생성되어 있어야 함
-3. **테스트 사용자 존재**: 테스트용 사용자가 최소 1명 있어야 함
+2. **Realm 존재**: admin console에서 Realm settings → Create realm. 아래 단계는
+   `crucio`라는 realm을 가정하니, 본인 realm 이름과 URL로 바꿔주세요.
+3. **테스트 사용자 존재**: Users → Add user 후 Credentials 탭에서 비밀번호를
+   설정해두면 로그인 테스트를 할 수 있어요.
 
 ### Step 1: Keycloak에서 OAuth2-Proxy 클라이언트 생성
 

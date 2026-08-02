@@ -39,7 +39,7 @@ if [ -z "$AWS_ACCOUNT_ID" ]; then
 fi
 ```
 
-`set -e`에서는 `$(...)` 안의 명령이 실패하면 스크립트가 그 줄에서 즉시 종료돼요. 커스텀 에러 처리 코드가 실행될 일이 없어요.
+`set -e`가 켜진 상태에서 `aws sts get-caller-identity`가 실패하면(자격 증명 오류, 네트워크 단절, CLI 미설치) 스크립트는 그 assignment 줄에서 종료돼요. 변수는 설정되지 않고, `if` 체크는 실행되지 않고, 사용자는 준비해 둔 메시지 대신 `set -e`가 내는 일반적인 에러만 보게 돼요.
 
 ## 해결 방법
 
@@ -75,10 +75,14 @@ fi
 
 ## 핵심 포인트
 
-- `set -e`는 모든 명령 실패 시 종료해요
-- 명령어 치환 `$(...)`도 명령이에요
-- `if` 문은 조건부의 `set -e` 트리거를 방지해요
-- 커스텀 에러 메시지가 필요하면 항상 if 패턴을 사용하면 돼요
+- `set -e`는 명령이 실패하면 종료하지만 예외가 있어요. `if`/`elif` 뒤의 test,
+  `while`/`until` 뒤의 list, `&&`/`||` list에서 마지막이 아닌 명령, `!`로 반전된
+  명령은 해당하지 않아요
+- 종료를 부르는 건 명령어 치환 자체가 아니라 `VAR=$(cmd)`라는 assignment의 종료
+  상태예요. `echo $(false) two`는 `set -e` 아래에서도 여전히 `two`를 출력해요
+- `if`로 감싸면 그 종료 상태를 `if`가 소비하기 때문에 `set -e`가 발동하지 않아요
+- 커스텀 에러 메시지가 필요하면 if 패턴과 `-z` 체크를 같이 쓰면 돼요. 앞의 것은
+  명령 실패를, 뒤의 것은 성공했지만 빈 출력이 온 경우를 잡아 줘요
 
 ## 언제 사용하면 좋을까
 
@@ -87,3 +91,14 @@ fi
 | 간단한 스크립트, 커스텀 에러 불필요 | `VAR=$(cmd)`로 충분    |
 | `set -e`를 쓰는 프로덕션 스크립트   | `if ! VAR=$(cmd)` 사용 |
 | 실패 유형 구분 필요                 | if 패턴 + `-z` 체크    |
+
+## 참고 자료
+
+- [POSIX.1-2024 Shell Command Language — `set` special built-in](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html#set)
+  — `-e`가 무시되는 경우를 나열하고, word expansion 중 실행된 command
+  substitution subshell의 실패로는 셸이 종료되지 않는다고 명시해요.
+  `set -e; echo $(false; echo one) two`가 `two`를 출력한다는 예시도 그대로 있어요
+- [`bash(1)` manual page — `set -e` (errexit)](https://man7.org/linux/man-pages/man1/bash.1.html)
+  — 같은 예외 목록을 bash 쪽 표현으로 정리해 둔 문서예요
+- [Greg's Wiki, BashFAQ 105 — Why doesn't `set -e` do what I expected?](https://mywiki.wooledge.org/BashFAQ/105)
+  — `set -e`가 직관과 어긋나는 사례들을 모아 둔 글이에요

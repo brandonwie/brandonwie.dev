@@ -35,12 +35,18 @@ references:
   - url: 'https://docs.astral.sh/ty/'
     title: ty
     type: official
+  - url: 'https://docs.astral.sh/ty/reference/configuration/'
+    title: ty configuration reference
+    type: official
   - url: 'https://astral.sh/blog/ty'
     title: ty
     type: verified
   - url: 'https://asdf-vm.com/'
     title: asdf-vm.com
     type: verified
+  - url: 'https://asdf-vm.com/guide/upgrading-to-v0-16.html'
+    title: Upgrading to asdf v0.16
+    type: official
 ---
 
 Python 코드를 작성하는 시간보다 Python 도구를 설정하는 데 더 많은 시간을
@@ -141,7 +147,7 @@ asdf plugin add python
 
 # Python 설치
 asdf install python 3.11.7
-asdf local python 3.11.7  # .tool-versions 파일 생성
+asdf set python 3.11.7  # 현재 디렉토리에 .tool-versions 생성
 
 # uv (패키지 관리자)
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -149,6 +155,11 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # ty (타입 체커)
 uv tool install ty@latest
 ```
+
+`asdf set` 부분을 주의해서 보세요. asdf는 v0.16에서 `asdf global`과
+`asdf local`을 제거하고 `asdf set`으로 대체했어요. Homebrew는 현재 0.20을
+설치하기 때문에, `brew install asdf` 후에 `asdf local`을 실행하면 그대로
+실패해요.
 
 ### 2. 프로젝트 설정
 
@@ -180,7 +191,7 @@ uv run ruff format .
 uv run ruff check --fix .
 
 # 타입 체크
-ty check common/ jobs/
+ty check .
 ```
 
 핵심 패턴은 모든 곳에서 `uv run`을 사용하는 거예요. 수동으로 활성화하지
@@ -199,9 +210,13 @@ target-version = "py311"
 select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "DTZ", "SIM"]
 
 # ty 설정 (필요 시)
-[tool.ty]
+[tool.ty.environment]
 python-version = "3.11"
 ```
+
+테이블 이름이 중요해요. ty는 `python-version`을 `[tool.ty]`가 아니라
+`[tool.ty.environment]`에서 읽어요. 한 단계 위에 두면 ty가 인식하지 못하는
+테이블에 키가 놓이게 돼요.
 
 `select` 목록은 경험을 통해 큐레이션한 거예요. `E`와 `W`는 pycodestyle
 에러와 경고, `F`는 pyflakes, `I`는 isort, `N`은 네이밍 규칙, `UP`는 Python
@@ -345,5 +360,7 @@ Python 툴링의 파편화 고통을 없애줘요.
 - [uv Documentation](https://docs.astral.sh/uv/)
 - [Ruff Documentation](https://docs.astral.sh/ruff/)
 - [ty Documentation](https://docs.astral.sh/ty/)
+- [ty Configuration Reference](https://docs.astral.sh/ty/reference/configuration/)
 - [ty Announcement Blog](https://astral.sh/blog/ty)
 - [asdf Documentation](https://asdf-vm.com/)
+- [Upgrading to asdf v0.16](https://asdf-vm.com/guide/upgrading-to-v0-16.html)

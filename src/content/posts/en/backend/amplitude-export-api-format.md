@@ -1,10 +1,10 @@
 ---
 title: Amplitude Export API Response Format
 description: >-
-  The Amplitude Export API returns data in a **nested compression format** that
-  is
+  The Amplitude Export API returns data in a nested compression format that is
+  easy to misunderstand — a ZIP holding a GZIP holding newline-delimited JSON.
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - amplitude
@@ -21,7 +21,7 @@ source_content_hash: a5df2bbb7292c6b25c7539cc0452a369f8cba63e39ab0d6786884374e51
 expanded: true
 ---
 
-I was building an ETL pipeline to backfill Amplitude event data into our data warehouse when `gzip.decompress()` started throwing cryptic errors. The files were named `*.json.gz`, so I assumed they were gzip-compressed JSON. They weren't. I spent an embarrassing amount of time debugging what turned out to be a double-layered compression format that Amplitude's documentation barely explains.
+I was building an ETL pipeline to backfill Amplitude event data into a data warehouse when `gzip.decompress()` started throwing cryptic errors. The files were named `*.json.gz`, so I assumed they were gzip-compressed JSON. They weren't. I spent an embarrassing amount of time debugging what turned out to be a double-layered compression format that Amplitude's documentation barely explains.
 
 If you're pulling data from the Amplitude Export API, this post will save you the hex-dump debugging session I had to do.
 
@@ -83,20 +83,20 @@ if not zf.namelist():
 
 ## Event Structure
 
-Each line in the decompressed output is a JSON object. Here are the key fields you'll typically work with:
+Each line in the decompressed output is a JSON object. Here are the key fields you'll typically work with, filled in with placeholder values:
 
 ```json
 {
   "event_type": "session_end",
   "event_time": "2026-01-26 04:23:35.379000",
   "user_id": "user@example.com",
-  "device_id": "6fd6899d-2b08-40e3-b723-e4ca1f848a43",
+  "device_id": "00000000-0000-4000-8000-000000000000",
   "platform": "Web",
   "country": "South Korea",
-  "city": "Suwon",
+  "city": "Seoul",
   "event_properties": {},
   "user_properties": {
-    "utm_source": "longblack"
+    "utm_source": "newsletter"
   }
 }
 ```

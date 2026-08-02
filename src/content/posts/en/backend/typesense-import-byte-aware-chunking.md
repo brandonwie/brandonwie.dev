@@ -2,7 +2,7 @@
 title: Byte-aware vs Count-based Chunking for Typesense documents/import
 description: Two chunking strategies for Typesense bulk import. Picking the wrong one silently fails the day a single power user creates a multi-MB document.
 date: 2026-04-28T00:00:00.000Z
-updated: 2026-04-29T00:00:00.000Z
+updated: "2026-08-02"
 tags:
   - backend
   - typesense
@@ -20,13 +20,14 @@ references:
 source_content_hash: e30001ad020655c421f8913a4255af982498b8ada3a25b4276130e0273eeb947
 ---
 
-The contact-bulk-upsert worker shipped with `CHUNK_SIZE = 500` and ran fine
-for months — small fixed-string documents, comfortable headroom under the 40
-MB Typesense import cap. Then came the calendar-block worker, same chunking
-strategy, and the math broke. A single block can carry a multi-MB rich-text
-note, and the moment one chunk crossed the cap, the entire import failed and
-the bootstrap stalled. The fix wasn't lowering the count; it was switching
-strategies entirely.
+A contacts sync worker shipped with `CHUNK_SIZE = 500` and ran fine for
+months — small fixed-string documents, comfortable headroom under the 40 MB
+Typesense import cap. Then a second worker, indexing calendar blocks, reused
+the same chunking strategy, and the math broke. A single block can carry a
+multi-MB rich-text note, and the moment one chunk crossed the cap, the entire
+import failed and the initial full-index backfill (the bootstrap that builds
+the collection from empty) stalled. The fix wasn't lowering the count; it was
+switching strategies entirely.
 
 ## The Two Strategies
 
@@ -44,7 +45,7 @@ failure modes:
 The mistake is defaulting to count-based for everything because "500 docs
 felt fine in dev." Then a power user creates a single document with a
 multi-MB note, the chunk crosses 40 MB, the entire batch fails, and the
-bootstrap never completes.
+initial index build never completes.
 
 ## When Count-Based Is Fine
 
@@ -56,7 +57,7 @@ Count-based is the right call when ALL of:
   below the import cap.
 
 Contacts is the textbook case. Schema is small fixed strings (`email`,
-`displayName`, `photoUrl`, `integrationId`). Worst case ~2 KB/doc; 500 × 2 KB
+`displayName`, `photoUrl`, `sourceId`). Worst case ~2 KB/doc; 500 × 2 KB
 = 1 MB; 40 MB cap. Two orders of magnitude headroom — count-based is fine:
 
 ```ts
@@ -170,7 +171,7 @@ inside handles outliers within those 200.
 
 CI seed fixtures and local-dev databases rarely contain the multi-MB docs
 that prod accumulates after years of use. A 500-per-job count-based limit
-will pass every test and ship; the production bootstrap fails on day one
+will pass every test and ship; the production backfill fails on day one
 for a single power user. A useful code review heuristic: any field that
 maps to a textarea or markdown editor in the UI is unbounded — use
 byte-aware.
@@ -186,20 +187,22 @@ processor limits HTTP body size.
 ## Sentry Signal Noise on the Single-Doc Overflow Path
 
 Logging every overflow at `error` level floods alerts when a single bad
-document recurs across N retries. Use `warning` level + tag
-`area: search-integration, issue: oversized_document` so it groups and
-suppresses by docId.
+document recurs across N retries. Dropping to `warning` level and tagging by
+subsystem and issue kind lets Sentry group the repeats instead of alerting per
+retry. Whatever tag convention a project already uses works — something like
+`area: search-integration` plus `issue: oversized_document` groups by docId in
+practice.
 
 ## The Caller-Blind Trap
 
 The first version of `splitByByteSize` returned just `T[][]`. Oversized
-docs were skipped with a Sentry warning and `continue`. The caller
-(`bulkUpsertBlocks`) had no signal — the doc was lost from Typesense
-without surfacing in processor logs, and `Bulk upserted N/M blocks`
-printed `M = blockIds.length` even when some docs were dropped, hiding
-the discrepancy.
+docs were skipped with a Sentry warning and `continue`. The caller —
+`bulkUpsertDocs` in the sketch below — had no signal. The doc was lost from
+Typesense without surfacing in processor logs, and the success log printed
+the requested count rather than the imported count, so the discrepancy never
+showed up.
 
-PR #858's proactive review flagged it (F-T-3). The return shape evolved
+A review pass caught this before it shipped, and the return shape evolved
 to:
 
 ```typescript
@@ -212,26 +215,28 @@ export interface SplitByByteSizeResult<T> {
 Caller pattern:
 
 ```typescript
-const { groups, skippedIds } = splitByByteSize(docs);
-for (const group of groups) {
-  await import(group, { action: "upsert" });
-}
-if (skippedIds.length > 0) {
-  this.logger.warn(
-    `Bulk upsert dropped ${skippedIds.length} oversize block doc(s) ` +
-      `user=${userId} calendar=${calendarId} blockIds=[${skippedIds.join(",")}]`
+async function bulkUpsertDocs(docs: Doc[], docIds: string[]) {
+  const { groups, skippedIds } = splitByByteSize(docs);
+  for (const group of groups) {
+    await collection.documents().import(group, { action: "upsert" });
+  }
+  if (skippedIds.length > 0) {
+    logger.warn(
+      `Bulk upsert dropped ${skippedIds.length} oversize doc(s) ` +
+        `ids=[${skippedIds.join(",")}]`
+    );
+  }
+  logger.debug(
+    `Bulk upserted ${docs.length - skippedIds.length}/${docIds.length} docs`
   );
 }
-this.logger.debug(
-  `Bulk upserted ${rows.length - skippedIds.length}/${blockIds.length} blocks ...`
-);
 ```
 
-The per-doc Sentry breadcrumb is retained for deep observability;
-processor-level tail-warning gives operators a single log line per batch
-with full `(userId, calendarId, skippedBlockIds)` context the util can't
-see. The `Bulk upserted` debug log subtracts skipped count so the ratio is
-honest.
+The per-doc Sentry breadcrumb is retained for deep observability; the
+processor-level tail-warning gives operators a single log line per batch,
+carrying the owning-entity context — which account, which parent record,
+which document IDs — that the utility itself can't see. And the success log
+subtracts the skipped count, so the ratio it prints is honest.
 
 ## The Generalizable Lesson
 

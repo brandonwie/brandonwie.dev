@@ -1,8 +1,10 @@
 ---
 title: ECS Autoscaling Patterns
-description: Best practices for implementing ECS service autoscaling with migration task
+description: >-
+  ECS service autoscaling with migration tasks separated from service
+  containers, and how to size max capacity from the database connection budget.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - aws
   - ecs
@@ -16,6 +18,13 @@ references:
   - url: >-
       https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html
     title: Automatically scale your Amazon ECS service
+    type: official
+  - url: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html
+    title: Quotas and constraints for Amazon RDS (maximum database connections)
+    type: official
+  - url: >-
+      https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-target-group-attributes.html
+    title: Edit target group attributes for your Application Load Balancer
     type: official
 source_content_hash: de8f24973da2ce21cdffca7a8fbdabf9bba983941a8b4c9b7aeda567750fa542
 ---
@@ -153,31 +162,33 @@ The max capacity value of 4 is not arbitrary. It comes from a database connectio
 
 ```text
 Max Connections = Max Tasks x Connections per Task
-RDS Limit = ~90-100 (db.t4g.medium)
+Connection ceiling = whatever your DB parameter group actually allows
 
-Example:
+Example (my numbers):
 - 4 tasks x 20 connections = 80 connections
-- RDS limit = 90-100
+- Connection ceiling = ~90-100
 - Headroom = 10-20 connections
 ```
 
-Each ECS task opens a connection pool to the database. If each task reserves 20 connections and you allow 4 tasks, that is 80 connections. A `db.t4g.medium` RDS instance supports roughly 90-100 connections. That leaves 10-20 connections for admin tools, monitoring agents, and migration tasks.
+Each ECS task opens a connection pool to the database. If each task reserves 20 connections and you allow 4 tasks, that is 80 connections. The ceiling I sized against was roughly 90-100, which left 10-20 connections for admin tools, monitoring agents, and migration tasks.
 
-If you set max capacity to 5 without doing this math, you would hit 100 connections and start seeing "too many connections" errors. The autoscaler would keep trying to add containers (because the existing ones are overloaded from connection failures), making the problem worse.
+One correction I owe here, because I had this wrong in my own notes. I had written 90-100 down as the limit of a `db.t4g.medium`, as if the instance class produced it. It does not. RDS derives the default `max_connections` from instance memory — `{DBInstanceClassMemory/12582880}` for MySQL, `LEAST({DBInstanceClassMemory/9531392}, 5000)` for PostgreSQL — which puts a 4 GiB class in the hundreds, not under a hundred. So 90-100 was a ceiling specific to my environment, not a property of the hardware. Read your own parameter group (`SHOW GLOBAL VARIABLES LIKE 'max_connections'` on MySQL) rather than borrowing my number.
+
+The method survives the correction even though the number does not. Whatever your ceiling turns out to be, budget against it. Had I set max capacity to 5 against a ceiling of 90-100, 5 tasks x 20 connections would have hit 100 and started returning "too many connections" errors — and the autoscaler would keep trying to add containers, because the existing ones look overloaded when their connections fail.
 
 **Always verify max capacity against database connection limits before deploying.** This is the single most common autoscaling misconfiguration I have seen.
 
 ## WebSocket Considerations
 
-If your service uses WebSockets (Socket.IO in our case), scaling events create additional challenges.
+If your service uses WebSockets (Socket.IO in my case), scaling events create additional challenges.
 
 ### Graceful Handling
 
 Three things need attention during scale events:
 
 - **Frontend reconnection:** The client must handle disconnection and automatic reconnection when a container is terminated during scale-in. Socket.IO has built-in reconnection, but your application-level state (rooms, subscriptions) needs to be re-established on reconnect.
-- **Session affinity:** If your WebSocket implementation is stateless, you do not need sticky sessions. The ALB can route the reconnection to any healthy container. This is the preferred design.
-- **Connection draining:** During scale-in, ECS drains connections before terminating the container. Configure a deregistration delay on the target group (default is 300 seconds) to give active connections time to complete.
+- **Session affinity:** If your WebSocket implementation is stateless, you do not need sticky sessions. An established WebSocket stays pinned to the target that accepted the upgrade anyway, and once that container goes away the ALB is free to route the reconnection to any healthy one. This is the preferred design.
+- **Connection draining:** During scale-in, the target deregisters before the container is terminated. ELB waits out the target group's deregistration delay — [300 seconds by default](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-target-group-attributes.html#deregistration-delay) — before completing deregistration, which is what gives in-flight requests time to finish. Tune that value to your longest expected request rather than leaving it at the default by accident.
 
 ### WAF Allowlist
 

@@ -1,8 +1,11 @@
 ---
 title: RRULE EXDATE Parsing with Timezone
-description: 'The `rrule` JavaScript library''s `rrulestr()` function fails when:'
+description: >-
+  The `rrule` JavaScript library's `rrulestr()` silently generates occurrences
+  at the current timestamp when EXDATE carries a TZID parameter. Here is the
+  workaround I settled on.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
 category: icalendar
@@ -74,14 +77,14 @@ Since `rrulestr()` cannot handle EXDATE with TZID, the fix is to split the parsi
 import { RRuleSet, rrulestr } from "rrule";
 
 // 1. Extract only RRULE lines (filter out EXDATE, RDATE)
-const rruleLines = extractRRulesOnly(block.recurrence);
+const rruleLines = extractRRulesOnly(event.recurrence);
 const rruleString = rruleLines.join("\n");
 
 // 2. Parse RRULE only
 const baseRule = rrulestr(rruleString, { dtstart: parentStart });
 
 // 3. Parse EXDATE separately (handles TZID correctly)
-const exdates = parseExdates(block.recurrence, timeZone);
+const exdates = parseExdates(event.recurrence, event.timeZone);
 
 // 4. Combine in RRuleSet
 const ruleSet = new RRuleSet();
@@ -118,32 +121,68 @@ The `sanitizeRRule` call handles another edge case -- proprietary extensions fro
 
 ## The EXDATE Parser
 
-Parsing EXDATE lines requires handling four distinct formats that Google Calendar produces:
-
-```typescript
-export function parseExdates(
-  recurrence: string[] | null,
-  blockTimeZone: string
-): Date[] {
-  // Supported formats:
-  // - EXDATE:20251219T090000Z (UTC)
-  // - EXDATE;VALUE=DATE:20251219 (date only)
-  // - EXDATE;TZID=Asia/Seoul:20251219T180000 (with timezone)
-  // - EXDATE;TZID=Asia/Seoul:20251219T180000,20251226T180000 (multiple)
-  // Returns array of Date objects in UTC
-}
-```
-
-Each format needs different handling:
+Parsing EXDATE lines means handling four distinct formats that Google Calendar produces:
 
 | Format | Example | Parsing Strategy |
 | --- | --- | --- |
 | UTC | `EXDATE:20251219T090000Z` | Parse directly as UTC |
-| Date-only | `EXDATE;VALUE=DATE:20251219` | Treat as midnight in block timezone |
-| TZID single | `EXDATE;TZID=Asia/Seoul:20251219T180000` | Parse in specified timezone, convert to UTC |
-| TZID multiple | `EXDATE;TZID=Asia/Seoul:20251219T180000,20251226T180000` | Split on comma, parse each in timezone |
+| Date-only | `EXDATE;VALUE=DATE:20251219` | Treat as midnight in the event's timezone |
+| TZID single | `EXDATE;TZID=Asia/Seoul:20251219T180000` | Parse in the specified timezone, convert to UTC |
+| TZID multiple | `EXDATE;TZID=Asia/Seoul:20251219T180000,20251226T180000` | Split on comma, parse each in the timezone |
 
-The TZID formats are what `rrulestr()` chokes on. By parsing them ourselves, we can properly convert the local times to UTC `Date` objects that `RRuleSet.exdate()` expects.
+Every EXDATE line has the same shape: parameters, a colon, then one or more comma-separated values. So the parser splits on the first colon, pulls `TZID` out of the parameter half, and then decides per value. A minimal version -- Luxon does the timezone conversion -- looks like this:
+
+```typescript
+import { DateTime } from "luxon";
+
+export function parseExdates(
+  recurrence: string[] | null,
+  defaultTimeZone: string
+): Date[] {
+  if (!recurrence) return [];
+
+  const exdates: Date[] = [];
+
+  for (const line of recurrence) {
+    if (!line.startsWith("EXDATE")) continue;
+
+    const colon = line.indexOf(":");
+    const params = line.slice(0, colon); // EXDATE;TZID=Asia/Seoul
+    const values = line.slice(colon + 1); // 20251219T180000,20251226T180000
+    const zone = /TZID=([^;:]+)/.exec(params)?.[1] ?? defaultTimeZone;
+
+    for (const value of values.split(",")) {
+      const raw = value.trim();
+      if (!raw) continue;
+
+      if (raw.endsWith("Z")) {
+        // 20251219T090000Z -- already UTC
+        exdates.push(
+          DateTime.fromFormat(raw, "yyyyMMdd'T'HHmmss'Z'", {
+            zone: "utc",
+          }).toJSDate()
+        );
+      } else if (!raw.includes("T")) {
+        // 20251219 -- VALUE=DATE, midnight in the event's timezone
+        exdates.push(
+          DateTime.fromFormat(raw, "yyyyMMdd", { zone }).toJSDate()
+        );
+      } else {
+        // 20251219T180000 -- local time in the TZID timezone
+        exdates.push(
+          DateTime.fromFormat(raw, "yyyyMMdd'T'HHmmss", { zone }).toJSDate()
+        );
+      }
+    }
+  }
+
+  return exdates;
+}
+```
+
+Three branches cover four formats, because TZID-with-multiple-dates is just the TZID branch running once per comma-separated value.
+
+The TZID formats are what `rrulestr()` chokes on. Parsing them here converts the local times into the UTC `Date` objects that `RRuleSet.exdate()` expects.
 
 ---
 

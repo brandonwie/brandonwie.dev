@@ -15,9 +15,19 @@ source_slug: folder-is-destiny
 source_updated: '2026-08-02'
 translation_date: '2026-06-17'
 references:
-  - url: 'https://yaml.org/spec/1.2.2/'
-    title: YAML 1.2.2 specification
+  - url: 'https://rubyonrails.org/doctrine'
+    title: 'The Rails Doctrine — Convention over Configuration'
     type: authoritative
+  - url: 'https://gohugo.io/content-management/front-matter/'
+    title: Hugo front matter reference
+    type: official
+  - url: 'https://www.rfc-editor.org/rfc/rfc9309.html'
+    title: 'RFC 9309 — Robots Exclusion Protocol'
+    type: official
+  - url: >-
+      https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag
+    title: Google Search Central — robots meta tag specifications
+    type: official
 ---
 
 파일을 어느 폴더에 두느냐가 그 파일의 거의 모든 걸 정해버린다면 어떨까요. 검색에 걸릴지, 기계가 읽어도 되는지, 얼마나 오래 묵혀도 되는지까지요. 3B에서는 폴더 위치 하나가 이 질문들에 먼저 답을 줘요. 물리적 위치와 의미가 어긋나는 5%만 frontmatter로 따로 표시하고요.
@@ -31,6 +41,8 @@ references:
 파일 경로는 그 파일이 어떤 종류의 정보인지, 기계가 index해도 되는지, 얼마나 묵혀도 되는지를 시스템에 알려줘요. 그렇다고 폴더가 항상 맞는 건 아니에요. information-layer 규칙은 파일의 95% 이상이 폴더 기본값을 따르고, 애매하게 남는 나머지만 frontmatter로 덮어쓴다고 분명히 못 박아 둬요.
 
 여기에 균형이 있어요. 흔한 경우는 폴더 기본값으로, 예외는 frontmatter로 처리하는 거죠.
+
+새로운 발상은 아니에요. Rails는 같은 거래를 convention over configuration이라고 부르고, Rails Doctrine은 이 거래가 어디서 한계를 만나는지도 솔직하게 적어 뒀어요. "만들 가치가 있는 애플리케이션은 대부분 어딘가 고유한 부분을 갖고 있다. 그게 5%나 1%밖에 안 되더라도 분명히 존재한다. 어려운 건 언제 convention에서 벗어날지를 아는 것이다." 폴더를 정책으로 쓰는 건 이 거래를 class 대신 메모에 적용한 거고, 어려운 부분도 그대로 물려받아요.
 
 ## 생애주기 경로
 
@@ -64,6 +76,8 @@ source_type: distilled-pending
 
 이 override는 두 번째 분류 체계가 아니에요. 폴더와 의미가 잠깐 어긋나는 경우를 위한 예외 장치일 뿐이에요.
 
+static site generator들도 같은 모양에 도달했어요. Hugo에서는 page의 content type이 그 page가 놓인 최상위 section에서 유도되고, front matter의 `type` 필드는 "page가 놓인 최상위 section에서 유도된 값을 덮어쓰기 위해" 존재해요. 현재 Hugo front matter 문서에 그렇게 적혀 있어요. 똑같은 거래죠. 디렉터리가 먼저 정하고, 디렉터리가 틀렸을 때만 필드 하나가 뒤집어요.
+
 ## `privacy`: 기계가 이걸 index해도 될까?
 
 privacy는 index 여부를 따지는 질문이에요.
@@ -75,6 +89,10 @@ privacy는 index 여부를 따지는 질문이에요.
 중요한 건 정확한 행 목록이 아니에요. 매트릭스가 하나뿐이라는 점이 핵심이에요.
 
 `scripts/lib/privacy-matrix.js`는 `information-layer.md`에서 privacy 매트릭스를 읽어 와서, 그 결과를 다른 도구들이 가져다 쓸 수 있게 열어 줘요. Graphify의 privacy 관문, `.graphifyignore` 생성, wrap의 신선도 검사, 앞으로 들어올 vector index까지 전부 같은 출처를 읽도록 돼 있어요. "journal은 절대 업로드하지 마라" 같은 규칙을 도구 다섯 개가 각자 복사해서 들고 다니는 걸 원치 않거든요.
+
+웹은 이 문제의 좁은 버전을 오래전에 풀었는데, 그 해법에는 경고도 같이 딸려 와요. `robots.txt` 규칙은 URL 경로에 매칭되고, RFC 9309는 가장 구체적으로 매칭된 규칙이 이긴다고 정해요. frontmatter override가 폴더 기본값을 이기는 것과 같은 우선순위죠. 그런데 Google의 robots meta tag 문서는 이 구조의 실패 지점을 짚어요. `robots.txt`에서 막힌 page는 크롤러가 애초에 가져가지 않으니, 그 page에 적어 둔 index 규칙은 "발견되지 않고 따라서 무시된다"는 거예요. 경로 규칙이 개별 page 규칙을 조용히 삼켜 버리는 셈이에요.
+
+3B는 이 순서 문제를 겪지 않아요. 두 시스템이 런타임에 만나는 대신, loader 하나가 경로 기본값과 파일 자체의 override를 함께 풀어 주거든요. 다른 데로 가져갈 만한 부분은 이거예요. 계층으로 나눈 정책은 두 계층을 모두 읽는 무언가가 있을 때만 작동해요.
 
 이렇게 해야 새 도구가 등장해도 비공개 폴더가 계속 비공개로 남아요.
 

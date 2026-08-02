@@ -20,6 +20,12 @@ references:
   - url: 'https://docs.github.com/en/rest/pulls/reviews'
     title: REST API endpoints for pull request reviews — GitHub Docs
     type: authoritative
+  - url: 'https://docs.github.com/en/repositories/creating-and-managing-repositories/repository-limits'
+    title: Repository limits — GitHub Docs
+    type: official
+  - url: 'https://docs.github.com/en/rest/pulls/pulls'
+    title: REST API endpoints for pull requests — GitHub Docs
+    type: official
 ---
 
 ## 분류 프레임워크
@@ -48,15 +54,15 @@ AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진�
 **예시:**
 
 ```text
-에이전트: "CRITICAL: Analytics 서비스 메서드가 Promise.reject('Not implemented')를 반환"
-현실: 서비스에 1449줄의 완전한 구현이 있음
+에이전트: "CRITICAL: analytics 메서드가 Promise.reject('Not implemented')를 반환"
+현실: 서비스는 완전히 구현되어 있음. 약 1,400줄
 ```
 
 **예방:** 보강 주석을 추가해요.
 
 ```typescript
-// NOTE: This service IS FULLY IMPLEMENTED. All 5 analytics calculations
-// are complete and production-ready via the consolidated getAnalytics() method.
+// NOTE: This service IS FULLY IMPLEMENTED. All five metric calculations
+// are complete and production-ready via the consolidated summary method below.
 ```
 
 ### 2. Request 라이프사이클 오해
@@ -89,7 +95,7 @@ AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진�
 **예시:**
 
 ```text
-에이전트: "softDeleteAllByUserId가 구독 생성과 transaction으로 감싸져 있지 않음"
+에이전트: "대량 soft-delete 호출이 구독 생성과 transaction으로 감싸져 있지 않음"
 현실: 결제 서비스가 이미 구독을 commit함. 우리 코드는 상태를 동기화할 뿐
 ```
 
@@ -109,15 +115,15 @@ AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진�
 **예시:**
 
 ```text
-에이전트: "retry 후 resyncOccurred가 undefined일 수 있음"
-현실: 327번 줄에서 resyncOccurred = true로 명시적 설정 (retryResult에서 온 게 아님)
+에이전트: "retry 후 didResync가 undefined일 수 있음"
+현실: 아래 recovery 분기에서 명시적으로 설정함. retry 결과에서 온 게 아님
 ```
 
 **예방:** 보강 주석을 추가해요.
 
 ```typescript
-// NOTE: Explicitly set to true (not from retryResult) because 410 recovery IS a resync event.
-resyncOccurred = true;
+// NOTE: Set explicitly here (not from retryResult) because a 410 recovery IS a resync event.
+didResync = true;
 ```
 
 ### 5. Process 모델 오해
@@ -181,17 +187,8 @@ constructor에 합리적인 default가 있고 factory가 이를 override하는 �
 **예방:** 교차 참조 주석을 추가해요.
 
 ```typescript
-// NOTE: Related logic in sync-blocks.helper.ts:232 handles resyncRequired
+// NOTE: Related logic in reconcile.helper.ts:120 handles the resync flag
 ```
-
-## 보강 주석 템플릿
-
-| 패턴                | 템플릿                                                                                              |
-| ------------------- | --------------------------------------------------------------------------------------------------- |
-| 기능 존재           | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]`                    |
-| Race Condition 없음 | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
-| 의도적 설계         | `// NOTE: Intentionally [omitted/designed this way] - [reason]`                                     |
-| Cross-File 참조     | `// NOTE: Related logic in [file:line] handles [concern]`                                           |
 
 ### 9. Cross-Branch 혼동
 
@@ -202,7 +199,7 @@ constructor에 합리적인 default가 있고 factory가 이를 override하는 �
 **예시:**
 
 ```text
-에이전트: "Lines 796-800 set deletedAt unconditionally — toBeNull() should fail"
+에이전트: "구현이 deletedAt을 무조건 설정함 — toBeNull()은 실패해야 함"
 현실: 해당 줄은 develop에서 NOTE 주석임. if 블록은 이전 PR에서 제거됨
 ```
 
@@ -212,14 +209,16 @@ release 계열 PR에서 실제로 겪은 사례예요. Claude가 `main` branch �
 
 ```typescript
 // NOTE: The deletedAt-setting code was removed in an earlier PR. This test verifies
-// the post-removal behavior: Event blocks only get itemStatus=Deleted, no deletedAt.
+// the post-removal behavior: child records only get status = Deleted, no deletedAt.
 ```
 
 ### 10. Large Diff Blindness (GitHub API 406)
 
 **어떻게 보이나:** AI reviewer가 release PR에서 코멘트를 반환하지 않거나 극히 적은 피드백만 줘요.
 
-**왜 이런 일이 생기나:** GitHub API가 PR diff가 20,000줄을 넘으면 HTTP 406을 반환해요. Release PR(develop to main)은 이 제한을 자주 넘어요. diff API endpoint에 의존하는 AI reviewer는 분석할 데이터 자체가 없어서, 빈 review를 만들거나 file 이름만 보고 추측해요.
+**왜 이런 일이 생기나:** GitHub은 PR diff를 얼마나 내려줄지에 상한을 둬요. 공식 문서 기준으로 20,000줄 또는 raw diff 1 MB, 그리고 단일 diff의 file 수는 300개까지예요. Release PR(develop to main)은 이 선을 쉽게 넘고, 넘어가면 "Get a pull request"에 diff media type을 요청했을 때 `406`이 돌아와요. 이건 해당 endpoint의 문서화된 status code 중 하나예요.
+
+여기에 단서를 하나 달아둘게요. GitHub은 크기 제한과 406을 각각 문서화할 뿐, 둘의 연결은 문서화하지 않아요. 인과 설명은 2026년 1월부터 7월까지 반복해서 겪은 사례에 대한 제 해석이지 믿고 쓸 수 있는 계약은 아니에요. 결과는 어느 쪽이든 같아요. 그 endpoint에 의존하는 reviewer는 분석할 데이터 자체가 없어서, 빈 review를 만들거나 file 이름만 보고 추측해요.
 
 **우회 방법:** `git diff origin/main..origin/develop`으로 diff를 로컬에서 생성하고 도메인별로 review agent에 나눠서 전달해요. API 제한을 비껴가면서, 각 reviewer가 실제로 읽어낼 수 있는 크기의 chunk를 넘길 수 있어요.
 
@@ -318,11 +317,20 @@ git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
 
 위 패턴들은 대부분 PR에 코멘트를 다는 bot 하나에서 나왔어요. proactive review는 결이 좀 달라요. 독립적인 slice agent 여러 개가 같은 diff를 다른 누구보다 먼저 읽어요. 이때는 *agent들의 의견이 어디서 모이고 어디서 갈리는지* 자체가 개별 finding에 없는 정보를 담고 있어요.
 
-의견이 모이면 확신이 올라가요. `/v1/sync` 변경을 proactive review했을 때, 역할이 서로 다른 agent 셋(safety, structure, runtime)이 각자 다른 근거로 똑같은 `lastSyncedAt` starvation 결함을 짚었어요. agent 하나가 같은 말을 세 가지 방식으로 반복하는 것과는 무게가 다르죠. 몇 달 묵은 timestamp 버그가 "누군가의 의견"에서 "제일 먼저 고쳐야 할 것"으로 올라선 것도 이 때문이에요.
+의견이 모이면 확신이 올라가요. sync endpoint 변경을 proactive review했을 때, 역할이 서로 다른 agent 셋(safety, structure, runtime)이 각자 다른 근거로 똑같은 sync cursor starvation 결함을 짚었어요. 부하가 계속되면 cursor timestamp가 가장 오래된 pending record를 넘어가지 못하는 문제였어요. agent 하나가 같은 말을 세 가지 방식으로 반복하는 것과는 무게가 다르죠. 몇 달 묵은 timestamp 버그가 "누군가의 의견"에서 "제일 먼저 고쳐야 할 것"으로 올라선 것도 이 때문이에요.
 
 의견이 갈릴 때도 신호가 있었어요. test assertion 하나를 두고 두 agent가 severity를 HIGH와 LOW로 정반대로 매겼어요. 한쪽은 조용히 통과해버리는 구멍을 봤고, 다른 쪽은 앞선 assertion이 그 구멍을 가리고 있다는 걸 봤어요. 둘 다 맞았고, 갈린 지점이 곧 가림막이 있던 자리였어요. 중간 severity로 평균 내는 것보다 불일치를 그대로 기록해두는 편이 나았어요.
 
 짚고 넘어갈 게 두 가지 있어요. 의견이 모였다는 건 그 지점이 눈에 띈다는 증거지, 그게 참이라는 증거는 아니에요. 그 review에서 결정을 만든 finding은 분류 전에 전부 소스와 다시 대조했고, client의 retry 동작을 두고 어떤 agent가 내놓은 주장은 repo로는 확인할 수 없는 가정으로 드러났어요. 같은 prompt 틀을 받은 agent들은 그 틀의 시야를 그대로 물려받기도 해요. 그래서 prompt가 한 번도 언급하지 않은 주제에서 나온 만장일치 침묵은 가장 약한 증거예요.
+
+## 보강 주석 템플릿
+
+| 패턴                | 템플릿                                                                                              |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| 기능 존재           | `// NOTE: [Feature] IS [implemented/handled] [here/below] - [brief description]`                    |
+| Race Condition 없음 | `// NOTE: NO RACE CONDITION - [framework] executes [operation] synchronously within single request` |
+| 의도적 설계         | `// NOTE: Intentionally [omitted/designed this way] - [reason]`                                     |
+| Cross-File 참조     | `// NOTE: Related logic in [file:line] handles [concern]`                                           |
 
 ## 워크플로
 
@@ -401,11 +409,11 @@ GitHub API 406 이슈(#10)를 유발한 release PR이에요. 로컬에서 diff�
 
 **통계:** Round 1: 8개(5 INVALID, 2 CONTROVERSIAL→FIX, 1 GTH→FIX). Round 2: 2개(1 INVALID, 1 GTH→FIX)
 
-Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`develop`) 대신 `main` branch 코드를 분석해서, test assertion이 796-800번 줄의 구현과 모순된다고 주장했어요. `develop`에서는 해당 줄이 이미 NOTE 주석이었고, `deletedAt` 설정 코드는 이전 PR에서 제거된 상태였어요.
+Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`develop`) 대신 `main` branch 코드를 분석해서, test assertion이 인용한 줄의 구현과 모순된다고 주장했어요. `develop`에서는 해당 줄이 이미 NOTE 주석이었고, `deletedAt` 설정 코드는 이전 PR에서 제거된 상태였어요.
 
 **주요 INVALID (새 패턴):**
 
-- Cross-Branch 혼동(#9): Reviewer가 PR target(`develop`) 대신 `main` branch 코드를 분석. `toBeNull()`이 796-800번 줄 구현과 모순된다고 주장했지만, `develop`에서 해당 줄은 NOTE 주석(`deletedAt` 설정 코드는 이전 PR에서 제거됨)
+- Cross-Branch 혼동(#9): Reviewer가 PR target(`develop`) 대신 `main` branch 코드를 분석. `toBeNull()`이 인용한 줄의 구현과 모순된다고 주장했지만, `develop`에서 해당 줄은 NOTE 주석(`deletedAt` 설정 코드는 이전 PR에서 제거됨)
 
 **결과:** 양쪽 round에서 3개 수정, 6개 INVALID 기각. 새 패턴도 문서화했어요. Cross-Branch 혼동은 PR target이 `develop`인데도 AI reviewer가 `main` branch context를 기본으로 삼는 경우예요.
 

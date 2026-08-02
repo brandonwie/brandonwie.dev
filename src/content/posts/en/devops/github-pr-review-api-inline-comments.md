@@ -20,12 +20,16 @@ references:
       https://docs.github.com/en/rest/pulls/reviews#create-a-review-for-a-pull-request
     title: GitHub REST API - Create a review for a pull request
     type: official
+  - url: https://cli.github.com/manual/gh_api
+    title: gh api - GitHub CLI manual
+    type: official
 ---
 
 ## The Problem
 
-When using `gh api` with `-f` flag and bracket notation for arrays, the JSON is
-malformed:
+I wanted to post a PR review with several inline comments from the command
+line. The obvious-looking approach — `gh api` with a numeric bracket index for
+the array — fails:
 
 ```bash
 # ❌ WRONG - causes HTTP 422 error
@@ -39,33 +43,81 @@ gh api repos/{owner}/{repo}/pulls/{PR}/reviews -X POST \
 # Error: "For 'properties/comments', {...} is not an array. (HTTP 422)"
 ```
 
-The `-f "comments[0][path]=..."` syntax does NOT create a proper JSON array.
-GitHub API expects `comments` to be an actual array, not an object with numeric
-keys.
+`gh api --verbose` prints the request body, which explains it (gh 2.97.0):
+
+```json
+{
+  "body": "Review body",
+  "comments": {
+    "0": {
+      "body": "Comment text",
+      "line": "123",
+      "path": "file.ts"
+    }
+  },
+  "event": "COMMENT"
+}
+```
+
+A number inside brackets is just another nested object key, so `comments`
+becomes an object with a `"0"` key. The API wants an actual JSON array.
 
 ---
 
 ## Difficulties Encountered
 
-- **Misleading `-f` flag behavior** — The `gh api -f` flag supports bracket
-  notation for nested objects, so `comments[0][path]` _looks_ correct but
-  silently produces `{"comments": {"0": {"path": ...}}}` instead of a JSON
-  array. No warning is emitted.
-- **Unhelpful 422 error** — The GitHub API returns "is not an array" but does
-  not show what the malformed payload actually looked like, making it hard to
-  diagnose without manually inspecting the serialized JSON.
-- **Line number validation** — Even after fixing the JSON format, comments fail
-  silently if the `line` number is not present in the PR diff. You must
-  cross-reference the diff output to find valid line numbers.
-- **Heredoc quoting subtlety** — Using unquoted heredoc delimiters causes shell
-  expansion of backticks and `$variables` inside the JSON body, corrupting code
-  snippets in comment text.
+- **Bracket notation looks like array syntax** — `gh api` supports
+  `key[subkey]=value` for nested objects, so `comments[0][path]` _looks_ like
+  indexing into an array. It is not. No warning is emitted locally; the request
+  goes out and GitHub rejects it.
+- **Unhelpful 422 error** — The response says "is not an array" but does not
+  echo the payload it received, so the mismatch is invisible until you add
+  `--verbose` and read the serialized JSON yourself.
+- **Line numbers must exist in the diff** — Even with valid JSON, a comment
+  aimed at a line that is not part of the PR diff is rejected with another 422
+  rather than being placed somewhere approximate. You have to cross-reference
+  the diff to pick line numbers.
+- **Heredoc quoting subtlety** — With an unquoted heredoc delimiter, the shell
+  expands backticks and `$variables` inside the JSON body, which mangles code
+  snippets inside comment text.
 
 ---
 
-## The Solution
+## Two Ways to Send a Real Array
 
-Use heredoc with `--input -` to pipe properly formatted JSON:
+### 1. Empty brackets, not a numeric index
+
+The `gh api` manual documents the array form explicitly: "To pass nested values
+as arrays, declare multiple fields with the syntax `key[]=value1`,
+`key[]=value2`." Its own example builds an array _of objects_ with
+`properties[][property_name]=...`, and the same shape works here. Repeating a
+subkey starts a new array element:
+
+```bash
+gh api repos/{owner}/{repo}/pulls/{PR}/reviews -X POST \
+  -f event="COMMENT" \
+  -f body="Review body" \
+  -F "comments[][path]=src/lib/calendar/normalize-timezone.ts" \
+  -F "comments[][line]=244" \
+  -F "comments[][side]=RIGHT" \
+  -F "comments[][body]=TZID normalization: non-standard values are mapped to IANA identifiers first." \
+  -F "comments[][path]=src/lib/calendar/normalize-timezone.ts" \
+  -F "comments[][line]=307" \
+  -F "comments[][side]=RIGHT" \
+  -F "comments[][body]=DST gap detection: the date library silently shifts times that do not exist."
+```
+
+Two details matter here. Use `-F`, not `-f`, for `line` — `-f` sends every
+value as a string, so `line` arrives as `"244"` instead of `244`. And the
+brackets must be empty: `comments[]`, never `comments[0]`.
+
+I had read past that paragraph in the manual and reached for the index form out
+of habit. The 422 was correct; my mental model of the flag was wrong.
+
+### 2. Heredoc with `--input -`
+
+Once comment bodies are multi-paragraph Markdown, the flag list gets long and
+hard to read. Piping the JSON directly is the version I keep:
 
 ```bash
 cat << 'REVIEW_JSON' | gh api repos/{owner}/{repo}/pulls/{PR}/reviews -X POST --input -
@@ -90,6 +142,10 @@ cat << 'REVIEW_JSON' | gh api repos/{owner}/{repo}/pulls/{PR}/reviews -X POST --
 REVIEW_JSON
 ```
 
+Both routes produce the same payload. The heredoc is easier to generate from a
+script and easier to eyeball before sending; the flag form is shorter for one
+or two short comments. Neither is more "correct" than the other.
+
 ## Key Points
 
 ### Comment Structure
@@ -97,13 +153,19 @@ REVIEW_JSON
 | Field  | Required | Description                                       |
 | ------ | -------- | ------------------------------------------------- |
 | `path` | Yes      | File path relative to repo root                   |
-| `line` | Yes      | Line number in the NEW version of the file        |
-| `side` | Yes      | `"RIGHT"` for new code, `"LEFT"` for deleted code |
 | `body` | Yes      | Comment content (supports Markdown)               |
+| `line` | No       | Line number in the NEW version of the file        |
+| `side` | No       | `"RIGHT"` for new code, `"LEFT"` for deleted code |
+
+Only `path` and `body` are required per comment in the REST reference. `line`
+and `side` are optional, and `side` defaults to `"RIGHT"`. In practice you still
+want `line` (or the alternative `position` field) — that is what anchors the
+comment to a specific spot in the diff. At the top level, `body` is required
+when `event` is `COMMENT` or `REQUEST_CHANGES`.
 
 ### Line Number Requirements
 
-**CRITICAL:** The `line` must be a line that appears in the PR diff.
+The `line` must be a line that appears in the PR diff.
 
 - Use lines with `+` prefix (added lines) → `side: "RIGHT"`
 - Context lines (no prefix) may or may not be commentable
@@ -146,6 +208,8 @@ REVIEW_JSON
 | `APPROVE`         | Approve the PR                       |
 | `REQUEST_CHANGES` | Request changes before merge         |
 
+Omitting `event` entirely creates a PENDING review you can submit later.
+
 ## Complete Example
 
 ```bash
@@ -181,10 +245,10 @@ On success, the API returns the created review object:
 
 ```json
 {
-  "id": 3751032477,
-  "html_url": "https://github.com/example-org/example-repo/pull/123#pullrequestreview-3751032477",
+  "id": 1234567890,
+  "html_url": "https://github.com/example-org/example-repo/pull/123#pullrequestreview-1234567890",
   "state": "COMMENTED",
-  "submitted_at": "2026-02-04T13:19:25Z"
+  "submitted_at": "2026-01-15T09:00:00Z"
 }
 ```
 
@@ -213,9 +277,9 @@ On success, the API returns the created review object:
 
 ## Common Errors
 
-| Error                       | Cause                       | Fix                       |
-| --------------------------- | --------------------------- | ------------------------- |
-| HTTP 422 "not an array"     | Using `-f comments[0][...]` | Use heredoc JSON          |
-| HTTP 422 "line not in diff" | Invalid line number         | Verify line is in PR diff |
-| HTTP 404                    | Wrong PR number or repo     | Check PR exists           |
-| HTTP 403                    | No write access             | Check permissions         |
+| Error                       | Cause                       | Fix                                    |
+| --------------------------- | --------------------------- | -------------------------------------- |
+| HTTP 422 "not an array"     | Using `-f comments[0][...]` | Use `comments[][...]` or heredoc JSON  |
+| HTTP 422 "line not in diff" | Invalid line number         | Verify line is in PR diff              |
+| HTTP 404                    | Wrong PR number or repo     | Check PR exists                        |
+| HTTP 403                    | No write access             | Check permissions                      |

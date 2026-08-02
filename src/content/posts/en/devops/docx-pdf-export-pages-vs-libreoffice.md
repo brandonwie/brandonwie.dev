@@ -3,7 +3,7 @@ title: A Reproducible DOCX-to-PDF Export with LibreOffice Headless
 description: >-
   Export a Word-list-formatted `.docx` to a PDF whose page layout and searchable
   text layer both survive, on macOS. Apple Pages is the obvious built-in path
-  (`open` + AppleScript export), but in this document it failed both checks.
+  (File > Export To > PDF), but in this document it failed both checks.
 date: 2026-07-22T00:00:00.000Z
 updated: "2026-08-02"
 tags:
@@ -25,9 +25,9 @@ source_content_hash: bc4e38512748259f0ee5be3cc1126e999ce0bf432ff706fddc9bbfabdf1
 ---
 
 I needed a stable PDF from a Word-list-formatted DOCX on macOS. The obvious path
-was to open the file in Pages and export it, but the resulting artifact failed
-the two checks that mattered here: repeatable layout and an intact searchable
-text layer.
+was to open the file in Pages and run the documented export, File > Export To >
+PDF. The resulting artifact failed the two checks that mattered here: repeatable
+layout and an intact searchable text layer.
 
 This is one document and one toolchain, not a general comparison of PDF
 renderers. What mattered more than the renderer choice was the verification

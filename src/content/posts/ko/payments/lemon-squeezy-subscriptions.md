@@ -4,18 +4,17 @@ description: >-
   구독 취소, 유예 기간, 만료, 재활성화와 기존 구독의 가격 변경을 구현하며
   확인한 lifecycle 경계예요.
 date: 2026-01-23T00:00:00.000Z
-updated: 2026-07-23
+updated: 2026-08-02
 tags:
   - backend
   - payments
   - subscriptions
-  - work
 category: payments
 draft: false
 lang: ko
 source_lang: en
 source_slug: lemon-squeezy-subscriptions
-source_updated: 2026-07-23
+source_updated: 2026-08-02
 translation_date: 2026-07-23
 references:
   - url: >-
@@ -30,12 +29,15 @@ references:
     type: official
 ---
 
-Lemon Squeezy로 결제를 붙인 SaaS에서 한 사용자가 구독을 취소했어요. 2주 뒤
-마음을 바꿔 다시 쓰고 싶다고 해서 API로 재개하려 했지만 이미 `expired` 상태였고
-되살릴 수 없었어요.
+Lemon Squeezy에서 구독 취소는 API 호출 한 번이에요. 취소를 되돌리는 것도 호출
+한 번인데, 어느 순간부터 조용히 불가능해져요.
 
-이 실패를 계기로 상태 전환 전체를 다시 그렸어요. 취소 뒤 유예 기간과, 새
-checkout이 필요해지는 정확한 경계를 알아야 했어요.
+SaaS 제품에 구독 결제를 붙이면서 가장 확실히 해두고 싶었던 경계가 `cancelled`와
+`expired`였어요. 둘 다 "사용자가 떠나는 중"이라는 뜻이지만 API로 되돌릴 수 있는
+쪽은 하나뿐이고, 호출하는 코드만 봐서는 그 차이가 드러나지 않아요.
+
+그래서 문서를 따라 lifecycle 전체를 정리했어요. 상태 전환, 유예 기간, 그리고
+돌아온 사용자에게 새 checkout이 필요해지는 정확한 지점까지요.
 
 ## 구독 lifecycle
 
@@ -55,8 +57,9 @@ Lemon Squeezy 구독에는 일곱 가지 상태가 있어요.
 2주 동안 네 번 재시도해요. 모두 실패하면 `unpaid`로 이동하고, 다음 동작은
 설정한 dunning 규칙이 결정해요.
 
-구현에서 더 중요했던 경계는 `cancelled`에서 `expired`로 넘어가는 순간이었어요.
-그 사이에는 구독을 재개할 수 있지만, 지나고 나면 새 구독을 만들어야 해요.
+application 로직을 가장 많이 좌우하는 경계는 `cancelled`에서 `expired`로 넘어가는
+순간이에요. 그 사이에는 구독을 재개할 수 있지만, 지나고 나면 새 구독을 만들어야
+해요.
 
 ## 유예 기간에는 무엇이 일어날까
 
@@ -94,6 +97,8 @@ order_item ID가 유지되므로 새 checkout이나 database relation 변경이 
 않아요. 이 경로는 유예 기간에만 쓸 수 있어요.
 
 ## 만료 뒤에는 새 구독이 필요해요
+
+설계의 나머지 부분이 전부 이 경계를 따라가야 해요.
 
 > `expired`가 된 구독은 API로 재개할 수 없어요.
 

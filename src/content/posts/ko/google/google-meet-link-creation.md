@@ -2,17 +2,16 @@
 title: "Google Meet 링크 생성"
 description: "프로그래밍 방식으로 Google Meet 링크를 생성하면서 배운 교훈이에요."
 date: 2026-01-23T00:00:00.000Z
-updated: "2026-04-06"
+updated: "2026-08-02"
 tags:
   - backend
   - google-api
-  - work
 category: google
 draft: false
 lang: ko
 source_lang: en
 source_slug: google-meet-link-creation
-source_updated: "2026-04-06"
+source_updated: "2026-08-02"
 translation_date: "2026-04-06"
 references:
   - url: "https://developers.google.com/workspace/calendar/api/guides/create-events"
@@ -38,7 +37,7 @@ Google Meet 링크를 프로그래밍 방식으로 생성해야 했어요. 무�
 
 Google Meet REST API는 **Google Workspace가 필수**예요. 무료 Gmail 계정에서는 `spaces.create`를 호출할 수 없어요. API가 permission 에러를 반환하는데, 계정 유형이 원인이라는 힌트는 전혀 없었어요.
 
-우리 앱은 무료 Gmail과 Workspace 사용자 모두를 서빙하기 때문에, Meet REST API는 선택지가 될 수 없었어요. Calendar API가 범용적으로 동작하는 유일한 접근 방식이었어요.
+제가 만들던 앱은 무료 Gmail과 Workspace 사용자 모두를 지원해야 했기 때문에, Meet REST API는 선택지가 될 수 없었어요. Calendar API가 범용적으로 동작하는 유일한 접근 방식이었어요.
 
 ## 해결책: Calendar API + conferenceData
 
@@ -65,7 +64,7 @@ Calendar API 방식은 conferenceData가 포함된 임시 캘린더 이벤트를
 
 ## 더 나은 방법: 기존 이벤트에 편승하기
 
-초기 구현 이후 몇 달 뒤에 흔한 경우에 더 깔끔한 접근법을 찾았어요. 애플리케이션이 이미 Google Calendar 이벤트를 생성하고 있다면 — 예를 들어 큐 프로세서가 블록을 캘린더에 동기화하는 경우 — 같은 API 호출에 `conferenceData.createRequest`를 포함시켜서 Meet 링크를 **원자적으로** 생성할 수 있어요. 임시 이벤트가 필요 없어요.
+초기 구현 이후 몇 달 뒤에 흔한 경우에 더 깔끔한 접근법을 찾았어요. 애플리케이션이 이미 Google Calendar 이벤트를 생성하고 있다면 — 예를 들어 백그라운드 작업이 사용자의 일정 시간대를 캘린더에 기록하는 경우 — 같은 API 호출에 `conferenceData.createRequest`를 포함시켜서 Meet 링크를 **원자적으로** 생성할 수 있어요. 임시 이벤트가 필요 없어요.
 
 ```typescript
 // Instead of: create temp event → extract link → delete temp event

@@ -2,7 +2,7 @@
 title: Amplitude Export API 응답 형식
 description: Amplitude Export API는 오해하기 쉬운 중첩 압축 형식으로 데이터를 반환해요
 date: 2026-01-27T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - backend
   - amplitude
@@ -13,7 +13,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: amplitude-export-api-format
-source_updated: '2026-03-22'
+source_updated: '2026-08-02'
 translation_date: '2026-02-12'
 references:
   - url: 'https://www.docs.developers.amplitude.com/analytics/apis/export-api/'
@@ -93,20 +93,21 @@ namelist를 가진 파일을 반환해요. production 코드에서는 인덱싱 
 
 ## 이벤트 구조
 
-압축 해제된 출력의 각 줄은 하나의 이벤트를 나타내는 JSON 객체예요:
+압축 해제된 출력의 각 줄은 하나의 이벤트를 나타내는 JSON 객체예요. 값은
+placeholder로 채웠어요:
 
 ```json
 {
   "event_type": "session_end",
   "event_time": "2026-01-26 04:23:35.379000",
   "user_id": "user@example.com",
-  "device_id": "6fd6899d-2b08-40e3-b723-e4ca1f848a43",
+  "device_id": "00000000-0000-4000-8000-000000000000",
   "platform": "Web",
   "country": "South Korea",
-  "city": "Suwon",
+  "city": "Seoul",
   "event_properties": {},
   "user_properties": {
-    "utm_source": "longblack"
+    "utm_source": "newsletter"
   }
 }
 ```

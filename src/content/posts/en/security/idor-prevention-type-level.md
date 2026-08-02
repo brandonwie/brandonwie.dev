@@ -1,8 +1,8 @@
 ---
 title: IDOR Prevention via Required Parameters (Type-Level Enforcement)
-description: Insecure Direct Object Reference (IDOR) occurs when an API allows users to
+description: A single optional parameter turned a repository method into an IDOR risk. Making userId required moved the security check to compile time.
 date: 2026-02-11T00:00:00.000Z
-updated: '2026-03-22'
+updated: '2026-08-02'
 tags:
   - security
   - backend
@@ -37,7 +37,7 @@ async findByIds(ids: number[], includeDeleted = false, userId?: number) {
 }
 ```
 
-The conditional WHERE clause looked intentional -- as if some callers were supposed to query without `userId` for admin operations. But no caller should have ever skipped the filter. An internal service calling `findByIds([1,2,3])` without `userId` would return blocks belonging to ANY user. That is a data leak.
+The conditional WHERE clause looked intentional -- as if some callers were supposed to query without `userId` for admin operations. But no caller should have ever skipped the filter. An internal service calling `findByIds([1,2,3])` without `userId` would return records belonging to ANY user. That is a data leak.
 
 ## Why Optional Parameters Hide Vulnerabilities
 
@@ -62,7 +62,7 @@ The runtime guard was tempting because it would not break any existing call site
 
 The middleware approach centralizes the check, but "centralized" also means "easy to bypass if someone adds a new route and forgets the decorator."
 
-Separate methods seemed clean until I imagined auditing a codebase with `findByIds`, `findByIdsAdmin`, `findByIdsAndUserId`, `findByIdsAndUserIdWithCalendar` -- method proliferation makes the surface area harder to review, not easier.
+Separate methods seemed clean until I imagined auditing a codebase with `findByIds`, `findByIdsAdmin`, `findByIdsAndUserId`, `findByIdsAndUserIdWithRelations` -- method proliferation makes the surface area harder to review, not easier.
 
 ## The Fix: Make the Compiler Enforce It
 

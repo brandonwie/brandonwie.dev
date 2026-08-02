@@ -4,7 +4,7 @@ description: >-
   TypeORM migration 생성 결과에 현재 feature와 무관한 SQL이 섞이는 이유와
   local DB drift, 이미 배포한 migration 수정까지 구분해서 다루는 방법이에요.
 date: 2026-04-17T00:00:00.000Z
-updated: 2026-07-23T00:00:00.000Z
+updated: 2026-08-02T00:00:00.000Z
 tags:
   - backend
   - typeorm
@@ -16,7 +16,7 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: typeorm-migration-drift-scope
-source_updated: 2026-07-23T00:00:00.000Z
+source_updated: 2026-08-02T00:00:00.000Z
 translation_date: 2026-07-23
 references:
   - url: 'https://typeorm.io/migrations#generating-migrations'
@@ -24,6 +24,9 @@ references:
     type: official
   - url: 'https://www.postgresql.org/docs/current/catalog-pg-constraint.html'
     title: PostgreSQL pg_constraint system catalog
+    type: official
+  - url: 'https://github.com/typeorm/typeorm/blob/1.1.0/src/migration/MigrationExecutor.ts#L514-L547'
+    title: 'TypeORM MigrationExecutor — migrations table definition (v1.1.0)'
     type: official
 ---
 
@@ -48,18 +51,17 @@ googleSub: string | null;
 들어왔어요.
 
 ```sql
-ALTER TABLE "user" ALTER COLUMN "preference" SET DEFAULT '{"hasDismissedUpgradePopup":false, ...}';
+ALTER TABLE "user" ALTER COLUMN "settings" SET DEFAULT '{"hasSeenTour":false, ...}';
 ```
 
-이번 작업에서는 `preference`를 건드리지 않았어요. 이전에 TypeScript의
-`defaultUserPreference`에는 `hasDismissedUpgradePopup`을 추가했지만 DB
-default를 맞추는 migration은 만들지 않았던 거예요. 그 차이가 계속 남아
-있었어요.
+이번 작업에서는 `settings`를 건드리지 않았어요. 누군가 이전에 entity의 default
+settings 객체에 key 하나를 TypeScript로만 추가하고 DB default를 맞추는
+migration은 만들지 않았던 거예요. 그 차이가 계속 남아 있었어요.
 
 ## PR에서 보이는 증상
 
 - feature와 무관한 SQL이 diff에 들어와요.
-- reviewer가 왜 `user.preference`를 바꾸는지 물어요.
+- reviewer가 왜 `user.settings`를 바꾸는지 물어요.
 - PR을 되돌리면 feature와 별개인 drift 수정까지 함께 돌아가요.
 - `--name=AddGoogleSub`라는 이름과 실제 SQL 범위가 달라요.
 
@@ -77,16 +79,16 @@ constraint를 어길 row가 있는지도 별도 query로 확인해야 해요.
 남겨요. 빠진 drift만 처리하는 migration은 별도 작업으로 열어요.
 
 ```typescript
-// NOTE: TypeORM also detected an unrelated drift on user.preference JSONB
-// default (missing `hasDismissedUpgradePopup` key). That drift is out of scope
-// for #840 and was removed to keep the commit atomic. A separate PR should
-// regenerate just the preference default sync.
-export class AddGoogleSub1776389391540 implements MigrationInterface {
+// NOTE: TypeORM also detected an unrelated drift on user.settings JSONB
+// default (missing `hasSeenTour` key). That drift is out of scope for this
+// change and was removed to keep the commit atomic. A separate PR should
+// regenerate just the settings default sync.
+export class AddGoogleSub1700000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "user" ADD "google_sub" varchar`);
     await queryRunner.query(`CREATE UNIQUE INDEX "IDX_user_google_sub_unique"
       ON "user" ("google_sub") WHERE google_sub IS NOT NULL`);
-    // NOTE: `ALTER COLUMN "preference" SET DEFAULT ...` removed; see header.
+    // NOTE: `ALTER COLUMN "settings" SET DEFAULT ...` removed; see header.
   }
   // ...
 }
@@ -132,9 +134,9 @@ CI도 local과 같은 seed를 쓴다면 통과하고 실제 deploy에서만 실�
 
 ### 복구 순서
 
-1. 삭제한 migration file을 잠시 복원하고
-   `src/database/index.ts`에 등록한 뒤 `npm run migration:revert`로 local
-   column을 제거해요.
+1. 삭제한 migration file을 잠시 복원하고 `DataSource` 설정의 `migrations`
+   배열에 다시 등록한 뒤 `npm run migration:revert`로 local column을
+   제거해요.
 2. 복원한 file과 rename 기반 replacement를 지워요.
 3. 깨끗한 local DB에서 migration을 다시 생성해요. 이제 TypeORM은 아래처럼
    `ADD COLUMN`을 만들어요.
@@ -158,35 +160,37 @@ migration을 되돌렸다면 local DB도 함께 되돌려요. CI에서는 빈 DB
 
 세 번째 경우에는 생성 시점 신호조차 없어요. 새 migration을 만들지 않고 기존
 `CREATE TABLE` migration 본문에 새 column이나 index를 끼워 넣는 경우예요.
-
-```text
-feat: add integration_id to user_contacts
-
-- merge the new column into the existing create-table migration
-```
+commit message는 보통 "새 column을 기존 create-table migration에 합쳤다"처럼
+정리 작업으로 표현돼요.
 
 history가 깔끔해 보이지만 이미 기존 본문을 실행한 환경은 예전 schema에 그대로
 남아요.
 
 ### TypeORM이 감지하지 못하는 이유
 
-`migrations` table은 적용한 migration의 `name`과 `timestamp`만 기록해요.
-content hash도, checksum도, 본문 재검증도 없어요. 같은 timestamp가 이미
-있으면 file 본문을 바꿔도 다시 실행하지 않아요.
+`migrations` table이 기록하는 건 `id`, `timestamp`, `name` 셋뿐이에요.
+TypeORM v1.1.0의
+[`MigrationExecutor`](https://github.com/typeorm/typeorm/blob/1.1.0/src/migration/MigrationExecutor.ts#L514-L547)가
+정확히 그 세 column만 만들고, 그 file 어디에도 migration 본문을 hash하거나
+다시 검증하는 code는 없어요. 그래서 같은 timestamp 행이 이미 있으면 file
+본문을 바꿔도 다시 실행하지 않아요.
 
-- 개발 DB는 몇 주 전에 원래 본문을 실행해서 `integration_id`가 없어요.
-- 작성자는 기존 `CREATE TABLE`에 `"integration_id" integer NOT NULL`을
+`contacts` table을 예로 들면 이렇게 흘러가요.
+
+- 개발 DB는 몇 주 전에 원래 본문을 실행해서 `source_id`가 없어요.
+- 작성자는 기존 `CREATE TABLE`에 `"source_id" integer NOT NULL`을
   추가해요.
 - `migration:run`은 timestamp를 보고 "no migrations to run"으로 끝나요.
-- entity에는 `integrationId`가 있지만 DB에는 column이 없어요.
+- entity에는 `sourceId`가 있지만 DB에는 column이 없어요.
 - 해당 column을 읽는 query가 runtime에서 실패해요.
 
 ## 이미 수정된 migration을 찾는 법
 
 먼저 오래된 migration을 creation 이후에 고친 흔적을 찾아요.
 
-1. `git log --all --oneline -- src/database/migrations/*.ts | grep -i "merge\|병합\|consolidate\|fold"`
-   로 기존 migration을 건드린 commit을 찾아요.
+1. `git log --all --oneline -- <migrations-dir>/*.ts | grep -i "merge\|consolidate\|fold"`
+   로 기존 migration을 건드린 commit을 찾아요. keyword는 팀이 commit message를
+   쓰는 언어에 맞게 바꿔요.
 2. 각 migration에 `git log --follow --oneline -- <migration-file>`을
    실행해 최초 추가 뒤에도 본문이 바뀌었는지 봐요.
 3. `CREATE TABLE` 안의 의심스러운 column이나 index line에 `git blame`을
@@ -212,10 +216,9 @@ migration은 logical commit을 나눠서 reviewer가 흐름을 볼 수 있게 �
 ## migration history가 같아도 constraint는 다를 수 있어요
 
 check constraint에서도 같은 실패가 생겨요. development와 production 모두
-`CreateDailyCounterTable1781675561791`을 기록하고 있지만 현재 repository의
-migration 본문에는 `daily_counter_count_check`가 뒤늦게 들어갈 수 있어요.
-production catalog에는 `CHECK ((count >= 1))`이 있고 development에는 없을
-수도 있어요.
+`CreateCounterTable1710000000000`을 기록하고 있지만 현재 repository의
+migration 본문에는 `count >= 1` check가 뒤늦게 들어갈 수 있어요. production
+catalog에는 `CHECK ((count >= 1))`이 있고 development에는 없을 수도 있어요.
 
 같은 migration identity 아래 서로 다른 과거 본문을 실행한 결과와 모순되지
 않아요. `migrations` table만 다시 봐서는 구분할 수 없어요.
@@ -225,7 +228,7 @@ production catalog에는 `CHECK ((count >= 1))`이 있고 development에는 없�
 3. 위반 row가 없다면 빠진 환경에만 constraint를 추가해요.
 4. 이미 배포한 migration은 그대로 두고 forward change로 복구해요.
 
-`SELECT ... FROM daily_counter WHERE count < 1`이 0건이라면 기존 data를
+`SELECT ... FROM counter WHERE count < 1`이 0건이라면 기존 data를
 깨뜨리지 않고 constraint를 추가할 수 있어요.
 
 ## 마지막 판단 기준

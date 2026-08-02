@@ -2,7 +2,7 @@
 title: Ruff Three-Gate Pre-Flight
 description: A push that turned into three CI cycles taught me Ruff in CI is three independent gates. A four-line shell function prevents the loop.
 date: 2026-04-29T00:00:00.000Z
-updated: 2026-04-29T00:00:00.000Z
+updated: '2026-08-02'
 tags:
   - devops
   - python
@@ -29,12 +29,12 @@ source_content_hash: 075be95fd90cbaed7958a43002050ddc7d08829ee017df3d9ccd85c55ff
 > catches lint errors but lets format failures through, costing a CI cycle per
 > missed gate.
 
-First push to PR #134, CI came back red on `ruff check` — an `I001` import
+First push to the PR, CI came back red on `ruff check` — an `I001` import
 sorting violation. Easy fix, push again. Second cycle: `ruff check` was green,
 but `ruff format --check` failed on the same files. Push the format fix. Third
-cycle: format failed again — this time in `ml/`, a directory I had not touched
-in this PR. Three CI cycles to learn that "ruff" in CI is actually three gates,
-and the local pre-flight needs to mirror all of them.
+cycle: format failed again — this time in a directory I had not touched on that
+branch. Three CI cycles to learn that "ruff" in CI is actually three gates, and
+the local pre-flight needs to mirror all of them.
 
 ## The Three Gates
 
@@ -74,18 +74,18 @@ Run **all three gates** locally before every push:
 ruff check {dir}                 # Gate 1: lint
 ruff format --check {dir}        # Gate 2: format dry-run
 
-# Repo-wide pre-flight (catches gates the CI suite=all hits)
+# Repo-wide pre-flight (catches gates a repo-wide CI run hits)
 ruff check . --quiet
 ruff format --check .
 ```
 
 If any gate is red, fix and re-run. Push only when all gates report clean.
 
-The repo-wide pass matters because CI `suite=all` typically scopes the checks
-to the whole repo, while your local intuition is scoped to "the files I just
-edited." Drift in unrelated directories — for example, a Markdown linter that
-auto-rewraps `.agents/rules/*.md` between your edits and CI — will fail at CI
-time even though `git diff` looks clean.
+The repo-wide pass matters because the CI job typically runs the checks across
+the whole repo, while your local intuition is scoped to "the files I just
+edited." Drift in unrelated directories — for example, a Markdown linter in my
+own tooling repo that auto-rewraps `.agents/rules/*.md` between my edits and CI
+— will fail at CI time even though `git diff` looks clean.
 
 ## Reusable Pre-Flight Script
 
@@ -107,7 +107,7 @@ ruff_preflight() {
 }
 
 # Usage
-ruff_preflight apps/api ml
+ruff_preflight src tests
 ```
 
 Or as a `Makefile` target:
@@ -130,9 +130,10 @@ Either form runs in a few seconds locally — far cheaper than a CI cycle.
 - **Auto-fix flags differ.** Lint has `ruff check --fix` (and `--unsafe-fixes`
   for the rest). Format has `ruff format` (no `--fix` flag — formatter is the
   fix). Mixing them up wastes time.
-- **CI scope ≠ git diff scope.** A rebase that touches `apps/api/` may trigger
-  format failures in `ml/` because the suite-wide format check doesn't care
-  which files you changed. Pre-flight repo-wide.
+- **CI scope ≠ git diff scope.** A rebase that touches one service directory
+  may trigger format failures in another one you never opened, because the
+  suite-wide format check doesn't care which files you changed. Pre-flight
+  repo-wide.
 - **Lockfile gate hides until format passes.** Failed lint blocks format blocks
   lock-check in most CI configs (sequential job dependency). You may not see
   the lockfile failure until the prior gates pass.
@@ -163,7 +164,7 @@ triggers a hard block at CI time. The gate runs against the whole repo state,
 not against your delta. Two paths:
 
 - **Same PR.** Fix the pre-existing breakage in your PR with an explicit
-  scope-creep commit (`fix(ml): ruff format pre-existing files`). Reviewer
+  scope-creep commit (`fix(format): ruff format pre-existing files`). Reviewer
   knows what's yours and what's cleanup.
 - **Separate hotfix.** Land the cleanup as a tiny independent PR first; rebase
   your feature branch after.
