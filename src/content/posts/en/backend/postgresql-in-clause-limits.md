@@ -2,7 +2,7 @@
 title: PostgreSQL IN Clause Parameter Limits
 description: "PostgreSQL's wire protocol caps parameterized queries at 65,535 bind parameters. Batching TypeORM's `In([...])` at 500-1,000 stays inside practical performance limits."
 date: 2026-02-11T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - backend
   - postgresql
@@ -18,7 +18,7 @@ references:
   - url: 'https://www.postgresql.org/docs/current/populate.html'
     title: PostgreSQL Documentation - Populating a Database
     type: official
-source_content_hash: dc47b0de0a1a50060545573a2acaaa24e4b66f23cd562efeeaaf3714a2ea8c5f
+source_content_hash: 2c5d1934a9cdbfe06ac5a2099e4d9c75da4ca5f2d1be557b490aebd16b4c2e5e
 expanded: true
 ---
 
@@ -124,9 +124,9 @@ DO UPDATE SET "name" = COALESCE(EXCLUDED."name", "contacts"."name")
 
 ### Chunk at the layer that owns the arithmetic
 
-The instinct is to chunk at the call site holding the big array. What I'd do differently now is chunk inside the method that builds the statement, since it's the only layer that knows the params-per-row count, and every caller inherits the fix instead of each one having to remember. When several call sites share one bulk-upsert helper, the rarely-exercised one tends to be the path nobody chunked — which is exactly why the chunking belongs in the helper.
+My instinct was to chunk at the call site holding the big array. What I'd do differently now is chunk inside the method that builds the statement. That method is the only layer that knows the params-per-row count, so putting the split there means every caller inherits the fix. In the case I ran into, four call sites shared one bulk-upsert helper, and the bootstrap path was the only one that had never been chunked. It was also the one that exceeded the parameter ceiling.
 
-Guarding the split keeps the common small-batch case emitting a single statement:
+A size guard keeps the common small-batch case on a single statement:
 
 ```ts
 const MAX_ROWS_PER_STATEMENT = 1000; // 6 x 1000 = 6,000 params
@@ -152,7 +152,7 @@ Batching adds unnecessary complexity in several cases:
 
 ## Takeaway
 
-PostgreSQL's wire protocol limits parameterized queries to 65,535 bind parameters, but performance degrades well before that. When using TypeORM's `In([...])` with dynamic ID lists that could grow beyond a few hundred items, batching at 500-1,000 IDs per query worked well for me. It stays inside `find()`, and planning time stayed sub-millisecond, so I never got close to the protocol-level errors sitting at the 65K ceiling.
+PostgreSQL's wire protocol limits parameterized queries to 65,535 bind parameters, but performance degrades well before that. When using TypeORM's `In([...])` with dynamic ID lists that could grow beyond a few hundred items, batching at 500-1,000 IDs per query worked well for me. It kept me inside `find()`, planning time stayed sub-millisecond, and I never got close to the protocol-level errors sitting at the 65K ceiling.
 
 The part that took me longest to internalize is that the ceiling belongs to the bind message, not the `IN` clause. The same limit shows up in a multi-row `INSERT` or an `ON CONFLICT` upsert, where the count is columns × rows rather than anything that looks like a list. It took three separate encounters before I stopped treating each one as a new bug. Knowing the params-per-row number for a given statement, and chunking in the layer that knows it, is the part that actually generalizes.
 

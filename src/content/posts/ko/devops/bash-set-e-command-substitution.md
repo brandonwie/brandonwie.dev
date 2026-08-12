@@ -2,7 +2,7 @@
 title: Bash set -e와 명령어 치환
 description: 'set -e(에러 시 종료)를 사용할 때, 명령어 치환이 커스텀 에러 메시지와 함께 예상과 다르게 동작하는 경우.'
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - devops
   - bash
@@ -12,8 +12,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: bash-set-e-command-substitution
-source_updated: '2026-08-02'
-translation_date: '2026-03-04'
+source_updated: '2026-08-12'
+translation_date: '2026-08-12'
 references:
   - url: 'https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html#set'
     title: 'POSIX.1-2024 Shell Command Language — the set special built-in (-e)'
@@ -40,6 +40,8 @@ fi
 ```
 
 `set -e`가 켜진 상태에서 `aws sts get-caller-identity`가 실패하면(자격 증명 오류, 네트워크 단절, CLI 미설치) 스크립트는 그 assignment 줄에서 종료돼요. 변수는 설정되지 않고, `if` 체크는 실행되지 않고, 사용자는 준비해 둔 메시지 대신 `set -e`가 내는 일반적인 에러만 보게 돼요.
+
+여기서 원인을 짚을 때 놓치기 쉬운 부분이 하나 있어요. `set -e`를 건드리는 건 안에 들어 있는 명령어 치환이 아니라 assignment 쪽이에요. 말장난처럼 들리지만 이 차이가 아래에서 볼 동작을 전부 설명해 줘요.
 
 ## 해결 방법
 
@@ -71,7 +73,11 @@ fi
 
 `if` 문이 종료 상태를 "소비"해서 `set -e`가 트리거되는 걸 막아요. `bash(1)` man page와 POSIX 모두 같은 예외를 명시해요. `if`나 `elif` 뒤의 test, `while`/`until` 뒤의 list, `&&`/`||` list에서 마지막이 아닌 명령, 그리고 `!`로 반전된 명령에서는 `-e`가 무시돼요.
 
-반대 방향은 헷갈리기 쉬워요. 명령어 치환 자체가 `set -e`를 발동시키는 건 아니에요. POSIX는 word expansion 중에 실행된 command substitution subshell의 실패로는 셸이 종료되지 않는다고 못박고 있고, 실제로 `echo $(false) two`는 여전히 `two`를 출력해요. `VAR=$(cmd)`가 다른 이유는, command name이 없는 simple command는 마지막 command substitution의 종료 상태를 그대로 자기 종료 상태로 갖기 때문이에요. 실패한 명령은 치환이 아니라 assignment 자체이고, 그 상태를 받아주는 곳이 없는 거예요.
+반대 방향은 헷갈리기 쉬워요. 명령어 치환 자체가 `set -e`를 발동시키는 건 아니에요. POSIX는 word expansion 중에 실행된 command substitution subshell의 실패로는 셸이 종료되지 않는다고 못박고 있어요. 문서에 실린 예시가 `set -e; echo $(false; echo one) two`인데, 여기서도 `echo two`까지 실행돼요. `VAR=$(cmd)`가 다른 이유는, command name이 없는 simple command는 마지막 command substitution의 종료 상태를 그대로 자기 종료 상태로 갖기 때문이에요. 실패한 명령은 치환이 아니라 assignment 자체이고, 그 상태를 받아주는 곳이 없는 거예요.
+
+둘 다 직접 확인해 보기 쉬워요. GNU bash 3.2.57에서 `set -e; echo $(false) two`는 `two`를 찍고 그냥 넘어가는데, `set -e; V=$(false)`는 종료 상태 1로 끝나요. 실패한 명령은 똑같은데 결과가 갈려요. 두 번째 경우에만 `set -e`가 들여다볼 실패한 simple command가 남기 때문이에요.
+
+같은 규칙이 반대로 작용하는 경우도 있어요. 함수 안에서 쓰는 `local V=$(cmd)`는 실패해도 종료되지 않아요. 이때 command name은 `local`이라서 `set -e`가 보는 건 `local` 자신의 종료 상태이고, 치환이 실패했다는 사실은 묻히고 말아요. assignment를 `local`로 감싸는 순간 `set -e`가 지켜 주던 안전장치가 조용히 사라지는 셈이에요. 글 맨 앞에서 본 함정이 방향만 뒤집힌 모양이죠.
 
 ## 핵심 포인트
 
@@ -79,8 +85,10 @@ fi
   `while`/`until` 뒤의 list, `&&`/`||` list에서 마지막이 아닌 명령, `!`로 반전된
   명령은 해당하지 않아요
 - 종료를 부르는 건 명령어 치환 자체가 아니라 `VAR=$(cmd)`라는 assignment의 종료
-  상태예요. `echo $(false) two`는 `set -e` 아래에서도 여전히 `two`를 출력해요
+  상태예요. `set -e; echo $(false; echo one) two`는 `echo two`까지 실행돼요
 - `if`로 감싸면 그 종료 상태를 `if`가 소비하기 때문에 `set -e`가 발동하지 않아요
+- 함수 안의 `local V=$(cmd)`는 반대로 움직여요. command name이 `local`이라서
+  `set -e`는 치환이 실패했다는 사실을 아예 보지 못하고 지나가요
 - 커스텀 에러 메시지가 필요하면 if 패턴과 `-z` 체크를 같이 쓰면 돼요. 앞의 것은
   명령 실패를, 뒤의 것은 성공했지만 빈 출력이 온 경우를 잡아 줘요
 

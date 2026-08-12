@@ -2,7 +2,7 @@
 title: Terraform State Recovery
 description: Procedures for recovering from Terraform state drift when the state file doesn't match AWS reality.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - devops
   - terraform
@@ -27,11 +27,11 @@ references:
   - url: 'https://developer.hashicorp.com/terraform/language/backend/s3'
     title: 'Backend type: s3'
     type: official
-source_content_hash: d8b04c23bdcc5706afd145c03074678034d30b9d5b016fdb9ba35c54e9e84a42
+source_content_hash: 1f512c4d1cb2d599a486b2fe48e326825028a280b9e75d1f1cd4a60783844040
 expanded: true
 ---
 
-I ran `terraform plan` and it wanted to destroy an actively-used RDS cluster. The state file had drifted from AWS reality — resources existed in AWS that Terraform didn't know about, and Terraform's view of existing resources was outdated. Instead of panicking and running `apply`, I needed a systematic recovery process.
+I ran `terraform plan` and it wanted to destroy an actively-used RDS cluster. The state file had drifted from AWS reality. Resources existed in AWS that Terraform didn't know about, and Terraform's view of existing resources was outdated. Instead of panicking and running `apply`, I needed a systematic recovery process.
 
 Terraform state drift happens when the state file doesn't match what actually exists in your cloud provider. This can occur from manual console changes, failed applies, or state file corruption. The recovery process is methodical: back up first, assess the damage, import missing resources, and fix configuration drift.
 
@@ -56,15 +56,15 @@ With local state, that's a file copy:
 cp terraform.tfstate terraform.tfstate.backup-$(date +%Y%m%d)
 ```
 
-With a remote backend, there's no local file to copy. Pull it instead — `terraform state pull` reads the state from the configured backend, and its counterpart `terraform state push` writes a state file back, which is the pair HashiCorp documents for recovering state from a backup:
+With a remote backend, there's no local file to copy. Pull it instead. `terraform state pull` reads the state from the configured backend, and its counterpart `terraform state push` writes a state file back, which is the pair HashiCorp documents for recovering state from a backup:
 
 ```bash
 terraform state pull > terraform.tfstate.backup-$(date +%Y%m%d)
 ```
 
-Next, reconcile Terraform's view of your infrastructure with what's actually in AWS. The step I reached for first was `terraform refresh` — and that turned out to be the wrong instinct. HashiCorp's CLI docs now carry a deprecation notice on that page: "This command is deprecated. Instead, add the `-refresh-only` flag to `terraform apply` and `terraform plan` commands."
+Next, reconcile Terraform's view of your infrastructure with what's actually in AWS. The step I reached for first was `terraform refresh`, and that turned out to be the wrong instinct. HashiCorp's CLI docs now carry a deprecation notice on that page: "This command is deprecated. Instead, add the `-refresh-only` flag to `terraform apply` and `terraform plan` commands."
 
-The reasoning matters more than the syntax. `terraform refresh` is equivalent to `terraform apply -refresh-only -auto-approve` — it writes whatever it discovers straight into state with nothing to review. The docs are blunt about the failure mode: if provider credentials are misconfigured, "Terraform may be misled into thinking that all of the managed objects have been deleted, causing it to remove all of the tracked objects without any confirmation prompt."
+The reasoning matters more than the syntax. `terraform refresh` is equivalent to `terraform apply -refresh-only -auto-approve`. It writes whatever it discovers straight into state with nothing to review. The docs are blunt about the failure mode: if provider credentials are misconfigured, "Terraform may be misled into thinking that all of the managed objects have been deleted, causing it to remove all of the tracked objects without any confirmation prompt."
 
 That is the same failure this whole post is trying to avoid, so read before you write:
 
@@ -90,10 +90,10 @@ For resources that exist in AWS but aren't in Terraform state (Terraform wants t
 
 ```bash
 # RDS Cluster
-terraform import aws_rds_cluster.main app-rds-prod-cluster
+terraform import aws_rds_cluster.main app-prod-cluster
 
 # RDS Instance
-terraform import aws_rds_cluster_instance.main app-rds-prod
+terraform import aws_rds_cluster_instance.main app-prod-instance-1
 
 # EC2 Instance
 terraform import aws_instance.main i-0123456789abcdef0
@@ -101,7 +101,7 @@ terraform import aws_instance.main i-0123456789abcdef0
 
 Each import command tells Terraform "this resource in my configuration corresponds to this existing resource in AWS." After importing, Terraform tracks the resource without trying to recreate it.
 
-One caveat worth knowing before you start typing: the CLI command "can only import resources into the state" and "does _not_ generate configuration," so you still have to write matching `.tf` blocks yourself — which is exactly what Phase 3 is about. Terraform's docs point at the declarative `import` block as the alternative when you want configuration generation and want the import reviewed in a plan instead of executed immediately.
+One caveat worth knowing before you start typing: the CLI command "can only import resources into the state" and "does _not_ generate configuration," so you still have to write matching `.tf` blocks yourself, which is exactly what Phase 3 is about. Terraform's docs point at the declarative `import` block as the alternative when you want configuration generation and want the import reviewed in a plan instead of executed immediately.
 
 ## Recovery: Phase 3 — Fix Configuration Drift
 
@@ -128,7 +128,7 @@ resource "aws_instance" "main" {
 }
 ```
 
-The `lifecycle.ignore_changes` block tells Terraform to skip an attribute when planning updates. HashiCorp describes it as the way "to let Terraform share management responsibilities of a single object with a separate process" — which is precisely the AMI case, where a patching pipeline outside Terraform is the thing changing the value.
+The `lifecycle.ignore_changes` block tells Terraform to skip an attribute when planning updates. HashiCorp describes it as the way "to let Terraform share management responsibilities of a single object with a separate process." That is precisely the AMI case, where a patching pipeline outside Terraform is the thing changing the value.
 
 It's a trade-off, not a free win: an ignored attribute is one Terraform stops reconciling, so drift there becomes invisible instead of noisy. Ignore the narrowest attribute you can, and only when something else genuinely owns it.
 
@@ -184,22 +184,22 @@ terraform {
 }
 ```
 
-If you learned this backend a few years ago, `use_lockfile` may be new to you — the pattern most tutorials still show is a `dynamodb_table` argument plus a separate `aws_dynamodb_table` resource holding a `LockID` hash key. That path still works, but the S3 backend documentation now states that "DynamoDB-based locking is deprecated and will be removed in a future minor version," with `use_lockfile` as the S3-native replacement. Both can be set at the same time while you migrate, which is the documented way to roll this out without a flag day.
+If you learned this backend a few years ago, `use_lockfile` may be new to you. The pattern most tutorials still show is a `dynamodb_table` argument plus a separate `aws_dynamodb_table` resource holding a `LockID` hash key. That path still works, but the S3 backend documentation now states that "DynamoDB-based locking is deprecated and will be removed in a future minor version," with `use_lockfile` as the S3-native replacement. Both can be set at the same time while you migrate, which is the documented way to roll this out without a flag day.
 
-Check the backend docs against your own Terraform version before you change this — locking is not the argument to get wrong from a blog post.
+Check the backend docs against your own Terraform version before you change this. Locking is not the argument to get wrong from a blog post.
 
 ## Key Lessons
 
-1. **Always back up state first** — copy the file for local state, `terraform state pull` for a remote backend
-2. **Refresh read-only before you refresh for real** — `plan -refresh-only` shows you the damage; `refresh` just commits it
-3. **Import before manage** — don't recreate existing resources; import them, then write the configuration to match
-4. **Use lifecycle blocks deliberately** — for attributes another process genuinely owns, and no wider than that
-5. **Plan extensively** — run `terraform plan` multiple times during recovery; never `apply` without reviewing
-6. **Set up remote state with locking** — prevents most drift by centralizing state management
+1. **Always back up state first.** Copy the file for local state, or run `terraform state pull` for a remote backend.
+2. **Refresh read-only before you refresh for real.** `plan -refresh-only` shows you the damage; `refresh` just commits it.
+3. **Import before manage.** Don't recreate existing resources. Import them, then write the configuration to match.
+4. **Use lifecycle blocks deliberately.** Only for attributes another process genuinely owns, and no wider than that.
+5. **Plan extensively.** Run `terraform plan` multiple times during recovery, and never `apply` without reviewing.
+6. **Set up remote state with locking.** Centralizing state management prevents most drift.
 
 ## Takeaway
 
-Terraform state recovery follows a predictable pattern: back up, reconcile read-only, import missing resources, fix configuration drift, and verify with `plan`. The key is to never let anything write to state before you've read what it intends to write — which is why the deprecated `terraform refresh` is worth unlearning even though it still runs. Set up remote state with locking from day one to prevent most drift scenarios. When drift does happen, the systematic approach (assess → import → fix → verify) gets you back to a clean state without destroying production resources.
+Terraform state recovery follows a predictable pattern: back up, reconcile read-only, import missing resources, fix configuration drift, and verify with `plan`. The key is to never let anything write to state before you've read what it intends to write, which is why the deprecated `terraform refresh` is worth unlearning even though it still runs. Set up remote state with locking from day one to prevent most drift scenarios. When drift does happen, the systematic approach (assess → import → fix → verify) gets you back to a clean state without destroying production resources.
 
 ## References
 

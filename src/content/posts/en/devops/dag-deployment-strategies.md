@@ -2,7 +2,7 @@
 title: DAG Deployment Strategies
 description: 'Different approaches to deploying Airflow DAGs, with trade-offs analysis.'
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - devops
   - airflow
@@ -24,7 +24,7 @@ references:
       https://airflow.apache.org/docs/apache-airflow/stable/configurations-ref.html
     title: 'Airflow Configuration Reference (dag_processor intervals)'
     type: official
-source_content_hash: 9fdce2e03f592d622a5b1e8d102e3bbd1e3977afdc2c7baa4b2c45f4c298dbc5
+source_content_hash: dba20dfeb0ddeb9782f70a7bdb750eb9ab88284019bf46822ad809b8047429ce
 expanded: true
 ---
 
@@ -34,11 +34,11 @@ I evaluated four common approaches, chose the simplest one that fit a two-person
 
 ## The Difficulty
 
-**No single recommended approach** — Airflow docs describe several strategies but don't recommend one for a given setup. I had to piece together trade-offs from blog posts, GitHub issues, and Helm chart defaults.
+**No single recommended approach.** Airflow docs describe several strategies but don't recommend one for a given setup. I had to piece together trade-offs from blog posts, GitHub issues, and Helm chart defaults.
 
-**Conflating DAG deployment with code deployment** — Most guides bundle deploying DAG Python files with deploying the Airflow application itself (Docker image). These are independent concerns.
+**Conflating DAG deployment with code deployment.** Most guides bundle deploying DAG Python files with deploying the Airflow application itself (Docker image). These are independent concerns.
 
-**Git-sync sidecar docs assume Kubernetes** — The most-documented approach is Kubernetes-native. Translating it to Docker Compose on EC2 felt like forcing a pattern.
+**Git-sync sidecar docs assume Kubernetes.** The most-documented approach is Kubernetes-native. Translating it to Docker Compose on EC2 felt like forcing a pattern.
 
 ## The Four Approaches
 
@@ -55,10 +55,10 @@ EC2 /opt/airflow/          ← Full Git repository
 └── .git/
 ```
 
-Changes sync via `git pull`, and the scheduler picks them up with no container restart. How fast it picks them up depends on two separate settings rather than one, which is easy to miss:
+Changes sync via `git pull`, and the scheduler picks them up with no container restart. How fast that happens depends on two separate settings rather than one, which is easy to miss:
 
-- `[scheduler] min_file_process_interval` (default `30`) — how often a DAG file Airflow already knows about gets re-parsed. The config reference states plainly that "updates to DAGs are reflected after this interval."
-- `[scheduler] dag_dir_list_interval` (default `300`) — how often the DAGs directory is scanned for _new_ files.
+- `[scheduler] min_file_process_interval` (default `30`) controls how often Airflow re-parses a DAG file it already knows about. The config reference puts it plainly: "Updates to DAGs are reflected after this interval."
+- `[scheduler] dag_dir_list_interval` (default `300`) controls how often Airflow rescans the DAGs directory for _new_ files.
 
 So editing an existing DAG shows up in roughly half a minute, but a brand-new DAG file can sit unnoticed for up to five minutes on stock config. Both defaults carried into Airflow 3.x, where parsing moved into a standalone dag-processor: the same 30-second `min_file_process_interval` now lives under `[dag_processor]`, and the directory scan became `[dag_processor] refresh_interval`, still 300 seconds.
 
@@ -119,7 +119,7 @@ AWS-native and works across regions, but adds infrastructure (S3 bucket or EFS m
 | **Best environment**  | EC2 small team  | Immutable infra | Kubernetes | AWS native   |
 | **Team size**         | 2-10            | Any             | Large      | Medium-Large |
 
-Airflow doesn't publish a matrix like this, so treat it as my read of the trade-offs rather than doctrine. The setup-complexity ratings and especially the team-size bands are judgement calls — they're where each approach stopped feeling proportionate to me, not thresholds anyone has measured.
+Airflow doesn't publish a matrix like this, so treat it as my read of the trade-offs rather than doctrine. The setup-complexity ratings and especially the team-size bands are judgement calls. They mark where each approach stopped feeling proportionate to me, not thresholds anyone has measured.
 
 ## What I Chose: Full Git Repo on EC2
 
@@ -127,7 +127,7 @@ I picked the simplest option because:
 
 - Small team (2 people) on EC2, not Kubernetes
 - DAG changes are frequent and need fast iteration (seconds, not minutes)
-- Zero downtime is critical — no container restarts for DAG-only changes
+- Zero downtime is critical, which rules out container restarts for DAG-only changes
 - Git provides built-in version control and instant rollback
 - The downsides (repo exposure, auth) are mitigated with deploy keys and `.gitignore`
 
@@ -203,7 +203,7 @@ Reflection time: ~30s for an edit
 
 ## When to Migrate
 
-Triggers I'd watch for, with the same caveat as the matrix — these are the points where the current approach starts costing more than it saves, not measured limits.
+Triggers I'd watch for, with the same caveat as the matrix. These are the points where the current approach starts costing more than it saves, not measured limits.
 
 | Situation                          | Recommended Change                       |
 | ---------------------------------- | ---------------------------------------- |
@@ -214,15 +214,17 @@ Triggers I'd watch for, with the same caveat as the matrix — these are the poi
 
 ## When NOT to Use Each Strategy
 
-- **Full Git Repo on EC2** — Don't use if the repository contains secrets that can't be excluded via `.gitignore`, or if compliance requires immutable deployments with auditable image tags
-- **Bake into Image** — Don't use if DAG iteration speed matters. Rebuilding and restarting containers for every change creates unacceptable feedback loops
-- **Git-Sync Sidecar** — Don't use on plain EC2 or Docker Compose. The sidecar adds unnecessary complexity outside of Kubernetes
-- **S3/EFS Sync** — Don't use if you need strict version control. S3 sync doesn't provide atomic updates or rollback guarantees the way Git does
+- **Full Git Repo on EC2.** Don't use if the repository contains secrets that can't be excluded via `.gitignore`, or if compliance requires immutable deployments with auditable image tags.
+- **Bake into Image.** Don't use if DAG iteration speed matters. Rebuilding and restarting containers for every change creates unacceptable feedback loops.
+- **Git-Sync Sidecar.** Don't use on plain EC2 or Docker Compose. The sidecar adds unnecessary complexity outside of Kubernetes.
+- **S3/EFS Sync.** Don't use if you need strict version control. S3 sync doesn't provide atomic updates or rollback guarantees the way Git does.
 
 ## Takeaway
 
-There's no universally correct DAG deployment strategy — it depends on your infrastructure, team size, and iteration speed requirements. For small teams on EC2, a full Git repo with CI/CD-triggered `git pull` is the simplest approach with the fastest feedback loop. Know your decision tree and plan your migration path for when the team or infrastructure outgrows the current strategy.
+There's no universally correct DAG deployment strategy. It depends on your infrastructure, team size, and how fast you need to iterate. For small teams on EC2, a full Git repo with CI/CD-triggered `git pull` is the simplest approach with the fastest feedback loop. Know your decision tree and plan your migration path for when the team or infrastructure outgrows the current strategy.
 
 ## References
 
 - [Airflow Production Deployment](https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/production-deployment.html)
+- [Airflow 2.10.5 Configuration Reference](https://airflow.apache.org/docs/apache-airflow/2.10.5/configurations-ref.html), which documents the `[scheduler] min_file_process_interval` and `dag_dir_list_interval` defaults
+- [Airflow Configuration Reference (stable)](https://airflow.apache.org/docs/apache-airflow/stable/configurations-ref.html), which covers the same two intervals after they moved under `[dag_processor]` in Airflow 3.x

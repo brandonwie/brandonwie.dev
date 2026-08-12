@@ -2,7 +2,7 @@
 title: AWS ECS/ALB에서의 WebSocket 아키텍처
 description: 'ALB, ECS, Redis Pub/Sub를 활용한 실시간 알림용 WebSocket 연결 구조'
 date: 2025-11-25T00:00:00.000Z
-updated: '2026-03-15'
+updated: '2026-08-12'
 tags:
   - backend
   - websocket
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: websocket-architecture
-source_updated: '2026-03-15'
-translation_date: '2026-02-12'
+source_updated: '2026-08-12'
+translation_date: '2026-08-12'
 references:
   - url: 'https://socket.io/docs/v4/'
     title: v4
@@ -31,27 +31,33 @@ references:
     type: official
 ---
 
-브라우저 클라이언트에 실시간 알림을 푸시해야 했어요 -- 백그라운드 작업이
-완료된 후 "동기화 완료" 메시지를 보내는 거죠. HTTP 폴링도 동작했지만 리소스를
-낭비하고 눈에 보이는 지연을 추가했어요. WebSocket이 명확한 해결책이었지만,
-여러 ECS 컨테이너 뒤의 AWS ALB에 배포하려니 답이 없는 질문들이 생겼어요.
+사용자들이 캘린더 동기화가 끝났는지 보려고 계속 페이지를 새로고침했어요.
+동기화가 끝나는 순간 서버가 "동기화 완료" 알림을 바로 밀어줘야 했는데,
+NestJS 백엔드는 ALB 뒤에서 여러 ECS 컨테이너로 돌아가고 있었죠. 작업이
+Container 2에서 끝나면, Container 1에 붙어 있는 사용자 A는 그걸 어떻게 알까요?
 
-ALB는 HTTP-to-WebSocket 업그레이드를 어떻게 처리할까? 다른 인스턴스에 연결된
-클라이언트에게 여러 컨테이너가 어떻게 브로드캐스트할까? 연결이 끊기면 어떻게
-될까? 이 글은 그 질문들을 해결하면서 도달한 아키텍처를 다뤄요.
+HTTP 폴링으로도 되긴 했지만 리소스를 낭비하고 눈에 띄는 지연이 생겼어요.
+WebSocket이 답이었는데, 컨테이너 여러 대와 로드 밸런서가 끼어들면서 질문이
+줄줄이 따라왔어요. ALB는 HTTP-to-WebSocket 업그레이드를 어떻게 처리할까?
+서로 다른 인스턴스에 연결된 클라이언트에게 여러 컨테이너가 어떻게
+브로드캐스트할까? 연결이 끊기면 어떻게 될까?
+
+답을 찾다 보니 경로 전체를 뜯어보게 됐어요. ALB가 업그레이드를 넘겨주는 방식,
+Redis Pub/Sub가 컨테이너 사이를 잇는 방식, 연결이 끊길 때 실제로 벌어지는
+일까지요.
 
 ## 어려웠던 점들
 
 여러 오해가 진행을 늦췄어요.
 
 처음에 ALB가 WebSocket 상태를 적극적으로 관리한다고 생각했어요. 아니에요.
-ALB는 HTTP 업그레이드 핸드셰이크 이후에는 그냥 TCP 터널이에요. 이 혼동
-때문에 아무 효과 없는 불필요한 ALB 설정을 시도했어요.
+HTTP 업그레이드 핸드셰이크가 끝나고 나면 ALB는 그냥 TCP 터널이에요. 이 오해
+때문에 아무 소용도 없는 ALB 설정을 몇 번 붙잡고 있었어요.
 
 컨테이너 간 브로드캐스팅이 더 어려운 문제였어요. 사용자 A가 Container 1에
 연결되어 있는데 동기화 작업이 Container 2에서 완료되면, Container 2가
-사용자 A에게 직접 알릴 수 없어요. Redis Pub/Sub가 HTTP 콜백이 아닌 영구 TCP
-구독을 통해 이 문제를 해결한다는 걸 이해하는 데 시간이 걸렸어요.
+사용자 A에게 직접 알릴 수 없어요. Redis Pub/Sub가 HTTP 콜백이 아니라 영구 TCP
+구독으로 이 문제를 푼다는 걸 이해하는 데 시간이 좀 걸렸어요.
 
 연결 수명 주기의 엣지 케이스는 Socket.io 문서만으로는 명확하지 않았어요.
 브라우저 탭 닫기는 TCP FIN을 보내고 (WebSocket 닫기 프레임이 아님), 네트워크
@@ -85,15 +91,15 @@ flowchart LR
 | -------------------- | --------------------------------------------------- |
 | **ALB**              | 초기 HTTP 업그레이드 라우팅, 이후 TCP 통과 (터널)   |
 | **Socket.io Server** | WebSocket 연결 관리, 클라이언트 추적, 하트비트 처리 |
-| **NestJS Gateway**   | 애플리케이션 로직 -- 인증, 메시지 처리, 룸 관리     |
+| **NestJS Gateway**   | 애플리케이션 로직: 인증, 메시지 처리, 룸 관리       |
 | **Redis Adapter**    | 여러 컨테이너 간 메시지 브로드캐스트                |
 
-핵심 인사이트: ALB는 그냥 터널이에요. Socket.io가 실제 연결을 관리해요.
+ALB는 그냥 터널이에요. Socket.io가 실제 연결을 관리해요.
 
 ## ALB가 필요한 이유
 
-Socket.io가 상태를 관리하지만, ALB는 다른 목적을 제공해요 -- 초기 연결
-라우팅:
+Socket.io가 연결을 관리한다면 ALB는 왜 필요할까요? 프로토콜 처리가 아니라
+네트워크 구조 때문이에요. 처음 연결을 어디로 보낼지 정하는 역할이죠:
 
 ```text
 Without ALB:
@@ -127,7 +133,9 @@ flowchart LR
 
 ### Pub/Sub의 실제 동작 방식
 
-Redis가 앱을 "호출"하지 않아요. 앱이 Redis에 대한 영구 TCP 연결을 유지해요:
+메시지가 발행되면 Redis가 앱으로 HTTP 요청을 쏜다고 생각하기 쉬운데, 실제로는
+방향이 반대예요. 앱이 Redis로 영구 TCP 연결을 열어두면, Redis가 이미 열려 있는
+그 소켓에 데이터를 그대로 써 넣어요:
 
 ```text
 Step 1: STARTUP
@@ -146,7 +154,8 @@ Step 4: RECEIVE
   Socket.io adapter handles it → delivers to user's WebSocket
 ```
 
-이를 설정하는 코드:
+Socket.io Redis Adapter 설정에서는 Redis 클라이언트를 두 개 써요. 하나는
+발행용, 하나는 구독용이에요:
 
 ```typescript
 // pubClient: for PUBLISHING messages
@@ -161,8 +170,8 @@ this.adapterConstructor = createAdapter(pubClient, subClient, {
 });
 ```
 
-두 개의 별도 Redis 연결: 하나는 발행용, 하나는 구독용이에요. 구독자 연결은
-메시지를 기다리며 영구적으로 열려 있어요.
+구독용 연결은 채널에 메시지가 올라올 때마다 Redis가 데이터를 써 넣는
+통로예요. 그래서 계속 열린 상태로 유지돼요.
 
 ## 연결 수명 주기
 
@@ -280,9 +289,30 @@ Adapter는 직렬화, 네임스페이스, 룸 범위 브로드캐스팅을 기�
 fetch가 더 저렴), 서버리스/Lambda 환경(Socket.io 대신 API Gateway WebSocket
 API 사용)에는 WebSocket을 사용하지 마세요.
 
-기억해야 할 다섯 가지: ALB는 초기 업그레이드 이후 그냥 터널이에요. Socket.io가
-전체 수명 주기를 관리해요 (하트비트, 타임아웃, 룸, 정리). Redis는 영구 TCP
-연결을 통해 멀티 컨테이너 브로드캐스팅을 가능하게 해요. Pub/Sub는 한 번
-구독하면 메시지가 발행될 때마다 받는 구조예요. 그리고 단일 컨테이너
-배포에서도 Redis Adapter를 포함하세요 -- 비용이 들지 않고, 스케일할 때
-고통스러운 마이그레이션을 막아줘요.
+그림으로 보면 복잡한데, 각 컴포넌트가 맡은 일이 정리되고 나면 머릿속 모델은
+오히려 단순해요. 정리하면 네 가지예요.
+
+ALB는 처음 업그레이드 핸드셰이크가 끝나면 TCP 바이트를 흘려보내는 통로일
+뿐이에요. ping/pong, 타임아웃, 룸, 정리까지 나머지 수명 주기는 Socket.io가 다
+맡아요. 하트비트가 25초마다 나가서 60초 유휴 타임아웃에 걸릴 일이 없으니,
+ALB 설정을 따로 손댈 이유도 없어요.
+
+멀티 컨테이너 브로드캐스팅은 Redis Pub/Sub가 풀어줘요. 컨테이너마다 영구 TCP
+연결로 한 번 구독해두면, Container 2가 발행할 때 Redis가 Container 1의 열린
+소켓에 메시지를 그대로 써 넣어요. 중간에 HTTP 콜백도 폴링도 없고요. 직렬화와
+룸 단위 전달은 Socket.io Adapter가 알아서 처리해요.
+
+컨테이너가 한 대뿐이어도 Redis Adapter는 미리 넣어두는 게 좋아요. 부담이 거의
+없고, 나중에 확장할 때 애플리케이션을 고치는 대신 Terraform만 바꾸면
+되거든요. Sticky session은 HTTP 폴링 폴백이 실제로 필요해질 때 붙여도 늦지
+않아요.
+
+연결이 끊기는 경우는 세 가지고, 감지 방식이 각각 달라요. 탭을 정상적으로
+닫으면 TCP FIN이 날아와서 바로 잡히고, 네트워크가 끊기면 아무것도 안 오니까
+25초쯤 뒤 ping/pong 타임아웃으로 걸려요. 60초 ALB 유휴 타임아웃은 하트비트
+덕분에 거의 발동하지 않고요. 셋 다 Socket.io가 알아서 처리하지만, 지금 어느
+경우인지 알고 있으면 운영 중 디버깅이 훨씬 빨라져요.
+
+컨테이너 환경에 실시간 기능을 붙일 생각이라면 ALB 뒤에 Socket.io와 Redis
+Adapter를 두는 조합이 무난해요. 연결 관리도 재연결도 컨테이너 간 메시징도
+직접 짤 필요가 없거든요.

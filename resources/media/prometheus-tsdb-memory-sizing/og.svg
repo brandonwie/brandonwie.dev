@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="'DejaVu Sans Mono','SF Mono',Menlo,Consolas,monospace">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181825"/><stop offset="1" stop-color="#11111b"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="52" cy="50" r="9" fill="#f38ba8"/>
+<circle cx="80" cy="50" r="9" fill="#f9e2af"/>
+<circle cx="108" cy="50" r="9" fill="#a6e3a1"/>
+<text x="144" y="57" font-size="22" fill="#bac2de">prometheus ~ tsdb</text>
+<text x="1148" y="57" font-size="18" fill="#585b70" text-anchor="end">~/posts</text>
+<line x1="52" y1="84" x2="1148" y2="84" stroke="#313244" stroke-width="2"/>
+<text x="52" y="176" font-size="37"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#cdd6f4">the head block lives in RAM, so 400m OOM-loops</tspan></text>
+<rect x="52" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#a6e3a1" stroke-opacity="0.5" stroke-width="2"/>
+<path d="M 231.31 304.1 L 210.38 336.99 L 225.33 336.99 L 220.85 363.9 L 241.78 329.52 L 225.33 329.52 Z" fill="none" stroke="#a6e3a1" stroke-width="3.59" stroke-linejoin="round"/>
+<text x="72" y="418" font-size="26" fill="#cdd6f4">head block</text>
+<text x="72" y="450" font-size="20" fill="#a6adc8">~3h of samples, in memory</text>
+<rect x="426.67" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#fab387" stroke-opacity="0.5" stroke-width="2"/>
+<circle cx="600" cy="334" r="27.51" fill="none" stroke="#fab387" stroke-width="3.59"/><line x1="600" y1="334" x2="600" y2="317.56" stroke="#fab387" stroke-width="3.23" stroke-linecap="round"/><line x1="600" y1="334" x2="612.56" y2="339.98" stroke="#fab387" stroke-width="3.23" stroke-linecap="round"/>
+<text x="446.67" y="418" font-size="26" fill="#cdd6f4">WAL replay</text>
+<text x="446.67" y="450" font-size="17" fill="#a6adc8">restart re-reaches pre-OOM size</text>
+<rect x="801.33" y="246" width="346.67" height="238" rx="14" fill="#1e1e2e" stroke="#89b4fa" stroke-opacity="0.5" stroke-width="2"/>
+<line x1="944.77" y1="360.91" x2="1004.57" y2="360.91" stroke="#89b4fa" stroke-width="2.87" stroke-linecap="round"/><rect x="949.25" y="336.99" width="12.56" height="23.92" fill="#89b4fa" opacity="0.6"/><rect x="968.69" y="319.05" width="12.56" height="41.86" fill="#89b4fa"/><rect x="988.12" y="331.01" width="12.56" height="29.9" fill="#89b4fa" opacity="0.8"/>
+<text x="821.33" y="418" font-size="26" fill="#cdd6f4">cardinality</text>
+<text x="821.33" y="450" font-size="18" fill="#a6adc8">each label combo is a series</text>
+<text x="52" y="572" font-size="24"><tspan fill="#a6e3a1">$ </tspan><tspan fill="#7f849c">mem_limit 2048m plus retention.size cap</tspan></text>
+<text x="1148" y="572" font-size="22" fill="#45475a" text-anchor="end">@BrandonWie</text>
+</svg>

@@ -2,7 +2,7 @@
 title: FastAPI Dependency Injection Patterns
 description: 'How to use Annotated types with FastAPI Depends() for reusable, type-safe dependency injection across routers.'
 date: 2026-02-03T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 expanded: true
 tags:
   - backend
@@ -19,12 +19,12 @@ references:
       https://fastapi.tiangolo.com/python-types/#type-hints-with-metadata-annotations
     title: FastAPI Type Hints with Metadata Annotations
     type: official
-source_content_hash: 4e2bb629ca52f2571f44b88d850511a1028596236a8784feb384e9271a9b23a3
+source_content_hash: a9465eed90f62db05441240e28d7238a9f5089d5f96e08f463dd719fbde3e47b
 ---
 
-While consolidating authentication in a personal project, I found the same `Depends(get_current_user)` call repeated in router after router. Some passed `user.sub` through as a raw string; others converted it to a `UUID`. Nothing complained at the router boundary — the mismatch only surfaced as a database query failing on type, deep in the stack.
+While consolidating authentication in a personal project, I found the same `Depends(get_current_user)` call repeated in router after router. Some passed `user.sub` through as a raw string; others converted it to a `UUID`. Nothing complained at the router boundary. The mismatch only surfaced as a database query failing on type, deep in the stack.
 
-The fix wasn't more validation. It was moving the dependency into one reusable type alias so every router receives the same thing the same way. FastAPI's `Annotated` type pattern makes that possible with full type safety. This post walks through the pattern, the pitfall that silently breaks it, and when to reach for it.
+The fix wasn't more validation. It was moving the dependency into one reusable type alias so every router receives the same thing the same way. FastAPI's `Annotated` type pattern makes that possible with full type safety. It also has one silent failure mode that's worth knowing about before you adopt it.
 
 ---
 
@@ -33,7 +33,7 @@ The fix wasn't more validation. It was moving the dependency into one reusable t
 - **A `Union` wrapper silently breaks injection**: writing
   `Optional[CurrentUser] = None` (or `CurrentUser | None = None`) raises no
   error. FastAPI never calls the dependency function, the parameter simply
-  arrives as `None`, and you get `NoneType` errors deep in the stack — far from
+  arrives as `None`, and you get `NoneType` errors deep in the stack, far from
   the actual cause.
 - **I wrote down the wrong cause**: my note from that session blamed the default
   value. Re-testing it for this post, a bare `current_user: CurrentUser = None`
@@ -43,26 +43,24 @@ The fix wasn't more validation. It was moving the dependency into one reusable t
   string, others as a `UUID`. The bug only surfaced when a downstream query
   failed on type, not at the router boundary where the conversion should happen.
 - **Docs show both old and new patterns**: FastAPI docs cover both the legacy
-  `param = Depends(func)` and the newer `Annotated` pattern, making it unclear
-  which to adopt. `Annotated` lives in `typing` from Python 3.9 on (earlier
+  `param = Depends(func)` and the newer `Annotated` pattern, so it isn't obvious
+  which one to adopt. `Annotated` lives in `typing` from Python 3.9 on (earlier
   versions need `typing_extensions`), and FastAPI has read it since 0.95.0.
 
 ---
 
 ## Key Points
 
-Before diving into the solution, here's the mental model to keep in mind:
-
-- **`Annotated[Type, Depends(func)]` embeds the dependency in the type itself**, enabling reuse across routers. Instead of repeating `Depends(get_current_user)` in every endpoint, you define a `CurrentUser` type alias once and use it everywhere.
+- **`Annotated[Type, Depends(func)]` embeds the dependency in the type itself**, so one alias can be reused across routers. Instead of repeating `Depends(get_current_user)` in every endpoint, you define a `CurrentUser` type alias once and use it everywhere.
 - **Never wrap the alias in `Optional[...]` or `| None`.** Once the outermost form of the annotation is a `Union`, FastAPI stops looking for `Annotated` metadata and the `Depends` is discarded without a word. If a dependency can legitimately return nothing, put the `Optional` *inside* the alias.
 - **Convert user identity at the router boundary** (e.g., `UUID(current_user.sub)`) to avoid type mismatches deeper in the stack. If you leave this conversion to individual service methods, some will convert and others won't.
-- **Session injection via `Depends(get_db_session)`** ensures proper unit-of-work lifecycle per request — each request gets its own database session that's automatically closed when the request ends.
+- **Session injection via `Depends(get_db_session)`** ensures proper unit-of-work lifecycle per request: each request gets its own database session, closed automatically when the request ends.
 
 ---
 
 ## The Solution
 
-The core idea is to create a reusable type alias that encapsulates both the dependency function and its return type. Define it once in a `deps.py` module, then import it in any router:
+Create one type alias that carries both the dependency function and its return type. Define it once in a `deps.py` module, then import it in any router:
 
 ```python
 from typing import Annotated
@@ -84,7 +82,7 @@ async def list_items(
     ...
 ```
 
-Notice how the `CurrentUser` type carries the dependency with it — no `Depends()` call needed at the router level. The `session` parameter still uses the traditional pattern because database sessions are typically not shared across a `deps.py` type alias (they're per-request by nature).
+The `CurrentUser` type carries the dependency with it, so no `Depends()` call is needed at the router level. The `session` parameter still uses the traditional pattern because database sessions are typically not shared across a `deps.py` type alias (they're per-request by nature).
 
 The `UUID(current_user.sub)` conversion is deliberate: it ensures every downstream function receives a proper `UUID` object, not a string that might or might not be a valid UUID.
 
@@ -92,7 +90,7 @@ The `UUID(current_user.sub)` conversion is deliberate: it ensures every downstre
 
 ## Common Pitfall
 
-This is the single most important thing to remember about the `Annotated` pattern:
+Three forms that look similar, only two of which actually inject:
 
 ```python
 # BAD: the Union wrapper hides the Depends metadata — injection never runs
@@ -113,22 +111,22 @@ async def endpoint(current_user: OptionalUser):
     ...  # get_optional_user runs and may return None
 ```
 
-The reason the first form is so dangerous is the failure mode. FastAPI doesn't raise an error and doesn't log a warning. `Optional[CurrentUser]` is `Union[Annotated[...], None]`, and FastAPI only inspects `Annotated` metadata when `Annotated` is the outermost form — so it never sees the `Depends` at all. It falls back to treating the parameter as ordinary request data — an optional query parameter on some versions, a request-body field on others — and a plain `GET` supplies neither, so the `None` default wins. Your code then fails somewhere else entirely — typically as an `AttributeError: 'NoneType' has no attribute 'sub'` deep in a service method, far from the router where the actual mistake lives.
+The first form is dangerous because of how it fails. FastAPI doesn't raise an error and doesn't log a warning. `Optional[CurrentUser]` is `Union[Annotated[...], None]`, and FastAPI only inspects `Annotated` metadata when `Annotated` is the outermost form, so it never sees the `Depends` at all. It falls back to treating the parameter as ordinary request data (an optional query parameter on some versions, a request-body field on others), and a plain `GET` supplies neither, so the `None` default wins. Your code then fails somewhere else entirely, usually as an `AttributeError: 'NoneType' has no attribute 'sub'` deep in a service method, far from the router where the actual mistake lives.
 
 ### A correction
 
-My note from that session recorded the cause as "adding `= None` breaks `Annotated` injection." Writing this post, I went back and tested it, and that is not what happens. A bare `current_user: CurrentUser = None` still calls the dependency on every FastAPI version I tried — 0.95.0, 0.100.0, 0.110.0, 0.115.0, 0.128.0, and 0.141.1 — and the default is simply never used. It's dead code, not a trap.
+My note from that session recorded the cause as "adding `= None` breaks `Annotated` injection." Writing this post, I went back and tested it, and that is not what happens. A bare `current_user: CurrentUser = None` still calls the dependency on every FastAPI version I tried (0.95.0, 0.100.0, 0.110.0, 0.115.0, 0.128.0, and 0.141.1), and the default is simply never used. It's dead code, not a trap.
 
-The only form I could get to reproduce the silent bypass is the `Union` wrapper. The symptom I debugged was real; the cause I wrote down was not. I did not find either behavior spelled out in the FastAPI docs, so treat this as observed rather than specified — but it held on every version above.
+The only form I could get to reproduce the silent bypass is the `Union` wrapper. The symptom I debugged was real; the cause I wrote down was not. I did not find either behavior spelled out in the FastAPI docs, so treat this as observed rather than specified. It held on every version above.
 
 ---
 
 ## When to Use
 
-- **Multiple routers share the same dependency** — authentication and database sessions are the most common cases. If three or more routers call the same `Depends()` function, it's time for an `Annotated` type alias.
-- **You want IDE autocomplete on the injected type** — `CurrentUser` gives you autocomplete for `KeycloakTokenClaims` fields, while bare `Depends()` gives you `Any`.
-- **The dependency requires consistent type conversion at the boundary** — e.g., `str` to `UUID`. Centralizing this in the type alias prevents inconsistencies.
-- **You plan to create variants** — `AdminUser`, `OptionalUser`, `ServiceAccount` can all be defined as separate type aliases with different dependency functions.
+- **Multiple routers share the same dependency.** Authentication and database sessions are the most common cases. If three or more routers call the same `Depends()` function, it's time for an `Annotated` type alias.
+- **You want IDE autocomplete on the injected type.** `CurrentUser` gives you autocomplete for `KeycloakTokenClaims` fields, while bare `Depends()` gives you `Any`.
+- **The dependency requires consistent type conversion at the boundary**, such as `str` to `UUID`. Centralizing this in the type alias prevents inconsistencies.
+- **You plan to create variants.** `AdminUser`, `OptionalUser`, and `ServiceAccount` can all be defined as separate type aliases with different dependency functions.
 
 ## When NOT to Use
 
@@ -138,8 +136,8 @@ The only form I could get to reproduce the silent bypass is the `Union` wrapper.
   them, but only with `Optional` inside the alias and a dependency function that
   returns `None` for anonymous callers. The traditional
   `user: Optional[Type] = Depends(func)` form is still fully supported and reads
-  more plainly for a one-off anonymous-allowed endpoint — there the `Depends`
-  comes from the default value, so the `Union` never hides anything.
+  more plainly for a one-off anonymous-allowed endpoint. In that form the
+  `Depends` comes from the default value, so the `Union` never hides anything.
 - **Non-FastAPI frameworks**: The `Annotated[..., Depends()]` pattern is
   FastAPI-specific. Other frameworks (Flask, Django) have different DI
   mechanisms.
@@ -159,8 +157,8 @@ The `Annotated` dependency pattern might seem like a small refactor, but it addr
 
 ## Practical Takeaways
 
-The `Annotated[Type, Depends(func)]` pattern is FastAPI's recommended form for dependency injection on Python 3.9+. Adopt it when you have dependencies shared across multiple routers — which is almost always the case for authentication and database sessions.
+The `Annotated[Type, Depends(func)]` pattern is FastAPI's recommended form for dependency injection on Python 3.9+. Adopt it when you have dependencies shared across multiple routers, which is almost always the case for authentication and database sessions.
 
-The one rule to remember: **keep `Annotated` on the outside.** Writing `current_user: Optional[CurrentUser] = None` bypasses dependency injection entirely, because FastAPI only reads `Depends` metadata when `Annotated` is the outermost form. It won't warn you — the parameter just arrives as `None`, and the error shows up far from the actual cause. If the dependency really is optional, move the `Optional` inside the alias.
+The one rule to remember: **keep `Annotated` on the outside.** Writing `current_user: Optional[CurrentUser] = None` bypasses dependency injection entirely, because FastAPI only reads `Depends` metadata when `Annotated` is the outermost form. It won't warn you. The parameter just arrives as `None`, and the error shows up far from the actual cause. If the dependency really is optional, move the `Optional` inside the alias.
 
 For new FastAPI projects, create a `deps.py` file early and define your shared dependencies as `Annotated` type aliases from the start. It's much easier than retrofitting the pattern across existing routers later.

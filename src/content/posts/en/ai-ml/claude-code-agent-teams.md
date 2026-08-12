@@ -2,7 +2,7 @@
 title: Claude Code Agent Teams
 description: Experimental feature for orchestrating multiple Claude Code instances as a coordinated team with shared task lists and inter-agent messaging
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-08-02'
+updated: "2026-08-12"
 tags:
   - ai-ml
   - claude-code
@@ -12,7 +12,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 1a7d3546f650d647ee7c0bcbadc102bff55cf504c8c8129111c228e2babb2833
+source_content_hash: 00a26cb8057630c978fefb9e2708894439ba7658bae32b043f3547b9931fa467
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
@@ -112,13 +112,13 @@ Four patterns emerged from daily use that make teams productive rather than chao
 
 ## Difficulties encountered
 
-This section is the reason this post exists. The official docs cover the happy path. Everything below I learned through broken sessions and lost work, not from the docs.
+This section is the reason this post exists. The official docs cover the happy path; what follows is what I picked up from broken sessions and lost work.
 
-**Experimental and undocumented edge cases.** The feature is marked experimental. Behavior around error recovery, context limits per teammate, and task dependency resolution was learned through trial and error. Documentation covers the basics but not failure modes.
+**Experimental and undocumented edge cases.** The feature is marked experimental, and the label is accurate. I worked out error recovery, per-teammate context limits, and task dependency resolution by trial and error. The documentation covers the basics and stops before the failure modes.
 
 **No session resumption for in-process mode.** If a teammate crashes or the terminal closes, that teammate's work is lost. I discovered this after losing 20 minutes of implementation progress mid-task. There is no checkpoint or recovery mechanism.
 
-**Permission modes are fixed at spawn.** Teammates start with the lead's permission settings. The docs are specific about what this does and does not rule out: you cannot set per-teammate modes at spawn time, but you can change an individual teammate's mode after it is running. So a read-only reviewer alongside a read-write implementer is reachable, just not in one step. Plan for a second pass after the spawn rather than a spawn-time config.
+**Permission modes are fixed at spawn.** Teammates start with the lead's permission settings. The docs draw a narrow line here: you cannot set per-teammate modes at spawn time, but you can change an individual teammate's mode once it is running. A read-only reviewer alongside a read-write implementer is still reachable, it just takes two steps. Plan for a second pass after the spawn instead of a spawn-time config.
 
 **Choosing team vs subagent vs solo.** The distinction is subtle. Early attempts used agent teams for tasks better suited to subagents (quick focused work), which wasted coordination overhead on problems that needed a five-second background task, not a persistent collaborator.
 
@@ -138,10 +138,12 @@ Neither flag lives in `settings.json`, and neither has a CLI read/write surface.
 
 The implication that surprised me on that release: `teammateMode` reads as authoritative in the docs, but the runtime detector was the actual decision point, and `settings.json` acted as a hint rather than a hard override. To find out which backend 2.1.138 really picked, I ran `claude --debug`, spawned a teammate, and grepped stderr for `[BackendRegistry] Selected:`. The log line was the ground truth; everything else was configuration. That is still the diagnostic shape I would reach for, but check it against the log your installed release actually emits rather than assuming the selector behaves the same way today.
 
-**Historical orphaned panes.** Older builds could leave a tmux pane alive as a
-shell after team metadata was removed. Current documentation says session-exit
-cleanup is automatic. If a specific version still leaks panes, confirm with
-`tmux list-panes -a` and report it against that release.
+**Historical orphaned panes.** Older builds could leave a tmux pane running as a
+bare shell after the team metadata was already gone. Current documentation says
+cleanup happens automatically when the session exits, but the same docs still
+list orphaned tmux sessions under troubleshooting. I read that as the intended
+behavior rather than a guarantee. If a specific version still leaks panes,
+confirm with `tmux list-panes -a` and report it against that release.
 
 **Tmux pane race condition on parallel spawn.** Spawning three or more teammates simultaneously can trigger "not in a mode" errors from tmux `send-keys`. The pane gets created, but the agent fails to start. Retrying individually usually works. Spawning teammates sequentially (with a brief pause) avoids the issue entirely.
 

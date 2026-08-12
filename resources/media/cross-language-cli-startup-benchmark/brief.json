@@ -1,0 +1,13 @@
+{
+	"slug": "cross-language-cli-startup-benchmark",
+	"topic": "rust vs node ~ startup",
+	"thesis": "separate startup cost from the work both share",
+	"components": [
+		{ "label": "hyperfine", "sublabel": "warmup plus statistics", "glyph": "chart" },
+		{ "label": "parity", "sublabel": "byte-identical output first", "glyph": "diff" },
+		{ "label": "decompose", "sublabel": "startup vs per-paint", "glyph": "layers" }
+	],
+	"takeaway": "attribute the win before advertising a multiple",
+	"theme": "terminal-mocha",
+	"alt": "Terminal-style cover for cross-language CLI startup benchmarking: hyperfine, parity, decompose"
+}

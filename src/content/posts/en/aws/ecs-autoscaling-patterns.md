@@ -26,7 +26,7 @@ references:
       https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-target-group-attributes.html
     title: Edit target group attributes for your Application Load Balancer
     type: official
-source_content_hash: de8f24973da2ce21cdffca7a8fbdabf9bba983941a8b4c9b7aeda567750fa542
+source_content_hash: b4367fbc35e0a01954a1839ea394627fcddcb70f8753130e5ff8b0f0f60ba988
 ---
 
 The first time I deployed an ECS service with autoscaling enabled, three containers started simultaneously and all tried to run database migrations at the same time. Two crashed with migration lock conflicts, and the third applied migrations out of order. It took me a full afternoon to untangle the database state.

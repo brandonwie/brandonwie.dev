@@ -4,7 +4,7 @@ description: >-
   Google Calendar sync leaves behind two kinds of leftover rows that look
   identical in the database and need opposite handling.
 date: 2026-02-05T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - backend
   - sync
@@ -16,7 +16,7 @@ references:
   - url: 'https://developers.google.com/calendar/api/guides/sync'
     title: Google Calendar API - Sync Events
     type: official
-source_content_hash: a141b0cc19f2bcdf0251c122f515aa3ae911742b258b6dea3838f554db1fa844
+source_content_hash: 8ef1faacba624c69ef1f9b925add4d223ee433a800756e1cc6e6d1b121ab843c
 expanded: true
 ---
 
@@ -164,6 +164,56 @@ returns changed events there, and deletions arrive as explicit entries in the
 response, so absence carries no signal to act on. Orphan detection is irrelevant
 if the system doesn't model recurring events at all.
 
+## Making Cleanup Response-Independent
+
+The rule is easy to state: stale cleanup on full syncs only. Living with it is
+harder. A cleanup pass that reads its facts from an in-memory map built out of
+the current response can't do its job during incremental or webhook syncs,
+because that map is incomplete by design. The pass still runs. It just finds
+nothing to act on, so it silently skips work it should have done.
+
+The fix is to stop asking the response and ask the database instead: query for
+the parent record directly rather than looking it up in the map. Now the check
+is correct no matter how partial the response was, and cleanup is safe to run on
+every sync.
+
+That fix is the part I'd want a warning label on. It moves the delete side off
+response-completeness and leaves the insert side where it was: the row still has
+to appear in the response to be written back. Once the two halves disagree about
+what triggers them, rows nobody touched start disappearing.
+
+| Whose row                            | Delete fires | In the response  | Re-inserted | Outcome                   |
+| ------------------------------------ | ------------ | ---------------- | ----------- | ------------------------- |
+| The person who made the edit         | yes          | yes (own change) | yes         | row survives, fields lost |
+| A participant who changed nothing    | yes          | no (unchanged)   | no          | row gone                  |
+| A participant removed from the event | yes          | no (removed)     | no          | row gone                  |
+
+Someone who edits an event puts their own rows in the response, so the delete is
+immediately followed by an insert, and the damage is bounded to whatever columns
+the insert path forgets to write. Someone who changed nothing gets no rows in an
+incremental response at all. The delete still fires, because it now reads from
+the database, and nothing brings the row back.
+
+Symmetric incompleteness is a no-op, and no-ops are safe. Asymmetric
+completeness is what destroys data. Calling a cleanup pass "safe to run
+regardless of response completeness" describes when it is allowed to run, not
+what it does when it runs. A pass that can always run can always delete.
+
+The hard delete is what made this hard to spot. There was no tombstone and no
+soft-deleted row, so nothing was left to point at when a user said an event had
+vanished.
+
+What gives it away is the split in severity. When two people hit the same code
+path and one loses a few fields while the other loses whole rows, the cause is
+usually a single step that one person's request satisfies and the other's
+doesn't, rather than two separate bugs.
+
+I should be clear about how far this actually got. It's a hypothesis I read out
+of the delete and insert paths, not something I reproduced end to end. The
+falsifier is cheap: was the vanished row present in the sync response at the
+moment it got deleted? If it was, this explanation is wrong and something else is
+suppressing the insert.
+
 ## Takeaway
 
 "Rows that need cleanup" is not one category. Stale records are absent from the
@@ -171,6 +221,10 @@ API response — deleted at the source. Orphan records are present in the respon
 but missing their parent — structurally invalid. Handle them separately, in the
 right order (stale first, orphan second), and respect the partial-access case
 where a non-cancelled parentless instance is intentional rather than broken.
+
+And when you later change what triggers one half of a delete/insert pair, change
+the other half with it. A cleanup that no longer depends on the response will
+happily delete rows that nothing is going to put back.
 
 ## References
 

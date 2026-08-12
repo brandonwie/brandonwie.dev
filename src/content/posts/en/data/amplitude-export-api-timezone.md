@@ -19,7 +19,7 @@ references:
   - url: 'https://amplitude.com/docs/admin/account-management/manage-orgs-projects'
     title: Amplitude Manage Organizations and Projects (Timezone Settings)
     type: official
-source_content_hash: 3da00d1b637a8ddf27288d93eed9876f139a151779a3e6ed8ddfa933fae953ba
+source_content_hash: 3fc3122cf47dc13bd608dd9863b14e92e608185acde752d4ebd93c148bdad948
 ---
 
 If an Amplitude export job runs at 01:00 KST and the users are all in Korea, should it be fetching KST-based hours? It sounds like a question about users. It is really a question about one setting in the Amplitude project, and the answer is not in the API docs.

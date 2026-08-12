@@ -4,7 +4,7 @@ description: >-
   Google Calendar API가 410 GONE을 반환하면 sync token이 무효화되고 전체 재동기화가 필요해요. 올바른 처리
   방법을 알아봐요.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - backend
   - google-calendar
@@ -15,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: sync-token-invalidation-recovery
-source_updated: '2026-08-02'
-translation_date: '2026-05-10'
+source_updated: '2026-08-12'
+translation_date: '2026-08-12'
 references:
   - url: 'https://developers.google.com/workspace/calendar/api/guides/sync'
     title: Synchronize resources efficiently — Google Calendar
@@ -27,8 +27,8 @@ references:
 들여다본 적이 있어요. 동기화 한 사이클이 돌고 나면 사용자 고유 데이터가 전부
 없어지고, Google에서 받은 깨끗한 사본으로 덮여 있었어요. 트리거는 Google
 Calendar API의 `410 GONE` 응답이었어요. sync token이 무효화되면서 전체 resync가
-돌았고, resync 코드가 모든 걸 지우고 처음부터 다시 만들었거든요. 그 과정에서
-앱 고유 데이터가 다 같이 날아가버린 거예요.
+돌았고, resync 코드가 모든 걸 지우고 처음부터 다시 만들었어요. 앱 고유 필드도
+거기에 전부 딸려 나갔고요.
 
 ## Sync Token이 무효화되는 이유
 
@@ -42,14 +42,15 @@ Google Calendar API는 sync token으로 incremental sync를 해요. 직전에 �
 
 토큰 만료뿐 아니라 관련 ACL 변경도 무효화 사유가 된다는 뜻이에요.
 
-핵심은 이거예요. 410 GONE은 단순히 시간이 지나서 나는 게 아니에요. 캘린더의
-ACL 변경(공유 권한이 바뀌거나 빠지거나)으로도 무효화돼요. 사용자가 다른
+그러니까 410 GONE은 시간이 지나서만 나는 게 아니에요. 캘린더의
+ACL 변경(공유 권한이 바뀌거나 빠지거나)으로도 토큰이 무효화돼요. 사용자가 다른
 캘린더에 공유 접근을 받거나 잃기만 해도, 전혀 무관한 integration이 전체 resync를
 타게 될 수 있어요.
 
 ## 데이터 유실 버그
 
-원래 resync 핸들러는 단순했어요. 다 지우고 Google에서 다시 만드는 방식이었거든요.
+원래 resync 핸들러는 무식할 만큼 단순했어요. 다 지우고 Google에서 다시 만드는
+방식이었거든요.
 
 ```typescript
 // ❌ 위험: 앱 고유 데이터가 사라짐
@@ -62,13 +63,13 @@ async handleResync(calendarId: string) {
 
 이 방식은 Google에 없는 모든 앱 고유 데이터를 파괴해요. 커스텀 메모(`note` 필드),
 링크 데이터(`linkData`), 공간 할당(`spaceId`), 사용자가 손댄 모든 커스터마이징이
-전부 날아가는 거예요. 캘린더 이벤트 자체는 Google이 source of truth지만, 앱은
-앱 고유 데이터를 따로 갖고 있어요. resync가 그걸 같이 버리면 안 돼요.
+전부 날아가는 거예요. 캘린더 이벤트 자체는 Google이 source of truth지만, 앱 고유
+데이터는 앱이 따로 갖고 있어요. resync가 그걸 같이 버리면 안 돼요.
 
 ## 해결: accessRole로 전략 선택
 
 해법은 캘린더의 access level에 따라 복구 전략을 다르게 가져가는 거예요. 편집
-가능한 캘린더(owner/writer)는 사용자 커스터마이징을 가질 수 있으니 보존이
+가능한 캘린더(owner/writer)에는 사용자 커스터마이징이 남아 있을 수 있으니 보존이
 필요해요. 읽기 전용 캘린더(reader/freeBusyReader)는 커스터마이징이 들어갈 일이
 없으니 clean-slate resync가 안전해요.
 
@@ -96,7 +97,7 @@ function isEditableCalendar(accessRole: string | null): boolean {
 
 ### Merge 전략(편집 가능한 캘린더)
 
-사용자가 이벤트를 만들고 수정하는 캘린더에서는, merge 전략이 앱 고유 필드를
+사용자가 이벤트를 만들고 수정하는 캘린더에서는 merge 전략이 앱 고유 필드를
 보존하고 Google에서 온 필드만 갱신해요.
 
 ```typescript
@@ -119,15 +120,15 @@ async mergeResync(calendar: Calendar) {
 }
 ```
 
-한 가지는 솔직하게 짚고 갈게요. 410에 대한 Google 문서의 안내는 이보다 단호해요.
-410 응답은 "should trigger a full wipe of the client's store and a new full
-sync"라고 적혀 있고, Google 데이터를 그대로 미러링한 부분에 대해서는 그 말이
+한 가지는 솔직하게 짚고 갈게요. 410이 왔을 때 Google 문서가 권하는 방식은 이보다
+단호해요. 410 응답은 "should trigger a full wipe of the client's store and a new
+full sync"라고 적혀 있고, Google 데이터를 그대로 미러링한 부분이라면 그 말이
 맞아요.
 
-위 merge 루프는 그 부분을 빼먹고 있어요. upsert만 돌리면 Google이 더 이상
+위 merge 루프에는 그 부분이 빠져 있어요. upsert만 돌리면 Google이 더 이상
 돌려주지 않는 이벤트의 로컬 레코드는 영영 남아요. 그래서 merge 경로에도 새로
-받은 목록에 없는 event ID를 지우는 단계가 필요해요. merge로 되찾는 건 앱이
-소유한 필드지, 오래된 이벤트를 그대로 둘 명분이 아니에요.
+받은 목록에 없는 event ID를 지우는 단계가 필요해요. merge가 지켜주는 건 앱이
+소유한 필드고, 오래된 이벤트는 그래도 정리해야 해요.
 
 ### Clean-slate 전략(읽기 전용 캘린더)
 

@@ -4,7 +4,7 @@ description:
   'When Google Calendar API returns 410 GONE, the sync token is invalidated and a
   full resync is required. Proper handling prevents data loss.'
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - backend
   - google-calendar
@@ -17,23 +17,23 @@ references:
   - url: 'https://developers.google.com/workspace/calendar/api/guides/sync'
     title: Synchronize resources efficiently — Google Calendar
     type: official
-source_content_hash: 7a6eb607141f6b9b5d5d285db746062d9ef4718ee8f46eac3be2c869199150bf
+source_content_hash: e77799fe1441f8523dc7b6d0f33197147250184a2c5a5be4e6d8798281e28fd6
 expanded: true
 ---
 
-I was investigating a production bug where users were losing their custom notes and space assignments on calendar events. After a sync cycle, all user-specific data was gone — replaced with a clean copy from Google. The trigger was a `410 GONE` response from the Google Calendar API, which invalidated our sync token and kicked off a full resync. The resync code deleted everything and recreated from scratch, wiping out all application-specific data in the process.
+I was investigating a production bug where users were losing their custom notes and space assignments on calendar events. After a sync cycle, all user-specific data was gone, replaced with a clean copy from Google. The trigger was a `410 GONE` response from the Google Calendar API, which invalidated our sync token and kicked off a full resync. The resync code deleted everything and recreated from scratch, and every application-specific field went with it.
 
 ## Why Sync Tokens Invalidate
 
-Google's Calendar API uses sync tokens for incremental synchronization — you pass the token from your last sync, and Google returns only the changes since then. But tokens can be invalidated, returning `410 GONE` instead of changes. From Google's documentation:
+Google's Calendar API uses sync tokens for incremental synchronization. You pass the token from your last sync, and Google returns only the changes since then. But tokens can be invalidated, and then you get `410 GONE` instead of a change list. From Google's documentation:
 
 > "Sometimes sync tokens are invalidated by the server, for various reasons including token expiration or changes in related ACLs."
 
-The key insight: 410 GONE isn't limited to time-based expiration. ACL changes (permission changes on a calendar) also invalidate tokens. A user getting shared access to a calendar, or losing it, can trigger a full resync on a completely unrelated integration.
+So 410 GONE isn't limited to time-based expiration. ACL changes (permission changes on a calendar) invalidate tokens too. A user getting shared access to a calendar, or losing it, can trigger a full resync on a completely unrelated integration.
 
 ## The Data Loss Bug
 
-The original resync handler was brutally simple — delete everything and recreate from Google:
+The original resync handler was brutally simple. Delete everything, then recreate from Google:
 
 ```typescript
 // ❌ DANGEROUS: Loses app-specific data
@@ -44,7 +44,7 @@ async handleResync(calendarId: string) {
 }
 ```
 
-This approach destroyed all application-specific data that doesn't exist in Google: custom notes (`note` field), link data (`linkData`), space assignments (`spaceId`), and any user customizations. Google is the source of truth for calendar event data, but the application owns its own data — and a resync should never throw that away.
+This approach destroyed all application-specific data that doesn't exist in Google: custom notes (`note` field), link data (`linkData`), space assignments (`spaceId`), and any user customizations. Google is the source of truth for calendar event data, but the application owns its own data, and a resync should never throw that away.
 
 ## The Fix: Strategy Selection by Access Role
 
@@ -98,7 +98,7 @@ async mergeResync(calendar: Calendar) {
 
 One honest caveat: Google's own guidance for a 410 is blunter than this. The docs say the response "should trigger a full wipe of the client's store and a new full sync," and for the mirrored copy of Google's data that is exactly right.
 
-The merge loop above skips that part. Upserting alone never removes rows for events Google no longer returns, so a merge path also needs a delete pass for local records whose event IDs are missing from the fresh listing. Merge buys back the app-owned fields; it doesn't buy an excuse to keep stale events.
+The merge loop above skips that part. Upserting alone never removes rows for events Google no longer returns, so a merge path also needs a delete pass for local records whose event IDs are missing from the fresh listing. What merge protects is the app-owned fields; the stale events still have to go.
 
 ### Clean-Slate Strategy (Read-Only Calendars)
 

@@ -2,7 +2,7 @@
 title: PostgreSQL IN 절 파라미터 제한
 description: 'PostgreSQL wire protocol은 파라미터 쿼리를 65,535개 바인드 파라미터로 제한해요. TypeORM의 `In([...])`을 500-1,000개로 쪼개면 실질적인 성능 한계 안에 머물러요.'
 date: 2026-02-11T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - backend
   - postgresql
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: postgresql-in-clause-limits
-source_updated: '2026-08-02'
-translation_date: '2026-07-31'
+source_updated: '2026-08-12'
+translation_date: '2026-08-12'
 references:
   - url: 'https://www.postgresql.org/docs/current/protocol-message-formats.html'
     title: PostgreSQL Protocol Message Formats - Bind Message
@@ -182,11 +182,12 @@ DO UPDATE SET "name" = COALESCE(EXCLUDED."name", "contacts"."name")
 
 ### 계산을 아는 레이어에서 쪼개기
 
-큰 배열을 들고 있는 호출부에서 쪼개고 싶어지는데, 지금 다시 한다면 statement를
-만드는 메서드 안에서 쪼갤 거예요. 행당 파라미터 수를 아는 레이어는 거기뿐이고,
-그래야 호출부마다 따로 기억할 필요 없이 전부 수정을 물려받아요. 여러 호출부가
-하나의 bulk-upsert 헬퍼를 함께 쓰면, 평소에 잘 안 타는 경로가 결국 아무도 쪼개
-두지 않은 경로예요. 쪼개는 일이 헬퍼 안에 있어야 하는 이유죠.
+처음엔 큰 배열을 들고 있는 호출부에서 쪼개고 싶었는데, 지금 다시 한다면
+statement를 만드는 메서드 안에서 쪼갤 거예요. 행당 파라미터 수를 아는 레이어는
+거기뿐이고, 그래야 호출부마다 따로 기억할 필요 없이 전부 수정을 물려받아요.
+제가 겪은 경우에는 호출부 네 곳이 bulk-upsert 헬퍼 하나를 같이 쓰고 있었는데,
+그중 bootstrap 경로만 한 번도 쪼개진 적이 없었어요. 파라미터 상한을 넘긴 것도
+바로 그 경로였고요.
 
 분기를 하나 두면 작은 배치는 여전히 statement 하나로 나가요:
 

@@ -1,0 +1,13 @@
+{
+	"slug": "gcloud-logging-freshness-flag-semantics",
+	"topic": "gcloud ~ logging",
+	"thesis": "freshness=N counts back from now, not from the event",
+	"components": [
+		{ "label": "anchor", "sublabel": "relative to NOW, not deploy", "glyph": "clock" },
+		{ "label": "absolute bounds", "sublabel": "timestamp>= RFC3339", "glyph": "search" },
+		{ "label": "empty result", "sublabel": "absence is not proof", "glyph": "shield" }
+	],
+	"takeaway": "pin absolute timestamps for gate windows",
+	"theme": "terminal-mocha",
+	"alt": "Terminal-style cover for gcloud logging freshness semantics: anchor, absolute bounds, empty result"
+}

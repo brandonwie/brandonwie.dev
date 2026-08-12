@@ -27,7 +27,7 @@ references:
   - url: 'https://docs.aws.amazon.com/waf/latest/developerguide/classic-limits.html'
     title: AWS WAF Classic quotas
     type: official
-source_content_hash: 1edb4cc346e40636ff07804f907058368f7ffb919151a1fd7fc51954e58a8348
+source_content_hash: dfeb4da8f1a27b251277af26bee67352a2fc27ec0de89434358e7c8863aaebc7
 ---
 
 A public API sitting behind an ALB was getting hit by scanners probing for WordPress admin panels, `.env` files, and Spring Boot actuator endpoints -- none of which existed on the service. The requests were harmless in that they all returned 404, but they generated log noise, consumed ALB capacity, and made it harder to spot real issues on monitoring dashboards. What I wanted was a way to say "if a request is not for a known endpoint, drop it before it reaches the application."

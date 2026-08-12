@@ -2,7 +2,7 @@
 title: Symmetric Redis ↔ Kafka Bridge Pair for Cross-Cloud Event Flow
 description: Cloud Run can't reach an internal Kafka broker — `advertised.listeners` always wins. A pair of unidirectional bridges through Redis keeps every invariant intact.
 date: 2026-04-29T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - backend
   - distributed-systems
@@ -22,7 +22,7 @@ references:
   - url: 'https://discord.com/blog/how-discord-stores-trillions-of-messages'
     title: Discord Engineering — How Discord Stores Trillions of Messages
     type: official
-source_content_hash: ce8e57030eda26dd5b0b9b425f7f02e6949a994d7f8fe15ee62693c9c8da804c
+source_content_hash: f86b7e8892bbde0665e1866f5dd12422c4d2671cd25fd95e869a01f4c671edbb
 ---
 
 > When a durable internal event bus (Kafka) and an ephemeral edge bus
@@ -198,14 +198,18 @@ around.
 - **LinkedIn** calls Kafka its
   [central data pipeline](https://www.linkedin.com/blog/engineering/open-source/kafka-ecosystem-at-linkedin),
   far enough that Espresso's replication moved off MySQL replication
-  and onto Kafka. The durable log sits underneath; the serving stores
-  are their own tier.
+  and onto Kafka, with derived-data platforms like Venice and the
+  next-generation Databus built on top of the same log. The durable log
+  sits underneath; the serving and derived stores are their own tier.
 - **Slack** added
   [Kafka in front of Redis](https://slack.engineering/scaling-slacks-job-queue/)
-  for their job queue instead of replacing Redis outright — Kafka is
-  the durable buffer against job loss, Redis stays the fast in-flight
-  layer. Same division of labour as the bridge pair, without a network
-  boundary in the middle.
+  for their async job queue instead of replacing Redis outright. Kafka
+  is the durable buffer against memory exhaustion and job loss, and
+  Redis keeps dequeue, dedup, in-flight tracking and retry. Same
+  division of labour as the bridge pair, without a network boundary in
+  the middle. Worth being precise about the scope: that write-up is
+  about the job queue, not chat delivery, so it says nothing about how
+  a message reaches a client.
 - **Discord** moved its
   [trillions of stored messages](https://discord.com/blog/how-discord-stores-trillions-of-messages)
   from Cassandra to ScyllaDB, and argued the move entirely on

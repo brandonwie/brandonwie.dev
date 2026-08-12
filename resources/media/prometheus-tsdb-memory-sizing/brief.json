@@ -1,0 +1,13 @@
+{
+	"slug": "prometheus-tsdb-memory-sizing",
+	"topic": "prometheus ~ tsdb",
+	"thesis": "the head block lives in RAM, so 400m OOM-loops",
+	"components": [
+		{ "label": "head block", "sublabel": "~3h of samples, in memory", "glyph": "cache" },
+		{ "label": "WAL replay", "sublabel": "restart re-reaches pre-OOM size", "glyph": "clock" },
+		{ "label": "cardinality", "sublabel": "each label combo is a series", "glyph": "chart" }
+	],
+	"takeaway": "mem_limit 2048m plus retention.size cap",
+	"theme": "terminal-mocha",
+	"alt": "Terminal-style cover for Prometheus TSDB memory sizing: head block, WAL replay, cardinality"
+}

@@ -2,7 +2,7 @@
 title: 'The pre-commit hook race that put my files in someone else''s commit'
 description: 'Two sessions committing to one repo, a slow pre-commit hook, and `fatal: cannot lock ref HEAD`. The loud failure is the easy one — the quiet failure hands your staged files to the other session''s commit under its message.'
 date: 2026-05-14T00:00:00.000Z
-updated: 2026-06-13
+updated: "2026-08-12"
 tags:
   - devops
   - transferable
@@ -14,7 +14,7 @@ references:
   - url: 'https://git-scm.com/docs/git-worktree'
     title: git-worktree — Manage multiple working trees
     type: official
-source_content_hash: e4c5595da8cf398dc3292f64236a287bdd04c8c1c13b0293ff548fd8ef4182ac
+source_content_hash: 3062f1df5dafa7a9eebc40bd3893a784c6f7d9f535ec73904a793b6bbbe23ef9
 ---
 
 I had two agent sessions working in the same repository at once, and both tried
@@ -85,6 +85,39 @@ git -C <main> worktree add <main>/.worktrees/<branch-slug> \
 Both sessions then commit independently, and when a worktree branch merges back,
 everyone sees the result — but the commit itself never races.
 
+## The hook window isn't the only window
+
+The pre-commit race is a few seconds wide at most. There's a second race in the
+same family that runs much longer, and I only caught it because I run a delta
+guard in my own tooling that exists to catch exactly this kind of thing.
+
+The guard captures a baseline of the repository state before I start editing,
+then verifies that baseline again right before staging. The span between capture
+and verify isn't a hook duration. It's the whole length of the edit, which can
+run to minutes. With another session writing to the same repo, that window loses
+in three ways:
+
+| Failure               | What the other session did                       |
+| --------------------- | ------------------------------------------------ |
+| Unexpected path       | Created files that weren't in the baseline       |
+| HEAD changed          | Committed, so the recorded SHA no longer matches |
+| Session path conflict | Nothing. My own path was already dirty at capture |
+
+I hit all three in one session, while a parallel session was writing files and
+committing to the main branch alongside me.
+
+The remedy was the same every time: re-capture a fresh baseline, and don't
+override the guard. An override tells the tool to ignore evidence that the
+repository moved underneath it, which is the one thing the guard exists to
+notice. A fresh capture makes it correct again.
+
+The third case has a wrinkle worth knowing if you build something similar. A
+path that's already dirty when the baseline is taken has to be declared both as a
+session-owned path and as a mixed path, and the identical set has to go to the
+capture step and the verify step. Pass different sets to each and the verify
+disagrees with the baseline it's checking against, which looks exactly like a
+real conflict.
+
 ## If you've already been bitten
 
 A few things that are worth knowing before you try to "fix" the history:
@@ -126,9 +159,11 @@ history rewrite, a different failure mode entirely.
 
 `cannot lock ref 'HEAD'` reads like a timing hiccup, but it's really a sign that
 two committers share one HEAD. Faster hooks treat the symptom. Worktrees remove
-the sharing, which is the only thing that actually ends the race — and, more
-importantly, ends the silent variant where your work quietly ships under someone
-else's name.
+the sharing, which is the only thing that actually ends the race, including the
+silent variant where your work quietly ships under someone else's name. The
+wider version of the same problem is any tool that captures repository state and
+verifies it later: its window is as long as your edit, and when it trips, the fix
+is a fresh baseline rather than an override.
 
 ## References
 

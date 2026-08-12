@@ -2,7 +2,7 @@
 title: "Claude Code: Shared + Personal AI Config Pattern"
 description: Split AI instructions into committed (shared) and gitignored (personal) layers
 date: 2026-02-04T00:00:00.000Z
-updated: "2026-08-02"
+updated: "2026-08-12"
 tags:
   - devops
   - claude-code
@@ -12,7 +12,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: dcbe64a1d4804ca000c8bd25992698e9f82f45e4b8b816980e208de3d0ca6037
+source_content_hash: 4f58ab7976db64ec810943af0ebc8c1383e39fd21824a63610546d5343b3e714
 references:
   - url: "https://code.claude.com/docs/en/memory"
     title: "Claude Code docs — How Claude remembers your project (CLAUDE.md load order)"
@@ -139,7 +139,7 @@ project repo:
 ```
 
 `{backend-repo}` and `{infra-repo}` stand in for the checkout directory names of
-those repos on disk — the pattern doesn't care what they're called.
+those repos on disk. The pattern doesn't care what they're called.
 
 Only repos with other team members need the shared/local split. Personal-only
 repos use a single combined file. `.mcp.json` follows the same pattern: the
@@ -222,9 +222,10 @@ global rules without restating them.
 
 ## Current profile settings architecture (July 2026)
 
-The shared instruction pattern above still uses repository files and generated
-projections. Private runtime settings are different. After several symlink
-failure modes, I stopped chaining profile `settings.json` files together.
+The shared instruction pattern above still runs on repository files and
+generated copies. Private runtime settings turned out to need something else.
+After a run of symlink failures I stopped chaining profile `settings.json` files
+together.
 
 The current layout uses two gitignored authorities and two independent runtime
 files:
@@ -236,20 +237,46 @@ settings.personal.json  ─deploy→  ~/.claude/settings.json
 settings.work.json      ─deploy→  ~/.claude-work/settings.json
 ```
 
-Each runtime is a regular mode-`0600` file. Capture and deployment are explicit
-per-profile operations; there is no background or bidirectional sync. Before a
-mutation, the workflow verifies trusted parent directories, expected ownership,
-valid JSON, and distinct profile identity.
+Each runtime is a regular mode-`0600` file. I capture and deploy each profile
+explicitly. Nothing syncs in the background, and nothing syncs both ways. Before
+anything gets written, the workflow checks that the parent directories are
+trusted, that ownership is what it should be, that the JSON parses, and that the
+two profiles really are distinct.
 
-The most important guardrail is a continuously monitored window with no running
-Claude process. If a new process appears or the file identity is unclear, the
-operation stops. Rollback is a separately approved whole-file update rather
-than a best-effort merge.
+The guardrail doing the most work is the write window itself. It stays open only
+while no Claude process is running, and it is watched the whole time. If a new
+process shows up, or the file identity is ambiguous, the operation stops.
+Rollback is a whole-file update approved on its own, not a best-effort merge.
 
 This does not contradict the shared repository pattern. Team-visible
 instructions can still use a repository source of truth and generated copies.
 Machine-private runtime settings need a smaller blast radius and stronger
 identity checks.
+
+### When a hook points at a script that no longer exists
+
+A hook can outlive the script it points at. When that happens to a
+`UserPromptSubmit` hook that launches an external script, the hook rejects the
+prompt outright and the session refuses to do anything at all, before any work
+starts. The error message points the wrong way: the Python shim in the output
+names only the launcher, never the target. The line that identifies the culprit
+is the `ENOENT` for the configured script path.
+
+When the integration behind the hook is retired for good, remove its complete
+hook groups instead of leaving a permissive guard behind. That means updating
+both private profile authorities, both regular-file runtimes, and any current
+legacy settings copy that could still be loaded, while preserving unrelated hook
+groups. Then verify the usual invariants: valid JSON, mode `0600`, parity
+between the two profiles, and zero remaining references to the retired
+integration.
+
+Structural sync checks prove nothing about whether external hook targets exist.
+A profile checker that compares file identity, permissions, and JSON validity
+will happily pass a configuration whose hooks point at nothing, so pair it with
+an explicit target-liveness or reference audit. Dated backups and migration
+bundles are a separate retention decision. A stale copy can't affect
+the current runtime, but restoring it later can quietly reintroduce the hook you
+just removed.
 
 ## Historical settings.local.json consolidation
 
@@ -321,7 +348,7 @@ The corrected topology:
   separate `settings.local.work.json` in the SoT directory. It contains only the
   two keys that differ from personal: `statusLine.command` (with the
   `CLAUDE_CONFIG_DIR=~/.claude-work` prefix) and `enabledMcpjsonServers` (the
-  whitelist of project-scoped MCP servers that profile may load — in my case a
+  whitelist of project-scoped MCP servers that profile may load, in my case a
   single read-only database server). Claude Code deep-merges this over the base
   `settings.json` at load time.
 
@@ -329,7 +356,7 @@ Worth flagging: a profile-scope `settings.local.json` sitting next to the user
 `settings.json` is not one of the documented settings scopes. The docs list user
 (`~/.claude/settings.json`), project (`.claude/settings.json`), and a
 repository-root `.claude/settings.local.json`. The override worked on my machine,
-so I leaned on it — but it was observed behavior, not a documented contract.
+so I leaned on it, but it was observed behavior, not a documented contract.
 That's part of why the chain is retired.
 
 All non-override settings (env, permissions, hooks, plugins) come from the
@@ -554,15 +581,20 @@ Session profiles are ephemeral directories under `~/.claude-swap-backup/sessions
 with keychain-only credentials. The service name is hashed
 (`Claude Code-credentials-<sha256(NFC(dir))[:8]>`), and the wrapper seeds the
 entry and unlinks any plaintext, since claude 2.1.207 never migrates plaintext on
-launch. The wrapper projects a 10-item symlink set from the source profile
-(settings, `CLAUDE.md`, skills, commands, agents, plugins, hooks, scripts,
-keybindings, settings.local) recorded in a `.cswap-3b-links.json` manifest. That
-list is duplicated in three places (the manifest, `LINK_ITEMS` in the wrapper,
-and the `items` string in sync-doctor check 18), so editing one means updating all
-three. Link handling is fail-closed: any failure deletes the session directory and
-its keychain entry. History and projects are always per-session (never
-`--share-history`), and every knowledge-base surface is an exact source-profile
-symlink, never a copy.
+launch.
+
+Settings follow the independent-file rule from the section above. The wrapper
+publishes `settings.json` as a distinct owned regular mode-`0600` copy of the
+selected runtime, not a link back to it. The remaining nine surfaces
+(`CLAUDE.md`, skills, commands, agents, plugins, hooks, scripts, keybindings,
+settings.local) stay exact symlinks to the source profile, and
+`.cswap-3b-links.json` records `copy_items` and `symlink_items` separately so the
+two kinds never get confused.
+
+Preparation is fail-closed: any failure deletes the disposable session directory
+and its keychain entry. History and projects are always per-session (never
+`--share-history`). A session therefore gets isolated settings bytes while the
+unrelated knowledge-base surfaces still resolve back to the source profile.
 
 ### Credential mode
 
@@ -576,10 +608,12 @@ cleanup removes the session, and the remedy is re-registration.
 
 ### Guardrail
 
-sync-doctor check 18 (`cswap session links`) validates every live session profile:
-a wrapper-managed manifest is required, `source_profile` is allowlisted to exactly
-`~/.claude` and `~/.claude-work`, and every owned item must be an exact symlink to
-its source. It goes red on copies, wrong targets, or missing links; no sessions
+sync-doctor check 18 (`cswap session profiles`) validates every live session: the
+source profile must be allowlisted to exactly `~/.claude` or `~/.claude-work`,
+`settings.json` must be a distinct mode-`0600` regular file carrying the exact
+reviewed bytes with Token Optimizer explicitly `false`, and every remaining
+managed item must be an exact symlink. Shared identities, hardlinks, wrong
+targets, invalid manifests, and missing required items all go red. No sessions
 directory at all is green.
 
 ### Current state

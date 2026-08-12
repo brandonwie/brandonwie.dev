@@ -4,7 +4,7 @@ description: >-
   한 저장소에 커밋하는 두 세션, 느린 pre-commit hook, 그리고 `fatal: cannot lock ref HEAD`.
   시끄러운 실패는 쉬운 쪽이에요 — 조용한 실패는 내 staged 파일을 다른 세션의 커밋에 그쪽 메시지로 넘겨버려요.
 date: 2026-05-14T00:00:00.000Z
-updated: '2026-06-13'
+updated: '2026-08-12'
 tags:
   - devops
   - transferable
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: git-pre-commit-parallel-session-head-race
-source_updated: '2026-06-13'
-translation_date: '2026-06-14'
+source_updated: '2026-08-12'
+translation_date: '2026-08-12'
 ---
 
 같은 저장소에서 두 agent 세션이 동시에 작업하고 있었고, 둘 다 거의 같은 순간에 커밋을 시도했어요. 그중 하나가 커밋 도중에 이렇게 죽었어요:
@@ -59,6 +59,24 @@ git -C <main> worktree add <main>/.worktrees/<branch-slug> \
 
 그러면 두 세션이 독립적으로 커밋하고, worktree 브랜치가 다시 merge되면 모두가 결과를 봐요 — 하지만 커밋 자체는 절대 race하지 않아요.
 
+## 열려 있는 틈은 hook 시간만이 아니에요
+
+pre-commit race는 길어야 몇 초짜리예요. 그런데 같은 계열에 훨씬 오래 열려 있는 race가 하나 더 있어요. 알아챈 이유는 하나예요. 이런 걸 잡으라고 만들어 둔 delta guard를 직접 돌리고 있었거든요.
+
+guard는 편집을 시작하기 전에 저장소 상태의 baseline을 뜨고, staging 직전에 그 baseline을 다시 확인해요. capture와 verify 사이의 간격은 hook이 도는 시간이 아니에요. 편집에 걸리는 시간 전체라서 몇 분씩 늘어나기도 해요. 같은 저장소에 다른 세션이 파일을 쓰고 있으면 이 틈은 세 가지 방식으로 깨져요.
+
+| 실패              | 다른 세션이 한 일                             |
+| ----------------- | --------------------------------------------- |
+| 예상 못 한 path   | baseline에 없던 파일을 새로 만듦              |
+| HEAD 변경         | 커밋해 버려서 기록해 둔 SHA가 안 맞음         |
+| 세션 path conflict | 없음. capture 시점에 내 path가 이미 dirty했음 |
+
+한 세션에서 셋 다 겪었어요. 옆에서 병렬 세션이 파일을 쓰면서 main 브랜치에 커밋하고 있던 상황이었고요.
+
+해결책은 매번 같았어요. override하지 말고 baseline을 새로 뜨는 거예요. override는 저장소가 발밑에서 움직였다는 증거를 무시하라고 도구에 지시하는 셈인데, 그 증거야말로 guard를 만든 이유거든요. 새로 뜨고 나면 guard는 다시 정확해져요.
+
+세 번째 경우엔 비슷한 도구를 직접 만들 때 알아둘 만한 함정이 하나 더 있어요. baseline을 뜨는 시점에 이미 dirty한 path라면 세션이 소유한 path이면서 동시에 섞여 있는 path라고 양쪽 다 선언해 줘야 하고, capture 단계와 verify 단계에 똑같은 목록을 넘겨야 해요. 단계마다 다른 목록을 넘기면 verify가 대조하려던 baseline과 어긋나는데, 진짜 conflict가 난 것처럼 보여요.
+
 ## 이미 당했다면
 
 history를 "고치"려 들기 전에 알아둘 만한 것들:
@@ -87,7 +105,9 @@ history를 "고치"려 들기 전에 알아둘 만한 것들:
 
 ## takeaway
 
-`cannot lock ref 'HEAD'`는 잠깐의 타이밍 문제처럼 보이지만, 사실은 두 커밋 주체가 하나의 HEAD를 공유하고 있다는 신호예요. hook을 빠르게 만드는 건 증상만 건드리는 거고요. worktree는 그 공유 자체를 없애요. race를 실제로 끝내는 방법은 이것뿐이에요. 그리고 더 중요한 건, 내 작업이 조용히 남의 이름으로 나가버리는 그 조용한 변종까지 같이 끝낸다는 점이에요.
+`cannot lock ref 'HEAD'`는 잠깐의 타이밍 문제처럼 보이지만, 사실은 두 커밋 주체가 하나의 HEAD를 공유하고 있다는 신호예요. hook을 빠르게 만드는 건 증상만 건드리는 거고요. worktree는 그 공유 자체를 없애요. race를 실제로 끝내는 방법은 이것뿐이고, 내 작업이 남의 이름으로 조용히 나가버리는 변종까지 같이 끝나요.
+
+같은 이야기가 한 단계 위에서도 똑같이 반복돼요. 저장소 상태를 capture해 뒀다가 나중에 verify하는 도구라면 전부 마찬가지예요. 그 틈은 편집하는 시간만큼 길고, guard가 걸렸을 때 답은 override가 아니라 baseline을 새로 뜨는 거예요.
 
 ## References
 

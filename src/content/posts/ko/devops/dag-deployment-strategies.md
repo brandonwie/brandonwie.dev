@@ -2,7 +2,7 @@
 title: DAG 배포 전략
 description: Airflow DAG를 배포하는 다양한 방법과 트레이드오프 분석
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - devops
   - airflow
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: dag-deployment-strategies
-source_updated: '2026-08-02'
-translation_date: '2026-02-12'
+source_updated: '2026-08-12'
+translation_date: '2026-08-12'
 references:
   - url: >-
       https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/production-deployment.html
@@ -30,69 +30,35 @@ references:
     type: official
 ---
 
-EC2에서 Docker Compose로 Airflow를 셋업하면서 제일 먼저 막힌 질문은
-이거였어요: Git에 있는 DAG 파일을 실행 중인 Airflow 컨테이너에 어떻게
-전달하지? Airflow 공식 문서는 여러 방법을 설명하면서도 하나를 추천하지
-않아서, 블로그와 Helm chart 기본값, GitHub issues를 뒤져야 했어요. 초반에
-잘못된 전략을 고르면 나중에 마이그레이션이 고통스러워지고요.
+EC2에서 Docker Compose로 Airflow를 셋업하면서 제일 먼저 막힌 질문은 이거였어요.
+Git에 있는 DAG 파일을 실행 중인 컨테이너에 어떻게 전달하지? Airflow 공식 문서는
+여러 방법을 설명하면서도 하나를 추천하지 않아요. 초반에 전략을 잘못 고르면 팀이나
+인프라가 커졌을 때 마이그레이션이 고통스러워지고요.
 
-## 왜 중요한가
-
-DAG 배포 전략은 한 번 정하면 몇 달은 같이 가는 결정이에요. 반복 속도(DAG
-변경을 얼마나 빨리 테스트할 수 있는지), 운영 안정성(DAG 배포가 스케줄러를
-재시작하는지), 보안(EC2 인스턴스에 뭐가 노출되는지) 모두에 영향을 줘요.
-대부분의 가이드가 DAG 배포와 애플리케이션 배포를 묶어서 설명하는데, DAG
-파일이 바뀔 때마다 Docker 이미지를 새로 빌드하게 되죠. 이 둘은 별개의
-관심사이고, 섞으면 불필요한 다운타임이 생겨요.
-
----
+흔한 방식 네 가지를 놓고 비교한 다음, EC2에 올린 2명짜리 팀에 맞는 가장 단순한
+쪽을 골랐어요. 언제 갈아타야 할지 미래의 제가 알 수 있게 결정 트리도 적어
+뒀고요.
 
 ## 겪었던 어려움
 
-- **단일 추천 방법이 없음** -- Airflow 문서는 여러 전략을 설명하면서
-  "EC2에는 이걸 쓰세요"라고 하지 않아요. 블로그, GitHub issues, Helm chart
-  기본값을 조합해서 트레이드오프를 파악해야 했어요.
-- **DAG 배포와 코드 배포를 혼동** -- 초기 리서치에서 DAG Python 파일 배포와
-  Airflow 애플리케이션(Docker 이미지) 배포를 혼동했어요. 대부분의 가이드가
-  이걸 묶어서 설명하지만, 실제로는 별개의 관심사예요.
-- **Git-sync sidecar 문서가 Kubernetes를 가정** -- 가장 많이 문서화된
-  git-sync sidecar 방식이 Kubernetes 네이티브예요. Docker Compose + EC2
-  환경에 맞추려니 맞지 않는 패턴을 억지로 적용하는 느낌이었어요.
-- **EC2에 전체 repo를 두면 보안 이슈** -- EC2에 전체 repository를 클론하면
-  DAG가 아닌 파일(자격 증명, CI 설정)도 노출돼요. `.gitignore`와 deploy
-  key로 충분한지 평가해야 했어요.
+**단일 추천 방법이 없어요.** Airflow 문서는 여러 전략을 설명하면서도 어떤
+환경에서 뭘 쓰라고는 하지 않아요. 트레이드오프는 결국 블로그 글과 GitHub issues,
+Helm chart 기본값을 긁어모아 직접 짜 맞춰야 했어요.
 
----
+**DAG 배포와 코드 배포를 뒤섞어 놔요.** 대부분의 가이드가 DAG Python 파일 배포와
+Airflow 애플리케이션(Docker 이미지) 배포를 한 덩어리로 묶어서 설명해요. 실제로는
+서로 독립적인 관심사인데도요.
 
-## 검토한 옵션
+**Git-sync sidecar 문서가 Kubernetes를 가정해요.** 가장 많이 문서화된 방식이
+Kubernetes 네이티브예요. Docker Compose + EC2 환경으로 옮기려니 맞지 않는 패턴을
+억지로 끼우는 느낌이었어요.
 
-| 옵션                      | 장점                                                         | 단점                                                  |
-| ------------------------- | ------------------------------------------------------------ | ----------------------------------------------------- |
-| EC2에 전체 Git Repo       | 간단한 셋업, 빠른 배포, 제로 다운타임, 익숙한 Git 워크플로우 | EC2에 전체 repo 노출, Git 인증 필요, 자동 동기화 아님 |
-| DAG를 Docker Image에 포함 | 불변, 버전 관리, EC2에 Git 불필요                            | 느림(리빌드 + 재시작), DAG 핫 리로드 불가             |
-| Git-Sync Sidecar          | 자동 동기화, K8s 표준, 재시작 불필요                         | Sidecar 컨테이너 필요, Kubernetes용으로 설계          |
-| S3/EFS Sync               | AWS 네이티브, 멀티 리전 지원                                 | 추가 인프라(S3 또는 EFS), 동기화 지연                 |
-
-각 방식은 서로 다른 인프라 형태를 목표로 해요. 올바른 선택은 팀 규모,
-플랫폼(EC2 vs Kubernetes), DAG 변경 빈도에 따라 달라져요.
-
----
-
-## 결정: EC2에 전체 Git Repo
-
-제 상황에는 명확한 제약이 있었어요:
-
-- 2명의 소규모 팀, EC2 기반 인프라 (Kubernetes 아님)
-- DAG 변경이 잦고 빠른 반복이 필요 (분 단위가 아니라 초 단위)
-- 제로 다운타임이 중요 -- DAG만 바꿀 때 컨테이너 재시작 불가
-- Git이 내장 버전 관리와 즉시 롤백을 제공
-- 단점(repo 노출, 인증)은 deploy key와 `.gitignore`로 쉽게 완화 가능
-
----
-
-## 네 가지 주요 방식
+## 네 가지 방식
 
 ### 1. EC2에 전체 Git Repo
+
+EC2 인스턴스에 전체 repository를 클론해요. 컨테이너는 `dags/` 폴더를
+volume-mount하고요.
 
 ```text
 EC2 /opt/airflow/          <- 전체 Git repository
@@ -103,39 +69,42 @@ EC2 /opt/airflow/          <- 전체 Git repository
 └── .git/
 ```
 
-EC2 인스턴스에 `git clone`으로 전체 repository를 두고, `git pull`로 변경
-사항을 동기화해요. 컨테이너가 `dags/` 폴더를 volume-mount하기 때문에
-Airflow가 재시작 없이 변경을 감지해요.
+변경 사항은 `git pull`로 동기화되고, 스케줄러가 컨테이너 재시작 없이 집어가요.
+얼마나 빨리 반영되는지는 하나가 아니라 두 개의 설정에 달려 있어요. 여기서 많이들
+놓쳐요.
 
-얼마나 빨리 감지하는지는 하나가 아니라 두 개의 설정에 달려 있는데, 놓치기
-쉬운 부분이에요.
+- `[scheduler] min_file_process_interval`(기본값 `30`)은 Airflow가 이미 알고 있는
+  DAG 파일을 얼마나 자주 다시 파싱할지 정해요. 설정 문서에도 "Updates to DAGs are
+  reflected after this interval."이라고 분명하게 적혀 있어요.
+- `[scheduler] dag_dir_list_interval`(기본값 `300`)은 DAG 디렉토리를 다시 훑어서
+  *새 파일*이 있는지 확인하는 주기고요.
 
-- `[scheduler] min_file_process_interval` (기본값 `30`) -- Airflow가 이미
-  알고 있는 DAG 파일을 다시 파싱하는 주기예요. 공식 config 문서도 "updates
-  to DAGs are reflected after this interval"이라고 명시해요.
-- `[scheduler] dag_dir_list_interval` (기본값 `300`) -- DAG 디렉토리에서
-  _새 파일_ 을 찾는 스캔 주기예요.
+그래서 기존 DAG를 수정하면 30초쯤 뒤에 반영되지만, 완전히 새로운 DAG 파일은 기본
+설정에서 최대 5분까지 안 보일 수 있어요. 두 기본값은 Airflow 3.x에도 그대로
+이어졌어요. 파싱이 별도 dag-processor로 옮겨가면서 같은 30초짜리
+`min_file_process_interval`이 `[dag_processor]` 아래로 갔고, 디렉토리 스캔은
+`[dag_processor] refresh_interval`(여전히 300초)이 됐어요.
 
-그래서 기존 DAG를 수정하면 30초쯤 뒤에 반영되지만, 완전히 새로운 DAG
-파일은 기본 설정에서 최대 5분까지 안 보일 수 있어요. 두 기본값은 Airflow
-3.x에도 그대로 이어졌어요. 파싱이 별도 dag-processor로 옮겨가면서 같은
-30초짜리 `min_file_process_interval`이 `[dag_processor]` 아래로 갔고,
-디렉토리 스캔은 `[dag_processor] refresh_interval`(여전히 300초)이 됐어요.
-
-소규모 팀(2-10명)이 EC2 기반 인프라에서 잦은 DAG 변경을 할 때 적합해요.
+**적합한 경우:** 소규모 팀(2~10명), EC2 기반, 잦은 DAG 변경.
 
 ### 2. Docker Image에 DAG 포함 (Bake into Image)
+
+DAG 파일을 Docker 이미지 빌드 시점에 넣어요.
 
 ```dockerfile
 # Dockerfile
 COPY dags/ /opt/airflow/dags/
 ```
 
-DAG 파일을 Docker 이미지 빌드 시점에 포함해요. DAG 변경 시 이미지 리빌드와
-컨테이너 재시작이 필요해요. 엄격한 버전 관리가 필요한 불변 인프라에
-적합해요 -- 모든 배포가 감사 가능한 이미지 태그가 돼요.
+DAG를 고칠 때마다 이미지를 다시 굽고 컨테이너도 재시작해야 해요. 배포는 불변이
+되고 버전도 찍히지만, 반복 속도는 눈에 띄게 느려져요.
+
+**적합한 경우:** 불변 인프라, 엄격한 버전 관리 요구사항.
 
 ### 3. Git-Sync Sidecar (Kubernetes 표준)
+
+별도의 git-sync 컨테이너가 주기적으로 repository를 pull하고 볼륨으로 DAG를
+공유해요.
 
 ```yaml
 # Kubernetes Pod
@@ -147,22 +116,24 @@ containers:
     args: ["--repo=https://github.com/...", "--branch=main"]
 ```
 
-별도의 git-sync 컨테이너가 주기적으로 repository에서 공유 볼륨으로
-pull해요. Airflow 컨테이너가 그 볼륨을 읽어요. Kubernetes 환경의 표준
-패턴이고 대규모 팀에 잘 확장돼요.
+Kubernetes 기반 Airflow 배포의 표준 패턴이에요. pull은 sidecar가 맡고, 스케줄러는
+재시작 없이 바뀐 내용을 그대로 읽어요.
+
+**적합한 경우:** Kubernetes 환경, 대규모 팀.
 
 ### 4. S3/EFS Sync
+
+DAG를 S3 bucket에 올리거나 EFS를 마운트해요.
 
 ```text
 S3 bucket                    EC2
 s3://airflow-dags/   --->  /opt/airflow/dags/
 ```
 
-DAG 파일을 S3에 업로드하고, EC2가 `aws s3 sync`로 동기화해요. 또는 EFS를
-직접 마운트할 수도 있어요. S3 복제로 분배를 처리하는 AWS 네이티브
-워크플로우, 특히 멀티 리전 배포에 적합해요.
+AWS 네이티브고 리전을 넘어서도 동작하지만, 인프라(S3 bucket 또는 EFS mount)가
+늘어나고 동기화 지연도 생겨요.
 
----
+**적합한 경우:** AWS 네이티브 워크플로우, 멀티 리전 배포.
 
 ## 비교 매트릭스
 
@@ -173,14 +144,22 @@ DAG 파일을 S3에 업로드하고, EC2가 `aws s3 sync`로 동기화해요. �
 | **컨테이너 재시작** | 불필요          | 필요          | 불필요     | 불필요       |
 | **추가 인프라**     | 없음            | 없음          | Sidecar    | S3/EFS       |
 | **적합한 환경**     | EC2 소규모 팀   | 불변 인프라   | Kubernetes | AWS 네이티브 |
-| **팀 규모**         | 2-10            | 무관          | 대규모     | 중-대규모    |
+| **팀 규모**         | 2~10            | 무관          | 대규모     | 중~대규모    |
 
-Airflow가 이런 매트릭스를 공식으로 제공하지는 않아요. 정답표가 아니라 제가
-정리한 트레이드오프 해석으로 봐주세요. 특히 셋업 복잡도 등급과 팀 규모
-구간은 누가 측정한 임계값이 아니라, 각 방식이 과하다고 느껴지기 시작한
-지점이에요.
+Airflow가 이런 매트릭스를 공식으로 내놓지는 않아요. 정답표가 아니라 제가 정리한
+트레이드오프 해석으로 봐주세요. 셋업 복잡도 등급과 특히 팀 규모 구간은 제
+판단이에요. 누가 측정한 임계값이 아니라 각 방식이 과하다고 느껴지기 시작한
+지점이고요.
 
----
+## 제가 고른 방식: EC2에 전체 Git Repo
+
+가장 단순한 선택지를 골랐어요. 이유는 이래요.
+
+- 2명짜리 소규모 팀이고 인프라는 EC2 기반이에요(Kubernetes 아님).
+- DAG를 자주 고치고, 분이 아니라 초 단위로 돌려봐야 해요.
+- 제로 다운타임이 중요했어요. DAG만 바꾸는데 컨테이너를 재시작할 수는 없잖아요.
+- 버전 관리와 즉시 롤백은 Git에 이미 딸려 와요.
+- repo 노출과 인증이라는 단점은 deploy key와 `.gitignore`로 덜어낼 수 있고요.
 
 ## 결정 트리
 
@@ -199,24 +178,7 @@ Airflow가 이런 매트릭스를 공식으로 제공하지는 않아요. 정답
     └─ S3/EFS Sync 사용
 ```
 
----
-
-## EC2 Git Repo: 상세 워크플로우
-
-### 디렉토리 구조
-
-```text
-EC2 /opt/airflow/
-├── .git/
-├── dags/
-│   ├── __init__.py
-│   └── my_pipeline.py    # <- 여기 변경하면 자동 동기화
-├── master/
-│   ├── docker-compose.yml
-│   └── docker-compose.prod.yml
-└── worker/
-    └── docker-compose.yml
-```
+## Git Repo 방식 자세히 보기
 
 ### 배포 흐름
 
@@ -239,10 +201,6 @@ EC2 /opt/airflow/
           새 DAG 파일은 최대 ~5분
 ```
 
-핵심은 Airflow가 설정 가능한 간격으로 DAG 파일을 다시 파싱한다는 거예요.
-단순한 `git pull` 하나면 DAG 변경이 배포돼요. 이미지 빌드도, 컨테이너
-재시작도, 다운타임도 없어요.
-
 ### 장점
 
 | 장점                  | 설명                                            |
@@ -254,7 +212,7 @@ EC2 /opt/airflow/
 | **버전 관리**         | Git 히스토리로 DAG 변경 추적                    |
 | **쉬운 롤백**         | `git checkout <commit>`으로 즉시 롤백           |
 
-### 단점
+### 단점과 완화 방법
 
 | 단점           | 설명                          | 완화 방법                       |
 | -------------- | ----------------------------- | ------------------------------- |
@@ -263,18 +221,10 @@ EC2 /opt/airflow/
 | 인증 필요      | Private repo에 자격 증명 필요 | Deploy Key 또는 HTTPS + PAT     |
 | 수동 동기화    | 자동 동기화 아님              | CI/CD 자동화 (SSM)              |
 
----
+### 디렉토리 컨벤션
 
-## 왜 이 방식이 효과적인가
-
-핵심은 관심사의 분리예요. DAG 파일은 자주 바뀌는 코드지만, Airflow
-애플리케이션(Docker 이미지)은 드물게 바뀌어요. Git으로 관리되는 `dags/`
-디렉토리를 volume-mount하면 DAG 변경은 Git을 통해 흐르고, 애플리케이션은
-안정적으로 유지돼요. 리빌드도, 재시작도, 다운타임도 없어요.
-
-`/opt/airflow` 컨벤션은 Linux 표준에서 나왔어요. `/opt`는 서드파티
-소프트웨어를 위한 표준 디렉토리이고, Apache Airflow 공식 문서에서
-`AIRFLOW_HOME=/opt/airflow`를 기본값으로 사용해요.
+`/opt`는 서드파티 소프트웨어를 두는 Linux 표준 디렉토리예요. Apache Airflow도
+`AIRFLOW_HOME=/opt/airflow`를 기본값으로 쓰고요.
 
 ```text
 /opt        <- 서드파티 앱 (Airflow, Jenkins 등)
@@ -282,40 +232,45 @@ EC2 /opt/airflow/
 /home       <- 사용자 홈 디렉토리
 ```
 
----
+## 마이그레이션 시점
 
-## 실전 팁
+제가 지켜보는 신호는 이런 거예요. 앞의 매트릭스에 달았던 단서를 여기에도 똑같이
+붙여둘게요. 측정된 한계치가 아니라 지금 방식이 아껴주는 것보다 더 많은 비용을
+물리기 시작하는 지점이에요.
 
-이 결정 프레임워크를 활용하세요:
+| 상황                          | 추천 변경              |
+| ----------------------------- | ---------------------- |
+| Kubernetes 도입               | Git-Sync Sidecar       |
+| 보안 강화                     | Image에 포함           |
+| 멀티 리전 배포                | S3 sync + 리전 간 복제 |
+| DAG 10개, 작성자 5명 정도부터 | Git-Sync 또는 S3       |
 
-- **EC2 또는 Docker Compose에 Airflow 배포** -- 전체 Git repo 방식으로
-  시작하세요. 빠른 반복을 지원하는 가장 간단한 경로예요.
-- **새 클러스터 셋업** -- 위의 비교 매트릭스로 반복 속도, 보안, 팀 규모
-  사이의 트레이드오프를 평가하세요.
-- **현재 방식을 넘어서야 할 때** -- 아래 마이그레이션 표를 가이드로
-  활용하세요.
+## 각 전략을 쓰면 안 되는 경우
 
-### 마이그레이션 시점
+- **EC2 전체 Git Repo.** `.gitignore`로 걸러낼 수 없는 비밀이 repository에
+  있다면 쓰지 마세요. 감사 가능한 이미지 태그를 남기는 불변 배포를 컴플라이언스가
+  요구할 때도 마찬가지고요.
+- **Image에 포함.** DAG 반복 속도가 중요하면 쓰지 마세요. DAG를 고칠 때마다
+  리빌드하고 재시작하면 못 견딜 피드백 루프가 생겨요.
+- **Git-Sync Sidecar.** 일반 EC2나 Docker Compose 환경에서는 쓰지 마세요.
+  Kubernetes 밖에서 sidecar 패턴은 복잡성만 늘려요.
+- **S3/EFS Sync.** 엄격한 버전 관리가 필요하면 쓰지 마세요. S3 sync에는 Git 같은
+  원자적 업데이트나 롤백 보장이 없어요.
 
-매트릭스와 같은 단서를 붙여둘게요. 측정된 한계치가 아니라, 지금 방식이
-아껴주는 것보다 더 많은 비용을 물리기 시작하는 지점이에요.
+## 정리
 
-| 상황                 | 추천 변경             |
-| -------------------- | --------------------- |
-| Kubernetes 도입      | Git-Sync Sidecar      |
-| 보안 강화            | Image에 포함          |
-| 멀티 리전 배포       | S3 sync + 리전 간 복제 |
-| 대략 DAG 10개+, 작성자 5명+ | Git-Sync 또는 S3 |
+DAG 배포에 보편적으로 옳은 전략은 없어요. 인프라와 팀 규모, 얼마나 빨리 돌려봐야
+하는지에 따라 갈려요. EC2 위의 소규모 팀이라면 CI/CD가 `git pull`을 걸어주는 전체
+Git repo 방식이 가장 단순하면서 피드백 루프도 제일 빨라요. 결정 트리를 손에 쥐고
+있다가 팀이나 인프라가 지금 전략을 넘어설 때 옮겨 갈 경로까지 미리 그려두면
+돼요.
 
-### 각 전략을 쓰면 안 되는 경우
+## 참고 자료
 
-- **EC2 전체 Git Repo** -- repository에 `.gitignore`로 제외할 수 없는
-  비밀이 있거나, 감사 가능한 이미지 태그가 필요한 불변 배포가 필수인 경우
-  사용하지 마세요.
-- **Image에 포함** -- DAG 반복 속도가 중요한 경우 사용하지 마세요. DAG
-  변경마다 리빌드하고 재시작하면 개발 중 허용할 수 없는 피드백 루프가
-  생겨요.
-- **Git-Sync Sidecar** -- 일반 EC2나 Docker Compose 환경에서 사용하지
-  마세요. Kubernetes 밖에서 sidecar 패턴은 불필요한 복잡성만 추가해요.
-- **S3/EFS Sync** -- DAG 배포의 엄격한 버전 관리가 필요한 경우 사용하지
-  마세요. S3 sync는 Git처럼 원자적 업데이트나 롤백 보장을 제공하지 않아요.
+- [Airflow Production Deployment](https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/production-deployment.html)
+- [Airflow 2.10.5 Configuration Reference](https://airflow.apache.org/docs/apache-airflow/2.10.5/configurations-ref.html).
+  위에서 인용한 `min_file_process_interval`과 `dag_dir_list_interval`
+  기본값이 여기 나와요.
+- [Airflow Configuration Reference (stable)](https://airflow.apache.org/docs/apache-airflow/stable/configurations-ref.html).
+  Airflow 3.x에서 같은 두 값이 `[dag_processor]` 아래로 옮겨간 내용을 담은
+  최신 문서예요.

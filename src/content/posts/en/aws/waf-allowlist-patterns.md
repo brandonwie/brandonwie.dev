@@ -30,7 +30,7 @@ references:
   - url: 'https://aws.amazon.com/waf/pricing/'
     title: AWS WAF Pricing
     type: official
-source_content_hash: 29eb344a05030ee2ea72a6dcc61fce3a9c7efd271ba587c659870059989ad9fd
+source_content_hash: 6c7e0668c659bcc2ace3b5159f8ecd6c758ce65d1412f98e534425a288d7ad3b
 ---
 
 I noticed our production API was receiving thousands of requests to paths like `/wp-admin`, `/phpmyadmin`, and `/.env`. Bots scanning for vulnerabilities, hitting every common exploit path they know. Our API returned 404s for all of them, but each request still consumed compute resources, cluttered logs, and occasionally triggered rate limiting for legitimate users.

@@ -3,7 +3,7 @@ title: Gemini Asymmetric Embeddings
 description: >-
   Retrieval gets better when queries and documents are encoded differently. Gemini expressed that with a task_type parameter, and its newer model moved the same idea into the prompt.
 date: 2026-03-23T00:00:00.000Z
-updated: '2026-08-02'
+updated: "2026-08-12"
 tags:
   - ai-ml
   - embeddings
@@ -13,6 +13,14 @@ draft: false
 lang: en
 expanded: true
 references:
+  - url: 'https://ai.google.dev/gemini-api/docs/embeddings'
+    title: >-
+      Gemini API embeddings guide — task_type on gemini-embedding-001, prompt
+      task prefixes on gemini-embedding-2
+    type: official
+  - url: 'https://ai.google.dev/gemini-api/docs/deprecations'
+    title: Gemini API model deprecations — shutdown dates per model
+    type: official
   - url: 'https://cloud.google.com/vertex-ai/generative-ai/docs/embeddings/task-types'
     title: Choose an embeddings task type — asymmetric and symmetric formats
     type: official
@@ -34,16 +42,16 @@ references:
   - url: 'https://huggingface.co/nomic-ai/nomic-embed-text-v1.5'
     title: nomic-embed-text-v1.5 model card
     type: authoritative
-source_content_hash: 4382b37c4535c74008abd96bc30d40f49e1ee79a19494fa1b86ba0c1c36f61f5
+source_content_hash: 638396d439f2463c92c063bbbf5f2ce514f144f5832dad58766e743988d044e4
 ---
 
-I was building a RAG pipeline and my retrieval quality was mediocre. Queries like "how do I handle database migrations" would come back with tangentially related documents instead of the ones that actually answered the question. I was embedding both sides the same way — one call, no distinction between a question and a passage — and that was the bottleneck.
+I was building a RAG pipeline and my retrieval quality was mediocre. Queries like "how do I handle database migrations" would come back with tangentially related documents instead of the ones that actually answered the question. I was embedding both sides the same way, one call with no distinction between a question and a passage, and that was the bottleneck.
 
 Encoding the two sides differently fixed it. Here is how that works, and a correction to what I first wrote about it.
 
-**Models first, because they moved.** I wired this up with `text-embedding-004`, which is on its way out on both of Google's surfaces — the Gemini API [shut it down in January 2026](https://ai.google.dev/gemini-api/docs/deprecations), and Vertex AI lists it for retirement on 2027-04-01. So the code below uses `gemini-embedding-001`, which carries the same `task_type` mechanism and whose Vertex retirement date is "No sooner than May 20, 2028."
+Start with the models, because they moved. I wired this up with `text-embedding-004`, which is on its way out on both of Google's surfaces. The Gemini API [shut it down in January 2026](https://ai.google.dev/gemini-api/docs/deprecations), and Vertex AI lists it for retirement on 2027-04-01. So the code below uses `gemini-embedding-001`, which carries the same `task_type` mechanism and a Vertex retirement date of "No sooner than May 20, 2028." The two surfaces keep separate calendars, though: the Gemini API lists that same model for shutdown on 2028-05-14. Read the date for the surface you actually call, not the one you happened to find first.
 
-The current model is `gemini-embedding-2`, GA since 2026-04-22, and it does not accept `task_type` at all — the task instruction moved into the prompt. Both mechanisms are below, but check the lifecycle page before you commit to either. This area moves faster than blog posts do.
+The current model is `gemini-embedding-2`, GA since 2026-04-22, and it does not accept `task_type` at all. The task instruction moved into the prompt instead. Both mechanisms are below, but check the lifecycle page before you commit to either. This area moves faster than blog posts do.
 
 ## Symmetric vs. Asymmetric Encoding
 
@@ -102,11 +110,11 @@ def prepare_document(content, title="none"):
     return f"title: {title} | text: {content}"
 ```
 
-Same asymmetry, different surface. The newer model also raises the input limit to 8,192 tokens, and its output is "already L2 normalized for non-default dimensions (unlike `gemini-embedding-001`)," so the manual normalization step above goes away. If you are starting a pipeline today, that is the path; `task_type` is what you keep for an index you already built on `gemini-embedding-001`.
+Same asymmetry, different surface. The newer model also raises the input limit to 8,192 tokens and takes multimodal input rather than text alone. Its output is "already L2 normalized for non-default dimensions (unlike `gemini-embedding-001`)," so the manual normalization step above goes away. If you are starting a pipeline today, that is the path; `task_type` is what you keep for an index you already built on `gemini-embedding-001`.
 
 One batching difference is worth a note before you port an indexing loop over. On the Gemini API, [the embeddings guide](https://ai.google.dev/gemini-api/docs/embeddings) says `gemini-embedding-001` gives you individual embeddings for a list of strings while `gemini-embedding-2` "produces a single aggregated embedding for multiple inputs," and points you at the Batch API when you want many embeddings at once. A loop that passed a list and got a list back would quietly collapse a whole batch into one vector.
 
-The lesson that survives both APIs: pick a convention and use it consistently. The docs are explicit that the task has to be applied the same way on both sides — if your documents were embedded under one task format, your queries have to follow it too. Mixing conventions across the index and the query side puts you back in the mismatch this whole mechanism exists to remove.
+The lesson that survives both APIs: pick a convention and use it consistently. The docs are explicit that the task has to be applied the same way on both sides. If your documents were embedded under one task format, your queries have to follow it too. Mixing conventions across the index and the query side puts you back in the mismatch this whole mechanism exists to remove.
 
 ## Where Symmetric Formatting Still Applies
 

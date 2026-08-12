@@ -1,0 +1,13 @@
+{
+	"slug": "fastapi-domain-exception-handler",
+	"topic": "fastapi ~ exceptions",
+	"thesis": "an unregistered domain exception is a 500, not a 404",
+	"components": [
+		{ "label": "one handler", "sublabel": "base class, MRO dispatch", "glyph": "api" },
+		{ "label": "status map", "sublabel": "NotFound 404, Validation 422", "glyph": "doc" },
+		{ "label": "startup guard", "sublabel": "catch unmapped subclasses", "glyph": "shield" }
+	],
+	"takeaway": "translate at the boundary, keep services HTTP-agnostic",
+	"theme": "terminal-mocha",
+	"alt": "Terminal-style cover for FastAPI domain exception handlers: one handler, status map, startup guard"
+}

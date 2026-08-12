@@ -5,7 +5,7 @@ description: >-
   새 개발자는 즉시 AI 지시사항을 사용하고 기존 개발자는 개인 확장을
   유지하는 패턴입니다.
 date: 2026-02-04T00:00:00.000Z
-updated: "2026-08-02"
+updated: "2026-08-12"
 tags:
   - devops
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-shared-personal-config
-source_updated: "2026-08-02"
-translation_date: "2026-07-23"
+source_updated: "2026-08-12"
+translation_date: "2026-08-12"
 references:
   - url: "https://code.claude.com/docs/en/memory"
     title: "Claude Code 공식 문서 — CLAUDE.md 로드 순서"
@@ -213,11 +213,11 @@ Claude Code의 로딩 계층 구조가 `~/.claude/CLAUDE.md`를 모든 세션에
 - best-practices audit에서 나온 rules 파일 총 4개(+ Tier 1의 tag-taxonomy)
 - 이제 모든 세션이 같은 원칙을 적용하면서 로딩하는 줄 수는 줄었어요
 
-## 현재 profile settings 구조
+## 현재 profile settings 구조 (2026년 7월)
 
-위의 공유 지시사항은 저장소 file과 생성해 둔 사본을 계속 사용해요.
-machine 전용 runtime 설정은 실패 범위가 달라서 symlink 연결을
-그만뒀어요.
+위의 공유 지시사항 패턴은 지금도 저장소 file과 생성해 둔 사본을 그대로 써요.
+그런데 비공개 runtime 설정에는 다른 방식이 필요했어요. symlink가 몇 번 깨지고
+나서 프로필 `settings.json`을 서로 이어 붙이는 방식을 그만뒀어요.
 
 현재는 비공개 authority 두 개와 서로 독립된 runtime file 두 개를 사용해요.
 
@@ -228,19 +228,41 @@ settings.personal.json  ─deploy→  ~/.claude/settings.json
 settings.work.json      ─deploy→  ~/.claude-work/settings.json
 ```
 
-각 runtime 설정은 mode `0600`인 일반 file이에요. 프로필별 가져오기와 적용을
-명시적으로 실행하며 background 동기화나 양방향 동기화는 없어요. 변경 전에
-신뢰할 수 있는 상위 directory인지, 소유자가 맞는지, JSON이 유효한지, 두
-프로필 식별자가 다른지 확인해요.
+각 runtime은 mode `0600`인 일반 file이에요. 프로필마다 직접 가져오고 직접
+적용해요. background로 도는 동기화도 없고, 양방향 동기화도 없어요. 뭔가를 쓰기
+전에 상위 디렉토리가 믿을 만한지, 소유자가 맞는지, JSON이 제대로 파싱되는지,
+두 프로필이 정말 서로 다른지 확인해요.
 
-가장 중요한 guardrail은 Claude process가 하나도 실행되지 않는 시간을 계속
-확인하는 거예요. 새 process가 생기거나 file identity가 불명확하면 작업을
-중단해요. rollback도 일부 field를 best-effort로 합치는 대신 별도 승인한 전체
-file update로 처리해요.
+가장 큰 몫을 하는 guardrail은 쓰기 구간 자체예요. Claude process가 하나도 돌지
+않을 때만 열리고 그동안 계속 지켜봐요. 새 process가 뜨거나 file identity가
+애매하면 작업을 멈춰요. rollback도 best-effort로 합치는 게 아니라 따로
+승인받은 전체 file update로 처리해요.
 
 repository의 공유 지시사항 패턴과 모순되는 구조는 아니에요. 팀이 보는 지시사항은
 감사 가능한 하나의 source와 생성된 사본이 유리해요. 반면 machine-private
 settings는 실패 범위를 줄이고 identity를 더 엄격하게 확인해야 해요.
+
+### hook이 없어진 script를 가리킬 때
+
+hook이 자기가 부르는 script보다 오래 남아 있을 수 있어요. 외부 script를 띄우는
+`UserPromptSubmit` hook에서 이 일이 생기면 hook이 prompt를 그대로 거절해서
+세션이 아무 일도 시작하지 못해요. 그런데 error 메시지는 엉뚱한 곳을 가리켜요.
+출력에 찍히는 Python shim은 실행기 이름만 알려주고 정작 대상은 알려주지
+않거든요. 범인을 짚어주는 건 설정된 script 경로에서 나는 `ENOENT` 한 줄이에요.
+
+hook 뒤에 있던 통합을 완전히 걷어내기로 했다면 느슨한 guard를 남겨두지 말고
+hook group을 통째로 지우는 게 맞아요. 비공개 프로필 authority 두 개, 일반 file
+runtime 두 개, 그리고 아직 로드될 수 있는 과거 settings 사본까지 전부 손봐야
+하고, 관계없는 hook group은 그대로 둬야 해요. 그다음에 늘 보던 것들을 확인해요.
+JSON이 유효한지, mode가 `0600`인지, 두 프로필이 같은 상태인지, 걷어낸 통합을
+참조하는 자리가 하나도 안 남았는지 보는 거예요.
+
+구조를 맞춰보는 sync 검사만으로는 외부 hook 대상이 실제로 존재하는지 알 수
+없어요. file identity와 권한, JSON 유효성만 비교하는 프로필 checker는 아무 데도
+가리키지 않는 hook 설정도 그냥 통과시키거든요. 그러니 대상이 살아 있는지
+확인하는 검사나 참조 감사를 따로 붙여야 해요. 날짜별 backup과 migration 묶음을
+얼마나 보관할지는 별개의 결정이에요. 오래된 사본이 지금 runtime에 영향을 주지는
+않지만, 나중에 그걸 되살리면 방금 지운 hook이 조용히 돌아올 수 있어요.
 
 ## 과거 settings.local.json 통합 방식
 
@@ -532,14 +554,19 @@ session 프로필은 `~/.claude-swap-backup/sessions/` 아래의 ephemeral 디�
 credential은 keychain에만 둬요. 서비스 이름은 해시로 만들어져요
 (`Claude Code-credentials-<sha256(NFC(dir))[:8]>`). wrapper가 그 항목을 심고
 평문은 unlink해요. claude 2.1.207이 실행 시점에 평문을 절대 마이그레이션하지
-않으니까요. wrapper는 source 프로필에서 10개 항목짜리 symlink 세트를 투영해요
-(settings, `CLAUDE.md`, skills, commands, agents, plugins, hooks, scripts,
-keybindings, settings.local). 이 목록은 `.cswap-3b-links.json` manifest에
-기록돼요. 목록이 세 곳(manifest, wrapper의 `LINK_ITEMS`, sync-doctor check 18의
-`items` 문자열)에 중복되어 있어서 하나를 고치면 셋 다 고쳐야 해요. 링크 처리는
-fail-closed예요. 실패가 나면 session 디렉토리와 keychain 항목을 지워요. history와
-projects는 항상 session별이고(`--share-history`는 절대 안 씀), 지식 베이스 표면은
-전부 source 프로필로 향하는 정확한 symlink예요. 복사본이 아니에요.
+않으니까요.
+
+settings는 앞 섹션의 독립 file 원칙을 그대로 따라요. wrapper는 선택한 runtime을
+가리키는 link가 아니라 자기가 소유한 mode `0600` 일반 file 사본으로
+`settings.json`을 만들어요. 나머지 아홉 개 표면(`CLAUDE.md`, skills, commands,
+agents, plugins, hooks, scripts, keybindings, settings.local)은 source 프로필로
+향하는 정확한 symlink로 남고, `.cswap-3b-links.json`이 `copy_items`와
+`symlink_items`를 따로 기록해서 두 종류가 섞이지 않게 해요.
+
+준비 과정은 fail-closed예요. 하나라도 실패하면 일회용 session 디렉토리와
+keychain 항목을 지워요. history와 projects는 항상 session별이고
+`--share-history`는 절대 안 써요. 그래서 session은 격리된 settings를 갖되,
+관계없는 지식 베이스 표면은 여전히 source 프로필로 이어져요.
 
 ### Credential 모드
 
@@ -553,10 +580,12 @@ token은 refresh token 없이 오래 유지돼서 만료되거나 취소되면 s
 
 ### 가드레일
 
-sync-doctor check 18(`cswap session links`)이 살아있는 모든 session 프로필을
-검증해요. wrapper가 관리하는 manifest가 있어야 하고, `source_profile`은 정확히
-`~/.claude`와 `~/.claude-work`로만 허용되고, 소유한 항목은 전부 원본으로 향하는
-정확한 symlink여야 해요. 복사본이나 잘못된 대상, 빠진 링크가 있으면 red로 뜨고,
+sync-doctor check 18(`cswap session profiles`)이 살아 있는 session을 전부
+검증해요. source 프로필은 `~/.claude`나 `~/.claude-work`로만 허용되고,
+`settings.json`은 검토를 마친 내용을 그대로 담은 별도의 mode `0600` 일반
+file이어야 하고, Token Optimizer는 명시적으로 `false`여야 해요. 나머지 관리
+항목은 전부 정확한 symlink여야 하고요. identity를 공유하거나, hardlink이거나,
+대상이 틀렸거나, manifest가 깨졌거나, 필수 항목이 빠지면 전부 red로 떠요.
 sessions 디렉토리가 아예 없으면 green이에요.
 
 ### 현재 상태

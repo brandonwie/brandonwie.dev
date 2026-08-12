@@ -2,7 +2,7 @@
 title: WebSocket Architecture in AWS ECS/ALB
 description: 'How WebSocket connections work with ALB, ECS, and Redis Pub/Sub for real-time notifications in containerized environments.'
 date: 2025-11-25T00:00:00.000Z
-updated: 2026-03-15T00:00:00.000Z
+updated: "2026-08-12"
 expanded: true
 tags:
   - backend
@@ -26,12 +26,12 @@ references:
   - url: 'https://redis.io/docs/interact/pubsub/'
     title: pubsub
     type: official
-source_content_hash: 35bb7bed18cebe5f98372a61c6df8c97b7b005e1dec4e6ae81b6b5cb50db075b
+source_content_hash: d760abb213f1b5a1b43ffd3f3c9c15578eae6d644fdc957645fbc8e40dd195f2
 ---
 
-Our users kept refreshing the page to check if their calendar sync was done. We needed the server to push a "sync complete" notification in real time — but our NestJS backend ran on multiple ECS containers behind an ALB. That raised a fundamental question: if a background job finishes on Container 2, how does User A (connected to Container 1) find out?
+Our users kept refreshing the page to check if their calendar sync was done. We needed the server to push a "sync complete" notification in real time, but our NestJS backend ran on multiple ECS containers behind an ALB. So if a background job finishes on Container 2, how does User A, connected to Container 1, ever hear about it?
 
-This post traces the full architecture of WebSocket connections in a containerized AWS environment: how ALB handles the HTTP upgrade, how Redis Pub/Sub bridges multiple containers, and what happens when connections inevitably drop.
+Answering that took us through the whole path: how ALB handles the HTTP upgrade, how Redis Pub/Sub bridges containers, and what actually happens when a connection drops.
 
 ---
 
@@ -43,22 +43,21 @@ A NestJS backend running on AWS ECS needs to push real-time notifications to bro
 
 ## Difficulties Encountered
 
-- **Misunderstanding ALB's role** — Initial assumption was that ALB actively
-  manages WebSocket state; in reality ALB is just a TCP tunnel after the HTTP
-  upgrade handshake. This confusion led to unnecessary ALB configuration
-  attempts
-- **Cross-container broadcasting** — When User A connects to Container 1 but a
-  sync job completes on Container 2, Container 2 cannot directly notify User A.
-  Took time to understand that Redis Pub/Sub solves this via persistent TCP
-  subscriptions, not HTTP callbacks
-- **Connection lifecycle edge cases** — Browser tab close sends a TCP FIN (not a
-  WebSocket close frame), network drops send nothing (relies on ping/pong
-  timeout), and ALB has its own idle timeout. Each scenario requires different
-  handling, which was not obvious from Socket.io docs alone
-- **Sticky sessions confusion** — Thought sticky sessions were mandatory for
-  Socket.io, but they are only needed for HTTP polling fallback. With WebSocket
-  transport only, any container can handle the connection after the initial
-  upgrade
+- We assumed ALB actively manages WebSocket state. It does not. Once the HTTP
+  upgrade handshake is done, ALB is a TCP tunnel and nothing more. That
+  misreading cost us a few pointless attempts at ALB configuration.
+- Cross-container broadcasting took a while to click. When User A connects to
+  Container 1 but a sync job completes on Container 2, Container 2 has no way to
+  reach User A by itself. Redis Pub/Sub closes the gap through persistent TCP
+  subscriptions, not HTTP callbacks.
+- The connection lifecycle edge cases were not obvious from the Socket.io docs
+  alone. Closing a browser tab sends a TCP FIN rather than a WebSocket close
+  frame, a network drop sends nothing at all and shows up only through the
+  ping/pong timeout, and ALB keeps its own idle timeout on top of both. Each
+  case needs different handling.
+- We thought sticky sessions were mandatory for Socket.io. They matter only for
+  the HTTP polling fallback. With WebSocket transport alone, any container can
+  carry the connection once the upgrade is finished.
 
 ---
 
@@ -79,8 +78,6 @@ flowchart LR
 4. **ALB** keeps TCP tunnel open (passes through data)
 5. **Socket.io** manages the connection from here
 
-Let's break down what each component in this architecture is actually responsible for.
-
 ---
 
 ## Component Responsibilities
@@ -89,12 +86,12 @@ Let's break down what each component in this architecture is actually responsibl
 | -------------------- | ---------------------------------------------------------------- |
 | **ALB**              | Routes initial HTTP upgrade, then passes through TCP (tunnel)    |
 | **Socket.io Server** | Manages WebSocket connection, tracks clients, handles heartbeats |
-| **NestJS Gateway**   | Application logic - auth, message handling, room management      |
+| **NestJS Gateway**   | Application logic: auth, message handling, room management       |
 | **Redis Adapter**    | Broadcasts messages across multiple containers                   |
 
-**Key insight:** ALB is just a tunnel - Socket.io manages the actual connection.
+ALB is just a tunnel. Socket.io manages the actual connection.
 
-A natural question arises: if Socket.io manages the connection, why do we need an ALB at all? The answer is about network topology, not protocol handling.
+So if Socket.io manages the connection, why keep an ALB at all? Because of network topology, not protocol handling.
 
 ---
 
@@ -114,7 +111,7 @@ With ALB:
   Client → api.example.com → ALB (public) → picks container → WebSocket established
 ```
 
-ALB solves the "how do clients reach containers" problem. But there's a second, subtler problem: how do containers talk to each other?
+That covers how clients reach containers. The harder problem is how containers reach each other.
 
 ---
 
@@ -144,7 +141,7 @@ flowchart LR
 
 ### How Pub/Sub Actually Works
 
-A common misconception is that Redis sends HTTP requests to your application when a message is published. In reality, it works the other way around — your app maintains persistent TCP connections to Redis, and Redis writes data to those already-open connections:
+It is easy to picture Redis firing an HTTP request at your application whenever a message is published. It works the other way around. Your app opens persistent TCP connections to Redis, and Redis writes data straight into those already-open sockets:
 
 ```text
 Step 1: STARTUP
@@ -165,7 +162,7 @@ Step 4: RECEIVE
 
 ### Code Reference
 
-In the Socket.io Redis adapter setup, notice the two separate Redis clients — one for publishing messages, one for subscribing to receive them. The subscriber maintains a persistent TCP connection that Redis writes to whenever a message is published on the channel:
+The Socket.io Redis adapter setup uses two separate Redis clients, one for publishing and one for subscribing. The subscriber holds a persistent TCP connection that Redis writes to whenever a message lands on the channel:
 
 ```typescript
 // pubClient: for PUBLISHING messages
@@ -179,8 +176,6 @@ this.adapterConstructor = createAdapter(pubClient, subClient, {
   key: `${redisConfig.prefix}:socket.io`
 });
 ```
-
-With the broadcasting mechanism understood, the next important topic is what happens when connections end — either normally or unexpectedly.
 
 ---
 
@@ -228,7 +223,7 @@ ALB closes the TCP connection
 Both client and server detect disconnect
 ```
 
-**Note:** This rarely happens because Socket.io sends heartbeat every 25s.
+This rarely happens, because Socket.io sends a heartbeat every 25s.
 
 ### Summary Table
 
@@ -284,7 +279,7 @@ When scaling to multiple containers:
 
 ### Sticky Sessions
 
-Ensures reconnections go to the same container:
+Sticky sessions route reconnections back to the same container:
 
 - Faster reconnection (previous state available)
 - Less Redis overhead
@@ -294,30 +289,27 @@ Ensures reconnections go to the same container:
 
 ## When to Use
 
-- **Real-time notifications to browser clients** — When the server needs to push
-  updates (sync status, live collaboration, chat) without client polling
-- **Containerized deployments behind a load balancer** — When multiple ECS tasks
-  or Kubernetes pods serve the same application and clients may connect to any
+- Real-time notifications to browser clients, where the server has to push
+  updates (sync status, live collaboration, chat) without the client polling
+- Containerized deployments behind a load balancer, where multiple ECS tasks or
+  Kubernetes pods serve the same application and a client may land on any
   instance
-- **Background job completion alerts** — When async workers finish tasks and
-  users need immediate feedback without refreshing
+- Background job completion alerts, where async workers finish work and users
+  need immediate feedback without refreshing
 
 ---
 
 ## When NOT to Use
 
-- **Simple request-response APIs** — If the client only needs data when it
-  explicitly asks, REST or GraphQL is simpler and has no persistent connection
-  overhead
-- **Server-sent events (SSE) suffice** — If communication is one-directional
-  (server to client only), SSE is simpler than WebSocket and works through more
-  proxies without special config
-- **Low-frequency updates** — If updates happen less than once per minute,
-  long-polling or periodic fetch is cheaper than maintaining persistent
-  WebSocket connections
-- **Serverless / Lambda** — WebSockets require persistent connections; Lambda
-  functions are ephemeral. Use API Gateway WebSocket APIs instead of Socket.io
-  in serverless environments
+- Simple request-response APIs. If the client only needs data when it explicitly
+  asks, REST or GraphQL is simpler and carries no persistent connection overhead
+- One-directional traffic. If only the server ever talks, SSE is simpler than
+  WebSocket and passes through more proxies without special config
+- Low-frequency updates. If something changes less than once a minute,
+  long-polling or a periodic fetch costs less than holding connections open
+- Serverless / Lambda. WebSockets need persistent connections and Lambda
+  functions are ephemeral, so API Gateway WebSocket APIs fit better than
+  Socket.io there
 
 ---
 
@@ -343,31 +335,19 @@ namespaces, and room-scoped broadcasting out of the box.
 
 ---
 
-## Key Points
-
-1. **ALB is just a tunnel** - Routes initial connection, then passes through TCP
-2. **Socket.io manages lifecycle** - Ping/pong, timeouts, rooms, cleanup are
-   automatic
-3. **Redis enables multi-container** - Uses persistent TCP connections, not HTTP
-4. **Pub/Sub pattern** - Subscribe once, receive messages as they're published
-5. **Single container simplifies** - No sticky sessions needed; Redis useful for
-   future scaling
-
----
-
 ## Practical Takeaways
 
-WebSocket architecture in a containerized environment looks complex on paper, but the mental model is straightforward once you understand each component's role:
+On paper the architecture looks heavy. The mental model turns out to be small once each component's job is clear.
 
-1. **ALB is just a tunnel.** After the initial HTTP upgrade handshake, ALB does nothing but pass TCP bytes through. Socket.io manages the actual connection lifecycle — heartbeats, timeouts, rooms, cleanup. Don't over-configure the ALB; the defaults work because Socket.io's 25-second heartbeat keeps connections alive well within ALB's 60-second idle timeout.
+1. ALB is just a tunnel. After the initial HTTP upgrade handshake it does nothing but pass TCP bytes through, and Socket.io owns the rest of the lifecycle: ping/pong, timeouts, rooms, cleanup. There is no reason to over-configure the ALB, because Socket.io's 25-second heartbeat keeps connections alive well inside the 60-second idle timeout.
 
-2. **Redis Pub/Sub solves the multi-container broadcast problem.** Each container maintains a persistent TCP connection to Redis. When Container 2 publishes a message, Redis writes it to Container 1's already-open connection — no HTTP callbacks, no polling. The Socket.io Redis adapter handles serialization and room-scoped delivery out of the box.
+2. Redis Pub/Sub solves the multi-container broadcast problem. Every container subscribes once over a persistent TCP connection. When Container 2 publishes, Redis writes the message into Container 1's already-open socket, with no HTTP callbacks and no polling anywhere in the path. The Socket.io adapter takes care of serialization and room-scoped delivery.
 
-3. **Start with the Redis adapter even on a single container.** It adds negligible overhead and means you can scale to multiple containers without changing your WebSocket code. Going from one container to three becomes a Terraform change, not an application architecture change.
+3. Add the Redis adapter even on a single container. The overhead is negligible, and it means scaling out later is a Terraform change instead of an application rewrite. Sticky sessions can wait until the HTTP polling fallback actually matters.
 
-4. **Know the three disconnect scenarios.** Normal tab close sends a TCP FIN (instant detection). Network drops send nothing (detected by ping/pong timeout in ~25 seconds). ALB idle timeout (60 seconds) rarely triggers thanks to heartbeats. Each scenario is handled automatically by Socket.io, but understanding them helps you debug connection issues in production.
+4. Know the three disconnect scenarios. A normal tab close sends a TCP FIN and is detected instantly. A network drop sends nothing and only surfaces through the ping/pong timeout after roughly 25 seconds. The ALB idle timeout at 60 seconds rarely fires, thanks to the heartbeat. Socket.io handles all three on its own, but knowing which one you are looking at makes production debugging much faster.
 
-If you're adding real-time features to a containerized backend, the Socket.io + Redis Adapter + ALB combination is battle-tested and avoids reinventing the wheel of connection management, reconnection, and cross-container messaging.
+If you are adding real-time features to a containerized backend, Socket.io with the Redis adapter behind an ALB covers connection management, reconnection, and cross-container messaging without writing any of it yourself.
 
 ---
 

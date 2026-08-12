@@ -43,7 +43,7 @@ references:
   - url: 'https://asdf-vm.com/guide/upgrading-to-v0-16.html'
     title: Upgrading to asdf v0.16
     type: official
-source_content_hash: 269a8ae05596c621827bbc69511f9e34aff95874d9b756beb997a9bdfa62f2a4
+source_content_hash: beaed96fe6f2b0d647ddfa861c48d8000e1b25c182dc68d6e68ae3103afc4cce
 expanded: true
 ---
 

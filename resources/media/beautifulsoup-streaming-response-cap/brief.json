@@ -1,0 +1,13 @@
+{
+	"slug": "beautifulsoup-streaming-response-cap",
+	"topic": "beautifulsoup ~ memory",
+	"thesis": "the parsed DOM costs 20-50x the raw HTML",
+	"components": [
+		{ "label": "stream", "sublabel": "httpx.stream defers the body", "glyph": "pipeline" },
+		{ "label": "two-layer reject", "sublabel": "header first, then bytes read", "glyph": "shield" },
+		{ "label": "5 MB cap", "sublabel": "covers 99% of real pages", "glyph": "gear" }
+	],
+	"takeaway": "cap bytes before parsing, never trust Content-Length",
+	"theme": "terminal-mocha",
+	"alt": "Terminal-style cover for BeautifulSoup streaming response caps: stream, two-layer reject, 5 MB cap"
+}

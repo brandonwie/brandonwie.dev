@@ -36,7 +36,7 @@ references:
   - url: 'https://www.jenkins.io/doc/book/scaling/hardware-recommendations/'
     title: Jenkins hardware recommendations
     type: official
-source_content_hash: 992cbdea640004306cb6d1b7a8a0a7f9ae7631cae9619949c247f341e3d2252a
+source_content_hash: 4433f3f5d04a9270fa7614b3c8381fee447b64af5ec141e9f4da8580b836b23a
 ---
 
 For a personal repo with polyglot services — Python, Go, Rust, and TypeScript — which CI system should you use? The naive answer is "pick one." The better answer is: use both, each for what it was designed for.

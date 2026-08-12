@@ -5,7 +5,7 @@ description: >-
   (tool configuration), Mia Heidenstedt (process discipline), and YK Dojo
   (practitioner workflows)
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - general
   - claude-code
@@ -31,7 +31,7 @@ references:
   - url: 'https://code.claude.com/docs/en/mcp'
     title: Connect Claude Code to tools via MCP
     type: official
-source_content_hash: d14ec839502d84ba0b190d4fb7b8316700d27c00dd0f2fe37f9d4ab8feb9a426
+source_content_hash: cd26667629957c2b984388156e2947aa3c6bbd5ca61424dc680d0f7545da697d
 ---
 
 Claude Code works well out of the box, but without a structured workflow the sessions drift. Context windows fill with history that no longer matters, parallel work goes unused, and the quality of generated code swings between fine and subtly broken.
@@ -42,7 +42,7 @@ I went through three sources and tried to reconcile them into one workflow. Bori
 
 ## Why Three Sources
 
-The first thing that got in the way was advice that appeared to conflict. Boris uses the biggest model and steers less. Heidenstedt emphasizes manual control and careful verification. Read side by side, those sound opposed. They are not — they operate at different layers.
+The first thing that got in the way was advice that appeared to conflict. Boris uses the biggest model and steers less. Heidenstedt emphasizes manual control and careful verification. Read side by side, those sound opposed. They are not. They operate at different layers.
 
 Boris optimizes the **tool layer**: how to configure Claude Code itself. Heidenstedt optimizes the **process layer**: how to structure your work regardless of which AI tool you use. YK Dojo optimizes the **practice layer**: daily workflow habits for throughput.
 
@@ -50,13 +50,19 @@ No single source covers the full picture. Boris does not talk about test design.
 
 ## Boris Cherny: Tool Configuration
 
-Boris opens his thread by calling his own setup "surprisingly vanilla": the tool works well out of the box, so he does not customize it much. Everything below is from that thread, so treat it as a snapshot of early 2026 rather than current behavior — the flags and defaults move.
+Boris opens his thread by calling his own setup "surprisingly vanilla": the tool works well out of the box, so he does not customize it much. Everything below is from that thread, so treat it as a snapshot of early 2026 rather than current behavior. The flags and defaults move.
 
 ### Massive Parallelism
 
 Boris runs 5 Claude sessions in his terminal, numbered 1-5, and relies on system notifications to know when one needs input. Alongside those he runs 5-10 sessions on the web. He hands local sessions off to web with `&` and uses `--teleport` to move back and forth.
 
 The point is not multitasking for its own sake. It is keeping work moving while one session grinds through a long task.
+
+### The Biggest Model, Always
+
+In that January 2026 thread he was running Opus 4.5 with thinking for everything, rather than dropping to a smaller model for smaller tasks. The trade-off he describes is that the bigger model is slower per token but faster overall: it needs less steering and uses tools better, so the correction turns you skip outweigh the extra generation time.
+
+Model names change fast enough that the specific pin dates quickly. His measurement is the part worth keeping: time to a working result rather than tokens per second.
 
 ### Living CLAUDE.md
 
@@ -92,11 +98,11 @@ Per the [hooks reference](https://code.claude.com/docs/en/hooks), the event live
 }
 ```
 
-The `|| true` keeps a failed format from surfacing as a hook error. `PostToolUse` fires after the tool call has already succeeded, so it cannot block the edit either way — it is a side-effect slot, not a gate.
+The `|| true` keeps a failed format from surfacing as a hook error. `PostToolUse` fires after the tool call has already succeeded, so it cannot block the edit either way. It is a side-effect slot, not a gate.
 
 ### Verification Is Number One
 
-His closing tip is the most emphatic one: give Claude a way to verify its work. His claim is specific — with that feedback loop in place, "it will 2-3x the quality of the final result." Without it, Claude produces plausible-looking code that may or may not run.
+His closing tip is the most emphatic one: give Claude a way to verify its work. His claim is specific: with that feedback loop in place, "it will 2-3x the quality of the final result." Without it, Claude produces plausible-looking code that may or may not run.
 
 ### Permissions Allow-List
 
@@ -104,9 +110,9 @@ He does not use `--dangerously-skip-permissions`. Instead he pre-allows common b
 
 ### MCP Checked Into the Repo
 
-Boris has Claude use his team's tools directly — searching and posting to Slack through an MCP server, running analytics queries, pulling error logs — and the Slack MCP configuration is checked into their `.mcp.json` rather than configured per person.
+Boris has Claude use his team's tools directly: searching and posting to Slack through an MCP server, running analytics queries, pulling error logs. The Slack MCP configuration is checked into their `.mcp.json` rather than configured per person.
 
-The [MCP docs](https://code.claude.com/docs/en/mcp) describe this as project scope, and recommend checking `.mcp.json` into version control so the whole team gets the same servers:
+The thread says the file is checked in but never names the endpoint, so the URL below comes from the official docs rather than from his config. The [MCP docs](https://code.claude.com/docs/en/mcp) describe this as project scope, and recommend checking `.mcp.json` into version control so the whole team gets the same servers:
 
 ```json
 {
@@ -133,13 +139,13 @@ Her solution is to write property-based, high-level specification tests yourself
 
 ### Context Isolation
 
-If an AI does write the tests, it should see as little of the implementation as possible — property-based interface tests for the expected behavior, written against the spec rather than the code. The test session gets the interface, not the source.
+If an AI does write the tests, it should see as little of the implementation as possible: property-based interface tests for the expected behavior, written against the spec rather than the code. The test session gets the interface, not the source.
 
 ### HIGH-RISK Markers
 
 For functions that carry real security risk, she marks them in place with comments like `//HIGH-RISK-UNREVIEWED` and `//HIGH-RISK-REVIEWED`. The mechanism that makes it work is the instruction attached to it: the AI is told to change the review state as soon as it changes a single character in the function.
 
-That gives you an audit trail on the code that can actually cause damage — payment processing, data deletion, authentication.
+That gives you an audit trail on the code that can actually cause damage: payment processing, data deletion, authentication.
 
 ### Reduce Complexity
 
@@ -170,7 +176,7 @@ Where Boris and Heidenstedt provide frameworks, YK Dojo's repo is a pile of dail
 
 ### Voice Input
 
-Local transcription, on the theory that you can communicate faster by speaking than by typing. He notes that local models are accurate enough — Claude tends to recover mistranscriptions from context — and that whispering into earphones works even on a plane.
+Local transcription, on the theory that you can communicate faster by speaking than by typing. He notes that local models are accurate enough (Claude tends to recover mistranscriptions from context) and that whispering into earphones works even on a plane.
 
 ### Context Freshness
 
@@ -180,7 +186,7 @@ When you do need continuity, ask Claude to write a handoff document first: what 
 
 ### Cascade Multitasking
 
-Open a new tab on the right for each new task, then sweep left to right, oldest to newest. He recommends at most three or four tasks at a time — staying organized matters more than any particular technical setup.
+Open a new tab on the right for each new task, then sweep left to right, oldest to newest. He recommends at most three or four tasks at a time. Staying organized matters more than any particular technical setup.
 
 ### Automation Progression
 
@@ -194,7 +200,7 @@ When you catch yourself repeating something, it goes in `CLAUDE.md`. When that g
 
 ### Half-Clone Conversations
 
-When a conversation gets too long, a half-clone keeps only the later half and continues from there — recent context preserved, older material dropped. He wires it to a hook that checks context usage after each response and suggests the clone above 85%.
+When a conversation gets too long, a half-clone keeps only the later half and continues from there, so the recent context stays and the older material goes. He wires it to a hook that checks context usage after each response and suggests the clone above 85%.
 
 The stated advantage over auto-compact is determinism: half-clone keeps your actual messages intact instead of summarizing them.
 
@@ -219,7 +225,7 @@ Adopting all of this at once creates the cognitive overload it is supposed to pr
 
 **YK Dojo's efficiency.** Try cascade multitasking with two or three sessions. Try voice input for long prompts. Start a fresh session per topic and use handoff docs for continuity.
 
-Then let the automation progression happen on its own schedule. It is also fair to skip all of it for a one-line change — parallel sessions and verification hooks are not worth the overhead when you are editing a string constant.
+Then let the automation progression happen on its own schedule. It is also fair to skip all of it for a one-line change. Parallel sessions and verification hooks are not worth the overhead when you are editing a string constant.
 
 ## Takeaway
 

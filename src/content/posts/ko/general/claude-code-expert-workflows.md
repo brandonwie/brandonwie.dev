@@ -4,7 +4,7 @@ description: >-
   세 명의 전문가 소스에서 합성한 Claude Code 활용 패턴: Boris Cherny(도구 설정), Mia Heidenstedt(프로세스
   규율), YK Dojo(실무 워크플로우)
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - general
   - claude-code
@@ -15,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-expert-workflows
-source_updated: '2026-08-02'
-translation_date: '2026-02-12'
+source_updated: '2026-08-12'
+translation_date: '2026-08-12'
 references:
   - url: 'https://x.com/bcherny/status/2007179832300581177'
     title: Boris Cherny's Claude Code setup
@@ -58,6 +58,12 @@ Boris는 스레드를 자기 설정이 "놀라울 정도로 평범(surprisingly 
 Boris는 터미널에서 5개의 Claude 세션을 1-5번으로 번호를 붙여 실행하고, 어느 세션이 입력을 기다리는지 시스템 알림으로 파악해요. 여기에 더해 웹에서 5-10개 세션을 돌려요. 로컬 세션은 `&`로 웹에 넘기고, `--teleport`로 양쪽을 오가요.
 
 멀티태스킹 자체가 목적은 아니에요. 한 세션이 긴 작업을 갈아 넣는 동안 다른 일을 계속 굴리는 게 핵심이에요.
+
+### 언제나 가장 큰 모델
+
+2026년 1월 그 스레드에서 그는 작은 작업이라고 작은 모델로 내려가지 않고, thinking을 켠 Opus 4.5를 전부에 썼어요. 큰 모델은 토큰당 속도는 느리지만 전체로 보면 더 빠르다는 게 그의 설명이에요. 조종할 일이 적고 도구를 더 잘 쓰니까, 굳이 안 해도 되는 교정 턴이 늘어난 생성 시간을 상쇄하고도 남는다는 거죠.
+
+모델 이름은 금방 바뀌니까 특정 버전을 콕 집은 부분은 빨리 낡아요. 남는 건 그가 무엇을 재고 있느냐예요. 초당 토큰 수가 아니라 결과가 돌아가기까지 걸린 시간이죠.
 
 ### 살아있는 CLAUDE.md
 
@@ -107,7 +113,7 @@ Boris는 터미널에서 5개의 Claude 세션을 1-5번으로 번호를 붙여 
 
 Boris는 Claude가 팀 도구를 직접 쓰게 해요. MCP 서버로 Slack을 검색하고 글을 올리고, 분석 쿼리를 돌리고, 에러 로그를 가져와요. Slack MCP 설정은 개인마다 따로 잡는 게 아니라 팀의 `.mcp.json`에 체크인돼 있어요.
 
-[MCP 문서](https://code.claude.com/docs/en/mcp)는 이걸 project scope라고 부르고, 팀 전체가 같은 서버를 쓰도록 `.mcp.json`을 버전 관리에 체크인하라고 권해요:
+스레드에는 파일을 체크인한다는 얘기만 있고 endpoint가 뭔지는 안 나와요. 그래서 아래 URL은 그의 설정이 아니라 공식 문서에 있는 주소예요. [MCP 문서](https://code.claude.com/docs/en/mcp)는 이걸 project scope라고 부르고, 팀 전체가 같은 서버를 쓰도록 `.mcp.json`을 버전 관리에 체크인하라고 권해요:
 
 ```json
 {

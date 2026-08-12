@@ -1,0 +1,13 @@
+{
+	"slug": "docker-exec-credential-leak-vectors",
+	"topic": "docker exec ~ leaks",
+	"thesis": "env dumps and argv both print the broker password",
+	"components": [
+		{ "label": "env dump", "sublabel": "grep prints the secret", "glyph": "terminal" },
+		{ "label": "argv", "sublabel": "process list sees the URL", "glyph": "search" },
+		{ "label": "redaction", "sublabel": "read from env inside", "glyph": "lock" }
+	],
+	"takeaway": "keep secrets out of argv and out of scrollback",
+	"theme": "terminal-mocha",
+	"alt": "Terminal-style cover for docker exec credential leak vectors: env dump, argv, redaction"
+}

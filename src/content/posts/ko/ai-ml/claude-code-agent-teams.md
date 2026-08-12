@@ -4,7 +4,7 @@ description: >-
   Agent Teams의 현재 동작과 version별 pane 문제, 작업 소유권, 결과 전달
   실패를 구분해서 정리한 사용 기록이에요.
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - ai-ml
   - claude-code
@@ -15,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: '2026-08-02'
-translation_date: 2026-07-23
+source_updated: '2026-08-12'
+translation_date: '2026-08-12'
 references:
   - url: 'https://code.claude.com/docs/en/agent-teams'
     title: Claude Code Agent Teams 공식 문서
@@ -142,9 +142,12 @@ flag 두 개를 찾았어요.
 남겼어요. 그 version을 진단할 때는 문서의 설정값보다 `claude --debug` log가
 실제 선택을 보여줬어요.
 
-오래된 build는 team metadata를 지운 뒤에도 tmux pane을 shell로 남기기도
-했어요. 현재 문서는 session 종료 시 자동 cleanup을 설명해요. 특정 version에서
-pane이 남는다면 `tmux list-panes -a`로 확인하고 그 release의 bug로 보고해요.
+오래된 build는 team metadata를 지운 뒤에도 tmux pane을 빈 shell로 남기기도
+했어요. 현재 문서는 session이 끝나면 cleanup이 자동으로 이뤄진다고 설명하는데,
+같은 문서의 문제 해결 항목에는 여전히 남은 tmux session이 올라와 있어요.
+그래서 자동 cleanup은 보장이라기보다 의도된 동작 정도로 읽고 있어요. 특정
+version에서 pane이 남는다면 `tmux list-panes -a`로 확인하고 그 release의 bug로
+보고해요.
 
 teammate를 세 명 이상 동시에 만들 때 tmux `send-keys`의 "not in a mode"
 오류도 겪었어요. pane은 생겼지만 agent가 시작되지 않았고, 한 명씩 다시 만들면

@@ -2,7 +2,7 @@
 title: Terraform 상태 복구
 description: Terraform state 파일이 AWS 실제 상태와 맞지 않을 때 복구하는 절차를 정리했어요.
 date: 2026-01-26T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-08-12'
 tags:
   - devops
   - terraform
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: terraform-state-recovery
-source_updated: '2026-08-02'
-translation_date: '2026-08-02'
+source_updated: '2026-08-12'
+translation_date: '2026-08-12'
 references:
   - url: 'https://developer.hashicorp.com/terraform/cli/state/recover'
     title: Recover state from backup
@@ -92,10 +92,10 @@ AWS에는 있는데 state에는 없는 리소스(= Terraform이 create하려는 
 
 ```bash
 # RDS Cluster
-terraform import aws_rds_cluster.main app-rds-prod-cluster
+terraform import aws_rds_cluster.main app-prod-cluster
 
 # RDS Instance
-terraform import aws_rds_cluster_instance.main app-rds-prod
+terraform import aws_rds_cluster_instance.main app-prod-instance-1
 
 # EC2 Instance
 terraform import aws_instance.main i-0123456789abcdef0
@@ -192,12 +192,18 @@ terraform {
 
 ## 핵심 교훈
 
-1. **state를 항상 먼저 백업** — local state는 파일 복사, remote backend는 `terraform state pull`
-2. **진짜 refresh 전에 읽기 전용 refresh** — `plan -refresh-only`는 보여주고, `refresh`는 그냥 써버려요
-3. **관리 전에 import** — 기존 리소스를 다시 만들지 말고 import한 뒤 설정을 맞추세요
-4. **lifecycle 블록은 의도적으로** — 다른 프로세스가 실제로 소유한 속성에만, 그 이상 넓히지 않기
-5. **plan을 충분히 실행** — 복구 중에는 `terraform plan`을 여러 번 돌리고, 검토 없이 `apply`하지 않기
-6. **remote state + locking 설정** — state를 중앙화해서 대부분의 drift를 예방해요
+1. **state는 항상 먼저 백업하세요.** Local state는 파일을 복사하고, remote
+   backend는 `terraform state pull`을 쓰면 돼요.
+2. **진짜 refresh 전에 읽기 전용으로 먼저 확인하세요.** `plan -refresh-only`는
+   보여주기만 하고, `refresh`는 그냥 써버려요.
+3. **관리하기 전에 import하세요.** 기존 리소스를 다시 만들지 마세요. import한
+   뒤에 설정을 맞추면 돼요.
+4. **lifecycle 블록은 의도적으로 쓰세요.** 다른 프로세스가 실제로 소유한
+   속성에만 쓰고, 그 이상으로 넓히지 마세요.
+5. **plan을 충분히 돌리세요.** 복구 중에는 `terraform plan`을 여러 번 실행하고,
+   검토 없이 `apply`하지 마세요.
+6. **remote state와 locking을 설정하세요.** state를 중앙에서 관리하면 대부분의
+   drift를 예방할 수 있어요.
 
 ## 마무리
 
