@@ -16,9 +16,16 @@ pnpm migration:controls   # prove the harness fails closed
 pnpm migration:verify compare verification/baseline/svelte-34aa7e7.json build
 ```
 
-The baseline covers 366 pages, 5 site artifacts (`sitemap.xml`, `rss.xml`,
-`ko/rss.xml`, `_redirects`, `404.html`) and 344 Pagefind fragments, captured at
-`main` HEAD `34aa7e7`.
+The baseline covers 366 pages, 4 site artifacts (`sitemap.xml`, `rss.xml`,
+`ko/rss.xml`, `_redirects`) and 344 Pagefind fragments, captured at `main` HEAD
+`34aa7e7`.
+
+**It is stable across rebuilds, and that was not free.** Two build-to-build
+differences showed up as false positives before it was: the feeds carry a
+`<lastBuildDate>`, and `404.html` embeds content-hashed `_app/immutable/*` URLs.
+Feeds are now compared semantically (item counts, links, titles) and `404.html`
+is compared as the page `/404` rather than as bytes. Two consecutive production
+builds now compare with zero differences.
 
 ## What the harness does not check
 
@@ -29,6 +36,11 @@ decision rather than an implementation detail. They are AC7 and AC9 obligations
 and are open, not dropped.
 
 Whitespace is normalized before the text of a page is hashed, so a Prettier
-reflow is invisible to the comparator. That is deliberate — the alternative
-reports every formatting run as a content change — and control 6 exists to mark
-exactly where that blindness starts.
+reflow is invisible to the comparator. The feed build timestamp is excluded for
+the same reason. Both are deliberate — the alternative reports every formatting
+run and every rebuild as a change — and controls 6 and 8 mark exactly where the
+blindness starts, while controls 9 and 10 prove the feed and the 404 page are
+still compared.
+
+Ten negative controls run via `pnpm migration:controls`; eight must exit 1 and
+two must exit 0.

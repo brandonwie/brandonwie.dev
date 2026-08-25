@@ -14,7 +14,8 @@
  *   - title, meta description, canonical, hreflang alternates, OG and Twitter
  *   - every JSON-LD block, compared as parsed JSON rather than as text
  *   - the normalized visible text of the page body
- *   - sitemap.xml, rss.xml, ko/rss.xml
+ *   - sitemap.xml, rss.xml, ko/rss.xml on item counts, links and titles
+ *     rather than as bytes, because they carry a build timestamp
  *   - the Pagefind index entry count
  *
  * URL NORMALIZATION is explicit, because the Step 1 spike settled the output
@@ -178,7 +179,42 @@ function walk(dir: string, out: string[] = []): string[] {
 	return out;
 }
 
-const SITE_FILES = ['sitemap.xml', 'rss.xml', 'ko/rss.xml', '_redirects', '404.html'];
+/**
+ * Site-level artifacts compared outside the page map.
+ *
+ * `404.html` was here and has been REMOVED: it embeds content-hashed
+ * `_app/immutable/*` URLs, so its bytes change on every build, and the first
+ * cross-build run reported it as a difference. It is already compared as the
+ * page `/404` on its fields and normalized text, where asset hashes do not
+ * matter -- control 10 proves deleting it is still caught. Raw hashing is
+ * reserved for `_redirects`, which is static text.
+ */
+const SITE_FILES = ['sitemap.xml', 'rss.xml', 'ko/rss.xml', '_redirects'];
+
+/**
+ * Feeds carry a build timestamp, so hashing the whole file makes the comparison
+ * non-deterministic. The negative-control run right after a rebuild reported
+ * `rss.xml` changed when only `<lastBuildDate>` had moved -- a harness that
+ * reports a false difference on every rebuild is worse than no harness. AC5
+ * asks for a SEMANTIC diff of the feeds (item counts, ordering, links, locale
+ * split), so that is what is compared and the timestamp is excluded by design.
+ */
+function feedShape(raw: string): string {
+	const tag = (name: string): string[] =>
+		[...raw.matchAll(new RegExp(`<${name}>([\\s\\S]*?)</${name}>`, 'gi'))].map((m) =>
+			m[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim(),
+		);
+	const items = (raw.match(/<item>/gi) ?? []).length;
+	const urls = (raw.match(/<url>/gi) ?? []).length;
+	return JSON.stringify({
+		items,
+		urls,
+		links: [...tag('link'), ...tag('loc')],
+		titles: tag('title'),
+	});
+}
+
+const SEMANTIC_FEEDS = new Set(['sitemap.xml', 'rss.xml', 'ko/rss.xml']);
 
 function pagefindEntries(buildDir: string): number | null {
 	const dir = join(buildDir, 'pagefind');
@@ -204,10 +240,8 @@ export function capture(buildDir: string): Baseline {
 		const full = join(buildDir, name);
 		if (existsSync(full)) {
 			const raw = readFileSync(full, 'utf8');
-			site[name] = createHash('sha256')
-				.update(raw.replace(/\s+/g, ' ').trim())
-				.digest('hex')
-				.slice(0, 16);
+			const material = SEMANTIC_FEEDS.has(name) ? feedShape(raw) : raw.replace(/\s+/g, ' ').trim();
+			site[name] = createHash('sha256').update(material).digest('hex').slice(0, 16);
 		}
 	}
 	return {

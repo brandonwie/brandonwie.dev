@@ -7,8 +7,8 @@
  * injects one defect per control, and asserts what the comparator does about
  * it. Results are whatever the run printed, not what was expected.
  *
- * SEVEN CONTROLS. Six must exit 1. One — control 6 — must exit 0 and marks a
- * deliberate blindness rather than a failure:
+ * TEN CONTROLS. Eight must exit 1. Two — controls 6 and 8 — must exit 0 and
+ * mark deliberate blindnesses rather than failures:
  *
  *   1 removed page              a built page deleted
  *   2 changed canonical         one canonical href rewritten
@@ -17,6 +17,9 @@
  *   5 stale ledger entry        the ledger approves a difference that is absent
  *   6 Prettier-style reflow     a line break inserted mid-phrase in body text
  *   7 malformed ledger          an entry carrying an extra key
+ *   8 feed timestamp moved      only <lastBuildDate> changed
+ *   9 feed item removed         one <item> deleted from rss.xml
+ *  10 404 page removed         build/404.html deleted, caught as a page
  *
  * CONTROL 6 IS THE BOUNDARY, AND IT DEVIATES FROM plan.md. The plan lists a
  * reflow among the injected defects and says each control must exit nonzero.
@@ -32,6 +35,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
 	cpSync,
 	existsSync,
@@ -185,6 +189,38 @@ const CONTROLS: Control[] = [
 			);
 		},
 	},
+	{
+		id: 8,
+		name: 'feed lastBuildDate moved (deliberate blindness)',
+		expect: 0,
+		apply: (dir) => {
+			const file = join(dir, 'rss.xml');
+			const xml = readFileSync(file, 'utf8');
+			writeFileSync(
+				file,
+				xml.replace(
+					/<lastBuildDate>[^<]*<\/lastBuildDate>/,
+					'<lastBuildDate>Thu, 01 Jan 2099 00:00:00 GMT</lastBuildDate>',
+				),
+			);
+		},
+	},
+	{
+		id: 10,
+		name: '404 page removed',
+		expect: 1,
+		apply: (dir) => unlinkSync(join(dir, '404.html')),
+	},
+	{
+		id: 9,
+		name: 'feed item removed',
+		expect: 1,
+		apply: (dir) => {
+			const file = join(dir, 'rss.xml');
+			const xml = readFileSync(file, 'utf8');
+			writeFileSync(file, xml.replace(/<item>[\s\S]*?<\/item>/, ''));
+		},
+	},
 ];
 
 /** A built page that actually carries an Article JSON-LD block.
@@ -208,19 +244,25 @@ function jsonLdPage(dir: string): string {
 	process.exit(2);
 }
 
-/** Cheap structural fingerprint: every file path plus its size. */
+/**
+ * Fingerprint of the candidate tree: every file path plus a hash of its bytes.
+ *
+ * The first version hashed path plus SIZE, and control 8 -- which swaps one
+ * timestamp for another of the same length -- was reported as "changed
+ * nothing". A guard that only notices edits which change a file's length is
+ * not a guard against no-op injections, which is the whole point of it.
+ */
 function treeFingerprint(dir: string): string {
 	const parts: string[] = [];
 	const walk = (d: string): void => {
 		for (const entry of readdirSync(d).sort()) {
 			const full = join(d, entry);
-			const st = statSync(full);
-			if (st.isDirectory()) walk(full);
-			else parts.push(`${full}:${st.size}`);
+			if (statSync(full).isDirectory()) walk(full);
+			else parts.push(`${full}:${createHash('sha256').update(readFileSync(full)).digest('hex')}`);
 		}
 	};
 	walk(dir);
-	return parts.join('\n');
+	return createHash('sha256').update(parts.join('\n')).digest('hex');
 }
 
 let failures = 0;
@@ -265,5 +307,6 @@ for (const control of CONTROLS) {
 console.log(
 	`\n${CONTROLS.length - failures}/${CONTROLS.length} controls produced their required exit code.`,
 );
-console.log('Control 6 asserts exit 0 on purpose: whitespace normalization is a stated blindness.');
+console.log('Controls 6 and 8 assert exit 0 on purpose: whitespace normalization and the feed');
+console.log('build timestamp are stated blindnesses. Control 9 proves the feed is still compared.');
 process.exit(failures === 0 ? 0 : 1);
