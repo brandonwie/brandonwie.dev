@@ -7,28 +7,26 @@
  * injects one defect per control, and asserts what the comparator does about
  * it. Results are whatever the run printed, not what was expected.
  *
- * TEN CONTROLS. Eight must exit 1. Two — controls 6 and 8 — must exit 0 and
- * mark deliberate blindnesses rather than failures:
+ * TWO KINDS OF CONTROL, per plan.md § Slice 0 step 3 as amended 2026-08-25.
+ * DEFECT controls must exit 1: the harness rejects a known-bad input. INVARIANCE
+ * controls must exit 0: it ignores a benign change on purpose. Each invariance
+ * control is paired with a defect control over the same surface, so a blindness
+ * is never the only thing proven about a field. The plan and this file agree;
+ * an earlier revision called every control a negative control and recorded the
+ * mismatch as an open disagreement, which was the wrong diagnosis.
  *
- *   1 removed page              a built page deleted
- *   2 changed canonical         one canonical href rewritten
- *   3 dropped JSON-LD           an Article JSON-LD block deleted
- *   4 reworded title            one word changed inside <title>
- *   5 stale ledger entry        the ledger approves a difference that is absent
- *   6 Prettier-style reflow     a line break inserted mid-phrase in body text
- *   7 malformed ledger          an entry carrying an extra key
- *   8 feed timestamp moved      only <lastBuildDate> changed
- *   9 feed item removed         one <item> deleted from rss.xml
- *  10 404 page removed         build/404.html deleted, caught as a page
- *
- * CONTROL 6 IS THE BOUNDARY, AND IT DEVIATES FROM plan.md. The plan lists a
- * reflow among the injected defects and says each control must exit nonzero.
- * The harness normalizes whitespace before hashing text, so a reflow is
- * invisible to it by design -- flagging it would report every Prettier run as a
- * content change and make the harness useless. Control 6 therefore asserts
- * exit 0 and exists to mark exactly where the harness stops seeing. The plan's
- * wording and this implementation disagree; the disagreement is recorded rather
- * than resolved unilaterally.
+ *   defect      1 removed page              2 changed canonical
+ *               3 dropped JSON-LD           4 reworded title
+ *               5 stale ledger entry        7 malformed ledger
+ *               9 feed item removed        10 404 page removed
+ *              11 html lang changed        12 internal link target changed
+ *              13 content image src        14 ledger approves a DIFFERENT
+ *              16 image alt removed        17 one repeated-link occurrence broken
+ *              18 color-scheme flipped
+ *              20 ledger approval reused across a shared printed prefix
+ *   invariance  6 Prettier reflow ignored   8 feed timestamp ignored
+ *              15 ledger approves the EXACT difference
+ *              19 directory-index file shape is equivalent
  *
  * USAGE  tsx scripts/migration-verify-controls.ts <build-dir> <baseline.json>
  * EXIT   0 = every control produced the exit code it must; 1 = one did not
@@ -39,6 +37,7 @@ import { createHash } from 'node:crypto';
 import {
 	cpSync,
 	existsSync,
+	mkdirSync,
 	mkdtempSync,
 	readdirSync,
 	readFileSync,
@@ -157,7 +156,7 @@ const CONTROLS: Control[] = [
 						{
 							url: '/about',
 							field: 'title',
-							expected: 'baseline "x" != candidate "y"',
+							fingerprint: '0'.repeat(32),
 							reason: 'approves a difference that does not exist',
 							approved_by: 'control-5',
 							approved_on: '2026-08-25',
@@ -195,7 +194,7 @@ const CONTROLS: Control[] = [
 						{
 							url: '/about',
 							field: 'title',
-							expected: 'baseline "x" != candidate "y"',
+							fingerprint: '0'.repeat(32),
 							reason: 'carries a key the closed format does not allow',
 							approved_by: 'control-7',
 							approved_on: '2026-08-25',
@@ -292,8 +291,7 @@ const CONTROLS: Control[] = [
 						{
 							url: '/about',
 							field: 'title',
-							expected:
-								'baseline "About Brandon Wie | Brandon Wie" != candidate "An Approved Rename"',
+							fingerprint: approvedRenameFingerprint(),
 							reason: 'approves one specific title change, not the title field',
 							approved_by: 'control-14',
 							approved_on: '2026-08-25',
@@ -324,10 +322,128 @@ const CONTROLS: Control[] = [
 						{
 							url: '/about',
 							field: 'title',
-							expected:
-								'baseline "About Brandon Wie | Brandon Wie" != candidate "An Approved Rename"',
+							fingerprint: approvedRenameFingerprint(),
 							reason: 'the one difference this entry exists to approve',
 							approved_by: 'control-15',
+							approved_on: '2026-08-25',
+						},
+					],
+					null,
+					2,
+				)}\n`,
+			);
+		},
+	},
+	{
+		id: 16,
+		name: 'image alt text removed',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = imagePage(dir);
+			const html = readFileSync(file, 'utf8');
+			const body = html.indexOf('<body');
+			writeFileSync(
+				file,
+				html.slice(0, body) + html.slice(body).replace(/(<img\b[^>]*)\salt="[^"]*"/i, '$1'),
+			);
+		},
+	},
+	{
+		id: 17,
+		name: 'one occurrence of a repeated link target broken, text unchanged',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// The first version appended a new <a>dup</a>, which also changed the
+			// page text -- it exited 1 on [text] and proved nothing about occurrence
+			// lists. This rewrites the href of the SECOND occurrence of a target that
+			// already appears twice, so the visible text is byte-identical and only
+			// the occurrence list moves.
+			const file = repeatedLinkPage(dir);
+			const html = readFileSync(file, 'utf8');
+			const body = html.indexOf('<body');
+			const head = html.slice(0, body);
+			const rest = html.slice(body);
+			const counts = new Map<string, number>();
+			for (const m of rest.matchAll(/href="(\/[^"]*)"/g)) {
+				counts.set(m[1], (counts.get(m[1]) ?? 0) + 1);
+			}
+			const repeated = [...counts.entries()].find(([, n]) => n >= 2)?.[0];
+			if (!repeated) {
+				console.error('FATAL: control 17 found no link target that appears twice');
+				process.exit(2);
+			}
+			let seen = 0;
+			const mutated = rest.replace(new RegExp(`href="${repeated}"`, 'g'), (match) => {
+				seen += 1;
+				return seen === 2 ? `href="${repeated}-broken"` : match;
+			});
+			writeFileSync(file, head + mutated);
+		},
+	},
+	{
+		id: 18,
+		name: 'color-scheme meta flipped dark to light',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			if (!/name="color-scheme"/i.test(html)) {
+				console.error('FATAL: control 18 found no color-scheme meta to flip');
+				process.exit(2);
+			}
+			writeFileSync(
+				file,
+				html.replace(/(name="color-scheme"[^>]*content=")[^"]*(")/i, '$1light$2'),
+			);
+		},
+	},
+	{
+		id: 19,
+		name: 'directory-index file shape serves the same URL and status',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// Next's export can write `about/index.html` where SvelteKit writes
+			// `about.html`. Both must serve /about at 200 and compare identical.
+			//
+			// This replaced a control that created `this-page-does-not-exist.html`
+			// and claimed to test statuses: it exited 1 on [page], because in a
+			// static tree a status difference is ENTAILED by a manifest difference.
+			// The status map's real value is proving the served shape, which is what
+			// this asserts.
+			const from = join(dir, 'about.html');
+			const to = join(dir, 'about', 'index.html');
+			mkdirSync(join(dir, 'about'), { recursive: true });
+			writeFileSync(to, readFileSync(from));
+			unlinkSync(from);
+		},
+	},
+	{
+		id: 20,
+		name: 'ledger approval reused on a different difference with the same 120-char prefix',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir, ledgerPath) => {
+			// Two long internalLinks differences whose printed detail is identical
+			// after truncation. Approving by the printed string covered both; the
+			// fingerprint is computed over the untruncated values.
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			const filler = Array.from({ length: 40 }, (_, i) => `<a href="/pad-${i}">p</a>`).join('');
+			writeFileSync(file, html.replace('</body>', `${filler}<a href="/tail-b">t</a></body>`));
+			writeFileSync(
+				ledgerPath,
+				`${JSON.stringify(
+					[
+						{
+							url: '/about',
+							field: 'internalLinks',
+							fingerprint: 'f'.repeat(32),
+							reason: 'approves a different long difference sharing the printed prefix',
+							approved_by: 'control-20',
 							approved_on: '2026-08-25',
 						},
 					],
@@ -349,6 +465,38 @@ const CONTROLS: Control[] = [
 		},
 	},
 ];
+
+/** The fingerprint the comparator prints for the /about title change that
+ * controls 14 and 15 use. Computed the same way the comparator does, so the
+ * pair tests the binding rather than a string I typed. */
+function approvedRenameFingerprint(): string {
+	const baselineTitle = JSON.parse(readFileSync(baselineFile, 'utf8')).pages['/about'].title;
+	return createHash('sha256')
+		.update(
+			`/about\u0000title\u0000${JSON.stringify(baselineTitle)}\u0000${JSON.stringify('An Approved Rename')}`,
+		)
+		.digest('hex')
+		.slice(0, 32);
+}
+
+/** A built page whose body links to the same internal target at least twice. */
+function repeatedLinkPage(dir: string): string {
+	for (const base of [dir, join(dir, 'posts')]) {
+		if (!existsSync(base)) continue;
+		for (const entry of readdirSync(base)) {
+			if (!entry.endsWith('.html')) continue;
+			const full = join(base, entry);
+			const body = readFileSync(full, 'utf8').slice(readFileSync(full, 'utf8').indexOf('<body'));
+			const counts = new Map<string, number>();
+			for (const m of body.matchAll(/href="(\/[^"]*)"/g)) {
+				counts.set(m[1], (counts.get(m[1]) ?? 0) + 1);
+			}
+			if ([...counts.values()].some((n) => n >= 2)) return full;
+		}
+	}
+	console.error('FATAL: no built page repeats an internal link target; control 17 cannot run');
+	process.exit(2);
+}
 
 /** A built page carrying a content image that is not a framework asset. */
 function imagePage(dir: string): string {

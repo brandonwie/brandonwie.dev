@@ -17,6 +17,8 @@
  *   - sitemap.xml, rss.xml, ko/rss.xml on item counts, links and titles
  *     rather than as bytes, because they carry a build timestamp
  *   - the Pagefind index entry count
+ *   - the HTTP status of every baseline URL plus deliberate misses, served from
+ *     a real static server over the build tree
  *
  * URL NORMALIZATION is explicit, because the Step 1 spike settled the output
  * shape: SvelteKit writes `about.html`, Next under `trailingSlash: false`
@@ -30,9 +32,12 @@
  *
  * THE EXCEPTION LEDGER IS CLOSED AND DIFFERENCE-BOUND. Every approved
  * difference is one object with exactly the keys
- * {url, field, expected, reason, approved_by, approved_on}, and `expected` must
- * equal the comparator's own detail string for that difference -- approving by
- * url+field alone let one entry approve any future change to that field. An unknown
+ * {url, field, fingerprint, reason, approved_by, approved_on}. The fingerprint
+ * is a hash of the url, field and the FULL baseline and candidate values, and
+ * is printed under every unapproved difference so an entry is written by
+ * copying it. Approving by url+field let one entry approve any future change to
+ * a field; approving by the printed (truncated) detail let two long values with
+ * a shared prefix collide. An unknown
  * key, a missing key, or a malformed file is FATAL rather than ignored. An
  * exception that matches no actual difference is ALSO fatal: a ledger that has
  * drifted from reality is how a harness quietly stops testing.
@@ -55,6 +60,8 @@
  */
 
 import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
@@ -82,8 +89,9 @@ export interface PageFields {
 	internalLinks: string[];
 	images: string[];
 	shell: Record<string, string>;
-	/** A static export has no server, so byte length stands in for a status: a
-	 * URL that is in the manifest resolves, one that is absent does not. */
+	/** Page size in bytes. Recorded only. Round 27 deleted the claim that this
+	 * stood in for an HTTP status -- it did not, and it was not even compared.
+	 * Real statuses are served and captured in Baseline.statuses. */
 	bytes: number;
 }
 
@@ -104,6 +112,14 @@ export interface BundleWeights {
 export interface Baseline {
 	generatedFrom: string;
 	pageCount: number;
+	/** URL -> HTTP status, from a real static server over the build tree.
+	 *
+	 * Round 27: the previous revision claimed page byte length stood in for a
+	 * status. It did not, and nothing compared it. This serves the build the way
+	 * Cloudflare Pages does -- exact file, then `<path>.html`, then
+	 * `<path>/index.html`, else `404.html` with status 404 -- requests every
+	 * baseline URL plus deliberate misses, and compares the results. */
+	statuses?: Record<string, number>;
 	bundle?: BundleWeights;
 	pages: Record<string, PageFields>;
 	site: Record<string, string>;
@@ -185,35 +201,47 @@ export function extractFields(html: string): PageFields {
 	const text = normalizeText(body);
 
 	const htmlTag = html.match(/<html\b[^>]*>/i)?.[0] ?? '';
-	const internalLinks = [
-		...new Set(
-			[...body.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["']/gi)]
-				.map((m) => m[1])
-				.filter((href) => href.startsWith('/') || href.startsWith('https://brandonwie.dev')),
-		),
-	].sort();
-	const images = [
-		...new Set(
-			[...body.matchAll(/<img\b[^>]*src\s*=\s*["']([^"']+)["']/gi)]
-				.map((m) => m[1])
-				.filter((src) => !src.startsWith('/_app/')),
-		),
-	].sort();
+	// Round 27: these were de-duplicated sets. A reviewer duplicated one /about
+	// link and broke one occurrence of it, and the set erased the difference. They
+	// are OCCURRENCE LISTS in document order now -- a repeated target is a fact
+	// about the page, and losing it loses the regression.
+	const internalLinks = [...body.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["']/gi)]
+		.map((m) => m[1])
+		.filter((href) => href.startsWith('/') || href.startsWith('https://brandonwie.dev'));
+	// `alt` was omitted, so an image losing its alt text read as parity. It is
+	// user-visible (assistive technology) and part of the C9/C12 obligation.
+	const images = [...body.matchAll(/<img\b[^>]*>/gi)]
+		.map((m) => m[0])
+		.filter((tag) => {
+			const src = attr(tag, 'src');
+			return src !== null && !src.startsWith('/_app/');
+		})
+		.map((tag) => `${attr(tag, 'src')} alt=${JSON.stringify(attr(tag, 'alt'))}`);
+	// Every automatable row of plan.md C13's element table. `color-scheme` was
+	// missing, and a reviewer flipped it from dark to light without the comparator
+	// noticing. Rows that need a recorded human decision -- the font mechanism,
+	// preconnect hints, the preload-data attribute -- are captured as values here
+	// so a change is visible; judging whether the change is acceptable is C13's
+	// job, not this comparator's.
+	const SHELL_METAS = ['viewport', 'color-scheme', 'theme-color', 'robots'];
+	const SHELL_LINKS = ['icon', 'manifest', 'sitemap', 'preconnect', 'stylesheet'];
 	const shell: Record<string, string> = {};
 	for (const tag of metaTags(head)) {
-		const name = attr(tag, 'name');
 		const charset = attr(tag, 'charset');
 		if (charset) shell.charset = charset;
-		if (name === 'viewport' || name === 'theme-color' || name === 'robots') {
-			shell[name] = attr(tag, 'content') ?? '';
-		}
+		const name = attr(tag, 'name');
+		if (name && SHELL_METAS.includes(name)) shell[`meta:${name}`] = attr(tag, 'content') ?? '';
 	}
 	for (const tag of links) {
 		const rel = attr(tag, 'rel');
-		if (rel === 'icon' || rel === 'manifest' || rel === 'sitemap') {
-			shell[rel] = attr(tag, 'href') ?? '';
-		}
+		if (!rel || !SHELL_LINKS.includes(rel)) continue;
+		const href = attr(tag, 'href') ?? '';
+		if (href.startsWith('/_app/')) continue;
+		shell[`link:${rel}:${href}`] = attr(tag, 'type') ?? '';
 	}
+	const bodyTag = html.match(/<body\b[^>]*>/i)?.[0] ?? '';
+	const preload = attr(bodyTag, 'data-sveltekit-preload-data');
+	if (preload !== null) shell['body:preload-data'] = preload;
 
 	return {
 		lang: attr(htmlTag, 'lang'),
@@ -285,6 +313,51 @@ function feedShape(raw: string): string {
 
 const SEMANTIC_FEEDS = new Set(['sitemap.xml', 'rss.xml', 'ko/rss.xml']);
 
+/** Resolve a URL against a static export the way Cloudflare Pages serves it. */
+export function resolveStatic(buildDir: string, urlPath: string): { file: string | null } {
+	const clean = urlPath.split('?')[0].replace(/\/+$/, '') || '/';
+	const rel = clean === '/' ? 'index.html' : clean.replace(/^\//, '');
+	for (const candidate of [rel, `${rel}.html`, join(rel, 'index.html')]) {
+		const full = join(buildDir, candidate);
+		if (existsSync(full) && statSync(full).isFile()) return { file: full };
+	}
+	return { file: null };
+}
+
+/** Serve the build tree and record the status of every URL asked for. */
+export async function captureStatuses(
+	buildDir: string,
+	urls: string[],
+): Promise<Record<string, number>> {
+	const server = createServer((req, res) => {
+		const { file } = resolveStatic(buildDir, req.url ?? '/');
+		if (file) {
+			res.writeHead(200, { 'content-type': 'text/html' });
+			res.end(readFileSync(file));
+			return;
+		}
+		const notFound = join(buildDir, '404.html');
+		res.writeHead(404, { 'content-type': 'text/html' });
+		res.end(existsSync(notFound) ? readFileSync(notFound) : 'not found');
+	});
+	await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+	const { port } = server.address() as AddressInfo;
+	const statuses: Record<string, number> = {};
+	try {
+		for (const url of urls) {
+			const response = await fetch(`http://127.0.0.1:${port}${url}`, { redirect: 'manual' });
+			statuses[url] = response.status;
+			await response.arrayBuffer();
+		}
+	} finally {
+		await new Promise<void>((resolve) => server.close(() => resolve()));
+	}
+	return statuses;
+}
+
+/** URLs asked for beyond the manifest: a miss must be a miss. */
+const NEGATIVE_URLS = ['/this-page-does-not-exist', '/posts/this-post-does-not-exist'];
+
 function bundleWeights(buildDir: string): BundleWeights {
 	const byExt = { htmlBytes: 0, jsBytes: 0, cssBytes: 0, imageBytes: 0 };
 	let totalBytes = 0;
@@ -328,7 +401,7 @@ function pagefindEntries(buildDir: string): number | null {
 	}
 }
 
-export function capture(buildDir: string): Baseline {
+export async function capture(buildDir: string): Promise<Baseline> {
 	if (!existsSync(buildDir)) {
 		console.error(`FATAL: build directory not found: ${buildDir}`);
 		process.exit(2);
@@ -346,9 +419,15 @@ export function capture(buildDir: string): Baseline {
 			site[name] = createHash('sha256').update(material).digest('hex').slice(0, 16);
 		}
 	}
+	const statuses = await captureStatuses(buildDir, [
+		...Object.keys(pages).sort(),
+		...NEGATIVE_URLS,
+	]);
+
 	return {
 		generatedFrom: buildDir,
 		pageCount: Object.keys(pages).length,
+		statuses,
 		bundle: bundleWeights(buildDir),
 		pages,
 		site,
@@ -361,8 +440,8 @@ export function capture(buildDir: string): Baseline {
 export interface Exception {
 	url: string;
 	field: string;
-	/** The comparator's exact detail string for the approved difference. */
-	expected: string;
+	/** The comparator's printed fingerprint for the one approved difference. */
+	fingerprint: string;
 	reason: string;
 	approved_by: string;
 	approved_on: string;
@@ -378,7 +457,14 @@ export interface Exception {
  * comparator's own detail string for that difference -- printed verbatim on
  * every unapproved diff, so writing an entry means copying what the run said.
  */
-const LEDGER_KEYS = ['url', 'field', 'expected', 'reason', 'approved_by', 'approved_on'] as const;
+const LEDGER_KEYS = [
+	'url',
+	'field',
+	'fingerprint',
+	'reason',
+	'approved_by',
+	'approved_on',
+] as const;
 
 export function loadLedger(path: string | null): Exception[] {
 	if (!path || !existsSync(path)) return [];
@@ -423,14 +509,29 @@ interface Diff {
 	url: string;
 	field: string;
 	detail: string;
+	/** sha256 of url + field + the FULL baseline and candidate values.
+	 *
+	 * Round 27: approvals were matched against `detail`, which trim() truncates
+	 * at 120 characters for printing. Two long `internalLinks` differences shared
+	 * a prefix, so one approval covered both and the second exited 0. The
+	 * approval key is now a hash of the untruncated values; `detail` stays as the
+	 * human-readable line and is no longer load-bearing. */
+	fingerprint: string;
 }
 
 function scalarDiff(url: string, field: string, a: unknown, b: unknown, out: Diff[]): void {
 	const left = JSON.stringify(a ?? null);
 	const right = JSON.stringify(b ?? null);
-	if (left !== right) {
-		out.push({ url, field, detail: `baseline ${trim(left)} != candidate ${trim(right)}` });
-	}
+	if (left === right) return;
+	out.push({
+		url,
+		field,
+		detail: `baseline ${trim(left)} != candidate ${trim(right)}`,
+		fingerprint: createHash('sha256')
+			.update(`${url}\u0000${field}\u0000${left}\u0000${right}`)
+			.digest('hex')
+			.slice(0, 32),
+	});
 }
 
 function trim(value: string): string {
@@ -491,7 +592,7 @@ export function compare(baseline: Baseline, candidate: Baseline): Diff[] {
 
 // ---------------------------------------------------------------------- cli
 
-function main(argv: string[]): number {
+async function main(argv: string[]): Promise<number> {
 	const [mode, ...rest] = argv;
 	if (mode === 'capture') {
 		const [buildDir, outFile] = rest;
@@ -499,11 +600,20 @@ function main(argv: string[]): number {
 			console.error('usage: migration-verify capture <build-dir> <out.json>');
 			return 2;
 		}
-		const baseline = capture(buildDir);
+		const baseline = await capture(buildDir);
 		writeFileSync(outFile, `${JSON.stringify(baseline, null, 2)}\n`);
 		console.log(`captured ${baseline.pageCount} pages from ${buildDir} -> ${outFile}`);
 		console.log(`  site artifacts ${Object.keys(baseline.site).length}/${SITE_FILES.length}`);
 		console.log(`  pagefind fragments ${baseline.pagefindEntries ?? 'ABSENT'}`);
+		const statusCounts: Record<string, number> = {};
+		for (const code of Object.values(baseline.statuses ?? {})) {
+			statusCounts[code] = (statusCounts[code] ?? 0) + 1;
+		}
+		console.log(
+			`  served statuses ${Object.entries(statusCounts)
+				.map(([code, n]) => `${n}x${code}`)
+				.join(', ')} (incl. ${NEGATIVE_URLS.length} deliberate misses)`,
+		);
 		const b = baseline.bundle;
 		if (b) {
 			console.log(
@@ -530,7 +640,7 @@ function main(argv: string[]): number {
 		const explain = rest.includes('--explain');
 
 		const baseline = JSON.parse(readFileSync(baselineFile, 'utf8')) as Baseline;
-		const candidate = capture(candidateDir);
+		const candidate = await capture(candidateDir);
 		const ledger = loadLedger(ledgerPath);
 		const diffs = compare(baseline, candidate);
 
@@ -543,7 +653,7 @@ function main(argv: string[]): number {
 		const unapproved: Diff[] = [];
 		for (const diff of diffs) {
 			const hit = ledger.findIndex(
-				(e) => e.url === diff.url && e.field === diff.field && e.expected === diff.detail,
+				(e) => e.url === diff.url && e.field === diff.field && e.fingerprint === diff.fingerprint,
 			);
 			if (hit === -1) unapproved.push(diff);
 			else used.add(hit);
@@ -552,13 +662,14 @@ function main(argv: string[]): number {
 		const stale = ledger.filter((_, i) => !used.has(i));
 		for (const diff of unapproved) {
 			console.error(`DIFF ${diff.url} [${diff.field}] ${diff.detail}`);
+			console.error(`  fingerprint ${diff.fingerprint}`);
 		}
 		for (const diff of unapproved) {
 			const sameSlot = ledger.find((e) => e.url === diff.url && e.field === diff.field);
 			if (sameSlot) {
 				console.error(
 					`  the ledger approves a DIFFERENT difference at ${diff.url} [${diff.field}]: ` +
-						`${trim(JSON.stringify(sameSlot.expected))}. An approval covers one known ` +
+						`fingerprint ${sameSlot.fingerprint}. An approval covers one known ` +
 						'difference, not the field.',
 				);
 			}
@@ -590,5 +701,5 @@ function main(argv: string[]): number {
 }
 
 if (process.argv[1]?.endsWith('migration-verify.ts')) {
-	process.exit(main(process.argv.slice(2)));
+	main(process.argv.slice(2)).then((code) => process.exit(code));
 }

@@ -17,8 +17,10 @@ pnpm migration:verify compare verification/baseline/svelte-34aa7e7.json build
 ```
 
 The baseline covers 366 pages, 4 site artifacts (`sitemap.xml`, `rss.xml`,
-`ko/rss.xml`, `_redirects`) and 344 Pagefind fragments, captured at `main` HEAD
-`34aa7e7`.
+`ko/rss.xml`, `_redirects`), 344 Pagefind fragments, bundle weights, and the
+**served HTTP status of every URL** — 366×200 plus deliberate misses returning
+404, taken from a real static server over the build tree rather than inferred.
+Captured at `main` HEAD `34aa7e7`.
 
 **It is stable across rebuilds, and that was not free.** Two build-to-build
 differences showed up as false positives before it was: the feeds carry a
@@ -42,9 +44,9 @@ run and every rebuild as a change — and controls 6 and 8 mark exactly where th
 blindness starts, while controls 9 and 10 prove the feed and the 404 page are
 still compared.
 
-Fifteen controls run via `pnpm migration:controls`, in two kinds that prove
-opposite things. **Defect controls** (12) must exit 1: the harness rejects a
-known-bad input. **Invariance controls** (3) must exit 0: the harness ignores a
+Twenty controls run via `pnpm migration:controls`, in two kinds that prove
+opposite things. **Defect controls** (16) must exit 1: the harness rejects a
+known-bad input. **Invariance controls** (4) must exit 0: the harness ignores a
 benign change on purpose. Every invariance control is paired with a defect
 control over the same surface, so a blindness can never be the only thing
 proven about a field.
