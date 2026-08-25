@@ -42,5 +42,9 @@ run and every rebuild as a change — and controls 6 and 8 mark exactly where th
 blindness starts, while controls 9 and 10 prove the feed and the 404 page are
 still compared.
 
-Ten negative controls run via `pnpm migration:controls`; eight must exit 1 and
-two must exit 0.
+Fifteen controls run via `pnpm migration:controls`, in two kinds that prove
+opposite things. **Defect controls** (12) must exit 1: the harness rejects a
+known-bad input. **Invariance controls** (3) must exit 0: the harness ignores a
+benign change on purpose. Every invariance control is paired with a defect
+control over the same surface, so a blindness can never be the only thing
+proven about a field.

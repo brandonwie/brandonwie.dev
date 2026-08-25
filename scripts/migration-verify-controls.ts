@@ -72,9 +72,19 @@ function runCompare(candidate: string, ledger: string): { code: number; out: str
 	}
 }
 
+/**
+ * Round 26 split the taxonomy. Calling an exit-0 assertion a "negative control"
+ * was the defect: a negative control demonstrates the harness REJECTS a defect,
+ * and an assertion that a benign change is ignored is an INVARIANCE control.
+ * Both are needed and they prove opposite things, so they are named apart here
+ * and in plan.md, AC1 and the verification record.
+ */
+type ControlKind = 'defect' | 'invariance';
+
 interface Control {
 	id: number;
 	name: string;
+	kind: ControlKind;
 	expect: number;
 	apply: (dir: string, ledgerPath: string) => void;
 }
@@ -85,12 +95,14 @@ const CONTROLS: Control[] = [
 	{
 		id: 1,
 		name: 'removed page',
+		kind: 'defect',
 		expect: 1,
 		apply: (dir) => unlinkSync(join(dir, 'about.html')),
 	},
 	{
 		id: 2,
 		name: 'changed canonical',
+		kind: 'defect',
 		expect: 1,
 		apply: (dir) => {
 			const file = join(dir, 'about.html');
@@ -107,6 +119,7 @@ const CONTROLS: Control[] = [
 	{
 		id: 3,
 		name: 'dropped JSON-LD',
+		kind: 'defect',
 		expect: 1,
 		apply: (dir) => {
 			const file = jsonLdPage(dir);
@@ -120,6 +133,7 @@ const CONTROLS: Control[] = [
 	{
 		id: 4,
 		name: 'reworded title',
+		kind: 'defect',
 		expect: 1,
 		apply: (dir) => {
 			const file = join(dir, 'about.html');
@@ -133,6 +147,7 @@ const CONTROLS: Control[] = [
 	{
 		id: 5,
 		name: 'stale ledger entry',
+		kind: 'defect',
 		expect: 1,
 		apply: (_dir, ledgerPath) => {
 			writeFileSync(
@@ -142,6 +157,7 @@ const CONTROLS: Control[] = [
 						{
 							url: '/about',
 							field: 'title',
+							expected: 'baseline "x" != candidate "y"',
 							reason: 'approves a difference that does not exist',
 							approved_by: 'control-5',
 							approved_on: '2026-08-25',
@@ -155,7 +171,8 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 6,
-		name: 'Prettier-style reflow (deliberate blindness)',
+		name: 'Prettier-style reflow is ignored',
+		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
 			const file = join(dir, 'about.html');
@@ -168,6 +185,7 @@ const CONTROLS: Control[] = [
 	{
 		id: 7,
 		name: 'malformed ledger (extra key)',
+		kind: 'defect',
 		expect: 1,
 		apply: (_dir, ledgerPath) => {
 			writeFileSync(
@@ -177,6 +195,7 @@ const CONTROLS: Control[] = [
 						{
 							url: '/about',
 							field: 'title',
+							expected: 'baseline "x" != candidate "y"',
 							reason: 'carries a key the closed format does not allow',
 							approved_by: 'control-7',
 							approved_on: '2026-08-25',
@@ -191,7 +210,8 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 8,
-		name: 'feed lastBuildDate moved (deliberate blindness)',
+		name: 'feed lastBuildDate move is ignored',
+		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
 			const file = join(dir, 'rss.xml');
@@ -208,12 +228,119 @@ const CONTROLS: Control[] = [
 	{
 		id: 10,
 		name: '404 page removed',
+		kind: 'defect',
 		expect: 1,
 		apply: (dir) => unlinkSync(join(dir, '404.html')),
 	},
 	{
+		id: 11,
+		name: 'html lang changed',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace(/<html([^>]*)lang="[^"]*"/i, '<html$1lang="fr"'));
+		},
+	},
+	{
+		id: 12,
+		name: 'internal link target changed',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			const body = html.indexOf('<body');
+			const head = html.slice(0, body);
+			const rest = html.slice(body).replace(/href="\/posts"/i, 'href="/posts-moved"');
+			writeFileSync(file, head + rest);
+		},
+	},
+	{
+		id: 13,
+		name: 'content image src changed',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = imagePage(dir);
+			const html = readFileSync(file, 'utf8');
+			const body = html.indexOf('<body');
+			writeFileSync(
+				file,
+				html.slice(0, body) +
+					html.slice(body).replace(/(<img\b[^>]*src=")([^"]+)(")/i, '$1/moved/elsewhere.png$3'),
+			);
+		},
+	},
+	{
+		id: 14,
+		name: 'ledger approves a DIFFERENT difference in the same url+field',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir, ledgerPath) => {
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(
+				file,
+				html.replace(/<title>([\s\S]*?)<\/title>/i, '<title>Something Else Entirely</title>'),
+			);
+			writeFileSync(
+				ledgerPath,
+				`${JSON.stringify(
+					[
+						{
+							url: '/about',
+							field: 'title',
+							expected:
+								'baseline "About Brandon Wie | Brandon Wie" != candidate "An Approved Rename"',
+							reason: 'approves one specific title change, not the title field',
+							approved_by: 'control-14',
+							approved_on: '2026-08-25',
+						},
+					],
+					null,
+					2,
+				)}\n`,
+			);
+		},
+	},
+	{
+		id: 15,
+		name: 'ledger approves the EXACT difference',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir, ledgerPath) => {
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(
+				file,
+				html.replace(/<title>([\s\S]*?)<\/title>/i, '<title>An Approved Rename</title>'),
+			);
+			writeFileSync(
+				ledgerPath,
+				`${JSON.stringify(
+					[
+						{
+							url: '/about',
+							field: 'title',
+							expected:
+								'baseline "About Brandon Wie | Brandon Wie" != candidate "An Approved Rename"',
+							reason: 'the one difference this entry exists to approve',
+							approved_by: 'control-15',
+							approved_on: '2026-08-25',
+						},
+					],
+					null,
+					2,
+				)}\n`,
+			);
+		},
+	},
+	{
 		id: 9,
 		name: 'feed item removed',
+		kind: 'defect',
 		expect: 1,
 		apply: (dir) => {
 			const file = join(dir, 'rss.xml');
@@ -222,6 +349,23 @@ const CONTROLS: Control[] = [
 		},
 	},
 ];
+
+/** A built page carrying a content image that is not a framework asset. */
+function imagePage(dir: string): string {
+	for (const base of [join(dir, 'posts'), dir]) {
+		if (!existsSync(base)) continue;
+		for (const entry of readdirSync(base)) {
+			if (!entry.endsWith('.html')) continue;
+			const full = join(base, entry);
+			const html = readFileSync(full, 'utf8');
+			const body = html.slice(html.indexOf('<body'));
+			const img = body.match(/<img\b[^>]*src="([^"]+)"/i);
+			if (img && !img[1].startsWith('/_app/')) return full;
+		}
+	}
+	console.error('FATAL: no built page carries a content image; control 13 cannot run');
+	process.exit(2);
+}
 
 /** A built page that actually carries an Article JSON-LD block.
  *
@@ -299,14 +443,17 @@ for (const control of CONTROLS) {
 					l.startsWith('PARITY'),
 			) ?? '';
 	console.log(
-		`control ${control.id} ${control.name}\n  expected exit ${control.expect}, got ${code}  ${ok ? 'PASS' : 'FAIL'}\n  ${first.trim().slice(0, 150)}`,
+		`control ${control.id} [${control.kind}] ${control.name}\n  expected exit ${control.expect}, got ${code}  ${ok ? 'PASS' : 'FAIL'}\n  ${first.trim().slice(0, 150)}`,
 	);
 	rmSync(work, { recursive: true, force: true });
 }
 
+const defects = CONTROLS.filter((c) => c.kind === 'defect').length;
+const invariants = CONTROLS.length - defects;
 console.log(
-	`\n${CONTROLS.length - failures}/${CONTROLS.length} controls produced their required exit code.`,
+	`\n${CONTROLS.length - failures}/${CONTROLS.length} controls produced their required exit code ` +
+		`(${defects} defect controls must exit 1; ${invariants} invariance controls must exit 0).`,
 );
-console.log('Controls 6 and 8 assert exit 0 on purpose: whitespace normalization and the feed');
-console.log('build timestamp are stated blindnesses. Control 9 proves the feed is still compared.');
+console.log('Invariance controls are not weaker defect controls: they assert that a benign change');
+console.log('is ignored, which is why each is paired with a defect control over the same surface.');
 process.exit(failures === 0 ? 0 : 1);

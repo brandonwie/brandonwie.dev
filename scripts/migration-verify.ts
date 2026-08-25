@@ -28,8 +28,11 @@
  * reported as a content change. That is a deliberate blindness with a control
  * attached (control 6), not an accident.
  *
- * THE EXCEPTION LEDGER IS CLOSED. Every approved difference is one object with
- * exactly the keys {url, field, reason, approved_by, approved_on}. An unknown
+ * THE EXCEPTION LEDGER IS CLOSED AND DIFFERENCE-BOUND. Every approved
+ * difference is one object with exactly the keys
+ * {url, field, expected, reason, approved_by, approved_on}, and `expected` must
+ * equal the comparator's own detail string for that difference -- approving by
+ * url+field alone let one entry approve any future change to that field. An unknown
  * key, a missing key, or a malformed file is FATAL rather than ignored. An
  * exception that matches no actual difference is ALSO fatal: a ledger that has
  * drifted from reality is how a harness quietly stops testing.
@@ -68,11 +71,40 @@ export interface PageFields {
 	h1: string[];
 	textHash: string;
 	textLength: number;
+	/** Round 26 additions. A reviewer mutated `<html lang>`, an internal link
+	 * target and a content image `src` and this comparator reported parity on all
+	 * three -- they are C13 and C9/C12 obligations and were simply not extracted.
+	 * They are framework-NEUTRAL user semantics: what a reader or a crawler gets.
+	 * Class names, framework chunk URLs and the script graph stay excluded on
+	 * purpose; those change legitimately in a framework swap. */
+	lang: string | null;
+	dir: string | null;
+	internalLinks: string[];
+	images: string[];
+	shell: Record<string, string>;
+	/** A static export has no server, so byte length stands in for a status: a
+	 * URL that is in the manifest resolves, one that is absent does not. */
+	bytes: number;
+}
+
+export interface BundleWeights {
+	/** Recorded, NOT compared. A framework swap changes chunk names and sizes by
+	 * construction, so diffing them would fail on every candidate for reasons
+	 * that are not regressions. AC9's budget lives in verification/thresholds.md
+	 * and is judged against these numbers by a person, not by this comparator. */
+	htmlBytes: number;
+	jsBytes: number;
+	cssBytes: number;
+	imageBytes: number;
+	totalBytes: number;
+	fileCount: number;
+	largest: string[];
 }
 
 export interface Baseline {
 	generatedFrom: string;
 	pageCount: number;
+	bundle?: BundleWeights;
 	pages: Record<string, PageFields>;
 	site: Record<string, string>;
 	pagefindEntries: number | null;
@@ -152,7 +184,44 @@ export function extractFields(html: string): PageFields {
 	const body = bodyStart === -1 ? html : html.slice(bodyStart);
 	const text = normalizeText(body);
 
+	const htmlTag = html.match(/<html\b[^>]*>/i)?.[0] ?? '';
+	const internalLinks = [
+		...new Set(
+			[...body.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["']/gi)]
+				.map((m) => m[1])
+				.filter((href) => href.startsWith('/') || href.startsWith('https://brandonwie.dev')),
+		),
+	].sort();
+	const images = [
+		...new Set(
+			[...body.matchAll(/<img\b[^>]*src\s*=\s*["']([^"']+)["']/gi)]
+				.map((m) => m[1])
+				.filter((src) => !src.startsWith('/_app/')),
+		),
+	].sort();
+	const shell: Record<string, string> = {};
+	for (const tag of metaTags(head)) {
+		const name = attr(tag, 'name');
+		const charset = attr(tag, 'charset');
+		if (charset) shell.charset = charset;
+		if (name === 'viewport' || name === 'theme-color' || name === 'robots') {
+			shell[name] = attr(tag, 'content') ?? '';
+		}
+	}
+	for (const tag of links) {
+		const rel = attr(tag, 'rel');
+		if (rel === 'icon' || rel === 'manifest' || rel === 'sitemap') {
+			shell[rel] = attr(tag, 'href') ?? '';
+		}
+	}
+
 	return {
+		lang: attr(htmlTag, 'lang'),
+		dir: attr(htmlTag, 'dir'),
+		internalLinks,
+		images,
+		shell,
+		bytes: html.length,
 		title: titleMatch ? normalizeText(titleMatch[1]) : null,
 		description,
 		canonical,
@@ -216,6 +285,39 @@ function feedShape(raw: string): string {
 
 const SEMANTIC_FEEDS = new Set(['sitemap.xml', 'rss.xml', 'ko/rss.xml']);
 
+function bundleWeights(buildDir: string): BundleWeights {
+	const byExt = { htmlBytes: 0, jsBytes: 0, cssBytes: 0, imageBytes: 0 };
+	let totalBytes = 0;
+	let fileCount = 0;
+	const sizes: Array<[string, number]> = [];
+	const walkAll = (dir: string): void => {
+		for (const entry of readdirSync(dir)) {
+			const full = join(dir, entry);
+			const st = statSync(full);
+			if (st.isDirectory()) {
+				walkAll(full);
+				continue;
+			}
+			if (entry.endsWith('.br') || entry.endsWith('.gz')) continue;
+			fileCount += 1;
+			totalBytes += st.size;
+			sizes.push([relative(buildDir, full).split(sep).join('/'), st.size]);
+			if (entry.endsWith('.html')) byExt.htmlBytes += st.size;
+			else if (entry.endsWith('.js')) byExt.jsBytes += st.size;
+			else if (entry.endsWith('.css')) byExt.cssBytes += st.size;
+			else if (/\.(png|jpe?g|webp|avif|svg|gif)$/i.test(entry)) byExt.imageBytes += st.size;
+		}
+	};
+	walkAll(buildDir);
+	sizes.sort((a, b) => b[1] - a[1]);
+	return {
+		...byExt,
+		totalBytes,
+		fileCount,
+		largest: sizes.slice(0, 10).map(([path, size]) => `${path} ${size}`),
+	};
+}
+
 function pagefindEntries(buildDir: string): number | null {
 	const dir = join(buildDir, 'pagefind');
 	if (!existsSync(dir)) return null;
@@ -247,6 +349,7 @@ export function capture(buildDir: string): Baseline {
 	return {
 		generatedFrom: buildDir,
 		pageCount: Object.keys(pages).length,
+		bundle: bundleWeights(buildDir),
 		pages,
 		site,
 		pagefindEntries: pagefindEntries(buildDir),
@@ -258,12 +361,24 @@ export function capture(buildDir: string): Baseline {
 export interface Exception {
 	url: string;
 	field: string;
+	/** The comparator's exact detail string for the approved difference. */
+	expected: string;
 	reason: string;
 	approved_by: string;
 	approved_on: string;
 }
 
-const LEDGER_KEYS = ['url', 'field', 'reason', 'approved_by', 'approved_on'] as const;
+/**
+ * Round 26: `expected` was added and the format stayed CLOSED, so every
+ * pre-existing entry is now invalid until it names the difference it approves.
+ *
+ * Approving by url+field alone was the defect: one `title` entry approved two
+ * unrelated injected titles and both runs exited 0. An approval is for ONE
+ * known difference, not for a field permanently. `expected` must equal the
+ * comparator's own detail string for that difference -- printed verbatim on
+ * every unapproved diff, so writing an entry means copying what the run said.
+ */
+const LEDGER_KEYS = ['url', 'field', 'expected', 'reason', 'approved_by', 'approved_on'] as const;
 
 export function loadLedger(path: string | null): Exception[] {
 	if (!path || !existsSync(path)) return [];
@@ -348,6 +463,11 @@ export function compare(baseline: Baseline, candidate: Baseline): Diff[] {
 		scalarDiff(url, 'jsonLd', a.jsonLd, b.jsonLd, diffs);
 		scalarDiff(url, 'h1', a.h1, b.h1, diffs);
 		scalarDiff(url, 'text', a.textHash, b.textHash, diffs);
+		scalarDiff(url, 'lang', a.lang, b.lang, diffs);
+		scalarDiff(url, 'dir', a.dir, b.dir, diffs);
+		scalarDiff(url, 'internalLinks', a.internalLinks, b.internalLinks, diffs);
+		scalarDiff(url, 'images', a.images, b.images, diffs);
+		scalarDiff(url, 'shell', a.shell, b.shell, diffs);
 	}
 
 	for (const name of SITE_FILES) {
@@ -384,6 +504,15 @@ function main(argv: string[]): number {
 		console.log(`captured ${baseline.pageCount} pages from ${buildDir} -> ${outFile}`);
 		console.log(`  site artifacts ${Object.keys(baseline.site).length}/${SITE_FILES.length}`);
 		console.log(`  pagefind fragments ${baseline.pagefindEntries ?? 'ABSENT'}`);
+		const b = baseline.bundle;
+		if (b) {
+			console.log(
+				`  bundle ${b.fileCount} files / ${(b.totalBytes / 1024 / 1024).toFixed(1)} MB ` +
+					`(html ${(b.htmlBytes / 1024).toFixed(0)} KB, js ${(b.jsBytes / 1024).toFixed(0)} KB, ` +
+					`css ${(b.cssBytes / 1024).toFixed(0)} KB, images ${(b.imageBytes / 1024 / 1024).toFixed(1)} MB)`,
+			);
+			console.log('  bundle weights are RECORDED, not compared -- see verification/thresholds.md');
+		}
 		return 0;
 	}
 
@@ -413,7 +542,9 @@ function main(argv: string[]): number {
 		const used = new Set<number>();
 		const unapproved: Diff[] = [];
 		for (const diff of diffs) {
-			const hit = ledger.findIndex((e) => e.url === diff.url && e.field === diff.field);
+			const hit = ledger.findIndex(
+				(e) => e.url === diff.url && e.field === diff.field && e.expected === diff.detail,
+			);
 			if (hit === -1) unapproved.push(diff);
 			else used.add(hit);
 		}
@@ -421,6 +552,16 @@ function main(argv: string[]): number {
 		const stale = ledger.filter((_, i) => !used.has(i));
 		for (const diff of unapproved) {
 			console.error(`DIFF ${diff.url} [${diff.field}] ${diff.detail}`);
+		}
+		for (const diff of unapproved) {
+			const sameSlot = ledger.find((e) => e.url === diff.url && e.field === diff.field);
+			if (sameSlot) {
+				console.error(
+					`  the ledger approves a DIFFERENT difference at ${diff.url} [${diff.field}]: ` +
+						`${trim(JSON.stringify(sameSlot.expected))}. An approval covers one known ` +
+						'difference, not the field.',
+				);
+			}
 		}
 		for (const entry of stale) {
 			console.error(
