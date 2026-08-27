@@ -66,6 +66,10 @@ export default ts.config(
 			'node_modules/',
 			'docs/',
 			'.worktrees/',
+			// Next.js migration candidate: generated output only. Its source
+			// (next/app, next/src) is still linted.
+			'next/build/',
+			'next/.next/',
 		],
 	},
 );

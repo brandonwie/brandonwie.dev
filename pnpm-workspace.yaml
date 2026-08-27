@@ -1,0 +1,12 @@
+# Temporary two-app workspace for the SvelteKit -> Next.js migration.
+#
+# The repository root remains the SvelteKit app and keeps building to `build/`.
+# `next/` is the Next.js candidate and builds to `next/build`, which is where
+# `pnpm migration:verify` points its candidate directory.
+#
+# This split is deliberate and temporary: it keeps the Svelte baseline
+# rebuildable while the risky ports happen, so the 34aa7e7 baseline can be
+# re-captured or challenged at any point. `next/` collapses back into the
+# repository root only when SvelteKit is removed.
+packages:
+  - next

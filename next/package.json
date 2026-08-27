@@ -1,0 +1,22 @@
+{
+	"name": "brandonwie-dev-next",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "next build",
+		"dev": "next dev",
+		"start": "next start",
+		"check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"next": "^16.3.3",
+		"react": "^19.2.8",
+		"react-dom": "^19.2.8"
+	},
+	"devDependencies": {
+		"@types/node": "^24.13.2",
+		"@types/react": "^19.2.18",
+		"@types/react-dom": "^19.2.5",
+		"typescript": "^6.0.3"
+	}
+}
