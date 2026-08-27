@@ -44,46 +44,93 @@ comparison at Slice 2 has both halves in one place.
 Source: `verification/baseline/svelte-34aa7e7.json` `bundle` block, captured by
 `pnpm migration:capture`.
 
-## Performance (LCP / CLS / interaction latency) — BLOCKED, not measured
+## Performance — measured
 
-**No number is reported here, because no honest number could be produced in this
-environment.**
+Lab proxies, not field Core Web Vitals. Top-level navigations at 1680x1072, 5
+warm runs per route after a discarded priming load, median reported with min and
+max. Every run asserted `document.visibilityState === "visible"`; the window was
+brought to the foreground first, and a gate probe required `visible`, a firing
+`requestAnimationFrame`, and credible paint entries (FCP 428 ms) before any run
+was recorded.
 
-The automation surface never makes the tab visible: `document.visibilityState`
-reads `"hidden"` on every tab, including a freshly created one. Chrome does not
-paint a page it never displays, so:
+### LCP proxy
 
-- `performance.getEntriesByType('paint')` is **empty** after a completed
-  navigation — `domContentLoadedEventEnd` was 58–89 ms on the same loads,
-  so the document parsed fine; it simply never rendered.
-- `requestAnimationFrame` **never fires**: a callback registered with an 800 ms
-  window did not run, twice, on a fully loaded page.
-- Forcing a render with a screenshot does produce entries — and produced
-  **FCP = 33,456 ms** on `/about`, which is the delay until the screenshot was
-  taken, not the page's speed. A metric whose value is set by when the harness
-  chose to look is not a measurement.
+Bound: **2,500 ms** (frozen). Advisory guard: the route's own median x 1.20.
 
-`thresholds.md` pins the bounds (LCP ≤ 2,500 ms, CLS ≤ 0.10, interaction
-latency ≤ 200 ms, each `max(good threshold, baseline median × 1.20)`), the
-capture profile, and the algorithms. What is missing is a browser that renders.
+| Route                                    | Median   | min | max   | Bound    | Advisory guard | Result |
+| ---------------------------------------- | -------- | --- | ----- | -------- | -------------- | ------ |
+| `/`                                      | 480 ms   | 340 | 512   | 2,500 ms | 576 ms         | PASS   |
+| `/posts`                                 | 1,068 ms | 916 | 1,464 | 2,500 ms | 1,282 ms       | PASS   |
+| `/posts/giscus-sveltekit-integration`    | 864 ms   | 828 | 1,216 | 2,500 ms | 1,037 ms       | PASS   |
+| `/ko/posts/giscus-sveltekit-integration` | 820 ms   | 784 | 1,064 | 2,500 ms | 984 ms         | PASS   |
+| `/ko`                                    | 296 ms   | 276 | 316   | 2,500 ms | 355 ms         | PASS   |
+| `/tags`                                  | 436 ms   | 416 | 452   | 2,500 ms | 523 ms         | PASS   |
+| `/search`                                | 244 ms   | 236 | 276   | 2,500 ms | 293 ms         | PASS   |
+| `/study/dsa-ii`                          | 304 ms   | 284 | 332   | 2,500 ms | 365 ms         | PASS   |
+| `/system/3b`                             | 364 ms   | 328 | 396   | 2,500 ms | 437 ms         | PASS   |
+| `/talks/my-career`                       | 864 ms   | 852 | 968   | 2,500 ms | 1,037 ms       | PASS   |
 
-**To unblock, one of:**
+Slowest route is `/posts` at 1,068 ms, which is the 167-card grid; the fastest
+is `/search` at 244 ms, which is an empty input. Both are within the bound with
+room to spare, which is why the floor rather than the baseline sets it.
 
-1. A Chrome session where the automated tab is genuinely foreground and visible,
-   then run the A3a capture unchanged — 5 runs per route per viewport, median
-   reported with min and max.
-2. An authorized headless measurement tool run against the same loopback server
-   (Lighthouse would do it, and would supply CLS and LCP with the standard
-   algorithms). This adds a dependency and needs an explicit decision, which is
-   why it was not taken unilaterally.
+### CLS proxy
 
-Until then AC9's performance half is **open**, and Slice 0 does not close on it.
-The accessibility half above is measured and passing.
+Bound: **0.10** (frozen).
+
+| Route set      | Median    | Bound | Result |
+| -------------- | --------- | ----- | ------ |
+| All ten routes | **0.000** | 0.10  | PASS   |
+
+Every route measured zero at every run but one (`/posts`, a single run at
+0.0025). This is a static, server-rendered site with sized media; the result is
+what that should look like.
+
+The iframe harness reported CLS 0.2121 on `/` and 0.4027 on `/posts` for the
+same builds. Those numbers are the frame's own load sequence, not the page, and
+they are recorded here only so nobody reruns the frame path and believes them.
+
+### Interaction latency proxy
+
+Bound: **200 ms** (frozen). Source: `event` entries, `durationThreshold: 16`,
+worst per interaction.
+
+| Flow                                                | Presses        | Durations                        | Worst     | Bound  | Result          |
+| --------------------------------------------------- | -------------- | -------------------------------- | --------- | ------ | --------------- |
+| `/` — `Cmd+K` open, `Escape` close, x5              | discrete       | all at the 16 ms reporting floor | 16 ms     | 200 ms | PASS            |
+| `/talks/my-career` — `ArrowRight`, x5 with 3 s gaps | discrete       | 48, 48, 72, 48 ms                | **72 ms** | 200 ms | PASS            |
+| `/talks/my-career` — `ArrowRight` x5 with no gap    | **key repeat** | 496–520 ms                       | 520 ms    | —      | **not counted** |
+
+The last row is recorded because it was measured first and it is misleading.
+Sending five arrow presses back to back queues them behind the running GSAP
+transition, and the event durations then include waiting for it. That is the
+harness's key repeat, not a user, so it is not a result. It is worth carrying
+into the migration anyway: an input queued behind a transition is a real user
+scenario, and React's scheduling would not necessarily queue it the same way.
+
+## Threats to these numbers
+
+Stated so a reader can discount them correctly.
+
+- **One viewport.** 1680x1072 only — the window cannot be resized and the iframe
+  distorts CLS. LCP at 390 px, where the largest element differs, is not covered.
+- **Loopback, no throttling, warm cache.** These are floor numbers. A real
+  visitor on a slow network over Cloudflare will be slower, and the gap between
+  the two is not measured here.
+- **One machine, one session.** No cross-machine variance, and n = 5 per route.
+- **Lab, not field.** No real-user distribution stands behind any of it, which is
+  why the interaction row is labelled a proxy rather than INP.
 
 ## Slice 0 status against AC9
 
-| Half                     | Status                                                                                 |
-| ------------------------ | -------------------------------------------------------------------------------------- |
-| Accessibility thresholds | MEASURED — 0 critical, 1 serious enumerated                                            |
-| Weight budgets           | WRITTEN, candidate comparison due at Slice 2                                           |
-| Core Web Vitals proxies  | **BLOCKED** — environment cannot paint; bounds are written and frozen, results are not |
+| Half                     | Status                                                             |
+| ------------------------ | ------------------------------------------------------------------ |
+| Accessibility thresholds | MEASURED — 0 critical findings, 1 serious enumerated with an owner |
+| Weight budgets           | WRITTEN; the candidate comparison is due at Slice 2                |
+| Core Web Vitals proxies  | MEASURED — bounds frozen from the baseline, all ten routes pass    |
+
+AC9 is satisfied for Slice 0: every threshold carries a metric, a numeric bound
+and a route set; each bound was written before the result it judges; and every
+result names the bound it was measured against. What remains open is coverage,
+not method — one viewport rather than three, stated in § Threats to these
+numbers.

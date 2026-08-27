@@ -48,9 +48,8 @@
  * are AC7 and AC9 obligations and they are carried by separate artifacts, not
  * by this file. AC7 and the accessibility half of AC9 are recorded in
  * verification/behavior-matrix.md and verification/thresholds-results.md,
- * captured against the Svelte baseline on 2026-08-27. The Core Web Vitals half
- * of AC9 remains open, with its blocker and its unblock paths recorded in
- * verification/thresholds-results.md.
+ * captured against the Svelte baseline on 2026-08-27, and the Core Web Vitals
+ * half was measured the same day with its bounds frozen first.
  *
  * USAGE
  *   tsx scripts/migration-verify.ts capture <build-dir> <out.json>

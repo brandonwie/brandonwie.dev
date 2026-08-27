@@ -36,12 +36,12 @@ measurements. That is a boundary of what a build-artifact comparator can see,
 not a gap to be closed in this file — those obligations are carried by separate
 artifacts:
 
-| Obligation          | Artifact                                             | Status                                                                                                                                   |
-| ------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| AC7 behavior matrix | [`./behavior-matrix.md`](./behavior-matrix.md)       | Captured 2026-08-27 for a declared 11-route representative set; every uncovered surface is inventoried there as a `pending` row          |
-| AC9 accessibility   | [`./thresholds-results.md`](./thresholds-results.md) | Measured — 0 critical findings, 1 serious enumerated with an owner                                                                       |
-| AC9 weight budgets  | [`./thresholds.md`](./thresholds.md)                 | Written; the candidate comparison is due at Slice 2                                                                                      |
-| AC9 Core Web Vitals | [`./thresholds-results.md`](./thresholds-results.md) | **Open** — the automation surface never paints, so no honest number exists yet; the blocker and its two unblock paths are recorded there |
+| Obligation          | Artifact                                             | Status                                                                                                                          |
+| ------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| AC7 behavior matrix | [`./behavior-matrix.md`](./behavior-matrix.md)       | Captured 2026-08-27 for a declared 11-route representative set; every uncovered surface is inventoried there as a `pending` row |
+| AC9 accessibility   | [`./thresholds-results.md`](./thresholds-results.md) | Measured — 0 critical findings, 1 serious enumerated with an owner                                                              |
+| AC9 weight budgets  | [`./thresholds.md`](./thresholds.md)                 | Written; the candidate comparison is due at Slice 2                                                                             |
+| AC9 Core Web Vitals | [`./thresholds-results.md`](./thresholds-results.md) | Measured 2026-08-27 — bounds frozen from the Svelte baseline, all ten routes pass; coverage is one viewport, stated there       |
 
 Capture tooling lives in `../scripts/`: `serve-build.mjs` (loopback server plus
 the `/__viewport` frame harness) and `capture/` (the probes injected into the
