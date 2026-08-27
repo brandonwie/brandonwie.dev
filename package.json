@@ -21,6 +21,7 @@
 		"migration:capture": "tsx scripts/migration-verify.ts capture build verification/baseline/svelte-34aa7e7.json",
 		"migration:controls": "tsx scripts/migration-verify-controls.ts build verification/baseline/svelte-34aa7e7.json",
 		"migration:verify:next": "tsx scripts/migration-verify.ts compare verification/baseline/svelte-34aa7e7.json next/build",
+		"migration:corpus": "tsx --tsconfig next/tsconfig.json next/scripts/compile-corpus.ts",
 		"migration:serve": "node scripts/serve-build.mjs build 4173",
 		"sync": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts",
 		"sync:check": "deno run --allow-read --allow-env scripts/sync-from-3b.ts --check",
