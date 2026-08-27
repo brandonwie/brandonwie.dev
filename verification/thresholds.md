@@ -108,15 +108,27 @@ recorded with its reason — the same rule this file already applies to weights.
 
 ### Frozen performance bounds
 
-**Status: not yet frozen.** A3a has not run — see the blocker recorded in
-`behavior-matrix.md`. This table is filled in once, at A3b, and Slice 0 does not
-close while any cell below reads TBD.
+**Status: BLOCKED — the floor is pinned, the baseline-derived half cannot be
+measured in this environment.** The formula's lower half is a fixed number and is
+frozen now. Its upper half needs A3a's Svelte medians, and A3a cannot run while
+the tab never paints (constraint 2 above): the only paint entry this environment
+produced was FCP = 33,456 ms on `/about`, which measures when the harness forced
+a render, not the page. That number is discarded, not recorded.
 
-| Route set                                             | Metric                    | Baseline median | Frozen bound |
-| ----------------------------------------------------- | ------------------------- | --------------- | ------------ |
-| Slice 0 representative set (see `behavior-matrix.md`) | LCP proxy                 | TBD             | TBD          |
-| Slice 0 representative set                            | CLS proxy                 | TBD             | TBD          |
-| Slice 0 representative set                            | interaction latency proxy | TBD             | TBD          |
+| Route set                                             | Metric                    | Floor (frozen) | Baseline median | Effective bound          |
+| ----------------------------------------------------- | ------------------------- | -------------- | --------------- | ------------------------ |
+| Slice 0 representative set (see `behavior-matrix.md`) | LCP proxy                 | 2,500 ms       | blocked         | >= 2,500 ms, pending A3a |
+| Slice 0 representative set                            | CLS proxy                 | 0.10           | blocked         | >= 0.10, pending A3a     |
+| Slice 0 representative set                            | interaction latency proxy | 200 ms         | blocked         | >= 200 ms, pending A3a   |
+
+Because the formula is `max(floor, median x 1.20)`, the floors above already
+bind: a candidate worse than 2,500 ms / 0.10 / 200 ms fails whatever A3a
+eventually measures. What is not yet known is whether the bound should be
+_tighter_ than the floor — that is what the Svelte medians would decide.
+
+**Slice 0 does not close on this half.**
+[`./thresholds-results.md`](./thresholds-results.md) records the blocker, its
+evidence, and the two ways to unblock it.
 
 ### Accessibility rubric
 

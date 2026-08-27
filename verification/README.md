@@ -32,10 +32,22 @@ builds now compare with zero differences.
 ## What the harness does not check
 
 Screenshots, keyboard flows, accessibility findings and performance
-measurements. `plan.md` § Slice 0 lists them in the baseline; they need browser
-automation this repository does not have, and adding that dependency is a
-decision rather than an implementation detail. They are AC7 and AC9 obligations
-and are open, not dropped.
+measurements. That is a boundary of what a build-artifact comparator can see,
+not a gap to be closed in this file — those obligations are carried by separate
+artifacts:
+
+| Obligation          | Artifact                                             | Status                                                                                                                                   |
+| ------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| AC7 behavior matrix | [`./behavior-matrix.md`](./behavior-matrix.md)       | Captured 2026-08-27 for a declared 11-route representative set; every uncovered surface is inventoried there as a `pending` row          |
+| AC9 accessibility   | [`./thresholds-results.md`](./thresholds-results.md) | Measured — 0 critical findings, 1 serious enumerated with an owner                                                                       |
+| AC9 weight budgets  | [`./thresholds.md`](./thresholds.md)                 | Written; the candidate comparison is due at Slice 2                                                                                      |
+| AC9 Core Web Vitals | [`./thresholds-results.md`](./thresholds-results.md) | **Open** — the automation surface never paints, so no honest number exists yet; the blocker and its two unblock paths are recorded there |
+
+Capture tooling lives in `../scripts/`: `serve-build.mjs` (loopback server plus
+the `/__viewport` frame harness) and `capture/` (the probes injected into the
+page, served at `/__probe/<name>.js` so the browser runs the tracked copy).
+Screenshots are kept under `./screenshots/baseline-34aa7e7/` for the life of
+this branch and are deleted at task archive with it.
 
 Whitespace is normalized before the text of a page is hashed, so a Prettier
 reflow is invisible to the comparator. The feed build timestamp is excluded for

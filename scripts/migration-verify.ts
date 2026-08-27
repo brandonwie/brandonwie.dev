@@ -44,10 +44,13 @@
  *
  * WHAT IT DOES NOT DO — stated here rather than discovered later. It does not
  * take screenshots, drive the keyboard, run an accessibility audit, or measure
- * performance. plan.md lists those in the Slice 0 baseline; they need a browser
- * automation dependency this repository does not have, and adding one is a
- * decision, not an implementation detail. They are AC7 and AC9 obligations and
- * are recorded as open in the task folder rather than silently dropped.
+ * performance, and it never will: this is a build-artifact comparator. Those
+ * are AC7 and AC9 obligations and they are carried by separate artifacts, not
+ * by this file. AC7 and the accessibility half of AC9 are recorded in
+ * verification/behavior-matrix.md and verification/thresholds-results.md,
+ * captured against the Svelte baseline on 2026-08-27. The Core Web Vitals half
+ * of AC9 remains open, with its blocker and its unblock paths recorded in
+ * verification/thresholds-results.md.
  *
  * USAGE
  *   tsx scripts/migration-verify.ts capture <build-dir> <out.json>
