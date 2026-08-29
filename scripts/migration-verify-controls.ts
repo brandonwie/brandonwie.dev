@@ -24,9 +24,23 @@
  *              16 image alt removed        17 one repeated-link occurrence broken
  *              18 color-scheme flipped
  *              20 ledger approval reused across a shared printed prefix
+ *              21 favicon href points elsewhere
+ *              23 favicon link deleted     25 font URL weight dropped
+ *              27 bundle stylesheets gone  29 preconnect deleted
+ *              30 query appended to a href 31 fragment appended to a href
  *   invariance  6 Prettier reflow ignored   8 feed timestamp ignored
  *              15 ledger approves the EXACT difference
  *              19 directory-index file shape is equivalent
+ *              22 route-relative vs absolute href
+ *              24 &amp; vs a raw & in a href
+ *              26 bundle stylesheet filenames rehashed
+ *              28 two head links swapped in document order
+ *
+ * Controls 21-31 pin `normalizeShell()`. Each of its three loosenings -- href
+ * resolution against the page URL, bundle assets collapsed to one presence key,
+ * and sorted keys -- is an invariance claim, so each is bounded by defect
+ * controls over the same surface. 30 and 31 exist because the first resolution
+ * kept only `URL.pathname` and silently discarded `?query` and `#fragment`.
  *
  * USAGE  tsx scripts/migration-verify-controls.ts <build-dir> <baseline.json>
  * EXIT   0 = every control produced the exit code it must; 1 = one did not
@@ -607,6 +621,34 @@ const CONTROLS: Control[] = [
 				file,
 				html.replace('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />', ''),
 			);
+		},
+	},
+
+	{
+		id: 30,
+		name: 'a query string appended to a shell href',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// Resolution keeps pathname, search AND hash. The first version kept
+			// only URL.pathname, so `../favicon.svg` and `../favicon.svg?v=2`
+			// normalized to the same key and a cache-busting query on any shell
+			// link compared equal. Paired with control 22, which is the invariance
+			// this defect bounds.
+			const file = relativeIconPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace('../favicon.svg', '../favicon.svg?v=2'));
+		},
+	},
+	{
+		id: 31,
+		name: 'a fragment appended to a shell href',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = relativeIconPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace('../favicon.svg', '../favicon.svg#icon'));
 		},
 	},
 ];

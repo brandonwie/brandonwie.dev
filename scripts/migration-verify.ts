@@ -528,6 +528,22 @@ function decodeAttrEntities(value: string): string {
 }
 
 /**
+ * Resolve a relative href against the page's directory, keeping EVERY
+ * component of the result.
+ *
+ * `URL.pathname` alone was the first version and it was wrong: it silently
+ * discards `?query` and `#fragment`, so `../favicon.svg` and
+ * `../favicon.svg?v=2` normalized to the same key and a cache-busting query
+ * added to any shell link would have compared equal. A normalization that
+ * erases part of the value it normalizes is not a normalization, it is a
+ * blindness -- controls 30 and 31 exist to keep it that way.
+ */
+function resolveAgainstPage(href: string, baseDir: string): string {
+	const url = new URL(href, `http://normalize.invalid${baseDir}`);
+	return `${url.pathname}${url.search}${url.hash}`;
+}
+
+/**
  * Put one page's shell into the form the CONTRACT is written about, so both
  * sides of a comparison are read the same way.
  *
@@ -570,9 +586,7 @@ export function normalizeShell(url: string, shell: Record<string, string>): Reco
 		const [, rel, rawHref] = link;
 		const href = decodeAttrEntities(rawHref);
 		const isAbsoluteUrl = /^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//');
-		const resolved = isAbsoluteUrl
-			? href
-			: new URL(href, `http://normalize.invalid${baseDir}`).pathname;
+		const resolved = isAbsoluteUrl ? href : resolveAgainstPage(href, baseDir);
 		if (BUNDLE_PREFIXES.some((prefix) => resolved.startsWith(prefix))) {
 			bundleAssets += 1;
 			continue;
