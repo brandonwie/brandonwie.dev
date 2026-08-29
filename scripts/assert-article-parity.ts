@@ -110,6 +110,36 @@ function attrOf(tag: string, name: string): string | null {
 	return tag.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`, 'i'))?.[1] ?? null;
 }
 
+/**
+ * Drive an `onerror` attribute the way a browser would, and record what it does.
+ *
+ * A6 used to check that the handler's text CONTAINED the two fallback URLs.
+ * That is not a behavioral claim, and a reviewer proved it by replacing the
+ * whole handler with the two URLs as bare string literals — inert code, and the
+ * assertion still passed. Substring presence cannot tell a state machine from
+ * its own comments.
+ *
+ * So the handler is executed against a fake image. `this` is the element, the
+ * body runs verbatim, and the returned list is the src the element would load
+ * after each successive failure, ending in `STOP` once the handler detaches
+ * itself. The loop is bounded: a handler that never stops is a defect, not a
+ * reason to hang.
+ */
+function driveFallback(handler: string, slug: string): string[] {
+	const image = {
+		dataset: {} as Record<string, string>,
+		src: `/hero/${slug}.png`,
+		onerror: handler as string | null,
+	};
+	const body = new Function(handler);
+	const sequence: string[] = [];
+	for (let step = 0; step < 5 && image.onerror !== null; step += 1) {
+		body.call(image);
+		sequence.push(image.onerror === null ? 'STOP' : image.src);
+	}
+	return sequence;
+}
+
 /** Characters smartypants produces. Counted, not just detected. */
 function smartCounts(text: string): Record<string, number> {
 	const out: Record<string, number> = {};
@@ -249,27 +279,35 @@ export async function runAssertions(
 
 		// The VALUE is not compared: SvelteKit's is the `this.__e=event`
 		// delegation stub, a framework artifact no other stack will spell the same
-		// way. What is asserted is that a handler exists on both sides and that
-		// the candidate's walks the same three-stage chain the Svelte component
-		// does — hero, then the 1200x630 cover, then the default cover.
+		// way. What is asserted is that a handler exists on both sides, and that
+		// RUNNING the candidate's walks the same three stages the Svelte component
+		// does — hero, then the 1200x630 cover, then the default cover, then stop.
 		const baseHandler = attrOf(baseHero, 'onerror');
 		const candHandler = attrOf(candHero, 'onerror');
-		const chain = [`/og/${ARTICLE_SLUG}.png`, '/og/default.png'];
+		const EXPECTED = [`/og/${ARTICLE_SLUG}.png`, '/og/default.png', 'STOP'];
 		if (baseHandler === null || candHandler === null) {
 			fail(
 				'A6 hero fallback chain',
 				`handler presence: baseline ${baseHandler === null ? 'ABSENT' : 'present'}, candidate ${candHandler === null ? 'ABSENT' : 'present'}`,
 			);
-		} else if (chain.every((step) => candHandler.includes(step))) {
-			pass(
-				'A6 hero fallback chain',
-				`present on both sides; candidate falls back ${chain.join(' -> ')}`,
-			);
 		} else {
-			fail(
-				'A6 hero fallback chain',
-				`candidate handler does not name ${chain.filter((step) => !candHandler.includes(step)).join(' and ')}`,
-			);
+			let observed: string[];
+			try {
+				observed = driveFallback(decodeEntities(candHandler), ARTICLE_SLUG);
+			} catch (error) {
+				observed = [`THREW ${error instanceof Error ? error.message : String(error)}`];
+			}
+			if (JSON.stringify(observed) === JSON.stringify(EXPECTED)) {
+				pass(
+					'A6 hero fallback chain',
+					`present on both sides; executing the candidate's handler yields ${observed.join(' -> ')}`,
+				);
+			} else {
+				fail(
+					'A6 hero fallback chain',
+					`executing the candidate's handler yields ${JSON.stringify(observed)}, expected ${JSON.stringify(EXPECTED)}`,
+				);
+			}
 		}
 	}
 

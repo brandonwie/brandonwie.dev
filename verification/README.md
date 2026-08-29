@@ -11,10 +11,21 @@ evidence apparatus every later slice is accepted against.
 | `../scripts/migration-verify-controls.ts` | Its negative controls                                                  |
 
 ```bash
-pnpm migration:capture    # rebuild the baseline from build/
+pnpm migration:capture    # RE-MEASURE the baseline from build/ -- see the rule below
 pnpm migration:controls   # prove the harness fails closed
+pnpm migration:projection # prove the committed baseline is a projection, not a re-measurement
 pnpm migration:verify compare verification/baseline/svelte-34aa7e7.json build
 ```
+
+**Widening the schema is a projection, never a re-capture.** When a new field is
+added to `PageFields`, graft it onto the committed baseline and change nothing
+else. Do not run `migration:capture` to get it: the SvelteKit build is not
+byte-reproducible, and a re-capture rewrites the `bundle` block — it moved by
+three bytes once and nothing caught it, because `bundle` is RECORDED rather than
+compared and the AC9 weight evidence in
+[`./thresholds.md`](./thresholds.md) reads it. `pnpm migration:projection`
+enforces the rule against the parent blob read from git, and
+`pnpm migration:projection:controls` proves it catches exactly that drift.
 
 The baseline covers 366 pages, 4 site artifacts (`sitemap.xml`, `rss.xml`,
 `ko/rss.xml`, `_redirects`), 344 Pagefind fragments, bundle weights, and the

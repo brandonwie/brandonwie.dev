@@ -132,6 +132,28 @@ const CONTROLS: Control[] = [
 			),
 	},
 	{
+		id: 'AP-14',
+		kind: 'DEFECT',
+		what: 'the fallback handler is replaced by inert literals naming the same URLs',
+		// The reviewer's own mutation. A6 used to check that the handler TEXT
+		// contained the two URLs, which this passes while doing nothing at all.
+		apply: (html) =>
+			html.replace(
+				/(<img[^>]*onerror=")[^"]*(")/,
+				`$1&quot;/og/${ARTICLE_SLUG}.png&quot;,&quot;/og/default.png&quot;$2`,
+			),
+	},
+	{
+		id: 'AP-15',
+		kind: 'DEFECT',
+		what: 'the fallback chain runs in the wrong order',
+		// Both URLs are still present and the handler still works. Only the ORDER
+		// is wrong, which no substring check can see: the default cover would be
+		// tried before the post's own 1200x630 cover.
+		apply: (html) =>
+			html.replace(/(<img[^>]*onerror="[^"]*)stage='cover'([^"]*")/, "$1stage='default'$2"),
+	},
+	{
 		id: 'AP-13',
 		kind: 'INVARIANCE',
 		what: 'the hero attributes are emitted in a different order — paired with AP-09/10',
