@@ -28,12 +28,15 @@
 		"vfile": "^6.0.3"
 	},
 	"devDependencies": {
+		"@tailwindcss/postcss": "4.3.1",
+		"@tailwindcss/typography": "^0.5.20",
 		"@types/hast": "^3.0.5",
 		"@types/mdast": "^4.0.4",
 		"@types/node": "^24.13.2",
 		"@types/react": "^19.2.18",
 		"@types/react-dom": "^19.2.5",
 		"react-dom": "^19.2.8",
+		"tailwindcss": "4.3.1",
 		"typescript": "^6.0.3"
 	}
 }

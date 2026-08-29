@@ -1,21 +1,18 @@
 import type { ReactNode } from 'react';
 
-export const metadata = {
-	title: 'Brandon Wie',
-	description: 'Migration scaffold — the real document shell lands with C13.',
-};
+import { DOCUMENT_METADATA, DOCUMENT_VIEWPORT, DocumentShell } from '@/shell/document';
 
 /**
- * Slice 1 scaffold shell.
+ * Root layout — contract C13.
  *
- * The real shell is contract C13 (document shell + locale `lang` surface) and
- * is ported with the layout slice. This exists so `output: 'export'` has a root
- * layout to build against; it deliberately asserts nothing about parity yet.
+ * English is the unprefixed locale, so this root layout is the English one.
+ * Korean lives at `/ko/*` and needs its own `<html lang="ko">`; how that is
+ * expressed is recorded in `verification/contracts/C13-document-shell.md`
+ * § Korean root layout and is not decided by this file.
  */
+export const metadata = DOCUMENT_METADATA;
+export const viewport = DOCUMENT_VIEWPORT;
+
 export default function RootLayout({ children }: { children: ReactNode }) {
-	return (
-		<html lang="en">
-			<body>{children}</body>
-		</html>
-	);
+	return <DocumentShell lang="en">{children}</DocumentShell>;
 }
