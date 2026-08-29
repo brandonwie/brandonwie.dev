@@ -9,7 +9,7 @@
     "npm:@sveltejs/kit@^2.68.0": "2.68.0_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.56.4__vite@8.1.0___@types+node@24.13.2___tsx@4.22.4__@types+node@24.13.2__tsx@4.22.4_svelte@5.56.4_typescript@6.0.3_vite@8.1.0__@types+node@24.13.2__tsx@4.22.4_@types+node@24.13.2_tsx@4.22.4",
     "npm:@sveltejs/vite-plugin-svelte@^7.1.2": "7.1.2_svelte@5.56.4_vite@8.1.0__@types+node@24.13.2__tsx@4.22.4_@types+node@24.13.2_tsx@4.22.4",
     "npm:@tailwindcss/typography@~0.5.20": "0.5.20_tailwindcss@4.3.1",
-    "npm:@tailwindcss/vite@^4.3.1": "4.3.1_vite@8.1.0__@types+node@24.13.2__tsx@4.22.4_@types+node@24.13.2_tsx@4.22.4",
+    "npm:@tailwindcss/vite@4.3.1": "4.3.1_vite@8.1.0__@types+node@24.13.2__tsx@4.22.4",
     "npm:@types/d3-shape@^3.1.8": "3.1.8",
     "npm:@types/mdast@^4.0.4": "4.0.4",
     "npm:@types/node@^24.13.2": "24.13.2",
@@ -37,7 +37,7 @@
     "npm:shiki@^4.3.0": "4.3.0",
     "npm:svelte-check@^4.7.1": "4.7.1_svelte@5.56.4_typescript@6.0.3",
     "npm:svelte@^5.56.4": "5.56.4",
-    "npm:tailwindcss@^4.3.1": "4.3.1",
+    "npm:tailwindcss@4.3.1": "4.3.1",
     "npm:tsx@^4.22.4": "4.22.4",
     "npm:typescript-eslint@^8.62.0": "8.62.0_eslint@10.6.0_typescript@6.0.3",
     "npm:typescript@^6.0.3": "6.0.3",
@@ -1037,7 +1037,7 @@
         "tailwindcss"
       ]
     },
-    "@tailwindcss/vite@4.3.1_vite@8.1.0__@types+node@24.13.2__tsx@4.22.4_@types+node@24.13.2_tsx@4.22.4": {
+    "@tailwindcss/vite@4.3.1_vite@8.1.0__@types+node@24.13.2__tsx@4.22.4": {
       "integrity": "sha512-hItDHuIIlEV61R+faXu66s1K36aTurO/Qw0e45Vskz57gXl9pWOT6eg3zmcEui6CZXddbN7zd41bwmvag4JGwQ==",
       "dependencies": [
         "@tailwindcss/node",
@@ -3806,7 +3806,7 @@
         "npm:@sveltejs/kit@^2.68.0",
         "npm:@sveltejs/vite-plugin-svelte@^7.1.2",
         "npm:@tailwindcss/typography@~0.5.20",
-        "npm:@tailwindcss/vite@^4.3.1",
+        "npm:@tailwindcss/vite@4.3.1",
         "npm:@types/d3-shape@^3.1.8",
         "npm:@types/mdast@^4.0.4",
         "npm:@types/node@^24.13.2",
@@ -3834,7 +3834,7 @@
         "npm:shiki@^4.3.0",
         "npm:svelte-check@^4.7.1",
         "npm:svelte@^5.56.4",
-        "npm:tailwindcss@^4.3.1",
+        "npm:tailwindcss@4.3.1",
         "npm:tsx@^4.22.4",
         "npm:typescript-eslint@^8.62.0",
         "npm:typescript@^6.0.3",
