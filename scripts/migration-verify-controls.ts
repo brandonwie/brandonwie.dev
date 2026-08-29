@@ -464,7 +464,215 @@ const CONTROLS: Control[] = [
 			writeFileSync(file, xml.replace(/<item>[\s\S]*?<\/item>/, ''));
 		},
 	},
+
+	// --- shell normalization (controls 21-29) --------------------------------
+	//
+	// `normalizeShell()` resolves link hrefs against the page URL, collapses
+	// framework bundle assets to one presence key, and sorts keys. Each of those
+	// three loosenings is an INVARIANCE claim, so each is paired here with a
+	// DEFECT control over the same surface. Without the pairs, the normalization
+	// would be indistinguishable from switching the shell comparison off.
+	{
+		id: 21,
+		name: 'favicon href points at a DIFFERENT file',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = relativeIconPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace('../favicon.svg', '../favicon.ico'));
+		},
+	},
+	{
+		id: 22,
+		name: 'favicon href written absolute instead of route-relative',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// `../favicon.svg` at /posts/<slug> and `/favicon.svg` denote the same
+			// file. 365 of 366 baseline pages spell it relatively; no candidate can
+			// reproduce that spelling, and it never meant anything different.
+			const file = relativeIconPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace('../favicon.svg', '/favicon.svg'));
+		},
+	},
+	{
+		id: 23,
+		name: 'favicon link deleted',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = relativeIconPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace(/<link rel="icon"[^>]*>/, ''));
+		},
+	},
+	{
+		id: 24,
+		name: 'font href serialized with &amp; instead of a raw &',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			const file = fontLinkPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(
+				file,
+				html.replace(
+					/href="(https:\/\/fonts\.googleapis\.com\/css2[^"]*)"/,
+					(_m, href) => `href="${href.replace(/&/g, '&amp;')}"`,
+				),
+			);
+		},
+	},
+	{
+		id: 25,
+		name: 'font href semantically changed (a weight dropped)',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = fontLinkPage(dir);
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('JetBrains+Mono:wght@400;500;600;700')) {
+				console.error('FATAL: control 25 found no JetBrains Mono weight list to change');
+				process.exit(2);
+			}
+			writeFileSync(
+				file,
+				html.replace('JetBrains+Mono:wght@400;500;600;700', 'JetBrains+Mono:wght@400;500;600'),
+			);
+		},
+	},
+	{
+		id: 26,
+		name: 'bundle stylesheet filenames rehashed',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			const file = bundleStylesheetPage(dir);
+			const html = readFileSync(file, 'utf8');
+			let n = 0;
+			writeFileSync(
+				file,
+				html.replace(
+					/(_app\/immutable\/assets\/)[^"']+\.css/g,
+					(_m, prefix) => `${prefix}rehashed${n++}.css`,
+				),
+			);
+		},
+	},
+	{
+		id: 27,
+		name: 'every bundle stylesheet link removed',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// The presence key exists so this stays visible. Collapsing 1087
+			// content-hashed entries to one marker is only safe if losing the CSS
+			// entirely still fails.
+			const file = bundleStylesheetPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(
+				file,
+				html.replace(/<link[^>]*_app\/immutable\/assets\/[^>]*\.css"[^>]*>/g, ''),
+			);
+		},
+	},
+	{
+		id: 28,
+		name: 'two head links swapped in document order',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			const file = fontLinkPage(dir);
+			const html = readFileSync(file, 'utf8');
+			const a = '<link rel="preconnect" href="https://fonts.googleapis.com" />';
+			const b = '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />';
+			if (!html.includes(a) || !html.includes(b)) {
+				console.error('FATAL: control 28 found no preconnect pair to swap');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace(a, '__SWAP__').replace(b, a).replace('__SWAP__', b));
+		},
+	},
+	{
+		id: 29,
+		name: 'a preconnect hint deleted',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = fontLinkPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(
+				file,
+				html.replace('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />', ''),
+			);
+		},
+	},
 ];
+
+/** A built page whose favicon href is ROUTE-RELATIVE with a `../` segment.
+ *
+ * Controls 21-23 are about resolving that spelling, so a page that already
+ * spells it `./favicon.svg` would make all three vacuous. No such page is a
+ * hard error, the same way `jsonLdPage` refuses to fall back. */
+function relativeIconPage(dir: string): string {
+	for (const base of [join(dir, 'posts'), join(dir, 'ko', 'posts')]) {
+		if (!existsSync(base)) continue;
+		for (const entry of readdirSync(base)) {
+			if (!entry.endsWith('.html')) continue;
+			const full = join(base, entry);
+			if (readFileSync(full, 'utf8').includes('href="../favicon.svg"')) return full;
+		}
+	}
+	console.error('FATAL: no built page links ../favicon.svg; controls 21-23 cannot run');
+	process.exit(2);
+}
+
+/** A built page carrying the Google Fonts stylesheet and both preconnect hints. */
+function fontLinkPage(dir: string): string {
+	for (const candidate of ['about.html', 'index.html']) {
+		const full = join(dir, candidate);
+		if (!existsSync(full)) continue;
+		const html = readFileSync(full, 'utf8');
+		if (html.includes('fonts.googleapis.com/css2') && html.includes('fonts.gstatic.com'))
+			return full;
+	}
+	console.error(
+		'FATAL: no built page carries the font stylesheet and preconnects; controls 24-25 and 28-29 cannot run',
+	);
+	process.exit(2);
+}
+
+/** A built page carrying at least two ROUTE-RELATIVE bundle stylesheets.
+ *
+ * The relative spelling is required, and finding that out cost control 27 a
+ * run: the first version accepted any page and picked `404.html`, whose
+ * stylesheets are absolute `/_app/...`. `extractFields()` has always skipped
+ * that exact spelling, so the entries were never recorded, deleting them
+ * changed nothing the comparator could see, and the control reported exit 0 on
+ * a build with its CSS torn out. A control that cannot observe its own mutation
+ * proves nothing, so the selector now demands a page where the entries exist. */
+function bundleStylesheetPage(dir: string): string {
+	for (const base of [dir, join(dir, 'posts')]) {
+		if (!existsSync(base)) continue;
+		for (const entry of readdirSync(base)) {
+			if (!entry.endsWith('.html')) continue;
+			const full = join(base, entry);
+			const head = readFileSync(full, 'utf8').split('</head>')[0];
+			if (
+				[...head.matchAll(/"\.{1,2}\/(?:\.\.\/)*_app\/immutable\/assets\/[^"']+\.css"/g)].length >=
+				2
+			) {
+				return full;
+			}
+		}
+	}
+	console.error(
+		'FATAL: no built page carries two route-relative bundle stylesheets; controls 26-27 cannot run',
+	);
+	process.exit(2);
+}
 
 /** The fingerprint the comparator prints for the /about title change that
  * controls 14 and 15 use. Computed the same way the comparator does, so the

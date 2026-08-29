@@ -1,1 +1,10 @@
-[]
+[
+	{
+		"url": "/",
+		"field": "shell",
+		"fingerprint": "f9b6faf870b7d60cc13c282d178bc947",
+		"reason": "C13 prefetch decision. The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent; next/link default prefetching takes over the behaviour it configured, moving the trigger from hover/tap to viewport entry. Next has no hover-only mode - prefetch={false} is strictly less than the baseline and the default is strictly more. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-08-29"
+	}
+]

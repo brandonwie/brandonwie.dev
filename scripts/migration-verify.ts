@@ -505,6 +505,89 @@ export function loadLedger(path: string | null): Exception[] {
 	});
 }
 
+// -------------------------------------------------------- shell normalization
+
+/** Framework bundle roots. Their filenames are content-hashed and framework-
+ *  owned, so they are compared as presence, never as names. */
+const BUNDLE_PREFIXES = ['/_app/', '/_next/'];
+
+/** HTML entities an attribute value can legally carry.
+ *
+ * `extractFields()` reads attributes as raw serialized text, so the same URL
+ * spelled `&` on one side and `&amp;` on the other reads as two different
+ * shell keys. SvelteKit copied `app.html`'s raw `&` through; React escapes it.
+ * A browser parses both to the same URL, and the shell contract is about the
+ * document, not its serialization. */
+function decodeAttrEntities(value: string): string {
+	return value
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#0*39;/g, "'")
+		.replace(/&amp;/g, '&');
+}
+
+/**
+ * Put one page's shell into the form the CONTRACT is written about, so both
+ * sides of a comparison are read the same way.
+ *
+ * Three things happen, and each one exists because a real difference was
+ * unreachable without it:
+ *
+ * 1. **Link hrefs resolve against the page URL.** `%sveltekit.assets%` emits
+ *    route-relative paths, so the baseline holds four spellings of one file --
+ *    `/favicon.svg` on 1 page, `./favicon.svg` on 11, `../favicon.svg` on 182
+ *    and `../../favicon.svg` on 172. A candidate linking absolutely could not
+ *    match 365 of them, although every spelling resolves to the same URL in a
+ *    browser. Absolute URLs with a scheme are left alone.
+ *
+ * 2. **Bundle assets collapse to one presence key.** `extractFields()` already
+ *    skipped `/_app/`, but only in that exact spelling, so 365 baseline pages
+ *    still carried 1087 content-hashed stylesheet entries the skip was written
+ *    for. They collapse to `link:<bundle>` rather than vanishing: a candidate
+ *    that ships NO framework stylesheet at all still differs from a baseline
+ *    that ships some, which is the one thing those entries were worth.
+ *
+ * 3. **Keys are sorted.** `scalarDiff` compares `JSON.stringify` output, which
+ *    is insertion-ordered, so moving a `<meta>` within `<head>` read as a
+ *    difference. Head element order carries no meaning for these elements.
+ *
+ * Every one of the three is paired with a defect control that must still fail:
+ * a href pointing at a DIFFERENT file, a missing link, a semantically changed
+ * font URL, and a build with its framework stylesheets removed.
+ */
+export function normalizeShell(url: string, shell: Record<string, string>): Record<string, string> {
+	const baseDir = url === '/' ? '/' : `${url.replace(/\/[^/]*$/, '')}/`;
+	const out: Record<string, string> = {};
+	let bundleAssets = 0;
+
+	for (const [key, value] of Object.entries(shell)) {
+		const link = /^link:([^:]+):([\s\S]*)$/.exec(key);
+		if (!link) {
+			out[key] = value;
+			continue;
+		}
+		const [, rel, rawHref] = link;
+		const href = decodeAttrEntities(rawHref);
+		const isAbsoluteUrl = /^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//');
+		const resolved = isAbsoluteUrl
+			? href
+			: new URL(href, `http://normalize.invalid${baseDir}`).pathname;
+		if (BUNDLE_PREFIXES.some((prefix) => resolved.startsWith(prefix))) {
+			bundleAssets += 1;
+			continue;
+		}
+		out[`link:${rel}:${resolved}`] = value;
+	}
+	if (bundleAssets > 0) out['link:<bundle>'] = 'present';
+
+	return Object.fromEntries(
+		Object.keys(out)
+			.sort()
+			.map((k) => [k, out[k]]),
+	);
+}
+
 // ------------------------------------------------------------------ compare
 
 interface Diff {
@@ -570,7 +653,7 @@ export function compare(baseline: Baseline, candidate: Baseline): Diff[] {
 		scalarDiff(url, 'dir', a.dir, b.dir, diffs);
 		scalarDiff(url, 'internalLinks', a.internalLinks, b.internalLinks, diffs);
 		scalarDiff(url, 'images', a.images, b.images, diffs);
-		scalarDiff(url, 'shell', a.shell, b.shell, diffs);
+		scalarDiff(url, 'shell', normalizeShell(url, a.shell), normalizeShell(url, b.shell), diffs);
 	}
 
 	for (const name of SITE_FILES) {
