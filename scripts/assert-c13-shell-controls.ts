@@ -163,7 +163,7 @@ const CONTROLS: Control[] = [
 		what: 'the /_next bundle stylesheet href changes hash — paired with C13-10',
 		apply: onEveryPage((html) =>
 			html.replace(
-				/\/_next\/static\/chunks\/[a-z0-9_]+\.css/g,
+				/\/_next\/static\/chunks\/[a-z0-9_-]+\.css/g,
 				'/_next/static/chunks/rehashed0000.css',
 			),
 		),

@@ -572,6 +572,24 @@ function resolveAgainstPage(href: string, baseDir: string): string {
  * a href pointing at a DIFFERENT file, a missing link, a semantically changed
  * font URL, and a build with its framework stylesheets removed.
  */
+/**
+ * Key-sorted copy of a meta map.
+ *
+ * `scalarDiff` compares `JSON.stringify` output, which is insertion-ordered, so
+ * a `<meta property="og:type">` moved within `<head>` read as a difference. The
+ * order of head elements carries no meaning for these maps, and it is not the
+ * candidate's to choose: SvelteKit emitted them in template order and Next's
+ * Metadata API emits them in its own. Bounded by controls 32-34, which still
+ * catch a changed value and a missing tag.
+ */
+function sortKeys(map: Record<string, string>): Record<string, string> {
+	return Object.fromEntries(
+		Object.keys(map)
+			.sort()
+			.map((key) => [key, map[key]]),
+	);
+}
+
 export function normalizeShell(url: string, shell: Record<string, string>): Record<string, string> {
 	const baseDir = url === '/' ? '/' : `${url.replace(/\/[^/]*$/, '')}/`;
 	const out: Record<string, string> = {};
@@ -658,8 +676,8 @@ export function compare(baseline: Baseline, candidate: Baseline): Diff[] {
 		scalarDiff(url, 'description', a.description, b.description, diffs);
 		scalarDiff(url, 'canonical', a.canonical, b.canonical, diffs);
 		scalarDiff(url, 'alternates', a.alternates, b.alternates, diffs);
-		scalarDiff(url, 'og', a.og, b.og, diffs);
-		scalarDiff(url, 'twitter', a.twitter, b.twitter, diffs);
+		scalarDiff(url, 'og', sortKeys(a.og), sortKeys(b.og), diffs);
+		scalarDiff(url, 'twitter', sortKeys(a.twitter), sortKeys(b.twitter), diffs);
 		scalarDiff(url, 'jsonLd', a.jsonLd, b.jsonLd, diffs);
 		scalarDiff(url, 'h1', a.h1, b.h1, diffs);
 		scalarDiff(url, 'text', a.textHash, b.textHash, diffs);

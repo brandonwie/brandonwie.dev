@@ -28,6 +28,7 @@
  *              23 favicon link deleted     25 font URL weight dropped
  *              27 bundle stylesheets gone  29 preconnect deleted
  *              30 query appended to a href 31 fragment appended to a href
+ *              32 og tag removed           33 twitter tag value changed
  *   invariance  6 Prettier reflow ignored   8 feed timestamp ignored
  *              15 ledger approves the EXACT difference
  *              19 directory-index file shape is equivalent
@@ -35,6 +36,7 @@
  *              24 &amp; vs a raw & in a href
  *              26 bundle stylesheet filenames rehashed
  *              28 two head links swapped in document order
+ *              34 og and twitter tags reordered in the document
  *
  * Controls 21-31 pin `normalizeShell()`. Each of its three loosenings -- href
  * resolution against the page URL, bundle assets collapsed to one presence key,
@@ -651,6 +653,58 @@ const CONTROLS: Control[] = [
 			writeFileSync(file, html.replace('../favicon.svg', '../favicon.svg#icon'));
 		},
 	},
+
+	{
+		id: 32,
+		name: 'an og tag removed',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = ogPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace(/<meta property="og:type"[^>]*\/?>/, ''));
+		},
+	},
+	{
+		id: 33,
+		name: 'a twitter tag value changed',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = ogPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(
+				file,
+				html.replace(/(name="twitter:card"[^>]*content=")[^"]*(")/, '$1summary$2'),
+			);
+		},
+	},
+	{
+		id: 34,
+		name: 'og and twitter tags reordered in the document',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// The candidate does not choose this order: SvelteKit emits template
+			// order, Next's Metadata API emits its own, and both describe the same
+			// page. Paired with 32 and 33, which still catch a missing tag and a
+			// changed value.
+			const file = ogPage(dir);
+			const html = readFileSync(file, 'utf8');
+			const tags = [...html.matchAll(/<meta property="og:[^"]*"[^>]*\/?>/g)].map((m) => m[0]);
+			if (tags.length < 3) {
+				console.error('FATAL: control 34 needs at least three og tags to reorder');
+				process.exit(2);
+			}
+			let out = html;
+			for (const tag of tags) out = out.replace(tag, '');
+			const reversed = [...tags].reverse().join('');
+			writeFileSync(
+				out.includes('</head>') ? file : file,
+				out.replace('</head>', `${reversed}</head>`),
+			);
+		},
+	},
 ];
 
 /** A built page whose favicon href is ROUTE-RELATIVE with a `../` segment.
@@ -668,6 +722,22 @@ function relativeIconPage(dir: string): string {
 		}
 	}
 	console.error('FATAL: no built page links ../favicon.svg; controls 21-23 cannot run');
+	process.exit(2);
+}
+
+/** A built page carrying a full Open Graph and Twitter card set. */
+function ogPage(dir: string): string {
+	for (const base of [join(dir, 'posts'), dir]) {
+		if (!existsSync(base)) continue;
+		for (const entry of readdirSync(base)) {
+			if (!entry.endsWith('.html')) continue;
+			const full = join(base, entry);
+			const head = readFileSync(full, 'utf8').split('</head>')[0];
+			const og = [...head.matchAll(/<meta property="og:[^"]*"/g)].length;
+			if (og >= 3 && /name="twitter:card"/.test(head)) return full;
+		}
+	}
+	console.error('FATAL: no built page carries og and twitter tags; controls 32-34 cannot run');
 	process.exit(2);
 }
 

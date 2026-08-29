@@ -14,5 +14,13 @@
 		"reason": "C13, three approved shell differences on the 404 page, named individually because the comparator keys one fingerprint per route and field. (1) body:preload-data is dropped: the attribute is SvelteKit-only and next/link default prefetching takes over, the same decision approved for /. (2) meta:robots=noindex is ADDED by Next; the baseline has no such meta and a 404 belongs out of the index, so the candidate is better here, not different-and-worse. (3) link:<bundle> is present on the candidate and absent from the baseline, and this one is a CAPTURE ARTIFACT rather than a candidate defect: 404.html is the one baseline page spelling its asset paths absolutely, extractFields() has always skipped /_app/ in exactly that spelling, so its stylesheets were never recorded. Both pages ship CSS. Widening the skip to erase the marker was rejected because it would make total stylesheet loss invisible everywhere, which control 27 exists to prevent. Every other shell element on this route matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
 		"approved_by": "Brandon",
 		"approved_on": "2026-08-30"
+	},
+	{
+		"url": "/posts/giscus-sveltekit-integration",
+		"field": "shell",
+		"fingerprint": "6a3ff3b9662a7b4f8519dbbdffe1414a",
+		"reason": "C13 prefetch decision, the same one approved for / and /404. The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent; next/link default prefetching takes over, moving the trigger from hover and tap to viewport entry. This is the ONLY difference in this route's shell: every other element - charset, viewport, color-scheme, theme-color, icon, manifest, both preconnects, the font stylesheet and the bundle marker - matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-08-30"
 	}
 ]
