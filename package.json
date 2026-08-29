@@ -24,6 +24,8 @@
 		"migration:verify:svelte": "tsx scripts/migration-verify.ts compare verification/baseline/svelte-34aa7e7.json build --ledger verification/empty-ledger.json",
 		"migration:c13": "tsx scripts/assert-c13-shell.ts",
 		"migration:c13:controls": "tsx scripts/assert-c13-shell-controls.ts",
+		"migration:article": "tsx scripts/assert-article-parity.ts",
+		"migration:article:controls": "tsx scripts/assert-article-parity-controls.ts",
 		"migration:corpus": "tsx --tsconfig next/tsconfig.json next/scripts/compile-corpus.ts",
 		"migration:serve": "node scripts/serve-build.mjs build 4173",
 		"sync": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts",

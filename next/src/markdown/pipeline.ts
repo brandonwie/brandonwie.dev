@@ -13,6 +13,7 @@ import { VFile } from 'vfile';
 import type { BundledLanguage } from 'shiki';
 
 import { remarkMermaidNode } from './plugins/remark-mermaid-node';
+import { remarkSmartTypography } from './plugins/remark-smart-typography';
 // Framework-neutral and shared with the SvelteKit app rather than copied, so
 // the two stacks cannot drift while both exist. They move into this package
 // when SvelteKit is removed and `next/` collapses into the repository root.
@@ -95,6 +96,10 @@ export async function renderMarkdown(source: string): Promise<RenderedMarkdown> 
 
 	const processor = unified()
 		.use(remarkParse)
+		// Before every ported plugin, exactly where mdsvex registers its own
+		// smartypants transformer: reading time and the heading list are computed
+		// from the typeset text, not the raw source.
+		.use(remarkSmartTypography)
 		.use(remarkMermaidNode)
 		.use(remarkGfm)
 		.use(remarkReadingTime)

@@ -29,6 +29,10 @@
  *              27 bundle stylesheets gone  29 preconnect deleted
  *              30 query appended to a href 31 fragment appended to a href
  *              32 og tag removed           33 twitter tag value changed
+ *              35 article:published_time as a locale string
+ *              36 one article:tag removed  37 hero intrinsic size dropped
+ *              38 hero priority and decoding hints dropped
+ *              40 hero fallback handler deleted
  *   invariance  6 Prettier reflow ignored   8 feed timestamp ignored
  *              15 ledger approves the EXACT difference
  *              19 directory-index file shape is equivalent
@@ -37,12 +41,19 @@
  *              26 bundle stylesheet filenames rehashed
  *              28 two head links swapped in document order
  *              34 og and twitter tags reordered in the document
+ *              39 hero onerror body rewritten, handler still present
  *
  * Controls 21-31 pin `normalizeShell()`. Each of its three loosenings -- href
  * resolution against the page URL, bundle assets collapsed to one presence key,
  * and sorted keys -- is an invariance claim, so each is bounded by defect
  * controls over the same surface. 30 and 31 exist because the first resolution
  * kept only `URL.pathname` and silently discarded `?query` and `#fragment`.
+ *
+ * Controls 35-40 pin round 35's two capture widenings. `article:` metadata was
+ * not captured at all, and `<img>` recorded only `src` and `alt`; both blind
+ * spots shipped a real regression in the first article port. The one loosening
+ * they introduce -- `onerror` recorded as presence rather than value -- is
+ * control 39, bounded by 40.
  *
  * USAGE  tsx scripts/migration-verify-controls.ts <build-dir> <baseline.json>
  * EXIT   0 = every control produced the exit code it must; 1 = one did not
@@ -691,18 +702,106 @@ const CONTROLS: Control[] = [
 			// changed value.
 			const file = ogPage(dir);
 			const html = readFileSync(file, 'utf8');
-			const tags = [...html.matchAll(/<meta property="og:[^"]*"[^>]*\/?>/g)].map((m) => m[0]);
-			if (tags.length < 3) {
-				console.error('FATAL: control 34 needs at least three og tags to reorder');
+			// Round 35: this reordered only the og tags while its name and the
+			// handoff both claimed it covered twitter. `twitter` is sorted at
+			// compare time for the same reason og is, so the invariance has to be
+			// exercised over BOTH maps or half of the loosening is unproven.
+			const tags = [
+				...[...html.matchAll(/<meta property="og:[^"]*"[^>]*\/?>/g)].map((m) => m[0]),
+				...[...html.matchAll(/<meta name="twitter:[^"]*"[^>]*\/?>/g)].map((m) => m[0]),
+			];
+			if (tags.length < 4) {
+				console.error('FATAL: control 34 needs at least four og and twitter tags to reorder');
 				process.exit(2);
 			}
 			let out = html;
 			for (const tag of tags) out = out.replace(tag, '');
 			const reversed = [...tags].reverse().join('');
+			writeFileSync(file, out.replace('</head>', `${reversed}</head>`));
+		},
+	},
+
+	{
+		id: 35,
+		name: 'article:published_time changed to a locale date string',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// The exact regression the first article port shipped: gray-matter hands
+			// back a Date for an unquoted YAML date, `String(date)` is the runtime's
+			// locale form, and the comparator captured `og:` and `twitter:` but not
+			// `article:`, so a timezone-dependent published time read as parity.
+			const file = articlePage(dir);
+			const html = readFileSync(file, 'utf8');
 			writeFileSync(
-				out.includes('</head>') ? file : file,
-				out.replace('</head>', `${reversed}</head>`),
+				file,
+				html.replace(
+					/(property="article:published_time"[^>]*content=")[^"]*(")/,
+					'$1Wed Jan 28 2026 09:00:00 GMT+0900 (Korean Standard Time)$2',
+				),
 			);
+		},
+	},
+	{
+		id: 36,
+		name: 'one article:tag removed from a repeated set',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// `article:tag` repeats once per tag. A map keyed by property name would
+			// keep the last one and erase this deletion, which is why the capture is
+			// an ordered list rather than a record.
+			const file = articlePage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace(/<meta property="article:tag"[^>]*\/?>/, ''));
+		},
+	},
+	{
+		id: 37,
+		name: 'the hero image loses its intrinsic size',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = heroPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace(/(<img[^>]*)width="2400" height="1260" /, '$1'));
+		},
+	},
+	{
+		id: 38,
+		name: 'the hero image loses its priority and decoding hints',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = heroPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace(/ fetchpriority="high" decoding="async"/, ''));
+		},
+	},
+	{
+		id: 39,
+		name: 'the hero onerror handler is rewritten but still present',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// The VALUE of this attribute is a framework artifact -- SvelteKit emits
+			// the `this.__e=event` delegation stub and nothing else ever will -- so
+			// the capture records presence. Paired with 40, which still catches the
+			// handler disappearing.
+			const file = heroPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace(/(<img[^>]*onerror=")[^"]*(")/, '$1void 0$2'));
+		},
+	},
+	{
+		id: 40,
+		name: 'the hero image loses its fallback handler entirely',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = heroPage(dir);
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(file, html.replace(/(<img[^>]*) onerror="[^"]*"/, '$1'));
 		},
 	},
 ];
@@ -738,6 +837,54 @@ function ogPage(dir: string): string {
 		}
 	}
 	console.error('FATAL: no built page carries og and twitter tags; controls 32-34 cannot run');
+	process.exit(2);
+}
+
+/** A built page carrying a repeated `article:tag` set.
+ *
+ * Controls 35 and 36 are about the `article:` namespace specifically, and a
+ * page without it would make both vacuous -- the failure mode control 27 hit. */
+function articlePage(dir: string): string {
+	const base = join(dir, 'posts');
+	if (existsSync(base)) {
+		for (const entry of readdirSync(base)) {
+			if (!entry.endsWith('.html')) continue;
+			const full = join(base, entry);
+			const head = readFileSync(full, 'utf8').split('</head>')[0];
+			if (
+				/property="article:published_time"/.test(head) &&
+				[...head.matchAll(/property="article:tag"/g)].length >= 2
+			) {
+				return full;
+			}
+		}
+	}
+	console.error('FATAL: no built page carries article: metadata; controls 35-36 cannot run');
+	process.exit(2);
+}
+
+/** A built page whose hero image carries the full attribute set.
+ *
+ * The size pair is matched LITERALLY by control 37, so a page whose hero was
+ * generated at another size would silently no-op the mutation. */
+function heroPage(dir: string): string {
+	const base = join(dir, 'posts');
+	if (existsSync(base)) {
+		for (const entry of readdirSync(base)) {
+			if (!entry.endsWith('.html')) continue;
+			const full = join(base, entry);
+			const html = readFileSync(full, 'utf8');
+			if (
+				/<img[^>]*width="2400" height="1260" fetchpriority="high" decoding="async"/.test(html) &&
+				/<img[^>]*onerror="/.test(html)
+			) {
+				return full;
+			}
+		}
+	}
+	console.error(
+		'FATAL: no built page carries a hero image with size, hints and a fallback; controls 37-40 cannot run',
+	);
 	process.exit(2);
 }
 

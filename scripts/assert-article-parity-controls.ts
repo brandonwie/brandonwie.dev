@@ -1,0 +1,221 @@
+/**
+ * Negative controls for the article parity assertions.
+ *
+ *   pnpm migration:article:controls
+ *
+ * `assert-article-parity.ts` reports six passing rows. That number is worth
+ * nothing until each row has been observed to go red, which is the argument
+ * `migration-verify-controls.ts` makes for the comparator and
+ * `assert-c13-shell-controls.ts` makes for the shell.
+ *
+ *   DEFECT      the assertions MUST exit 1 on a deliberately broken article
+ *   INVARIANCE  the assertions MUST exit 0 on a benign change they should ignore
+ *
+ * Every invariance is paired with a defect over the same surface: entity
+ * encoding and whitespace against the two prose defects, the rewritten handler
+ * against its deletion, attribute order against the attribute values.
+ *
+ * Each control runs against a throwaway copy of the candidate build under
+ * `tmp/`. The real `next/build` is never mutated, and the baseline is read-only
+ * throughout — a control that "fixed" a difference by editing the baseline
+ * would be proving the opposite of what it claims.
+ */
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { join } from 'node:path';
+
+import { ARTICLE_SLUG, runAssertions } from './assert-article-parity.ts';
+
+type Kind = 'DEFECT' | 'INVARIANCE';
+
+interface Control {
+	id: string;
+	kind: Kind;
+	what: string;
+	apply: (html: string) => string;
+}
+
+const CONTROLS: Control[] = [
+	{
+		id: 'AP-01',
+		kind: 'DEFECT',
+		what: 'one word of the prose is changed',
+		apply: (html) => html.replace(/\bcomments\b/, 'remarks'),
+	},
+	{
+		id: 'AP-02',
+		kind: 'DEFECT',
+		what: 'an em dash reverts to the ASCII source spelling',
+		apply: (html) => html.replace('—', '--'),
+	},
+	{
+		id: 'AP-03',
+		kind: 'DEFECT',
+		what: 'a curly apostrophe reverts to a straight one',
+		apply: (html) => html.replace('’', "'"),
+	},
+	{
+		id: 'AP-04',
+		kind: 'INVARIANCE',
+		what: 'smart punctuation written as numeric entities — paired with AP-02/03',
+		apply: (html) =>
+			html
+				.replace(/—/g, '&#8212;')
+				.replace(/’/g, '&#8217;')
+				.replace(/“/g, '&#8220;')
+				.replace(/”/g, '&#8221;'),
+	},
+	{
+		id: 'AP-05',
+		kind: 'INVARIANCE',
+		what: 'the prose is reflowed with extra whitespace — paired with AP-01',
+		// Matched on the CLOSING tag alone. The first version reflowed `</p><p`,
+		// which the candidate never emits — React already writes a newline there —
+		// so the mutation changed nothing and the no-op guard failed the control
+		// rather than letting an untested invariance report success.
+		apply: (html) => html.replace(/<\/p>/g, '</p>\n\n   '),
+	},
+	{
+		id: 'AP-06',
+		kind: 'DEFECT',
+		what: 'article:published_time becomes a locale date string',
+		apply: (html) =>
+			html.replace(
+				/(property="article:published_time"[^>]*content=")[^"]*(")/,
+				'$1Wed Jan 28 2026 09:00:00 GMT+0900 (Korean Standard Time)$2',
+			),
+	},
+	{
+		id: 'AP-07',
+		kind: 'DEFECT',
+		what: 'one article:tag is removed from a repeated set',
+		apply: (html) => html.replace(/<meta property="article:tag"[^>]*\/?>/, ''),
+	},
+	{
+		id: 'AP-08',
+		kind: 'DEFECT',
+		what: 'the article:* tags are emitted in a different order',
+		apply: (html) => {
+			const tags = [...html.matchAll(/<meta property="article:[^"]*"[^>]*\/?>/g)].map((m) => m[0]);
+			let out = html;
+			for (const tag of tags) out = out.replace(tag, '');
+			return out.replace('</head>', `${[...tags].reverse().join('')}</head>`);
+		},
+	},
+	{
+		id: 'AP-09',
+		kind: 'DEFECT',
+		what: 'the hero loses its intrinsic size',
+		apply: (html) => html.replace(/(<img[^>]*)width="2400" height="1260" /, '$1'),
+	},
+	{
+		id: 'AP-10',
+		kind: 'DEFECT',
+		what: 'the hero loses its decoding hint',
+		apply: (html) => html.replace(/(<img[^>]*) decoding="async"/, '$1'),
+	},
+	{
+		id: 'AP-11',
+		kind: 'DEFECT',
+		what: 'the hero loses its fallback handler',
+		apply: (html) => html.replace(/(<img[^>]*) onerror="[^"]*"/, '$1'),
+	},
+	{
+		id: 'AP-12',
+		kind: 'INVARIANCE',
+		what: 'the fallback handler is spelled differently but walks the same chain — paired with AP-11',
+		apply: (html) =>
+			html.replace(
+				/(<img[^>]*onerror=")([^"]*)(")/,
+				(_, open, body, close) =>
+					`${open}/* rewritten */${body.replace(/var i=this/, 'var i=this /* renamed */')}${close}`,
+			),
+	},
+	{
+		id: 'AP-13',
+		kind: 'INVARIANCE',
+		what: 'the hero attributes are emitted in a different order — paired with AP-09/10',
+		apply: (html) =>
+			html.replace(
+				/<img src="(\/hero\/[^"]*)" alt="" width="2400" height="1260"/,
+				'<img width="2400" height="1260" alt="" src="$1"',
+			),
+	},
+];
+
+/** The one file the controls touch, so a no-op mutation is detectable. */
+function fingerprint(file: string): string {
+	return createHash('sha256').update(readFileSync(file)).digest('hex');
+}
+
+async function main(): Promise<number> {
+	const source = process.argv[2] ?? 'next/build';
+	const baseline = process.argv[3] ?? 'build';
+	const scratch = 'tmp/article-controls';
+
+	for (const [label, dir] of [
+		['candidate', source],
+		['baseline', baseline],
+	] as const) {
+		if (!existsSync(dir)) {
+			console.error(`FATAL: ${label} build not found: ${dir}`);
+			return 2;
+		}
+	}
+
+	// A control suite that never sees the unbroken build passing is not a
+	// baseline, it is a coincidence.
+	const clean = await runAssertions(source, baseline, true);
+	console.log(`BASELINE  ${source} unmodified -> exit ${clean} (expected 0)`);
+	if (clean !== 0) {
+		console.error(
+			'FATAL: the unmodified build does not pass; fix that before trusting any control',
+		);
+		return 1;
+	}
+
+	mkdirSync('tmp', { recursive: true });
+	const failures: string[] = [];
+
+	for (const control of CONTROLS) {
+		rmSync(scratch, { recursive: true, force: true });
+		cpSync(source, scratch, { recursive: true });
+		const file = join(scratch, 'posts', `${ARTICLE_SLUG}.html`);
+		const before = fingerprint(file);
+		writeFileSync(file, control.apply(readFileSync(file, 'utf8')));
+		// A mutation that silently matched nothing turns an INVARIANCE control
+		// into a tautology and a DEFECT control into a coincidence. The shell
+		// suite has caught this twice; it is not a hypothetical.
+		if (before === fingerprint(file)) {
+			failures.push(`${control.id} ${control.what}: the mutation changed nothing`);
+			console.log(
+				`FAIL  ${control.id}  ${control.kind.padEnd(10)} NO-OP MUTATION  ${control.what}`,
+			);
+			continue;
+		}
+		const code = await runAssertions(scratch, baseline, true);
+		const expected = control.kind === 'DEFECT' ? 1 : 0;
+		const ok = code === expected;
+		if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
+		console.log(
+			`${ok ? 'PASS' : 'FAIL'}  ${control.id}  ${control.kind.padEnd(10)} exit ${code} (expected ${expected})  ${control.what}`,
+		);
+	}
+	rmSync(scratch, { recursive: true, force: true });
+
+	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length;
+	console.log(
+		`\n${CONTROLS.length} controls: ${defects} defect (must exit 1), ${CONTROLS.length - defects} invariance (must exit 0)`,
+	);
+	if (failures.length) {
+		for (const line of failures) console.error(`CONTROL FAILED ${line}`);
+		console.error(
+			`RESULT: ${failures.length}/${CONTROLS.length} control(s) failed — the article assertions do not fail closed`,
+		);
+		return 1;
+	}
+	console.log(`RESULT: ${CONTROLS.length}/${CONTROLS.length} controls behaved as specified`);
+	return 0;
+}
+
+main().then((code) => process.exit(code));

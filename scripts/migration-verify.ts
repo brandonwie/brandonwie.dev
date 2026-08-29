@@ -76,6 +76,19 @@ export interface PageFields {
 	alternates: string[];
 	og: Record<string, string>;
 	twitter: Record<string, string>;
+	/** `article:*` Open Graph tags, in DOCUMENT ORDER, duplicates preserved.
+	 *
+	 * Round 35: `og:` and `twitter:` were captured and `article:` was not, so a
+	 * timezone-dependent `article:published_time` and a dropped `article:tag`
+	 * both read as parity. They are not a sub-namespace of `og:` -- the spelling
+	 * is `article:`, and the loop below only matched the `og:` prefix.
+	 *
+	 * A map would be wrong here: `article:tag` legitimately repeats once per tag,
+	 * and a map keyed by property name would keep the last one and erase the
+	 * rest. Order is compared strictly because both stacks emit the same order
+	 * from the same source list; if that ever stops being true it is a finding,
+	 * not noise to normalize away. */
+	articleMeta: string[];
 	jsonLd: unknown[];
 	h1: string[];
 	textHash: string;
@@ -163,6 +176,7 @@ export function extractFields(html: string): PageFields {
 	const head = html.slice(0, html.search(/<\/head>/i) + 1 || html.length);
 	const og: Record<string, string> = {};
 	const twitter: Record<string, string> = {};
+	const articleMeta: string[] = [];
 	let description: string | null = null;
 
 	for (const tag of metaTags(head)) {
@@ -170,6 +184,7 @@ export function extractFields(html: string): PageFields {
 		const name = attr(tag, 'name');
 		const content = attr(tag, 'content') ?? '';
 		if (property?.startsWith('og:')) og[property] = content;
+		else if (property?.startsWith('article:')) articleMeta.push(`${property} ${content}`);
 		else if (name?.startsWith('twitter:')) twitter[name] = content;
 		else if (name === 'description') description = content;
 	}
@@ -218,7 +233,30 @@ export function extractFields(html: string): PageFields {
 			const src = attr(tag, 'src');
 			return src !== null && !src.startsWith('/_app/');
 		})
-		.map((tag) => `${attr(tag, 'src')} alt=${JSON.stringify(attr(tag, 'alt'))}`);
+		.map((tag) => {
+			// Round 35: `src` and `alt` alone were captured, so the post hero could
+			// lose its intrinsic size, its priority hint and its decoding hint and
+			// still read as parity -- it did, on the first port of the article.
+			// These four are user-visible loading and layout semantics, not markup
+			// taste: the size pair is what reserves space and prevents the shift,
+			// and the two hints are what the browser schedules against.
+			//
+			// `onerror` is recorded as PRESENCE, not value. Its value is a
+			// framework artifact -- SvelteKit emits the `this.__e=event` delegation
+			// stub and no other stack will ever spell it that way -- while the user
+			// semantic is whether a broken image has a fallback wired at all. Same
+			// argument as the bundle-prefix normalization in `normalizeShell`, and
+			// bounded the same way, by a defect control over the same surface.
+			const dims = `${attr(tag, 'width')}x${attr(tag, 'height')}`;
+			const onerror = attr(tag, 'onerror') === null ? 'absent' : 'present';
+			return [
+				`${attr(tag, 'src')} alt=${JSON.stringify(attr(tag, 'alt'))}`,
+				`size=${dims}`,
+				`fetchpriority=${attr(tag, 'fetchpriority')}`,
+				`decoding=${attr(tag, 'decoding')}`,
+				`onerror=${onerror}`,
+			].join(' ');
+		});
 	// Every automatable row of plan.md C13's element table. `color-scheme` was
 	// missing, and a reviewer flipped it from dark to light without the comparator
 	// noticing. Rows that need a recorded human decision -- the font mechanism,
@@ -258,6 +296,7 @@ export function extractFields(html: string): PageFields {
 		alternates,
 		og,
 		twitter,
+		articleMeta,
 		jsonLd,
 		h1,
 		textHash: createHash('sha256').update(text).digest('hex').slice(0, 16),
@@ -678,6 +717,10 @@ export function compare(baseline: Baseline, candidate: Baseline): Diff[] {
 		scalarDiff(url, 'alternates', a.alternates, b.alternates, diffs);
 		scalarDiff(url, 'og', sortKeys(a.og), sortKeys(b.og), diffs);
 		scalarDiff(url, 'twitter', sortKeys(a.twitter), sortKeys(b.twitter), diffs);
+		// NOT sorted, unlike `og` and `twitter` above. Those two are maps whose
+		// emission order the candidate does not choose; this is an ordered list
+		// with meaningful repeats.
+		scalarDiff(url, 'articleMeta', a.articleMeta, b.articleMeta, diffs);
 		scalarDiff(url, 'jsonLd', a.jsonLd, b.jsonLd, diffs);
 		scalarDiff(url, 'h1', a.h1, b.h1, diffs);
 		scalarDiff(url, 'text', a.textHash, b.textHash, diffs);
