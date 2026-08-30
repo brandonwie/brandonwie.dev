@@ -29,6 +29,8 @@
 		"migration:projection": "tsx scripts/assert-baseline-projection.ts",
 		"migration:projection:controls": "tsx scripts/assert-baseline-projection-controls.ts",
 		"migration:typography": "tsx --tsconfig next/tsconfig.json next/scripts/assert-corpus-typography.ts",
+		"migration:ast": "tsx --tsconfig next/tsconfig.json next/scripts/assert-mdsvex-ast.ts",
+		"migration:ast:controls": "tsx --tsconfig next/tsconfig.json next/scripts/assert-mdsvex-ast-controls.ts",
 		"migration:typography:oracle": "tsx --tsconfig next/tsconfig.json next/scripts/assert-typography-oracle.ts",
 		"migration:typography:oracle:controls": "tsx --tsconfig next/tsconfig.json next/scripts/assert-typography-oracle-controls.ts",
 		"migration:typography:controls": "tsx --tsconfig next/tsconfig.json next/scripts/assert-corpus-typography-controls.ts",
