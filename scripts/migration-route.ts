@@ -5,7 +5,7 @@
  *
  * `.husky/pre-push` already costs ~123 s before any migration check runs (lint,
  * format:check, build, check, validate:dates). Measured on this host, the
- * fourteen blocking migration commands add ~100 s and `migration:controls`
+ * fourteen migration commands add ~100 s and `migration:controls`
  * alone adds ~265 s. Bolting the whole set onto the hook makes an ordinary push
  * cost more than four minutes, and a hook that slow gets bypassed with
  * `--no-verify`, which is worse than a hook that runs less. So push-time runs
@@ -41,7 +41,7 @@
  *   --list [--tier push|ci|all]     print the commands in a tier
  *   --plan                          print the selection for the given change set
  *   --run                           run the selection (sequential, first failure wins)
- *   --all                           select every blocking suite in --tier (default push)
+ *   --all                           select every suite in --tier (default push)
  *   --range <base>..<head>          derive changed paths from a git range
  *   --paths <p1,p2,...>             use an explicit change set (tests)
  *   (default)                       read pre-push stdin: `<lref> <lsha> <rref> <rsha>`
@@ -51,6 +51,8 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, posix, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import ts from 'typescript';
 
 const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
 
@@ -91,8 +93,6 @@ export interface Suite {
 	dataRoots: string[];
 	/** `push` runs in the hook when selected; `ci` never runs at push time. */
 	tier: 'push' | 'ci';
-	/** A non-blocking suite is reported, never enforced (parity is still open). */
-	blocking: boolean;
 }
 
 export const SUITES: Suite[] = [
@@ -101,98 +101,84 @@ export const SUITES: Suite[] = [
 		entry: 'next/scripts/compile-corpus.ts',
 		dataRoots: ['src/content/posts'],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:typography',
 		entry: 'next/scripts/assert-corpus-typography.ts',
 		dataRoots: ['src/content/posts', ...SVELTE_BUILD_SOURCES],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:typography:controls',
 		entry: 'next/scripts/assert-corpus-typography-controls.ts',
 		dataRoots: ['src/content/posts', ...SVELTE_BUILD_SOURCES],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:typography:oracle',
 		entry: 'next/scripts/assert-typography-oracle.ts',
 		dataRoots: [],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:typography:oracle:controls',
 		entry: 'next/scripts/assert-typography-oracle-controls.ts',
 		dataRoots: [],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:ast',
 		entry: 'next/scripts/assert-mdsvex-ast.ts',
 		dataRoots: ['src/content/posts'],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:ast:controls',
 		entry: 'next/scripts/assert-mdsvex-ast-controls.ts',
 		dataRoots: ['src/content/posts'],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:c13',
 		entry: 'scripts/assert-c13-shell.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:c13:controls',
 		entry: 'scripts/assert-c13-shell-controls.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:article',
 		entry: 'scripts/assert-article-parity.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:article:controls',
 		entry: 'scripts/assert-article-parity-controls.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:projection',
 		entry: 'scripts/assert-baseline-projection.ts',
 		dataRoots: [...BASELINE],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:projection:controls',
 		entry: 'scripts/assert-baseline-projection-controls.ts',
 		dataRoots: [...BASELINE],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		command: 'migration:verify:svelte',
 		entry: 'scripts/migration-verify.ts',
 		dataRoots: [...SVELTE_BUILD_SOURCES, ...BASELINE],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		// The router routes itself: its controls are a suite like any other, so a
@@ -202,7 +188,6 @@ export const SUITES: Suite[] = [
 		entry: 'scripts/migration-route-controls.ts',
 		dataRoots: [],
 		tier: 'push',
-		blocking: true,
 	},
 	{
 		// 265 s — more than the other fourteen combined, because each of its 40
@@ -211,17 +196,25 @@ export const SUITES: Suite[] = [
 		entry: 'scripts/migration-verify-controls.ts',
 		dataRoots: [...SVELTE_BUILD_SOURCES, ...BASELINE],
 		tier: 'ci',
-		blocking: true,
 	},
 	{
-		// Exits 1 by design until the surface port closes parity. Reported in CI
-		// as a progress number, never enforced; enforcing it now would mean
-		// disabling it later, which is how a gate becomes decorative.
-		command: 'migration:verify:next',
-		entry: 'scripts/migration-verify.ts',
+		// `migration:verify:next` exits 1 by design until the surface port closes
+		// parity, and CI used to run it under `continue-on-error`. That suppressed
+		// a missing build (exit 2) and a malformed or stale ledger (also exit 1)
+		// along with the expected drift. This judges the exit instead of ignoring
+		// it: expected drift passes and is reported as a number, a broken harness
+		// fails. CI only — it needs the Next build.
+		command: 'migration:parity:progress',
+		entry: 'scripts/assert-parity-progress.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
 		tier: 'ci',
-		blocking: false,
+	},
+	{
+		// The judge is a pure function, so its controls cost nothing at push time.
+		command: 'migration:parity:progress:controls',
+		entry: 'scripts/assert-parity-progress-controls.ts',
+		dataRoots: [],
+		tier: 'push',
 	},
 ];
 
@@ -257,15 +250,27 @@ const SHARED_CONFIG = [
 const SELECTOR = [/^scripts\/migration-route(-controls)?\.ts$/, /^\.husky\//];
 
 /**
- * Both statement forms, each anchored to the start of a line. The anchor matters:
- * an unanchored bare-`import` alternative also matches an import-shaped STRING
- * LITERAL mid-line, and since an unresolvable specifier is fatal here, that turns
- * a quoted example in a comment or a test fixture into a hard router failure.
- * Anchoring narrows it to something that can actually be a statement; a literal
- * that still starts its own line errs toward the fatal, never toward silence.
+ * Import discovery uses the TypeScript compiler's own file preprocessor rather
+ * than a regex.
+ *
+ * The regex version shipped first and a reviewer found it blind to MULTILINE
+ * imports — `import {\n  a,\n  b,\n} from './x'` — because the pattern refused
+ * a newline between the specifier list and `from`. Four such imports exist in
+ * this repository, and one of them was load-bearing: a change to
+ * `next/src/markdown/pipeline.ts` did not select
+ * `migration:typography:oracle:controls`, because that suite reaches the
+ * pipeline only through a multiline import of `assert-typography-oracle`.
+ *
+ * That is the exact failure this router was written to prevent, committed
+ * inside the router. A hand-rolled scanner has an unbounded list of forms it
+ * has not thought of; `ts.preProcessFile` is the same scanner the compiler
+ * uses, so the list is the language's, not mine.
  */
-const IMPORT_RE =
-	/(?:^|\n)[ \t]*(?:import|export)[^'"\n]*?from[ \t]*['"]([^'"]+)['"]|(?:^|\n)[ \t]*import[ \t]*['"]([^'"]+)['"]/g;
+export function scanImports(source: string): string[] {
+	const scanned = ts.preProcessFile(source, true, true);
+	return scanned.importedFiles.map((file) => file.fileName);
+}
+
 const RESOLVE_EXTS = ['', '.ts', '.tsx', '.mts', '.js', '.mjs', '.jsx'];
 
 function toRepoRelative(absolute: string): string {
@@ -295,9 +300,8 @@ export function importClosure(entry: string, seen = new Set<string>()): Set<stri
 	if (seen.has(entry)) return seen;
 	seen.add(entry);
 	const source = readFileSync(join(REPO_ROOT, entry), 'utf8');
-	for (const match of source.matchAll(IMPORT_RE)) {
-		const specifier = match[1] ?? match[2];
-		if (!specifier || !specifier.startsWith('.')) continue;
+	for (const specifier of scanImports(source)) {
+		if (!specifier.startsWith('.')) continue;
 		importClosure(resolveLocal(specifier, entry), seen);
 	}
 	return seen;
@@ -319,7 +323,7 @@ export interface Selection {
 
 export function select(changed: string[], tier: 'push' | 'ci' | 'all' = 'push'): Selection {
 	const inTier = SUITES.filter((s) => tier === 'all' || s.tier === tier);
-	const all = () => inTier.filter((s) => s.blocking).map((s) => s.command);
+	const all = () => inTier.map((s) => s.command);
 
 	const reasons: string[] = [];
 	for (const path of changed) {
@@ -335,7 +339,7 @@ export function select(changed: string[], tier: 'push' | 'ci' | 'all' = 'push'):
 		for (const suite of inTier) {
 			if (!inputs.get(suite.command)!.some((root) => underRoot(path, root))) continue;
 			matched = true;
-			if (suite.blocking) selected.add(suite.command);
+			selected.add(suite.command);
 		}
 		if (matched) continue;
 		if (INERT.some((re) => re.test(path))) continue;
@@ -408,7 +412,7 @@ async function main(argv: string[]): Promise<number> {
 
 	if (argv.includes('--list')) {
 		for (const suite of inTier) {
-			console.log(`${suite.blocking ? 'blocking' : 'report  '}  ${suite.command}`);
+			console.log(`${suite.tier.padEnd(4)}  ${suite.command}`);
 		}
 		return 0;
 	}
@@ -416,7 +420,7 @@ async function main(argv: string[]): Promise<number> {
 	let selection: Selection;
 	if (argv.includes('--all')) {
 		selection = {
-			commands: inTier.filter((s) => s.blocking).map((s) => s.command),
+			commands: inTier.map((s) => s.command),
 			broad: true,
 			reasons: ['--all'],
 		};
@@ -430,7 +434,7 @@ async function main(argv: string[]): Promise<number> {
 		selection =
 			changed === null
 				? {
-						commands: inTier.filter((s) => s.blocking).map((s) => s.command),
+						commands: inTier.map((s) => s.command),
 						broad: true,
 						reasons: ['no resolvable push range (new branch or empty stdin)'],
 					}

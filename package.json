@@ -39,6 +39,8 @@
 		"migration:route": "tsx scripts/migration-route.ts",
 		"migration:route:controls": "tsx scripts/migration-route-controls.ts",
 		"migration:all": "tsx scripts/migration-route.ts --all --run",
+		"migration:parity:progress": "tsx scripts/assert-parity-progress.ts",
+		"migration:parity:progress:controls": "tsx scripts/assert-parity-progress-controls.ts",
 		"sync": "deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts",
 		"sync:check": "deno run --allow-read --allow-env scripts/sync-from-3b.ts --check",
 		"sync:diff": "deno run --allow-read --allow-write --allow-env --allow-run scripts/sync-from-3b.ts --diff",

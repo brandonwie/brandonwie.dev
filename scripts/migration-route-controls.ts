@@ -166,6 +166,22 @@ const CONTROLS: Control[] = [
 		paths: ['README.md', 'PROGRESS.md'],
 	},
 	{
+		id: 'RT-10',
+		kind: 'DEFECT',
+		what: 'import discovery goes back to a line-bound regex and cannot see a multiline import',
+		mutations: [
+			{
+				find: '\tconst scanned = ts.preProcessFile(source, true, true);\n\treturn scanned.importedFiles.map((file) => file.fileName);',
+				replace:
+					'\treturn [...source.matchAll(/(?:^|\\n)[ \\t]*import[^\'"\\n]*?from[ \\t]*[\'"]([^\'"]+)[\'"]/g)].map(\n\t\t(match) => match[1],\n\t);',
+			},
+		],
+		// `migration:typography:oracle:controls` reaches the pipeline ONLY through
+		// the multiline `import { ... } from './assert-typography-oracle'` at
+		// `assert-typography-oracle-controls.ts:19-24`. The shipped regex missed it.
+		paths: ['next/src/markdown/pipeline.ts'],
+	},
+	{
 		id: 'RT-09',
 		kind: 'INVARIANCE',
 		what: 'widening the inert list elsewhere leaves a docs-only push selecting nothing — paired with RT-08 over the same surface',
@@ -238,6 +254,16 @@ function vacuityGuard(): string[] {
 				failures.push(`${suite.command}: missing data root ${root}`);
 		}
 	}
+	// The edge a reviewer found missing. Pinned by name because a scanner can be
+	// complete for every form this repository happens to use today and blind to
+	// the one it gains tomorrow; this is the one that was actually wrong.
+	const oracleControls = importClosure('next/scripts/assert-typography-oracle-controls.ts');
+	if (!oracleControls.has('next/scripts/assert-typography-oracle.ts')) {
+		failures.push(
+			'the multiline import at assert-typography-oracle-controls.ts:19-24 is invisible to import discovery',
+		);
+	}
+
 	// At least one suite must reach a real dependency graph, or the derivation is
 	// decorative and the map is a hand-written table wearing a computation.
 	const derived = SUITES.filter((s) => importClosure(s.entry).size > 1);

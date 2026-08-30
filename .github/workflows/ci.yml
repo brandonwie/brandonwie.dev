@@ -64,12 +64,13 @@ jobs:
       - name: Full migration suite
         run: pnpm run migration:all
 
-      # Exits 1 by design until the surface port closes parity, so it is reported
-      # as a progress number rather than enforced. Enforcing it now would mean
-      # turning it off later, which is how a gate becomes decorative.
-      - name: Next parity progress (report only)
-        continue-on-error: true
-        run: pnpm run migration:verify:next
+      # The Next comparator exits 1 by design until the surface port closes
+      # parity. `continue-on-error` would have been the easy way to tolerate
+      # that, and it also swallows a missing build (exit 2) and a malformed or
+      # stale ledger (also exit 1). This JUDGES the exit instead: expected drift
+      # passes and is reported as a number, a broken harness fails the job.
+      - name: Next parity progress
+        run: pnpm run migration:parity:progress
 
   # Split out because it is ~265 s on its own — more than the other fifteen
   # suites combined — since each of its 40 controls re-captures the whole
