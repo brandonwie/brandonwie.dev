@@ -211,26 +211,47 @@ function smartypants() {
  * is the word `s`, which is the "opening single quote" branch: wrong English as
  * well as a parity difference.
  *
- * So the value is educated one bracket-free span at a time, and the label
- * inside the brackets is educated as its own span, which is what mdsvex does
- * with the reference node's children. The brackets are rejoined untouched.
- * Whether this reproduces the baseline everywhere is not asserted here:
- * `pnpm migration:typography` renders all 334 posts and compares.
+ * So the value is educated span by span, split exactly where remark-parse 8
+ * would have built a `linkReference`: a NON-EMPTY label containing no nested
+ * brackets. The label is educated as its own span, which is what mdsvex does
+ * with the reference node's children; the brackets are rejoined untouched.
+ *
+ * The precision matters, and the first version did not have it. Splitting on
+ * every bracket diverged from mdsvex on three shapes that are NOT shortcut
+ * references and therefore never split: `[[bot]]'s`, `foo[]'s` (empty label)
+ * and `[a[b]c]'s` (nested). `pnpm migration:typography:oracle` runs those and
+ * more through the installed mdsvex and this pipeline side by side, so the
+ * claim is differential rather than asserted; `pnpm migration:typography`
+ * covers all 334 real posts.
  */
-function educateBySpan(value: string, educate: (span: string) => string): string {
-	return value
-		.split(/([[\]])/)
-		.map((part) => (part === '[' || part === ']' ? part : educate(part)))
-		.join('');
+const SHORTCUT_REFERENCE = /\[([^[\]]+)\]/g;
+
+/** Educate one span with mdsvex's educators. Exported for the oracle controls. */
+export function educateSpan(span: string): string {
+	return span === '' ? span : String(PROCESSOR.processSync(span));
 }
 
+export function educateBySpan(
+	value: string,
+	educate: (span: string) => string = educateSpan,
+): string {
+	let out = '';
+	let cursor = 0;
+	SHORTCUT_REFERENCE.lastIndex = 0;
+	for (const match of value.matchAll(SHORTCUT_REFERENCE)) {
+		out += educate(value.slice(cursor, match.index));
+		out += `[${educate(match[1])}]`;
+		cursor = match.index + match[0].length;
+	}
+	return out + educate(value.slice(cursor));
+}
+
+const PROCESSOR = retext().use(smartypants);
+
 export function remarkSmartTypography() {
-	const processor = retext().use(smartypants);
-	const educate = (span: string): string =>
-		span === '' ? span : String(processor.processSync(span));
 	return (tree: Root) => {
 		visit(tree, 'text', (node: Text) => {
-			node.value = educateBySpan(node.value, educate);
+			node.value = educateBySpan(node.value, educateSpan);
 		});
 	};
 }

@@ -65,6 +65,24 @@ const CONTROLS: Control[] = [
 		mutate: onFirstMatch(/”/, '“'),
 	},
 	{
+		id: 'CT-06',
+		kind: 'DEFECT',
+		what: 'a quote MOVES one visible character — identical sequence, different anchor',
+		// The reviewer's mutation. A sequence-only comparison exits 0 on this: the
+		// same characters appear in the same order, one of them just landed inside
+		// the next word instead of in front of it.
+		mutate: (html) => html.replace(/“([^\s<])/, '$1“'),
+	},
+	{
+		id: 'CT-07',
+		kind: 'DEFECT',
+		what: 'a smart character is changed INSIDE a word covered by a content exception',
+		// The exceptions in assert-corpus-typography.ts forgive a word whose
+		// spelling differs for a markdown-parsing reason. This proves they cannot
+		// forgive the typography inside it.
+		mutate: (html, index) => (EXEMPT_POSTS.has(index) ? html.replace(/“UTC”/, '”UTC”') : html),
+	},
+	{
 		id: 'CT-04',
 		kind: 'INVARIANCE',
 		what: 'smart punctuation written as numeric entities — paired with CT-01/02',
@@ -85,12 +103,22 @@ const CONTROLS: Control[] = [
 
 const BUILD = fileURLToPath(new URL('../../build/', import.meta.url));
 
+/** Corpus indices of the posts an enumerated content exception covers. */
+const EXEMPT_POSTS = new Set<number>();
+
 if (!existsSync(BUILD)) {
 	console.error(`FATAL: SvelteKit build not found: ${BUILD} — run \`pnpm build\` first`);
 	process.exit(2);
 }
 
 const corpus = await renderCorpus();
+for (const [index, post] of corpus.entries()) {
+	if (post.rel === 'ko/data/amplitude-export-api-timezone.md') EXEMPT_POSTS.add(index);
+}
+if (EXEMPT_POSTS.size === 0) {
+	console.error('FATAL: the post CT-07 targets is not in the corpus; the control would be vacuous');
+	process.exit(2);
+}
 
 // A control suite that never sees the unbroken corpus passing is not a
 // baseline, it is a coincidence.
@@ -108,7 +136,8 @@ for (const control of CONTROLS) {
 	let changed = false;
 	const mutate = (html: string, index: number): string => {
 		const out = control.mutate(html, index);
-		if (out !== html && smartSequence(out) !== smartSequence(html)) changed = true;
+		if (out !== html && JSON.stringify(smartSequence(out)) !== JSON.stringify(smartSequence(html)))
+			changed = true;
 		else if (out !== html && control.kind === 'INVARIANCE') changed = true;
 		return out;
 	};
