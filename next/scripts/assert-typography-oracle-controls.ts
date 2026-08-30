@@ -16,7 +16,7 @@
  * so there is nothing for an invariance control to pin.
  */
 import { educateSpan } from '../src/markdown/plugins/remark-smart-typography';
-import { FIXTURES, runHtmlDetection, runOracle } from './assert-typography-oracle';
+import { FIXTURES, runFalsePositiveCheck, runOracle } from './assert-typography-oracle';
 
 /**
  * The two REJECTED boundary rules, kept here precisely because they are wrong.
@@ -49,7 +49,12 @@ function bracketSplit(value: string): string {
 /** Fixtures each rejected rule fails on. Plain text apart from the markup under
  * test, so educating the SOURCE is what the pipeline would render for them. */
 const WHOLE_NODE_FIXTURES = ["claude[bot]'s review", "[[bot]]'s review", "foo[]'s review"];
-const BRACKET_SPLIT_FIXTURES = ["[*a*]'s review", "[`a`]'s review", "[a\\]b]'s review"];
+const BRACKET_SPLIT_FIXTURES = [
+	"[*a*]'s review",
+	"[**a**]'s review",
+	"[`a`]'s review",
+	"[a\\]b]'s review",
+];
 
 interface Control {
 	id: string;
@@ -92,14 +97,16 @@ const CONTROLS: Control[] = [
 
 // OR-05 is not a mutation control; it is the detector's discrimination test, so
 // it runs before the mutation loop. A detector that answered "yes" to every
-// input would satisfy the oracle's raw-HTML row while proving nothing, so it is
-// pointed at fixtures carrying NO raw HTML and required to reject them.
-const discrimination = runHtmlDetection(FIXTURES, true);
+// input would satisfy the oracle's detection row while proving nothing. The
+// first version asked only that the DETECTION run fail over ordinary fixtures,
+// which a single unflagged fixture already satisfies; it now requires EVERY
+// ordinary fixture to stay unflagged.
+const discrimination = runFalsePositiveCheck(FIXTURES, true);
 console.log(
-	`${discrimination === 1 ? 'PASS' : 'FAIL'}  OR-05  exit ${discrimination} (expected 1)  the raw-HTML detector must NOT flag ordinary fixtures`,
+	`${discrimination === 0 ? 'PASS' : 'FAIL'}  OR-05  exit ${discrimination} (expected 0)  the detector must flag NONE of the ordinary fixtures`,
 );
 const detectorFailures =
-	discrimination === 1 ? [] : ['OR-05 the raw-HTML detector flags everything'];
+	discrimination === 0 ? [] : ['OR-05 the detector flags ordinary markdown as unsupported'];
 
 const clean = await runOracle(FIXTURES, undefined, true);
 console.log(`BASELINE  unmutated fixtures -> exit ${clean} (expected 0)`);

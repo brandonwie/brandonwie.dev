@@ -24,7 +24,7 @@ import { compile } from 'mdsvex';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { renderMarkdown } from '../src/markdown/pipeline';
-import { hasRawHtml } from '../src/markdown/plugins/remark-smart-typography';
+import { hasUnsupportedMarkup } from '../src/markdown/plugins/remark-smart-typography';
 
 /**
  * Fixtures, and why each one is here.
@@ -88,7 +88,7 @@ const REQUIRED_SHAPES = [
 ];
 
 /**
- * Raw HTML: shapes whose mdsvex education boundaries are NOT reproduced.
+ * Unsupported markup: shapes whose mdsvex education boundaries are NOT reproduced.
  *
  * These are not fixtures in the ordinary sense, because they do not agree and
  * cannot be made to agree by reproducing remark-parse 8 alone: mdsvex runs its
@@ -97,19 +97,26 @@ const REQUIRED_SHAPES = [
  *
  *   `> <span>b</span> c -- d`   mdsvex "b c -- d"   here "b c — d"
  *   `<span>a</span>'s b`        mdsvex "a's b"      here "a’s b"
+ *   `<svelte:component …>a -- b` mdsvex "a -- b"    here "a — b"
  *
  * What IS asserted is that every one of them is DETECTED as html-bearing, so
  * the corpus gate refuses a post that introduces raw HTML rather than educating
  * it on rules this preprocessor cannot claim to match. The corpus carries zero
  * raw-HTML nodes across all 334 posts today.
  */
-export const HTML_FIXTURES: string[] = [
+export const UNSUPPORTED_MARKUP_FIXTURES: string[] = [
 	'> <span>b</span> c -- d',
 	"<span>a</span>'s b",
 	'> <div>b</div> c -- d',
 	'<div>\na -- b\n</div>',
 	'<details>\n<summary>s -- t</summary>\n\na -- b\n</details>',
 	'text\n<div>\nx -- y\n</div>\ntail -- z',
+	// NOT html nodes. `svelte:component` is not a valid HTML tag name, so
+	// remark-parse 8 leaves these as ordinary text and an html-node counter
+	// never sees them. All nine svelte:* elements behaved this way.
+	'<svelte:component this={X}>a -- b</svelte:component>',
+	'<svelte:element this={"p"}>a -- b</svelte:element>',
+	'<svelte:head><title>a -- b</title></svelte:head>',
 ];
 
 /**
@@ -119,15 +126,41 @@ export const HTML_FIXTURES: string[] = [
  * require a failure — a detector that answers "yes" to everything would pass
  * this assertion while proving nothing.
  */
-export function runHtmlDetection(fixtures: string[] = HTML_FIXTURES, quiet = false): number {
-	const missed = fixtures.filter((source) => !hasRawHtml(source));
+export function runUnsupportedMarkupDetection(
+	fixtures: string[] = UNSUPPORTED_MARKUP_FIXTURES,
+	quiet = false,
+): number {
+	const missed = fixtures.filter((source) => !hasUnsupportedMarkup(source));
 	if (missed.length) {
 		if (!quiet) {
-			for (const source of missed) console.error(`RAW HTML NOT DETECTED ${JSON.stringify(source)}`);
+			for (const source of missed) console.error(`NOT DETECTED ${JSON.stringify(source)}`);
 		}
 		return 1;
 	}
-	if (!quiet) console.log(`raw-HTML detection: ${fixtures.length}/${fixtures.length} flagged`);
+	if (!quiet) {
+		console.log(`unsupported-markup detection: ${fixtures.length}/${fixtures.length} flagged`);
+	}
+	return 0;
+}
+
+/**
+ * The NEGATIVE assertion: every one of these must be left unflagged.
+ *
+ * The positive assertion above is satisfied by a detector that answers "yes" to
+ * everything, and the first version of this control only proved that AT LEAST
+ * ONE ordinary fixture was unflagged. This requires ALL of them, so a detector
+ * that started guessing would fail here even while every real divergence stayed
+ * caught.
+ */
+export function runFalsePositiveCheck(fixtures: string[] = FIXTURES, quiet = false): number {
+	const flagged = fixtures.filter((source) => hasUnsupportedMarkup(source));
+	if (flagged.length) {
+		if (!quiet) {
+			for (const source of flagged) console.error(`FALSE POSITIVE ${JSON.stringify(source)}`);
+		}
+		return 1;
+	}
+	if (!quiet) console.log(`false positives: 0/${fixtures.length}`);
 	return 0;
 }
 
@@ -204,9 +237,14 @@ export async function runOracle(
 	// on the full run: a control driving a fixture subset is testing one rejected
 	// rule and has no business asserting the detector too.
 	if (fixtures === FIXTURES) {
-		const detected = runHtmlDetection(HTML_FIXTURES, quiet);
-		if (detected !== 0) {
-			console.error('RESULT: raw-HTML detection failed; the corpus gate would educate it silently');
+		if (runUnsupportedMarkupDetection(UNSUPPORTED_MARKUP_FIXTURES, quiet) !== 0) {
+			console.error(
+				'RESULT: unsupported-markup detection failed; the corpus gate would educate it silently',
+			);
+			return 1;
+		}
+		if (runFalsePositiveCheck(FIXTURES, quiet) !== 0) {
+			console.error('RESULT: the detector flags ordinary markdown; it would block valid posts');
 			return 1;
 		}
 	}

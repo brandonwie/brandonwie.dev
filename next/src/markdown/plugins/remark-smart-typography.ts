@@ -314,31 +314,43 @@ export function unmappedNodeCount(): number {
 }
 
 /**
- * Cumulative count of raw-HTML nodes seen in educated sources.
+ * Markup whose mdsvex education boundaries this preprocessor does NOT reproduce.
  *
- * It must stay at zero, and the corpus check asserts it. Reproducing
- * remark-parse 8's node boundaries is not enough on its own: mdsvex runs its own
- * parser extensions BEFORE smartypants, and around raw HTML they change which
- * text is eligible for education at all. `> <span>b</span> c -- d` keeps its two
- * hyphens under mdsvex and became an em dash here; `<span>a</span>'s b` keeps
- * its straight apostrophe there and curled here.
+ * Reproducing remark-parse 8's node boundaries is not enough on its own: mdsvex
+ * runs its own parser extensions BEFORE smartypants, and they change which text
+ * is eligible for education at all. Measured divergences, mdsvex first:
  *
- * The corpus contains ZERO raw-HTML nodes across all 334 posts, so the divergence
- * is entirely out of corpus today. That is a reason to DETECT it, not to ignore
- * it: a post that introduces raw HTML tomorrow would be educated on rules this
+ *   `> <span>b</span> c -- d`                     "b c -- d"  here "b c — d"
+ *   `<span>a</span>'s b`                          "a's b"     here "a’s b"
+ *   `<svelte:component this={X}>a -- b</...>`     "a -- b"    here "… a — b …"
+ *
+ * The first two are `html` nodes. The third is NOT: `svelte:component` is not a
+ * valid HTML tag name, so remark-parse 8 leaves it as ordinary TEXT and an
+ * html-node counter never sees it — the exact hole a reviewer found across all
+ * nine `svelte:*` special elements. So the detector is two-sided: html nodes,
+ * plus tag-shaped spans surviving inside text.
+ *
+ * The count must stay at zero and `pnpm migration:typography` asserts it — the
+ * MIGRATION-VERIFICATION gate, which is not yet wired into `pnpm build`, `pnpm
+ * check` or the git hooks; that wiring is contracts C1 and C2. Across
+ * all 334 posts the corpus carries zero of either kind, so the divergence is
+ * entirely out of corpus today. That is a reason to DETECT it, not to ignore it:
+ * a post introducing this markup tomorrow would be educated on rules this
  * preprocessor cannot claim to match, and the gate says so instead of guessing.
  */
-let htmlNodes = 0;
+const TAG_SHAPED = /<\/?[A-Za-z][A-Za-z0-9:.-]*(\s[^<>]*)?\/?>/;
 
-export function htmlNodeCount(): number {
-	return htmlNodes;
+let unsupportedMarkup = 0;
+
+export function unsupportedMarkupCount(): number {
+	return unsupportedMarkup;
 }
 
-/** True when a source carries raw HTML, whose mdsvex boundaries are not reproduced. */
-export function hasRawHtml(markdown: string): boolean {
-	const before = htmlNodes;
+/** True when a source carries markup whose mdsvex boundaries are not reproduced. */
+export function hasUnsupportedMarkup(markdown: string): boolean {
+	const before = unsupportedMarkup;
 	educateSource(markdown);
-	return htmlNodes > before;
+	return unsupportedMarkup > before;
 }
 
 /**
@@ -356,11 +368,12 @@ export function educateSource(markdown: string): string {
 		.parse(markdown);
 
 	visit(tree as never, 'html', () => {
-		htmlNodes += 1;
+		unsupportedMarkup += 1;
 	});
 
 	const splices: Splice[] = [];
 	visit(tree as never, 'text', (node: TextNode) => {
+		if (TAG_SHAPED.test(node.value ?? '')) unsupportedMarkup += 1;
 		const start = node.position?.start.offset;
 		const end = node.position?.end.offset;
 		if (start === undefined || end === undefined) return;

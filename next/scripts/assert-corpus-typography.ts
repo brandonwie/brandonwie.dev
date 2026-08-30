@@ -47,7 +47,10 @@ import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { renderMarkdown } from '../src/markdown/pipeline';
-import { htmlNodeCount, unmappedNodeCount } from '../src/markdown/plugins/remark-smart-typography';
+import {
+	unmappedNodeCount,
+	unsupportedMarkupCount,
+} from '../src/markdown/plugins/remark-smart-typography';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const CONTENT = join(REPO_ROOT, 'src/content/posts');
@@ -261,14 +264,15 @@ export function runAssertions(
 		);
 	}
 
-	// Raw HTML changes which text mdsvex considers eligible for education at all,
-	// and that eligibility is decided by mdsvex's own parser extensions rather
-	// than by remark-parse 8 alone. The corpus carries none today; a post that
-	// introduces some would be educated on rules this preprocessor cannot claim
-	// to match, so the count is asserted rather than assumed to stay zero.
-	if (htmlNodeCount() > 0) {
+	// Raw HTML and Svelte special elements change which text mdsvex considers
+	// eligible for education at all, and that eligibility is decided by mdsvex's
+	// own parser extensions rather than by remark-parse 8 alone. The corpus
+	// carries none today; a post that introduced some would be educated on rules
+	// this preprocessor cannot claim to match, so the count is asserted rather
+	// than assumed to stay zero.
+	if (unsupportedMarkupCount() > 0) {
 		console.error(
-			`FATAL: ${htmlNodeCount()} raw-HTML node(s) reached the typography preprocessor; mdsvex's education boundaries around raw HTML are NOT reproduced (see assert-typography-oracle.ts § raw HTML)`,
+			`FATAL: ${unsupportedMarkupCount()} unsupported-markup construct(s) reached the typography preprocessor; mdsvex's education boundaries around raw HTML and svelte:* elements are NOT reproduced (see assert-typography-oracle.ts § unsupported markup)`,
 		);
 		return 2;
 	}
