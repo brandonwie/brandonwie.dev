@@ -314,6 +314,34 @@ export function unmappedNodeCount(): number {
 }
 
 /**
+ * Cumulative count of raw-HTML nodes seen in educated sources.
+ *
+ * It must stay at zero, and the corpus check asserts it. Reproducing
+ * remark-parse 8's node boundaries is not enough on its own: mdsvex runs its own
+ * parser extensions BEFORE smartypants, and around raw HTML they change which
+ * text is eligible for education at all. `> <span>b</span> c -- d` keeps its two
+ * hyphens under mdsvex and became an em dash here; `<span>a</span>'s b` keeps
+ * its straight apostrophe there and curled here.
+ *
+ * The corpus contains ZERO raw-HTML nodes across all 334 posts, so the divergence
+ * is entirely out of corpus today. That is a reason to DETECT it, not to ignore
+ * it: a post that introduces raw HTML tomorrow would be educated on rules this
+ * preprocessor cannot claim to match, and the gate says so instead of guessing.
+ */
+let htmlNodes = 0;
+
+export function htmlNodeCount(): number {
+	return htmlNodes;
+}
+
+/** True when a source carries raw HTML, whose mdsvex boundaries are not reproduced. */
+export function hasRawHtml(markdown: string): boolean {
+	const before = htmlNodes;
+	educateSource(markdown);
+	return htmlNodes > before;
+}
+
+/**
  * Typeset a markdown source the way mdsvex would, and return the new source.
  *
  * The tree is remark-parse 8's, so the text-node boundaries the educators see
@@ -326,6 +354,10 @@ export function educateSource(markdown: string): string {
 	)()
 		.use(remarkParse8)
 		.parse(markdown);
+
+	visit(tree as never, 'html', () => {
+		htmlNodes += 1;
+	});
 
 	const splices: Splice[] = [];
 	visit(tree as never, 'text', (node: TextNode) => {

@@ -37,9 +37,9 @@
 		"@types/react": "^19.2.18",
 		"@types/react-dom": "^19.2.5",
 		"react-dom": "^19.2.8",
-		"remark-parse8": "npm:remark-parse@^8.0.3",
+		"remark-parse8": "npm:remark-parse@8.0.3",
 		"tailwindcss": "4.3.1",
 		"typescript": "^6.0.3",
-		"unified9": "npm:unified@^9.2.2"
+		"unified9": "npm:unified@9.2.2"
 	}
 }

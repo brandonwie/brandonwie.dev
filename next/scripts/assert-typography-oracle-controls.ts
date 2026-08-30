@@ -16,7 +16,7 @@
  * so there is nothing for an invariance control to pin.
  */
 import { educateSpan } from '../src/markdown/plugins/remark-smart-typography';
-import { FIXTURES, runOracle } from './assert-typography-oracle';
+import { FIXTURES, runHtmlDetection, runOracle } from './assert-typography-oracle';
 
 /**
  * The two REJECTED boundary rules, kept here precisely because they are wrong.
@@ -90,6 +90,17 @@ const CONTROLS: Control[] = [
 	},
 ];
 
+// OR-05 is not a mutation control; it is the detector's discrimination test, so
+// it runs before the mutation loop. A detector that answered "yes" to every
+// input would satisfy the oracle's raw-HTML row while proving nothing, so it is
+// pointed at fixtures carrying NO raw HTML and required to reject them.
+const discrimination = runHtmlDetection(FIXTURES, true);
+console.log(
+	`${discrimination === 1 ? 'PASS' : 'FAIL'}  OR-05  exit ${discrimination} (expected 1)  the raw-HTML detector must NOT flag ordinary fixtures`,
+);
+const detectorFailures =
+	discrimination === 1 ? [] : ['OR-05 the raw-HTML detector flags everything'];
+
 const clean = await runOracle(FIXTURES, undefined, true);
 console.log(`BASELINE  unmutated fixtures -> exit ${clean} (expected 0)`);
 if (clean !== 0) {
@@ -97,7 +108,7 @@ if (clean !== 0) {
 	process.exit(1);
 }
 
-const failures: string[] = [];
+const failures: string[] = [...detectorFailures];
 for (const control of CONTROLS) {
 	// A mutation that changed nothing would make the control a coincidence.
 	let changed = false;
@@ -120,10 +131,10 @@ for (const control of CONTROLS) {
 	console.log(`${ok ? 'PASS' : 'FAIL'}  ${control.id}  exit ${code} (expected 1)  ${control.what}`);
 }
 
-console.log(`\n${CONTROLS.length} defect controls over the oracle`);
+console.log(`\n${CONTROLS.length + 1} defect controls over the oracle`);
 if (failures.length) {
 	for (const line of failures) console.error(`CONTROL FAILED ${line}`);
-	console.error(`RESULT: ${failures.length}/${CONTROLS.length} control(s) failed`);
+	console.error(`RESULT: ${failures.length}/${CONTROLS.length + 1} control(s) failed`);
 	process.exit(1);
 }
-console.log(`RESULT: ${CONTROLS.length}/${CONTROLS.length} controls behaved as specified`);
+console.log(`RESULT: ${CONTROLS.length + 1}/${CONTROLS.length + 1} controls behaved as specified`);

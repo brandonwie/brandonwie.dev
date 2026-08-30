@@ -24,6 +24,7 @@ import { compile } from 'mdsvex';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { renderMarkdown } from '../src/markdown/pipeline';
+import { hasRawHtml } from '../src/markdown/plugins/remark-smart-typography';
 
 /**
  * Fixtures, and why each one is here.
@@ -76,7 +77,59 @@ export const FIXTURES: string[] = [
  * ones that killed the regex approach outright: a label with inline children or
  * an escape ends its node somewhere no pattern over the raw text can predict.
  */
-const REQUIRED_SHAPES = ["[[bot]]'s", "foo[]'s", "[a[b]c]'s", "[*a*]'s", '[`a`]', "[a\\]b]'s"];
+const REQUIRED_SHAPES = [
+	"[[bot]]'s",
+	"foo[]'s",
+	"[a[b]c]'s",
+	"[*a*]'s",
+	"[**a**]'s",
+	'[`a`]',
+	"[a\\]b]'s",
+];
+
+/**
+ * Raw HTML: shapes whose mdsvex education boundaries are NOT reproduced.
+ *
+ * These are not fixtures in the ordinary sense, because they do not agree and
+ * cannot be made to agree by reproducing remark-parse 8 alone: mdsvex runs its
+ * own parser extensions before smartypants, and around raw HTML they change
+ * which text is eligible for education. Measured divergences:
+ *
+ *   `> <span>b</span> c -- d`   mdsvex "b c -- d"   here "b c — d"
+ *   `<span>a</span>'s b`        mdsvex "a's b"      here "a’s b"
+ *
+ * What IS asserted is that every one of them is DETECTED as html-bearing, so
+ * the corpus gate refuses a post that introduces raw HTML rather than educating
+ * it on rules this preprocessor cannot claim to match. The corpus carries zero
+ * raw-HTML nodes across all 334 posts today.
+ */
+export const HTML_FIXTURES: string[] = [
+	'> <span>b</span> c -- d',
+	"<span>a</span>'s b",
+	'> <div>b</div> c -- d',
+	'<div>\na -- b\n</div>',
+	'<details>\n<summary>s -- t</summary>\n\na -- b\n</details>',
+	'text\n<div>\nx -- y\n</div>\ntail -- z',
+];
+
+/**
+ * Every fixture must be seen as html-bearing. Exit 1 if any is not.
+ *
+ * Exported so the controls can run it over fixtures that carry NO raw HTML and
+ * require a failure — a detector that answers "yes" to everything would pass
+ * this assertion while proving nothing.
+ */
+export function runHtmlDetection(fixtures: string[] = HTML_FIXTURES, quiet = false): number {
+	const missed = fixtures.filter((source) => !hasRawHtml(source));
+	if (missed.length) {
+		if (!quiet) {
+			for (const source of missed) console.error(`RAW HTML NOT DETECTED ${JSON.stringify(source)}`);
+		}
+		return 1;
+	}
+	if (!quiet) console.log(`raw-HTML detection: ${fixtures.length}/${fixtures.length} flagged`);
+	return 0;
+}
 
 export function visibleText(markup: string): string {
 	return markup
@@ -146,6 +199,16 @@ export async function runOracle(
 		for (const line of failures) console.error(`ORACLE MISMATCH ${line}`);
 		console.error(`RESULT: ${failures.length}/${fixtures.length} fixture(s) differ`);
 		return 1;
+	}
+	// The raw-HTML shapes are checked for DETECTION, not for agreement, and only
+	// on the full run: a control driving a fixture subset is testing one rejected
+	// rule and has no business asserting the detector too.
+	if (fixtures === FIXTURES) {
+		const detected = runHtmlDetection(HTML_FIXTURES, quiet);
+		if (detected !== 0) {
+			console.error('RESULT: raw-HTML detection failed; the corpus gate would educate it silently');
+			return 1;
+		}
 	}
 	say(`RESULT: ${fixtures.length}/${fixtures.length} fixtures render identically`);
 	return 0;
