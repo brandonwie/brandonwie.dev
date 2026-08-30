@@ -117,6 +117,30 @@ export const UNSUPPORTED_MARKUP_FIXTURES: string[] = [
 	'<svelte:component this={X}>a -- b</svelte:component>',
 	'<svelte:element this={"p"}>a -- b</svelte:element>',
 	'<svelte:head><title>a -- b</title></svelte:head>',
+	// A tag opener whose attribute body contains a less-than operator. The
+	// previous rule matched a COMPLETE tag and required its attributes to hold no
+	// angle brackets, so this slipped past a detector written for exactly it.
+	'<svelte:component this={a < b} />x -- y',
+	// Template directives are not tags at all.
+	'{#if x}a -- b{/if}',
+	'{#each xs as x}a -- b{/each}',
+	'{#if x}a{:else}b -- c{/if}',
+	'{@const y = "a -- b"}',
+	'{@html "a -- b"}',
+	'{@debug x}a -- b',
+];
+
+/**
+ * Brace shapes that are ORDINARY prose and must stay unflagged.
+ *
+ * `{braces}` and a JSON object are not Svelte directives, mdsvex agrees with the
+ * candidate on both, and a directive rule that swept them up would fail posts
+ * for writing about JSON. Checked by `runFalsePositiveCheck` alongside the
+ * thirty ordinary fixtures.
+ */
+export const ORDINARY_BRACE_FIXTURES: string[] = [
+	'ordinary {braces} a -- b',
+	'json { "a": 1 } a -- b',
 ];
 
 /**
@@ -243,7 +267,7 @@ export async function runOracle(
 			);
 			return 1;
 		}
-		if (runFalsePositiveCheck(FIXTURES, quiet) !== 0) {
+		if (runFalsePositiveCheck([...FIXTURES, ...ORDINARY_BRACE_FIXTURES], quiet) !== 0) {
 			console.error('RESULT: the detector flags ordinary markdown; it would block valid posts');
 			return 1;
 		}

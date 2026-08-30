@@ -324,11 +324,23 @@ export function unmappedNodeCount(): number {
  *   `<span>a</span>'s b`                          "a's b"     here "a’s b"
  *   `<svelte:component this={X}>a -- b</...>`     "a -- b"    here "… a — b …"
  *
- * The first two are `html` nodes. The third is NOT: `svelte:component` is not a
- * valid HTML tag name, so remark-parse 8 leaves it as ordinary TEXT and an
- * html-node counter never sees it — the exact hole a reviewer found across all
- * nine `svelte:*` special elements. So the detector is two-sided: html nodes,
- * plus tag-shaped spans surviving inside text.
+ *   `{@const y = "a -- b"}`                     "a -- b"    here "a — b"
+ *   `{#if x}a -- b{/if}`                         "a -- b"    here "a — b"
+ *
+ * The first two are `html` nodes. The rest are NOT: `svelte:component` is not a
+ * valid HTML tag name and a template directive is not a tag at all, so
+ * remark-parse 8 leaves both as ordinary TEXT and an html-node counter never
+ * sees them — the hole a reviewer found across all nine `svelte:*` elements and
+ * then again across `{#if}`, `{:else}`, `{/if}` and `{@const}`.
+ *
+ * So the detector is three-sided: html nodes, tag OPENERS, and template
+ * directive tokens. The opener rule deliberately stops at the tag name and the
+ * one character after it. An earlier version matched a whole tag including its
+ * attribute body and required that body to contain no angle brackets, which
+ * `<svelte:component this={a < b} />` defeats — the fix for a shape must not
+ * itself depend on parsing the shape.
+ *
+ * Both rules fire ZERO times across all 334 posts, measured before adoption.
  *
  * The count must stay at zero and `pnpm migration:typography` asserts it — the
  * MIGRATION-VERIFICATION gate, which is not yet wired into `pnpm build`, `pnpm
@@ -338,7 +350,8 @@ export function unmappedNodeCount(): number {
  * a post introducing this markup tomorrow would be educated on rules this
  * preprocessor cannot claim to match, and the gate says so instead of guessing.
  */
-const TAG_SHAPED = /<\/?[A-Za-z][A-Za-z0-9:.-]*(\s[^<>]*)?\/?>/;
+const TAG_OPENER = /<\/?[A-Za-z][A-Za-z0-9:.-]*[\s/>]/;
+const TEMPLATE_DIRECTIVE = /\{[#:/@][A-Za-z]/;
 
 let unsupportedMarkup = 0;
 
@@ -373,7 +386,8 @@ export function educateSource(markdown: string): string {
 
 	const splices: Splice[] = [];
 	visit(tree as never, 'text', (node: TextNode) => {
-		if (TAG_SHAPED.test(node.value ?? '')) unsupportedMarkup += 1;
+		const value = node.value ?? '';
+		if (TAG_OPENER.test(value) || TEMPLATE_DIRECTIVE.test(value)) unsupportedMarkup += 1;
 		const start = node.position?.start.offset;
 		const end = node.position?.end.offset;
 		if (start === undefined || end === undefined) return;

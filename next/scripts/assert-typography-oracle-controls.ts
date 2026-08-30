@@ -16,7 +16,12 @@
  * so there is nothing for an invariance control to pin.
  */
 import { educateSpan } from '../src/markdown/plugins/remark-smart-typography';
-import { FIXTURES, runFalsePositiveCheck, runOracle } from './assert-typography-oracle';
+import {
+	FIXTURES,
+	ORDINARY_BRACE_FIXTURES,
+	runFalsePositiveCheck,
+	runOracle,
+} from './assert-typography-oracle';
 
 /**
  * The two REJECTED boundary rules, kept here precisely because they are wrong.
@@ -101,9 +106,9 @@ const CONTROLS: Control[] = [
 // first version asked only that the DETECTION run fail over ordinary fixtures,
 // which a single unflagged fixture already satisfies; it now requires EVERY
 // ordinary fixture to stay unflagged.
-const discrimination = runFalsePositiveCheck(FIXTURES, true);
+const discrimination = runFalsePositiveCheck([...FIXTURES, ...ORDINARY_BRACE_FIXTURES], true);
 console.log(
-	`${discrimination === 0 ? 'PASS' : 'FAIL'}  OR-05  exit ${discrimination} (expected 0)  the detector must flag NONE of the ordinary fixtures`,
+	`${discrimination === 0 ? 'PASS' : 'FAIL'}  OR-05  exit ${discrimination} (expected 0)  the detector must flag NONE of the ordinary fixtures, braces included`,
 );
 const detectorFailures =
 	discrimination === 0 ? [] : ['OR-05 the detector flags ordinary markdown as unsupported'];
