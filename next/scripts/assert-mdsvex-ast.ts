@@ -44,12 +44,21 @@ export const SPECIAL_NODES = ['html', 'svelteBlock', 'svelteTag'] as const;
  * Fixtures that MUST still produce each class.
  *
  * Without these the check passes trivially the day the hook stops firing — the
- * same vacuity failure the corpus and projection checks each guard against.
+ * same vacuity failure the corpus and projection checks each guard against. One
+ * fixture per class in `SPECIAL_NODES`, and a reviewer found the first version
+ * short one: `svelteTag` was refused with nothing proving it could still be
+ * recognised.
  */
 const CLASS_FIXTURES: Array<{ source: string; expect: string }> = [
 	{ source: '> <span>b</span> c -- d', expect: 'html' },
 	{ source: '{#if x}a -- b{/if}', expect: 'svelteBlock' },
 	{ source: '{@const y = "a -- b"}', expect: 'svelteBlock' },
+	// `svelteTag` was in SPECIAL_NODES with no fixture and no control, which is
+	// the same vacuity this list exists to prevent: the oracle would have gone on
+	// refusing a class nothing proved it could still see. All four `svelte:*`
+	// forms probed produce it.
+	{ source: '<svelte:head><title>x -- y</title></svelte:head>', expect: 'svelteTag' },
+	{ source: '<svelte:component this={X} />', expect: 'svelteTag' },
 ];
 
 function walk(dir: string, out: string[] = []): string[] {

@@ -7,6 +7,11 @@
  * these add is the other direction: that it REFUSES a post carrying each class,
  * and ACCEPTS ordinary prose including the brace shapes a directive rule could
  * plausibly over-match.
+ *
+ * One defect control per class in `SPECIAL_NODES`, which the first version was
+ * short of: `svelteTag` was refused by the oracle and exercised by nothing.
+ * AST-04 and AST-05 close that, and the pairing rule is now explicit — a class
+ * may not appear in `SPECIAL_NODES` without both a fixture and a control.
  */
 import { runAstOracle } from './assert-mdsvex-ast';
 
@@ -38,8 +43,25 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'AST-04',
+		kind: 'DEFECT',
+		what: 'a post containing a Svelte special element (svelteTag)',
+		sources: [
+			{
+				label: 'fixture/svelte-tag.md',
+				source: '<svelte:head><title>x -- y</title></svelte:head>\n',
+			},
+		],
+	},
+	{
+		id: 'AST-05',
+		kind: 'DEFECT',
+		what: 'a post containing a self-closing svelte:component',
+		sources: [{ label: 'fixture/svelte-component.md', source: '<svelte:component this={X} />\n' }],
+	},
+	{
+		id: 'AST-06',
 		kind: 'INVARIANCE',
-		what: 'ordinary prose, braces and JSON — paired with AST-02',
+		what: 'ordinary prose, braces and JSON — paired with AST-02/04',
 		sources: [
 			{ label: 'fixture/prose.md', source: 'plain prose -- here, with "quotes".\n' },
 			{ label: 'fixture/braces.md', source: 'ordinary {braces} a -- b\n' },
