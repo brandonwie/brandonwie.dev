@@ -3,13 +3,13 @@
  *
  *   pnpm migration:typography:oracle:controls
  *
- * OR-01 is the one that earns the file. It re-educates the boundary fixtures
- * with the rule the reviewer defeated — a split on every bracket instead of on
- * a valid remark-parse-8 shortcut label — and requires the oracle to reject it.
- * Without that, "the oracle passes" would only mean today's fixtures happen to
- * agree, not that the oracle can tell a wrong boundary rule from a right one.
+ * OR-01 and OR-02 are the ones that earn the file. They re-educate the fixtures
+ * with the two boundary rules this lane already shipped and had defeated, and
+ * require the oracle to reject both. Without them, "the oracle passes" would
+ * only mean today's fixtures happen to agree, not that the oracle can tell a
+ * wrong boundary rule from a right one.
  *
- * All three controls are DEFECT controls. There is no invariance to pair here:
+ * All four controls are DEFECT controls. There is no invariance to pair here:
  * this comparison has no normalization to be blind through — `visibleText`
  * already collapses whitespace on both sides before anything is compared, and
  * the oracle asserts equality of the result. Nothing is deliberately ignored,
@@ -19,21 +19,37 @@ import { educateSpan } from '../src/markdown/plugins/remark-smart-typography';
 import { FIXTURES, runOracle } from './assert-typography-oracle';
 
 /**
- * The rejected rule: split on every bracket character.
+ * The two REJECTED boundary rules, kept here precisely because they are wrong.
  *
- * Kept here, in the controls, precisely because it is wrong. It is the only way
- * to demonstrate that the oracle discriminates between boundary rules.
+ * Each one shipped, passed a broad check, and was then defeated:
+ *
+ *   wholeNode   educate each text node as one span. Fails `claude[bot]'s`,
+ *               because micromark keeps it in one node and remark-parse 8 does
+ *               not. Found by a 334-post corpus probe.
+ *   bracketSplit  split on a bracket label. Fixes that one shape and 334/334
+ *               posts, and still fails `[*a*]'s`, `[`a`]'s` and `[a\]b]'s`,
+ *               where the label has inline children or an escape. Found by a
+ *               reviewer's augmented oracle.
+ *
+ * A control suite that cannot reproduce the bugs it was written for proves
+ * nothing, so both are exercised: OR-01 and OR-02 must each make the oracle
+ * exit 1 over the fixtures that killed them.
  */
-function naiveSplit(value: string): string {
+function wholeNode(value: string): string {
+	return educateSpan(value);
+}
+
+function bracketSplit(value: string): string {
 	return value
 		.split(/([[\]])/)
 		.map((part) => (part === '[' || part === ']' ? part : educateSpan(part)))
 		.join('');
 }
 
-/** The four boundary fixtures. Plain text apart from brackets, so educating the
- * SOURCE is the same string the pipeline would render for them. */
-const BOUNDARY_FIXTURES = FIXTURES.slice(0, 4);
+/** Fixtures each rejected rule fails on. Plain text apart from the markup under
+ * test, so educating the SOURCE is what the pipeline would render for them. */
+const WHOLE_NODE_FIXTURES = ["claude[bot]'s review", "[[bot]]'s review", "foo[]'s review"];
+const BRACKET_SPLIT_FIXTURES = ["[*a*]'s review", "[`a`]'s review", "[a\\]b]'s review"];
 
 interface Control {
 	id: string;
@@ -45,12 +61,18 @@ interface Control {
 const CONTROLS: Control[] = [
 	{
 		id: 'OR-01',
-		what: 'the rejected all-bracket split rule — the boundary bug itself',
-		fixtures: BOUNDARY_FIXTURES,
-		mutate: (_candidate, source) => naiveSplit(source),
+		what: "the rejected whole-node rule — micromark boundaries instead of mdsvex's",
+		fixtures: WHOLE_NODE_FIXTURES,
+		mutate: (_candidate, source) => wholeNode(source),
 	},
 	{
 		id: 'OR-02',
+		what: 'the rejected bracket-split rule — labels with inline children or an escape',
+		fixtures: BRACKET_SPLIT_FIXTURES,
+		mutate: (_candidate, source) => bracketSplit(source),
+	},
+	{
+		id: 'OR-03',
 		what: 'smart punctuation flattened to ASCII',
 		fixtures: FIXTURES,
 		mutate: (candidate) =>
@@ -61,7 +83,7 @@ const CONTROLS: Control[] = [
 				.replace(/…/g, '...'),
 	},
 	{
-		id: 'OR-03',
+		id: 'OR-04',
 		what: 'one quote flips direction',
 		fixtures: FIXTURES,
 		mutate: (candidate) => candidate.replace(/”/, '“'),

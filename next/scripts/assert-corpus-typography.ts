@@ -34,8 +34,8 @@
  * refuses the intraword `**“UTC”**로` that remark-parse 8 accepted. Those are
  * real content-parity findings and they belong to the surface port, not to this
  * check. A character window would drag all fourteen in as false failures; a
- * word-scoped anchor drags in TWO, and those two are enumerated below rather
- * than waved away — with the character itself still compared, so an exception
+ * word-scoped anchor drags in two POSTS, enumerated below as three rows over two
+ * causes rather than waved away — with the character itself still compared, so an exception
  * can forgive the word and never the typography.
  *
  * Exit 0 = every post's sequence matches. Exit 1 = at least one does not, or
@@ -47,6 +47,7 @@ import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { renderMarkdown } from '../src/markdown/pipeline';
+import { unmappedNodeCount } from '../src/markdown/plugins/remark-smart-typography';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const CONTENT = join(REPO_ROOT, 'src/content/posts');
@@ -61,11 +62,13 @@ const MIN_POSTS = 334;
 /**
  * Anchors that differ for a reason that is NOT typography.
  *
+ * Three rows, two causes, two posts.
+ *
  * A closed list, in the same spirit as `verification/exception-ledger.json`: an
  * entry names the post, both spellings of the word, and why they differ. It
  * forgives the WORD only — `anchorsAgree()` still requires the smart character
  * itself, and its offset inside each side's own word, to match — so no
- * exception here can hide a typography regression. Control CT-06 proves that by
+ * exception here can hide a typography regression. Control CT-07 proves that by
  * mutating the character inside an exempted word and requiring a failure.
  *
  * Both entries are markdown-PARSING differences between remark-parse 8 and
@@ -256,6 +259,16 @@ export function runAssertions(
 				`first difference at ${at}: ${JSON.stringify(expected.slice(Math.max(0, at - 2), at + 2))} != ` +
 				`${JSON.stringify(actual.slice(Math.max(0, at - 2), at + 2))}`,
 		);
+	}
+
+	// A text node the preprocessor could not map back to its source offsets is
+	// left in ASCII. That is invisible to a per-post comparison whenever the post
+	// has no smart characters at all, so it is asserted directly.
+	if (unmappedNodeCount() > 0) {
+		console.error(
+			`FATAL: the typography preprocessor declined ${unmappedNodeCount()} text node(s); each one silently keeps ASCII punctuation`,
+		);
+		return 2;
 	}
 
 	// A corpus that typesets nothing would compare empty to empty on every post

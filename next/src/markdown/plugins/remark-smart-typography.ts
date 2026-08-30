@@ -1,42 +1,42 @@
+import unified from 'unified9';
+import remarkParse8 from 'remark-parse8';
 import { retext } from 'retext';
 import { visit } from 'unist-util-visit';
-import type { Root, Text } from 'mdast';
 
 /**
- * mdsvex's smart-typography step, ported implementation and all.
+ * mdsvex's smart-typography step, ported — educators AND node boundaries.
  *
  * mdsvex enables `smartypants: true` by default, so every post in the baseline
- * is typeset: `--` becomes an em dash, straight quotes become curly ones. The
- * first port of the article omitted this entirely and shipped ASCII.
+ * is typeset: `--` becomes an em dash, straight quotes become curly ones. Three
+ * rounds of review have established that copying the educators is not enough,
+ * because smartypants reads a character's NEIGHBOURS and the neighbours depend
+ * on where the markdown parser drew its text nodes:
  *
- * The first FIX of that omission used the published `retext-smartypants@6`, and
- * a 334-post probe against the built baseline found five posts where the quote
- * DIRECTION differed — same character counts, opposite curl. mdsvex bundles an
- * older copy of the same package, and the two disagree in the first branch of
- * the quote educator:
+ *   1. `retext-smartypants@6` disagrees with mdsvex's bundled copy in one
+ *      branch of the quote educator. Five posts differed. Fixed by transcribing
+ *      mdsvex's educators below.
+ *   2. mdsvex runs remark-parse 8, which builds a `linkReference` for
+ *      `[bot]` where CommonMark keeps literal text, so `claude[bot]'s` is one
+ *      text node here and three there. A regex that split on a bracket label
+ *      fixed that one shape and 334/334 posts.
+ *   3. The regex was still wrong. `[*a*]'s`, `[**a**]'s`, `` [`a`]'s `` and
+ *      `[a\]b]'s` all place the apostrophe differently once the label has
+ *      inline children or an escape, and a reviewer found them. There is no
+ *      regex for "where does remark-parse 8 end an inline node"; the only
+ *      faithful answer is remark-parse 8.
  *
- *   mdsvex   next && nextNext && (next is punctuation/symbol) && nextNext is not a word
- *   v6       next && (next is punctuation/symbol) && (!nextNext || nextNext is not a word)
+ * So the source is segmented by remark-parse 8 ITSELF (pinned in `next/` as a
+ * dev dependency alongside `unified@9`, which is the last unified that speaks
+ * its parser API), each text node is educated with mdsvex's educators, and the
+ * results are spliced back into the markdown by source offset. The Next
+ * pipeline then parses ALREADY-TYPESET markdown, so micromark's own node
+ * boundaries never enter the question.
  *
- * When the quote is followed by punctuation at the END of a sentence node there
- * is no `nextNext`, so v6 closes the quote by brute force and mdsvex falls
- * through to a later branch and opens it. Five posts across the corpus land on
- * exactly that shape.
+ * That makes this a source PREPROCESSOR, not a remark plugin. It is a temporary
+ * cost of running two markdown stacks at once: it leaves with mdsvex.
  *
- * So this is mdsvex's educator set, transcribed from its bundle
- * (`mdsvex/dist/main-*.js`, `educators` and `transformFactory`), rather than a
- * dependency that merely resembles it. The target is the baseline's output, not
- * the newest available typography — and `pnpm migration:typography` compares
- * all 334 posts against the built baseline so that claim is checked rather than
- * asserted.
- *
- * `retext()` still supplies the tokenizer. Only the educators are ported; if
- * the parser ever drifts, the corpus check is what will say so.
- *
- * Position in the pipeline mirrors mdsvex: registered BEFORE the ported
- * remark plugins, so reading time and the heading list are computed from the
- * typeset text. Code is untouched — `code` and `inlineCode` are their own mdast
- * node types, so visiting `text` never reaches them.
+ * Code is untouched, because `code` and `inlineCode` are their own node types
+ * and only `text` is visited.
  */
 
 const PUNCTUATION = 'PunctuationNode';
@@ -194,64 +194,155 @@ function smartypants() {
 	};
 }
 
-/**
- * Text spans mdsvex would have seen as SEPARATE mdast nodes.
- *
- * The last of the five corpus mismatches is not an educator difference at all,
- * it is a text-node BOUNDARY difference, and smartypants reads its neighbours.
- * `claude[bot]'s` is one text node under micromark, because CommonMark says an
- * undefined shortcut reference is literal text. mdsvex runs remark-parse 8,
- * which builds a `linkReference` node for `[bot]` regardless, splitting the
- * paragraph into `claude`, the reference, and `'s structured review ...`.
- *
- * That changes the answer. With the split, the apostrophe is the FIRST node in
- * its span, has no previous sibling, and falls through to the `'` + `s` branch
- * that closes it -- `claude[bot]'s` with a closing curl, the correct
- * possessive. Without it the apostrophe's previous sibling is `]` and its next
- * is the word `s`, which is the "opening single quote" branch: wrong English as
- * well as a parity difference.
- *
- * So the value is educated span by span, split exactly where remark-parse 8
- * would have built a `linkReference`: a NON-EMPTY label containing no nested
- * brackets. The label is educated as its own span, which is what mdsvex does
- * with the reference node's children; the brackets are rejoined untouched.
- *
- * The precision matters, and the first version did not have it. Splitting on
- * every bracket diverged from mdsvex on three shapes that are NOT shortcut
- * references and therefore never split: `[[bot]]'s`, `foo[]'s` (empty label)
- * and `[a[b]c]'s` (nested). `pnpm migration:typography:oracle` runs those and
- * more through the installed mdsvex and this pipeline side by side, so the
- * claim is differential rather than asserted; `pnpm migration:typography`
- * covers all 334 real posts.
- */
-const SHORTCUT_REFERENCE = /\[([^[\]]+)\]/g;
-
-/** Educate one span with mdsvex's educators. Exported for the oracle controls. */
+/** Educate one string with mdsvex's educators. Exported for the oracle controls. */
 export function educateSpan(span: string): string {
 	return span === '' ? span : String(PROCESSOR.processSync(span));
 }
 
-export function educateBySpan(
-	value: string,
-	educate: (span: string) => string = educateSpan,
-): string {
-	let out = '';
-	let cursor = 0;
-	SHORTCUT_REFERENCE.lastIndex = 0;
-	for (const match of value.matchAll(SHORTCUT_REFERENCE)) {
-		out += educate(value.slice(cursor, match.index));
-		out += `[${educate(match[1])}]`;
-		cursor = match.index + match[0].length;
-	}
-	return out + educate(value.slice(cursor));
-}
-
 const PROCESSOR = retext().use(smartypants);
 
-export function remarkSmartTypography() {
-	return (tree: Root) => {
-		visit(tree, 'text', (node: Text) => {
-			node.value = educateBySpan(node.value, educateSpan);
-		});
-	};
+interface TextNode {
+	type: string;
+	value?: string;
+	position?: { start: { offset?: number }; end: { offset?: number } };
+	children?: TextNode[];
+}
+
+/**
+ * Map each index of a decoded node value back to its offset in the raw source.
+ *
+ * remark-parse resolves backslash escapes, so a node whose value is `]` may
+ * occupy two source characters. Splicing an educated value straight over the
+ * raw range would delete the escape — `\$50` would silently become `$50`, which
+ * is one of the very content differences this lane is trying NOT to introduce.
+ * Returns null when the two cannot be lined up, and the caller then leaves that
+ * node alone rather than guessing.
+ */
+function offsetMap(raw: string, value: string): number[] | null {
+	const map: number[] = [];
+	let j = 0;
+	for (let i = 0; i < value.length; i += 1) {
+		// Continuation markup. A wrapped line inside a list item carries leading
+		// spaces and inside a block quote a `> ` marker, and the parser strips both
+		// from the value, so the raw cursor has to walk past them. 71 posts wrap a
+		// line that way, which is how this was found: every one of them had a node
+		// the map could not line up, so every one of them silently lost its
+		// typography and the corpus check reported all 71.
+		if (i > 0 && value[i - 1] === '\n') {
+			while (
+				j < raw.length &&
+				(raw[j] === ' ' || raw[j] === '\t' || raw[j] === '>') &&
+				raw[j] !== value[i]
+			) {
+				j += 1;
+			}
+		}
+		if (raw[j] === '\\' && raw[j + 1] === value[i]) j += 1;
+		if (raw[j] !== value[i]) return null;
+		map.push(j);
+		j += 1;
+	}
+	map.push(j);
+	// A node that ends on a newline can leave the NEXT line's continuation markup
+	// inside its raw range — indentation, or a block quote's `> `. That trailing
+	// run is markup, not content, so it may remain unconsumed. Nothing else may.
+	let tail = j;
+	while (tail < raw.length && (raw[tail] === ' ' || raw[tail] === '\t' || raw[tail] === '>')) {
+		tail += 1;
+	}
+	return tail === raw.length ? map : null;
+}
+
+/** A single educated replacement, in SOURCE coordinates. */
+interface Splice {
+	start: number;
+	end: number;
+	text: string;
+}
+
+/**
+ * Educated replacements for one text node, or null if it must be left alone.
+ *
+ * The educated value is compared to the original CHARACTER BY CHARACTER rather
+ * than spliced wholesale, so an escape that sits between two substitutions
+ * survives untouched. Educators only ever rewrite a short run of punctuation
+ * (`--`, `...`, one quote), so a common-prefix / common-suffix trim isolates
+ * each change precisely enough.
+ */
+function nodeSplices(node: TextNode, raw: string): Splice[] | null {
+	const value = node.value ?? '';
+	const educated = educateSpan(value);
+	if (educated === value) return [];
+	const map = offsetMap(raw, value);
+	if (map === null) return null;
+
+	let head = 0;
+	while (head < value.length && head < educated.length && value[head] === educated[head]) head += 1;
+	let tail = 0;
+	while (
+		tail < value.length - head &&
+		tail < educated.length - head &&
+		value[value.length - 1 - tail] === educated[educated.length - 1 - tail]
+	) {
+		tail += 1;
+	}
+	const base = node.position?.start.offset ?? 0;
+	return [
+		{
+			start: base + map[head],
+			end: base + map[value.length - tail],
+			text: educated.slice(head, educated.length - tail),
+		},
+	];
+}
+
+/**
+ * Cumulative count of text nodes this preprocessor declined to educate.
+ *
+ * It must stay at zero, and it is asserted rather than merely logged: a node the
+ * map cannot line up is silently left in ASCII, which is precisely the failure
+ * this whole preprocessor exists to prevent. The first three versions of
+ * `offsetMap` declined 257 nodes across 71 posts, 21 across 18, then 1 — every
+ * one of them a wrapped line whose continuation markup the parser strips
+ * (list indentation, then a block quote's `> `, then that marker in the TRAILING
+ * position). The corpus check reads this after rendering all 334 posts.
+ */
+let unmapped = 0;
+
+export function unmappedNodeCount(): number {
+	return unmapped;
+}
+
+/**
+ * Typeset a markdown source the way mdsvex would, and return the new source.
+ *
+ * The tree is remark-parse 8's, so the text-node boundaries the educators see
+ * are mdsvex's. Splices are applied last-to-first so earlier offsets stay valid
+ * while the text length changes (`--` to an em dash is a two-to-one shrink).
+ */
+export function educateSource(markdown: string): string {
+	const tree = (
+		unified as unknown as () => { use: (p: unknown) => { parse: (d: string) => TextNode } }
+	)()
+		.use(remarkParse8)
+		.parse(markdown);
+
+	const splices: Splice[] = [];
+	visit(tree as never, 'text', (node: TextNode) => {
+		const start = node.position?.start.offset;
+		const end = node.position?.end.offset;
+		if (start === undefined || end === undefined) return;
+		const result = nodeSplices(node, markdown.slice(start, end));
+		if (result === null) {
+			unmapped += 1;
+			return;
+		}
+		splices.push(...result);
+	});
+
+	let out = markdown;
+	for (const splice of splices.sort((a, b) => b.start - a.start)) {
+		out = out.slice(0, splice.start) + splice.text + out.slice(splice.end);
+	}
+	return out;
 }

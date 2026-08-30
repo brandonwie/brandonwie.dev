@@ -34,6 +34,16 @@ import { renderMarkdown } from '../src/markdown/pipeline';
  * quote's direction.
  */
 export const FIXTURES: string[] = [
+	// Round 4: labels with inline children or an escape. Each of these places the
+	// apostrophe differently, and no bracket regex can see the difference.
+	"[a\\]b]'s review",
+	"[*a*]'s review",
+	"[**a**]'s review",
+	"[`a`]'s review",
+	"[a b]'s review",
+	"[a\\[b]'s review",
+	"![a]'s review",
+	"[a]: https://example.com\n\n[a]'s review",
 	"claude[bot]'s review",
 	"[[bot]]'s review",
 	"foo[]'s review",
@@ -58,8 +68,15 @@ export const FIXTURES: string[] = [
 	'nested "outer \'inner\' outer" done',
 ];
 
-/** The three shapes the reviewer demonstrated. Losing them is a defect. */
-const REQUIRED_SHAPES = ["[[bot]]'s", "foo[]'s", "[a[b]c]'s"];
+/**
+ * Shapes reviewers have demonstrated. Losing any of them from the fixture set is
+ * a defect in the fixture set, not a reason for the check to pass.
+ *
+ * The first three are shapes a bracket regex mis-split. The last three are the
+ * ones that killed the regex approach outright: a label with inline children or
+ * an escape ends its node somewhere no pattern over the raw text can predict.
+ */
+const REQUIRED_SHAPES = ["[[bot]]'s", "foo[]'s", "[a[b]c]'s", "[*a*]'s", '[`a`]', "[a\\]b]'s"];
 
 export function visibleText(markup: string): string {
 	return markup
@@ -88,10 +105,16 @@ export async function runOracle(
 		if (!quiet) console.log(...parts);
 	};
 
-	for (const shape of REQUIRED_SHAPES) {
-		if (!fixtures.some((f) => f.includes(shape))) {
-			console.error(`FATAL: the fixture set no longer covers ${JSON.stringify(shape)}`);
-			return 2;
+	// Only the full set carries the coverage obligation. A control deliberately
+	// runs a SUBSET -- the fixtures that killed one specific rejected rule -- and
+	// demanding full coverage there would abort the control before its mutation
+	// ever ran, which is how this guard first reported two controls as no-ops.
+	if (fixtures === FIXTURES) {
+		for (const shape of REQUIRED_SHAPES) {
+			if (!fixtures.some((f) => f.includes(shape))) {
+				console.error(`FATAL: the fixture set no longer covers ${JSON.stringify(shape)}`);
+				return 2;
+			}
 		}
 	}
 
@@ -107,10 +130,10 @@ export async function runOracle(
 		);
 	}
 
-	// Scaled to the fixture set rather than a fixed floor: the controls run the
-	// four boundary fixtures on their own, and a fixed floor would report their
-	// run as vacuous instead of as the failure it is meant to produce.
-	const floor = Math.max(4, fixtures.length);
+	// One smart character per fixture, scaled rather than a fixed floor: the
+	// controls run three-fixture subsets, and a fixed floor reported those runs
+	// as vacuous instead of as the failures they are meant to produce.
+	const floor = Math.max(1, fixtures.length);
 	if (smartCharacters < floor) {
 		console.error(
 			`FATAL: ${fixtures.length} fixture(s) produce only ${smartCharacters} smart character(s), expected at least ${floor}; the comparison is vacuous`,

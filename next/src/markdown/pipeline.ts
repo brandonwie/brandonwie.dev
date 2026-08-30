@@ -13,7 +13,7 @@ import { VFile } from 'vfile';
 import type { BundledLanguage } from 'shiki';
 
 import { remarkMermaidNode } from './plugins/remark-mermaid-node';
-import { remarkSmartTypography } from './plugins/remark-smart-typography';
+import { educateSource } from './plugins/remark-smart-typography';
 // Framework-neutral and shared with the SvelteKit app rather than copied, so
 // the two stacks cannot drift while both exist. They move into this package
 // when SvelteKit is removed and `next/` collapses into the repository root.
@@ -92,14 +92,17 @@ export const SHIKI_THEME = 'github-dark';
  * mermaid client component impossible to hydrate.
  */
 export async function renderMarkdown(source: string): Promise<RenderedMarkdown> {
-	const { data: frontmatter, content } = matter(source);
+	const { data: frontmatter, content: raw } = matter(source);
+	// Typography is applied to the SOURCE, before this pipeline parses it, and
+	// the segmentation is remark-parse 8's rather than micromark's -- see
+	// `plugins/remark-smart-typography.ts` for why the boundary has to come from
+	// mdsvex's own parser. Everything downstream, reading time and the heading
+	// list included, therefore sees the typeset text, which is the order mdsvex
+	// used when it ran smartypants before the user's remark plugins.
+	const content = educateSource(raw);
 
 	const processor = unified()
 		.use(remarkParse)
-		// Before every ported plugin, exactly where mdsvex registers its own
-		// smartypants transformer: reading time and the heading list are computed
-		// from the typeset text, not the raw source.
-		.use(remarkSmartTypography)
 		.use(remarkMermaidNode)
 		.use(remarkGfm)
 		.use(remarkReadingTime)
