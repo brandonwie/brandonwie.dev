@@ -28,12 +28,22 @@ import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
 
-/** `RESULT: N unapproved difference(s), M stale ledger entry(ies)` */
-const RESULT_RE = /^RESULT: (\d+) unapproved difference\(s\), (\d+) stale ledger entry\(ies\)$/m;
-/** `PARITY: N pages, M site artifacts, K approved exception(s), 0 unapproved differences` */
-const PARITY_RE = /^PARITY: (\d+) pages, /m;
+/** The two terminal verdicts the comparator can print, fully parsed. */
+const RESULT_RE = /^RESULT: (\d+) unapproved difference\(s\), (\d+) stale ledger entry\(ies\)$/;
+const PARITY_RE =
+	/^PARITY: (\d+) pages, (\d+) site artifacts, (\d+) approved exception\(s\), (\d+) unapproved differences$/;
+/** Anything that CLAIMS to be a verdict, so a malformed one is caught, not skipped. */
+const VERDICT_PREFIX_RE = /^(RESULT|PARITY):/;
 const FATAL_RE = /^FATAL: .*/m;
 const STALE_RE = /^STALE LEDGER ENTRY /m;
+/**
+ * Lines allowed AFTER the terminal verdict: blank, an indented continuation
+ * (the comparator's own `  NOT CHECKED here:` note), or pnpm's lifecycle
+ * epilogue, which only restates the exit code we already read. Anything else
+ * means the process kept going after reaching a verdict, which means the
+ * verdict was not terminal.
+ */
+const TRAILER_RE = /^(\s*$|\s{2,}\S|\s*ELIFECYCLE\b)/;
 
 export interface Judgment {
 	ok: boolean;
@@ -42,32 +52,74 @@ export interface Judgment {
 	stale: number | null;
 }
 
+const fail = (
+	reason: string,
+	unapproved: number | null = null,
+	stale: number | null = null,
+): Judgment => ({
+	ok: false,
+	reason,
+	unapproved,
+	stale,
+});
+
+/**
+ * The contract: ONE terminal verdict, consistent with the exit code, fully
+ * parsed, with nothing meaningful after it.
+ *
+ * The first version checked those properties independently and a reviewer got
+ * three transcripts past it: a stale-entry line rode along with an exit-0
+ * PARITY because stale detection lived in the exit-1 branch; a PARITY line
+ * announcing SEVEN unapproved differences passed because only its prefix was
+ * matched; and a valid RESULT followed by an `Error` line passed because the
+ * RESULT was found anywhere rather than required to be last. Each is the same
+ * failure in a different place — a check that answered the question it happened
+ * to ask instead of the question it claimed to answer.
+ */
 export function judge(exitCode: number, output: string): Judgment {
+	const lines = output.split('\n');
+
 	const fatal = FATAL_RE.exec(output);
-	if (fatal) {
-		return {
-			ok: false,
-			reason: `the comparator reported ${fatal[0]}`,
-			unapproved: null,
-			stale: null,
-		};
-	}
+	if (fatal) return fail(`the comparator reported ${fatal[0]}`);
+	// Checked for the WHOLE transcript, not inside one exit branch. A ledger that
+	// approves a difference which no longer exists has drifted from reality, and
+	// that is true whatever the exit code says.
+	if (STALE_RE.test(output))
+		return fail('a stale ledger entry; the ledger has drifted from reality');
 	if (exitCode !== 0 && exitCode !== 1) {
-		return {
-			ok: false,
-			reason: `exit ${exitCode} is not a comparison result; the check did not run`,
-			unapproved: null,
-			stale: null,
-		};
+		return fail(`exit ${exitCode} is not a comparison result; the check did not run`);
 	}
+
+	const verdicts = lines
+		.map((line, index) => ({ line, index }))
+		.filter(({ line }) => VERDICT_PREFIX_RE.test(line));
+	if (verdicts.length === 0) {
+		return fail(`exit ${exitCode} with no terminal verdict; the comparator never reached one`);
+	}
+	if (verdicts.length > 1) {
+		return fail(`${verdicts.length} terminal verdicts in one transcript; exactly one is a result`);
+	}
+
+	const { line, index } = verdicts[0];
+	const trailing = lines.slice(index + 1).find((rest) => !TRAILER_RE.test(rest));
+	if (trailing !== undefined) {
+		return fail(
+			`output continues past the terminal verdict: ${JSON.stringify(trailing.slice(0, 60))}`,
+		);
+	}
+
 	if (exitCode === 0) {
-		if (!PARITY_RE.test(output)) {
-			return {
-				ok: false,
-				reason: 'exit 0 with no PARITY line; the comparator did not reach a verdict',
-				unapproved: null,
-				stale: null,
-			};
+		const parity = PARITY_RE.exec(line);
+		if (!parity)
+			return fail(`exit 0 with an unparseable verdict: ${JSON.stringify(line.slice(0, 60))}`);
+		const unapproved = Number(parity[4]);
+		// A PARITY line is allowed to say one thing about differences: zero.
+		if (unapproved !== 0) {
+			return fail(
+				`exit 0 with a PARITY line claiming ${unapproved} unapproved difference(s)`,
+				unapproved,
+				0,
+			);
 		}
 		return {
 			ok: true,
@@ -76,35 +128,24 @@ export function judge(exitCode: number, output: string): Judgment {
 			stale: 0,
 		};
 	}
-	const result = RESULT_RE.exec(output);
-	if (!result) {
-		return {
-			ok: false,
-			reason: 'exit 1 with no RESULT line; the comparator failed before it could compare',
-			unapproved: null,
-			stale: null,
-		};
-	}
+
+	const result = RESULT_RE.exec(line);
+	if (!result)
+		return fail(`exit 1 with an unparseable verdict: ${JSON.stringify(line.slice(0, 60))}`);
 	const unapproved = Number(result[1]);
 	const stale = Number(result[2]);
-	// A stale entry means the ledger approves a difference that no longer
-	// exists. That is a ledger drifted from reality, not migration progress, and
-	// it is exactly what the report-only step used to hide.
-	if (stale > 0 || STALE_RE.test(output)) {
-		return {
-			ok: false,
-			reason: `${stale} stale ledger entry(ies); the ledger has drifted from reality`,
+	if (stale > 0)
+		return fail(
+			`${stale} stale ledger entry(ies); the ledger has drifted from reality`,
 			unapproved,
 			stale,
-		};
-	}
+		);
 	if (unapproved === 0) {
-		return {
-			ok: false,
-			reason: 'exit 1 with 0 unapproved and 0 stale; the result contradicts the exit code',
+		return fail(
+			'exit 1 with 0 unapproved and 0 stale; the result contradicts the exit code',
 			unapproved,
 			stale,
-		};
+		);
 	}
 	return {
 		ok: true,
@@ -112,11 +153,6 @@ export function judge(exitCode: number, output: string): Judgment {
 		unapproved,
 		stale,
 	};
-}
-
-export interface Run {
-	status: number;
-	output: string;
 }
 
 function runComparator(): Run {

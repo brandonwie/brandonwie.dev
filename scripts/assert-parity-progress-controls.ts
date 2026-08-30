@@ -16,6 +16,25 @@ const RESULT = (unapproved: number, stale: number): string =>
 	`RESULT: ${unapproved} unapproved difference(s), ${stale} stale ledger entry(ies)`;
 const PARITY =
 	'PARITY: 366 pages, 4 site artifacts, 0 approved exception(s), 0 unapproved differences';
+const PARITY_UNAPPROVED = (n: number): string =>
+	`PARITY: 366 pages, 4 site artifacts, 0 approved exception(s), ${n} unapproved differences`;
+/**
+ * The REAL transcript shape, captured from `pnpm migration:verify:next`: the
+ * pnpm banner and its lifecycle epilogue arrive on stdout, the comparator's
+ * diffs and terminal RESULT on stderr, and `main()` concatenates them in that
+ * order. It is here so tightening the contract cannot quietly start rejecting
+ * the output the check actually receives.
+ */
+const REAL_TRANSCRIPT = [
+	'> brandonwie.dev@0.0.1 migration:verify:next /repo',
+	'> tsx scripts/migration-verify.ts compare verification/baseline/svelte-34aa7e7.json next/build',
+	'',
+	' ELIFECYCLE  Command failed with exit code 1.',
+	'DIFF (site) [pagefindEntries] baseline 344 != candidate null',
+	'  fingerprint 5968024de71a2037bf53e43854fdf5f4',
+	RESULT(383, 0),
+	'',
+].join('\n');
 const STALE_LINE =
 	'STALE LEDGER ENTRY /about [text] approves a difference that does not exist; a ledger that has drifted from reality is how a harness stops testing';
 
@@ -76,6 +95,48 @@ const CONTROLS: Control[] = [
 		what: 'an unrecognised exit code is not a comparison result',
 		exitCode: 137,
 		output: `${RESULT(383, 0)}\n`,
+	},
+	{
+		id: 'PP-12',
+		kind: 'DEFECT',
+		what: 'a stale entry rides along with an exit-0 PARITY line',
+		exitCode: 0,
+		output: `${STALE_LINE}\n${PARITY}\n`,
+	},
+	{
+		id: 'PP-13',
+		kind: 'DEFECT',
+		what: 'a PARITY line announcing seven unapproved differences',
+		exitCode: 0,
+		output: `${PARITY_UNAPPROVED(7)}\n`,
+	},
+	{
+		id: 'PP-14',
+		kind: 'DEFECT',
+		what: 'a valid RESULT followed by an error line — the verdict was not terminal',
+		exitCode: 1,
+		output: `${RESULT(383, 0)}\nError: connection reset\n`,
+	},
+	{
+		id: 'PP-15',
+		kind: 'DEFECT',
+		what: 'two terminal verdicts in one transcript',
+		exitCode: 1,
+		output: `${RESULT(383, 0)}\n${RESULT(1, 0)}\n`,
+	},
+	{
+		id: 'PP-16',
+		kind: 'DEFECT',
+		what: 'the verdict kind contradicts the exit code',
+		exitCode: 0,
+		output: `${RESULT(383, 0)}\n`,
+	},
+	{
+		id: 'PP-17',
+		kind: 'INVARIANCE',
+		what: 'the real captured transcript still passes — paired with PP-14 over the same surface',
+		exitCode: 1,
+		output: REAL_TRANSCRIPT,
 	},
 	{
 		id: 'PP-08',
