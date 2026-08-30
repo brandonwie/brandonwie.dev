@@ -13,12 +13,14 @@
  * AST-04 and AST-05 close that, and the pairing rule is now explicit — a class
  * may not appear in `SPECIAL_NODES` without both a fixture and a control.
  */
-import { runAstOracle } from './assert-mdsvex-ast';
+import { SPECIAL_NODES, runAstOracle } from './assert-mdsvex-ast';
 
 interface Control {
 	id: string;
 	kind: 'DEFECT' | 'INVARIANCE';
 	what: string;
+	/** For a defect control, the `SPECIAL_NODES` class it exercises. */
+	covers?: (typeof SPECIAL_NODES)[number];
 	sources: Array<{ label: string; source: string }>;
 }
 
@@ -26,24 +28,28 @@ const CONTROLS: Control[] = [
 	{
 		id: 'AST-01',
 		kind: 'DEFECT',
+		covers: 'html',
 		what: 'a post containing raw HTML',
 		sources: [{ label: 'fixture/html.md', source: 'a\n\n<div>\nb -- c\n</div>\n' }],
 	},
 	{
 		id: 'AST-02',
 		kind: 'DEFECT',
+		covers: 'svelteBlock',
 		what: 'a post containing a Svelte block',
 		sources: [{ label: 'fixture/block.md', source: '{#if x}a -- b{/if}\n' }],
 	},
 	{
 		id: 'AST-03',
 		kind: 'DEFECT',
+		covers: 'html',
 		what: 'a post containing an inline raw-HTML span',
 		sources: [{ label: 'fixture/span.md', source: '> <span>b</span> c -- d\n' }],
 	},
 	{
 		id: 'AST-04',
 		kind: 'DEFECT',
+		covers: 'svelteTag',
 		what: 'a post containing a Svelte special element (svelteTag)',
 		sources: [
 			{
@@ -55,6 +61,7 @@ const CONTROLS: Control[] = [
 	{
 		id: 'AST-05',
 		kind: 'DEFECT',
+		covers: 'svelteTag',
 		what: 'a post containing a self-closing svelte:component',
 		sources: [{ label: 'fixture/svelte-component.md', source: '<svelte:component this={X} />\n' }],
 	},
@@ -69,6 +76,18 @@ const CONTROLS: Control[] = [
 		],
 	},
 ];
+
+// The controls half of the pairing rule, executed rather than asserted: every
+// class the oracle refuses must have a defect control proving the refusal is
+// real. `assert-mdsvex-ast.ts` enforces the fixture half.
+const exercised = new Set(CONTROLS.filter((c) => c.kind === 'DEFECT').map((c) => c.covers));
+const unexercised = SPECIAL_NODES.filter((node) => !exercised.has(node));
+if (unexercised.length > 0) {
+	console.error(
+		`FATAL: ${unexercised.join(', ')} in SPECIAL_NODES with no defect control; add one before trusting this suite`,
+	);
+	process.exit(2);
+}
 
 const clean = await runAstOracle(
 	[{ label: 'fixture/clean.md', source: 'plain prose -- here\n' }],

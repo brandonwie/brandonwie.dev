@@ -102,6 +102,19 @@ export async function runAstOracle(
 		if (!quiet) console.log(...parts);
 	};
 
+	// The pairing rule, executed rather than asserted in prose: a class may not
+	// appear in `SPECIAL_NODES` without a fixture proving the oracle can still
+	// see it. A reviewer found `svelteTag` listed with neither, which is the
+	// refusal list outgrowing its evidence — the same vacuity in a new place.
+	const covered = new Set(CLASS_FIXTURES.map((fixture) => fixture.expect));
+	const uncovered = SPECIAL_NODES.filter((node) => !covered.has(node));
+	if (uncovered.length > 0) {
+		console.error(
+			`FATAL: ${uncovered.join(', ')} in SPECIAL_NODES with no class fixture; the oracle would refuse a class nothing proves it can still recognise`,
+		);
+		return 2;
+	}
+
 	for (const { source, expect } of CLASS_FIXTURES) {
 		const found = await specialNodesIn(source);
 		if (!found.includes(expect)) {

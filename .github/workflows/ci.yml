@@ -30,3 +30,64 @@ jobs:
       - run: pnpm run check
       - run: pnpm run validate:dates
       - run: deno task snapshot:3b:check
+
+  # The migration verification superset. The pre-push hook routes by changed
+  # surface to stay under a workable push time; CI runs EVERY suite regardless of
+  # what the diff touched, so a routing mistake costs a red CI run rather than a
+  # silent gap. The suite list comes from the router's own map
+  # (`pnpm migration:all`), so a suite added there lands here without anyone
+  # remembering to edit this file.
+  migration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `migration:projection` grafts the current baseline onto its frozen
+          # parent via `git show`, so the history must be present.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Both outputs: the suites read `build/` (Svelte) and `next/build/` (Next).
+      - run: pnpm run build
+
+      - name: Router controls
+        run: pnpm run migration:route:controls
+
+      - name: Full migration suite
+        run: pnpm run migration:all
+
+      # Exits 1 by design until the surface port closes parity, so it is reported
+      # as a progress number rather than enforced. Enforcing it now would mean
+      # turning it off later, which is how a gate becomes decorative.
+      - name: Next parity progress (report only)
+        continue-on-error: true
+        run: pnpm run migration:verify:next
+
+  # Split out because it is ~265 s on its own — more than the other fifteen
+  # suites combined — since each of its 40 controls re-captures the whole
+  # 366-page build. Parallel job, so it never serializes behind the rest.
+  migration-controls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - run: pnpm run migration:controls
