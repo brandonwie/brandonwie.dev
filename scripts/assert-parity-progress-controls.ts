@@ -139,6 +139,20 @@ const CONTROLS: Control[] = [
 		output: REAL_TRANSCRIPT,
 	},
 	{
+		id: 'PP-18',
+		kind: 'DEFECT',
+		what: 'an indented error after RESULT is still meaningful output',
+		exitCode: 1,
+		output: `${RESULT(383, 0)}\n  Error: connection reset\n`,
+	},
+	{
+		id: 'PP-19',
+		kind: 'DEFECT',
+		what: 'an indented second verdict is not a comparator continuation',
+		exitCode: 1,
+		output: `${RESULT(383, 0)}\n  ${RESULT(1, 0)}\n`,
+	},
+	{
 		id: 'PP-08',
 		kind: 'INVARIANCE',
 		what: 'the expected progress state passes — paired with PP-03 over the same surface',
@@ -150,7 +164,7 @@ const CONTROLS: Control[] = [
 		kind: 'INVARIANCE',
 		what: 'full parity passes — paired with PP-05 over the same surface',
 		exitCode: 0,
-		output: `${PARITY}\n  NOT CHECKED here: screenshots, keyboard flows, accessibility, performance\n`,
+		output: `${PARITY}\n  NOT CHECKED here: screenshots, keyboard flows, accessibility, performance (AC7/AC9)\n`,
 	},
 ];
 

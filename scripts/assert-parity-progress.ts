@@ -36,14 +36,13 @@ const PARITY_RE =
 const VERDICT_PREFIX_RE = /^(RESULT|PARITY):/;
 const FATAL_RE = /^FATAL: .*/m;
 const STALE_RE = /^STALE LEDGER ENTRY /m;
-/**
- * Lines allowed AFTER the terminal verdict: blank, an indented continuation
- * (the comparator's own `  NOT CHECKED here:` note), or pnpm's lifecycle
- * epilogue, which only restates the exit code we already read. Anything else
- * means the process kept going after reaching a verdict, which means the
- * verdict was not terminal.
- */
-const TRAILER_RE = /^(\s*$|\s{2,}\S|\s*ELIFECYCLE\b)/;
+/** Exact lines the pinned comparator and pnpm may append after a verdict. */
+const PARITY_FOLLOWUP =
+	'  NOT CHECKED here: screenshots, keyboard flows, accessibility, performance (AC7/AC9)';
+const PNPM_FAILURE_EPILOGUE_RE = /^\s*ELIFECYCLE\s+Command failed with exit code 1\.\s*$/;
+
+const isAllowedTrailer = (line: string): boolean =>
+	/^\s*$/.test(line) || line === PARITY_FOLLOWUP || PNPM_FAILURE_EPILOGUE_RE.test(line);
 
 export interface Judgment {
 	ok: boolean;
@@ -101,7 +100,7 @@ export function judge(exitCode: number, output: string): Judgment {
 	}
 
 	const { line, index } = verdicts[0];
-	const trailing = lines.slice(index + 1).find((rest) => !TRAILER_RE.test(rest));
+	const trailing = lines.slice(index + 1).find((rest) => !isAllowedTrailer(rest));
 	if (trailing !== undefined) {
 		return fail(
 			`output continues past the terminal verdict: ${JSON.stringify(trailing.slice(0, 60))}`,
