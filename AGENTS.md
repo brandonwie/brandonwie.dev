@@ -1,1 +1,1 @@
-/Users/brandonwie/dev/personal/3b/.agents/project-codex/brandonwie.dev.md
+/Users/brandonwie/dev/personal/3b/.agent-ssot/project-codex/brandonwie.dev.md
