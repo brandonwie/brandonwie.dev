@@ -32,6 +32,13 @@ import { DEFAULT_COVER, coverImage, heroImage } from '../../../src/lib/seo';
  * this introduces no new inline-script surface.
  */
 export function heroBlockHtml(slug: string): string {
+	// The slug is embedded in both HTML double quotes and JavaScript single
+	// quotes. Enforce the post-filename contract instead of maintaining two
+	// independent escaping schemes for this static generator.
+	if (!/^[A-Za-z0-9_-]+$/.test(slug)) {
+		throw new Error(`unsafe post slug for hero HTML: ${JSON.stringify(slug)}`);
+	}
+
 	const onError = [
 		`var i=this,s=i.dataset.stage;`,
 		`if(s==='default'){i.onerror=null;return}`,

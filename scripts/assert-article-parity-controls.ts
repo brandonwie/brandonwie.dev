@@ -15,15 +15,16 @@
  * encoding and whitespace against the two prose defects, the rewritten handler
  * against its deletion, attribute order against the attribute values.
  *
- * Each control runs against a throwaway copy of the candidate build under
- * `tmp/`. The real `next/build` is never mutated, and the baseline is read-only
- * throughout — a control that "fixed" a difference by editing the baseline
- * would be proving the opposite of what it claims.
+ * Build-mutating controls run against a throwaway copy of the candidate under
+ * `tmp/`; AP-16 calls the hero generator directly to prove that unsafe slugs
+ * fail at its nested HTML/JavaScript quoting boundary. The real `next/build`
+ * is never mutated, and the baseline is read-only throughout.
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 
+import { heroBlockHtml } from '../next/src/content/hero.ts';
 import { ARTICLE_SLUG, runAssertions } from './assert-article-parity.ts';
 
 type Kind = 'DEFECT' | 'INVARIANCE';
@@ -198,6 +199,21 @@ async function main(): Promise<number> {
 
 	mkdirSync('tmp', { recursive: true });
 	const failures: string[] = [];
+	const acceptedUnsafeSlugs = ["quote'slug", 'quote"slug'].filter((slug) => {
+		try {
+			heroBlockHtml(slug);
+			return true;
+		} catch {
+			return false;
+		}
+	});
+	const boundaryOk = acceptedUnsafeSlugs.length === 0;
+	if (!boundaryOk) {
+		failures.push(`AP-16 unsafe slug accepted: ${acceptedUnsafeSlugs.join(', ')}`);
+	}
+	console.log(
+		`${boundaryOk ? 'PASS' : 'FAIL'}  AP-16  DEFECT     unsafe slugs are rejected before hero HTML generation`,
+	);
 
 	for (const control of CONTROLS) {
 		rmSync(scratch, { recursive: true, force: true });
@@ -225,18 +241,19 @@ async function main(): Promise<number> {
 	}
 	rmSync(scratch, { recursive: true, force: true });
 
-	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length;
+	const totalControls = CONTROLS.length + 1;
+	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length + 1;
 	console.log(
-		`\n${CONTROLS.length} controls: ${defects} defect (must exit 1), ${CONTROLS.length - defects} invariance (must exit 0)`,
+		`\n${totalControls} controls: ${defects} defect (must exit 1), ${totalControls - defects} invariance (must exit 0)`,
 	);
 	if (failures.length) {
 		for (const line of failures) console.error(`CONTROL FAILED ${line}`);
 		console.error(
-			`RESULT: ${failures.length}/${CONTROLS.length} control(s) failed — the article assertions do not fail closed`,
+			`RESULT: ${failures.length}/${totalControls} control(s) failed — the article assertions do not fail closed`,
 		);
 		return 1;
 	}
-	console.log(`RESULT: ${CONTROLS.length}/${CONTROLS.length} controls behaved as specified`);
+	console.log(`RESULT: ${totalControls}/${totalControls} controls behaved as specified`);
 	return 0;
 }
 
