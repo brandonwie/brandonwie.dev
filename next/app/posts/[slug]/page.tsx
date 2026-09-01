@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { loadPost, type PostFrontmatter } from '@/content/posts';
+import { loadPost } from '@/content/posts';
 import { heroBlockHtml } from '@/content/hero';
 import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../../../../src/lib/seo';
+import { articleJsonLd } from './article-json-ld';
 
 /**
  * The representative English article — Slice 1's content proof.
@@ -98,37 +99,6 @@ export async function generateMetadata({
 			creator: '@BrandonWie',
 		},
 	};
-}
-
-/**
- * JSON-LD Article schema.
- *
- * Key ORDER matters and is not cosmetic: the parity comparator parses both
- * sides and compares the resulting objects as serialized JSON, so a reordered
- * object is a difference. This reproduces `PostDetail.svelte:118-141` field for
- * field, in the same order.
- *
- * `datePublished` and `dateModified` are stringified rather than reformatted.
- * The source frontmatter writes `date` unquoted and `updated` quoted, so YAML
- * hands back a `Date` and a string respectively, and the baseline carries an
- * ISO timestamp next to a bare `YYYY-MM-DD`. Normalising them would be tidier
- * and wrong.
- */
-function articleJsonLd(slug: string, meta: PostFrontmatter): string {
-	return JSON.stringify({
-		'@context': 'https://schema.org',
-		'@type': 'Article',
-		headline: meta.title,
-		description: meta.description,
-		datePublished: meta.date,
-		dateModified: meta.updated || meta.date,
-		image: `${SITE_URL}/og/${slug}.png`,
-		author: { '@type': 'Person', name: SITE_AUTHOR, url: SITE_URL },
-		mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(`/posts/${slug}`) },
-		publisher: { '@type': 'Person', name: SITE_AUTHOR, url: SITE_URL },
-		inLanguage: 'en-US',
-		keywords: meta.tags.join(', '),
-	});
 }
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {

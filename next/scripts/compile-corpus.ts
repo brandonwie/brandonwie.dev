@@ -18,6 +18,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { articleJsonLd } from '../app/posts/[slug]/article-json-ld';
 import { initializeMermaidOnce } from '../src/components/Mermaid';
 import { renderMarkdown } from '../src/markdown/pipeline';
 
@@ -103,6 +104,28 @@ if (failures.length > 0) {
 	if (failures.length > 20) console.error(`  ... and ${failures.length - 20} more`);
 	process.exit(1);
 }
+
+const scriptBreakout = '</script><script>globalThis.__jsonLdControl = true</script>';
+const serializedJsonLd = articleJsonLd('json-ld-control', {
+	title: scriptBreakout,
+	description: 'JSON-LD script-text boundary control',
+	date: new Date('2026-01-01T00:00:00.000Z'),
+	updated: '2026-01-02',
+	tags: ['security'],
+	category: 'test',
+});
+const parsedJsonLd = JSON.parse(serializedJsonLd) as Record<string, unknown>;
+if (
+	serializedJsonLd.includes('<') ||
+	!serializedJsonLd.includes('\\u003c/script>') ||
+	parsedJsonLd.headline !== scriptBreakout
+) {
+	console.error(
+		'FAIL: JSON-LD must escape the HTML script-text boundary without changing its data',
+	);
+	process.exit(1);
+}
+console.log('  json-ld boundary   literal < escaped + semantic round-trip');
 
 const initializationFailure = new Error('mermaid initialization control');
 const attemptedConfigs: unknown[] = [];
