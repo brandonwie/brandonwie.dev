@@ -18,6 +18,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { initializeMermaidOnce } from '../src/components/Mermaid';
 import { renderMarkdown } from '../src/markdown/pipeline';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -102,5 +103,35 @@ if (failures.length > 0) {
 	if (failures.length > 20) console.error(`  ... and ${failures.length - 20} more`);
 	process.exit(1);
 }
+
+const initializationFailure = new Error('mermaid initialization control');
+const attemptedConfigs: unknown[] = [];
+const fakeMermaid = {
+	initialize(config: unknown): void {
+		attemptedConfigs.push(config);
+		if (attemptedConfigs.length === 1) throw initializationFailure;
+	},
+};
+let failurePropagated = false;
+try {
+	initializeMermaidOnce(fakeMermaid);
+} catch (cause) {
+	failurePropagated = cause === initializationFailure;
+}
+initializeMermaidOnce(fakeMermaid);
+initializeMermaidOnce(fakeMermaid);
+const strictConfigOnly = attemptedConfigs.every((config) => {
+	const record = config as Record<string, unknown>;
+	return (
+		record.startOnLoad === false && record.theme === 'dark' && record.securityLevel === 'strict'
+	);
+});
+if (!failurePropagated || attemptedConfigs.length !== 2 || !strictConfigOnly) {
+	console.error(
+		'FAIL: Mermaid initialization must propagate failure, retry once, then preserve its strict config',
+	);
+	process.exit(1);
+}
+console.log('  mermaid init       one failed attempt + one successful initialization');
 
 console.log('\nPASS: every content file compiled and rendered.');

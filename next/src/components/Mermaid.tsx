@@ -1,6 +1,23 @@
 'use client';
 
+import type { MermaidConfig } from 'mermaid';
 import { useEffect, useId, useRef, useState } from 'react';
+
+type MermaidApi = (typeof import('mermaid'))['default'];
+
+const MERMAID_CONFIG = {
+	startOnLoad: false,
+	theme: 'dark',
+	securityLevel: 'strict',
+} satisfies MermaidConfig;
+
+let mermaidInitialized = false;
+
+export function initializeMermaidOnce(mermaid: Pick<MermaidApi, 'initialize'>): void {
+	if (mermaidInitialized) return;
+	mermaid.initialize(MERMAID_CONFIG);
+	mermaidInitialized = true;
+}
 
 /**
  * Client boundary for a mermaid diagram.
@@ -23,7 +40,7 @@ export default function Mermaid({ code }: { code: string }) {
 		(async () => {
 			try {
 				const mermaid = (await import('mermaid')).default;
-				mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict' });
+				initializeMermaidOnce(mermaid);
 				const { svg } = await mermaid.render(`mermaid-${id}`, code);
 				if (!cancelled && ref.current) ref.current.innerHTML = svg;
 			} catch (cause) {
