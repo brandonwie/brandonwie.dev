@@ -111,7 +111,11 @@ export async function renderMarkdown(
 		.use(remarkGfm)
 		.use(remarkReadingTime)
 		.use(remarkTocExtract)
-		.use(remarkRehype, { allowDangerousHtml: false })
+		.use(remarkRehype, {
+			// Raw HTML stays fail-closed: migration:ast proves the 334-post corpus
+			// has no HTML/Svelte-special nodes and rejects any future introduction.
+			allowDangerousHtml: false,
+		})
 		.use(rehypeSlug)
 		.use(rehypeShiki, {
 			theme: SHIKI_THEME,
