@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import matter from 'gray-matter';
 
-import { renderMarkdown, type Heading } from '../markdown/pipeline';
+import { renderMarkdown, type Heading, type ParsedMarkdownSource } from '../markdown/pipeline';
 
 /**
  * Post loading for the Next candidate.
@@ -34,6 +34,14 @@ import { renderMarkdown, type Heading } from '../markdown/pipeline';
  * source detection already relies on, so `../` is the repository root.
  */
 const CONTENT_ROOT = join(process.cwd(), '..', 'src/content/posts');
+
+interface PostSourceCacheEntry {
+	mtimeMs: number;
+	size: number;
+	parsed: ParsedMarkdownSource;
+}
+
+const postSourceCache = new Map<string, PostSourceCacheEntry>();
 
 export type Locale = 'en' | 'ko';
 
@@ -66,6 +74,17 @@ function walk(dir: string, out: string[] = []): string[] {
 	return out;
 }
 
+/** Process-local build cache, revalidated with a file-metadata freshness heuristic. */
+function readParsedPost(file: string): ParsedMarkdownSource {
+	const { mtimeMs, size } = statSync(file);
+	const cached = postSourceCache.get(file);
+	if (cached?.mtimeMs === mtimeMs && cached.size === size) return cached.parsed;
+
+	const parsed = matter(readFileSync(file, 'utf8'));
+	postSourceCache.set(file, { mtimeMs, size, parsed });
+	return parsed;
+}
+
 /** Absolute path of `<slug>.md` under a locale, or null. */
 export function findPostFile(slug: string, locale: Locale): string | null {
 	const root = join(CONTENT_ROOT, locale);
@@ -76,7 +95,7 @@ export function findPostFile(slug: string, locale: Locale): string | null {
 export function listPostSlugs(locale: Locale): string[] {
 	return walk(join(CONTENT_ROOT, locale))
 		.map((file) => ({ file, slug: file.split('/').pop()!.replace(/\.md$/, '') }))
-		.filter(({ file }) => matter(readFileSync(file, 'utf8')).data.draft !== true)
+		.filter(({ file }) => readParsedPost(file).data.draft !== true)
 		.map(({ slug }) => slug)
 		.sort();
 }
@@ -93,9 +112,11 @@ export async function loadPost(slug: string, locale: Locale): Promise<LoadedPost
 	const file = findPostFile(slug, locale);
 	if (!file) return null;
 
-	const rendered = await renderMarkdown(readFileSync(file, 'utf8'));
+	const parsed = readParsedPost(file);
+	if (parsed.data.draft === true) return null;
+
+	const rendered = await renderMarkdown(parsed);
 	const frontmatter = rendered.frontmatter as unknown as PostFrontmatter;
-	if (frontmatter.draft === true) return null;
 
 	return {
 		slug,

@@ -103,6 +103,12 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		command: 'migration:posts:controls',
+		entry: 'next/scripts/assert-posts-controls.ts',
+		dataRoots: [],
+		tier: 'push',
+	},
+	{
 		command: 'migration:typography',
 		entry: 'next/scripts/assert-corpus-typography.ts',
 		dataRoots: ['src/content/posts', ...SVELTE_BUILD_SOURCES],

@@ -36,6 +36,8 @@ export interface RenderedMarkdown {
 	headings: Heading[];
 }
 
+export type ParsedMarkdownSource = Pick<matter.GrayMatterFile<string>, 'data' | 'content'>;
+
 /**
  * Languages the SvelteKit build highlights (`svelte.config.js` getHighlighter).
  * Kept identical so a code block that highlighted before still highlights, and
@@ -91,8 +93,10 @@ export const SHIKI_THEME = 'github-dark';
  * and using `dangerouslySetInnerHTML` would be simpler and would make the
  * mermaid client component impossible to hydrate.
  */
-export async function renderMarkdown(source: string): Promise<RenderedMarkdown> {
-	const { data: frontmatter, content: raw } = matter(source);
+export async function renderMarkdown(
+	source: string | ParsedMarkdownSource,
+): Promise<RenderedMarkdown> {
+	const { data: frontmatter, content: raw } = typeof source === 'string' ? matter(source) : source;
 	// Typography is applied to the SOURCE, before this pipeline parses it, and
 	// the segmentation is remark-parse 8's rather than micromark's -- see
 	// `plugins/remark-smart-typography.ts` for why the boundary has to come from

@@ -35,6 +35,7 @@
 		"migration:typography:oracle:controls": "tsx --tsconfig next/tsconfig.json next/scripts/assert-typography-oracle-controls.ts",
 		"migration:typography:controls": "tsx --tsconfig next/tsconfig.json next/scripts/assert-corpus-typography-controls.ts",
 		"migration:corpus": "tsx --tsconfig next/tsconfig.json next/scripts/compile-corpus.ts",
+		"migration:posts:controls": "tsx --tsconfig next/tsconfig.json next/scripts/assert-posts-controls.ts",
 		"migration:serve": "node scripts/serve-build.mjs build 4173",
 		"migration:route": "tsx scripts/migration-route.ts",
 		"migration:route:controls": "tsx scripts/migration-route-controls.ts",
