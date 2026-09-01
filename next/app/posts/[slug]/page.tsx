@@ -112,7 +112,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 		<>
 			<script
 				type="application/ld+json"
-				dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta) }}
+				dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta, post.locale) }}
 			/>
 			<article>
 				<div dangerouslySetInnerHTML={{ __html: heroBlockHtml(slug) }} />

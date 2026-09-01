@@ -106,14 +106,15 @@ if (failures.length > 0) {
 }
 
 const scriptBreakout = '</script><script>globalThis.__jsonLdControl = true</script>';
-const serializedJsonLd = articleJsonLd('json-ld-control', {
+const jsonLdControlMeta = {
 	title: scriptBreakout,
 	description: 'JSON-LD script-text boundary control',
 	date: new Date('2026-01-01T00:00:00.000Z'),
 	updated: '2026-01-02',
 	tags: ['security'],
 	category: 'test',
-});
+};
+const serializedJsonLd = articleJsonLd('json-ld-control', jsonLdControlMeta, 'en');
 const parsedJsonLd = JSON.parse(serializedJsonLd) as Record<string, unknown>;
 if (
 	serializedJsonLd.includes('<') ||
@@ -126,6 +127,21 @@ if (
 	process.exit(1);
 }
 console.log('  json-ld boundary   literal < escaped + semantic round-trip');
+
+for (const [locale, expectedLanguage] of [
+	['en', 'en-US'],
+	['ko', 'ko-KR'],
+] as const) {
+	const localizedJsonLd = articleJsonLd('json-ld-locale-control', jsonLdControlMeta, locale);
+	const localizedData = JSON.parse(localizedJsonLd) as Record<string, unknown>;
+	if (localizedData.inLanguage !== expectedLanguage) {
+		console.error(
+			`FAIL: JSON-LD locale ${locale} must serialize inLanguage=${expectedLanguage}; received ${String(localizedData.inLanguage)}`,
+		);
+		process.exit(1);
+	}
+}
+console.log('  json-ld locales    en-US + ko-KR');
 
 const initializationFailure = new Error('mermaid initialization control');
 const attemptedConfigs: unknown[] = [];

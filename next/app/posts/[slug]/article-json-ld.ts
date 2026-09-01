@@ -1,4 +1,4 @@
-import type { PostFrontmatter } from '@/content/posts';
+import type { Locale, PostFrontmatter } from '@/content/posts';
 import { SITE_AUTHOR, SITE_URL, absoluteUrl } from '../../../../src/lib/seo';
 
 /**
@@ -15,7 +15,7 @@ import { SITE_AUTHOR, SITE_URL, absoluteUrl } from '../../../../src/lib/seo';
  * ISO timestamp next to a bare `YYYY-MM-DD`. Normalising them would be tidier
  * and wrong.
  */
-export function articleJsonLd(slug: string, meta: PostFrontmatter): string {
+export function articleJsonLd(slug: string, meta: PostFrontmatter, contentLocale: Locale): string {
 	return JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'Article',
@@ -27,7 +27,7 @@ export function articleJsonLd(slug: string, meta: PostFrontmatter): string {
 		author: { '@type': 'Person', name: SITE_AUTHOR, url: SITE_URL },
 		mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(`/posts/${slug}`) },
 		publisher: { '@type': 'Person', name: SITE_AUTHOR, url: SITE_URL },
-		inLanguage: 'en-US',
+		inLanguage: contentLocale === 'ko' ? 'ko-KR' : 'en-US',
 		keywords: meta.tags.join(', '),
 	}).replace(/</g, '\\u003c');
 }
