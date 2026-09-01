@@ -80,10 +80,11 @@ export interface LoadedPost {
 function walk(dir: string, out: string[], directories: DirectoryStamp[]): string[] {
 	const directory = statSync(dir);
 	directories.push({ path: dir, mtimeMs: directory.mtimeMs, ctimeMs: directory.ctimeMs });
-	for (const entry of readdirSync(dir)) {
-		const full = join(dir, entry);
-		if (statSync(full).isDirectory()) walk(full, out, directories);
-		else if (entry.endsWith('.md')) out.push(full);
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const full = join(dir, entry.name);
+		if (entry.isDirectory()) walk(full, out, directories);
+		else if (entry.isSymbolicLink() && statSync(full).isDirectory()) walk(full, out, directories);
+		else if (entry.name.endsWith('.md')) out.push(full);
 	}
 	return out;
 }

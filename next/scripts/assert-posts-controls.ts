@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import {
+	mkdtempSync,
+	mkdirSync,
+	rmSync,
+	statSync,
+	symlinkSync,
+	unlinkSync,
+	utimesSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
@@ -47,6 +56,7 @@ async function runChild(): Promise<void> {
 	assert.ok(modulePath, `${MODULE_ENV} must point at posts.ts`);
 	let matterCalls = 0;
 	let directoryReads = 0;
+	let statCalls = 0;
 
 	cjsModule._load = function (this: unknown, request, parent, isMain) {
 		const loaded = originalLoad.call(this, request, parent, isMain);
@@ -60,9 +70,14 @@ async function runChild(): Promise<void> {
 				directoryReads += 1;
 				return Reflect.apply(nodeFs.readdirSync, nodeFs, args);
 			}) as NodeFs['readdirSync'];
+			const countedStatSync = ((...args: unknown[]) => {
+				statCalls += 1;
+				return Reflect.apply(nodeFs.statSync, nodeFs, args);
+			}) as NodeFs['statSync'];
 			return new Proxy(nodeFs, {
 				get(target, property, receiver) {
 					if (property === 'readdirSync') return countedReaddirSync;
+					if (property === 'statSync') return countedStatSync;
 					return Reflect.get(target, property, receiver);
 				},
 			});
@@ -86,6 +101,11 @@ async function runChild(): Promise<void> {
 	assert.deepEqual(listPostSlugs('en'), [SLUG]);
 	assert.equal(matterCalls, 2, 'listing parses the published and draft fixtures once each');
 	assert.equal(directoryReads, 1, 'the first English listing reads its locale root once');
+	assert.equal(
+		statCalls,
+		3,
+		'the first listing stats its root and two parsed files, not tree entries',
+	);
 
 	const english = await loadPost(SLUG, 'en');
 	assert.ok(english);
@@ -131,6 +151,18 @@ async function runChild(): Promise<void> {
 	assert.match(renderToStaticMarkup(refreshedBySize.content), /size change/);
 
 	const englishRoot = join(contentRoot, 'en');
+	if (process.platform !== 'win32') {
+		const linkedRoot = resolve(contentRoot, '..', '..', 'linked-posts');
+		const linkedPath = join(englishRoot, 'linked');
+		mkdirSync(linkedRoot);
+		writeFileSync(join(linkedRoot, 'linked-fixture.md'), postSource('Linked', 'Linked body.'));
+		symlinkSync(linkedRoot, linkedPath, 'dir');
+		assert.deepEqual(listPostSlugs('en'), ['linked-fixture', SLUG]);
+		unlinkSync(linkedPath);
+		rmSync(linkedRoot, { recursive: true });
+		assert.deepEqual(listPostSlugs('en'), [SLUG]);
+	}
+
 	const nestedRoot = join(englishRoot, 'nested');
 	mkdirSync(nestedRoot);
 	writeFileSync(join(nestedRoot, 'nested-one.md'), postSource('Nested one', 'Nested body.'));
@@ -169,6 +201,10 @@ async function runChild(): Promise<void> {
 	console.log('posts controls: list -> load parse reuse');
 	console.log('posts controls: locale/path cache separation');
 	console.log('posts controls: locale directory cache + nested invalidation');
+	console.log('posts controls: Dirent walk avoids per-entry stat calls');
+	if (process.platform !== 'win32') {
+		console.log('posts controls: POSIX directory symlink traversal preserved');
+	}
 	console.log('posts controls: mtime + size freshness invalidation');
 	console.log('posts controls: draft and missing-post rejection');
 	console.log('posts controls: Date/string frontmatter preservation');
