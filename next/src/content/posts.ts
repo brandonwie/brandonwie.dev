@@ -41,7 +41,19 @@ interface PostSourceCacheEntry {
 	parsed: ParsedMarkdownSource;
 }
 
+interface DirectoryStamp {
+	path: string;
+	mtimeMs: number;
+	ctimeMs: number;
+}
+
+interface PostFileListCacheEntry {
+	files: string[];
+	directories: DirectoryStamp[];
+}
+
 const postSourceCache = new Map<string, PostSourceCacheEntry>();
+const postFileListCache = new Map<string, PostFileListCacheEntry>();
 
 export type Locale = 'en' | 'ko';
 
@@ -65,13 +77,42 @@ export interface LoadedPost {
 	hasKoreanTranslation: boolean;
 }
 
-function walk(dir: string, out: string[] = []): string[] {
+function walk(dir: string, out: string[], directories: DirectoryStamp[]): string[] {
+	const directory = statSync(dir);
+	directories.push({ path: dir, mtimeMs: directory.mtimeMs, ctimeMs: directory.ctimeMs });
 	for (const entry of readdirSync(dir)) {
 		const full = join(dir, entry);
-		if (statSync(full).isDirectory()) walk(full, out);
+		if (statSync(full).isDirectory()) walk(full, out, directories);
 		else if (entry.endsWith('.md')) out.push(full);
 	}
 	return out;
+}
+
+function directoryListIsFresh(directories: DirectoryStamp[]): boolean {
+	return directories.every((cached) => {
+		try {
+			const current = statSync(cached.path);
+			return (
+				current.isDirectory() &&
+				current.mtimeMs === cached.mtimeMs &&
+				current.ctimeMs === cached.ctimeMs
+			);
+		} catch {
+			return false;
+		}
+	});
+}
+
+/** Process-local directory cache, revalidated across every previously discovered directory. */
+function listPostFiles(locale: Locale): string[] {
+	const root = join(CONTENT_ROOT, locale);
+	const cached = postFileListCache.get(root);
+	if (cached && directoryListIsFresh(cached.directories)) return cached.files;
+
+	const directories: DirectoryStamp[] = [];
+	const files = walk(root, [], directories);
+	postFileListCache.set(root, { files, directories });
+	return files;
 }
 
 /** Process-local build cache, revalidated with a file-metadata freshness heuristic. */
@@ -87,13 +128,12 @@ function readParsedPost(file: string): ParsedMarkdownSource {
 
 /** Absolute path of `<slug>.md` under a locale, or null. */
 export function findPostFile(slug: string, locale: Locale): string | null {
-	const root = join(CONTENT_ROOT, locale);
-	return walk(root).find((file) => file.endsWith(`/${slug}.md`)) ?? null;
+	return listPostFiles(locale).find((file) => file.endsWith(`/${slug}.md`)) ?? null;
 }
 
 /** Every slug published in a locale, drafts excluded. */
 export function listPostSlugs(locale: Locale): string[] {
-	return walk(join(CONTENT_ROOT, locale))
+	return listPostFiles(locale)
 		.map((file) => ({ file, slug: file.split('/').pop()!.replace(/\.md$/, '') }))
 		.filter(({ file }) => readParsedPost(file).data.draft !== true)
 		.map(({ slug }) => slug)

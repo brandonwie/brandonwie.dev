@@ -38,14 +38,35 @@ const SIZE_SOURCE = postSource('Delta', 'New body with a size change.');
 async function runChild(): Promise<void> {
 	type CjsLoad = (this: unknown, request: string, parent: unknown, isMain: boolean) => unknown;
 	type GrayMatter = typeof import('gray-matter');
+	type NodeFs = typeof import('node:fs');
 	type PostsApi = typeof import('../src/content/posts');
 
 	const cjsModule = require('node:module') as unknown as { _load: CjsLoad };
 	const originalLoad = cjsModule._load;
+	const modulePath = process.env[MODULE_ENV];
+	assert.ok(modulePath, `${MODULE_ENV} must point at posts.ts`);
 	let matterCalls = 0;
+	let directoryReads = 0;
 
 	cjsModule._load = function (this: unknown, request, parent, isMain) {
 		const loaded = originalLoad.call(this, request, parent, isMain);
+		const parentFilename =
+			typeof parent === 'object' && parent !== null && 'filename' in parent
+				? String((parent as { filename?: unknown }).filename ?? '')
+				: '';
+		if (request === 'node:fs' && parentFilename === modulePath) {
+			const nodeFs = loaded as NodeFs;
+			const countedReaddirSync = ((...args: unknown[]) => {
+				directoryReads += 1;
+				return Reflect.apply(nodeFs.readdirSync, nodeFs, args);
+			}) as NodeFs['readdirSync'];
+			return new Proxy(nodeFs, {
+				get(target, property, receiver) {
+					if (property === 'readdirSync') return countedReaddirSync;
+					return Reflect.get(target, property, receiver);
+				},
+			});
+		}
 		if (request !== 'gray-matter' || typeof loaded !== 'function') return loaded;
 
 		const grayMatter = loaded as GrayMatter;
@@ -57,8 +78,6 @@ async function runChild(): Promise<void> {
 		return counted;
 	};
 
-	const modulePath = process.env[MODULE_ENV];
-	assert.ok(modulePath, `${MODULE_ENV} must point at posts.ts`);
 	const { listPostSlugs, loadPost } = require(modulePath) as PostsApi;
 	const { renderToStaticMarkup } = require('react-dom/server') as typeof import('react-dom/server');
 	const contentRoot = resolve(process.cwd(), '..', 'src/content/posts');
@@ -66,10 +85,16 @@ async function runChild(): Promise<void> {
 
 	assert.deepEqual(listPostSlugs('en'), [SLUG]);
 	assert.equal(matterCalls, 2, 'listing parses the published and draft fixtures once each');
+	assert.equal(directoryReads, 1, 'the first English listing reads its locale root once');
 
 	const english = await loadPost(SLUG, 'en');
 	assert.ok(english);
 	assert.equal(matterCalls, 2, 'loading a listed post reuses its parsed source');
+	assert.equal(
+		directoryReads,
+		2,
+		'loading a listed post reuses English files and warms Korean once',
+	);
 	assert.ok(english.frontmatter.date instanceof Date, 'unquoted YAML dates stay Date objects');
 	assert.equal(typeof english.frontmatter.updated, 'string', 'quoted YAML dates stay strings');
 	assert.equal(english.hasKoreanTranslation, true);
@@ -85,6 +110,7 @@ async function runChild(): Promise<void> {
 	assert.equal(matterCalls, 3, 'a second locale load reuses its parsed source');
 	assert.equal(await loadPost('missing-fixture', 'en'), null);
 	assert.equal(matterCalls, 3, 'a missing slug never invokes gray-matter');
+	assert.equal(directoryReads, 2, 'warm locale listings avoid repeated directory walks');
 
 	assert.equal(Buffer.byteLength(INITIAL_SOURCE), Buffer.byteLength(MTIME_SOURCE));
 	writeFileSync(englishFile, MTIME_SOURCE);
@@ -104,8 +130,45 @@ async function runChild(): Promise<void> {
 	assert.equal(refreshedBySize.frontmatter.title, 'Delta');
 	assert.match(renderToStaticMarkup(refreshedBySize.content), /size change/);
 
+	const englishRoot = join(contentRoot, 'en');
+	const nestedRoot = join(englishRoot, 'nested');
+	mkdirSync(nestedRoot);
+	writeFileSync(join(nestedRoot, 'nested-one.md'), postSource('Nested one', 'Nested body.'));
+	utimesSync(nestedRoot, INITIAL_MTIME, INITIAL_MTIME);
+	const readsBeforeNestedAdd = directoryReads;
+	assert.deepEqual(listPostSlugs('en'), ['nested-one', SLUG]);
+	assert.equal(
+		directoryReads,
+		readsBeforeNestedAdd + 2,
+		'a nested addition rewalks both directories',
+	);
+
+	const rootBeforeNestedFile = statSync(englishRoot);
+	writeFileSync(join(nestedRoot, 'nested-two.md'), postSource('Nested two', 'Another body.'));
+	utimesSync(nestedRoot, UPDATED_MTIME, UPDATED_MTIME);
+	const rootAfterNestedFile = statSync(englishRoot);
+	assert.equal(rootAfterNestedFile.mtimeMs, rootBeforeNestedFile.mtimeMs);
+	assert.equal(rootAfterNestedFile.ctimeMs, rootBeforeNestedFile.ctimeMs);
+	const readsBeforeNestedFile = directoryReads;
+	assert.deepEqual(listPostSlugs('en'), ['nested-one', 'nested-two', SLUG]);
+	assert.equal(
+		directoryReads,
+		readsBeforeNestedFile + 2,
+		'nested metadata invalidates a warm root',
+	);
+
+	rmSync(nestedRoot, { recursive: true });
+	const readsBeforeNestedDelete = directoryReads;
+	assert.deepEqual(listPostSlugs('en'), [SLUG]);
+	assert.equal(
+		directoryReads,
+		readsBeforeNestedDelete + 1,
+		'a nested deletion rewalks the locale root',
+	);
+
 	console.log('posts controls: list -> load parse reuse');
 	console.log('posts controls: locale/path cache separation');
+	console.log('posts controls: locale directory cache + nested invalidation');
 	console.log('posts controls: mtime + size freshness invalidation');
 	console.log('posts controls: draft and missing-post rejection');
 	console.log('posts controls: Date/string frontmatter preservation');
