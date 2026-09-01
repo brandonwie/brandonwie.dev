@@ -3,11 +3,23 @@
 # Pre-push hook: runs the same checks as CI (.github/workflows/ci.yml),
 # plus a local-only deno.lock drift guard (step 1, not in CI).
 # Blocks push if any check fails.
+#
+# Step 7 is the migration verification set, routed by changed surface
+# (scripts/migration-route.ts). Steps 1-6 already cost ~123 s; the full
+# migration set adds ~100 s and `migration:controls` alone adds ~265 s, so the
+# hook runs only the suites whose inputs this push actually changed and CI runs
+# the whole superset unconditionally. The router fails closed — an unknown path,
+# a shared config, a change to the router itself, or a new branch all select
+# everything.
+
+# Git writes `<local ref> <local sha> <remote ref> <remote sha>` lines on stdin,
+# and it can only be read once, so capture it before any step consumes it.
+PUSH_REFS=$(cat)
 
 echo "Running pre-push checks..."
 echo ""
 
-echo "1/6 Deno lockfile sync check..."
+echo "1/7 Deno lockfile sync check..."
 # deno.lock mirrors package.json's npm deps (nodeModulesDir "auto"). It silently
 # drifts whenever deps change via pnpm but no deno command regenerates it. Catch
 # that here. --node-modules-dir=none verifies the lock only and never touches
@@ -23,24 +35,28 @@ else
 fi
 
 echo ""
-echo "2/6 Linting..."
+echo "2/7 Linting..."
 corepack pnpm run lint || exit 1
 
 echo ""
-echo "3/6 Format check..."
+echo "3/7 Format check..."
 corepack pnpm run format:check || exit 1
 
 echo ""
-echo "4/6 Building (includes Pagefind)..."
+echo "4/7 Building (includes Pagefind)..."
 corepack pnpm run build || exit 1
 
 echo ""
-echo "5/6 Svelte check..."
+echo "5/7 Type check..."
 corepack pnpm run check || exit 1
 
 echo ""
-echo "6/6 Frontmatter date validation..."
+echo "6/7 Frontmatter date validation..."
 corepack pnpm run validate:dates || exit 1
+
+echo ""
+echo "7/7 Migration verification (routed by changed surface)..."
+printf '%s\n' "$PUSH_REFS" | corepack pnpm exec tsx scripts/migration-route.ts --run || exit 1
 
 echo ""
 echo "All pre-push checks passed!"

@@ -5,10 +5,10 @@ name: Claude Code Review
 # excludes this trigger phrase to prevent both workflows firing on the same
 # comment.
 #
-# brandonwie.dev is a SvelteKit (SSG) personal blog with a command palette
-# and bilingual (EN/KO) mdsvex content. PRs touch Svelte 5 components,
-# TypeScript, Tailwind v4 CSS, i18n message files, and markdown posts. The
-# review prompt below reflects that mix.
+# brandonwie.dev is migrating from a SvelteKit static site to a Next.js App
+# Router static export. During the migration, PRs can touch the Svelte parity
+# baseline, the Next candidate under `next/`, shared verification controls, or
+# bilingual content. The review prompt below routes findings by that surface.
 #
 # Security note: github.event.*.body fields appear ONLY in `if:` contains()
 # expressions (YAML-time evaluation, never shell-injected). Numeric inputs
@@ -71,23 +71,30 @@ jobs:
 
             ## Project Context
 
-            brandonwie.dev is a personal blog + portfolio built with SvelteKit
-            (SSG via adapter-static) and deployed to Cloudflare Pages. It has a
-            single blog UI with a global Cmd/Ctrl+K command palette
-            (Raycast / VS-Code style) for searching posts and jumping to nav
-            and actions. Content is bilingual — English
-            (default) plus Korean — authored as mdsvex markdown under
-            `src/content/posts/{en,ko}/{category}/`.
+            brandonwie.dev is a bilingual personal blog + portfolio deployed
+            as static files to Cloudflare Pages. It is migrating incrementally
+            from the production-parity SvelteKit root (`src/`, adapter-static,
+            output in `build/`) to a Next.js 16 App Router candidate under
+            `next/` (`output: 'export'`, output in `next/build/`). Both read the
+            EN/KO markdown corpus under `src/content/posts/`; review each
+            changed file with its own framework's rules.
 
-            Stack: Svelte 5 (runes), SvelteKit 2, Tailwind CSS v4 (CSS-first,
-            no JS config), Paraglide-JS i18n, mdsvex + Shiki +
-            remark-reading-time, Fuse.js + Pagefind search, JetBrains Mono.
-            Package manager is pnpm (corepack); deno only runs the
-            `scripts/sync-from-3b.ts` sync tooling. Build: `pnpm build`
-            (vite build + pagefind). Quality gates: `pnpm lint` (ESLint),
-            `pnpm format:check` (Prettier), `pnpm check` (svelte-check),
-            `pnpm validate:dates`. There is no unit-test suite — do not ask for
-            one or treat its absence as a finding.
+            The root stack remains Svelte 5, SvelteKit 2, Tailwind CSS v4,
+            Paraglide-JS, mdsvex + Shiki, Fuse.js, and Pagefind. The candidate
+            uses Next.js 16, React, Tailwind CSS v4, and an AST-based markdown
+            pipeline under `next/src/markdown/`. Package management is pnpm;
+            deno only runs `scripts/sync-from-3b.ts` tooling.
+
+            Root `pnpm build` builds Svelte/Pagefind and then Next; root
+            `pnpm check` runs svelte-check and Next TypeScript. Other gates are
+            lint, Prettier, date validation, and migration controls.
+            `migration:verify:svelte` must stay at zero differences.
+            `migration:verify:next` can be nonzero during an approved phase;
+            `migration:parity:progress` validates its terminal verdict and
+            reports the count. Reviewers must explain count changes and stale
+            ledger entries. There is no conventional unit-test suite; new
+            migration predicates need executable positive and negative
+            controls, not a new test framework by default.
 
             ## Architecture Notes
 
@@ -109,6 +116,23 @@ jobs:
               (`rss.xml`, `ko/rss.xml`) and `sitemap.xml` are generated routes.
 
             ## Review Categories
+
+            For Next / React / shared migration changes:
+
+            N1. Static export — flag request-time features such as cookies,
+                Server Actions, request-dependent handlers, rewrites, ISR, or
+                default image optimization. Dynamic routes must be fully
+                enumerated with `generateStaticParams`.
+            N2. Server/Client boundary — components are server-first and run at
+                build time. Keep `'use client'` boundaries narrow, props
+                serializable, and browser APIs inside client code.
+            N3. Parity — preserve canonical URLs, locale alternates, metadata,
+                JSON-LD, RSS/sitemap, accessibility, and hydration behavior for
+                the claimed phase. Compare generated artifacts, not JSX shape.
+            N4. Content — preserve the guarded AST, typography, Shiki, headings,
+                Mermaid, reading time, and safe HTML/JSON-LD serialization.
+            N5. Controls — each new comparator predicate needs an invariance
+                case and a defect-injection case that reaches production logic.
 
             For Svelte / TypeScript changes:
 
@@ -175,6 +199,11 @@ jobs:
             - Korean pages rendering EN content behind a fallback banner is
               intentional (`isFallback`), not a "missing translation" to fix in
               code.
+            - The simultaneous Svelte root and `next/` package are intentional
+              migration architecture, not accidental framework duplication.
+            - A documented nonzero Next parity count is an intermediate-state
+              signal, not automatically a defect. Unexplained count changes,
+              stale entries, or a malformed terminal verdict ARE findings.
             - Client-side category filtering on `/posts` (no URL params) is a
               deliberate SSG choice — do not suggest server-side or URL-based
               filtering (it would force prerendering every category combo).

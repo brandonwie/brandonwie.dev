@@ -1,0 +1,23 @@
+/*
+  The Next candidate's stylesheet is the SvelteKit app's stylesheet.
+
+  `src/app.css` carries every terminal design token: the `@theme` semantic and
+  legacy `terminal-*` colour aliases, the Rosé Pine `:root` palette, the base
+  layer (html/body grid backdrop, scrollbars, selection, code), and every
+  `@utility` the components use. Importing it rather than copying it follows the
+  same rule the markdown pipeline already follows for `remark-reading-time` and
+  `remark-toc-extract`: while both stacks exist, neither may drift from the
+  other, and a fork of 419 lines of design tokens would drift silently.
+
+  `@import 'tailwindcss'` and `@plugin '@tailwindcss/typography'` live inside
+  that file, so they are not repeated here. Tailwind v4 resolves relative CSS
+  `@import`s itself.
+
+  Source detection: Tailwind v4 scans from the current working directory
+  (https://tailwindcss.com/docs/detecting-classes-in-source-files), and
+  `next build` runs with the working directory set to this package, so the scan
+  covers `next/` only and never the SvelteKit `src/` tree. Generated output is
+  excluded because `build/` and `next/.next` are git-ignored, and Tailwind skips
+  git-ignored paths.
+*/
+@import '../../src/app.css';
