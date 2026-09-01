@@ -20,6 +20,7 @@ const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const NEXT_ROOT = resolve(dirname(SCRIPT_PATH), '..');
 const POSTS_MODULE = resolve(NEXT_ROOT, 'src/content/posts.ts');
 const CHILD_ENV = 'POSTS_CONTROLS_CHILD';
+const RSC_CHILD_ENV = 'POSTS_CONTROLS_RSC_CHILD';
 const MODULE_ENV = 'POSTS_CONTROLS_MODULE';
 const SLUG = 'shared-fixture';
 const INITIAL_MTIME = new Date('2026-01-01T00:00:00.000Z');
@@ -210,6 +211,104 @@ async function runChild(): Promise<void> {
 	console.log('posts controls: Date/string frontmatter preservation');
 }
 
+async function runRscChild(): Promise<void> {
+	type CjsLoad = (this: unknown, request: string, parent: unknown, isMain: boolean) => unknown;
+	type PipelineApi = typeof import('../src/markdown/pipeline');
+	type PageModule = typeof import('../app/posts/[slug]/page');
+
+	const React = require('react') as typeof import('react');
+	const { Writable } = require('node:stream') as typeof import('node:stream');
+	const { renderToPipeableStream } =
+		require('next/dist/compiled/react-server-dom-webpack/server.node.js') as {
+			renderToPipeableStream: (
+				model: unknown,
+				webpackMap: Record<string, unknown>,
+				options: { onError: (error: unknown) => void },
+			) => { pipe: (destination: InstanceType<typeof Writable>) => void };
+		};
+	const cjsModule = require('node:module') as unknown as { _load: CjsLoad };
+	const originalLoad = cjsModule._load;
+	const modulePath = process.env[MODULE_ENV];
+	assert.ok(modulePath, `${MODULE_ENV} must point at posts.ts`);
+	let renderMarkdownCalls = 0;
+
+	cjsModule._load = function (this: unknown, request, parent, isMain) {
+		if (request === 'next/navigation') {
+			return {
+				notFound(): never {
+					throw new Error('unexpected notFound');
+				},
+			};
+		}
+
+		const loaded = originalLoad.call(this, request, parent, isMain);
+		const parentFilename =
+			typeof parent === 'object' && parent !== null && 'filename' in parent
+				? String((parent as { filename?: unknown }).filename ?? '')
+				: '';
+		if (parentFilename === modulePath && /markdown[\\/]pipeline/.test(request)) {
+			return new Proxy(loaded as PipelineApi, {
+				get(target, property, receiver) {
+					if (property !== 'renderMarkdown') return Reflect.get(target, property, receiver);
+					const renderMarkdown = Reflect.get(
+						target,
+						property,
+						receiver,
+					) as PipelineApi['renderMarkdown'];
+					return async (...args: Parameters<PipelineApi['renderMarkdown']>) => {
+						renderMarkdownCalls += 1;
+						return renderMarkdown(...args);
+					};
+				},
+			});
+		}
+		return loaded;
+	};
+
+	const page = require(resolve(NEXT_ROOT, 'app/posts/[slug]/page.tsx')) as PageModule;
+
+	async function Probe() {
+		const params = Promise.resolve({ slug: SLUG });
+		const [metadata, renderedPage] = await Promise.all([
+			page.generateMetadata({ params }),
+			page.default({ params }),
+		]);
+
+		return React.createElement(
+			React.Fragment,
+			null,
+			renderedPage,
+			React.createElement('meta', { name: 'probe', content: String(Boolean(metadata)) }),
+		);
+	}
+
+	async function renderProbe(): Promise<number> {
+		const callsBeforeRender = renderMarkdownCalls;
+		await new Promise<void>((resolveRender, rejectRender) => {
+			const sink = new Writable({
+				write(_chunk, _encoding, done) {
+					done();
+				},
+			});
+			const stream = renderToPipeableStream(
+				React.createElement(Probe),
+				{},
+				{
+					onError: rejectRender,
+				},
+			);
+			sink.on('finish', resolveRender);
+			sink.on('error', rejectRender);
+			stream.pipe(sink);
+		});
+		return renderMarkdownCalls - callsBeforeRender;
+	}
+
+	assert.equal(await renderProbe(), 1, 'metadata and page share one Markdown render per request');
+	assert.equal(await renderProbe(), 1, 'the Markdown render cache resets for the next request');
+	console.log('posts controls: request-scoped metadata/page render reuse');
+}
+
 function runParent(): void {
 	const fixtureRoot = mkdtempSync(join(tmpdir(), 'posts-controls-'));
 	const fixtureNext = join(fixtureRoot, 'next');
@@ -248,10 +347,34 @@ function runParent(): void {
 			);
 		}
 		process.stdout.write(child.stdout);
+
+		const rscChild = spawnSync(
+			process.execPath,
+			['--conditions', 'react-server', '--import', require.resolve('tsx'), SCRIPT_PATH],
+			{
+				cwd: fixtureNext,
+				encoding: 'utf8',
+				env: {
+					...process.env,
+					[CHILD_ENV]: '1',
+					[RSC_CHILD_ENV]: '1',
+					[MODULE_ENV]: POSTS_MODULE,
+					TSX_TSCONFIG_PATH: resolve(NEXT_ROOT, 'tsconfig.json'),
+				},
+			},
+		);
+
+		if (rscChild.status !== 0) {
+			throw new Error(
+				`posts RSC control child failed (${rscChild.status ?? rscChild.signal}):\n${rscChild.stdout}${rscChild.stderr}`,
+			);
+		}
+		process.stdout.write(rscChild.stdout);
 	} finally {
 		rmSync(fixtureRoot, { recursive: true, force: true });
 	}
 }
 
-if (process.env[CHILD_ENV] === '1') await runChild();
+if (process.env[RSC_CHILD_ENV] === '1') await runRscChild();
+else if (process.env[CHILD_ENV] === '1') await runChild();
 else runParent();

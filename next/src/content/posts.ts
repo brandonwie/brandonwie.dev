@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import matter from 'gray-matter';
+import { cache } from 'react';
 
 import { renderMarkdown, type Heading, type ParsedMarkdownSource } from '../markdown/pipeline';
 
@@ -149,7 +150,7 @@ export function listPostSlugs(locale: Locale): string[] {
  * post that failed a content-integrity gate actually withdraws it" — the direct
  * URL has to stop working, not just the listings.
  */
-export async function loadPost(slug: string, locale: Locale): Promise<LoadedPost | null> {
+async function loadPostUncached(slug: string, locale: Locale): Promise<LoadedPost | null> {
 	const file = findPostFile(slug, locale);
 	if (!file) return null;
 
@@ -169,3 +170,5 @@ export async function loadPost(slug: string, locale: Locale): Promise<LoadedPost
 		hasKoreanTranslation: findPostFile(slug, 'ko') !== null,
 	};
 }
+
+export const loadPost = cache(loadPostUncached);
