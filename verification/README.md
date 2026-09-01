@@ -24,8 +24,26 @@ byte-reproducible, and a re-capture rewrites the `bundle` block — it moved by
 three bytes once and nothing caught it, because `bundle` is RECORDED rather than
 compared and the AC9 weight evidence in
 [`./thresholds.md`](./thresholds.md) reads it. `pnpm migration:projection`
-enforces the rule against the parent blob read from git, and
+enforces the rule against the frozen parent blob, and
 `pnpm migration:projection:controls` proves it catches exactly that drift.
+
+## Frozen projection source
+
+The annotated tag `migration-baseline-svelte-34aa7e7-v1` points directly to
+blob `aad4ec1e0e25156778c3695d82bf9bf3c12b6fcb`. Its tag message records source
+commit `b4af9cb8a29532a94d976831c73602c8770cee3b`, source path
+`verification/baseline/svelte-34aa7e7.json`, and SHA-256
+`bb7231e83f057f204259164d78a43e00a76f38aa795625a9bd63590df2907fae`.
+
+`migration:projection` fails closed unless the ref is an annotated tag that
+peels to a blob with that exact object ID and digest and contains valid baseline
+JSON. Never retarget or delete the tag. A future measurement must create a new
+versioned tag. CI therefore keeps `fetch-depth: 0` so fresh checkouts receive
+the frozen tag. An existing clone that predates the tag must fetch it once:
+
+```bash
+git fetch origin tag migration-baseline-svelte-34aa7e7-v1
+```
 
 The baseline covers 366 pages, 4 site artifacts (`sitemap.xml`, `rss.xml`,
 `ko/rss.xml`, `_redirects`), 344 Pagefind fragments, bundle weights, and the

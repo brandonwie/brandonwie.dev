@@ -12,9 +12,10 @@
  *   INVARIANCE  the check MUST exit 0 on a change the projection permits
  *
  * Each control runs against a throwaway copy of the baseline under `tmp/`. The
- * committed file is never mutated, and the parent blob comes from git, so no
- * control can "pass" by editing the thing it is measured against.
+ * committed file is never mutated, and the parent blob comes from an immutable
+ * tag, so no control can "pass" by editing the thing it is measured against.
  */
+import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 import { runProjection } from './assert-baseline-projection.ts';
@@ -24,6 +25,13 @@ interface Control {
 	expect: 0 | 1 | 2;
 	what: string;
 	apply: (baseline: Record<string, never>) => void;
+}
+
+interface ResolverControl {
+	id: string;
+	expect: 2;
+	what: string;
+	run: () => number;
 }
 
 const SOURCE = 'verification/baseline/svelte-34aa7e7.json';
@@ -102,6 +110,45 @@ const CONTROLS: Control[] = [
 ];
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+const MALFORMED_BLOB = Buffer.from('{"pages":', 'utf8');
+const RESOLVER_CONTROLS: ResolverControl[] = [
+	{
+		id: 'BP-09',
+		expect: 2,
+		what: 'the frozen baseline tag is missing',
+		run: () =>
+			runProjection(SOURCE, 'refs/tags/migration-baseline-svelte-34aa7e7-missing-control', true),
+	},
+	{
+		id: 'BP-10',
+		expect: 2,
+		what: 'the frozen baseline ref is a commit instead of an annotated tag',
+		run: () => runProjection(SOURCE, 'HEAD', true),
+	},
+	{
+		id: 'BP-11',
+		expect: 2,
+		what: 'the frozen tag peels to an unexpected object ID',
+		run: () => runProjection(SOURCE, undefined, true, { expectedObjectId: '0'.repeat(40) }),
+	},
+	{
+		id: 'BP-12',
+		expect: 2,
+		what: 'the frozen blob has an unexpected SHA-256 digest',
+		run: () => runProjection(SOURCE, undefined, true, { expectedSha256: '0'.repeat(64) }),
+	},
+	{
+		id: 'BP-13',
+		expect: 2,
+		what: 'the frozen blob is malformed JSON',
+		run: () =>
+			runProjection(SOURCE, undefined, true, {
+				expectedSha256: createHash('sha256').update(MALFORMED_BLOB).digest('hex'),
+				readBlob: () => MALFORMED_BLOB,
+			}),
+	},
+];
+
 function main(): number {
 	if (!existsSync(SOURCE)) {
 		console.error(`FATAL: baseline not found: ${SOURCE}`);
@@ -117,6 +164,16 @@ function main(): number {
 	}
 
 	const failures: string[] = [];
+	for (const control of RESOLVER_CONTROLS) {
+		const code = control.run();
+		const ok = code === control.expect;
+		if (!ok)
+			failures.push(`${control.id} ${control.what}: exit ${code}, expected ${control.expect}`);
+		console.log(
+			`${ok ? 'PASS' : 'FAIL'}  ${control.id}  exit ${code} (expected ${control.expect})  ${control.what}`,
+		);
+	}
+
 	for (const control of CONTROLS) {
 		copyFileSync(SOURCE, SCRATCH);
 		const before = readFileSync(SCRATCH, 'utf8');
@@ -140,13 +197,14 @@ function main(): number {
 	}
 	rmSync(SCRATCH, { force: true });
 
-	console.log(`\n${CONTROLS.length} controls over the projection rule`);
+	const controlCount = RESOLVER_CONTROLS.length + CONTROLS.length;
+	console.log(`\n${controlCount} controls over the projection rule`);
 	if (failures.length) {
 		for (const line of failures) console.error(`CONTROL FAILED ${line}`);
-		console.error(`RESULT: ${failures.length}/${CONTROLS.length} control(s) failed`);
+		console.error(`RESULT: ${failures.length}/${controlCount} control(s) failed`);
 		return 1;
 	}
-	console.log(`RESULT: ${CONTROLS.length}/${CONTROLS.length} controls behaved as specified`);
+	console.log(`RESULT: ${controlCount}/${controlCount} controls behaved as specified`);
 	return 0;
 }
 
