@@ -83,29 +83,24 @@ const FONT_STYLESHEET =
  * Prefetch — the recorded decision for `data-sveltekit-preload-data="hover"`.
  *
  * That attribute is SvelteKit-only and has no Next attribute equivalent, so it
- * is DROPPED from `<body>` and the behaviour it configured is taken over by
- * `next/link`'s default prefetching. The behaviour change, stated rather than
- * absorbed:
+ * is DROPPED from `<body>`. This slice deliberately renders native anchors:
+ * the locale switch must cross root layouts with a full document navigation,
+ * and the small home/header/breadcrumb surface does not need speculative data.
+ * The behaviour change, stated rather than absorbed:
  *
  *   before  a link's data is fetched when the pointer enters it, or on touch
- *   after   a static route is fetched in full when the link enters the viewport
+ *   after   a static document is requested only when its link is activated
  *
- * Next's `prefetch` prop has no hover-only mode — `false` disables prefetching
- * on viewport entry AND on hover, which is strictly less than the baseline, and
- * `auto` (the default) is strictly more.
- * https://nextjs.org/docs/app/api-reference/components/link#prefetch
- *
- * The default is chosen: navigations get faster rather than slower, and every
- * prefetched payload on this site is a cacheable static file. The cost is
- * eagerness on link-dense routes — `/posts` lists 52+ posts — which is a
- * per-`<Link>` `prefetch={false}` decision when those routes are ported in
- * Slice 3, not a global one to take now.
+ * This is less eager than the baseline. The site-wide client-navigation and
+ * prefetch policy belongs to Slice 3, when link-dense routes such as `/posts`
+ * are actually present; this representative slice does not claim it early.
  *
  * This drops the `body:preload-data` shell key the comparator captures on all
- * 366 baseline pages. That is a deliberate difference and needs an
- * exception-ledger entry approved by Brandon; it is NOT self-approved here.
+ * 366 baseline pages. The four currently migrated route fingerprints are
+ * approved in the exception ledger; every future route needs its own
+ * route-specific fingerprint entry before this decision applies there.
  */
-export const PREFETCH_DECISION = 'next-link-default' as const;
+export const PREFETCH_DECISION = 'native-anchors-no-prefetch' as const;
 
 /**
  * The document shell. One instance per locale root layout.
@@ -121,10 +116,29 @@ export const PREFETCH_DECISION = 'next-link-default' as const;
  * removes the box from the layout and the accessibility tree, so dropping the
  * wrapper leaves the rendered document structure unchanged.
  */
-export function DocumentShell({ lang, children }: { lang: Locale; children: ReactNode }) {
+export function DocumentShell({
+	lang,
+	children,
+	title,
+	standaloneHead = false,
+}: {
+	lang: Locale;
+	children: ReactNode;
+	title?: string;
+	standaloneHead?: boolean;
+}) {
 	return (
 		<html lang={lang}>
 			<head>
+				{title ? <title>{title}</title> : null}
+				{standaloneHead ? (
+					<>
+						<meta name="color-scheme" content="dark" />
+						<meta name="theme-color" content="#13111c" />
+						<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+						<link rel="manifest" href="/site.webmanifest" />
+					</>
+				) : null}
 				<link rel="preconnect" href="https://fonts.googleapis.com" />
 				<link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
 				<link href={FONT_STYLESHEET} rel="stylesheet" />

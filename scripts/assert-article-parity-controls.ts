@@ -3,8 +3,8 @@
  *
  *   pnpm migration:article:controls
  *
- * `assert-article-parity.ts` reports six passing rows. That number is worth
- * nothing until each row has been observed to go red, which is the argument
+ * `assert-article-parity.ts` reports a row table. That table is worth nothing
+ * until each contract has been observed to go red, which is the argument
  * `migration-verify-controls.ts` makes for the comparator and
  * `assert-c13-shell-controls.ts` makes for the shell.
  *
@@ -24,6 +24,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 
+import { articleJsonLd } from '../next/src/content/article-json-ld.ts';
 import { heroBlockHtml } from '../next/src/content/hero.ts';
 import { ARTICLE_SLUG, runAssertions } from './assert-article-parity.ts';
 
@@ -33,7 +34,17 @@ interface Control {
 	id: string;
 	kind: Kind;
 	what: string;
-	apply: (html: string) => string;
+	target?: 'en' | 'ko' | 'hero' | 'cover' | 'default-cover';
+	remove?: boolean;
+	apply?: (html: string) => string;
+}
+
+function replaceJsonLdField(html: string, field: string, value: string): string {
+	return html.replace(
+		/(<script\b[^>]*type="application\/ld\+json"[^>]*>)([\s\S]*?)(<\/script>)/i,
+		(_, open, body, close) =>
+			`${open}${body.replace(new RegExp(`("${field}":")[^"]*(")`), `$1${value}$2`)}${close}`,
+	);
 }
 
 const CONTROLS: Control[] = [
@@ -164,11 +175,242 @@ const CONTROLS: Control[] = [
 				'<img width="2400" height="1260" alt="" src="$1"',
 			),
 	},
+	{
+		id: 'AP-17',
+		kind: 'DEFECT',
+		what: 'the Korean representative article is missing',
+		target: 'ko',
+		remove: true,
+	},
+	{
+		id: 'AP-18',
+		kind: 'DEFECT',
+		what: 'the Korean document declares the English language',
+		target: 'ko',
+		apply: (html) => html.replace('<html lang="ko"', '<html lang="en"'),
+	},
+	{
+		id: 'AP-19',
+		kind: 'DEFECT',
+		what: 'the Korean canonical points at the English article',
+		target: 'ko',
+		apply: (html) =>
+			html.replace(
+				/(<link[^>]*rel="canonical"[^>]*href=")[^"]*(")/,
+				`$1https://brandonwie.dev/posts/${ARTICLE_SLUG}$2`,
+			),
+	},
+	{
+		id: 'AP-20',
+		kind: 'DEFECT',
+		what: 'the Korean JSON-LD declares English',
+		target: 'ko',
+		apply: (html) => html.replace('"inLanguage":"ko-KR"', '"inLanguage":"en-US"'),
+	},
+	{
+		id: 'AP-21',
+		kind: 'DEFECT',
+		what: 'the English locale switch targets the wrong article',
+		apply: (html) =>
+			html.replace(
+				`href="/ko/posts/${ARTICLE_SLUG}" hrefLang="ko"`,
+				'href="/ko/posts/missing-translation" hrefLang="ko"',
+			),
+	},
+	{
+		id: 'AP-22',
+		kind: 'DEFECT',
+		what: 'the Korean skip link targets a missing id',
+		target: 'ko',
+		apply: (html) =>
+			html.replace(
+				'class="skip-link" href="#main-content"',
+				'class="skip-link" href="#missing-main"',
+			),
+	},
+	{
+		id: 'AP-23',
+		kind: 'DEFECT',
+		what: 'the Korean page loses its main landmark',
+		target: 'ko',
+		apply: (html) =>
+			html
+				.replace('<main id="main-content"', '<div id="main-content"')
+				.replace('</main>', '</div>'),
+	},
+	{
+		id: 'AP-24',
+		kind: 'DEFECT',
+		what: 'the Korean static table of contents is removed',
+		target: 'ko',
+		apply: (html) => html.replace('class="article-toc"', 'class="article-outline"'),
+	},
+	{
+		id: 'AP-25',
+		kind: 'DEFECT',
+		what: 'the Korean tag list is removed',
+		target: 'ko',
+		apply: (html) => html.replace('class="article-tags"', 'class="article-labels"'),
+	},
+	{
+		id: 'AP-26',
+		kind: 'DEFECT',
+		what: 'the Korean comments mount marker is removed',
+		target: 'ko',
+		apply: (html) => html.replace(' data-giscus-mount="true"', ''),
+	},
+	{
+		id: 'AP-27',
+		kind: 'DEFECT',
+		what: 'the English header links to a route the export does not contain',
+		apply: (html) =>
+			html.replace(`<a href="/posts/${ARTICLE_SLUG}">`, '<a href="/posts/missing-export">'),
+	},
+	{
+		id: 'AP-28',
+		kind: 'DEFECT',
+		what: 'the Korean boundary loads the Giscus client runtime',
+		target: 'ko',
+		apply: (html) =>
+			html.replace('</body>', '<script src="https://giscus.app/client.js"></script></body>'),
+	},
+	{
+		id: 'AP-29',
+		kind: 'DEFECT',
+		what: 'the English page contains a duplicate id',
+		apply: (html) => html.replace('id="comments-title"', 'id="article-toc-title"'),
+	},
+	{
+		id: 'AP-30',
+		kind: 'DEFECT',
+		what: 'the English table of contents targets a missing heading',
+		apply: (html) =>
+			html.replace('href="#why-giscus-over-the-alternatives"', 'href="#missing-article-heading"'),
+	},
+	{
+		id: 'AP-31',
+		kind: 'DEFECT',
+		what: 'the Korean article details are removed',
+		target: 'ko',
+		apply: (html) => html.replace('class="article-meta"', 'class="article-summary"'),
+	},
+	{
+		id: 'AP-32',
+		kind: 'DEFECT',
+		what: 'the exported hero image is missing',
+		target: 'hero',
+		remove: true,
+	},
+	{
+		id: 'AP-33',
+		kind: 'DEFECT',
+		what: 'the article-specific fallback cover is missing',
+		target: 'cover',
+		remove: true,
+	},
+	{
+		id: 'AP-34',
+		kind: 'DEFECT',
+		what: 'the default fallback cover is missing',
+		target: 'default-cover',
+		remove: true,
+	},
+	{
+		id: 'AP-35',
+		kind: 'DEFECT',
+		what: 'an internal link points at a directory with no exported document',
+		apply: (html) => html.replace('<a href="/">', '<a href="/ko">'),
+	},
+	{
+		id: 'AP-36',
+		kind: 'DEFECT',
+		what: 'an internal link uses dot segments to escape the export root',
+		apply: (html) => html.replace('<a href="/">', '<a href="/%2e%2e%2f%2e%2e%2fpackage.json">'),
+	},
+	{
+		id: 'AP-37',
+		kind: 'DEFECT',
+		what: 'one word of the Korean prose differs from its baseline',
+		target: 'ko',
+		apply: (html) => {
+			const prose = html.indexOf('prose-terminal');
+			if (prose === -1) return html;
+			const word = html.indexOf('Giscus', prose);
+			return word === -1 ? html : `${html.slice(0, word)}Disqus${html.slice(word + 6)}`;
+		},
+	},
+	{
+		id: 'AP-38',
+		kind: 'INVARIANCE',
+		what: 'metadata remains discoverable when the document has no closing head tag',
+		apply: (html) => html.replace('</head>', ''),
+	},
+	{
+		id: 'AP-39',
+		kind: 'DEFECT',
+		what: 'a category paragraph is inserted before the article title',
+		apply: (html) =>
+			html.replace(
+				/(<header\b[^>]*class="[^"]*\barticle-header\b[^"]*"[^>]*>)/,
+				'$1<p>frontend</p>',
+			),
+	},
+	{
+		id: 'AP-40',
+		kind: 'DEFECT',
+		what: 'JSON-LD datePublished differs from the baseline',
+		apply: (html) => replaceJsonLdField(html, 'datePublished', '2000-01-01T00:00:00.000Z'),
+	},
+	{
+		id: 'AP-41',
+		kind: 'DEFECT',
+		what: 'JSON-LD dateModified differs from the baseline',
+		apply: (html) => replaceJsonLdField(html, 'dateModified', '2000-01-01'),
+	},
+	{
+		id: 'AP-42',
+		kind: 'DEFECT',
+		what: 'the site header identity is removed while the article header remains',
+		apply: (html) => html.replace('class="site-header"', 'class="shell-header"'),
+	},
+	{
+		id: 'AP-43',
+		kind: 'DEFECT',
+		what: 'the site navigation identity is removed while article navigation remains',
+		apply: (html) => html.replace('class="site-nav"', 'class="shell-nav"'),
+	},
+	{
+		id: 'AP-44',
+		kind: 'DEFECT',
+		what: 'the site footer identity is removed while its landmark remains',
+		apply: (html) => html.replace('class="site-footer"', 'class="shell-footer"'),
+	},
+	{
+		id: 'AP-45',
+		kind: 'DEFECT',
+		what: 'the article shell identity is removed while its landmark remains',
+		apply: (html) => html.replace('class="article-shell"', 'class="content-shell"'),
+	},
 ];
 
-/** The one file the controls touch, so a no-op mutation is detectable. */
+/** Fingerprint the selected HTML or asset target so no-op mutations are detectable. */
 function fingerprint(file: string): string {
 	return createHash('sha256').update(readFileSync(file)).digest('hex');
+}
+
+function controlTarget(scratch: string, target: Control['target']): string {
+	switch (target) {
+		case 'ko':
+			return join(scratch, 'ko', 'posts', `${ARTICLE_SLUG}.html`);
+		case 'hero':
+			return join(scratch, 'hero', `${ARTICLE_SLUG}.png`);
+		case 'cover':
+			return join(scratch, 'og', `${ARTICLE_SLUG}.png`);
+		case 'default-cover':
+			return join(scratch, 'og', 'default.png');
+		default:
+			return join(scratch, 'posts', `${ARTICLE_SLUG}.html`);
+	}
 }
 
 async function main(): Promise<number> {
@@ -199,6 +441,30 @@ async function main(): Promise<number> {
 
 	mkdirSync('tmp', { recursive: true });
 	const failures: string[] = [];
+	const date = '2026-01-01';
+	const updated = '2026-02-02';
+	const jsonLdMeta = {
+		title: 'Date fallback control',
+		description: 'Proves Article dateModified fallback behavior',
+		date,
+		tags: ['control'],
+		category: 'testing',
+	};
+	const blankUpdated = JSON.parse(
+		articleJsonLd('date-fallback-control', { ...jsonLdMeta, updated: '' }, 'en'),
+	).dateModified;
+	const explicitUpdated = JSON.parse(
+		articleJsonLd('date-fallback-control', { ...jsonLdMeta, updated }, 'en'),
+	).dateModified;
+	const dateFallbackOk = blankUpdated === date && explicitUpdated === updated;
+	if (!dateFallbackOk) {
+		failures.push(
+			`AP-46 dateModified fallback: blank=${String(blankUpdated)}, explicit=${String(explicitUpdated)}`,
+		);
+	}
+	console.log(
+		`${dateFallbackOk ? 'PASS' : 'FAIL'}  AP-46  DEFECT     blank updated falls back to date while nonblank updated is preserved`,
+	);
 	const acceptedUnsafeSlugs = ["quote'slug", 'quote"slug'].filter((slug) => {
 		try {
 			heroBlockHtml(slug);
@@ -218,13 +484,15 @@ async function main(): Promise<number> {
 	for (const control of CONTROLS) {
 		rmSync(scratch, { recursive: true, force: true });
 		cpSync(source, scratch, { recursive: true });
-		const file = join(scratch, 'posts', `${ARTICLE_SLUG}.html`);
+		const file = controlTarget(scratch, control.target);
 		const before = fingerprint(file);
-		writeFileSync(file, control.apply(readFileSync(file, 'utf8')));
+		if (control.remove) rmSync(file);
+		else if (control.apply) writeFileSync(file, control.apply(readFileSync(file, 'utf8')));
 		// A mutation that silently matched nothing turns an INVARIANCE control
 		// into a tautology and a DEFECT control into a coincidence. The shell
 		// suite has caught this twice; it is not a hypothetical.
-		if (before === fingerprint(file)) {
+		const changed = control.remove ? !existsSync(file) : before !== fingerprint(file);
+		if (!changed) {
 			failures.push(`${control.id} ${control.what}: the mutation changed nothing`);
 			console.log(
 				`FAIL  ${control.id}  ${control.kind.padEnd(10)} NO-OP MUTATION  ${control.what}`,
@@ -241,8 +509,8 @@ async function main(): Promise<number> {
 	}
 	rmSync(scratch, { recursive: true, force: true });
 
-	const totalControls = CONTROLS.length + 1;
-	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length + 1;
+	const totalControls = CONTROLS.length + 2;
+	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length + 2;
 	console.log(
 		`\n${totalControls} controls: ${defects} defect (must exit 1), ${totalControls - defects} invariance (must exit 0)`,
 	);

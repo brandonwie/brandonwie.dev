@@ -214,7 +214,7 @@ async function runChild(): Promise<void> {
 async function runRscChild(): Promise<void> {
 	type CjsLoad = (this: unknown, request: string, parent: unknown, isMain: boolean) => unknown;
 	type PipelineApi = typeof import('../src/markdown/pipeline');
-	type PageModule = typeof import('../app/posts/[slug]/page');
+	type ArticleModule = typeof import('../src/content/article');
 
 	const React = require('react') as typeof import('react');
 	const { Writable } = require('node:stream') as typeof import('node:stream');
@@ -265,13 +265,12 @@ async function runRscChild(): Promise<void> {
 		return loaded;
 	};
 
-	const page = require(resolve(NEXT_ROOT, 'app/posts/[slug]/page.tsx')) as PageModule;
+	const article = require(resolve(NEXT_ROOT, 'src/content/article.tsx')) as ArticleModule;
 
 	async function Probe() {
-		const params = Promise.resolve({ slug: SLUG });
 		const [metadata, renderedPage] = await Promise.all([
-			page.generateMetadata({ params }),
-			page.default({ params }),
+			article.generateArticleMetadata(SLUG, 'en'),
+			article.Article({ slug: SLUG, locale: 'en' }),
 		]);
 
 		return React.createElement(
