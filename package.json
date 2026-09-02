@@ -28,6 +28,8 @@
 		"migration:article:controls": "tsx scripts/assert-article-parity-controls.ts",
 		"migration:publishing": "tsx scripts/assert-publishing-surfaces.ts",
 		"migration:publishing:controls": "tsx scripts/assert-publishing-surfaces-controls.ts",
+		"migration:feed": "tsx scripts/assert-feed-redirects.ts",
+		"migration:feed:controls": "tsx scripts/assert-feed-redirects-controls.ts",
 		"migration:projection": "tsx scripts/assert-baseline-projection.ts",
 		"migration:projection:controls": "tsx scripts/assert-baseline-projection-controls.ts",
 		"migration:typography": "tsx --tsconfig next/tsconfig.json next/scripts/assert-corpus-typography.ts",

@@ -253,3 +253,119 @@
 	cursor: pointer;
 	padding: 0.625rem 0.875rem;
 }
+
+/* /feed and /ko/feed — `src/lib/components/SocialFeedPage.svelte` <style> block,
+   ported verbatim minus Svelte's scoping hash. The design variables resolve
+   through the `src/app.css` import at the top of this file. */
+.feed {
+	max-width: 44rem;
+	margin: 0 auto;
+	padding: 40px 1.5rem 64px;
+}
+
+.feed__head {
+	margin-bottom: 32px;
+}
+
+.crumb {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--faint);
+}
+
+.feed__title {
+	margin-top: 8px;
+	font-family: var(--font-sans);
+	font-size: 28px;
+	font-weight: 700;
+	color: var(--ink);
+}
+
+.feed__lede {
+	margin-top: 8px;
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--muted);
+}
+
+.feed__empty {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--faint);
+}
+
+.feed__list {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.campaign {
+	padding: 16px 18px;
+	border: 1px solid var(--line2);
+	border-radius: 12px;
+	background: color-mix(in srgb, var(--panel) 45%, transparent);
+}
+
+.campaign__meta {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--faint);
+}
+
+.campaign__id {
+	color: var(--iris);
+}
+
+.campaign__topic {
+	margin-top: 6px;
+	font-family: var(--font-sans);
+	font-size: 17px;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--ink);
+}
+
+.campaign__links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 12px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.chip {
+	display: inline-block;
+	padding: 4px 10px;
+	border: 1px solid var(--line2);
+	border-radius: 999px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--muted);
+	text-decoration: none;
+	transition:
+		border-color 0.2s,
+		color 0.2s;
+}
+
+.chip:hover {
+	border-color: var(--foam);
+	color: var(--foam);
+}
+
+.chip--canonical {
+	border-color: color-mix(in srgb, var(--gold) 55%, transparent);
+	color: var(--gold);
+}
+
+.chip--blog {
+	border-color: color-mix(in srgb, var(--iris) 55%, transparent);
+	color: var(--iris);
+}
