@@ -38,6 +38,14 @@ interface Control {
 	apply?: (html: string) => string;
 }
 
+function replaceJsonLdField(html: string, field: string, value: string): string {
+	return html.replace(
+		/(<script\b[^>]*type="application\/ld\+json"[^>]*>)([\s\S]*?)(<\/script>)/i,
+		(_, open, body, close) =>
+			`${open}${body.replace(new RegExp(`("${field}":")[^"]*(")`), `$1${value}$2`)}${close}`,
+	);
+}
+
 const CONTROLS: Control[] = [
 	{
 		id: 'AP-01',
@@ -345,6 +353,18 @@ const CONTROLS: Control[] = [
 				/(<header\b[^>]*class="[^"]*\barticle-header\b[^"]*"[^>]*>)/,
 				'$1<p>frontend</p>',
 			),
+	},
+	{
+		id: 'AP-40',
+		kind: 'DEFECT',
+		what: 'JSON-LD datePublished differs from the baseline',
+		apply: (html) => replaceJsonLdField(html, 'datePublished', '2000-01-01T00:00:00.000Z'),
+	},
+	{
+		id: 'AP-41',
+		kind: 'DEFECT',
+		what: 'JSON-LD dateModified differs from the baseline',
+		apply: (html) => replaceJsonLdField(html, 'dateModified', '2000-01-01'),
 	},
 ];
 

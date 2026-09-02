@@ -269,6 +269,7 @@ function shellProblems(html: string, locale: 'en' | 'ko'): string[] {
 
 function metadataProblems(
 	html: string,
+	baselineHtml: string,
 	expected: { canonical: string; locale: string; language: string },
 ): string[] {
 	const englishUrl = `https://brandonwie.dev/posts/${ARTICLE_SLUG}`;
@@ -287,6 +288,7 @@ function metadataProblems(
 	if (headMeta(html, 'og:url') !== expected.canonical) problems.push('og:url mismatch');
 	if (headMeta(html, 'og:locale') !== expected.locale) problems.push('og:locale mismatch');
 	const data = jsonLd(html);
+	const baselineData = jsonLd(baselineHtml);
 	const mainEntity = data?.mainEntityOfPage as Record<string, unknown> | undefined;
 	if (!data) problems.push('JSON-LD missing or invalid');
 	else {
@@ -294,6 +296,14 @@ function metadataProblems(
 		if (mainEntity?.['@id'] !== expected.canonical) problems.push('JSON-LD canonical mismatch');
 		if (typeof data.headline !== 'string' || data.headline.length === 0) {
 			problems.push('JSON-LD headline missing');
+		}
+		for (const field of ['datePublished', 'dateModified'] as const) {
+			const baselineValue = baselineData?.[field];
+			if (typeof baselineValue !== 'string' || baselineValue.length === 0) {
+				problems.push(`baseline JSON-LD ${field} missing or invalid`);
+			} else if (data[field] !== baselineValue) {
+				problems.push(`JSON-LD ${field} mismatch`);
+			}
 		}
 	}
 	return problems;
@@ -549,13 +559,13 @@ export async function runAssertions(
 	}
 
 	const metadataIssues = [
-		...metadataProblems(cand, {
+		...metadataProblems(cand, base, {
 			canonical: `https://brandonwie.dev/posts/${ARTICLE_SLUG}`,
 			locale: 'en_US',
 			language: 'en-US',
 		}).map((problem) => `en: ${problem}`),
 		...(candKo
-			? metadataProblems(candKo, {
+			? metadataProblems(candKo, baseKo, {
 					canonical: `https://brandonwie.dev/ko/posts/${ARTICLE_SLUG}`,
 					locale: 'ko_KR',
 					language: 'ko-KR',

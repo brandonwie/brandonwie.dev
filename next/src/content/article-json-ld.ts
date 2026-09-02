@@ -1,6 +1,6 @@
 import type { Locale, PostFrontmatter } from './posts';
 import { SITE_AUTHOR, SITE_URL, absoluteUrl } from '../../../src/lib/seo';
-import { articlePath } from './article-contract';
+import { articlePath, sourceDate } from './article-contract';
 
 export function articleJsonLd(slug: string, meta: PostFrontmatter, locale: Locale): string {
 	return JSON.stringify({
@@ -8,8 +8,8 @@ export function articleJsonLd(slug: string, meta: PostFrontmatter, locale: Local
 		'@type': 'Article',
 		headline: meta.title,
 		description: meta.description,
-		datePublished: meta.date,
-		dateModified: meta.updated || meta.date,
+		datePublished: sourceDate(meta.date),
+		dateModified: sourceDate(meta.updated ?? meta.date),
 		image: `${SITE_URL}/og/${slug}.png`,
 		author: { '@type': 'Person', name: SITE_AUTHOR, url: SITE_URL },
 		mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(articlePath(slug, locale)) },

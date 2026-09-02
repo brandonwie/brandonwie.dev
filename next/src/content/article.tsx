@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../../../src/lib/seo';
-import { articlePath } from './article-contract';
+import { articlePath, sourceDate } from './article-contract';
 import { articleJsonLd } from './article-json-ld';
 import { heroBlockHtml } from './hero';
 import { loadPost, type Locale } from './posts';
@@ -39,11 +39,6 @@ const COPY = {
 		commentsStatus: 'Giscus 런타임을 마이그레이션하면 이곳에 댓글이 표시됩니다.',
 	},
 } as const;
-
-function sourceDate(value: string | Date | undefined): string | undefined {
-	if (value === undefined) return undefined;
-	return value instanceof Date ? value.toISOString() : String(value);
-}
 
 function displayDate(value: string | Date, locale: Locale): string {
 	return new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-US', {
