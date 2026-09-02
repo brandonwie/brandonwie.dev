@@ -156,6 +156,20 @@ const CONTROLS: Control[] = [
 		target: 'fragment:en',
 		remove: true,
 	},
+	{
+		id: 'PS-13',
+		kind: 'DEFECT',
+		what: 'the English fragment carries category=wrong (the category filter dropped or misplaced)',
+		target: 'fragment:en',
+		applyFragment: (f) => ({ ...f, filters: { ...f.filters, category: ['wrong'] } }),
+	},
+	{
+		id: 'PS-14',
+		kind: 'DEFECT',
+		what: 'the English fragment body is empty (prose not indexed)',
+		target: 'fragment:en',
+		applyFragment: (f) => ({ ...f, content: '' }),
+	},
 ];
 
 function fingerprint(file: string): string {
