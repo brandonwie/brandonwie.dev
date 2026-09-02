@@ -255,6 +255,18 @@ function fingerprint(file: string): string {
 	return createHash('sha256').update(readFileSync(file)).digest('hex');
 }
 
+/**
+ * Run the FR control lattice against a scratch copy of the candidate export.
+ *
+ * CLI: `tsx scripts/assert-feed-redirects-controls.ts [candidateDir] [baselineDir]`
+ * (defaults `next/build` and `build`). Every control mutates a fresh
+ * dereferenced copy under `tmp/` and reruns `runAssertions`; a DEFECT must
+ * exit 1, an INVARIANCE or BASELINE must exit 0, and a mutation that changes
+ * no bytes is reported as a failed control.
+ *
+ * @returns 0 when every control behaved as specified, 1 otherwise, 2 when a
+ *   build is missing and the lattice could not run
+ */
 async function main(): Promise<number> {
 	const candidate = process.argv[2] ?? 'next/build';
 	const baseline = process.argv[3] ?? 'build';

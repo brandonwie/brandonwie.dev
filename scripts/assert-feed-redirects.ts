@@ -315,6 +315,17 @@ function diffCampaigns(expected: Campaign[], actual: Campaign[]): string[] {
 	return problems;
 }
 
+/**
+ * Run the C8 remainder rows against a candidate Next export.
+ *
+ * @param candidateDir - the Next export root (normally `next/build`)
+ * @param baselineDir - the SvelteKit build root the page-owned values are read
+ *   from (normally `build`); the frozen `_redirects` hash comes from the
+ *   baseline JSON, not from this directory
+ * @param quiet - suppress the per-row log lines (the controls runner sets it)
+ * @returns 0 when every row passes, 1 when at least one row fails, 2 when a
+ *   build or the frozen baseline is missing and nothing could be asserted
+ */
 export async function runAssertions(
 	candidateDir: string,
 	baselineDir: string,

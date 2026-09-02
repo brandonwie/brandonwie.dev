@@ -97,6 +97,15 @@ function blogHref(slug: string, path: string): string {
 	return `${path.startsWith('/ko') ? '/ko' : ''}/posts/${slug}`;
 }
 
+/**
+ * Head metadata for the feed hub: title, description and canonical only.
+ *
+ * NOTE: no `alternates.languages` (hreflang) and no `openGraph` block on
+ * purpose. The SvelteKit feed pages emit neither — the frozen baseline records
+ * `pages["/feed"].alternates = []` and `og = {}` for both locales — so adding
+ * them here would be a divergence from the parity oracle, not a fix. Whether
+ * the chrome should gain them is a Slice 3 shell decision.
+ */
 export function generateFeedMetadata(locale: Locale): Metadata {
 	const copy = COPY[locale];
 	return {
@@ -108,6 +117,14 @@ export function generateFeedMetadata(locale: Locale): Metadata {
 	};
 }
 
+/**
+ * The `/feed` (or `/ko/feed`) page body: crumb, title, lede and the campaign
+ * cards from the shared snapshot. Renders inside the site shell's
+ * `<main id="main-content">`.
+ *
+ * @param locale - selects the `COPY` strings, the crumb path and the blog-chip
+ *   href prefix; both locales render the same EN-only campaign snapshot
+ */
 export function SocialFeedPage({ locale }: { locale: Locale }) {
 	const copy = COPY[locale];
 	const path = feedPath(locale);
