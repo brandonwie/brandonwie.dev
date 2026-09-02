@@ -54,6 +54,8 @@ interface Control {
 	remove?: boolean;
 	apply?: (text: string) => string;
 	applyFragment?: (fragment: Fragment) => Fragment;
+	/** `fragment:synthetic` only: a new fragment written into the scratch index. */
+	writeFragment?: Fragment;
 }
 
 const CONTROLS: Control[] = [
@@ -195,6 +197,67 @@ const CONTROLS: Control[] = [
 		target: 'rss.xml',
 		remove: true,
 	},
+	{
+		id: 'PS-18',
+		kind: 'DEFECT',
+		what: 'the Korean fragment title is the Pagefind fallback rather than the article title',
+		target: 'fragment:ko',
+		applyFragment: (f) => ({ ...f, meta: { ...f.meta, title: 'Untitled' } }),
+	},
+	{
+		id: 'PS-19',
+		kind: 'DEFECT',
+		what: 'the Korean fragment carries category=wrong (the category filter dropped or misplaced)',
+		target: 'fragment:ko',
+		applyFragment: (f) => ({ ...f, filters: { ...f.filters, category: ['wrong'] } }),
+	},
+	{
+		id: 'PS-20',
+		kind: 'DEFECT',
+		what: 'the Korean fragment body is empty (prose not indexed)',
+		target: 'fragment:ko',
+		applyFragment: (f) => ({ ...f, content: '' }),
+	},
+	{
+		id: 'PS-21',
+		kind: 'DEFECT',
+		what: 'comments-shell text leaks into the Korean index (an ignore region dropped)',
+		target: 'fragment:ko',
+		applyFragment: (f) => ({ ...f, content: `${f.content} ${ARTICLE_FRAGMENTS.ko.ignored[0]}` }),
+	},
+	{
+		id: 'PS-22',
+		kind: 'DEFECT',
+		what: 'the Korean fragment is missing (article not indexed)',
+		target: 'fragment:ko',
+		remove: true,
+	},
+	{
+		id: 'PS-23',
+		kind: 'DEFECT',
+		what: 'a non-post page is indexed (the body marker leaked onto site chrome)',
+		target: 'fragment:synthetic',
+		writeFragment: {
+			url: '/about.html',
+			content: 'About Brandon Wie',
+			word_count: 3,
+			filters: { lang: ['en'] },
+			meta: { title: 'About' },
+		},
+	},
+	{
+		id: 'PS-24',
+		kind: 'DEFECT',
+		what: 'the English article is indexed twice (duplicate fragment for one url)',
+		target: 'fragment:synthetic',
+		writeFragment: {
+			url: ARTICLE_FRAGMENTS.en.url,
+			content: `en ${ARTICLE_FRAGMENTS.en.prose}`,
+			word_count: 6,
+			filters: { lang: ['en'], category: [ARTICLE_FRAGMENTS.en.category] },
+			meta: { title: ARTICLE_FRAGMENTS.en.title },
+		},
+	},
 ];
 
 function fingerprint(file: string): string {
@@ -241,19 +304,29 @@ async function main(): Promise<number> {
 		const scratch = join('tmp', `publishing-control-${control.id}`);
 		rmSync(scratch, { recursive: true, force: true });
 		mkdirSync(scratch, { recursive: true });
-		cpSync(candidate, scratch, { recursive: true });
+		// dereference: a symlink inside the candidate would otherwise be copied as a
+		// link and a later mutation could write through it to a path outside tmp/.
+		cpSync(candidate, scratch, { recursive: true, dereference: true });
 
-		const file = control.target.startsWith('fragment:')
-			? fragmentFile(scratch, control.target.slice('fragment:'.length) as 'en' | 'ko')
-			: join(scratch, control.target);
+		const file =
+			control.target === 'fragment:synthetic'
+				? join(scratch, 'pagefind', 'fragment', `synthetic_${control.id}.pf_fragment`)
+				: control.target.startsWith('fragment:')
+					? fragmentFile(scratch, control.target.slice('fragment:'.length) as 'en' | 'ko')
+					: join(scratch, control.target);
 		const before = existsSync(file) ? fingerprint(file) : null;
 		if (control.remove) rmSync(file);
+		else if (control.writeFragment) writeFileSync(file, encodeFragment(control.writeFragment));
 		else if (control.applyFragment)
 			writeFileSync(file, encodeFragment(control.applyFragment(decodeFragment(file))));
 		else if (control.apply) writeFileSync(file, control.apply(readFileSync(file, 'utf8')));
 		// A mutation that matched nothing turns an INVARIANCE into a tautology
 		// and a DEFECT into a coincidence; the sibling suites caught this twice.
-		const changed = control.remove ? !existsSync(file) : before !== fingerprint(file);
+		const changed = control.remove
+			? !existsSync(file)
+			: control.writeFragment
+				? before === null && existsSync(file)
+				: before !== fingerprint(file);
 		if (!changed) {
 			failures.push(`${control.id} ${control.what}: the mutation changed nothing`);
 			console.log(

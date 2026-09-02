@@ -232,11 +232,17 @@ export async function runAssertions(
 	// --- S2-S3  the representative article's fragments ------------------------
 	for (const [locale, expected] of Object.entries(ARTICLE_FRAGMENTS)) {
 		const row = `S${locale === 'en' ? 2 : 3} ${locale.toUpperCase()} article fragment`;
-		const fragment = fragments.find((f) => f.url === expected.url);
-		if (!fragment) {
-			fail(row, `no fragment with url ${expected.url}`);
+		const matches = fragments.filter((f) => f.url === expected.url);
+		if (matches.length !== 1) {
+			fail(
+				row,
+				matches.length === 0
+					? `no fragment with url ${expected.url}`
+					: `${matches.length} fragments share url ${expected.url}; search would return the article twice`,
+			);
 			continue;
 		}
+		const fragment = matches[0];
 		const problems: string[] = [];
 		if (fragment.meta?.title !== expected.title)
 			problems.push(
