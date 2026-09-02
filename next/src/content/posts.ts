@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 
 import matter from 'gray-matter';
 import { cache } from 'react';
@@ -192,16 +192,20 @@ export interface PublishedPost {
  */
 export function listPublishedPosts(locale: Locale): PublishedPost[] {
 	const root = join(CONTENT_ROOT, locale);
-	return listPostFiles(locale)
-		.map((file) => ({ file, relativePath: relative(root, file) }))
-		.sort((a, b) =>
-			a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0,
-		)
-		.map(({ file, relativePath }) => ({ file, relativePath, parsed: readParsedPost(file) }))
-		.filter(({ parsed }) => parsed.data.draft !== true)
-		.map(({ file, relativePath, parsed }) => ({
-			slug: file.split('/').pop()!.replace(/\.md$/, ''),
-			relativePath,
-			frontmatter: parsed.data as PostFrontmatter,
-		}));
+	return (
+		listPostFiles(locale)
+			// POSIX separators regardless of host OS: the order and the slug below are
+			// contracts against Vite's glob keys, which are always `/`-joined.
+			.map((file) => ({ file, relativePath: relative(root, file).split(sep).join('/') }))
+			.sort((a, b) =>
+				a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0,
+			)
+			.map(({ file, relativePath }) => ({ file, relativePath, parsed: readParsedPost(file) }))
+			.filter(({ parsed }) => parsed.data.draft !== true)
+			.map(({ relativePath, parsed }) => ({
+				slug: relativePath.split('/').pop()!.replace(/\.md$/, ''),
+				relativePath,
+				frontmatter: parsed.data as PostFrontmatter,
+			}))
+	);
 }
