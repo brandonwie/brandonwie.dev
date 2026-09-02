@@ -24,6 +24,9 @@ const nextConfig: NextConfig = {
 	distDir: 'build',
 	trailingSlash: false,
 	images: { unoptimized: true },
+	experimental: {
+		globalNotFound: true,
+	},
 };
 
 export default nextConfig;

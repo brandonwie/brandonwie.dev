@@ -329,7 +329,7 @@ export async function runAssertions(
 			pass(
 				'preload-data decision',
 				`dropped on ${candCount}/${candCount} candidate pages; present on ${inBaseline}/${baseCount} baseline pages. ` +
-					`Recorded decision: next/link default prefetching replaces it (hover/tap -> viewport entry). ` +
+					`Recorded decision: native anchors perform no speculative prefetch in this slice. ` +
 					`This is a DELIBERATE difference and needs an exception-ledger approval it does not yet have.`,
 			);
 		}

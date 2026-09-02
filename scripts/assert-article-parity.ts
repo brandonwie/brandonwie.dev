@@ -5,11 +5,11 @@
  *   pnpm migration:article <candidate-dir> <baseline-dir>
  *
  * Why this exists when a parity comparator already runs: the comparator hashes
- * the text of a WHOLE PAGE, and the candidate has no site chrome yet, so the
- * one field that would have caught the prose regression reads as a
- * chrome-shaped difference and the regression hides inside it. Three defects
- * shipped that way in the first port of this article, and the third is the
- * reason this file is scoped to the article rather than the page:
+ * the text of a WHOLE PAGE. During the first article port the candidate had no
+ * site chrome, so the one field that would have caught the prose regression
+ * read as a chrome-shaped difference and the regression hid inside it. Three
+ * defects shipped that way, and the third is the reason this file is scoped to
+ * the article rather than the page:
  *
  *   1. `article:published_time` was the runtime's LOCALE date string, so the
  *      built output depended on the timezone of the build machine.
@@ -22,8 +22,8 @@
  * The comparator now sees all three (`articleMeta`, and `<img>` capture widened
  * to the size pair, the hints and handler presence; controls 35-40 pin them).
  * This file asserts the SAME facts a second way, directly against the built
- * HTML, and adds the two the comparator structurally cannot make: prose scoped
- * below the chrome, and the shape of the fallback chain.
+ * HTML, and owns the representative article's shell, locale, link, media and
+ * fallback-chain contracts that the whole-page comparator cannot isolate.
  *
  * Three exit codes:
  *
@@ -31,8 +31,8 @@
  *   1   at least one row FAILED
  *   2   the script could not run at all (a build or the article is missing)
  */
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { join, resolve, sep } from 'node:path';
 
 export const ARTICLE_SLUG = 'giscus-sveltekit-integration';
 
@@ -149,6 +149,179 @@ function smartCounts(text: string): Record<string, number> {
 	return out;
 }
 
+function tagsOf(html: string, name: string): string[] {
+	return [...html.matchAll(new RegExp(`<${name}\\b[^>]*>`, 'gi'))].map((match) => match[0]);
+}
+
+function tagWith(html: string, name: string, attribute: string, value: string): string | null {
+	return tagsOf(html, name).find((tag) => attrOf(tag, attribute) === value) ?? null;
+}
+
+function classToken(html: string, name: string, token: string): string | null {
+	return (
+		tagsOf(html, name).find((tag) =>
+			(attrOf(tag, 'class') ?? '').split(/\s+/).filter(Boolean).includes(token),
+		) ?? null
+	);
+}
+
+function headLink(html: string, rel: string, hrefLang?: string): string | null {
+	const head = html.slice(0, html.search(/<\/head>/i) + 7 || html.length);
+	const tag = tagsOf(head, 'link').find(
+		(candidate) =>
+			attrOf(candidate, 'rel') === rel &&
+			(hrefLang === undefined || attrOf(candidate, 'hreflang') === hrefLang),
+	);
+	return tag ? decodeEntities(attrOf(tag, 'href') ?? '') : null;
+}
+
+function headMeta(html: string, property: string): string | null {
+	const head = html.slice(0, html.search(/<\/head>/i) + 7 || html.length);
+	const tag = tagsOf(head, 'meta').find((candidate) => attrOf(candidate, 'property') === property);
+	return tag ? decodeEntities(attrOf(tag, 'content') ?? '') : null;
+}
+
+function jsonLd(html: string): Record<string, unknown> | null {
+	const body = html.match(
+		/<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i,
+	)?.[1];
+	if (!body) return null;
+	try {
+		return JSON.parse(body) as Record<string, unknown>;
+	} catch {
+		return null;
+	}
+}
+
+function duplicateIds(html: string): string[] {
+	const ids = [...html.matchAll(/\bid="([^"]+)"/gi)].map((match) => match[1]);
+	return [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+}
+
+function fragmentProblems(html: string): string[] {
+	const ids = new Set([...html.matchAll(/\bid="([^"]+)"/gi)].map((match) => match[1]));
+	return tagsOf(html, 'a')
+		.map((tag) => decodeEntities(attrOf(tag, 'href') ?? ''))
+		.filter((href) => href.startsWith('#') && href.length > 1 && !ids.has(href.slice(1)))
+		.map((href) => `${href} has no matching id`);
+}
+
+function exportedFileExists(candidateDir: string, candidate: string): boolean {
+	const root = resolve(candidateDir);
+	const file = resolve(root, candidate);
+	if (file !== root && !file.startsWith(`${root}${sep}`)) return false;
+	try {
+		return statSync(file).isFile();
+	} catch {
+		return false;
+	}
+}
+
+function exportedRouteExists(candidateDir: string, href: string): boolean {
+	let pathname: string;
+	try {
+		pathname = decodeURIComponent(new URL(href, 'https://static.invalid').pathname);
+	} catch {
+		return false;
+	}
+	if (pathname === '/') return exportedFileExists(candidateDir, 'index.html');
+	const route = pathname.replace(/^\/+/, '').replace(/\/$/, '');
+	return [`${route}.html`, join(route, 'index.html'), route].some((candidate) =>
+		exportedFileExists(candidateDir, candidate),
+	);
+}
+
+function internalLinkProblems(candidateDir: string, html: string): string[] {
+	return tagsOf(html, 'a')
+		.map((tag) => decodeEntities(attrOf(tag, 'href') ?? ''))
+		.filter((href) => href.startsWith('/') && !href.startsWith('//'))
+		.filter((href) => !exportedRouteExists(candidateDir, href))
+		.map((href) => `${href} has no exported target`);
+}
+
+function shellProblems(html: string, locale: 'en' | 'ko'): string[] {
+	const problems: string[] = [];
+	const htmlTag = tagsOf(html, 'html')[0] ?? '';
+	if (attrOf(htmlTag, 'lang') !== locale) problems.push(`html lang is not ${locale}`);
+	if (tagsOf(html, 'main').length !== 1) problems.push('expected exactly one main landmark');
+	if (tagsOf(html, 'h1').length !== 1) problems.push('expected exactly one h1');
+	if (tagsOf(html, 'header').length < 1) problems.push('site header missing');
+	if (tagsOf(html, 'nav').length < 1) problems.push('navigation landmark missing');
+	if (tagsOf(html, 'footer').length !== 1) problems.push('site footer missing');
+	if (tagsOf(html, 'article').length !== 1) problems.push('article landmark missing');
+	const skip = classToken(html, 'a', 'skip-link');
+	if (!skip || attrOf(skip, 'href') !== '#main-content') problems.push('skip link is missing');
+	if (!tagWith(html, 'main', 'id', 'main-content')) problems.push('skip target is missing');
+	if (duplicateIds(html).length > 0)
+		problems.push(`duplicate ids: ${duplicateIds(html).join(', ')}`);
+	problems.push(...fragmentProblems(html));
+	const firstH1 = html.search(/<h1\b/i);
+	const firstH2 = html.search(/<h2\b/i);
+	if (firstH2 !== -1 && (firstH1 === -1 || firstH2 < firstH1)) problems.push('h2 precedes h1');
+	return problems;
+}
+
+function metadataProblems(
+	html: string,
+	expected: { canonical: string; locale: string; language: string },
+): string[] {
+	const englishUrl = `https://brandonwie.dev/posts/${ARTICLE_SLUG}`;
+	const koreanUrl = `https://brandonwie.dev/ko/posts/${ARTICLE_SLUG}`;
+	const problems: string[] = [];
+	if (headLink(html, 'canonical') !== expected.canonical) problems.push('canonical URL mismatch');
+	for (const [language, url] of [
+		['en', englishUrl],
+		['ko', koreanUrl],
+		['x-default', englishUrl],
+	] as const) {
+		if (headLink(html, 'alternate', language) !== url) {
+			problems.push(`hreflang ${language} mismatch`);
+		}
+	}
+	if (headMeta(html, 'og:url') !== expected.canonical) problems.push('og:url mismatch');
+	if (headMeta(html, 'og:locale') !== expected.locale) problems.push('og:locale mismatch');
+	const data = jsonLd(html);
+	const mainEntity = data?.mainEntityOfPage as Record<string, unknown> | undefined;
+	if (!data) problems.push('JSON-LD missing or invalid');
+	else {
+		if (data.inLanguage !== expected.language) problems.push('JSON-LD inLanguage mismatch');
+		if (mainEntity?.['@id'] !== expected.canonical) problems.push('JSON-LD canonical mismatch');
+		if (typeof data.headline !== 'string' || data.headline.length === 0) {
+			problems.push('JSON-LD headline missing');
+		}
+	}
+	return problems;
+}
+
+function chromeProblems(html: string): string[] {
+	const problems: string[] = [];
+	if (!classToken(html, 'ol', 'breadcrumb-list')) problems.push('breadcrumb missing');
+	if (!classToken(html, 'ul', 'article-tags')) problems.push('tags missing');
+	if (!classToken(html, 'nav', 'article-toc')) problems.push('static table of contents missing');
+	if (!classToken(html, 'div', 'article-meta')) problems.push('article metadata missing');
+	if (tagsOf(html, 'time').length < 1) problems.push('machine-readable date missing');
+	return problems;
+}
+
+function commentsProblems(html: string, locale: 'en' | 'ko'): string[] {
+	const problems: string[] = [];
+	const mount = tagWith(html, 'div', 'id', 'giscus-comments');
+	if (!mount) problems.push('comments mount missing');
+	else {
+		if (attrOf(mount, 'data-giscus-mount') !== 'true') problems.push('mount marker missing');
+		if (attrOf(mount, 'data-giscus-term') !== ARTICLE_SLUG) problems.push('term mismatch');
+		if (attrOf(mount, 'data-giscus-locale') !== locale) problems.push('locale mismatch');
+	}
+	const hasRuntime = tagsOf(html, 'script').some(
+		(tag) => attrOf(tag, 'src') === 'https://giscus.app/client.js',
+	);
+	const hasFrame = tagsOf(html, 'iframe').some((tag) =>
+		/(?:^|\s)giscus(?:-frame)?(?:\s|$)/.test(attrOf(tag, 'class') ?? ''),
+	);
+	if (hasRuntime || hasFrame) problems.push('Giscus runtime rendered in the boundary-only slice');
+	return problems;
+}
+
 export async function runAssertions(
 	candidateDir: string,
 	baselineDir: string,
@@ -164,10 +337,13 @@ export async function runAssertions(
 		void rows.push({ row, status: 'FAIL', detail });
 
 	const candFile = join(candidateDir, 'posts', `${ARTICLE_SLUG}.html`);
+	const candKoFile = join(candidateDir, 'ko', 'posts', `${ARTICLE_SLUG}.html`);
 	const baseFile = join(baselineDir, 'posts', `${ARTICLE_SLUG}.html`);
+	const baseKoFile = join(baselineDir, 'ko', 'posts', `${ARTICLE_SLUG}.html`);
 	for (const [label, file] of [
 		['candidate', candFile],
 		['baseline', baseFile],
+		['Korean baseline', baseKoFile],
 	] as const) {
 		if (!existsSync(file)) {
 			console.error(`FATAL: ${label} article not found: ${file}`);
@@ -176,6 +352,8 @@ export async function runAssertions(
 	}
 	const cand = readFileSync(candFile, 'utf8');
 	const base = readFileSync(baseFile, 'utf8');
+	const baseKo = readFileSync(baseKoFile, 'utf8');
+	const candKo = existsSync(candKoFile) ? readFileSync(candKoFile, 'utf8') : '';
 
 	// --- A1  article:* metadata --------------------------------------------
 	const baseMeta = articleMeta(base);
@@ -311,6 +489,148 @@ export async function runAssertions(
 		}
 	}
 
+	// --- A7-A15  bilingual article shell ----------------------------------
+	if (candKo) {
+		pass('A7 bilingual static output', 'English and Korean article HTML both exist');
+	} else {
+		fail('A7 bilingual static output', `Korean article not found: ${candKoFile}`);
+	}
+
+	const shellIssues = [
+		...shellProblems(cand, 'en').map((problem) => `en: ${problem}`),
+		...(candKo ? shellProblems(candKo, 'ko').map((problem) => `ko: ${problem}`) : []),
+	];
+	if (shellIssues.length === 0 && candKo) {
+		pass('A8 locale document shells', 'lang, landmarks, skip targets, headings and ids are valid');
+	} else {
+		fail('A8 locale document shells', shellIssues.join('; ') || 'Korean shell unavailable');
+	}
+
+	const expectedSwitches = [
+		{
+			locale: 'en',
+			html: cand,
+			href: `/ko/posts/${ARTICLE_SLUG}`,
+			other: 'ko',
+		},
+		{
+			locale: 'ko',
+			html: candKo,
+			href: `/posts/${ARTICLE_SLUG}`,
+			other: 'en',
+		},
+	] as const;
+	const switchIssues = expectedSwitches.flatMap(({ locale, html, href, other }) => {
+		const tag = tagWith(html, 'a', 'data-locale-switch', other);
+		if (!tag) return [`${locale}: locale switch missing`];
+		return [
+			...(attrOf(tag, 'href') === href ? [] : [`${locale}: switch href mismatch`]),
+			...(attrOf(tag, 'hreflang') === other ? [] : [`${locale}: switch hreflang mismatch`]),
+			...(attrOf(tag, 'lang') === other ? [] : [`${locale}: switch language mismatch`]),
+		];
+	});
+	if (switchIssues.length === 0 && candKo) {
+		pass('A9 reciprocal locale switches', 'native anchors target the real EN and KO documents');
+	} else {
+		fail('A9 reciprocal locale switches', switchIssues.join('; ') || 'Korean switch unavailable');
+	}
+
+	const metadataIssues = [
+		...metadataProblems(cand, {
+			canonical: `https://brandonwie.dev/posts/${ARTICLE_SLUG}`,
+			locale: 'en_US',
+			language: 'en-US',
+		}).map((problem) => `en: ${problem}`),
+		...(candKo
+			? metadataProblems(candKo, {
+					canonical: `https://brandonwie.dev/ko/posts/${ARTICLE_SLUG}`,
+					locale: 'ko_KR',
+					language: 'ko-KR',
+				}).map((problem) => `ko: ${problem}`)
+			: []),
+	];
+	if (metadataIssues.length === 0 && candKo) {
+		pass('A10 bilingual metadata and JSON-LD', 'canonical, hreflang, Open Graph and schema agree');
+	} else {
+		fail(
+			'A10 bilingual metadata and JSON-LD',
+			metadataIssues.join('; ') || 'Korean metadata unavailable',
+		);
+	}
+
+	const chromeIssues = [
+		...chromeProblems(cand).map((problem) => `en: ${problem}`),
+		...(candKo ? chromeProblems(candKo).map((problem) => `ko: ${problem}`) : []),
+	];
+	if (chromeIssues.length === 0 && candKo) {
+		pass('A11 semantic article chrome', 'breadcrumb, dates, category, tags and static ToC exist');
+	} else {
+		fail('A11 semantic article chrome', chromeIssues.join('; ') || 'Korean chrome unavailable');
+	}
+
+	const linkIssues = [
+		...internalLinkProblems(candidateDir, cand).map((problem) => `en: ${problem}`),
+		...(candKo
+			? internalLinkProblems(candidateDir, candKo).map((problem) => `ko: ${problem}`)
+			: []),
+	];
+	if (linkIssues.length === 0 && candKo) {
+		pass(
+			'A12 exported internal links',
+			'every emitted internal anchor resolves in the static tree',
+		);
+	} else {
+		fail('A12 exported internal links', linkIssues.join('; ') || 'Korean links unavailable');
+	}
+
+	const commentIssues = [
+		...commentsProblems(cand, 'en').map((problem) => `en: ${problem}`),
+		...(candKo ? commentsProblems(candKo, 'ko').map((problem) => `ko: ${problem}`) : []),
+	];
+	if (commentIssues.length === 0 && candKo) {
+		pass('A13 comments mount boundary', 'stable localized mounts exist without Giscus runtime');
+	} else {
+		fail('A13 comments mount boundary', commentIssues.join('; ') || 'Korean boundary unavailable');
+	}
+
+	const baseKoProse = proseHtml(baseKo);
+	if (baseKoProse === null) {
+		console.error('FATAL: could not locate the Korean baseline prose container; A14 is vacuous');
+		return 2;
+	}
+	const baseKoText = visibleText(baseKoProse);
+	if (baseKoText.length <= 1_000 || !/[가-힣]/.test(baseKoText)) {
+		console.error('FATAL: Korean baseline prose is too short or carries no Hangul; A14 is vacuous');
+		return 2;
+	}
+	const koProse = candKo ? proseHtml(candKo) : null;
+	const koText = koProse ? visibleText(koProse) : '';
+	if (koText === baseKoText) {
+		pass(
+			'A14 Korean prose parity',
+			`${koText.length} characters, identical to the Korean baseline`,
+		);
+	} else {
+		let at = 0;
+		while (at < baseKoText.length && at < koText.length && baseKoText[at] === koText[at]) at += 1;
+		fail(
+			'A14 Korean prose parity',
+			`baseline ${baseKoText.length} chars, candidate ${koText.length}; first difference at ${at}: ` +
+				`${JSON.stringify(baseKoText.slice(Math.max(0, at - 40), at + 40))} != ` +
+				`${JSON.stringify(koText.slice(Math.max(0, at - 40), at + 40))}`,
+		);
+	}
+
+	const requiredMedia = [`/hero/${ARTICLE_SLUG}.png`, `/og/${ARTICLE_SLUG}.png`, '/og/default.png'];
+	const missingMedia = requiredMedia.filter(
+		(asset) => !exportedFileExists(candidateDir, asset.replace(/^\/+/, '')),
+	);
+	if (missingMedia.length === 0) {
+		pass('A15 static article media', 'hero and both fallback images exist in the export');
+	} else {
+		fail('A15 static article media', `missing exported asset(s): ${missingMedia.join(', ')}`);
+	}
+
 	// --- report ------------------------------------------------------------
 	const width = Math.max(...rows.map((r) => r.row.length));
 	say('\nROW TABLE');
@@ -320,7 +640,7 @@ export async function runAssertions(
 	say(`\nRESULT: ${rows.length - failed.length} pass, ${failed.length} fail`);
 	if (failed.length) return 1;
 	say(
-		'Scope: ONE article. The other 333 posts are not built by the candidate yet, and the site chrome around this one is still absent.',
+		'Scope: one bilingual representative article pair. The remaining post corpus and C13 route cohort are still open.',
 	);
 	return 0;
 }

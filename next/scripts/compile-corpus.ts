@@ -18,8 +18,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { articleJsonLd } from '../app/posts/[slug]/article-json-ld';
 import { initializeMermaidOnce } from '../src/components/Mermaid';
+import { articleJsonLd } from '../src/content/article-json-ld';
 import { renderMarkdown } from '../src/markdown/pipeline';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
