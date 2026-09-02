@@ -30,7 +30,11 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 
-import { capture, captureStatuses } from './migration-verify.ts';
+import { capture, captureStatuses, compare, loadLedger } from './migration-verify.ts';
+import type { Baseline } from './migration-verify.ts';
+
+/** The comparator's closed, difference-bound exception ledger (see migration-verify.ts). */
+const DEFAULT_LEDGER = 'verification/exception-ledger.json';
 
 type Status = 'PASS' | 'FAIL' | 'PENDING';
 
@@ -137,6 +141,7 @@ export async function runAssertions(
 	candidateDir: string,
 	baselineFile: string,
 	quiet = false,
+	ledgerFile = DEFAULT_LEDGER,
 ): Promise<number> {
 	rows.length = 0;
 	const say = (...parts: unknown[]): void => {
@@ -326,13 +331,41 @@ export async function runAssertions(
 				`${leaked.length} candidate page(s) carry a SvelteKit-only body attribute`,
 			);
 		} else {
-			pass(
-				'preload-data decision',
-				`dropped on ${candCount}/${candCount} candidate pages; present on ${inBaseline}/${baseCount} baseline pages. ` +
-					`Recorded decision: native anchors perform no speculative prefetch in this slice. ` +
-					`This DELIBERATE difference is covered for the current route fingerprints by the approved ` +
-					`exception ledger; C13 remains open on full route coverage.`,
+			// The decision is only "covered" if the ledger says so for THESE routes
+			// at THEIR current fingerprints. Round 9 (PR #34) found this row
+			// asserting coverage without reading the ledger: two new routes had
+			// dropped the attribute with no approval and the row still passed.
+			// Coverage is now computed from the comparator's own diff + fingerprint
+			// and the same ledger loader the comparator uses, so a route without a
+			// fingerprint-bound approval fails here before it fails there.
+			const shellDiffs = compare(baseline as Baseline, candidate).filter(
+				(d) => d.field === 'shell' && candPages[d.url] !== undefined,
 			);
+			const ledger = loadLedger(ledgerFile);
+			const uncovered = shellDiffs
+				.filter(
+					(d) =>
+						!ledger.some(
+							(e) => e.url === d.url && e.field === 'shell' && e.fingerprint === d.fingerprint,
+						),
+				)
+				.map((d) => `${d.url} (fingerprint ${d.fingerprint})`);
+			if (uncovered.length) {
+				fail(
+					'preload-data decision',
+					`dropped on ${candCount}/${candCount} candidate pages, but ${uncovered.length} route(s) have no ` +
+						`fingerprint-bound approval in ${ledgerFile}: ${uncovered.join('; ')}. ` +
+						`Approve the difference (copy the fingerprint the comparator prints) or restore the attribute.`,
+				);
+			} else {
+				pass(
+					'preload-data decision',
+					`dropped on ${candCount}/${candCount} candidate pages; present on ${inBaseline}/${baseCount} baseline pages. ` +
+						`Recorded decision: native anchors perform no speculative prefetch in this slice. ` +
+						`Every candidate route's shell difference (${shellDiffs.length}) is approved at its current ` +
+						`fingerprint in ${ledgerFile} (${ledger.length} entries); C13 remains open on full route coverage.`,
+				);
+			}
 		}
 	}
 
@@ -416,5 +449,7 @@ if (process.argv[1]?.endsWith('assert-c13-shell.ts')) {
 	runAssertions(
 		process.argv[2] ?? 'next/build',
 		process.argv[3] ?? 'verification/baseline/svelte-34aa7e7.json',
+		false,
+		process.argv[4] ?? DEFAULT_LEDGER,
 	).then((code) => process.exit(code));
 }

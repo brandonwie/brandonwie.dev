@@ -30,5 +30,29 @@
 		"reason": "C13 prefetch decision, applying the same approved behavior from /, /404, and the English representative article to its Korean document. The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent; native anchors perform no speculative prefetch in this slice. This is the ONLY difference in this route's shell: every other element - charset, viewport, color-scheme, theme-color, icon, manifest, both preconnects, the font stylesheet and the bundle marker - matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
 		"approved_by": "Brandon",
 		"approved_on": "2026-09-02"
+	},
+	{
+		"url": "/feed",
+		"field": "shell",
+		"fingerprint": "4749f9574aae2e6d06b9d43933868620",
+		"reason": "C13 prefetch decision, the same one approved for /, /404 and both representative article documents, applied to the English social feed page (PR #34). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent; native anchors perform no speculative prefetch in this slice. This is the ONLY difference in this route's shell: every other element - charset, viewport, color-scheme, theme-color, icon, manifest, both preconnects, the font stylesheet and the bundle marker - matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C8-feeds-redirects.md and C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-03"
+	},
+	{
+		"url": "/ko/feed",
+		"field": "shell",
+		"fingerprint": "2343e5e2b0afd797380e34383c58a8e2",
+		"reason": "C13 prefetch decision, the same one approved for /, /404 and both representative article documents, applied to the Korean social feed page (PR #34). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent; native anchors perform no speculative prefetch in this slice. This is the ONLY difference in this route's shell: every other element - charset, viewport, color-scheme, theme-color, icon, manifest, both preconnects, the font stylesheet and the bundle marker - matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C8-feeds-redirects.md and C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-03"
+	},
+	{
+		"url": "/ko/feed",
+		"field": "lang",
+		"fingerprint": "21f453d2c357d6039ea3d95b489fdfda",
+		"reason": "C8 finding 4: the SvelteKit /ko/feed page ships <html lang=\"en\"> because src/hooks.server.ts substitutes %lang% from Paraglide's url strategy and vite.config.ts urlPatterns has no /feed pattern, so the KO page falls through to the base locale (one of the seven KO pages the C13 record names). The candidate ships lang=\"ko\", which is the URL locale and what assert-c13-shell.ts row 1 requires of every candidate page. The baseline value is a defect carried by the Svelte site, not a contract. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C8-feeds-redirects.md (finding 4).",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-03"
 	}
 ]

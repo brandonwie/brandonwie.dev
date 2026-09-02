@@ -34,6 +34,9 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 
 import { runAssertions } from './assert-c13-shell.ts';
+import type { Exception } from './migration-verify.ts';
+
+const LEDGER = 'verification/exception-ledger.json';
 
 type Kind = 'DEFECT' | 'INVARIANCE';
 
@@ -43,6 +46,8 @@ interface Control {
 	what: string;
 	/** Mutate the copied build tree in place. */
 	apply: (dir: string) => void;
+	/** Mutate a copy of the exception ledger; the build tree may stay untouched. */
+	ledger?: (entries: Exception[]) => Exception[];
 }
 
 /** Rewrite every built page through `edit`. */
@@ -178,11 +183,49 @@ const CONTROLS: Control[] = [
 			),
 		),
 	},
+	// Round 9 (PR #34): the preload-data row must READ the ledger, not assert coverage.
+	{
+		id: 'C13-17',
+		kind: 'DEFECT',
+		what: "the approved shell entry for '/' removed from the ledger — its prefetch difference is no longer approved",
+		apply: () => {},
+		ledger: (entries) => entries.filter((e) => !(e.url === '/' && e.field === 'shell')),
+	},
+	{
+		id: 'C13-18',
+		kind: 'DEFECT',
+		what: "the '/' shell entry's fingerprint altered — a stale approval must not cover the route",
+		apply: () => {},
+		ledger: (entries) =>
+			entries.map((e) =>
+				e.url === '/' && e.field === 'shell' ? { ...e, fingerprint: '0'.repeat(32) } : e,
+			),
+	},
+	{
+		id: 'C13-19',
+		kind: 'INVARIANCE',
+		what: 'an approval for a route the candidate does not build appended — coverage is judged per built route',
+		apply: () => {},
+		ledger: (entries) => [
+			...entries,
+			{
+				url: '/nowhere',
+				field: 'shell',
+				fingerprint: 'f'.repeat(32),
+				reason: 'control fixture: a route the candidate does not build',
+				approved_by: 'control',
+				approved_on: '2026-09-03',
+			},
+		],
+	},
 ];
 
-/** Content hash of every file the controls can touch, so a no-op mutation is detectable. */
-function treeFingerprint(dir: string): string {
+/** Content hash of every file the controls can touch (build tree + scratch ledger), so a no-op mutation is detectable. */
+function treeFingerprint(dir: string, ledgerFile: string): string {
 	const hash = createHash('sha256');
+	hash
+		.update('ledger')
+		.update(existsSync(ledgerFile) ? readFileSync(ledgerFile) : Buffer.from('ABSENT'));
 	for (const name of [
 		'index.html',
 		'404.html',
@@ -200,6 +243,7 @@ async function main(): Promise<number> {
 	const source = process.argv[2] ?? 'next/build';
 	const baseline = process.argv[3] ?? 'verification/baseline/svelte-34aa7e7.json';
 	const scratch = 'tmp/c13-controls';
+	const scratchLedger = 'tmp/c13-controls-ledger.json';
 
 	if (!existsSync(source)) {
 		console.error(`FATAL: candidate build not found: ${source} — run \`pnpm build:next\` first`);
@@ -223,9 +267,13 @@ async function main(): Promise<number> {
 	for (const control of CONTROLS) {
 		rmSync(scratch, { recursive: true, force: true });
 		cpSync(source, scratch, { recursive: true });
-		const before = treeFingerprint(scratch);
+		const entries = JSON.parse(readFileSync(LEDGER, 'utf8')) as Exception[];
+		writeFileSync(scratchLedger, JSON.stringify(entries, null, '\t'));
+		const before = treeFingerprint(scratch, scratchLedger);
 		control.apply(scratch);
-		const after = treeFingerprint(scratch);
+		if (control.ledger)
+			writeFileSync(scratchLedger, JSON.stringify(control.ledger(entries), null, '\t'));
+		const after = treeFingerprint(scratch, scratchLedger);
 		// A mutation that silently matched nothing turns an INVARIANCE control
 		// into a tautology and a DEFECT control into a coincidence. Neither is
 		// allowed to be the reason a control "passed".
@@ -238,7 +286,7 @@ async function main(): Promise<number> {
 			);
 			continue;
 		}
-		const code = await runAssertions(scratch, baseline, true);
+		const code = await runAssertions(scratch, baseline, true, scratchLedger);
 		const expected = control.kind === 'DEFECT' ? 1 : 0;
 		const ok = code === expected;
 		if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
@@ -247,6 +295,7 @@ async function main(): Promise<number> {
 		);
 	}
 	rmSync(scratch, { recursive: true, force: true });
+	rmSync(scratchLedger, { force: true });
 
 	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length;
 	const invariance = CONTROLS.length - defects;
