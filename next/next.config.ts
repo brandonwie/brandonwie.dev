@@ -25,6 +25,8 @@ const nextConfig: NextConfig = {
 	trailingSlash: false,
 	images: { unoptimized: true },
 	experimental: {
+		// Keeps one static 404 document while locale route groups own separate root layouts.
+		// Revalidate this experimental API on every Next.js upgrade.
 		globalNotFound: true,
 	},
 };
