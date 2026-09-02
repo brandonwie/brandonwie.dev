@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../../../src/lib/seo';
-import { heroBlockHtml } from './hero';
+import { articlePath } from './article-contract';
 import { articleJsonLd } from './article-json-ld';
+import { heroBlockHtml } from './hero';
 import { loadPost, type Locale } from './posts';
 
 export const SLICE_1_ARTICLE_SLUG = 'giscus-sveltekit-integration';
@@ -38,10 +39,6 @@ const COPY = {
 		commentsStatus: 'Giscus 런타임을 마이그레이션하면 이곳에 댓글이 표시됩니다.',
 	},
 } as const;
-
-function articlePath(slug: string, locale: Locale): string {
-	return locale === 'ko' ? `/ko/posts/${slug}` : `/posts/${slug}`;
-}
 
 function sourceDate(value: string | Date | undefined): string | undefined {
 	if (value === undefined) return undefined;

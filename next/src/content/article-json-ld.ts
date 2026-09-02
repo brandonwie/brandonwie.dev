@@ -1,9 +1,6 @@
 import type { Locale, PostFrontmatter } from './posts';
 import { SITE_AUTHOR, SITE_URL, absoluteUrl } from '../../../src/lib/seo';
-
-function articlePath(slug: string, locale: Locale): string {
-	return locale === 'ko' ? `/ko/posts/${slug}` : `/posts/${slug}`;
-}
+import { articlePath } from './article-contract';
 
 export function articleJsonLd(slug: string, meta: PostFrontmatter, locale: Locale): string {
 	return JSON.stringify({
