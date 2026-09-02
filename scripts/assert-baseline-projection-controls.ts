@@ -18,7 +18,14 @@
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
-import { runProjection } from './assert-baseline-projection.ts';
+import {
+	FROZEN_OBJECT_ID,
+	FROZEN_TAG,
+	FrozenBaselineError,
+	readFrozenBaseline,
+	runProjection,
+	type FrozenBaselineErrorCode,
+} from './assert-baseline-projection.ts';
 
 interface Control {
 	id: string;
@@ -29,13 +36,14 @@ interface Control {
 
 interface ResolverControl {
 	id: string;
-	expect: 2;
+	expectCode: FrozenBaselineErrorCode;
 	what: string;
-	run: () => number;
+	read: () => unknown;
 }
 
 const SOURCE = 'verification/baseline/svelte-34aa7e7.json';
 const SCRATCH = 'tmp/projection-control.json';
+const MISSING_TAG = 'refs/tags/migration-baseline-svelte-34aa7e7-missing-control';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const CONTROLS: Control[] = [
@@ -114,40 +122,63 @@ const MALFORMED_BLOB = Buffer.from('{"pages":', 'utf8');
 const RESOLVER_CONTROLS: ResolverControl[] = [
 	{
 		id: 'BP-09',
-		expect: 2,
+		expectCode: 'tag-unavailable',
 		what: 'the frozen baseline tag is missing',
-		run: () =>
-			runProjection(SOURCE, 'refs/tags/migration-baseline-svelte-34aa7e7-missing-control', true),
+		read: () => readFrozenBaseline(MISSING_TAG),
 	},
 	{
 		id: 'BP-10',
-		expect: 2,
+		expectCode: 'not-annotated-tag',
 		what: 'the frozen baseline ref is a commit instead of an annotated tag',
-		run: () => runProjection(SOURCE, 'HEAD', true),
+		read: () => readFrozenBaseline('HEAD'),
 	},
 	{
 		id: 'BP-11',
-		expect: 2,
+		expectCode: 'object-id-mismatch',
 		what: 'the frozen tag peels to an unexpected object ID',
-		run: () => runProjection(SOURCE, undefined, true, { expectedObjectId: '0'.repeat(40) }),
+		read: () => readFrozenBaseline(undefined, { expectedObjectId: '0'.repeat(40) }),
 	},
 	{
 		id: 'BP-12',
-		expect: 2,
+		expectCode: 'sha256-mismatch',
 		what: 'the frozen blob has an unexpected SHA-256 digest',
-		run: () => runProjection(SOURCE, undefined, true, { expectedSha256: '0'.repeat(64) }),
+		read: () => readFrozenBaseline(undefined, { expectedSha256: '0'.repeat(64) }),
 	},
 	{
 		id: 'BP-13',
-		expect: 2,
+		expectCode: 'invalid-baseline',
 		what: 'the frozen blob is malformed JSON',
-		run: () =>
-			runProjection(SOURCE, undefined, true, {
+		read: () =>
+			readFrozenBaseline(undefined, {
 				expectedSha256: createHash('sha256').update(MALFORMED_BLOB).digest('hex'),
 				readBlob: () => MALFORMED_BLOB,
 			}),
 	},
+	{
+		id: 'BP-14',
+		expectCode: 'not-blob',
+		what: 'the frozen tag peels to a non-blob object',
+		read: () =>
+			readFrozenBaseline(undefined, {
+				readGitText: (args) => {
+					const command = args.join(' ');
+					if (command === `cat-file -t ${FROZEN_TAG}`) return 'tag';
+					if (command.startsWith('rev-parse ')) return FROZEN_OBJECT_ID;
+					if (command === `cat-file -t ${FROZEN_OBJECT_ID}`) return 'commit';
+					throw new Error(`unexpected git command: ${command}`);
+				},
+			}),
+	},
 ];
+
+function resolverErrorCode(read: () => unknown): FrozenBaselineErrorCode | undefined {
+	try {
+		read();
+		return undefined;
+	} catch (error) {
+		return error instanceof FrozenBaselineError ? error.code : undefined;
+	}
+}
 
 function main(): number {
 	if (!existsSync(SOURCE)) {
@@ -156,6 +187,28 @@ function main(): number {
 	}
 	mkdirSync('tmp', { recursive: true });
 
+	const failures: string[] = [];
+	let frozenPages: Record<string, unknown>[];
+	try {
+		frozenPages = Object.values(readFrozenBaseline().pages);
+	} catch (error) {
+		console.error(
+			`FATAL: could not read the frozen baseline: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return 2;
+	}
+	const frozenPageCount = frozenPages.length;
+	const articleMetaCount = frozenPages.filter((page) => 'articleMeta' in page).length;
+	const frozenInvariantOk = frozenPageCount === 366 && articleMetaCount === 0;
+	if (!frozenInvariantOk) {
+		failures.push(
+			`live frozen baseline: ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta; expected 366 and 0`,
+		);
+	}
+	console.log(
+		`${frozenInvariantOk ? 'PASS' : 'FAIL'}  INVARIANCE  live frozen baseline has ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta (expected 366 and 0)`,
+	);
+
 	const clean = runProjection(SOURCE, undefined, true);
 	console.log(`BASELINE  committed file unmodified -> exit ${clean} (expected 0)`);
 	if (clean !== 0) {
@@ -163,16 +216,25 @@ function main(): number {
 		return 1;
 	}
 
-	const failures: string[] = [];
 	for (const control of RESOLVER_CONTROLS) {
-		const code = control.run();
-		const ok = code === control.expect;
+		const code = resolverErrorCode(control.read);
+		const ok = code === control.expectCode;
 		if (!ok)
-			failures.push(`${control.id} ${control.what}: exit ${code}, expected ${control.expect}`);
+			failures.push(
+				`${control.id} ${control.what}: error code ${code ?? 'none/untyped'}, expected ${control.expectCode}`,
+			);
 		console.log(
-			`${ok ? 'PASS' : 'FAIL'}  ${control.id}  exit ${code} (expected ${control.expect})  ${control.what}`,
+			`${ok ? 'PASS' : 'FAIL'}  ${control.id}  error ${code ?? 'none/untyped'} (expected ${control.expectCode})  ${control.what}`,
 		);
 	}
+	const adapterExit = runProjection(SOURCE, MISSING_TAG, true);
+	const adapterOk = adapterExit === 2;
+	if (!adapterOk) {
+		failures.push(`BP-15 missing-tag resolver adapter: exit ${adapterExit}, expected 2`);
+	}
+	console.log(
+		`${adapterOk ? 'PASS' : 'FAIL'}  BP-15  exit ${adapterExit} (expected 2)  resolver errors map to the CLI cannot-run exit`,
+	);
 
 	for (const control of CONTROLS) {
 		copyFileSync(SOURCE, SCRATCH);
@@ -197,7 +259,7 @@ function main(): number {
 	}
 	rmSync(SCRATCH, { force: true });
 
-	const controlCount = RESOLVER_CONTROLS.length + CONTROLS.length;
+	const controlCount = RESOLVER_CONTROLS.length + CONTROLS.length + 2;
 	console.log(`\n${controlCount} controls over the projection rule`);
 	if (failures.length) {
 		for (const line of failures) console.error(`CONTROL FAILED ${line}`);

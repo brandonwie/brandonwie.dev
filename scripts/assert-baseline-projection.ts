@@ -55,9 +55,29 @@ interface Baseline {
 	[key: string]: unknown;
 }
 
+export type FrozenBaselineErrorCode =
+	| 'tag-unavailable'
+	| 'not-annotated-tag'
+	| 'not-blob'
+	| 'object-id-mismatch'
+	| 'sha256-mismatch'
+	| 'invalid-baseline';
+
+export class FrozenBaselineError extends Error {
+	constructor(
+		readonly code: FrozenBaselineErrorCode,
+		message: string,
+		options?: ErrorOptions,
+	) {
+		super(message, options);
+		this.name = 'FrozenBaselineError';
+	}
+}
+
 export interface FrozenBaselineOverrides {
 	expectedObjectId?: string;
 	expectedSha256?: string;
+	readGitText?: (args: readonly string[]) => string;
 	readBlob?: (objectId: string) => Buffer;
 }
 
@@ -93,44 +113,61 @@ export function readFrozenBaseline(
 ): Baseline {
 	const expectedObjectId = overrides.expectedObjectId ?? FROZEN_OBJECT_ID;
 	const expectedSha256 = overrides.expectedSha256 ?? FROZEN_SHA256;
+	const readGitText = overrides.readGitText ?? gitText;
 
 	let refType: string;
 	try {
-		refType = gitText(['cat-file', '-t', frozenRef]);
+		refType = readGitText(['cat-file', '-t', frozenRef]);
 	} catch (error) {
 		const recovery =
 			frozenRef === FROZEN_TAG ? `; fetch it with \`git fetch origin tag ${FROZEN_TAG_NAME}\`` : '';
-		throw new Error(`${frozenRef} is unavailable${recovery}`, { cause: error });
+		throw new FrozenBaselineError('tag-unavailable', `${frozenRef} is unavailable${recovery}`, {
+			cause: error,
+		});
 	}
 	if (refType !== 'tag') {
-		throw new Error(`${frozenRef} must be an annotated tag, got ${refType}`);
+		throw new FrozenBaselineError(
+			'not-annotated-tag',
+			`${frozenRef} must be an annotated tag, got ${refType}`,
+		);
 	}
 
-	const objectId = gitText(['rev-parse', '--verify', '--end-of-options', `${frozenRef}^{}`]);
-	const objectType = gitText(['cat-file', '-t', objectId]);
+	const objectId = readGitText(['rev-parse', '--verify', '--end-of-options', `${frozenRef}^{}`]);
+	const objectType = readGitText(['cat-file', '-t', objectId]);
 	if (objectType !== 'blob') {
-		throw new Error(`${frozenRef} must peel to a blob, got ${objectType}`);
+		throw new FrozenBaselineError(
+			'not-blob',
+			`${frozenRef} must peel to a blob, got ${objectType}`,
+		);
 	}
 	if (objectId !== expectedObjectId) {
-		throw new Error(`${frozenRef} peeled to ${objectId}, expected ${expectedObjectId}`);
+		throw new FrozenBaselineError(
+			'object-id-mismatch',
+			`${frozenRef} peeled to ${objectId}, expected ${expectedObjectId}`,
+		);
 	}
 
 	const blob = (overrides.readBlob ?? readGitBlob)(objectId);
 	const sha256 = createHash('sha256').update(blob).digest('hex');
 	if (sha256 !== expectedSha256) {
-		throw new Error(`${frozenRef} has SHA-256 ${sha256}, expected ${expectedSha256}`);
+		throw new FrozenBaselineError(
+			'sha256-mismatch',
+			`${frozenRef} has SHA-256 ${sha256}, expected ${expectedSha256}`,
+		);
 	}
 
 	try {
 		return requireBaseline(JSON.parse(blob.toString('utf8')));
 	} catch (error) {
-		throw new Error(
+		throw new FrozenBaselineError(
+			'invalid-baseline',
 			`${frozenRef} does not contain a valid baseline: ${error instanceof Error ? error.message : String(error)}`,
 			{ cause: error },
 		);
 	}
 }
 
+// Explicit undefined is valid for a default-initialized TypeScript parameter and selects FROZEN_TAG.
 export function runProjection(
 	baselinePath: string = BASELINE_PATH,
 	frozenRef: string = FROZEN_TAG,
