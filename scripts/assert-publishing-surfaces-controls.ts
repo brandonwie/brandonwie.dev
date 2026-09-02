@@ -50,7 +50,8 @@ interface Control {
 		| 'ko/rss.xml'
 		| 'pagefind/pagefind-entry.json'
 		| 'fragment:en'
-		| 'fragment:ko';
+		| 'fragment:ko'
+		| 'fragment:synthetic';
 	remove?: boolean;
 	apply?: (text: string) => string;
 	applyFragment?: (fragment: Fragment) => Fragment;
