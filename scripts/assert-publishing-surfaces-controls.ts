@@ -170,6 +170,31 @@ const CONTROLS: Control[] = [
 		target: 'fragment:en',
 		applyFragment: (f) => ({ ...f, content: '' }),
 	},
+	{
+		id: 'PS-15',
+		kind: 'INVARIANCE',
+		what: 'the Korean feed <lastBuildDate> moves -- the build clock is not content',
+		target: 'ko/rss.xml',
+		apply: (xml) =>
+			xml.replace(
+				/<lastBuildDate>[^<]*<\/lastBuildDate>/,
+				'<lastBuildDate>Thu, 01 Jan 1970 00:00:00 GMT</lastBuildDate>',
+			),
+	},
+	{
+		id: 'PS-16',
+		kind: 'DEFECT',
+		what: 'the sitemap file is missing from the export',
+		target: 'sitemap.xml',
+		remove: true,
+	},
+	{
+		id: 'PS-17',
+		kind: 'DEFECT',
+		what: 'the English RSS file is missing from the export',
+		target: 'rss.xml',
+		remove: true,
+	},
 ];
 
 function fingerprint(file: string): string {
