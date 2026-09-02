@@ -174,6 +174,13 @@ const CONTROLS: Control[] = [
 		applyFragment: (f) => ({ ...f, content: '' }),
 	},
 	{
+		id: 'PS-25',
+		kind: 'DEFECT',
+		what: 'the English fragment carries lang=ko (an EN route indexed under the wrong facet)',
+		target: 'fragment:en',
+		applyFragment: (f) => ({ ...f, filters: { ...f.filters, lang: ['ko'] } }),
+	},
+	{
 		id: 'PS-15',
 		kind: 'INVARIANCE',
 		what: 'the Korean feed <lastBuildDate> moves -- the build clock is not content',
