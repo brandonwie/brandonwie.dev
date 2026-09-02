@@ -214,7 +214,7 @@ const CONTROLS: Control[] = [
 				fingerprint: 'f'.repeat(32),
 				reason: 'control fixture: a route the candidate does not build',
 				approved_by: 'control',
-				approved_on: '2026-09-03',
+				approved_on: '2000-01-01',
 			},
 		],
 	},

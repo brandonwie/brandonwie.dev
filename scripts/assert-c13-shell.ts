@@ -355,7 +355,7 @@ export async function runAssertions(
 					'preload-data decision',
 					`dropped on ${candCount}/${candCount} candidate pages, but ${uncovered.length} route(s) have no ` +
 						`fingerprint-bound approval in ${ledgerFile}: ${uncovered.join('; ')}. ` +
-						`Approve the difference (copy the fingerprint the comparator prints) or restore the attribute.`,
+						`Approve that route's shell difference (copy the fingerprint the comparator prints into the ledger) or make its shell match the baseline; this row gates on ANY unapproved shell difference, not only the preload-data attribute.`,
 				);
 			} else {
 				pass(

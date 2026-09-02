@@ -485,6 +485,11 @@ export interface Exception {
 	fingerprint: string;
 	reason: string;
 	approved_by: string;
+	/**
+	 * Calendar date of the approval in the approver's local time zone (KST), the
+	 * same convention as every earlier entry — NOT a UTC timestamp. A reviewer
+	 * running in UTC may see it as "tomorrow" for a few hours; that is not drift.
+	 */
 	approved_on: string;
 }
 
