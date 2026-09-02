@@ -161,11 +161,29 @@ const RESOLVER_CONTROLS: ResolverControl[] = [
 		read: () =>
 			readFrozenBaseline(undefined, {
 				readGitText: (args) => {
-					const command = args.join(' ');
-					if (command === `cat-file -t ${FROZEN_TAG}`) return 'tag';
-					if (command.startsWith('rev-parse ')) return FROZEN_OBJECT_ID;
-					if (command === `cat-file -t ${FROZEN_OBJECT_ID}`) return 'commit';
-					throw new Error(`unexpected git command: ${command}`);
+					if (
+						args.length === 3 &&
+						args[0] === 'cat-file' &&
+						args[1] === '-t' &&
+						args[2] === FROZEN_TAG
+					)
+						return 'tag';
+					if (
+						args.length === 4 &&
+						args[0] === 'rev-parse' &&
+						args[1] === '--verify' &&
+						args[2] === '--end-of-options' &&
+						args[3] === `${FROZEN_TAG}^{}`
+					)
+						return FROZEN_OBJECT_ID;
+					if (
+						args.length === 3 &&
+						args[0] === 'cat-file' &&
+						args[1] === '-t' &&
+						args[2] === FROZEN_OBJECT_ID
+					)
+						return 'commit';
+					throw new Error(`unexpected git command: ${JSON.stringify(args)}`);
 				},
 			}),
 	},
