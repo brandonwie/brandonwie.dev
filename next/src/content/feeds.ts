@@ -33,6 +33,20 @@ import { listPublishedPosts, type Locale, type PublishedPost } from './posts';
 const siteUrl = SITE_URL;
 const siteName = 'Brandon Wie';
 
+/**
+ * Deliberate divergence from the Svelte templates, which interpolate frontmatter
+ * into XML unescaped. No published post carries `&`, `<`, `>` or `]]>` in a
+ * tag, title or description today (the byte rows prove it), so escaping
+ * changes nothing now and keeps the feeds well-formed the day one does.
+ */
+function xmlText(value: string): string {
+	return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function cdata(value: string): string {
+	return value.replace(/]]>/g, ']]]]><![CDATA[>');
+}
+
 const SITE_DESCRIPTION: Record<Locale, string> = {
 	en: 'Software engineering insights, tutorials, and learnings',
 	ko: '소프트웨어 엔지니어링 인사이트, 튜토리얼, 배움',
@@ -189,12 +203,12 @@ export function rssXml(locale: Locale): string {
 			.map(
 				(post) => `
     <item>
-      <title><![CDATA[${post.title}]]></title>
-      <description><![CDATA[${post.description}]]></description>
+      <title><![CDATA[${cdata(post.title)}]]></title>
+      <description><![CDATA[${cdata(post.description)}]]></description>
       <link>${siteUrl}${prefix}/posts/${post.slug}</link>
       <guid isPermaLink="true">${siteUrl}${prefix}/posts/${post.slug}</guid>
       <pubDate>${new Date(effectiveDate(post.date, post.updated)).toUTCString()}</pubDate>
-      ${post.tags.map((tag) => `<category>${tag}</category>`).join('\n      ')}
+      ${post.tags.map((tag) => `<category>${xmlText(tag)}</category>`).join('\n      ')}
     </item>`,
 			)
 			.join('')}
