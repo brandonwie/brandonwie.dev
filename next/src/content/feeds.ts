@@ -202,11 +202,12 @@ export function rssXml(locale: Locale): string {
 </rss>`;
 }
 
+/**
+ * Under `output: 'export'` only the body is written to disk; response headers
+ * never reach Cloudflare Pages. The Svelte endpoints also sent
+ * `Cache-Control: max-age=3600`, but caching for static files is a `_headers`
+ * concern, so it is deliberately not restated here.
+ */
 export function xmlResponse(body: string): Response {
-	return new Response(body, {
-		headers: {
-			'Content-Type': 'application/xml',
-			'Cache-Control': 'max-age=3600',
-		},
-	});
+	return new Response(body, { headers: { 'Content-Type': 'application/xml' } });
 }
