@@ -24,15 +24,20 @@
  * fields. Exit 1 = something else changed. Exit 2 = it could not run.
  */
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 /**
- * The last commit that captured the baseline by MEASUREMENT.
+ * The immutable tag for the last baseline captured by MEASUREMENT.
  *
- * Every commit after it must be a projection. Moving this ref is a deliberate
- * act that re-measures the site, and it belongs in a commit that says so.
+ * The annotated tag points directly at the baseline blob so a squash merge
+ * cannot make the evidence unreachable. It must never be retargeted: a future
+ * measurement gets a new versioned tag.
  */
-const FROZEN_REF = 'b4af9cb';
+export const FROZEN_TAG_NAME = 'migration-baseline-svelte-34aa7e7-v1';
+export const FROZEN_TAG = `refs/tags/${FROZEN_TAG_NAME}`;
+export const FROZEN_OBJECT_ID = 'aad4ec1e0e25156778c3695d82bf9bf3c12b6fcb';
+export const FROZEN_SHA256 = 'bb7231e83f057f204259164d78a43e00a76f38aa795625a9bd63590df2907fae';
 const BASELINE_PATH = 'verification/baseline/svelte-34aa7e7.json';
 
 /**
@@ -50,25 +55,148 @@ interface Baseline {
 	[key: string]: unknown;
 }
 
+export type FrozenBaselineErrorCode =
+	| 'tag-unavailable'
+	| 'not-annotated-tag'
+	| 'not-blob'
+	| 'object-id-mismatch'
+	| 'sha256-mismatch'
+	| 'invalid-baseline';
+
+export class FrozenBaselineError extends Error {
+	constructor(
+		readonly code: FrozenBaselineErrorCode,
+		message: string,
+		options?: ErrorOptions,
+	) {
+		super(message, options);
+		this.name = 'FrozenBaselineError';
+	}
+}
+
+export interface FrozenBaselineOverrides {
+	expectedObjectId?: string;
+	expectedSha256?: string;
+	readGitText?: (args: readonly string[]) => string;
+	readBlob?: (objectId: string) => Buffer;
+}
+
+function gitText(args: readonly string[]): string {
+	return execFileSync('git', [...args], {
+		encoding: 'utf8',
+		maxBuffer: 256 * 1024 * 1024,
+		stdio: ['ignore', 'pipe', 'pipe'],
+	}).trim();
+}
+
+function readGitBlob(objectId: string): Buffer {
+	return execFileSync('git', ['cat-file', 'blob', objectId], {
+		maxBuffer: 256 * 1024 * 1024,
+		stdio: ['ignore', 'pipe', 'pipe'],
+	});
+}
+
+function requireBaseline(value: unknown): Baseline {
+	if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+		throw new Error('frozen baseline JSON must be an object');
+	}
+	const pages = (value as { pages?: unknown }).pages;
+	if (pages === null || typeof pages !== 'object' || Array.isArray(pages)) {
+		throw new Error('frozen baseline JSON must contain a pages object');
+	}
+	return value as Baseline;
+}
+
+/**
+ * @param frozenRef Annotated tag that must resolve to the pinned baseline blob.
+ * @param overrides Test-only Git, blob, object-ID, and digest overrides.
+ * @returns The parsed, verified frozen baseline.
+ * @throws {FrozenBaselineError} With a stable code when declared tag, integrity, or baseline validation fails.
+ * @throws {Error} When Git or blob I/O fails after the initial tag lookup.
+ */
+export function readFrozenBaseline(
+	frozenRef: string = FROZEN_TAG,
+	overrides: FrozenBaselineOverrides = {},
+): Baseline {
+	const expectedObjectId = overrides.expectedObjectId ?? FROZEN_OBJECT_ID;
+	const expectedSha256 = overrides.expectedSha256 ?? FROZEN_SHA256;
+	const readGitText = overrides.readGitText ?? gitText;
+
+	let refType: string;
+	try {
+		refType = readGitText(['cat-file', '-t', frozenRef]);
+	} catch (error) {
+		const recovery =
+			frozenRef === FROZEN_TAG ? `; fetch it with \`git fetch origin tag ${FROZEN_TAG_NAME}\`` : '';
+		throw new FrozenBaselineError('tag-unavailable', `${frozenRef} is unavailable${recovery}`, {
+			cause: error,
+		});
+	}
+	if (refType !== 'tag') {
+		throw new FrozenBaselineError(
+			'not-annotated-tag',
+			`${frozenRef} must be an annotated tag, got ${refType}`,
+		);
+	}
+
+	const objectId = readGitText(['rev-parse', '--verify', '--end-of-options', `${frozenRef}^{}`]);
+	const objectType = readGitText(['cat-file', '-t', objectId]);
+	if (objectType !== 'blob') {
+		throw new FrozenBaselineError(
+			'not-blob',
+			`${frozenRef} must peel to a blob, got ${objectType}`,
+		);
+	}
+	if (objectId !== expectedObjectId) {
+		throw new FrozenBaselineError(
+			'object-id-mismatch',
+			`${frozenRef} peeled to ${objectId}, expected ${expectedObjectId}`,
+		);
+	}
+
+	const blob = (overrides.readBlob ?? readGitBlob)(objectId);
+	const sha256 = createHash('sha256').update(blob).digest('hex');
+	if (sha256 !== expectedSha256) {
+		throw new FrozenBaselineError(
+			'sha256-mismatch',
+			`${frozenRef} has SHA-256 ${sha256}, expected ${expectedSha256}`,
+		);
+	}
+
+	try {
+		return requireBaseline(JSON.parse(blob.toString('utf8')));
+	} catch (error) {
+		throw new FrozenBaselineError(
+			'invalid-baseline',
+			`${frozenRef} does not contain a valid baseline: ${error instanceof Error ? error.message : String(error)}`,
+			{ cause: error },
+		);
+	}
+}
+
+/**
+ * @param baselinePath Baseline projection candidate path.
+ * @param frozenRef Frozen annotated tag; explicit `undefined` selects the `FROZEN_TAG` default.
+ * @param quiet Suppresses successful progress output, but not errors.
+ * @param frozenOverrides Test-only frozen-baseline verification overrides.
+ * @returns `0` when clean, `1` for a projection violation, or `2` for a frozen-baseline verification failure or when no page carries a declared added field.
+ * @throws {Error} When reading, parsing, or traversing the candidate baseline fails.
+ */
 export function runProjection(
 	baselinePath: string = BASELINE_PATH,
-	frozenRef: string = FROZEN_REF,
+	frozenRef: string = FROZEN_TAG,
 	quiet = false,
+	frozenOverrides: FrozenBaselineOverrides = {},
 ): number {
 	const say = (...parts: unknown[]): void => {
 		if (!quiet) console.log(...parts);
 	};
 	let parent: Baseline;
 	try {
-		parent = JSON.parse(
-			execFileSync('git', ['show', `${frozenRef}:${BASELINE_PATH}`], {
-				encoding: 'utf8',
-				maxBuffer: 256 * 1024 * 1024,
-			}),
-		);
+		parent = readFrozenBaseline(frozenRef, frozenOverrides);
 	} catch (error) {
 		console.error(
-			`FATAL: could not read ${BASELINE_PATH} at ${frozenRef}: ${error instanceof Error ? error.message : String(error)}`,
+			`FATAL: could not verify frozen baseline ${frozenRef}: ${error instanceof Error ? error.message : String(error)}`,
 		);
 		return 2;
 	}
@@ -159,5 +287,5 @@ export function runProjection(
 }
 
 if (process.argv[1]?.endsWith('assert-baseline-projection.ts')) {
-	process.exit(runProjection(process.argv[2] ?? BASELINE_PATH, process.argv[3] ?? FROZEN_REF));
+	process.exit(runProjection(process.argv[2] ?? BASELINE_PATH, process.argv[3] ?? FROZEN_TAG));
 }

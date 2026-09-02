@@ -12,12 +12,20 @@
  *   INVARIANCE  the check MUST exit 0 on a change the projection permits
  *
  * Each control runs against a throwaway copy of the baseline under `tmp/`. The
- * committed file is never mutated, and the parent blob comes from git, so no
- * control can "pass" by editing the thing it is measured against.
+ * committed file is never mutated, and the parent blob comes from an immutable
+ * tag, so no control can "pass" by editing the thing it is measured against.
  */
+import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
-import { runProjection } from './assert-baseline-projection.ts';
+import {
+	FROZEN_OBJECT_ID,
+	FROZEN_TAG,
+	FrozenBaselineError,
+	readFrozenBaseline,
+	runProjection,
+	type FrozenBaselineErrorCode,
+} from './assert-baseline-projection.ts';
 
 interface Control {
 	id: string;
@@ -26,8 +34,16 @@ interface Control {
 	apply: (baseline: Record<string, never>) => void;
 }
 
+interface ResolverControl {
+	id: string;
+	expectCode: FrozenBaselineErrorCode;
+	what: string;
+	read: () => unknown;
+}
+
 const SOURCE = 'verification/baseline/svelte-34aa7e7.json';
 const SCRATCH = 'tmp/projection-control.json';
+const MISSING_TAG = 'refs/tags/migration-baseline-svelte-34aa7e7-missing-control';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const CONTROLS: Control[] = [
@@ -102,12 +118,114 @@ const CONTROLS: Control[] = [
 ];
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+const MALFORMED_BLOB = Buffer.from('{"pages":', 'utf8');
+const RESOLVER_CONTROLS: ResolverControl[] = [
+	{
+		id: 'BP-09',
+		expectCode: 'tag-unavailable',
+		what: 'the frozen baseline tag is missing',
+		read: () => readFrozenBaseline(MISSING_TAG),
+	},
+	{
+		id: 'BP-10',
+		expectCode: 'not-annotated-tag',
+		what: 'the frozen baseline ref is a commit instead of an annotated tag',
+		read: () => readFrozenBaseline('HEAD'),
+	},
+	{
+		id: 'BP-11',
+		expectCode: 'object-id-mismatch',
+		what: 'the frozen tag peels to an unexpected object ID',
+		read: () => readFrozenBaseline(undefined, { expectedObjectId: '0'.repeat(40) }),
+	},
+	{
+		id: 'BP-12',
+		expectCode: 'sha256-mismatch',
+		what: 'the frozen blob has an unexpected SHA-256 digest',
+		read: () => readFrozenBaseline(undefined, { expectedSha256: '0'.repeat(64) }),
+	},
+	{
+		id: 'BP-13',
+		expectCode: 'invalid-baseline',
+		what: 'the frozen blob is malformed JSON',
+		read: () =>
+			readFrozenBaseline(undefined, {
+				expectedSha256: createHash('sha256').update(MALFORMED_BLOB).digest('hex'),
+				readBlob: () => MALFORMED_BLOB,
+			}),
+	},
+	{
+		id: 'BP-14',
+		expectCode: 'not-blob',
+		what: 'the frozen tag peels to a non-blob object',
+		read: () =>
+			readFrozenBaseline(undefined, {
+				readGitText: (args) => {
+					if (
+						args.length === 3 &&
+						args[0] === 'cat-file' &&
+						args[1] === '-t' &&
+						args[2] === FROZEN_TAG
+					)
+						return 'tag';
+					if (
+						args.length === 4 &&
+						args[0] === 'rev-parse' &&
+						args[1] === '--verify' &&
+						args[2] === '--end-of-options' &&
+						args[3] === `${FROZEN_TAG}^{}`
+					)
+						return FROZEN_OBJECT_ID;
+					if (
+						args.length === 3 &&
+						args[0] === 'cat-file' &&
+						args[1] === '-t' &&
+						args[2] === FROZEN_OBJECT_ID
+					)
+						return 'commit';
+					throw new Error(`unexpected git command: ${JSON.stringify(args)}`);
+				},
+			}),
+	},
+];
+
+function resolverErrorCode(read: () => unknown): FrozenBaselineErrorCode | undefined {
+	try {
+		read();
+		return undefined;
+	} catch (error) {
+		return error instanceof FrozenBaselineError ? error.code : undefined;
+	}
+}
+
 function main(): number {
 	if (!existsSync(SOURCE)) {
 		console.error(`FATAL: baseline not found: ${SOURCE}`);
 		return 2;
 	}
 	mkdirSync('tmp', { recursive: true });
+
+	const failures: string[] = [];
+	let frozenPages: Record<string, unknown>[];
+	try {
+		frozenPages = Object.values(readFrozenBaseline().pages);
+	} catch (error) {
+		console.error(
+			`FATAL: could not read the frozen baseline: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return 2;
+	}
+	const frozenPageCount = frozenPages.length;
+	const articleMetaCount = frozenPages.filter((page) => 'articleMeta' in page).length;
+	const frozenInvariantOk = frozenPageCount === 366 && articleMetaCount === 0;
+	if (!frozenInvariantOk) {
+		failures.push(
+			`live frozen baseline: ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta; expected 366 and 0`,
+		);
+	}
+	console.log(
+		`${frozenInvariantOk ? 'PASS' : 'FAIL'}  INVARIANCE  live frozen baseline has ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta (expected 366 and 0)`,
+	);
 
 	const clean = runProjection(SOURCE, undefined, true);
 	console.log(`BASELINE  committed file unmodified -> exit ${clean} (expected 0)`);
@@ -116,7 +234,26 @@ function main(): number {
 		return 1;
 	}
 
-	const failures: string[] = [];
+	for (const control of RESOLVER_CONTROLS) {
+		const code = resolverErrorCode(control.read);
+		const ok = code === control.expectCode;
+		if (!ok)
+			failures.push(
+				`${control.id} ${control.what}: error code ${code ?? 'none/untyped'}, expected ${control.expectCode}`,
+			);
+		console.log(
+			`${ok ? 'PASS' : 'FAIL'}  ${control.id}  error ${code ?? 'none/untyped'} (expected ${control.expectCode})  ${control.what}`,
+		);
+	}
+	const adapterExit = runProjection(SOURCE, MISSING_TAG, true);
+	const adapterOk = adapterExit === 2;
+	if (!adapterOk) {
+		failures.push(`BP-15 missing-tag resolver adapter: exit ${adapterExit}, expected 2`);
+	}
+	console.log(
+		`${adapterOk ? 'PASS' : 'FAIL'}  BP-15  exit ${adapterExit} (expected 2)  resolver errors map to the CLI cannot-run exit`,
+	);
+
 	for (const control of CONTROLS) {
 		copyFileSync(SOURCE, SCRATCH);
 		const before = readFileSync(SCRATCH, 'utf8');
@@ -140,13 +277,14 @@ function main(): number {
 	}
 	rmSync(SCRATCH, { force: true });
 
-	console.log(`\n${CONTROLS.length} controls over the projection rule`);
+	const controlCount = RESOLVER_CONTROLS.length + CONTROLS.length + 2;
+	console.log(`\n${controlCount} controls over the projection rule`);
 	if (failures.length) {
 		for (const line of failures) console.error(`CONTROL FAILED ${line}`);
-		console.error(`RESULT: ${failures.length}/${CONTROLS.length} control(s) failed`);
+		console.error(`RESULT: ${failures.length}/${controlCount} control(s) failed`);
 		return 1;
 	}
-	console.log(`RESULT: ${CONTROLS.length}/${CONTROLS.length} controls behaved as specified`);
+	console.log(`RESULT: ${controlCount}/${controlCount} controls behaved as specified`);
 	return 0;
 }
 
