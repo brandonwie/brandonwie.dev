@@ -330,6 +330,12 @@ const CONTROLS: Control[] = [
 			return word === -1 ? html : `${html.slice(0, word)}Disqus${html.slice(word + 6)}`;
 		},
 	},
+	{
+		id: 'AP-38',
+		kind: 'INVARIANCE',
+		what: 'metadata remains discoverable when the document has no closing head tag',
+		apply: (html) => html.replace('</head>', ''),
+	},
 ];
 
 /** Fingerprint the selected HTML or asset target so no-op mutations are detectable. */

@@ -88,9 +88,15 @@ function visibleText(fragment: string): string {
 		.trim();
 }
 
+/** The document head, or the full document when its closing tag is absent. */
+function headHtml(html: string): string {
+	const end = html.search(/<\/head>/i);
+	return end === -1 ? html : html.slice(0, end + '</head>'.length);
+}
+
 /** `article:*` meta tags in document order, duplicates preserved. */
 function articleMeta(html: string): string[] {
-	const head = html.slice(0, html.search(/<\/head>/i) + 1 || html.length);
+	const head = headHtml(html);
 	return [...head.matchAll(/<meta\b[^>]*property="(article:[^"]*)"[^>]*>/gi)].map((m) => {
 		const content = m[0].match(/content="([^"]*)"/i)?.[1] ?? '';
 		return `${m[1]} ${decodeEntities(content)}`;
@@ -166,7 +172,7 @@ function classToken(html: string, name: string, token: string): string | null {
 }
 
 function headLink(html: string, rel: string, hrefLang?: string): string | null {
-	const head = html.slice(0, html.search(/<\/head>/i) + 7 || html.length);
+	const head = headHtml(html);
 	const tag = tagsOf(head, 'link').find(
 		(candidate) =>
 			attrOf(candidate, 'rel') === rel &&
@@ -176,7 +182,7 @@ function headLink(html: string, rel: string, hrefLang?: string): string | null {
 }
 
 function headMeta(html: string, property: string): string | null {
-	const head = html.slice(0, html.search(/<\/head>/i) + 7 || html.length);
+	const head = headHtml(html);
 	const tag = tagsOf(head, 'meta').find((candidate) => attrOf(candidate, 'property') === property);
 	return tag ? decodeEntities(attrOf(tag, 'content') ?? '') : null;
 }
