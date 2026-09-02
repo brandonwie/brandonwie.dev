@@ -96,8 +96,9 @@ const FONT_STYLESHEET =
  * are actually present; this representative slice does not claim it early.
  *
  * This drops the `body:preload-data` shell key the comparator captures on all
- * 366 baseline pages. That is a deliberate difference and needs an
- * exception-ledger entry approved by Brandon; it is NOT self-approved here.
+ * 366 baseline pages. The four currently migrated route fingerprints are
+ * approved in the exception ledger; every future route needs its own
+ * route-specific fingerprint entry before this decision applies there.
  */
 export const PREFETCH_DECISION = 'native-anchors-no-prefetch' as const;
 

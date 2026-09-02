@@ -24,6 +24,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 
+import { articleJsonLd } from '../next/src/content/article-json-ld.ts';
 import { heroBlockHtml } from '../next/src/content/hero.ts';
 import { ARTICLE_SLUG, runAssertions } from './assert-article-parity.ts';
 
@@ -440,6 +441,30 @@ async function main(): Promise<number> {
 
 	mkdirSync('tmp', { recursive: true });
 	const failures: string[] = [];
+	const date = '2026-01-01';
+	const updated = '2026-02-02';
+	const jsonLdMeta = {
+		title: 'Date fallback control',
+		description: 'Proves Article dateModified fallback behavior',
+		date,
+		tags: ['control'],
+		category: 'testing',
+	};
+	const blankUpdated = JSON.parse(
+		articleJsonLd('date-fallback-control', { ...jsonLdMeta, updated: '' }, 'en'),
+	).dateModified;
+	const explicitUpdated = JSON.parse(
+		articleJsonLd('date-fallback-control', { ...jsonLdMeta, updated }, 'en'),
+	).dateModified;
+	const dateFallbackOk = blankUpdated === date && explicitUpdated === updated;
+	if (!dateFallbackOk) {
+		failures.push(
+			`AP-46 dateModified fallback: blank=${String(blankUpdated)}, explicit=${String(explicitUpdated)}`,
+		);
+	}
+	console.log(
+		`${dateFallbackOk ? 'PASS' : 'FAIL'}  AP-46  DEFECT     blank updated falls back to date while nonblank updated is preserved`,
+	);
 	const acceptedUnsafeSlugs = ["quote'slug", 'quote"slug'].filter((slug) => {
 		try {
 			heroBlockHtml(slug);
@@ -484,8 +509,8 @@ async function main(): Promise<number> {
 	}
 	rmSync(scratch, { recursive: true, force: true });
 
-	const totalControls = CONTROLS.length + 1;
-	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length + 1;
+	const totalControls = CONTROLS.length + 2;
+	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length + 2;
 	console.log(
 		`\n${totalControls} controls: ${defects} defect (must exit 1), ${totalControls - defects} invariance (must exit 0)`,
 	);

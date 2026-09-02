@@ -9,7 +9,7 @@ export function articleJsonLd(slug: string, meta: PostFrontmatter, locale: Local
 		headline: meta.title,
 		description: meta.description,
 		datePublished: sourceDate(meta.date),
-		dateModified: sourceDate(meta.updated ?? meta.date),
+		dateModified: sourceDate(meta.updated || meta.date),
 		image: `${SITE_URL}/og/${slug}.png`,
 		author: { '@type': 'Person', name: SITE_AUTHOR, url: SITE_URL },
 		mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(articlePath(slug, locale)) },
