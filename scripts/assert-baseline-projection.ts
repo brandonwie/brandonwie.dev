@@ -107,6 +107,13 @@ function requireBaseline(value: unknown): Baseline {
 	return value as Baseline;
 }
 
+/**
+ * @param frozenRef Annotated tag that must resolve to the pinned baseline blob.
+ * @param overrides Test-only Git, blob, object-ID, and digest overrides.
+ * @returns The parsed, verified frozen baseline.
+ * @throws {FrozenBaselineError} With a stable code when declared tag, integrity, or baseline validation fails.
+ * @throws {Error} When Git or blob I/O fails after the initial tag lookup.
+ */
 export function readFrozenBaseline(
 	frozenRef: string = FROZEN_TAG,
 	overrides: FrozenBaselineOverrides = {},
@@ -167,7 +174,14 @@ export function readFrozenBaseline(
 	}
 }
 
-// Explicit undefined is valid for a default-initialized TypeScript parameter and selects FROZEN_TAG.
+/**
+ * @param baselinePath Baseline projection candidate path.
+ * @param frozenRef Frozen annotated tag; explicit `undefined` selects the `FROZEN_TAG` default.
+ * @param quiet Suppresses successful progress output, but not errors.
+ * @param frozenOverrides Test-only frozen-baseline verification overrides.
+ * @returns `0` when clean, `1` for a projection violation, or `2` for a frozen-baseline verification failure or when no page carries a declared added field.
+ * @throws {Error} When reading, parsing, or traversing the candidate baseline fails.
+ */
 export function runProjection(
 	baselinePath: string = BASELINE_PATH,
 	frozenRef: string = FROZEN_TAG,
