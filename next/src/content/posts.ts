@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 
 import matter from 'gray-matter';
 import { cache } from 'react';
@@ -172,3 +172,36 @@ async function loadPostUncached(slug: string, locale: Locale): Promise<LoadedPos
 }
 
 export const loadPost = cache(loadPostUncached);
+
+export interface PublishedPost {
+	slug: string;
+	/** Path below the locale root, e.g. `backend/redis-caching-patterns.md`. */
+	relativePath: string;
+	frontmatter: PostFrontmatter;
+}
+
+/**
+ * Every published post in a locale, in the order the SvelteKit feeds emit them.
+ *
+ * `src/routes/sitemap.xml/+server.ts` and both `rss.xml` routes iterate the
+ * result of `import.meta.glob`, and Vite sorts those keys by path, so the
+ * emission order is `<category>/<slug>.md` ascending by code unit -- not slug
+ * order (`listPostSlugs`) and not filesystem order (`walk`). The frozen feed
+ * hashes in `verification/baseline/svelte-34aa7e7.json` are order-sensitive,
+ * so this ordering is a contract, not a convenience.
+ */
+export function listPublishedPosts(locale: Locale): PublishedPost[] {
+	const root = join(CONTENT_ROOT, locale);
+	return listPostFiles(locale)
+		.map((file) => ({ file, relativePath: relative(root, file) }))
+		.sort((a, b) =>
+			a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0,
+		)
+		.map(({ file, relativePath }) => ({ file, relativePath, parsed: readParsedPost(file) }))
+		.filter(({ parsed }) => parsed.data.draft !== true)
+		.map(({ file, relativePath, parsed }) => ({
+			slug: file.split('/').pop()!.replace(/\.md$/, ''),
+			relativePath,
+			frontmatter: parsed.data as PostFrontmatter,
+		}));
+}

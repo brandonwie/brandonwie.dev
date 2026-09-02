@@ -107,12 +107,18 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 	const switchPath = articlePath(slug, otherLocale);
 
 	return (
-		<article className="article-shell" data-article-locale={locale}>
+		<article className="article-shell" data-article-locale={locale} data-pagefind-body>
+			{/* Pagefind locale facet, as PostDetail.svelte:204. The Svelte page indexes a KO route
+			   showing EN fallback content as "en"; this slice has no fallback rendering (a missing
+			   translation is a 404), so the facet is the route locale. */}
+			<span data-pagefind-filter="lang" className="hidden">
+				{locale}
+			</span>
 			<script
 				type="application/ld+json"
 				dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta, locale) }}
 			/>
-			<nav aria-label={copy.breadcrumb}>
+			<nav aria-label={copy.breadcrumb} data-pagefind-ignore>
 				<ol className="breadcrumb-list">
 					<li>
 						<a href="/">{copy.home}</a>
@@ -120,14 +126,20 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 					<li aria-current="page">{meta.title}</li>
 				</ol>
 			</nav>
-			<div className="article-hero" dangerouslySetInnerHTML={{ __html: heroBlockHtml(slug) }} />
+			<div
+				className="article-hero"
+				data-pagefind-ignore
+				dangerouslySetInnerHTML={{ __html: heroBlockHtml(slug) }}
+			/>
 			<header className="article-header">
 				<h1>{meta.title}</h1>
 				<p className="article-description">{meta.description}</p>
 				<div className="article-meta">
 					<span>
 						{copy.published}{' '}
-						<time dateTime={sourceDate(meta.date)}>{displayDate(meta.date, locale)}</time>
+						<time dateTime={sourceDate(meta.date)} data-pagefind-sort="date[datetime]">
+							{displayDate(meta.date, locale)}
+						</time>
 					</span>
 					{meta.updated ? (
 						<span>
@@ -139,7 +151,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 						{post.readingTime} {copy.readingTime}
 					</span>
 					<span>
-						{copy.category}: {meta.category}
+						{copy.category}: <span data-pagefind-filter="category">{meta.category}</span>
 					</span>
 				</div>
 				<div>
@@ -164,7 +176,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 				) : null}
 			</header>
 			{post.headings.length > 0 ? (
-				<nav className="article-toc" aria-labelledby="article-toc-title">
+				<nav className="article-toc" aria-labelledby="article-toc-title" data-pagefind-ignore>
 					<h2 id="article-toc-title">{copy.toc}</h2>
 					<ol className="toc-list">
 						{post.headings.map((heading) => (
@@ -176,7 +188,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 				</nav>
 			) : null}
 			<div className="prose-terminal">{post.content}</div>
-			<section className="comments-shell" aria-labelledby="comments-title">
+			<section className="comments-shell" aria-labelledby="comments-title" data-pagefind-ignore>
 				<h2 id="comments-title">{copy.comments}</h2>
 				<p>{copy.commentsStatus}</p>
 				<div
