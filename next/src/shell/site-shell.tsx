@@ -1,11 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { SLICE_1_ARTICLE_SLUG, articlePath } from '../content/article-contract';
 import type { Locale } from './document';
-
-const ARTICLE_PATH = {
-	en: '/posts/giscus-sveltekit-integration',
-	ko: '/ko/posts/giscus-sveltekit-integration',
-} as const;
 
 const COPY = {
 	en: {
@@ -46,7 +42,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 							<a href="/">{copy.home}</a>
 						</li>
 						<li>
-							<a href={ARTICLE_PATH[locale]}>{copy.article}</a>
+							<a href={articlePath(SLICE_1_ARTICLE_SLUG, locale)}>{copy.article}</a>
 						</li>
 					</ul>
 				</nav>

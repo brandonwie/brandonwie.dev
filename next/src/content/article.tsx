@@ -2,12 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../../../src/lib/seo';
-import { articlePath, sourceDate } from './article-contract';
+import { SLICE_1_ARTICLE_SLUG, articlePath, sourceDate } from './article-contract';
 import { articleJsonLd } from './article-json-ld';
 import { heroBlockHtml } from './hero';
 import { loadPost, type Locale } from './posts';
-
-export const SLICE_1_ARTICLE_SLUG = 'giscus-sveltekit-integration';
 
 const COPY = {
 	en: {
