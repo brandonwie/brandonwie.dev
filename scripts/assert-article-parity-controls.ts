@@ -366,6 +366,30 @@ const CONTROLS: Control[] = [
 		what: 'JSON-LD dateModified differs from the baseline',
 		apply: (html) => replaceJsonLdField(html, 'dateModified', '2000-01-01'),
 	},
+	{
+		id: 'AP-42',
+		kind: 'DEFECT',
+		what: 'the site header identity is removed while the article header remains',
+		apply: (html) => html.replace('class="site-header"', 'class="shell-header"'),
+	},
+	{
+		id: 'AP-43',
+		kind: 'DEFECT',
+		what: 'the site navigation identity is removed while article navigation remains',
+		apply: (html) => html.replace('class="site-nav"', 'class="shell-nav"'),
+	},
+	{
+		id: 'AP-44',
+		kind: 'DEFECT',
+		what: 'the site footer identity is removed while its landmark remains',
+		apply: (html) => html.replace('class="site-footer"', 'class="shell-footer"'),
+	},
+	{
+		id: 'AP-45',
+		kind: 'DEFECT',
+		what: 'the article shell identity is removed while its landmark remains',
+		apply: (html) => html.replace('class="article-shell"', 'class="content-shell"'),
+	},
 ];
 
 /** Fingerprint the selected HTML or asset target so no-op mutations are detectable. */

@@ -251,10 +251,12 @@ function shellProblems(html: string, locale: 'en' | 'ko'): string[] {
 	if (attrOf(htmlTag, 'lang') !== locale) problems.push(`html lang is not ${locale}`);
 	if (tagsOf(html, 'main').length !== 1) problems.push('expected exactly one main landmark');
 	if (tagsOf(html, 'h1').length !== 1) problems.push('expected exactly one h1');
-	if (tagsOf(html, 'header').length < 1) problems.push('site header missing');
-	if (tagsOf(html, 'nav').length < 1) problems.push('navigation landmark missing');
-	if (tagsOf(html, 'footer').length !== 1) problems.push('site footer missing');
-	if (tagsOf(html, 'article').length !== 1) problems.push('article landmark missing');
+	if (!classToken(html, 'header', 'site-header')) problems.push('site header missing');
+	if (!classToken(html, 'nav', 'site-nav')) problems.push('site navigation missing');
+	if (!classToken(html, 'footer', 'site-footer')) problems.push('site footer missing');
+	if (tagsOf(html, 'article').length !== 1 || !classToken(html, 'article', 'article-shell')) {
+		problems.push('expected exactly one article-shell landmark');
+	}
 	const skip = classToken(html, 'a', 'skip-link');
 	if (!skip || attrOf(skip, 'href') !== '#main-content') problems.push('skip link is missing');
 	if (!tagWith(html, 'main', 'id', 'main-content')) problems.push('skip target is missing');
