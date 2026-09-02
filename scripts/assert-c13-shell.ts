@@ -330,7 +330,8 @@ export async function runAssertions(
 				'preload-data decision',
 				`dropped on ${candCount}/${candCount} candidate pages; present on ${inBaseline}/${baseCount} baseline pages. ` +
 					`Recorded decision: native anchors perform no speculative prefetch in this slice. ` +
-					`This is a DELIBERATE difference and needs an exception-ledger approval it does not yet have.`,
+					`This DELIBERATE difference is covered for the current route fingerprints by the approved ` +
+					`exception ledger; C13 remains open on full route coverage.`,
 			);
 		}
 	}
