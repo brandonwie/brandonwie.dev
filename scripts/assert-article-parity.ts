@@ -305,6 +305,13 @@ function chromeProblems(html: string): string[] {
 	if (!classToken(html, 'ul', 'article-tags')) problems.push('tags missing');
 	if (!classToken(html, 'nav', 'article-toc')) problems.push('static table of contents missing');
 	if (!classToken(html, 'div', 'article-meta')) problems.push('article metadata missing');
+	const articleHeader = classToken(html, 'header', 'article-header');
+	if (!articleHeader) problems.push('article header missing');
+	else {
+		const content = html.slice(html.indexOf(articleHeader) + articleHeader.length);
+		const firstElement = content.match(/^\s*(?:<!--[\s\S]*?-->\s*)*<([a-z][\w:-]*)\b/i)?.[1];
+		if (firstElement?.toLowerCase() !== 'h1') problems.push('article header must begin with h1');
+	}
 	if (tagsOf(html, 'time').length < 1) problems.push('machine-readable date missing');
 	return problems;
 }

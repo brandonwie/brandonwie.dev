@@ -336,6 +336,16 @@ const CONTROLS: Control[] = [
 		what: 'metadata remains discoverable when the document has no closing head tag',
 		apply: (html) => html.replace('</head>', ''),
 	},
+	{
+		id: 'AP-39',
+		kind: 'DEFECT',
+		what: 'a category paragraph is inserted before the article title',
+		apply: (html) =>
+			html.replace(
+				/(<header\b[^>]*class="[^"]*\barticle-header\b[^"]*"[^>]*>)/,
+				'$1<p>frontend</p>',
+			),
+	},
 ];
 
 /** Fingerprint the selected HTML or asset target so no-op mutations are detectable. */
