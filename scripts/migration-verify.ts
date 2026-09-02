@@ -337,7 +337,7 @@ const SITE_FILES = ['sitemap.xml', 'rss.xml', 'ko/rss.xml', '_redirects'];
  * asks for a SEMANTIC diff of the feeds (item counts, ordering, links, locale
  * split), so that is what is compared and the timestamp is excluded by design.
  */
-function feedShape(raw: string): string {
+export function feedShape(raw: string): string {
 	const tag = (name: string): string[] =>
 		[...raw.matchAll(new RegExp(`<${name}>([\\s\\S]*?)</${name}>`, 'gi'))].map((m) =>
 			m[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim(),
