@@ -180,6 +180,21 @@ export const SPIKE_PAGE = ['migration-fixture', 'study.html'];
  */
 export const INITIAL_EXPORT_COUNTS = { motionKeys: 1, flipAttributes: 0, studyCards: 2 };
 
+/**
+ * Any way a module can reach the `svelte` package.
+ *
+ * Quote-agnostic on purpose: an earlier revision matched single quotes only, so
+ * `from "svelte/easing"` would have produced a green run while the port reached
+ * back into the framework it replaced. Covers `from`, a bare side-effect
+ * `import`, a dynamic `import(...)`, and `require(...)`.
+ *
+ * The subpath group demands a `/` or a closing quote immediately after
+ * `svelte`, so a local module named `./svelte-motion` — which this port has —
+ * is not a match.
+ */
+export const SVELTE_IMPORT =
+	/(?:from|import)\s*\(?\s*["']svelte(?:\/[^"']*)?["']|require\(\s*["']svelte(?:\/[^"']*)?["']/;
+
 /** Sentinels that must survive minification if the hook actually shipped. */
 export const HOOK_SENTINELS = ['[data-motion-key]', 'currentCSSZoom'];
 
@@ -377,9 +392,16 @@ const SAMPLES: [number, number][] = [
 	[1, 0],
 ];
 
-const ORIGINS: { label: string; origin: string; ox: (w: number) => number }[] = [
-	{ label: 'top-left', origin: '0px 0px', ox: () => 0 },
-	{ label: 'centre', origin: 'centre', ox: (w) => w / 2 },
+/**
+ * Transform origins, as the FRACTION of the client box Svelte reduces them to.
+ * The computed `transform-origin` string is rebuilt from `ox` at each call site
+ * because it depends on that case's client box; carrying a literal string here
+ * as well would be a second copy of the same fact, free to disagree with the
+ * one actually used.
+ */
+const ORIGINS: { label: string; ox: (extent: number) => number }[] = [
+	{ label: 'top-left', ox: () => 0 },
+	{ label: 'centre', ox: (extent) => extent / 2 },
 ];
 
 // ------------------------------------------------------------------ the rows
@@ -672,7 +694,7 @@ export function runAssertions(options: Slice2Options = {}): number {
 				if (file.includes(`${'paraglide'}/`)) continue;
 				scanned += 1;
 				const source = readFileSync(file, 'utf8');
-				if (/from\s+'svelte(\/[a-z]+)?'|require\('svelte/.test(source)) {
+				if (SVELTE_IMPORT.test(source)) {
 					offenders.push(relative(root, file));
 				}
 			}
@@ -684,8 +706,8 @@ export function runAssertions(options: Slice2Options = {}): number {
 		// The harness itself imports svelte on purpose -- that is the oracle.
 		// Asserting it here keeps the two facts from being confused later.
 		must(
-			/from 'svelte\/animate'/.test(read('scripts/assert-slice2-motion.ts')),
-			'this harness no longer imports svelte/animate, so the O rows are comparing the port against nothing',
+			SVELTE_IMPORT.test(read('scripts/assert-slice2-motion.ts')),
+			'this harness no longer imports svelte, so the O rows are comparing the port against nothing',
 		);
 		return `${scanned} Next modules scanned, 0 svelte imports; the oracle import lives here instead`;
 	});
@@ -909,6 +931,41 @@ export function runAssertions(options: Slice2Options = {}): number {
 			'ids after the first insert following a reset',
 		);
 		return "n0 is reused after a reset -- which is why useKeyedMotion's container ref sits on the outer box, not the grid";
+	});
+
+	r.row('M5', 'a rehash mints new chain-node ids, as the Svelte original does', () => {
+		let state = model.reset('chaining');
+		let before: string[] = [];
+		for (let i = 0; i < INSERT_QUEUE.length; i += 1) {
+			const previous = state;
+			state = model.insert(state);
+			if (state.capacity !== previous.capacity) {
+				before = previous.chains.flat().map((chainNode) => chainNode.id);
+				break;
+			}
+		}
+		must(before.length > 0, 'the table never resized, so this row asserted nothing');
+		const after = state.chains.flat().map((chainNode) => chainNode.id);
+		// `before` is the state one step earlier, so the rehashed table also
+		// holds the key whose insert crossed the load factor.
+		eq(after.length, before.length + 1, 'node count across the rehash');
+		const survivors = after.filter((id) => before.includes(id));
+		eq(survivors, [], 'ids carried across the rehash');
+		// WHY THIS IS THE CORRECT BEHAVIOR AND NOT A BUG. Reviewers read this as
+		// one: the ids are the React keys and `data-motion-key`, so minting new
+		// ones remounts every node and `useKeyedMotion` plays the intro rather
+		// than a flip. That is exactly what the Svelte original does --
+		// `rehash()` in HashMapVisualizer.svelte pushes `{ id: `n${nodeId++}` }`
+		// for every rehashed key, so its keyed `{#each}` sees new keys and runs
+		// `in:scale`, not `animate:flip`. Preserving ids would make the React
+		// version animate a transition the Svelte version has never animated.
+		// The row exists so the match is asserted rather than accidental.
+		const svelteSource = read('src/lib/components/study/HashMapVisualizer.svelte');
+		must(
+			/function rehash\(\)[\s\S]*?id: `n\$\{nodeId\+\+\}`/.test(svelteSource),
+			'the Svelte rehash no longer mints new ids, so this row is pinning the port to something the original stopped doing',
+		);
+		return `${before.length} ids replaced wholesale, matching the Svelte rehash`;
 	});
 
 	// -- S: the spike route ---------------------------------------------------

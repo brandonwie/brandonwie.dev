@@ -97,8 +97,22 @@ const REAL_MODEL: ModelSeam = { insert, reset, sizeOf, loadFactor, isExhausted }
 interface Control {
 	id: string;
 	kind: 'defect' | 'invariance';
-	/** The row this control is about. A defect must flip exactly this row. */
+	/** The row this control is about. A defect must flip this row. */
 	row: string;
+	/**
+	 * Other rows this defect is EXPECTED to take down with it, declared rather
+	 * than tolerated.
+	 *
+	 * Some defects legitimately reach more than one row: deleting flip's scale
+	 * factor changes dx and dy, and the default duration is derived from them,
+	 * so O1 and O2 both go red and neither is a surprise. What must not happen
+	 * is a mutation that breaks the named row AND something unrelated, because
+	 * then "the row failed" no longer means "the row failed for its own
+	 * reason". The runner requires the failing set to equal `row` plus this
+	 * list exactly, so every extra failure is either written down here with a
+	 * reason or is a control that needs narrowing.
+	 */
+	alsoFails?: string[];
 	what: string;
 	/** Build the mutated inputs. Throwing here fails the control, which is what
 	 *  a no-op guard does. */
@@ -203,6 +217,9 @@ const CONTROLS: Control[] = [
 		id: 'O1-defect-scale-factor',
 		kind: 'defect',
 		row: 'O1',
+		// dx and dy are what the DEFAULT duration is derived from, so a defect in
+		// them necessarily reaches O2 as well. Declared rather than tolerated.
+		alsoFails: ['O2'],
 		what: 'flip drops the client/target scale factor from dx and dy',
 		setup: () => ({
 			skipTypecheck: true,
@@ -324,6 +341,11 @@ const CONTROLS: Control[] = [
 		id: 'P1-defect-missing-port',
 		kind: 'defect',
 		row: 'P1',
+		// P2 reads this file for its 'use client' directive and R1 reads it to
+		// check the hook has no reduced-motion branch. A missing file cannot be
+		// read, so both go down with it; narrowing the mutation is not possible
+		// without stopping it being "the module is missing".
+		alsoFails: ['P2', 'R1'],
 		what: 'a ported module is missing',
 		setup: (dir) => ({
 			skipTypecheck: true,
@@ -364,6 +386,27 @@ const CONTROLS: Control[] = [
 		setup: (dir) => ({
 			skipTypecheck: true,
 			scanRoots: scanRootWith(dir, "import { cubicOut } from 'svelte/easing';"),
+		}),
+	},
+	{
+		id: 'P3-defect-double-quoted-import',
+		kind: 'defect',
+		row: 'P3',
+		what: 'the Svelte import is written with double quotes',
+		// The exact shape the original single-quote-only matcher let through.
+		setup: (dir) => ({
+			skipTypecheck: true,
+			scanRoots: scanRootWith(dir, 'import { cubicOut } from "svelte/easing";'),
+		}),
+	},
+	{
+		id: 'P3-defect-dynamic-import',
+		kind: 'defect',
+		row: 'P3',
+		what: 'the Svelte import is dynamic rather than static',
+		setup: (dir) => ({
+			skipTypecheck: true,
+			scanRoots: scanRootWith(dir, 'const easings = () => import("svelte/easing");'),
 		}),
 	},
 	{
@@ -420,10 +463,16 @@ const CONTROLS: Control[] = [
 		setup: () => ({
 			skipTypecheck: true,
 			plan: planWith({
-				planFlip: (attributes, metrics, from, to) => ({
-					kind: 'flip',
-					config: flipConfig(metrics, from, to, { duration: Number(attributes.flip ?? 0) }),
-				}),
+				// The identity skip is KEPT. Dropping it as well would take R3
+				// down too, and a control that trips two rows has not shown
+				// either failing for its own reason.
+				planFlip: (attributes, metrics, from, to) => {
+					const config = flipConfig(metrics, from, to, {
+						duration: Number(attributes.flip ?? 0),
+					});
+					if (config.css(0, 1) === config.css(1, 0)) return { kind: 'none', why: 'identity' };
+					return { kind: 'flip', config };
+				},
 			}),
 		}),
 	},
@@ -527,6 +576,38 @@ const CONTROLS: Control[] = [
 			skipTypecheck: true,
 			model: modelWith({
 				reset: (strategy) => ({ ...reset(strategy), nodeId: 99 }),
+			}),
+		}),
+	},
+
+	{
+		id: 'M5-defect-ids-survive-rehash',
+		kind: 'defect',
+		row: 'M5',
+		what: 'the rehash carries chain-node ids across, so React keys survive it',
+		// This is the change a review suggested as a FIX: keep the ids so the
+		// nodes flip instead of re-entering. It is induced here as a defect
+		// because the Svelte original mints new ids, so preserving them would
+		// animate a transition the Svelte version has never animated.
+		setup: () => ({
+			skipTypecheck: true,
+			model: modelWith({
+				insert: (state) => {
+					const before = state.chains.flat();
+					const next = insert(state);
+					if (next.capacity === state.capacity) return next;
+					let cursor = 0;
+					return {
+						...next,
+						chains: next.chains.map((chain) =>
+							chain.map((chainNode) => {
+								const carried = before[cursor];
+								cursor += 1;
+								return carried ? { ...chainNode, id: carried.id } : chainNode;
+							}),
+						),
+					};
+				},
 			}),
 		}),
 	},
@@ -747,13 +828,22 @@ const CONTROLS: Control[] = [
 				string,
 				unknown
 			>;
-			// Paths are relative to the config's own directory, so a copy that
-			// changes nothing else still has to point back at next/.
+			// `include` and `exclude` are resolved against the config that
+			// DECLARES them, so a scratch config that only extends the real one
+			// inherits next/'s file set at next/'s paths. Copying those arrays
+			// into the scratch file would re-root them here and check nothing --
+			// which is the failure C1-defect-widened-exclude induces on purpose.
+			//
+			// An earlier revision wrote this scratch file and then returned the
+			// REAL config path, so I9 typechecked the original and could not have
+			// noticed if the copy were broken. It was a tautology dressed as an
+			// invariance control.
+			void real;
 			writeFileSync(
 				target,
-				`${JSON.stringify({ ...real, extends: resolve(ROOT, 'next/tsconfig.json') }, null, '\t')}\n`,
+				`${JSON.stringify({ extends: resolve(ROOT, 'next/tsconfig.json') }, null, '\t')}\n`,
 			);
-			return { tsconfigProject: resolve(ROOT, 'next/tsconfig.json') };
+			return { tsconfigProject: target };
 		},
 	},
 ];
@@ -804,10 +894,21 @@ function invertedScale(
 ): MotionConfig {
 	const real = flipConfig(metrics, from, to, params);
 	const swapped = flipConfig(metrics, to, from, params);
+	const swapScale = (text: string, t: number, u: number): string =>
+		text.replace(/scale\([^)]*\)/, swapped.css(t, u).match(/scale\([^)]*\)/)![0]);
+	// `style` is patched the same way as `css` on purpose. Patching only `css`
+	// would ALSO fail O6 -- the row that asserts the two agree -- and a control
+	// that trips two rows has not shown either of them failing for its own
+	// reason. This defect is the oracle mismatch and nothing else.
 	return {
 		...real,
-		css: (t, u) =>
-			real.css(t, u).replace(/scale\([^)]*\)/, swapped.css(t, u).match(/scale\([^)]*\)/)![0]),
+		css: (t, u) => swapScale(real.css(t, u), t, u),
+		style: (t, u) => {
+			const style = real.style(t, u);
+			return style.transform === undefined
+				? style
+				: { ...style, transform: swapScale(style.transform, t, u) };
+		},
 	};
 }
 
@@ -869,12 +970,18 @@ export function runControls(filter?: string): number {
 
 			if (control.kind === 'defect') {
 				const target = rows.find((r) => r.id === control.row);
+				const failedRows = rows
+					.filter((r) => !r.ok)
+					.map((r) => r.id)
+					.sort();
+				const declared = [control.row, ...(control.alsoFails ?? [])].sort();
 				if (code === 0)
 					verdict = `the harness still exited 0: ${control.what} was not caught by ANY row`;
 				else if (!target) verdict = `row ${control.row} did not run at all`;
 				else if (target.ok) {
-					const others = rows.filter((r) => !r.ok).map((r) => r.id);
-					verdict = `the run exited ${code}, but row ${control.row} PASSED; the rows that failed were [${others.join(', ')}]. A control that trips a different row proves a different thing.`;
+					verdict = `the run exited ${code}, but row ${control.row} PASSED; the rows that failed were [${failedRows.join(', ')}]. A control that trips a different row proves a different thing.`;
+				} else if (JSON.stringify(failedRows) !== JSON.stringify(declared)) {
+					verdict = `row ${control.row} failed, but the failing set was [${failedRows.join(', ')}] against a declared [${declared.join(', ')}]. An undeclared extra failure means the mutation reached further than the row it is named for, so "this row fails for its own reason" is not what was shown.`;
 				} else verdict = 'ok';
 			} else {
 				const broken = rows.filter((r) => !r.ok);
