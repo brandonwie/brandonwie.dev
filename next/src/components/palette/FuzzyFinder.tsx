@@ -26,7 +26,7 @@
  * handler gets to answer at all.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type Fuse from 'fuse.js';
 
 import * as m from '@/paraglide/messages';
@@ -89,7 +89,11 @@ export default function FuzzyFinder({ items, onSelect, onClose, locale }: Props)
 			`[data-result-index="${selectedIndex}"]`,
 		);
 		selected?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-	}, [results.length, selectedIndex]);
+		// `results`, not `results.length`: the Svelte `$effect` reads the array, so
+		// it re-runs on any reassignment. Depending on the length instead skips the
+		// scroll when a new query happens to return the same number of rows, which
+		// leaves a hand-scrolled list showing the wrong row as selected.
+	}, [results, selectedIndex]);
 
 	useEffect(() => {
 		// A11Y-2 / A11Y-1: remember focus so it can be restored on close. See the
@@ -230,7 +234,11 @@ export default function FuzzyFinder({ items, onSelect, onClose, locale }: Props)
 						<div className="cmdk-empty">{m.palette_no_results({}, at)}</div>
 					) : (
 						results.map((result, index) => (
-							<div key={result.item.id}>
+							/* A Fragment, not a <div>: React needs one node per key, but a real
+							   element between role="listbox" and its role="option" children
+							   breaks the ownership the accessibility tree reads. The Svelte
+							   template emits the header and the row as direct siblings. */
+							<Fragment key={result.item.id}>
 								{startsSection(results, index) && (
 									<div className="cmdk-grp">{groupLabel(result.item.group)}</div>
 								)}
@@ -304,7 +312,7 @@ export default function FuzzyFinder({ items, onSelect, onClose, locale }: Props)
 										</>
 									)}
 								</div>
-							</div>
+							</Fragment>
 						))
 					)}
 				</div>

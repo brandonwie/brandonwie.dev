@@ -226,6 +226,7 @@ export interface SlideSeam {
 	planStep: typeof planStep;
 	revealTweens: typeof revealTweens;
 	initialSets: typeof initialSets;
+	flipOptions: typeof FLIP_OPTIONS;
 }
 
 export interface ChordSeam {
@@ -410,6 +411,42 @@ function tweenExpressions(
 	return pairs;
 }
 
+/**
+ * The source text of one hook call, from its opening paren to the matching
+ * close.
+ *
+ * L1 used to test whether `Flip.getState(` appeared textually BEFORE the layout
+ * effect, which accepts a capture hoisted into the render body — strictly worse
+ * than the placement the row claims to prove, because a capture during render
+ * runs before React has committed anything at all. Bracketing to the hook that
+ * owns the call is what makes the row about a lifecycle phase rather than about
+ * character offsets.
+ */
+function hookBody(source: string, hook: string, contains: string): string {
+	let from = 0;
+	for (;;) {
+		const at = source.indexOf(`${hook}(`, from);
+		if (at === -1) throw new Error(`no ${hook}() call containing ${contains}`);
+		const open = source.indexOf('(', at);
+		let depth = 0;
+		let end = -1;
+		for (let i = open; i < source.length; i += 1) {
+			if (source[i] === '(') depth += 1;
+			else if (source[i] === ')') {
+				depth -= 1;
+				if (depth === 0) {
+					end = i;
+					break;
+				}
+			}
+		}
+		if (end === -1) throw new Error(`unterminated ${hook}() call`);
+		const body = source.slice(open, end);
+		if (body.includes(contains)) return body;
+		from = end;
+	}
+}
+
 export function runAssertions(options: Slice2GsapOptions = {}): number {
 	const root = resolve(options.root ?? process.cwd());
 	const buildDir = resolve(root, options.buildDir ?? 'next/build');
@@ -418,7 +455,12 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 	const clientBoundary = options.clientBoundary ?? CLIENT_BOUNDARY;
 	const dependencyPins = options.dependencyPins ?? NEW_DEPENDENCY_PINS;
 	const deckCounts = options.deckCounts ?? DECK_EXPORT_COUNTS;
-	const slide: SlideSeam = options.slide ?? { planStep, revealTweens, initialSets };
+	const slide: SlideSeam = options.slide ?? {
+		planStep,
+		revealTweens,
+		initialSets,
+		flipOptions: FLIP_OPTIONS,
+	};
 	const chord: ChordSeam = options.chord ?? {
 		planGlobalChord,
 		planInputKey,
@@ -461,6 +503,7 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 			const svelte = read('src/routes/talks/my-career/slides/AccountSeparationSlide.svelte');
 			const ported = read('next/src/deck/slide-plan.ts');
 			const compared: string[] = [];
+			let total = 0;
 
 			for (const selector of ['.second', '.chip', '.note']) {
 				const escaped = selector.replace('.', '\\.');
@@ -478,10 +521,11 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 				for (const property of Object.keys(a)) {
 					eq(b[property], a[property], `${selector}.${property}`);
 				}
+				total += Object.keys(a).length;
 				compared.push(`${selector} ${Object.keys(a).length}`);
 			}
 
-			return `11 expressions compared as text across three tweens: ${compared.join(', ')}`;
+			return `${total} expressions compared as text across three tweens: ${compared.join(', ')}`;
 		},
 	);
 
@@ -577,9 +621,9 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		// `absolute: true` is what lets Flip animate a node between two DIFFERENT
 		// parents, which is the entire move this slide performs. Without it the
 		// tween still runs and the node jumps.
-		eq(FLIP_OPTIONS.absolute, true, 'FLIP_OPTIONS.absolute');
-		eq(FLIP_OPTIONS.duration, DURATION, 'FLIP_OPTIONS.duration');
-		eq(FLIP_OPTIONS.ease, EASE, 'FLIP_OPTIONS.ease');
+		eq(slide.flipOptions.absolute, true, 'FLIP_OPTIONS.absolute');
+		eq(slide.flipOptions.duration, DURATION, 'FLIP_OPTIONS.duration');
+		eq(slide.flipOptions.ease, EASE, 'FLIP_OPTIONS.ease');
 
 		const svelte = read('src/routes/talks/my-career/slides/AccountSeparationSlide.svelte');
 		must(
@@ -598,8 +642,14 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		// constants exist at all.
 		must(!component.includes('0.45'), 'the component hardcodes a duration');
 		must(!component.includes('power2'), 'the component hardcodes an easing curve');
-		must(component.includes('revealTweens'), 'the component does not use the planner');
-		must(component.includes('FLIP_OPTIONS'), 'the component does not use the shared Flip options');
+		// Call forms, not bare identifiers: `ReturnType<typeof revealTweens>` is a
+		// TYPE reference and would satisfy an identifier check in a component that
+		// had stopped calling the planner altogether.
+		must(/revealTweens\(/.test(component), 'the component does not CALL the planner');
+		must(
+			/Flip\.from\([^)]*FLIP_OPTIONS/.test(component),
+			'the component does not pass the shared Flip options to Flip.from',
+		);
 		return 'no duration or curve literal in the component; the planner supplies both';
 	});
 
@@ -679,20 +729,34 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 
 	// ----------------------------------------------------- L: lifecycle shape
 
-	r.row('L1', 'the capture runs in a passive effect and the play in a layout effect', () => {
-		const source = stripComments(read('next/src/components/deck/AccountSeparationSlide.tsx'));
-		const layoutAt = source.indexOf('useIsomorphicLayoutEffect(');
-		must(layoutAt !== -1, 'no layout effect in the component');
+	r.row(
+		'L1',
+		'the capture runs in the effect that plans the step, and the play in the layout effect',
+		() => {
+			const source = stripComments(read('next/src/components/deck/AccountSeparationSlide.tsx'));
 
-		const before = source.slice(0, layoutAt);
-		const after = source.slice(layoutAt);
+			// Exactly once each, so "it is in the right place" cannot be satisfied by
+			// a second copy somewhere else.
+			eq(count(source, 'Flip.getState('), 1, 'Flip.getState call sites');
+			eq(count(source, 'Flip.from('), 1, 'Flip.from call sites');
 
-		must(before.includes('Flip.getState('), 'the capture is not in the pre-mutation phase');
-		must(!after.includes('Flip.getState('), 'the capture also appears AFTER the commit');
-		must(after.includes('Flip.from('), 'the play is not in the post-mutation phase');
-		must(!before.includes('Flip.from('), 'the play also appears before the commit');
-		return 'getState only above the layout effect, from only inside it';
-	});
+			// Bracketed to the hook that owns each call rather than to a character
+			// offset: the capture must live in the PASSIVE effect that runs planStep,
+			// and the play in the LAYOUT effect. A capture hoisted into the render
+			// body is textually "before the layout effect" and is a different, worse
+			// defect than the one this row exists to catch.
+			const planning = hookBody(source, 'useEffect', 'planStep(');
+			const playing = hookBody(source, 'useIsomorphicLayoutEffect', 'Flip.from(');
+
+			must(
+				planning.includes('Flip.getState('),
+				'the capture is not in the effect that plans the step',
+			);
+			must(!planning.includes('Flip.from('), 'the play also runs in the pre-mutation phase');
+			must(!playing.includes('Flip.getState('), 'the capture also runs after the commit');
+			return 'getState only inside the planning effect, from only inside the layout effect';
+		},
+	);
 
 	r.row('L2', 'the play is a layout effect, not a passive one', () => {
 		const source = stripComments(read('next/src/components/deck/AccountSeparationSlide.tsx'));
@@ -964,6 +1028,7 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 				source.match(/(weight: [\d.]+|threshold: [\d.]+|minMatchCharLength: \d+|name: '\w+')/g) ??
 				[]
 			).join('|');
+		must(options(svelte).length > 0, 'the option scraper matched nothing on the Svelte side');
 		eq(options(ported), options(svelte), 'Fuse options');
 
 		// And that they still behave: a title-ish query outranks a tag-ish one,
@@ -977,7 +1042,7 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 
 	r.row('F6', 'match highlighting splits at the edges as well as the middle', () => {
 		eq(
-			highlightMatches('redis', [[0, 1]]),
+			list.highlightMatches('redis', [[0, 1]]),
 			[
 				{ text: 're', highlighted: true },
 				{ text: 'dis', highlighted: false },
@@ -985,7 +1050,7 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 			'match at the start',
 		);
 		eq(
-			highlightMatches('redis', [[3, 4]]),
+			list.highlightMatches('redis', [[3, 4]]),
 			[
 				{ text: 'red', highlighted: false },
 				{ text: 'is', highlighted: true },
@@ -993,7 +1058,7 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 			'match at the end',
 		);
 		eq(
-			highlightMatches('redis', [
+			list.highlightMatches('redis', [
 				[1, 1],
 				[3, 3],
 			]),
@@ -1140,7 +1205,11 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		// An explicit locale is required under `output: 'export'`: there is no
 		// request context for an ambient one to live in.
 		const source = codeOnly(read('next/src/palette/items.ts'));
-		must(source.includes('{ locale }'), 'the locale is not passed to the message functions');
+		// The call form, not an object shorthand that could appear anywhere: the
+		// point is that the locale reaches the message functions, not that the
+		// word appears in the file.
+		must(/m\.\w+\(\{\}, at\)/.test(source), 'the locale is not passed to the message functions');
+		must(/const at = \{ locale \}/.test(source), '`at` no longer carries the caller locale');
 		return `en "${itemOf(en, 'nav:home').label}" vs ko "${itemOf(ko, 'nav:home').label}"`;
 	});
 
@@ -1148,27 +1217,43 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 
 	r.row('A1', 'focus returns to whatever held it, which is the recorded defect', () => {
 		const source = stripComments(read('next/src/components/palette/FuzzyFinder.tsx'));
+
+		// The BINDING, not a vocabulary of names. An earlier version of this row
+		// blacklisted `openerRef|triggerRef|openedBy`, which a fix under any
+		// fourth name walked straight past -- and its control injected one of the
+		// three literals, so it only ever proved the blacklist matched itself.
+		// What has to hold is that the restore target is bound to the element that
+		// held focus at mount and to nothing else.
 		must(
-			source.includes('document.activeElement'),
-			'the port does not read the previously focused element',
+			/previouslyFocused\.current = restoreFocusTarget\(\);/.test(source),
+			'the restore target is no longer bound to restoreFocusTarget()',
+		);
+		eq(count(source, 'previouslyFocused.current ='), 1, 'assignments to the restore target');
+		must(
+			/function restoreFocusTarget\(\)[^}]*document\.activeElement/.test(source),
+			'restoreFocusTarget no longer reads document.activeElement',
 		);
 		must(
-			/return\s*\(\)\s*=>\s*restore\?\.focus\?\.\(\)/.test(source),
+			/return \(\) => restore\?\.focus\?\.\(\);/.test(source),
 			'focus is not restored on unmount',
 		);
+		must(
+			/const restore = previouslyFocused\.current;/.test(source),
+			'the restored value is not the captured one',
+		);
+
 		// behavior-matrix.md:122 records focus landing on BODY after Escape and
 		// assigns the fix to the Slice 3 palette port. Reproducing it is the
 		// requirement here; fixing it early would leave the baseline row
 		// describing neither stack.
-		must(
-			!/openerRef|triggerRef|openedBy/.test(source),
-			'the port introduced an opener reference, which fixes A11Y-1 out of band',
-		);
-		return 'the restore target is document.activeElement at mount, as in the original';
+		return 'the restore target is document.activeElement at mount, assigned once, as in the original';
 	});
 
 	r.row('A2', 'the combobox contract the original shipped is intact', () => {
-		const source = read('next/src/components/palette/FuzzyFinder.tsx');
+		// stripComments first: the `\s`-anchor below closed the `data-role=` hole
+		// but left the comment channel open, so `// role="option"` above an
+		// attribute that had been renamed still satisfied the loop.
+		const source = stripComments(read('next/src/components/palette/FuzzyFinder.tsx'));
 		// Matched with the whitespace that must precede a real JSX attribute,
 		// because `data-role="option"` CONTAINS `role="option"` and a plain
 		// includes() passes on a renamed attribute. Not hypothetical: the first
@@ -1213,7 +1298,10 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 				read(file)
 					.split('\n')
 					.find((line) => line.trim().length > 0) ?? '';
-			const has = first.includes("'use client'");
+			// A real directive, not a line that mentions one: `// 'use client';`
+			// satisfies a substring test while Next treats the module as a server
+			// component.
+			const has = /^\s*(['"])use client\1\s*;?\s*$/.test(first);
 			if (has !== needsDirective) {
 				wrong.push(`${file} ${has ? 'has' : 'lacks'} the directive, expected ${needsDirective}`);
 			}
@@ -1242,6 +1330,11 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 			}
 		}
 		must(offenders.length === 0, `svelte imports in ${offenders.join(', ')}`);
+		// A scan of nothing finds nothing. `walk` returns [] for a missing
+		// directory, so a renamed `next/src` would silently turn this row into a
+		// check of zero files that still reports PASS. S5 carries the same guard
+		// for the same reason.
+		must(scanned > 0, `the scan roots matched no modules at all: ${roots.join(', ')}`);
 		return `${scanned} Next modules scanned, 0 svelte imports`;
 	});
 

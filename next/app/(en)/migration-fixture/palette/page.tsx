@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import PaletteSpike from '@/components/palette/PaletteSpike';
+import { sourceDate } from '@/content/article-contract';
 import { listPublishedPosts } from '@/content/posts';
 import type { PalettePost } from '@/palette/items';
 
@@ -31,7 +32,14 @@ export default function PaletteSpikePage() {
 		slug: post.slug,
 		title: post.frontmatter.title,
 		description: post.frontmatter.description,
-		date: String(post.frontmatter.date),
+		// `sourceDate`, not String(): gray-matter hands back a Date for an
+		// unquoted YAML date, and String(Date) is a timezone- and ICU-dependent
+		// local string. It would render "Tue Jan 27 2026 09:00:00 GMT+0900
+		// (Korean Standard Time)" where the Svelte palette renders the ISO value,
+		// show the PREVIOUS calendar day on any builder west of UTC, and make the
+		// exported bytes a function of the build machine's clock. The repo's own
+		// helper is what feeds.ts and article-json-ld.ts already use.
+		date: sourceDate(post.frontmatter.date) as string,
 		tags: post.frontmatter.tags,
 		category: post.frontmatter.category,
 	}));

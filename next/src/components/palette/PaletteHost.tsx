@@ -16,7 +16,7 @@
  * component only translates the decision into an effect.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import FuzzyFinder from '@/components/palette/FuzzyFinder';
 import {
@@ -39,7 +39,15 @@ interface Props {
 export default function PaletteHost({ posts, pathname, locale, navigate }: Props) {
 	const [open, setOpen] = useState(false);
 
-	const items = buildPaletteItems(posts, pathname, navigate, locale);
+	// Memoized because it is the sole dependency of the child's Fuse index. Rebuilt
+	// per render, it re-indexes 167 posts on every parent render and leaves `fuse`
+	// pointing at a different array than the `results` on screen. Latent on this
+	// fixture route, where the host only re-renders on open/close; live in the
+	// shell mount, where `pathname` comes from `usePathname()`.
+	const items = useMemo(
+		() => buildPaletteItems(posts, pathname, navigate, locale),
+		[locale, navigate, pathname, posts],
+	);
 
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
@@ -68,14 +76,12 @@ export default function PaletteHost({ posts, pathname, locale, navigate }: Props
 		item.run();
 	}, []);
 
+	// Stable, or the child's window-listener effect re-registers every render.
+	const handleClose = useCallback(() => setOpen(false), []);
+
 	if (!open) return null;
 
 	return (
-		<FuzzyFinder
-			items={items}
-			onSelect={handleSelect}
-			onClose={() => setOpen(false)}
-			locale={locale}
-		/>
+		<FuzzyFinder items={items} onSelect={handleSelect} onClose={handleClose} locale={locale} />
 	);
 }

@@ -43,7 +43,7 @@ import {
 	type SlideSeam,
 } from './assert-slice2-gsap-palette';
 
-import { initialSets, planStep, revealTweens } from '../next/src/deck/slide-plan';
+import { FLIP_OPTIONS, initialSets, planStep, revealTweens } from '../next/src/deck/slide-plan';
 import {
 	buildActionItems,
 	buildNavItems,
@@ -68,7 +68,7 @@ import {
 const ROOT = resolve(process.cwd());
 const SCRATCH = join(ROOT, 'node_modules', '.cache', 'slice2-gsap-controls');
 
-const REAL_SLIDE: SlideSeam = { planStep, revealTweens, initialSets };
+const REAL_SLIDE: SlideSeam = { planStep, revealTweens, initialSets, flipOptions: FLIP_OPTIONS };
 const REAL_CHORD: ChordSeam = {
 	planGlobalChord,
 	planInputKey,
@@ -201,6 +201,14 @@ function tsconfigWith(dir: string, patch: Record<string, unknown>): string {
 	// Returning the scratch path rather than the real one is the point: an
 	// earlier version of this helper typechecked the REAL project and the
 	// control passed for the wrong reason.
+	return target;
+}
+
+/** A file that does not typecheck, so the `tsc exits 0` half of C1 has a control. */
+function brokenProgram(dir: string): string {
+	const target = join(dir, 'broken.ts');
+	mkdirSync(dir, { recursive: true });
+	writeFileSync(target, 'export const broken: number = "not a number";\n');
 	return target;
 }
 
@@ -372,6 +380,39 @@ const CONTROLS: Control[] = [
 		}),
 	},
 
+	{
+		id: 'T8-defect-planner-referenced-but-not-called',
+		kind: 'defect',
+		row: 'T8',
+		what: 'the component names the planner in a type position and never calls it',
+		setup: (dir) => ({
+			// `ReturnType<typeof revealTweens>` satisfies a bare-identifier check
+			// while the component computes nothing, which is why the row matches a
+			// call form now.
+			sourceOverrides: mutateSource(
+				dir,
+				'next/src/components/deck/AccountSeparationSlide.tsx',
+				(text) =>
+					text.replace(
+						'for (const tween of revealTweens(want, still)) {',
+						'for (const tween of [] as ReturnType<typeof revealTweens>) {',
+					),
+			),
+		}),
+	},
+	{
+		id: 'T7-defect-absolute-dropped-in-the-port',
+		kind: 'defect',
+		row: 'T7',
+		what: 'the ported Flip options stop telling Flip the node changes parent',
+		setup: () => ({
+			// Without `absolute: true` Flip cannot animate a node between two
+			// different parents -- the entire move this slide performs. The tween
+			// still runs and the node jumps.
+			slide: slideWith({ flipOptions: { ...FLIP_OPTIONS, absolute: false } }),
+		}),
+	},
+
 	// ---- N: step planning
 	{
 		id: 'N1-defect-runs-before-gsap-loads',
@@ -411,6 +452,24 @@ const CONTROLS: Control[] = [
 				planStep: (input) => {
 					const plan = planStep(input);
 					return plan.kind === 'toggle' ? { ...plan, capture: false } : plan;
+				},
+			}),
+		}),
+	},
+	{
+		id: 'N4-defect-back-crossing-lost',
+		kind: 'defect',
+		row: 'N4',
+		what: 'resetting to step 0 does not plan the move back',
+		setup: () => ({
+			// N4 was the one row in this suite with no control of its own; it rode
+			// on N3's `alsoFails` and so had never been shown to fail for its own
+			// reason. Its distinguishing assertion is `want === false` on the back
+			// crossing, which N3's capture-only mutation never touches.
+			slide: slideWith({
+				planStep: (input) => {
+					const plan = planStep(input);
+					return plan.kind === 'toggle' ? { ...plan, want: true } : plan;
 				},
 			}),
 		}),
@@ -464,6 +523,32 @@ const CONTROLS: Control[] = [
 						'const loaded = bundle.current;\n\t\tif (loaded && pending.state) {',
 						'const loaded = bundle.current;\n\t\tvoid loaded?.Flip.getState(document.body);\n\t\tif (loaded && pending.state) {',
 					),
+			),
+		}),
+	},
+	{
+		id: 'L1-defect-capture-hoisted-into-render',
+		kind: 'defect',
+		row: 'L1',
+		what: 'the capture is hoisted out of any effect and runs during render',
+		setup: (dir) => ({
+			// Textually BEFORE the layout effect, and strictly worse than the
+			// defect L1 was originally written to catch: a capture during render
+			// runs before React has committed anything at all. The old positional
+			// test accepted it.
+			sourceOverrides: mutateSource(
+				dir,
+				'next/src/components/deck/AccountSeparationSlide.tsx',
+				(text) =>
+					text
+						.replace(
+							'\tconst [separated, setSeparated] = useState(false);',
+							'\tconst hoisted = () => bundle.current?.Flip.getState(document.body);\n\tconst [separated, setSeparated] = useState(false);',
+						)
+						.replace(
+							"\t\t\tstate: plan.capture ? loaded.Flip.getState(element.querySelectorAll('[data-flip-id]')) : null,",
+							'\t\t\tstate: plan.capture ? (hoisted() ?? null) : null,',
+						),
 			),
 		}),
 	},
@@ -850,18 +935,19 @@ const CONTROLS: Control[] = [
 
 	// ---- A: A11Y-1 preserved
 	{
-		id: 'A1-defect-focus-fixed-early',
+		id: 'A1-defect-fixed-under-an-unlisted-name',
 		kind: 'defect',
 		row: 'A1',
-		what: 'the port quietly fixes the finding assigned to Slice 3',
+		what: 'A11Y-1 is fixed by a mechanism the row was never taught to name',
 		setup: (dir) => ({
-			// A fix here would be an unrecorded behavior change: the baseline row
-			// would stop describing either stack, and Slice 3 would inherit a
-			// finding that is already closed without anyone recording when.
+			// The control that matters. The previous A1 injected the literal
+			// `openerRef`, one of three names the row blacklisted, so it only ever
+			// proved the blacklist matched itself. This fix uses a name no list
+			// contains; the row has to catch it by asserting the BINDING.
 			sourceOverrides: mutateSource(dir, 'next/src/components/palette/FuzzyFinder.tsx', (text) =>
 				text.replace(
-					'const inputRef = useRef',
-					'const openerRef = useRef<HTMLElement | null>(null);\n\tconst inputRef = useRef',
+					'previouslyFocused.current = restoreFocusTarget();',
+					'previouslyFocused.current = (window as unknown as { __invokedFrom?: HTMLElement }).__invokedFrom ?? restoreFocusTarget();',
 				),
 			),
 		}),
@@ -884,7 +970,32 @@ const CONTROLS: Control[] = [
 		what: 'the results stop being announced as a listbox',
 		setup: (dir) => ({
 			sourceOverrides: mutateSource(dir, 'next/src/components/palette/FuzzyFinder.tsx', (text) =>
-				text.replace(/\srole="option"/, ' data-opt="option"'),
+				// Anchored to a line that is ONLY the attribute. The looser
+				// `/\srole="option"/` matched the JSX comment above the list first --
+				// the one explaining why the wrapper is a Fragment, which quotes the
+				// attribute in prose -- so the mutation rewrote a comment, the row
+				// (correctly) stripped it, and the control proved nothing. A comment
+				// defeating a control is the mirror of a comment satisfying a row.
+				text.replace(/^(\s*)role="option"$/m, '$1data-opt="option"'),
+			),
+		}),
+	},
+
+	{
+		id: 'A2-defect-attribute-moved-into-a-comment',
+		kind: 'defect',
+		row: 'A2',
+		what: 'an ARIA hook is renamed in the markup and left behind in a comment',
+		setup: (dir) => ({
+			// The `\\s` anchor closed the `data-role=` hole; this is the same hole
+			// through the comment channel, which the anchor alone does not close.
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/FuzzyFinder.tsx', (text) =>
+				text
+					.replace(/^(\s*)role="option"$/m, '$1data-opt="option"')
+					.replace(
+						'export function restoreFocusTarget',
+						'// role="option" used to be here\nexport function restoreFocusTarget',
+					),
 			),
 		}),
 	},
@@ -919,6 +1030,17 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
+		id: 'P2-defect-directive-commented-out',
+		kind: 'defect',
+		row: 'P2',
+		what: 'the directive is commented out, which Next reads as a server component',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/PaletteHost.tsx', (text) =>
+				text.replace("'use client';", "// 'use client';"),
+			),
+		}),
+	},
+	{
 		id: 'P2-defect-directive-added-to-pure-module',
 		kind: 'defect',
 		row: 'P2',
@@ -941,6 +1063,17 @@ const CONTROLS: Control[] = [
 			// Injected into a scratch COPY, so the row is proven able to fail
 			// without a Svelte import ever being written into the real tree.
 			scanRoots: scanRootWith(dir, "import { tick } from 'svelte';"),
+		}),
+	},
+	{
+		id: 'P3-defect-scans-nothing',
+		kind: 'defect',
+		row: 'P3',
+		what: 'the scan roots match no modules at all and the row still passes',
+		setup: () => ({
+			// `walk` returns [] for a missing directory, so a renamed next/src
+			// silently turned this row into a check of zero files.
+			scanRoots: ['next/this-directory-does-not-exist'],
 		}),
 	},
 	{
@@ -1136,6 +1269,18 @@ const CONTROLS: Control[] = [
 		}),
 	},
 
+	{
+		id: 'C1-defect-type-error',
+		kind: 'defect',
+		row: 'C1',
+		what: 'tsc reports an error and the row still passes',
+		setup: (dir) => ({
+			// C1 is a conjunction -- tsc exits 0 AND the ported files are in the
+			// program -- and only the second half had a control. This is the first.
+			tsconfigProject: tsconfigWith(dir, { include: [brokenProgram(dir)] }),
+		}),
+	},
+
 	// ---- invariance: things the suite must NOT care about
 	{
 		id: 'I-comment-reflow',
@@ -1226,11 +1371,16 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
-		id: 'I-extra-post-in-the-fixture',
+		id: 'I-results-comment-reflowed',
 		kind: 'invariance',
-		row: 'F1',
-		what: 'the F rows build their own fixture and ignore the real corpus',
+		row: 'P2',
+		what: 'a comment inside results.ts moves nothing',
 		setup: (dir) => ({
+			// Named for P2, which is the only row that reads this file at all -- and
+			// only its first non-blank line. Naming it for F1 claimed a coupling
+			// that does not exist: the F rows drive the `list` seam and never
+			// read results.ts, so the control could not have demonstrated anything
+			// about them.
 			sourceOverrides: mutateSource(dir, 'next/src/palette/results.ts', (text) =>
 				text.replace('// UX-3: cap', '// UX-3 (control comment): cap'),
 			),
@@ -1256,6 +1406,36 @@ export function runControls(filter?: string): number {
 	const selected = filter ? CONTROLS.filter((c) => c.id.includes(filter)) : CONTROLS;
 	const failures: string[] = [];
 	let passed = 0;
+
+	// COVERAGE, before anything runs. `N4` reached review with no defect control
+	// of its own -- it appeared only inside another control's `alsoFails`, so it
+	// had never been shown to fail for its own reason, and nothing in this file
+	// could notice. Riding on a co-failure is exactly the thing the header
+	// forbids, so the roll-call is now computed rather than asserted in prose.
+	if (!filter) {
+		let baselineRows: RowResult[] = [];
+		runAssertions({
+			quiet: true,
+			skipTypecheck: true,
+			onRows: (rows) => {
+				baselineRows = rows;
+			},
+		});
+		const named = new Set(CONTROLS.filter((c) => c.kind === 'defect').map((c) => c.row));
+		const uncovered = baselineRows.map((row) => row.id).filter((id) => !named.has(id));
+		if (uncovered.length > 0) {
+			console.error(
+				`FAIL coverage   rows with no defect control of their own: ${uncovered.join(', ')}`,
+			);
+			console.error(
+				"       A row named only in another control's alsoFails has never been shown to fail for its own reason.",
+			);
+			return 1;
+		}
+		console.log(
+			`PASS coverage   all ${baselineRows.length} rows are named by at least one defect control`,
+		);
+	}
 
 	for (const control of selected) {
 		const dir = join(SCRATCH, control.id);
