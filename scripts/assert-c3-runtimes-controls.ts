@@ -144,6 +144,20 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
+		id: 'C3-12',
+		kind: 'INVARIANCE',
+		what: 'a file written OUTSIDE the guard roots during the run — the guard must not trip; paired with C3-07',
+		only: ['T6'],
+		options: ({ dir, guard }) => ({
+			guardPaths: [guard],
+			afterRows: () => {
+				const outside = join(dir, 'outside-the-guard');
+				mkdirSync(outside, { recursive: true });
+				writeFileSync(join(outside, 'stray.json'), '{"outside":true}\n');
+			},
+		}),
+	},
+	{
 		id: 'C3-08',
 		kind: 'INVARIANCE',
 		what: 'deno.json re-indented with four spaces and a trailing blank line — paired with C3-01/05',

@@ -43,12 +43,19 @@ async function findThreeBRoot(): Promise<string> {
 	}
 
 	// C3: explicit fallback chain — ~/dev/3b, then the legacy ~/dev/personal/3b.
-	const home = Deno.env.get('HOME') ?? '';
-	for (const candidate of [join(home, 'dev', '3b'), join(home, 'dev', 'personal', '3b')]) {
-		if (await exists(join(candidate, DSA_I_SOURCE_ROOT_LABEL))) return candidate;
+	// Skipped entirely when HOME is unset: `join('', 'dev', '3b')` is the relative
+	// path `dev/3b`, which resolves against the caller's cwd and turns a missing
+	// env var into a mystery.
+	const home = Deno.env.get('HOME');
+	if (home) {
+		for (const candidate of [join(home, 'dev', '3b'), join(home, 'dev', 'personal', '3b')]) {
+			if (await exists(join(candidate, DSA_I_SOURCE_ROOT_LABEL))) return candidate;
+		}
 	}
 
-	throw new Error('Could not locate 3B root. Set THREEB_ROOT=/absolute/path/to/3b.');
+	throw new Error(
+		'Could not locate 3B root. Set THREEB_PATH=/absolute/path/to/3b (THREEB_ROOT is still accepted).',
+	);
 }
 
 async function sha256(path: string): Promise<string> {

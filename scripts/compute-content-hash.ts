@@ -33,6 +33,14 @@ function resolveThreeBRoot(): string {
 	const fromEnv = Deno.env.get('THREEB_PATH');
 	if (fromEnv) return fromEnv;
 	const home = Deno.env.get('HOME');
+	// Without HOME there is no candidate to build: interpolating an undefined
+	// value yields "undefined/dev/3b", which fails later as a missing-file error
+	// that says nothing about the real cause.
+	if (!home) {
+		throw new Error(
+			'Cannot locate the 3B root: neither THREEB_PATH nor HOME is set. Set THREEB_PATH=/absolute/path/to/3b.',
+		);
+	}
 	const candidates = [`${home}/dev/3b`, `${home}/dev/personal/3b`];
 	for (const candidate of candidates) {
 		try {

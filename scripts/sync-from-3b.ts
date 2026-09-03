@@ -36,7 +36,15 @@ import {
 import { basename, dirname, join } from 'https://deno.land/std@0.220.0/path/mod.ts';
 
 // Configuration — all paths absolute so script works from any directory
-const HOME = Deno.env.get('HOME')!;
+// Without HOME every default path below is meaningless, and join() would throw a
+// TypeError that names neither variable. Fail on the real cause instead.
+const HOME = Deno.env.get('HOME');
+if (!HOME) {
+	console.error(
+		'Error: HOME is not set. Set THREEB_PATH and BLOG_ROOT to absolute paths, or run with HOME set.',
+	);
+	Deno.exit(1);
+}
 // C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b, so the
 // legacy default no longer exists on a current machine. Honor THREEB_PATH, then
 // fall back to the first existing root: ~/dev/3b, then the legacy path.
@@ -54,7 +62,27 @@ function resolveThreeBRoot(): string {
 	return candidates[0];
 }
 const SOURCE_DIR = join(resolveThreeBRoot(), 'knowledge');
-const BLOG_ROOT = Deno.env.get('BLOG_ROOT') || join(HOME, 'dev', 'personal', 'brandonwie.dev');
+/**
+ * The blog checkout this script writes into. BLOG_ROOT wins; the default is the
+ * usual location. A default that no longer exists is the same class of bug as
+ * the pre-move 3B path, so it is reported here rather than surfacing as a
+ * confusing write into a directory nobody has.
+ */
+function resolveBlogRoot(): string {
+	const fromEnv = Deno.env.get('BLOG_ROOT');
+	if (fromEnv) return fromEnv;
+	const fallback = join(HOME, 'dev', 'personal', 'brandonwie.dev');
+	try {
+		if (Deno.statSync(fallback).isDirectory) return fallback;
+	} catch {
+		/* reported below */
+	}
+	console.error(
+		`Error: BLOG_ROOT is not set and the default blog checkout does not exist: ${fallback}. Set BLOG_ROOT=/absolute/path/to/brandonwie.dev.`,
+	);
+	Deno.exit(1);
+}
+const BLOG_ROOT = resolveBlogRoot();
 const TARGET_DIR = join(BLOG_ROOT, 'src', 'content', 'posts', 'en');
 const EXCLUDED_CATEGORIES = ['moba']; // Company-specific content (backup filter)
 
