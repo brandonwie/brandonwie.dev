@@ -1,6 +1,7 @@
 build/
 .svelte-kit/
 src/lib/paraglide/
+next/src/paraglide/
 static/og/
 static/hero/
 resources/media/

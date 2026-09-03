@@ -3,40 +3,10 @@ import { notFound } from 'next/navigation';
 
 import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../../../src/lib/seo';
 import { SLICE_1_ARTICLE_SLUG, articlePath, sourceDate } from './article-contract';
+import { articleCopy } from '../i18n/copy';
 import { articleJsonLd } from './article-json-ld';
 import { heroBlockHtml } from './hero';
 import { loadPost, type Locale } from './posts';
-
-const COPY = {
-	en: {
-		breadcrumb: 'Breadcrumb',
-		home: 'Home',
-		published: 'Published',
-		updated: 'Updated',
-		readingTime: 'min read',
-		category: 'Category',
-		tags: 'Tags',
-		toc: 'On this page',
-		switchLabel: 'Read this article in Korean',
-		switchText: '한국어',
-		comments: 'Comments',
-		commentsStatus: 'Comments will load here when the Giscus runtime is migrated.',
-	},
-	ko: {
-		breadcrumb: '현재 위치',
-		home: '홈',
-		published: '게시일',
-		updated: '수정일',
-		readingTime: '분 읽기',
-		category: '카테고리',
-		tags: '태그',
-		toc: '이 글의 목차',
-		switchLabel: '이 글을 영어로 읽기',
-		switchText: 'English',
-		comments: '댓글',
-		commentsStatus: 'Giscus 런타임을 마이그레이션하면 이곳에 댓글이 표시됩니다.',
-	},
-} as const;
 
 function displayDate(value: string | Date, locale: Locale): string {
 	return new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-US', {
@@ -102,7 +72,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 	if (!post) notFound();
 
 	const meta = post.frontmatter;
-	const copy = COPY[locale];
+	const copy = articleCopy(locale);
 	const otherLocale: Locale = locale === 'ko' ? 'en' : 'ko';
 	const switchPath = articlePath(slug, otherLocale);
 

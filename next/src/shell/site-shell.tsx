@@ -1,31 +1,11 @@
 import type { ReactNode } from 'react';
 
 import { SLICE_1_ARTICLE_SLUG, articlePath } from '../content/article-contract';
+import { shellCopy } from '../i18n/copy';
 import type { Locale } from './document';
 
-const COPY = {
-	en: {
-		skip: 'Skip to content',
-		brandLabel: 'Brandon Wie home',
-		navigation: 'Primary navigation',
-		home: 'Home',
-		article: 'Article',
-		footer: 'Site footer',
-		footerText: 'Engineering notes by Brandon Wie.',
-	},
-	ko: {
-		skip: '본문으로 건너뛰기',
-		brandLabel: 'Brandon Wie 홈',
-		navigation: '주요 탐색',
-		home: '홈',
-		article: '글',
-		footer: '사이트 하단',
-		footerText: 'Brandon Wie의 엔지니어링 기록.',
-	},
-} as const;
-
 export function SiteShell({ locale, children }: { locale: Locale; children: ReactNode }) {
-	const copy = COPY[locale];
+	const copy = shellCopy(locale);
 
 	return (
 		<div className="site-shell">
