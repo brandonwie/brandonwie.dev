@@ -1,7 +1,7 @@
 'use client';
 
 import type { MermaidConfig } from 'mermaid';
-import { useEffect, useId, useRef, useState } from 'react';
+import { type RefObject, useEffect, useId, useRef, useState } from 'react';
 
 type MermaidApi = (typeof import('mermaid'))['default'];
 
@@ -95,22 +95,71 @@ export default function Mermaid({ code }: { code: string }) {
 
 	useEffect(() => {
 		let cancelled = false;
-		(async () => {
-			try {
-				const mermaid = (await import('mermaid')).default;
-				initializeMermaidOnce(mermaid);
-				const { svg } = await mermaid.render(`mermaid-${id}`, code);
+		void renderMermaid({
+			code,
+			id,
+			loadMermaid: async () => (await import('mermaid')).default,
+			setSvg: (svg) => {
 				if (!cancelled && ref.current) ref.current.innerHTML = svg;
-			} catch (cause) {
-				if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
-			}
-		})();
+			},
+			setError: (message) => {
+				if (!cancelled) setError(message);
+			},
+		});
 		return () => {
 			cancelled = true;
 		};
 	}, [code, id]);
 
-	if (error) {
+	return mermaidView({ code, error, ref });
+}
+
+/** The browser half of a mermaid diagram, as a seam.
+ *
+ * Lifted out of the effect so the C11 harness can drive the FAILING path
+ * without a browser: substitute a `loadMermaid` whose `render` throws and
+ * assert `setError` receives the message. Same seam-substitution shape as
+ * `compile-corpus.ts`'s `fakeMermaid`, and the reason S9's error state is
+ * provable at all -- a `catch` that nothing can reach is a claim, not a proof.
+ *
+ * `setSvg` and `setError` carry the component's cancellation check, so this
+ * function stays free of React entirely. */
+export interface MermaidRenderDeps {
+	code: string;
+	id: string;
+	loadMermaid: () => Promise<Pick<MermaidApi, 'initialize' | 'render'>>;
+	setSvg: (svg: string) => void;
+	setError: (message: string) => void;
+}
+
+export async function renderMermaid(deps: MermaidRenderDeps): Promise<void> {
+	try {
+		const mermaid = await deps.loadMermaid();
+		initializeMermaidOnce(mermaid);
+		const { svg } = await mermaid.render(`mermaid-${deps.id}`, deps.code);
+		deps.setSvg(svg);
+	} catch (cause) {
+		deps.setError(cause instanceof Error ? cause.message : String(cause));
+	}
+}
+
+/** The two rendered states, as a pure function of `error`.
+ *
+ * The attribute markers are the contract S9 asserts, and they must stay
+ * DISJOINT: `data-mermaid-error` marks a diagram the browser could not draw,
+ * `data-mermaid` one it could (or has not tried yet). Collapsing them to one
+ * name would leave a failed diagram indistinguishable from a pending one, which
+ * is precisely the state the fixture route exists to catch. */
+export function mermaidView({
+	code,
+	error,
+	ref,
+}: {
+	code: string;
+	error: string | null;
+	ref?: RefObject<HTMLDivElement | null>;
+}) {
+	if (error !== null) {
 		return (
 			<pre data-mermaid-error="" role="img" aria-label="Diagram failed to render">
 				{code}

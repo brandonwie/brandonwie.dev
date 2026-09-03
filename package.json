@@ -24,6 +24,7 @@
 		"migration:verify:svelte": "tsx scripts/migration-verify.ts compare verification/baseline/svelte-e23e808.json build --ledger verification/empty-ledger.json",
 		"migration:c13": "tsx scripts/assert-c13-shell.ts",
 		"migration:c13:controls": "tsx scripts/assert-c13-shell-controls.ts",
+		"migration:c11": "tsx --tsconfig next/tsconfig.json scripts/assert-c11-library-ports.ts",
 		"migration:c3": "tsx scripts/assert-c3-runtimes.ts",
 		"migration:c3:controls": "tsx scripts/assert-c3-runtimes-controls.ts",
 		"migration:article": "tsx scripts/assert-article-parity.ts",
