@@ -4,6 +4,7 @@ import { join, relative, sep } from 'node:path';
 import matter from 'gray-matter';
 import { cache } from 'react';
 
+import type { Locale } from '../i18n/locale';
 import { renderMarkdown, type Heading, type ParsedMarkdownSource } from '../markdown/pipeline';
 
 /**
@@ -55,8 +56,6 @@ interface PostFileListCacheEntry {
 
 const postSourceCache = new Map<string, PostSourceCacheEntry>();
 const postFileListCache = new Map<string, PostFileListCacheEntry>();
-
-import type { Locale } from '../i18n/locale';
 
 export type { Locale };
 
