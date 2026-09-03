@@ -11,6 +11,7 @@
 	},
 	"dependencies": {
 		"@shikijs/rehype": "^4.4.3",
+		"@xyflow/react": "12.11.6",
 		"github-slugger": "^2.0.0",
 		"gray-matter": "^4.0.3",
 		"hast-util-to-jsx-runtime": "^2.3.6",
