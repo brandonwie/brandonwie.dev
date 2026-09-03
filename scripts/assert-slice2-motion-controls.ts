@@ -3,7 +3,7 @@
  *
  *   pnpm migration:spike2:controls
  *
- * `assert-slice2-motion.ts` reports 24 green rows on its first run, which is
+ * `assert-slice2-motion.ts` reports 28 green rows on its first run, which is
  * exactly the shape a harness has when it asserts nothing. This asks the only
  * question that makes the number mean anything: would any of them go red?
  *
@@ -56,7 +56,7 @@ import {
 	type FlipParams,
 	type TransitionMetrics,
 } from '../next/src/motion/svelte-motion.ts';
-import { planEnter, planFlip, type MotionAttributes } from '../next/src/motion/useKeyedMotion.ts';
+import { planEnter, planFlip, type MotionAttributes } from '../next/src/motion/KeyedMotion.tsx';
 import {
 	LOAD_FACTOR_LIMIT,
 	RESIZE_CAPACITY,
@@ -92,7 +92,7 @@ const REAL_MOTION: MotionSeam = {
 	linear,
 };
 const REAL_PLAN: PlanSeam = { planFlip, planEnter };
-const REAL_MODEL: ModelSeam = { insert, reset, sizeOf, loadFactor, isExhausted };
+const REAL_MODEL: ModelSeam = { insert, reset, sizeOf, isExhausted };
 
 interface Control {
 	id: string;
@@ -336,20 +336,96 @@ const CONTROLS: Control[] = [
 		}),
 	},
 
+	{
+		id: 'O1-defect-zoom-ignored',
+		kind: 'defect',
+		row: 'O1',
+		// Same reason as the scale factor: dx and dy feed the default duration.
+		alsoFails: ['O2'],
+		what: 'flip divides by nothing where Svelte divides by the effective zoom',
+		setup: () => ({
+			skipTypecheck: true,
+			motion: motionWith({
+				flipConfig: (metrics, from, to, params) =>
+					flipConfig({ ...metrics, zoom: 1 }, from, to, params),
+			}),
+		}),
+	},
+	{
+		id: 'O1-defect-origin-copy-paste',
+		kind: 'defect',
+		row: 'O1',
+		// Not O2: that row pins the origin at the top-left corner, where ox and
+		// oy are both 0 and the slip is invisible.
+		what: 'the y origin fraction is computed from the x offset and the width',
+		// The classic copy-paste slip. Invisible while every test origin was
+		// symmetric, which every one of them was.
+		setup: () => ({
+			skipTypecheck: true,
+			motion: motionWith({
+				flipConfig: (metrics, from, to, params) => {
+					const [ox] = metrics.transformOrigin.split(' ').map(parseFloat);
+					const oy = (ox / metrics.clientWidth) * metrics.clientHeight;
+					return flipConfig({ ...metrics, transformOrigin: `${ox}px ${oy}px` }, from, to, params);
+				},
+			}),
+		}),
+	},
+	{
+		id: 'O1-defect-wrong-easing-default',
+		kind: 'defect',
+		row: 'O1',
+		what: "flip defaults to linear where Svelte's flip defaults to cubicOut",
+		setup: () => ({
+			skipTypecheck: true,
+			motion: motionWith({
+				flipConfig: (metrics, from, to, params) => ({
+					...flipConfig(metrics, from, to, params),
+					easing: linear,
+				}),
+			}),
+		}),
+	},
+	{
+		id: 'O3-defect-wrong-easing-default',
+		kind: 'defect',
+		row: 'O3',
+		what: "fade defaults to cubicOut where Svelte's fade defaults to linear",
+		setup: () => ({
+			skipTypecheck: true,
+			motion: motionWith({
+				fadeConfig: (metrics, params) => ({ ...fadeConfig(metrics, params), easing: cubicOut }),
+			}),
+		}),
+	},
+	{
+		id: 'O7-defect-fixed-sample-count',
+		kind: 'defect',
+		row: 'O7',
+		what: 'the keyframes are sampled a fixed 21 times regardless of duration',
+		// The port's own earlier behavior, which made its curve a CLOSER
+		// approximation of cubicOut than the oracle's -- better, and therefore
+		// a divergence.
+		setup: () => ({
+			skipTypecheck: true,
+			motion: motionWith({ sampleKeyframes: (config) => sampleKeyframes(config, 20) }),
+		}),
+	},
 	// ------------------------------------------------------------- P group
 	{
 		id: 'P1-defect-missing-port',
 		kind: 'defect',
 		row: 'P1',
-		// P2 reads this file for its 'use client' directive and R1 reads it to
-		// check the hook has no reduced-motion branch. A missing file cannot be
-		// read, so both go down with it; narrowing the mutation is not possible
-		// without stopping it being "the module is missing".
-		alsoFails: ['P2', 'R1'],
+		// P2 reads this file for its 'use client' directive, R1 reads it to check
+		// the boundary has no reduced-motion branch, and S5 reads it for the
+		// attribute names. A missing file cannot be read, so all three go down
+		// with it; narrowing the mutation is not possible without stopping it
+		// being "the module is missing".
+		alsoFails: ['P2', 'R1', 'S5'],
 		what: 'a ported module is missing',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: { 'next/src/motion/useKeyedMotion.ts': join(dir, 'gone.ts') },
+			sourceOverrides: { 'next/src/motion/KeyedMotion.tsx': join(dir, 'gone.ts') },
 		}),
 	},
 	{
@@ -430,10 +506,10 @@ const CONTROLS: Control[] = [
 		what: 'the hook grows its own reduced-motion branch',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/motion/useKeyedMotion.ts', (text) =>
+			sourceOverrides: mutateSource(dir, 'next/src/motion/KeyedMotion.tsx', (text) =>
 				text.replace(
-					'function run(element: HTMLElement, plan: MotionPlan) {',
-					'function run(element: HTMLElement, plan: MotionPlan) {\n\tconst reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;\n\tif (reduced) return;',
+					"\t\t\tif (plan.kind === 'none') continue;",
+					'\t\t\tif (plan.kind === \'none\') continue;\n\t\t\tconst reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;\n\t\t\tif (reduced) continue;',
 				),
 			),
 		}),
@@ -514,6 +590,77 @@ const CONTROLS: Control[] = [
 		}),
 	},
 
+	{
+		id: 'R4-defect-always-fade',
+		kind: 'defect',
+		row: 'R4',
+		what: 'every recognised intro resolves to a fade',
+		// Distinct from R4-defect-unknown-intro: this one PARSES correctly and
+		// still plays the wrong transition, which is what the row had not been
+		// checking.
+		setup: () => ({
+			skipTypecheck: true,
+			plan: planWith({
+				planEnter: (attributes: MotionAttributes, metrics: TransitionMetrics) => {
+					const plan = planEnter(attributes, metrics);
+					if (plan.kind !== 'enter') return plan;
+					return { kind: 'enter', config: fadeConfig(metrics, { duration: plan.config.duration }) };
+				},
+			}),
+		}),
+	},
+	{
+		id: 'R1-defect-ternary-in-a-string',
+		kind: 'defect',
+		row: 'R1',
+		what: 'the reduced-motion ternary is deleted and documented in a string instead',
+		setup: (dir) => ({
+			skipTypecheck: true,
+			sourceOverrides: mutateSource(
+				dir,
+				'next/src/components/study/HashMapVisualizer.tsx',
+				(text) =>
+					text
+						.replace('const flipDuration = reduced ? 0 : 220;', 'const flipDuration = 220;')
+						.replace(
+							'const enterDuration = reduced ? 0 : 160;',
+							"const enterDuration = 160;\n\tconst NOTE = 'useReducedMotion() and reduced ? 0 : 220 are documented here';\n\tvoid NOTE;",
+						),
+			),
+		}),
+	},
+	{
+		id: 'P3-defect-oracle-only-in-prose',
+		kind: 'defect',
+		row: 'P3',
+		what: 'the harness stops importing svelte and only mentions it in a comment',
+		// The realistic path is someone repointing the oracle at a local stub.
+		// The guard passed this until it started reading through stripComments.
+		setup: (dir) => ({
+			skipTypecheck: true,
+			sourceOverrides: mutateSource(dir, 'scripts/assert-slice2-motion.ts', (text) =>
+				text
+					.replace("import { flip } from 'svelte/animate';\n", '')
+					.replace(
+						"import { cubicOut as svelteCubicOut, linear as svelteLinear } from 'svelte/easing';\n",
+						'',
+					)
+					.replace("import { fade, scale } from 'svelte/transition';\n", ''),
+			),
+		}),
+	},
+	{
+		id: 'P2-defect-declared-boundary-unmet',
+		kind: 'defect',
+		row: 'P2',
+		what: 'the declared client-boundary map disagrees with the source',
+		// Exercises the `clientBoundary` injection point, which the option's own
+		// comment claimed a control proved and none did.
+		setup: () => ({
+			skipTypecheck: true,
+			clientBoundary: { 'next/src/motion/svelte-motion.ts': true },
+		}),
+	},
 	// ------------------------------------------------------------- M group
 	{
 		id: 'M1-defect-wrong-modulus',
@@ -612,6 +759,44 @@ const CONTROLS: Control[] = [
 		}),
 	},
 
+	{
+		id: 'M6-defect-flat-status',
+		kind: 'defect',
+		row: 'M6',
+		what: 'every node reports as placed, so collisions and probes are never shown',
+		setup: () => ({
+			skipTypecheck: true,
+			model: modelWith({
+				insert: (state) => {
+					const next = insert(state);
+					return {
+						...next,
+						chains: next.chains.map((chain) =>
+							chain.map((chainNode) => ({ ...chainNode, status: 'placed' as const })),
+						),
+						slots: next.slots.map((slot) =>
+							slot === null ? null : { ...slot, status: 'placed' as const },
+						),
+					};
+				},
+			}),
+		}),
+	},
+	{
+		id: 'M7-defect-inserts-past-the-end',
+		kind: 'defect',
+		row: 'M7',
+		what: 'an insert past the end of the queue reports a placement',
+		setup: () => ({
+			skipTypecheck: true,
+			model: modelWith({
+				insert: (state) =>
+					isExhausted(state)
+						? { ...state, message: { kind: 'place', key: 0, index: 0 } }
+						: insert(state),
+			}),
+		}),
+	},
 	// ------------------------------------------------------------- S group
 	{
 		id: 'S1-defect-indexable',
@@ -702,6 +887,32 @@ const CONTROLS: Control[] = [
 		},
 	},
 
+	{
+		id: 'S5-defect-renamed-attribute',
+		kind: 'defect',
+		row: 'S5',
+		what: 'a component renames data-motion-flip, so the flip silently never runs',
+		setup: (dir) => ({
+			skipTypecheck: true,
+			sourceOverrides: mutateSource(
+				dir,
+				'next/src/components/study/HashMapVisualizer.tsx',
+				(text) => text.replace('data-motion-flip=', 'data-flip='),
+			),
+		}),
+	},
+	{
+		id: 'S2-defect-declared-counts-unmet',
+		kind: 'defect',
+		row: 'S2',
+		what: 'the declared initial-export counts disagree with the export',
+		// Exercises the `initialCounts` injection point, which the option's own
+		// comment claimed a control proved and none did.
+		setup: () => ({
+			skipTypecheck: true,
+			initialCounts: { motionKeys: 4, flipAttributes: 0, studyCards: 2 },
+		}),
+	},
 	// ------------------------------------------------------------- C group
 	{
 		id: 'C1-defect-widened-exclude',
@@ -740,7 +951,7 @@ const CONTROLS: Control[] = [
 		what: 'a comment mentioning reduced motion does not satisfy or break R1',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/motion/useKeyedMotion.ts', (text) =>
+			sourceOverrides: mutateSource(dir, 'next/src/motion/KeyedMotion.tsx', (text) =>
 				text.replace(
 					"'use client';",
 					"'use client';\n\n// A note about reduced motion that is prose, not behavior.",
@@ -766,15 +977,33 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
-		id: 'I5-real-seams',
+		id: 'I5-rewritten-seams',
 		kind: 'invariance',
 		row: '-',
-		what: 'passing the real implementations through the seams changes nothing',
+		what: 'equivalent implementations behind the seams change nothing',
+		// `motionWith({})` returns the same function objects the harness builds
+		// by default, so it was I1 with extra spreads. These are wrappers with
+		// different identities and, for the model, a different object graph --
+		// which is what "the seam is not itself the defect" has to mean.
 		setup: () => ({
 			skipTypecheck: true,
-			motion: motionWith({}),
-			plan: planWith({}),
-			model: modelWith({}),
+			motion: motionWith({
+				flipConfig: (metrics, from, to, params) => flipConfig(metrics, from, to, params),
+				fadeConfig: (metrics, params) => fadeConfig(metrics, params),
+				scaleConfig: (metrics, params) => scaleConfig(metrics, params),
+				sampleKeyframes: (config, steps) =>
+					steps === undefined ? sampleKeyframes(config) : sampleKeyframes(config, steps),
+				cubicOut: (t) => cubicOut(t),
+				linear: (t) => linear(t),
+			}),
+			plan: planWith({
+				planFlip: (attributes, metrics, from, to) => planFlip(attributes, metrics, from, to),
+				planEnter: (attributes, metrics) => planEnter(attributes, metrics),
+			}),
+			model: modelWith({
+				insert: (state) => JSON.parse(JSON.stringify(insert(state))) as TableState,
+				reset: (strategy) => JSON.parse(JSON.stringify(reset(strategy))) as TableState,
+			}),
 		}),
 	},
 	{

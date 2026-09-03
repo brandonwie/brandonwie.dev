@@ -226,16 +226,39 @@ export function scaleConfig(metrics: TransitionMetrics, params: ScaleParams = {}
 }
 
 /**
+ * How many samples Svelte takes for a given duration.
+ *
+ * `Math.ceil(duration / (1000 / 60))` is Svelte's own line, with its own
+ * comment: "`n` must be an integer, or we risk missing the `t2` value". The
+ * loop runs `i = 0` through `i = n` inclusive, so a 220 ms flip is 15 frames
+ * and a 120 ms fade is 9 — not a round number, and not a free choice.
+ *
+ * An earlier revision sampled a fixed 21 frames regardless of duration. Since
+ * the easing is baked into the samples and the browser interpolates linearly
+ * between them, that made the port's curve a slightly CLOSER approximation of
+ * `cubicOut` than Svelte's own. Better, and therefore wrong: an unrecorded
+ * improvement is a divergence like any other, and this one would have been
+ * invisible in every comparison the harness makes.
+ */
+export function frameCount(duration: number): number {
+	return Math.max(1, Math.ceil(duration / (1000 / 60)));
+}
+
+/**
  * Sample a config into Web Animations API keyframes.
  *
- * Svelte compiles its `css(t, u)` into a CSS `@keyframes` rule sampled across
- * the duration; WAAPI takes the same idea as an array. The easing is baked
- * into the samples rather than handed to the animation, so the curve is the
- * ported `easing` function and not the browser's nearest `cubic-bezier`.
+ * Svelte samples its own `css(t, u)` across the duration and hands the result
+ * to `element.animate(...)`; this is the same array, built the same way. The
+ * easing is baked into the samples rather than passed to the animation, so the
+ * curve is the ported `easing` function and not the browser's nearest
+ * `cubic-bezier` — which is also why the sample COUNT is part of the port.
  *
  * `u` is `1 - t`, exactly as Svelte defines it for an intro.
  */
-export function sampleKeyframes(config: MotionConfig, steps = 20): Keyframe[] {
+export function sampleKeyframes(
+	config: MotionConfig,
+	steps = frameCount(config.duration),
+): Keyframe[] {
 	const frames: Keyframe[] = [];
 	for (let i = 0; i <= steps; i += 1) {
 		const p = i / steps;

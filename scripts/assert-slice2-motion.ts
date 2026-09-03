@@ -64,7 +64,7 @@ import {
 	type MotionBox,
 	type MotionConfig,
 } from '../next/src/motion/svelte-motion';
-import { planEnter, planFlip } from '../next/src/motion/useKeyedMotion';
+import { planEnter, planFlip } from '../next/src/motion/KeyedMotion';
 import {
 	INITIAL_CAPACITY,
 	INSERT_QUEUE,
@@ -72,7 +72,6 @@ import {
 	RESIZE_CAPACITY,
 	insert,
 	isExhausted,
-	loadFactor,
 	reset,
 	sizeOf,
 	type TableState,
@@ -114,7 +113,10 @@ export const PORT_ADDITIONS = [
 		path: 'next/src/motion/svelte-motion.ts',
 		why: 'flip, fade and scale have no React equivalent',
 	},
-	{ path: 'next/src/motion/useKeyedMotion.ts', why: 'React does not report keyed-list survivors' },
+	{
+		path: 'next/src/motion/KeyedMotion.tsx',
+		why: 'React does not report keyed-list survivors, or where they were',
+	},
 	{ path: 'next/src/study/hash-map-model.ts', why: 'no $derived, so the insert step becomes pure' },
 	{
 		path: 'next/src/components/study/StudySpike.tsx',
@@ -126,7 +128,7 @@ export const PORT_ADDITIONS = [
 /** `'use client'` belongs on the modules that touch React, and nowhere else. */
 export const CLIENT_BOUNDARY: Record<string, boolean> = {
 	'next/src/motion/useReducedMotion.ts': true,
-	'next/src/motion/useKeyedMotion.ts': true,
+	'next/src/motion/KeyedMotion.tsx': true,
 	'next/src/components/study/Stepper.tsx': true,
 	'next/src/components/study/BstTraversalVisualizer.tsx': true,
 	'next/src/components/study/HashMapVisualizer.tsx': true,
@@ -218,7 +220,6 @@ export interface ModelSeam {
 	insert: typeof insert;
 	reset: typeof reset;
 	sizeOf: typeof sizeOf;
-	loadFactor: typeof loadFactor;
 	isExhausted: typeof isExhausted;
 }
 
@@ -232,11 +233,11 @@ export interface Slice2Options {
 	 *  scratch copy carrying one, so the row is proven able to fail without a
 	 *  Svelte import ever being written into the real tree. */
 	scanRoots?: string[];
-	/** Replace the declared client-boundary map (controls prove P2 can fail). */
+	/** Replace the declared client-boundary map (P2-defect-declared-boundary-unmet). */
 	clientBoundary?: Record<string, boolean>;
 	/** Replace the declared dependency list (controls prove P4 can fail). */
 	dependencies?: string[];
-	/** Replace the declared initial-export counts (controls prove S2 can fail). */
+	/** Replace the declared initial-export counts (S2-defect-declared-counts-unmet). */
 	initialCounts?: typeof INITIAL_EXPORT_COUNTS;
 	/** Seam for the O rows. */
 	motion?: MotionSeam;
@@ -324,8 +325,8 @@ function withComputedStyle<T>(
 	}
 }
 
-function oracleNode(clientWidth: number, clientHeight: number): Element {
-	const node: OracleNode = { clientWidth, clientHeight, currentCSSZoom: 1 };
+function oracleNode(clientWidth: number, clientHeight: number, zoom = 1): Element {
+	const node: OracleNode = { clientWidth, clientHeight, currentCSSZoom: zoom };
 	return node as unknown as Element;
 }
 
@@ -346,7 +347,14 @@ function box(left: number, top: number, width: number, height: number): MotionBo
  * nodes this port animates carry a 1px border, so `clientWidth` really is
  * `width - 2` for them: the un-exercised term was one the real components use.
  */
-const FLIP_CASES: { name: string; from: MotionBox; to: MotionBox; client: [number, number] }[] = [
+const FLIP_CASES: {
+	name: string;
+	from: MotionBox;
+	to: MotionBox;
+	client: [number, number];
+	/** Effective CSS zoom. Svelte divides dx and dy by it; at 1 the term vanishes. */
+	zoom?: number;
+}[] = [
 	{
 		name: 'moves left and down',
 		from: box(120, 40, 110, 40),
@@ -374,11 +382,27 @@ const FLIP_CASES: { name: string; from: MotionBox; to: MotionBox; client: [numbe
 		client: [64, 24],
 	},
 	{ name: 'does not move', from: box(8, 8, 50, 25), to: box(8, 8, 50, 25), client: [50, 25] },
+	{
+		// The zoom divisor is the second term that disappears when every input
+		// leaves it at 1 -- the same shape as the scale factor O1 missed once
+		// already. Without this case, `/ metrics.zoom` can be deleted from the
+		// port and every row stays green; `O1-defect-zoom-ignored` proved it.
+		name: 'moves under CSS zoom',
+		from: box(300, 120, 80, 32),
+		to: box(90, 44, 80, 32),
+		client: [78, 30],
+		zoom: 2,
+	},
 ];
 
 /** Look a case up by name: an index would silently move when a case is added,
  *  which is how R3 came to assert something other than the stationary pair. */
-function flipCase(name: string): { from: MotionBox; to: MotionBox; client: [number, number] } {
+function flipCase(name: string): {
+	from: MotionBox;
+	to: MotionBox;
+	client: [number, number];
+	zoom?: number;
+} {
 	const found = FLIP_CASES.find((testCase) => testCase.name === name);
 	if (!found) throw new Error(`no flip case named "${name}"`);
 	return found;
@@ -393,16 +417,50 @@ const SAMPLES: [number, number][] = [
 ];
 
 /**
- * Transform origins, as the FRACTION of the client box Svelte reduces them to.
- * The computed `transform-origin` string is rebuilt from `ox` at each call site
- * because it depends on that case's client box; carrying a literal string here
- * as well would be a second copy of the same fact, free to disagree with the
- * one actually used.
+ * Transform origins, as the pair of FRACTIONS Svelte reduces them to.
+ *
+ * The computed `transform-origin` string is rebuilt from these at each call
+ * site because it depends on that case's client box; carrying a literal string
+ * here as well would be a second copy of the same fact, free to disagree with
+ * the one actually used.
+ *
+ * `x` and `y` are separate for a reason. While every origin was symmetric, the
+ * classic copy-paste defect — `oy` computed from `origin[0]` and the WIDTH —
+ * produced identical output on every case, so the port's y origin was
+ * unexercised. The asymmetric entry closes that.
  */
-const ORIGINS: { label: string; ox: (extent: number) => number }[] = [
-	{ label: 'top-left', ox: () => 0 },
-	{ label: 'centre', ox: (extent) => extent / 2 },
+const ORIGINS: { label: string; x: number; y: number }[] = [
+	{ label: 'top-left', x: 0, y: 0 },
+	{ label: 'centre', x: 0.5, y: 0.5 },
+	{ label: 'asymmetric', x: 0.25, y: 0.75 },
 ];
+
+/**
+ * Compare the two halves of a config that are NOT the CSS string: which easing
+ * it defaults to, and its delay.
+ *
+ * Both were uncompared until a review probe returned `easing: linear` from
+ * `flipConfig` (Svelte's flip defaults to `cubicOut`) and `easing: cubicOut`
+ * from `fadeConfig` (Svelte's fade defaults to `linear`) with every row still
+ * green. That is not cosmetic: `KeyedMotion` hands the browser `easing:
+ * 'linear'` and relies on `sampleKeyframes` baking `config.easing` in, so the
+ * config's easing IS the curve the user sees.
+ */
+function sameCurve(
+	oracle: { delay?: number; easing?: (t: number) => number },
+	ported: MotionConfig,
+	label: string,
+): void {
+	eq(ported.delay, oracle.delay ?? 0, `${label} delay`);
+	must(oracle.easing !== undefined, `${label}: the svelte oracle returned no easing to compare`);
+	for (let i = 0; i <= 10; i += 1) {
+		const t = i / 10;
+		must(
+			ported.easing(t) === oracle.easing!(t),
+			`${label} easing at t=${t}: svelte ${oracle.easing!(t)} != port ${ported.easing(t)}`,
+		);
+	}
+}
 
 // ------------------------------------------------------------------ the rows
 
@@ -423,7 +481,7 @@ export function runAssertions(options: Slice2Options = {}): number {
 		linear,
 	};
 	const plan: PlanSeam = options.plan ?? { planFlip, planEnter };
-	const model: ModelSeam = options.model ?? { insert, reset, sizeOf, loadFactor, isExhausted };
+	const model: ModelSeam = options.model ?? { insert, reset, sizeOf, isExhausted };
 	const r = new Runner(options.quiet ?? false);
 
 	const read = (rel: string): string => {
@@ -447,16 +505,17 @@ export function runAssertions(options: Slice2Options = {}): number {
 		for (const testCase of FLIP_CASES) {
 			for (const origin of ORIGINS) {
 				const [clientWidth, clientHeight] = testCase.client;
-				const originPx = `${origin.ox(clientWidth)}px ${origin.ox(clientHeight)}px`;
+				const zoom = testCase.zoom ?? 1;
+				const originPx = `${origin.x * clientWidth}px ${origin.y * clientHeight}px`;
 				const style = {
 					transform: 'none',
 					transformOrigin: originPx,
 					opacity: '1',
-					zoom: '1',
+					zoom: String(zoom),
 				};
 				const oracle = withComputedStyle(style, () =>
 					flip(
-						oracleNode(clientWidth, clientHeight),
+						oracleNode(clientWidth, clientHeight, zoom),
 						{ from: testCase.from as DOMRect, to: testCase.to as DOMRect },
 						{ duration: 220 },
 					),
@@ -467,7 +526,7 @@ export function runAssertions(options: Slice2Options = {}): number {
 						clientHeight,
 						transform: 'none',
 						transformOrigin: originPx,
-						zoom: 1,
+						zoom,
 					},
 					testCase.from,
 					testCase.to,
@@ -486,26 +545,36 @@ export function runAssertions(options: Slice2Options = {}): number {
 					);
 					compared += 1;
 				}
+				sameCurve(oracle, ported, `flip ${testCase.name} / ${origin.label}`);
 			}
 		}
-		return `${compared} CSS strings identical across ${FLIP_CASES.length} rect pairs x ${ORIGINS.length} origins x ${SAMPLES.length} samples`;
+		return `${compared} CSS strings identical across ${FLIP_CASES.length} rect pairs x ${ORIGINS.length} origins x ${SAMPLES.length} samples, easing and delay compared with each`;
 	});
 
 	r.row('O2', 'flip duration matches, explicit and distance-derived', () => {
 		const results: string[] = [];
 		for (const testCase of FLIP_CASES) {
 			const [clientWidth, clientHeight] = testCase.client;
-			const style = { transform: 'none', transformOrigin: '0px 0px', opacity: '1', zoom: '1' };
+			// The case's own zoom, not a hardcoded 1: the default duration is
+			// derived from dx and dy, and dx and dy are divided by the zoom, so
+			// pinning it here would leave that divisor unexercised on this row.
+			const zoom = testCase.zoom ?? 1;
+			const style = {
+				transform: 'none',
+				transformOrigin: '0px 0px',
+				opacity: '1',
+				zoom: String(zoom),
+			};
 			const metrics = {
 				clientWidth,
 				clientHeight,
 				transform: 'none',
 				transformOrigin: '0px 0px',
-				zoom: 1,
+				zoom,
 			};
 			const explicitOracle = withComputedStyle(style, () =>
 				flip(
-					oracleNode(clientWidth, clientHeight),
+					oracleNode(clientWidth, clientHeight, zoom),
 					{ from: testCase.from as DOMRect, to: testCase.to as DOMRect },
 					{ duration: 220 },
 				),
@@ -519,7 +588,7 @@ export function runAssertions(options: Slice2Options = {}): number {
 			// distance the formula computed, so a wrong dx/dy shows up here even
 			// when both sides are handed the same number for the explicit case.
 			const defaultOracle = withComputedStyle(style, () =>
-				flip(oracleNode(clientWidth, clientHeight), {
+				flip(oracleNode(clientWidth, clientHeight, zoom), {
 					from: testCase.from as DOMRect,
 					to: testCase.to as DOMRect,
 				}),
@@ -548,6 +617,7 @@ export function runAssertions(options: Slice2Options = {}): number {
 				compared += 1;
 			}
 			eq(ported.duration, oracle.duration, 'fade duration');
+			sameCurve(oracle, ported, `fade at opacity ${opacity}`);
 		}
 		return `${compared} CSS strings identical, durations equal`;
 	});
@@ -574,8 +644,9 @@ export function runAssertions(options: Slice2Options = {}): number {
 				);
 				compared += 1;
 			}
+			sameCurve(oracle, ported, `scale with transform ${transform}`);
 		}
-		return `${compared} CSS strings identical, indentation included`;
+		return `${compared} CSS strings identical, indentation included, easing and delay compared`;
 	});
 
 	r.row('O5', 'easings match svelte/easing', () => {
@@ -631,30 +702,40 @@ export function runAssertions(options: Slice2Options = {}): number {
 		return 'flip, fade and scale project their checked CSS exactly';
 	});
 
-	r.row('O7', 'keyframes bake the easing rather than defer it', () => {
-		const config = motion.scaleConfig({ opacity: 1, transform: 'none' }, { duration: 160 });
-		const frames = motion.sampleKeyframes(config, 20) as Record<string, unknown>[];
-		eq(frames.length, 21, 'frame count');
-		eq(frames[0].offset, 0, 'first offset');
-		eq(frames[20].offset, 1, 'last offset');
-		eq(
-			frames[0].opacity,
-			config.style(config.easing(0), 1 - config.easing(0)).opacity,
-			'first frame',
-		);
-		eq(
-			frames[20].opacity,
-			config.style(config.easing(1), 1 - config.easing(1)).opacity,
-			'last frame',
-		);
-		// If the curve were handed to the browser instead of sampled, the middle
-		// frame would sit at the linear midpoint. cubicOut does not.
-		const middle = Number(frames[10].opacity);
-		must(
-			Math.abs(middle - 0.5) > 0.05,
-			`the midpoint frame is ${middle}, which is the LINEAR midpoint -- the easing is not baked into the samples`,
-		);
-		return `21 frames, midpoint opacity ${middle.toFixed(4)} against a linear 0.5`;
+	r.row('O7', "keyframes bake the easing and are sampled at Svelte's rate", () => {
+		const details: string[] = [];
+		for (const duration of [120, 160, 220]) {
+			const config = motion.scaleConfig({ opacity: 1, transform: 'none' }, { duration });
+			const frames = motion.sampleKeyframes(config) as Record<string, unknown>[];
+			// Svelte's own line, with its own reason: `n` must be an integer or
+			// the final value is missed. A fixed sample count would make the
+			// port's curve a CLOSER approximation of cubicOut than the oracle's,
+			// which is a divergence like any other and invisible in every other
+			// row here.
+			const expected = Math.max(1, Math.ceil(duration / (1000 / 60))) + 1;
+			eq(frames.length, expected, `frame count at ${duration}ms`);
+			eq(frames[0].offset, 0, 'first offset');
+			eq(frames[frames.length - 1].offset, 1, 'last offset');
+			eq(
+				frames[0].opacity,
+				config.style(config.easing(0), 1 - config.easing(0)).opacity,
+				'first frame',
+			);
+			eq(
+				frames[frames.length - 1].opacity,
+				config.style(config.easing(1), 1 - config.easing(1)).opacity,
+				'last frame',
+			);
+			// If the curve were handed to the browser instead of sampled, the
+			// middle frame would sit at the linear midpoint. cubicOut does not.
+			const middle = Number(frames[Math.floor((frames.length - 1) / 2)].opacity);
+			must(
+				Math.abs(middle - 0.5) > 0.05,
+				`the midpoint frame is ${middle}, which is the LINEAR midpoint -- the easing is not baked into the samples`,
+			);
+			details.push(`${duration}ms=${frames.length} frames`);
+		}
+		return details.join(', ');
 	});
 
 	// -- P: the port roll-call ------------------------------------------------
@@ -705,8 +786,12 @@ export function runAssertions(options: Slice2Options = {}): number {
 		);
 		// The harness itself imports svelte on purpose -- that is the oracle.
 		// Asserting it here keeps the two facts from being confused later.
+		// Read through stripComments: this FILE explains the double-quoted import
+		// defect in prose, and that sentence matched the pattern, so the guard
+		// passed a control that deleted all three real imports. A guard
+		// satisfiable by its own commentary is not a guard.
 		must(
-			SVELTE_IMPORT.test(read('scripts/assert-slice2-motion.ts')),
+			SVELTE_IMPORT.test(stripComments(read('scripts/assert-slice2-motion.ts'))),
 			'this harness no longer imports svelte, so the O rows are comparing the port against nothing',
 		);
 		return `${scanned} Next modules scanned, 0 svelte imports; the oracle import lives here instead`;
@@ -724,24 +809,28 @@ export function runAssertions(options: Slice2Options = {}): number {
 	// -- R: reduced motion ----------------------------------------------------
 
 	r.row('R1', 'reduced motion is resolved at the call site, not in the hook', () => {
-		const hook = read('next/src/motion/useKeyedMotion.ts');
-		const code = stripComments(hook);
+		// codeOnly, not stripComments: string CONTENTS are emptied as well as
+		// comments removed. A probe satisfied the positive half below by deleting
+		// both ternaries and adding `const NOTE = 'useReducedMotion() and reduced
+		// ? 0 : 220 are documented here';` -- prose in quotes reading as
+		// behavior, the same self-blindness the C11 A4 row had.
+		const code = codeOnly(read('next/src/motion/KeyedMotion.tsx'));
 		must(
 			!/reduced|prefers-reduced-motion|useReducedMotion/.test(code),
-			'useKeyedMotion has an opinion about reduced motion; the Svelte template resolves it at the call site and so must the port, or the two places can disagree',
+			'KeyedMotion has an opinion about reduced motion; the Svelte template resolves it at the call site and so must the port, or the two places can disagree',
 		);
 		for (const component of [
 			'next/src/components/study/BstTraversalVisualizer.tsx',
 			'next/src/components/study/HashMapVisualizer.tsx',
 		]) {
-			const source = stripComments(read(component));
+			const source = codeOnly(read(component));
 			must(/useReducedMotion\(\)/.test(source), `${component} does not read useReducedMotion()`);
 			must(
 				/reduced\s*\?\s*0\s*:/.test(source),
 				`${component} does not resolve a duration to 0 under reduced motion`,
 			);
 		}
-		return 'both components resolve their own durations; the hook reads them as data';
+		return 'both components resolve their own durations; the boundary reads them as data';
 	});
 
 	r.row('R2', 'a zero or missing flip duration plans nothing', () => {
@@ -793,10 +882,33 @@ export function runAssertions(options: Slice2Options = {}): number {
 		eq(plan.planEnter({ enter: 'fade:0' }, metrics).kind, 'none', 'fade:0');
 		eq(plan.planEnter({ enter: 'fly:200' }, metrics).kind, 'none', 'an intro nobody implemented');
 		eq(plan.planEnter({}, metrics).kind, 'none', 'no intro declared');
-		const faded = plan.planEnter({ enter: 'fade:120' }, metrics);
-		must(faded.kind === 'enter', 'fade:120 did not plan an entry');
-		eq(faded.config.duration, 120, 'the parsed duration reaches the config');
-		return 'fade and scale parsed with their durations; fly, zero and absent plan nothing';
+		// WHICH transition, not merely that there is one. A planEnter returning a
+		// fade for every known spec passed this row with only the `fly:200` line
+		// doing any work -- and `R4-defect-unknown-intro` IS that substitution,
+		// so the control and the row were resting on the same one assertion.
+		for (const [spec, duration, expected] of [
+			// The REAL configs, not the seam's: planEnter calls the real ones, so
+			// comparing against a substituted seam would make an unrelated O-group
+			// mutation fail this row too.
+			['fade:120', 120, fadeConfig(metrics, { duration: 120 })],
+			['scale:160', 160, scaleConfig(metrics, { duration: 160 })],
+		] as const) {
+			const planned = plan.planEnter({ enter: spec }, metrics);
+			must(planned.kind === 'enter', `${spec} did not plan an entry`);
+			const config = (planned as { config: MotionConfig }).config;
+			eq(config.duration, duration, `${spec}: the parsed duration reaches the config`);
+			for (const [t, u] of SAMPLES) {
+				eq(config.css(t, u), expected.css(t, u), `${spec} at t=${t}: wrong transition selected`);
+			}
+		}
+		// And the two are distinguishable, so the loop above is not comparing a
+		// thing to itself.
+		must(
+			fadeConfig(metrics, { duration: 120 }).css(0.5, 0.5) !==
+				scaleConfig(metrics, { duration: 120 }).css(0.5, 0.5),
+			'fade and scale produce the same CSS, so nothing above distinguishes them',
+		);
+		return 'fade and scale each produce their own transition; fly, zero and absent plan nothing';
 	});
 
 	// -- M: the hash-map model ------------------------------------------------
@@ -821,9 +933,6 @@ export function runAssertions(options: Slice2Options = {}): number {
 				// the independent model to the new capacity.
 				capacity = message.capacity;
 				occupied.clear();
-				for (const chain of state.chains) {
-					chain.forEach(() => undefined);
-				}
 				state.chains.forEach((chain, index) => {
 					if (chain.length > 0) occupied.add(index);
 				});
@@ -930,7 +1039,7 @@ export function runAssertions(options: Slice2Options = {}): number {
 			['n0'],
 			'ids after the first insert following a reset',
 		);
-		return "n0 is reused after a reset -- which is why useKeyedMotion's container ref sits on the outer box, not the grid";
+		return 'n0 is reused after a reset -- which is why KeyedMotion wraps the outer box, not the grid';
 	});
 
 	r.row('M5', 'a rehash mints new chain-node ids, as the Svelte original does', () => {
@@ -953,7 +1062,7 @@ export function runAssertions(options: Slice2Options = {}): number {
 		eq(survivors, [], 'ids carried across the rehash');
 		// WHY THIS IS THE CORRECT BEHAVIOR AND NOT A BUG. Reviewers read this as
 		// one: the ids are the React keys and `data-motion-key`, so minting new
-		// ones remounts every node and `useKeyedMotion` plays the intro rather
+		// ones remounts every node and `KeyedMotion` plays the intro rather
 		// than a flip. That is exactly what the Svelte original does --
 		// `rehash()` in HashMapVisualizer.svelte pushes `{ id: `n${nodeId++}` }`
 		// for every rehashed key, so its keyed `{#each}` sees new keys and runs
@@ -966,6 +1075,74 @@ export function runAssertions(options: Slice2Options = {}): number {
 			'the Svelte rehash no longer mints new ids, so this row is pinning the port to something the original stopped doing',
 		);
 		return `${before.length} ids replaced wholesale, matching the Svelte rehash`;
+	});
+
+	r.row('M6', 'collision and probe statuses are set, and cleared on the next insert', () => {
+		// The status is what the table actually SHOWS -- a dashed gold box for a
+		// collision, a foam one for a probe -- and it is cleared on the next
+		// insert so only the newest event is highlighted. A model that reported
+		// every node as 'placed' kept M1 and M2 green, because those read the
+		// message, not the cell.
+		let state = model.reset('chaining');
+		let sawCollision = false;
+		for (let i = 0; i < INSERT_QUEUE.length; i += 1) {
+			const previous = state;
+			state = model.insert(state);
+			const statuses = state.chains.flat().map((chainNode) => chainNode.status);
+			const highlighted = statuses.filter((status) => status !== 'placed');
+			must(
+				highlighted.length <= 1,
+				`insert ${i}: ${highlighted.length} nodes highlighted at once; only the newest event is`,
+			);
+			if (state.message.kind === 'collide') {
+				eq(highlighted, ['collision'], `insert ${i}: a collision is shown as one`);
+				sawCollision = true;
+			}
+			if (state.message.kind === 'place' && previous.chains.flat().length > 0) {
+				eq(highlighted, [], `insert ${i}: a plain placement highlights nothing`);
+			}
+		}
+		must(sawCollision, 'no insert in the queue collided, so the chaining half asserted nothing');
+
+		let probing = model.reset('probing');
+		let sawProbe = false;
+		for (let i = 0; i < INSERT_QUEUE.length; i += 1) {
+			probing = model.insert(probing);
+			const statuses = probing.slots
+				.filter((slot): slot is { key: number; status: string } => slot !== null)
+				.map((slot) => slot.status);
+			const highlighted = statuses.filter((status) => status !== 'placed');
+			must(
+				highlighted.length <= 1,
+				`probing insert ${i}: ${highlighted.length} slots highlighted at once`,
+			);
+			if (probing.message.kind === 'probe') {
+				eq(highlighted, ['probed'], `probing insert ${i}: a probe is shown as one`);
+				sawProbe = true;
+			}
+		}
+		must(sawProbe, 'no insert in the queue probed, so the probing half asserted nothing');
+		return 'collisions and probes are each shown once and cleared by the next insert';
+	});
+
+	r.row('M7', 'an insert past the end of the queue reports full and changes nothing', () => {
+		for (const strategy of ['chaining', 'probing'] as const) {
+			let state = model.reset(strategy);
+			for (let i = 0; i < INSERT_QUEUE.length; i += 1) state = model.insert(state);
+			eq(model.isExhausted(state), true, `${strategy}: the queue is spent`);
+			const before = JSON.stringify(state);
+			const after = model.insert(state);
+			eq(after.message.kind, 'full', `${strategy}: the message past the end`);
+			eq(
+				JSON.stringify({ ...after, message: state.message }),
+				before,
+				`${strategy}: a ninth insert changed the table`,
+			);
+			// The button is disabled at this point, so this branch is only
+			// reachable through the model -- which is exactly why no row reached
+			// it until one was written for it.
+		}
+		return `insert ${INSERT_QUEUE.length + 1} reports full and is a no-op in both strategies`;
 	});
 
 	// -- S: the spike route ---------------------------------------------------
@@ -1032,6 +1209,47 @@ export function runAssertions(options: Slice2Options = {}): number {
 			);
 		}
 		return [...found].map(([sentinel, file]) => `${sentinel} in ${file}`).join(', ');
+	});
+
+	r.row('S5', 'the motion attributes the components emit are the ones the boundary reads', () => {
+		// The whole channel between the visualizers and KeyedMotion is three
+		// attribute names. Rename `data-motion-flip` to `data-flip` in one place
+		// and the flip silently never runs: S2 still counts zero of them, S4's
+		// sentinel is still in the bundle, R1's regexes still match, and tsc is
+		// happy, because nothing typed the string. So it is checked both ways.
+		const boundary = codeOnly(read('next/src/motion/KeyedMotion.tsx'));
+		const readNames = [...boundary.matchAll(/dataset\.(motion[A-Za-z]+)/g)].map((match) =>
+			match[1].replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`),
+		);
+		const readAttributes = new Set(readNames.map((name) => `data-${name}`));
+		must(
+			readAttributes.size >= 3,
+			`the boundary reads only ${readAttributes.size} motion attributes; the contract is key, flip and enter`,
+		);
+
+		const components = [
+			'next/src/components/study/BstTraversalVisualizer.tsx',
+			'next/src/components/study/HashMapVisualizer.tsx',
+		];
+		const emitted = new Set<string>();
+		for (const component of components) {
+			for (const match of read(component).matchAll(/(data-motion-[a-z-]+)=/g)) {
+				emitted.add(match[1]);
+			}
+		}
+		for (const attribute of readAttributes) {
+			must(
+				emitted.has(attribute),
+				`the boundary reads ${attribute} and no ported component emits it -- the channel is broken in the direction nothing else checks`,
+			);
+		}
+		for (const attribute of emitted) {
+			must(
+				readAttributes.has(attribute),
+				`a component emits ${attribute} and the boundary never reads it, so it does nothing`,
+			);
+		}
+		return `${[...readAttributes].sort().join(', ')} read and emitted on both sides`;
 	});
 
 	// -- C: typecheck ---------------------------------------------------------
@@ -1139,6 +1357,20 @@ export function stripComments(source: string): string {
 		index += 1;
 	}
 	return out;
+}
+
+/**
+ * Comments removed AND string contents emptied.
+ *
+ * `stripComments` keeps string contents on purpose -- the P3 oracle guard has
+ * to see a real `from 'svelte/animate'`. Rows that check for BEHAVIOR need the
+ * opposite, or a sentence in quotes satisfies them.
+ */
+export function codeOnly(source: string): string {
+	return stripComments(source).replace(
+		/(['"`])(?:\\.|(?!\1)[\s\S])*\1/g,
+		(match) => `${match[0]}${match[0]}`,
+	);
 }
 
 export function walk(dir: string): string[] {

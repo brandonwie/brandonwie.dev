@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { BstTraversalCopy } from '../../data/study';
-import { useKeyedMotion } from '../../motion/useKeyedMotion';
+import { KeyedMotion } from '../../motion/KeyedMotion';
 import { useReducedMotion } from '../../motion/useReducedMotion';
 import Stepper from './Stepper';
 
@@ -127,8 +127,11 @@ export default function BstTraversalVisualizer({ copy }: { copy: BstTraversalCop
 	const [mode, setMode] = useState<TraversalMode>('inorder');
 	const [step, setStep] = useState(0);
 	const reduced = useReducedMotion();
-	const outputRef = useRef<HTMLDivElement>(null);
-	useKeyedMotion(outputRef);
+	// Resolved here rather than inside the attribute's template literal, so the
+	// R1 row can read it as code. Same value either way; the Svelte original
+	// writes `duration: motion.current ? 0 : 120` inline, and a named constant
+	// is the same statement with a name.
+	const enterDuration = reduced ? 0 : 120;
 
 	const sequence = sequences[mode];
 	const currentMode = copy.modes[mode];
@@ -238,12 +241,12 @@ export default function BstTraversalVisualizer({ copy }: { copy: BstTraversalCop
 				<span className="font-mono text-xs uppercase tracking-wider text-faint">
 					{copy.outputLabel}
 				</span>
-				<div ref={outputRef} className="mt-2 flex flex-wrap gap-2">
+				<KeyedMotion className="mt-2 flex flex-wrap gap-2">
 					{visited.map((value, index) => (
 						<span
 							key={`${value}-${index}`}
 							data-motion-key={`${value}-${index}`}
-							data-motion-enter={`fade:${reduced ? 0 : 120}`}
+							data-motion-enter={`fade:${enterDuration}`}
 							className={`border px-2.5 py-1 font-mono text-sm ${
 								index === visited.length - 1
 									? 'border-gold text-gold'
@@ -253,7 +256,7 @@ export default function BstTraversalVisualizer({ copy }: { copy: BstTraversalCop
 							{value}
 						</span>
 					))}
-				</div>
+				</KeyedMotion>
 			</div>
 
 			<p className="mt-4 font-mono text-xs text-faint">

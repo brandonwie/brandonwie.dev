@@ -1,9 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import type { HashMapVisualizerCopy } from '../../data/study';
-import { useKeyedMotion } from '../../motion/useKeyedMotion';
+import { KeyedMotion } from '../../motion/KeyedMotion';
 import { useReducedMotion } from '../../motion/useReducedMotion';
 import {
 	insert as insertStep,
@@ -28,18 +28,17 @@ import {
  * the insert step reads the post-insert size to decide whether to resize and
  * React state cannot be read that way mid-handler. See that file.
  *
- * `animate:flip` and `in:scale` became attributes read by `useKeyedMotion`.
+ * `animate:flip` and `in:scale` became attributes read by `KeyedMotion`.
  * Svelte's directives work because a keyed `{#each}` knows which children
  * survived; React does not, so the hook measures instead. The durations still
  * carry reduced motion the way the Svelte template did — `motion.current ? 0 :
  * 220` is now `reduced ? 0 : 220` written into `data-motion-flip`.
  *
- * The ref sits on the outer scroll container rather than the chaining grid, so
- * it survives a strategy switch. If it sat on the grid, switching away and
- * back would remount the container while the hook still held the old
- * measurements, and the first insert afterwards — which reuses id `n0`,
- * because a reset restarts the counter — would flip from a box that belonged
- * to a different node.
+ * `KeyedMotion` wraps the outer scroll container rather than the chaining grid,
+ * so it survives a strategy switch. Around the grid it would unmount on every
+ * switch, and since a reset restarts the id counter at `n0`, the first insert
+ * after switching back could be matched against a box belonging to a different
+ * node.
  */
 
 function statusLabel(copy: HashMapVisualizerCopy, status: SlotStatus): string {
@@ -66,8 +65,6 @@ function messageText(copy: HashMapVisualizerCopy, message: MessageState): string
 export default function HashMapVisualizer({ copy }: { copy: HashMapVisualizerCopy }) {
 	const [state, setState] = useState<TableState>(() => resetState('chaining'));
 	const reduced = useReducedMotion();
-	const tableRef = useRef<HTMLDivElement>(null);
-	useKeyedMotion(tableRef);
 
 	const exhausted = isExhausted(state);
 	const loadFactorText = `${sizeOf(state)} / ${state.capacity} = ${loadFactor(state).toFixed(2)}`;
@@ -124,7 +121,7 @@ export default function HashMapVisualizer({ copy }: { copy: HashMapVisualizerCop
 				{copy.loadFactorLabel}: <span className="text-muted normal-case">{loadFactorText}</span>
 			</p>
 
-			<div ref={tableRef} className="mt-5 overflow-x-auto">
+			<KeyedMotion className="mt-5 overflow-x-auto">
 				{state.strategy === 'chaining' ? (
 					<div className="grid min-w-[26rem] gap-2">
 						{state.chains.map((chain, index) => (
@@ -188,7 +185,7 @@ export default function HashMapVisualizer({ copy }: { copy: HashMapVisualizerCop
 						))}
 					</div>
 				)}
-			</div>
+			</KeyedMotion>
 		</article>
 	);
 }
