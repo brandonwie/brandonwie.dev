@@ -1,0 +1,81 @@
+'use client';
+
+/**
+ * The palette's open state and the window-level chord handler — the React side
+ * of the parts of `src/routes/+layout.svelte` that own the palette
+ * (`:108-121` the chords, `:147` the window binding, `:124-127` the select
+ * handler) plus `src/lib/stores/palette.ts`.
+ *
+ * The ten-line Svelte store becomes one `useState` here, which is the whole
+ * reason it can be one component: the store existed because two unrelated
+ * Svelte files needed to agree on a boolean, and in React the same two
+ * concerns are the parent and child of a single subtree.
+ *
+ * The chord decisions themselves are NOT in this file. They are in
+ * `@/palette/shortcuts`, where they can be asserted without a DOM; this
+ * component only translates the decision into an effect.
+ */
+
+import { useCallback, useEffect, useState } from 'react';
+
+import FuzzyFinder from '@/components/palette/FuzzyFinder';
+import {
+	buildPaletteItems,
+	type PaletteItem,
+	type PaletteLocale,
+	type PalettePost,
+} from '@/palette/items';
+import { planGlobalChord } from '@/palette/shortcuts';
+
+interface Props {
+	posts: PalettePost[];
+	pathname: string;
+	locale: PaletteLocale;
+	/** Injected so the spike route can record navigations instead of performing
+	 *  them; the real shell passes `useRouter().push`. */
+	navigate: (href: string) => void;
+}
+
+export default function PaletteHost({ posts, pathname, locale, navigate }: Props) {
+	const [open, setOpen] = useState(false);
+
+	const items = buildPaletteItems(posts, pathname, navigate, locale);
+
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement | null;
+			const plan = planGlobalChord(event, {
+				pathname,
+				targetTag: target?.tagName ?? '',
+				targetEditable: Boolean(target?.isContentEditable),
+			});
+
+			if (plan.kind === 'ignore') return;
+			// Cmd+P prints and Cmd+F opens the browser find bar otherwise.
+			event.preventDefault();
+			if (plan.kind === 'open-palette') setOpen(true);
+			else navigate(plan.href);
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [navigate, pathname]);
+
+	// Close the palette, then run the selected item's command. Each PaletteItem
+	// carries its own run().
+	const handleSelect = useCallback((item: PaletteItem) => {
+		setOpen(false);
+		item.run();
+	}, []);
+
+	if (!open) return null;
+
+	return (
+		<FuzzyFinder
+			items={items}
+			onSelect={handleSelect}
+			onClose={() => setOpen(false)}
+			locale={locale}
+		/>
+	);
+}

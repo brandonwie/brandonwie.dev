@@ -12,8 +12,10 @@
 	"dependencies": {
 		"@shikijs/rehype": "^4.4.3",
 		"@xyflow/react": "12.11.6",
+		"fuse.js": "7.4.2",
 		"github-slugger": "^2.0.0",
 		"gray-matter": "^4.0.3",
+		"gsap": "3.15.0",
 		"hast-util-to-jsx-runtime": "^2.3.6",
 		"mdast-util-to-hast": "^13.2.1",
 		"mdast-util-to-string": "^4.0.0",
