@@ -23,7 +23,9 @@ async function exists(path: string): Promise<boolean> {
 }
 
 async function findThreeBRoot(): Promise<string> {
-	const envRoot = Deno.env.get('THREEB_ROOT');
+	// C3 (dual-runtime evidence): THREEB_PATH is the one env var every 3B-reading
+	// script honors; THREEB_ROOT stays accepted as the alias this script already had.
+	const envRoot = Deno.env.get('THREEB_PATH') ?? Deno.env.get('THREEB_ROOT');
 	if (envRoot) return envRoot;
 
 	let current = dirname(fileURLToPath(import.meta.url));
@@ -38,6 +40,12 @@ async function findThreeBRoot(): Promise<string> {
 		const parent = dirname(current);
 		if (parent === current) break;
 		current = parent;
+	}
+
+	// C3: explicit fallback chain — ~/dev/3b, then the legacy ~/dev/personal/3b.
+	const home = Deno.env.get('HOME') ?? '';
+	for (const candidate of [join(home, 'dev', '3b'), join(home, 'dev', 'personal', '3b')]) {
+		if (await exists(join(candidate, DSA_I_SOURCE_ROOT_LABEL))) return candidate;
 	}
 
 	throw new Error('Could not locate 3B root. Set THREEB_ROOT=/absolute/path/to/3b.');

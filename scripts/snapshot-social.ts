@@ -31,7 +31,23 @@
 import { join } from 'https://deno.land/std@0.220.0/path/mod.ts';
 
 const HOME = Deno.env.get('HOME')!;
-const LEDGER = join(HOME, 'dev', 'personal', '3b', 'personal', 'brandon', 'social-posts.jsonl');
+// C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b, so the
+// legacy default no longer exists on a current machine. Honor THREEB_PATH, then
+// fall back to the first existing root: ~/dev/3b, then the legacy path.
+function resolveThreeBRoot(): string {
+	const fromEnv = Deno.env.get('THREEB_PATH');
+	if (fromEnv) return fromEnv;
+	const candidates = [join(HOME, 'dev', '3b'), join(HOME, 'dev', 'personal', '3b')];
+	for (const candidate of candidates) {
+		try {
+			if (Deno.statSync(candidate).isDirectory) return candidate;
+		} catch {
+			/* not this one */
+		}
+	}
+	return candidates[0];
+}
+const LEDGER = join(resolveThreeBRoot(), 'personal', 'brandon', 'social-posts.jsonl');
 const BLOG_ROOT = Deno.env.get('BLOG_ROOT') || join(HOME, 'dev', 'personal', 'brandonwie.dev');
 const POSTS_DIR = join(BLOG_ROOT, 'src', 'content', 'posts', 'en');
 const OUT = join(BLOG_ROOT, 'src', 'lib', 'data', 'social-feed.json');

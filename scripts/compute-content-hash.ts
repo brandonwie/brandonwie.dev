@@ -26,7 +26,25 @@
  * commit must contain the helper without dragging in lockfile churn.
  */
 
-const KNOWLEDGE_ROOT = `${Deno.env.get('HOME')}/dev/personal/3b/knowledge`;
+// C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b, so the
+// legacy default no longer exists on a current machine. Honor THREEB_PATH, then
+// fall back to the first existing root: ~/dev/3b, then the legacy path.
+function resolveThreeBRoot(): string {
+	const fromEnv = Deno.env.get('THREEB_PATH');
+	if (fromEnv) return fromEnv;
+	const home = Deno.env.get('HOME');
+	const candidates = [`${home}/dev/3b`, `${home}/dev/personal/3b`];
+	for (const candidate of candidates) {
+		try {
+			if (Deno.statSync(candidate).isDirectory) return candidate;
+		} catch {
+			/* not this one */
+		}
+	}
+	return candidates[0];
+}
+
+const KNOWLEDGE_ROOT = `${resolveThreeBRoot()}/knowledge`;
 
 /**
  * Mirror of isPlainParagraphLine() from sync-from-3b.ts:113-124.

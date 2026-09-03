@@ -37,7 +37,23 @@ import { basename, dirname, join } from 'https://deno.land/std@0.220.0/path/mod.
 
 // Configuration — all paths absolute so script works from any directory
 const HOME = Deno.env.get('HOME')!;
-const SOURCE_DIR = join(HOME, 'dev', 'personal', '3b', 'knowledge');
+// C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b, so the
+// legacy default no longer exists on a current machine. Honor THREEB_PATH, then
+// fall back to the first existing root: ~/dev/3b, then the legacy path.
+function resolveThreeBRoot(): string {
+	const fromEnv = Deno.env.get('THREEB_PATH');
+	if (fromEnv) return fromEnv;
+	const candidates = [join(HOME, 'dev', '3b'), join(HOME, 'dev', 'personal', '3b')];
+	for (const candidate of candidates) {
+		try {
+			if (Deno.statSync(candidate).isDirectory) return candidate;
+		} catch {
+			/* not this one */
+		}
+	}
+	return candidates[0];
+}
+const SOURCE_DIR = join(resolveThreeBRoot(), 'knowledge');
 const BLOG_ROOT = Deno.env.get('BLOG_ROOT') || join(HOME, 'dev', 'personal', 'brandonwie.dev');
 const TARGET_DIR = join(BLOG_ROOT, 'src', 'content', 'posts', 'en');
 const EXCLUDED_CATEGORIES = ['moba']; // Company-specific content (backup filter)
