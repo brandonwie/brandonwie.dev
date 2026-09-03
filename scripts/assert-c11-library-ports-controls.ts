@@ -150,8 +150,8 @@ const CONTROLS: Control[] = [
 		row: 'P2',
 		what: 'the @xyflow/react pin gains a caret',
 		setup: (dir) => ({
-			sourceOverrides: mutateSource(dir, 'next/package.json', (t) =>
-				t.replace('"@xyflow/react": "12.11.6"', '"@xyflow/react": "^12.11.6"'),
+			sourceOverrides: mutateSource(dir, 'next/package.json', (sourceText) =>
+				sourceText.replace('"@xyflow/react": "12.11.6"', '"@xyflow/react": "^12.11.6"'),
 			),
 			skipTypecheck: true,
 		}),
@@ -162,8 +162,8 @@ const CONTROLS: Control[] = [
 		row: 'P3',
 		what: 'the band node takes a VALUE import from @xyflow',
 		setup: (dir) => ({
-			sourceOverrides: mutateSource(dir, 'next/src/components/System3bBandNode.tsx', (t) =>
-				t.replace(
+			sourceOverrides: mutateSource(dir, 'next/src/components/System3bBandNode.tsx', (sourceText) =>
+				sourceText.replace(
 					"import type { NodeProps } from '@xyflow/react';",
 					"import { Handle } from '@xyflow/react';",
 				),
@@ -177,8 +177,8 @@ const CONTROLS: Control[] = [
 		row: 'P4',
 		what: 'the dynamic import loses its loading component — the one-word regression',
 		setup: (dir) => ({
-			sourceOverrides: mutateSource(dir, 'next/src/components/System3bGraph.tsx', (t) =>
-				t.replace(/\n\tloading: \(\) => <System3bFallback state="loading" \/>,/, ''),
+			sourceOverrides: mutateSource(dir, 'next/src/components/System3bGraph.tsx', (sourceText) =>
+				sourceText.replace(/\n\tloading: \(\) => <System3bFallback state="loading" \/>,/, ''),
 			),
 			skipTypecheck: true,
 		}),
@@ -189,8 +189,8 @@ const CONTROLS: Control[] = [
 		row: 'P4',
 		what: 'the dynamic import turns ssr back on',
 		setup: (dir) => ({
-			sourceOverrides: mutateSource(dir, 'next/src/components/System3bGraph.tsx', (t) =>
-				t.replace('ssr: false,', 'ssr: true,'),
+			sourceOverrides: mutateSource(dir, 'next/src/components/System3bGraph.tsx', (sourceText) =>
+				sourceText.replace('ssr: false,', 'ssr: true,'),
 			),
 			skipTypecheck: true,
 		}),
@@ -201,8 +201,8 @@ const CONTROLS: Control[] = [
 		row: 'P5',
 		what: 'the wrapper imports the xyflow stylesheet, defeating the lazy boundary',
 		setup: (dir) => ({
-			sourceOverrides: mutateSource(dir, 'next/src/components/System3bGraph.tsx', (t) =>
-				t.replace(
+			sourceOverrides: mutateSource(dir, 'next/src/components/System3bGraph.tsx', (sourceText) =>
+				sourceText.replace(
 					"import dynamic from 'next/dynamic';",
 					"import '@xyflow/react/dist/style.css';\nimport dynamic from 'next/dynamic';",
 				),
@@ -216,8 +216,8 @@ const CONTROLS: Control[] = [
 		row: 'P4',
 		what: 'the wrapper gains a comment',
 		setup: (dir) => ({
-			sourceOverrides: mutateSource(dir, 'next/src/components/System3bGraph.tsx', (t) =>
-				t.replace(
+			sourceOverrides: mutateSource(dir, 'next/src/components/System3bGraph.tsx', (sourceText) =>
+				sourceText.replace(
 					'const Flow = dynamic(',
 					'// a comment that changes nothing\nconst Flow = dynamic(',
 				),
@@ -233,8 +233,8 @@ const CONTROLS: Control[] = [
 		what: "the graph CSS keeps the Svelte stack's class prefix — the review finding this row exists for",
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (t) =>
-				t.split('.canvas .react-flow').join('.canvas .svelte-flow'),
+			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (sourceText) =>
+				sourceText.split('.canvas .react-flow').join('.canvas .svelte-flow'),
 			),
 		}),
 	},
@@ -245,8 +245,8 @@ const CONTROLS: Control[] = [
 		what: 'the graph CSS is dropped rather than ported',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (t) =>
-				t.split('.canvas .react-flow').join('.canvas .no-such-flow'),
+			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (sourceText) =>
+				sourceText.split('.canvas .react-flow').join('.canvas .no-such-flow'),
 			),
 		}),
 	},
@@ -257,8 +257,8 @@ const CONTROLS: Control[] = [
 		what: 'the graph CSS gains a comment',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (t) =>
-				t.replace('.canvas .react-flow {', '/* graph surface */\n.canvas .react-flow {'),
+			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (sourceText) =>
+				sourceText.replace('.canvas .react-flow {', '/* graph surface */\n.canvas .react-flow {'),
 			),
 		}),
 	},
@@ -335,8 +335,8 @@ const CONTROLS: Control[] = [
 		what: 'edgeStyleString comes back as a real call',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (t) =>
-				t.replace(
+			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (sourceText) =>
+				sourceText.replace(
 					'const s = edgeStyleTracked(kind, report);',
 					'const s = edgeStyleTracked(kind, report);\n\tvoid edgeStyleString;',
 				),
@@ -350,8 +350,8 @@ const CONTROLS: Control[] = [
 		what: 'a CSS declaration STRING carrying opacity is built again — no control drove this clause before',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (t) =>
-				t.replace(
+			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (sourceText) =>
+				sourceText.replace(
 					'export function dimEdges',
 					"const dimmed = 'stroke:#fff;opacity: 0.1;';\nexport function dimEdges",
 				),
@@ -365,8 +365,8 @@ const CONTROLS: Control[] = [
 		what: 'a COMMENT mentions edgeStyleString — the false positive this row first produced',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (t) =>
-				t.replace(
+			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (sourceText) =>
+				sourceText.replace(
 					'export function dimEdges',
 					'// edgeStyleString is gone; opacity: 0.1 is no longer built as a string.\nexport function dimEdges',
 				),
@@ -400,8 +400,8 @@ const CONTROLS: Control[] = [
 		what: 'MarkerType.ArrowClosed appears in CODE',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (t) =>
-				t.replace(
+			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (sourceText) =>
+				sourceText.replace(
 					'export function dimEdges',
 					'const unused = MarkerType.ArrowClosed;\nexport function dimEdges',
 				),
@@ -415,8 +415,8 @@ const CONTROLS: Control[] = [
 		what: 'MarkerType. appears only in a comment',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (t) =>
-				t.replace(
+			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (sourceText) =>
+				sourceText.replace(
 					'export function dimEdges',
 					'// never MarkerType.ArrowClosed: the contract is assignability.\nexport function dimEdges',
 				),
@@ -430,8 +430,10 @@ const CONTROLS: Control[] = [
 		what: 'the assignability proof drops one of its two Edge[] bindings',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.types-check.ts', (t) =>
-				t.replace(/: Edge\[\] =/, ': unknown[] ='),
+			sourceOverrides: mutateSource(
+				dir,
+				'next/src/graph/system3b-graph.types-check.ts',
+				(sourceText) => sourceText.replace(/: Edge\[\] =/, ': unknown[] ='),
 			),
 		}),
 	},
@@ -441,8 +443,8 @@ const CONTROLS: Control[] = [
 		row: 'B3',
 		what: 'markerEnd.type is ALREADY string, so the widening mutates nothing',
 		setup: (dir) => ({
-			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (t) =>
-				t.replace("markerEnd?: { type: 'arrowclosed'", 'markerEnd?: { type: string'),
+			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (sourceText) =>
+				sourceText.replace("markerEnd?: { type: 'arrowclosed'", 'markerEnd?: { type: string'),
 			),
 		}),
 	},
@@ -507,8 +509,8 @@ const CONTROLS: Control[] = [
 		what: 'flow elements reach the exported HTML',
 		setup: (dir) => {
 			const build = copyBuild(dir);
-			mutateFile(join(build, 'system', '3b.html'), (t) =>
-				t.replace('<body', `<body data-leak="${FLOW_SENTINEL}node"`),
+			mutateFile(join(build, 'system', '3b.html'), (sourceText) =>
+				sourceText.replace('<body', `<body data-leak="${FLOW_SENTINEL}node"`),
 			);
 			return { buildDir: build, skipTypecheck: true };
 		},
@@ -520,8 +522,8 @@ const CONTROLS: Control[] = [
 		what: 'the no-JS fallback disappears from the export',
 		setup: (dir) => {
 			const build = copyBuild(dir);
-			mutateFile(join(build, 'system', '3b.html'), (t) =>
-				t.split(FALLBACK_SENTINEL).join('s3b-gone'),
+			mutateFile(join(build, 'system', '3b.html'), (sourceText) =>
+				sourceText.split(FALLBACK_SENTINEL).join('s3b-gone'),
 			);
 			return { buildDir: build, skipTypecheck: true };
 		},
@@ -549,8 +551,11 @@ const CONTROLS: Control[] = [
 			);
 			if (!flowChunk) throw new Error('no flow chunk in the copy to reference');
 			const name = flowChunk.split('/').pop() as string;
-			mutateFile(page, (t) =>
-				t.replace('</body>', `<script src="/_next/static/chunks/${name}"></script></body>`),
+			mutateFile(page, (sourceText) =>
+				sourceText.replace(
+					'</body>',
+					`<script src="/_next/static/chunks/${name}"></script></body>`,
+				),
 			);
 			return { buildDir: build, skipTypecheck: true };
 		},
@@ -589,7 +594,7 @@ const CONTROLS: Control[] = [
 				(f) => f.endsWith('.js') && referenced.has(f.split('/').pop() as string),
 			);
 			if (!target) throw new Error('no eager js chunk to append to');
-			mutateFile(target, (t) => `${t}\n// harmless`);
+			mutateFile(target, (chunkText) => `${chunkText}\n// harmless`);
 			return { buildDir: build, skipTypecheck: true };
 		},
 	},
@@ -697,7 +702,10 @@ const CONTROLS: Control[] = [
 				(f) => f.endsWith('.js') && readFileSync(f, 'utf8').includes(FLOW_SENTINEL),
 			);
 			if (!flow) throw new Error('no flow chunk to hide the reporter in');
-			mutateFile(flow, (t) => `${t}\nconsole.error(${JSON.stringify(REPORTER_SENTINEL)});`);
+			mutateFile(
+				flow,
+				(chunkText) => `${chunkText}\nconsole.error(${JSON.stringify(REPORTER_SENTINEL)});`,
+			);
 			return { buildDir: build, skipTypecheck: true };
 		},
 	},
@@ -708,8 +716,8 @@ const CONTROLS: Control[] = [
 		what: 'the export ships a diagram already marked failed',
 		setup: (dir) => {
 			const build = copyBuild(dir);
-			mutateFile(join(build, 'migration-fixture', 'mermaid.html'), (t) =>
-				t.replace('data-mermaid=""', 'data-mermaid-error=""'),
+			mutateFile(join(build, 'migration-fixture', 'mermaid.html'), (sourceText) =>
+				sourceText.replace('data-mermaid=""', 'data-mermaid-error=""'),
 			);
 			return { buildDir: build, skipTypecheck: true };
 		},
@@ -776,8 +784,8 @@ const CONTROLS: Control[] = [
 		what: 'the Next mermaid config silently drops flowchart.curve',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/components/Mermaid.tsx', (t) =>
-				t.replace("curve: 'basis',", "curve: 'linear',"),
+			sourceOverrides: mutateSource(dir, 'next/src/components/Mermaid.tsx', (sourceText) =>
+				sourceText.replace("curve: 'basis',", "curve: 'linear',"),
 			),
 		}),
 	},
@@ -801,8 +809,8 @@ const CONTROLS: Control[] = [
 		what: 'a themeVariables comment is reworded',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/src/components/Mermaid.tsx', (t) =>
-				t.replace('\t\t// Background\n', '\t\t// Backgrounds, carried over verbatim\n'),
+			sourceOverrides: mutateSource(dir, 'next/src/components/Mermaid.tsx', (sourceText) =>
+				sourceText.replace('\t\t// Background\n', '\t\t// Backgrounds, carried over verbatim\n'),
 			),
 		}),
 	},
