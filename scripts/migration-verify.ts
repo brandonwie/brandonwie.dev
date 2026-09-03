@@ -676,8 +676,22 @@ interface Diff {
 	 * at 120 characters for printing. Two long `internalLinks` differences shared
 	 * a prefix, so one approval covered both and the second exited 0. The
 	 * approval key is now a hash of the untruncated values; `detail` stays as the
-	 * human-readable line and is no longer load-bearing. */
-	fingerprint: string;
+	 * human-readable line and is no longer load-bearing.
+	 *
+	 * `null` means DELIBERATELY UNAPPROVABLE, and exactly one difference is:
+	 * `present in baseline, MISSING from candidate`. Losing a route is the
+	 * failure plan.md § Risks names as high impact ("Route lost when crawl
+	 * discovery becomes explicit enumeration"), so it must not be reachable by
+	 * writing a ledger entry. The matcher below refuses a null fingerprint
+	 * before it compares anything, which makes route loss unapprovable by
+	 * construction rather than by nobody having tried yet.
+	 *
+	 * Its mirror, `present in candidate, absent from baseline`, DOES carry a
+	 * fingerprint: a deliberate candidate-only route (a spike route, a fixture
+	 * route) is a difference someone can own. Fingerprinting it also makes the
+	 * approval self-cleaning — delete the route and the entry matches nothing,
+	 * is counted stale below, and fails the run until it is removed too. */
+	fingerprint: string | null;
 }
 
 function scalarDiff(url: string, field: string, a: unknown, b: unknown, out: Diff[]): void {
@@ -695,6 +709,28 @@ function scalarDiff(url: string, field: string, a: unknown, b: unknown, out: Dif
 	});
 }
 
+/** The approval key for a page-PRESENCE difference.
+ *
+ * `scalarDiff` was the only site computing a fingerprint, so both page rows
+ * shipped without one and neither could ever be approved: the matcher requires
+ * fingerprint equality, and an entry aimed at a fingerprint-less row matches
+ * nothing, is counted stale, and fails the run. Same shape as `scalarDiff`'s
+ * hash -- url, field, then the two sides -- with the presence booleans standing
+ * in for the values, because presence IS the value being compared here. */
+function presenceFingerprint(
+	url: string,
+	field: string,
+	inBaseline: boolean,
+	inCandidate: boolean,
+): string {
+	return createHash('sha256')
+		.update(
+			`${url}\u0000${field}\u0000${JSON.stringify(inBaseline)}\u0000${JSON.stringify(inCandidate)}`,
+		)
+		.digest('hex')
+		.slice(0, 32);
+}
+
 function trim(value: string): string {
 	return value.length > 120 ? `${value.slice(0, 117)}...` : value;
 }
@@ -706,11 +742,22 @@ export function compare(baseline: Baseline, candidate: Baseline): Diff[] {
 
 	for (const url of [...baseUrls].sort()) {
 		if (!candUrls.has(url))
-			diffs.push({ url, field: 'page', detail: 'present in baseline, MISSING from candidate' });
+			diffs.push({
+				url,
+				field: 'page',
+				detail: 'present in baseline, MISSING from candidate',
+				// Unapprovable on purpose -- see Diff.fingerprint.
+				fingerprint: null,
+			});
 	}
 	for (const url of [...candUrls].sort()) {
 		if (!baseUrls.has(url))
-			diffs.push({ url, field: 'page', detail: 'present in candidate, absent from baseline' });
+			diffs.push({
+				url,
+				field: 'page',
+				detail: 'present in candidate, absent from baseline',
+				fingerprint: presenceFingerprint(url, 'page', false, true),
+			});
 	}
 
 	for (const url of [...baseUrls].filter((u) => candUrls.has(u)).sort()) {
@@ -817,9 +864,16 @@ async function main(argv: string[]): Promise<number> {
 		const used = new Set<number>();
 		const unapproved: Diff[] = [];
 		for (const diff of diffs) {
-			const hit = ledger.findIndex(
-				(e) => e.url === diff.url && e.field === diff.field && e.fingerprint === diff.fingerprint,
-			);
+			// A null fingerprint is refused BEFORE the comparison, not by relying on
+			// no entry happening to match: this is what makes a lost route
+			// unapprovable by construction.
+			const hit =
+				diff.fingerprint === null
+					? -1
+					: ledger.findIndex(
+							(e) =>
+								e.url === diff.url && e.field === diff.field && e.fingerprint === diff.fingerprint,
+						);
 			if (hit === -1) unapproved.push(diff);
 			else used.add(hit);
 		}
@@ -827,7 +881,12 @@ async function main(argv: string[]): Promise<number> {
 		const stale = ledger.filter((_, i) => !used.has(i));
 		for (const diff of unapproved) {
 			console.error(`DIFF ${diff.url} [${diff.field}] ${diff.detail}`);
-			console.error(`  fingerprint ${diff.fingerprint}`);
+			console.error(
+				diff.fingerprint === null
+					? '  no fingerprint: a route present in the baseline and missing from the candidate ' +
+							'cannot be approved. Restore the route.'
+					: `  fingerprint ${diff.fingerprint}`,
+			);
 		}
 		for (const diff of unapproved) {
 			const sameSlot = ledger.find((e) => e.url === diff.url && e.field === diff.field);

@@ -79,6 +79,11 @@ const NEXT_BUILD_SOURCES = [
 	'next/postcss.config.mjs',
 	'src/content',
 	'src/lib/plugins',
+	// The 3B system snapshot. Once the Next /system/3b page consumes it, a
+	// `deno task snapshot:3b` regeneration changes the Next build while
+	// selecting no Next-build-consuming suite -- the build moves and nothing
+	// re-runs.
+	'src/lib/data',
 ];
 
 /** The frozen comparator evidence every build-consuming suite is judged against. */
@@ -154,6 +159,101 @@ export const SUITES: Suite[] = [
 		command: 'migration:c13:controls',
 		entry: 'scripts/assert-c13-shell-controls.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
+		tier: 'push',
+	},
+	{
+		command: 'migration:c11',
+		entry: 'scripts/assert-c11-library-ports.ts',
+		// Reads the Next export, the frozen baseline, the exception ledger (the N
+		// rows recompute what each shell approval claims), the mermaid corpus, and
+		// the Svelte mermaid config it diffs the Next one against.
+		dataRoots: [
+			...NEXT_BUILD_SOURCES,
+			...BASELINE,
+			'verification/exception-ledger.json',
+			// Row P1 reads every Svelte port-role path, and the selector only falls
+			// back to "run everything" for a path matching NO suite input.
+			// SVELTE_BUILD_SOURCES contains 'src', so a deleted System3bNode.svelte
+			// matches the Svelte suites, sets `matched`, skips the fallback -- and
+			// migration:c11 would never be selected while P1 is exactly the row that
+			// should have failed. Named individually for that reason.
+			'src/lib/components/Mermaid.svelte',
+			'src/lib/utils/system3b-graph.ts',
+			'src/lib/components/System3bGraph.svelte',
+			'src/lib/components/System3bFlow.svelte',
+			'src/lib/components/System3bNode.svelte',
+			'src/lib/components/System3bFitView.svelte',
+			'src/lib/components/System3bBandNode.svelte',
+		],
+		tier: 'push',
+	},
+	{
+		// Copies next/build once per build-shaped control and runs tsc twice for
+		// the C and B3 rows. migration:controls-class cost, so CI only.
+		command: 'migration:c11:controls',
+		entry: 'scripts/assert-c11-library-ports-controls.ts',
+		dataRoots: [
+			...NEXT_BUILD_SOURCES,
+			...BASELINE,
+			'verification/exception-ledger.json',
+			// Row P1 reads every Svelte port-role path, and the selector only falls
+			// back to "run everything" for a path matching NO suite input.
+			// SVELTE_BUILD_SOURCES contains 'src', so a deleted System3bNode.svelte
+			// matches the Svelte suites, sets `matched`, skips the fallback -- and
+			// migration:c11 would never be selected while P1 is exactly the row that
+			// should have failed. Named individually for that reason.
+			'src/lib/components/Mermaid.svelte',
+			'src/lib/utils/system3b-graph.ts',
+			'src/lib/components/System3bGraph.svelte',
+			'src/lib/components/System3bFlow.svelte',
+			'src/lib/components/System3bNode.svelte',
+			'src/lib/components/System3bFitView.svelte',
+			'src/lib/components/System3bBandNode.svelte',
+		],
+		tier: 'ci',
+	},
+	{
+		// The six rows below existed in package.json with NO row here, so
+		// `migration:all` -- which iterates this table -- ran none of them, and
+		// neither did the pre-push router: an unrecognised path selects
+		// "everything", which is still only this list. C10-search-comments.md
+		// cites `migration:publishing:controls` exit 0 as evidence for a suite
+		// that was not enforced per commit. Registered here because this plan's
+		// own verification block cites all three as regression guards.
+		command: 'migration:c3',
+		entry: 'scripts/assert-c3-runtimes.ts',
+		// It drives every deno task and pnpm wrapper, including build and preview.
+		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		tier: 'ci',
+	},
+	{
+		command: 'migration:c3:controls',
+		entry: 'scripts/assert-c3-runtimes-controls.ts',
+		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		tier: 'ci',
+	},
+	{
+		command: 'migration:publishing',
+		entry: 'scripts/assert-publishing-surfaces.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES, ...BASELINE],
+		tier: 'push',
+	},
+	{
+		command: 'migration:publishing:controls',
+		entry: 'scripts/assert-publishing-surfaces-controls.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES, ...BASELINE],
+		tier: 'push',
+	},
+	{
+		command: 'migration:feed',
+		entry: 'scripts/assert-feed-redirects.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES, ...BASELINE],
+		tier: 'push',
+	},
+	{
+		command: 'migration:feed:controls',
+		entry: 'scripts/assert-feed-redirects-controls.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES, ...BASELINE],
 		tier: 'push',
 	},
 	{
