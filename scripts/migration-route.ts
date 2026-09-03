@@ -213,6 +213,46 @@ export const SUITES: Suite[] = [
 		tier: 'ci',
 	},
 	{
+		command: 'migration:spike2',
+		entry: 'scripts/assert-slice2-motion.ts',
+		// Reads the Next export, the exception ledger (row S3 recomputes the
+		// spike route's page-presence approval), and the four Svelte sources the
+		// port came from.
+		dataRoots: [
+			...NEXT_BUILD_SOURCES,
+			'verification/exception-ledger.json',
+			// Named individually for the same reason the C11 rows are: row P1
+			// reads every Svelte port-role path, and the selector only falls back
+			// to "run everything" for a path matching NO suite input.
+			// SVELTE_BUILD_SOURCES contains 'src', so deleting a ported Svelte
+			// source matches the Svelte suites, sets `matched`, skips the
+			// fallback -- and this suite would never be selected while P1 is
+			// exactly the row that should have failed.
+			'src/lib/useReducedMotion.svelte.ts',
+			'src/lib/components/study/Stepper.svelte',
+			'src/lib/components/study/BstTraversalVisualizer.svelte',
+			'src/lib/components/study/HashMapVisualizer.svelte',
+			'src/lib/data/study.ts',
+		],
+		tier: 'push',
+	},
+	{
+		// Copies next/build for each build-shaped control and drives tsc twice
+		// for the C group. migration:controls-class cost, so CI only.
+		command: 'migration:spike2:controls',
+		entry: 'scripts/assert-slice2-motion-controls.ts',
+		dataRoots: [
+			...NEXT_BUILD_SOURCES,
+			'verification/exception-ledger.json',
+			'src/lib/useReducedMotion.svelte.ts',
+			'src/lib/components/study/Stepper.svelte',
+			'src/lib/components/study/BstTraversalVisualizer.svelte',
+			'src/lib/components/study/HashMapVisualizer.svelte',
+			'src/lib/data/study.ts',
+		],
+		tier: 'ci',
+	},
+	{
 		// The six rows below existed in package.json with NO row here, so
 		// `migration:all` -- which iterates this table -- ran none of them, and
 		// neither did the pre-push router: an unrecognised path selects

@@ -26,6 +26,8 @@
 		"migration:c13:controls": "tsx scripts/assert-c13-shell-controls.ts",
 		"migration:c11": "tsx --tsconfig next/tsconfig.json scripts/assert-c11-library-ports.ts",
 		"migration:c11:controls": "tsx --tsconfig next/tsconfig.json scripts/assert-c11-library-ports-controls.ts",
+		"migration:spike2": "tsx --tsconfig next/tsconfig.json scripts/assert-slice2-motion.ts",
+		"migration:spike2:controls": "tsx --tsconfig next/tsconfig.json scripts/assert-slice2-motion-controls.ts",
 		"migration:c3": "tsx scripts/assert-c3-runtimes.ts",
 		"migration:c3:controls": "tsx scripts/assert-c3-runtimes-controls.ts",
 		"migration:article": "tsx scripts/assert-article-parity.ts",

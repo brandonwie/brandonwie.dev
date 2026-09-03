@@ -89,16 +89,6 @@ function transitionMetricsOf(element: HTMLElement): TransitionMetrics {
 	return { opacity: Number(style.opacity), transform: style.transform };
 }
 
-function play(element: HTMLElement, config: MotionConfig) {
-	if (config.duration <= 0) return;
-	element.animate(sampleKeyframes(config), {
-		duration: config.duration,
-		delay: config.delay,
-		easing: 'linear',
-		fill: 'none',
-	});
-}
-
 /**
  * An identity flip is skipped rather than played.
  *
@@ -111,23 +101,59 @@ function isIdentity(config: MotionConfig): boolean {
 	return config.css(0, 1) === config.css(1, 0);
 }
 
-function playFlip(element: HTMLElement, from: MotionBox, to: MotionBox) {
-	const duration = Number(element.dataset.motionFlip ?? 0);
-	if (!Number.isFinite(duration) || duration <= 0) return;
-	const config = flipConfig(flipMetricsOf(element), from, to, { duration });
-	if (isIdentity(config)) return;
-	play(element, config);
+/**
+ * What the hook decided to do with one element, as a value.
+ *
+ * The decisions — is this a flip or an entry, does its duration mean anything,
+ * is the movement real — are the part worth checking, and checking them
+ * through a browser would mean not checking them. So they are a pure function
+ * of the element's attributes and its two boxes, and the effect below does
+ * nothing but measure, call this, and hand the result to the Web Animations
+ * API.
+ */
+export type MotionPlan =
+	{ kind: 'none'; why: string } | { kind: 'flip' | 'enter'; config: MotionConfig };
+
+export interface MotionAttributes {
+	/** `data-motion-flip` — flip duration in ms. */
+	flip?: string;
+	/** `data-motion-enter` — `"fade:120"` or `"scale:160"`. */
+	enter?: string;
 }
 
-function playEnter(element: HTMLElement) {
-	const spec = element.dataset.motionEnter;
-	if (!spec) return;
+export function planFlip(
+	attributes: MotionAttributes,
+	metrics: FlipMetrics,
+	from: MotionBox,
+	to: MotionBox,
+): MotionPlan {
+	const duration = Number(attributes.flip ?? 0);
+	if (!Number.isFinite(duration) || duration <= 0) return { kind: 'none', why: 'no flip duration' };
+	const config = flipConfig(metrics, from, to, { duration });
+	if (isIdentity(config)) return { kind: 'none', why: 'identity transform' };
+	return { kind: 'flip', config };
+}
+
+export function planEnter(attributes: MotionAttributes, metrics: TransitionMetrics): MotionPlan {
+	const spec = attributes.enter;
+	if (!spec) return { kind: 'none', why: 'no intro declared' };
 	const [kind, rawDuration] = spec.split(':');
 	const duration = Number(rawDuration);
-	if (!Number.isFinite(duration) || duration <= 0) return;
-	const metrics = transitionMetricsOf(element);
-	if (kind === 'fade') play(element, fadeConfig(metrics, { duration }));
-	else if (kind === 'scale') play(element, scaleConfig(metrics, { duration }));
+	if (!Number.isFinite(duration) || duration <= 0)
+		return { kind: 'none', why: 'no intro duration' };
+	if (kind === 'fade') return { kind: 'enter', config: fadeConfig(metrics, { duration }) };
+	if (kind === 'scale') return { kind: 'enter', config: scaleConfig(metrics, { duration }) };
+	return { kind: 'none', why: `unknown intro "${kind}"` };
+}
+
+function run(element: HTMLElement, plan: MotionPlan) {
+	if (plan.kind === 'none') return;
+	element.animate(sampleKeyframes(plan.config), {
+		duration: plan.config.duration,
+		delay: plan.config.delay,
+		easing: 'linear',
+		fill: 'none',
+	});
 }
 
 export function useKeyedMotion(containerRef: RefObject<HTMLElement | null>): void {
@@ -150,9 +176,17 @@ export function useKeyedMotion(containerRef: RefObject<HTMLElement | null>): voi
 			const box = boxOf(element);
 			next.set(key, box);
 			if (seeding || before === null) continue;
+			const attributes: MotionAttributes = {
+				flip: element.dataset.motionFlip,
+				enter: element.dataset.motionEnter,
+			};
 			const previousBox = before.get(key);
-			if (previousBox) playFlip(element, previousBox, box);
-			else playEnter(element);
+			run(
+				element,
+				previousBox
+					? planFlip(attributes, flipMetricsOf(element), previousBox, box)
+					: planEnter(attributes, transitionMetricsOf(element)),
+			);
 		}
 
 		previous.current = next;
