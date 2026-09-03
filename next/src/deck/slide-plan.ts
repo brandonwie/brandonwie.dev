@@ -105,13 +105,18 @@ export interface TweenSpec {
  */
 export function revealTweens(want: boolean, still: boolean): TweenSpec[] {
 	const d = still ? 0 : 1;
-	const alpha = want ? 1 : 0;
 
+	// The three `vars` objects below are written as the SAME expressions the
+	// Svelte original writes, key for key, because group T compares them as
+	// text: it extracts both files' `gsap.to` bodies and requires them to
+	// match. `want ? 1 : 0` is therefore spelled out three times rather than
+	// hoisted into a local -- hoisting it would read better and would silently
+	// turn that oracle into a comparison of one expression against nothing.
 	return [
 		{
 			selector: '.second',
 			vars: {
-				autoAlpha: alpha,
+				autoAlpha: want ? 1 : 0,
 				duration: DURATION * d,
 				ease: EASE,
 				delay: want ? DURATION * 0.8 * d : 0,
@@ -120,7 +125,7 @@ export function revealTweens(want: boolean, still: boolean): TweenSpec[] {
 		{
 			selector: '.chip',
 			vars: {
-				autoAlpha: alpha,
+				autoAlpha: want ? 1 : 0,
 				duration: DURATION * 0.8 * d,
 				stagger: 0.06 * d,
 				ease: EASE,
@@ -130,7 +135,7 @@ export function revealTweens(want: boolean, still: boolean): TweenSpec[] {
 		{
 			selector: '.note',
 			vars: {
-				autoAlpha: alpha,
+				autoAlpha: want ? 1 : 0,
 				y: want ? 0 : 6,
 				duration: DURATION * d,
 				stagger: 0.07 * d,
