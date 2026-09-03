@@ -129,10 +129,19 @@ export interface MermaidRenderDeps {
 	id: string;
 	loadMermaid: () => Promise<Pick<MermaidApi, 'initialize' | 'render'>>;
 	setSvg: (svg: string) => void;
-	setError: (message: string) => void;
+	setError: (message: string | null) => void;
 }
 
 export async function renderMermaid(deps: MermaidRenderDeps): Promise<void> {
+	// Clear first, and clear HERE rather than in the effect, so the row that
+	// proves it can drive this function directly.
+	//
+	// Without the reset a component that renders a second fence stays broken
+	// forever: `error` survives from the first attempt, `mermaidView` keeps the
+	// error branch, and that branch attaches no `ref` -- so the successful
+	// setSvg for the new code writes into nothing and the diagram stays marked
+	// data-mermaid-error even though it now renders.
+	deps.setError(null);
 	try {
 		const mermaid = await deps.loadMermaid();
 		initializeMermaidOnce(mermaid);

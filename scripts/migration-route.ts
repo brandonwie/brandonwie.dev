@@ -171,7 +171,19 @@ export const SUITES: Suite[] = [
 			...NEXT_BUILD_SOURCES,
 			...BASELINE,
 			'verification/exception-ledger.json',
+			// Row P1 reads every Svelte port-role path, and the selector only falls
+			// back to "run everything" for a path matching NO suite input.
+			// SVELTE_BUILD_SOURCES contains 'src', so a deleted System3bNode.svelte
+			// matches the Svelte suites, sets `matched`, skips the fallback -- and
+			// migration:c11 would never be selected while P1 is exactly the row that
+			// should have failed. Named individually for that reason.
 			'src/lib/components/Mermaid.svelte',
+			'src/lib/utils/system3b-graph.ts',
+			'src/lib/components/System3bGraph.svelte',
+			'src/lib/components/System3bFlow.svelte',
+			'src/lib/components/System3bNode.svelte',
+			'src/lib/components/System3bFitView.svelte',
+			'src/lib/components/System3bBandNode.svelte',
 		],
 		tier: 'push',
 	},
@@ -184,7 +196,19 @@ export const SUITES: Suite[] = [
 			...NEXT_BUILD_SOURCES,
 			...BASELINE,
 			'verification/exception-ledger.json',
+			// Row P1 reads every Svelte port-role path, and the selector only falls
+			// back to "run everything" for a path matching NO suite input.
+			// SVELTE_BUILD_SOURCES contains 'src', so a deleted System3bNode.svelte
+			// matches the Svelte suites, sets `matched`, skips the fallback -- and
+			// migration:c11 would never be selected while P1 is exactly the row that
+			// should have failed. Named individually for that reason.
 			'src/lib/components/Mermaid.svelte',
+			'src/lib/utils/system3b-graph.ts',
+			'src/lib/components/System3bGraph.svelte',
+			'src/lib/components/System3bFlow.svelte',
+			'src/lib/components/System3bNode.svelte',
+			'src/lib/components/System3bFitView.svelte',
+			'src/lib/components/System3bBandNode.svelte',
 		],
 		tier: 'ci',
 	},

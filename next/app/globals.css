@@ -521,19 +521,19 @@
 	vertical-align: middle;
 }
 /* xyflow surface tweaks to match the terminal palette */
-.canvas .svelte-flow {
+.canvas .react-flow {
 	background: var(--panel);
 }
-.canvas .svelte-flow__controls-button {
+.canvas .react-flow__controls-button {
 	background: var(--surface);
 	border-bottom: 1px solid var(--line2);
 	fill: var(--ink);
 	color: var(--ink);
 }
-.canvas .svelte-flow__controls-button:hover {
+.canvas .react-flow__controls-button:hover {
 	background: var(--overlay);
 }
-.canvas .svelte-flow__edge-path {
+.canvas .react-flow__edge-path {
 	transition: opacity 120ms ease;
 }
 

@@ -45,6 +45,7 @@ import {
 } from '../next/src/graph/system3b-graph.ts';
 import { mermaidView, renderMermaid } from '../next/src/components/Mermaid.tsx';
 import {
+	FLOW_RUNTIME_SENTINELS,
 	FLOW_SENTINEL,
 	FALLBACK_SENTINEL,
 	LANE_COUNTS,
@@ -225,6 +226,43 @@ const CONTROLS: Control[] = [
 		}),
 	},
 
+	{
+		id: 'P6-defect-foreign',
+		kind: 'defect',
+		row: 'P6',
+		what: "the graph CSS keeps the Svelte stack's class prefix — the review finding this row exists for",
+		setup: (dir) => ({
+			skipTypecheck: true,
+			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (t) =>
+				t.split('.canvas .react-flow').join('.canvas .svelte-flow'),
+			),
+		}),
+	},
+	{
+		id: 'P6-defect-dropped',
+		kind: 'defect',
+		row: 'P6',
+		what: 'the graph CSS is dropped rather than ported',
+		setup: (dir) => ({
+			skipTypecheck: true,
+			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (t) =>
+				t.split('.canvas .react-flow').join('.canvas .no-such-flow'),
+			),
+		}),
+	},
+	{
+		id: 'P6-invariance',
+		kind: 'invariance',
+		row: 'P6',
+		what: 'the graph CSS gains a comment',
+		setup: (dir) => ({
+			skipTypecheck: true,
+			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (t) =>
+				t.replace('.canvas .react-flow {', '/* graph surface */\n.canvas .react-flow {'),
+			),
+		}),
+	},
+
 	// ---------------------------------------------------------------- A group
 	{
 		id: 'A1-defect',
@@ -301,6 +339,21 @@ const CONTROLS: Control[] = [
 				t.replace(
 					'const s = edgeStyleTracked(kind, report);',
 					'const s = edgeStyleTracked(kind, report);\n\tvoid edgeStyleString;',
+				),
+			),
+		}),
+	},
+	{
+		id: 'A4-defect-concat-string',
+		kind: 'defect',
+		row: 'A4',
+		what: 'a CSS declaration STRING carrying opacity is built again — no control drove this clause before',
+		setup: (dir) => ({
+			skipTypecheck: true,
+			sourceOverrides: mutateSource(dir, 'next/src/graph/system3b-graph.ts', (t) =>
+				t.replace(
+					'export function dimEdges',
+					"const dimmed = 'stroke:#fff;opacity: 0.1;';\nexport function dimEdges",
 				),
 			),
 		}),
@@ -492,7 +545,7 @@ const CONTROLS: Control[] = [
 			const build = copyBuild(dir);
 			const page = join(build, 'system', '3b.html');
 			const flowChunk = listChunks(build).find(
-				(f) => f.endsWith('.js') && readFileSync(f, 'utf8').includes(FLOW_SENTINEL),
+				(f) => f.endsWith('.js') && readFileSync(f, 'utf8').includes(FLOW_RUNTIME_SENTINELS[0]),
 			);
 			if (!flowChunk) throw new Error('no flow chunk in the copy to reference');
 			const name = flowChunk.split('/').pop() as string;
@@ -674,6 +727,28 @@ const CONTROLS: Control[] = [
 					type: 'div',
 					props: { 'data-mermaid': '', 'data-mermaid-error': '', children: args.code },
 				})) as unknown as typeof mermaidView,
+			},
+		}),
+	},
+	{
+		id: 'S9d-defect',
+		kind: 'defect',
+		row: 'S9d',
+		what: 'a retry leaves the previous error in place, so a working diagram stays marked failed',
+		setup: () => ({
+			skipTypecheck: true,
+			mermaid: {
+				mermaidView,
+				renderMermaid: (async (deps: Parameters<typeof renderMermaid>[0]) => {
+					// Everything renderMermaid does EXCEPT the leading clear.
+					try {
+						const api = await deps.loadMermaid();
+						const { svg } = await api.render(`mermaid-${deps.id}`, deps.code);
+						deps.setSvg(svg);
+					} catch (cause) {
+						deps.setError(cause instanceof Error ? cause.message : String(cause));
+					}
+				}) as typeof renderMermaid,
 			},
 		}),
 	},

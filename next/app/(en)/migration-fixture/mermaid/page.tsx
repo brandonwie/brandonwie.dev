@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 
 import Mermaid from '@/components/Mermaid';
 
+import { INVALID_FENCE, VALID_FENCE } from './fences';
+
 /**
  * S9 fixture route -- Slice 2 scaffolding, deleted at Slice 4.
  *
@@ -44,13 +46,6 @@ export const metadata: Metadata = {
 	description: 'Slice 2 verification fixture: one renderable fence and one the renderer rejects.',
 	robots: { index: false, follow: false },
 };
-
-export const VALID_FENCE = `flowchart LR
-    A[Source] --> B[Process]
-    B --> C[Output]`;
-
-export const INVALID_FENCE = `notADiagramType XYZ
-    this line cannot parse under any mermaid grammar`;
 
 export default function MermaidFixturePage() {
 	return (

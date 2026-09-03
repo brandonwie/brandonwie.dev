@@ -125,6 +125,25 @@ export const XYFLOW_SYSTEM_TRANSITIVE = '0.0.82';
  *  element counts could never have gone green as written. */
 export const FLOW_SENTINEL = 'react-flow__';
 
+/**
+ * Markers the @xyflow RUNTIME emits that our own stylesheet does not reference.
+ *
+ * H3 first used FLOW_SENTINEL for the chunk check, and fixing the graph CSS to
+ * target `react-flow__` (it had been carried over as `svelte-flow__`, which
+ * matched nothing) immediately turned H3 red: `globals.css` legitimately names
+ * those classes, and `globals.css` is in an EAGER chunk. The row could not tell
+ * OUR REFERENCE to a class from THE LIBRARY shipping it.
+ *
+ * These three are emitted by @xyflow and appear nowhere in our CSS, which the
+ * row re-checks before using them -- a sentinel that has stopped being
+ * library-only would make the check pass for the wrong reason.
+ */
+export const FLOW_RUNTIME_SENTINELS = [
+	'react-flow__pane',
+	'react-flow__renderer',
+	'react-flow__viewport',
+];
+
 /** Emitted by System3bFallback into the prerendered HTML. */
 export const FALLBACK_SENTINEL = 's3b-fallback';
 
@@ -322,7 +341,26 @@ function eq(actual: unknown, expected: unknown, label: string): void {
  * markerEnd comment says "never MarkerType.ArrowClosed". A row that a comment
  * explaining the rule can break is a row about spelling, not about behavior.
  */
+export function stripComments(source: string): string {
+	return scan(source, { keepStrings: true });
+}
+
+/**
+ * Strip comments AND string CONTENTS. Use for identifier checks only.
+ *
+ * The distinction is load-bearing and was got wrong here first: A4's
+ * concatenation clause looked for `opacity: 0.1` followed by a quote or a
+ * semicolon, which can only ever occur INSIDE a string -- and this function
+ * empties strings, so the clause could not match any input. A clause that
+ * cannot fail is not a weak check, it is no check, in a file whose whole
+ * argument is that a guard never shown to fail proves nothing. It now runs
+ * against stripComments() and a control drives it.
+ */
 export function codeOnly(source: string): string {
+	return scan(source, { keepStrings: false });
+}
+
+function scan(source: string, options: { keepStrings: boolean }): string {
 	let out = '';
 	let inString: string | null = null;
 	let inLine = false;
@@ -345,10 +383,13 @@ export function codeOnly(source: string): string {
 			continue;
 		}
 		if (inString) {
-			if (c === '\\') i += 1;
-			else if (c === inString) {
+			if (options.keepStrings) out += c;
+			if (c === '\\') {
+				if (options.keepStrings) out += source[i + 1] ?? '';
+				i += 1;
+			} else if (c === inString) {
 				inString = null;
-				out += c;
+				if (!options.keepStrings) out += c;
 			}
 			continue;
 		}
@@ -673,6 +714,21 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 		},
 	);
 
+	await r.row('P6', "the app's own CSS targets the shipped stack's flow prefix", () => {
+		const css = read('next/app/globals.css');
+		const foreign = [...new Set([...css.matchAll(/\.svelte-flow[_a-z-]*/g)].map((m) => m[0]))];
+		must(
+			foreign.length === 0,
+			`${foreign.length} selector(s) still target the SVELTE stack's class prefix: ${foreign.join(', ')}. @xyflow/react emits react-flow__, so these rules match nothing and the graph silently loses the styling they describe. Nothing else in this harness sees it: the export has no flow elements to inspect, the chunks are framework-owned, and the CSS is valid either way.`,
+		);
+		const own = [...new Set([...css.matchAll(/\.react-flow[_a-z-]*/g)].map((m) => m[0]))];
+		must(
+			own.length > 0,
+			'no rule targets react-flow at all, so this row would also pass a stylesheet that dropped the graph styling instead of porting it',
+		);
+		return `${own.length} react-flow selector(s), 0 svelte-flow`;
+	});
+
 	// ---------------------------------------------------------------- A group
 
 	await r.row('A1', 'edgeStyleObject returns a style OBJECT with stroke and width', () => {
@@ -739,8 +795,11 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 			!/edgeStyleString/.test(src),
 			'edgeStyleString is still referenced in CODE (its mention in the doc comment is fine and expected)',
 		);
+		// stripComments(), NOT codeOnly(): a CSS declaration string only exists
+		// INSIDE a string literal, and codeOnly empties those. Running this clause
+		// against codeOnly output made it unmatchable for every possible input.
 		must(
-			!/opacity:\s*0\.1['"`;]/.test(src),
+			!/opacity:\s*0\.1['"`;]/.test(stripComments(raw)),
 			'a style DECLARATION string carrying opacity is still built — the exact regression the object merge replaces',
 		);
 		must(
@@ -876,17 +935,27 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 
 	await r.row('H3', 'flow code lives ONLY in chunks the page does not reference', () => {
 		must(chunks.length > 0, 'no chunks found under _next/static/chunks');
-		const carrying = chunks.filter((f) => readFileSync(f, 'utf8').includes(FLOW_SENTINEL));
+		const css = read('next/app/globals.css');
+		const leaked = FLOW_RUNTIME_SENTINELS.filter((sentinel) => css.includes(sentinel));
 		must(
-			carrying.length > 0,
-			`no chunk contains ${FLOW_SENTINEL}; the flow code is not in this build at all`,
+			leaked.length === 0,
+			`${leaked.join(', ')} now appear(s) in our own stylesheet, so it is no longer a runtime-only marker and this row would pass for the wrong reason. Pick another marker the library emits and we do not reference.`,
 		);
-		const eager = carrying.filter((f) => referenced.has(f.split('/').pop() as string));
-		must(
-			eager.length === 0,
-			`${eager.length} EAGER chunk(s) carry ${FLOW_SENTINEL}: ${eager.map((f) => f.split('/').pop()).join(', ')}. The lazy boundary is defeated — this goes red the moment the dynamic import becomes a static one.`,
-		);
-		return `${carrying.length} chunk(s) carry flow code, ${referenced.size} referenced asset(s), overlap 0`;
+		const report: string[] = [];
+		for (const sentinel of FLOW_RUNTIME_SENTINELS) {
+			const carrying = chunks.filter((f) => readFileSync(f, 'utf8').includes(sentinel));
+			must(
+				carrying.length > 0,
+				`no chunk contains ${sentinel}; the flow runtime is not in this build at all`,
+			);
+			const eager = carrying.filter((f) => referenced.has(f.split('/').pop() as string));
+			must(
+				eager.length === 0,
+				`${eager.length} EAGER chunk(s) carry ${sentinel}: ${eager.map((f) => f.split('/').pop()).join(', ')}. The lazy boundary is defeated — this goes red the moment the dynamic import becomes a static one.`,
+			);
+			report.push(`${sentinel} in ${carrying.length}`);
+		}
+		return `${report.join(', ')}; ${referenced.size} referenced asset(s), overlap 0`;
 	});
 
 	await r.row('H4', 'the failure reporter ships in an EAGER chunk', () => {
@@ -1133,7 +1202,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 		'S9c',
 		'the mermaid error path is reachable, and the healthy path is not',
 		async () => {
-			const failures: string[] = [];
+			const calls: (string | null)[] = [];
 			const svgs: string[] = [];
 			await mermaid.renderMermaid({
 				code: 'notADiagramType XYZ',
@@ -1146,16 +1215,19 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 						},
 					}) as never,
 				setSvg: (s) => svgs.push(s),
-				setError: (m) => failures.push(m),
+				setError: (m) => calls.push(m),
 			});
 			eq(svgs.length, 0, 'setSvg calls on a rejected diagram');
-			eq(failures.length, 1, 'setError calls on a rejected diagram');
+			// renderMermaid clears first, so a null leads every call sequence.
+			const failures = calls.filter((m): m is string => m !== null);
+			eq(failures.length, 1, 'non-null setError calls on a rejected diagram');
 			must(
 				failures[0].includes('No diagram type detected'),
 				`the error message was swallowed and replaced: ${failures[0]}`,
 			);
+			eq(calls[0], null, 'the FIRST setError call, which must clear any prior error');
 			const okSvgs: string[] = [];
-			const okErrors: string[] = [];
+			const okErrors: (string | null)[] = [];
 			await mermaid.renderMermaid({
 				code: 'flowchart LR\n A --> B',
 				id: 'probe2',
@@ -1167,11 +1239,43 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 				setSvg: (s) => okSvgs.push(s),
 				setError: (m) => okErrors.push(m),
 			});
-			eq(okErrors.length, 0, 'setError calls on a healthy diagram');
+			eq(
+				okErrors.filter((m) => m !== null).length,
+				0,
+				'non-null setError calls on a healthy diagram',
+			);
 			eq(okSvgs, ['<svg id="ok"/>'], 'setSvg payload on a healthy diagram');
 			return 'a throwing renderer reports; a working one does not';
 		},
 	);
+
+	await r.row('S9d', 'a retry CLEARS the previous error before attempting', async () => {
+		const calls: (string | null)[] = [];
+		const svgs: string[] = [];
+		const deps = (code: string, throws: boolean) => ({
+			code,
+			id: 'retry',
+			loadMermaid: async () =>
+				({
+					initialize: () => {},
+					render: throws
+						? () => {
+								throw new Error('rejected');
+							}
+						: async () => ({ svg: '<svg id="second"/>' }),
+				}) as never,
+			setSvg: (svg: string) => svgs.push(svg),
+			setError: (m: string | null) => calls.push(m),
+		});
+		await mermaid.renderMermaid(deps('bad', true));
+		await mermaid.renderMermaid(deps('good', false));
+		must(
+			calls.at(-1) === null,
+			`after a failing render followed by a working one the last setError call was ${JSON.stringify(calls.at(-1))}. A stuck error is not cosmetic: mermaidView's error branch attaches no ref, so the successful svg is written into nothing and the diagram stays marked failed for as long as the component lives.`,
+		);
+		eq(svgs, ['<svg id="second"/>'], 'the successful render still reaches setSvg');
+		return `setError sequence ${JSON.stringify(calls)}`;
+	});
 
 	// ---------------------------------------------------------------- M group
 
