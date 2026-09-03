@@ -3,10 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "next build",
-		"dev": "next dev",
+		"build": "pnpm paraglide && next build",
+		"dev": "pnpm paraglide && next dev",
 		"start": "next start",
-		"check": "tsc --noEmit"
+		"check": "pnpm paraglide && tsc --noEmit",
+		"paraglide": "paraglide-js compile --project ../project.inlang --outdir ./src/paraglide --strategy baseLocale"
 	},
 	"dependencies": {
 		"@shikijs/rehype": "^4.4.3",
@@ -29,6 +30,7 @@
 		"vfile": "^6.0.3"
 	},
 	"devDependencies": {
+		"@inlang/paraglide-js": "2.20.2",
 		"@tailwindcss/postcss": "4.3.1",
 		"@tailwindcss/typography": "^0.5.20",
 		"@types/hast": "^3.0.5",

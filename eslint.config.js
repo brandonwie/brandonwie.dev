@@ -70,6 +70,7 @@ export default ts.config(
 			// (next/app, next/src) is still linted.
 			'next/build/',
 			'next/.next/',
+			'next/src/paraglide/',
 		],
 	},
 );
