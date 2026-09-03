@@ -5,7 +5,7 @@ description: >-
   모르면 메시지 사이에 5분 이상 비는 순간 cache가 날아가고, 다음 메시지에 전체 conversation prefix를 처음부터 다시
   써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요.
 date: 2026-05-03T00:00:00.000Z
-updated: '2026-05-31'
+updated: "2026-09-03"
 tags:
   - knowledge
   - devops
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: anthropic-prompt-cache-ttl
-source_updated: 2026-05-31T00:00:00.000Z
-translation_date: '2026-06-14'
+source_updated: "2026-09-03"
+translation_date: "2026-09-03"
 ---
 
 점심 먹고 돌아와서 이어서 질문을 던졌더니, `/usage`의 cache hit 비율이 갑자기 떨어져 있었어요. 별 고민 없이 켜둔 줄 알았는데 그 사이에 cache가 통째로 날아가 있었던 거예요. 알고 보니 Anthropic이 2026년 3월 초쯤 Claude Code의 prompt cache TTL을 1시간에서 5분으로 조용히 줄여뒀어요([issue #46829](https://github.com/anthropics/claude-code/issues/46829)). 이걸 모르고 있으면, 메시지 사이에 5분 이상 비는 순간 cache가 증발하고, 다음 메시지에 **전체 conversation prefix**(system prompt + tools + CLAUDE.md + 이전 turn 전부)를 처음부터 다시 써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요. 200K 토큰짜리 Opus 세션이라면 한 번 이어붙일 때 약 $1.25씩 들어요. 하루 일하다 보면 세션당 비용이 30~60% 더 붙어요.
@@ -71,6 +71,8 @@ Claude Code 엔지니어 Thariq Shihipar에 따르면, prompt caching이 제품 
 
 prompt caching이 없으면 100 turn짜리 Opus 코딩 세션이 입력 토큰만 \$50~\$100 들 수 있어요. hit 비율이 90%면 \$10~\$19로 떨어져요. 이 경제성이 Claude Code Pro(\$20/월)를 굴러가게 만드는 핵심이에요.
 
+이 역전은 Claude Code 청구서 밖에서도 나타나요. Huang et al.(2026, p.11)은 입력 토큰을 14.18M 썼는데, Codex의 8.23M보다 오히려 돈을 덜 냈다고 보고해요(\$6.89 대 \$10.28). 그중 13.32M이 cache hit이었거든요(약 94%). 여기서 놀란 건 이거예요. "컨텍스트를 더 넣는다"가 곧 "돈이 더 든다"는 뜻은 아니에요. hit 비율을 실제로 재보기 전까지는요. 근데 제 환경에선 아직 확인을 못 해요. usage 로그에 `cached_input_tokens` 필드가 아예 없어서 실제 hit 비율을 모르거든요. 그 숫자를 알기 전까진 rule이나 knowledge를 더 무겁게 로드하는 걸 싸다고 여기면 안 되겠죠.
+
 ## Opus 4.7 200K 토큰 prefix 비용 계산
 
 | 시나리오                                | 비용                                              |
@@ -120,3 +122,4 @@ cache TTL regression은 조용해요. 대신 비용은 진짜로 들어요. 200K
 - [Cache TTL silently regressed from 1h to 5m around early March 2026 (issue #46829)](https://github.com/anthropics/claude-code/issues/46829)
 - [Anthropic: Claude quota drain not caused by cache tweaks (The Register)](https://www.theregister.com/2026/04/13/claude_code_cache_confusion/)
 - [How Prompt Caching Actually Works in Claude Code (Abhishek Ray)](https://www.claudecodecamp.com/p/how-prompt-caching-actually-works-in-claude-code)
+- [MemoHarness: Agent Harnesses That Learn from Experience (Huang et al., 2026)](https://arxiv.org/abs/2607.14159)

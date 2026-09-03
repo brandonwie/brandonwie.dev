@@ -4,7 +4,7 @@ description: >-
   한 저장소에 커밋하는 두 세션, 느린 pre-commit hook, 그리고 `fatal: cannot lock ref HEAD`.
   시끄러운 실패는 쉬운 쪽이에요 — 조용한 실패는 내 staged 파일을 다른 세션의 커밋에 그쪽 메시지로 넘겨버려요.
 date: 2026-05-14T00:00:00.000Z
-updated: '2026-08-12'
+updated: "2026-09-03"
 tags:
   - devops
   - transferable
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: git-pre-commit-parallel-session-head-race
-source_updated: '2026-08-12'
-translation_date: '2026-08-12'
+source_updated: "2026-09-03"
+translation_date: "2026-09-03"
 ---
 
 같은 저장소에서 두 agent 세션이 동시에 작업하고 있었고, 둘 다 거의 같은 순간에 커밋을 시도했어요. 그중 하나가 커밋 도중에 이렇게 죽었어요:
@@ -31,7 +31,9 @@ fatal: cannot lock ref 'HEAD': is at <new-sha> but expected <prev-sha>
 
 ## 조용한 버전이 더 나빠요
 
-시끄러운 중단은 그래도 멈춰는 줘요. 진짜 골치 아픈 경우는 병렬 세션이 `/wrap` 스타일 스크립트라서 staging 영역 전체에 `git add -A`나 `git add <session-dir>/`를 돌릴 때예요. 이때는 두 문제가 한꺼번에 터져요. 내 파일이 staged돼 있는데, 다른 세션의 `git add`가 그 파일까지 같이 쓸어 담아서 **그쪽** 메시지를 단 **그쪽** 커밋에 넣어버려요. 내가 쓰려던 커밋 메시지는 날아가고, 파일은 로그 엉뚱한 데 가 있는 거죠.
+시끄러운 중단은 그래도 멈춰는 줘요. 조용한 실패는 한 단계 아래에서 시작돼요. 제가 `git add`를 잘못 이해하고 있었던 지점이기도 하고요. index는 제 세션이 아니라 저장소에 속해요. 제가 stage한 건 같은 체크아웃에서 도는 다른 모든 세션에 보이고, 그 세션이 커밋해 버릴 수도 있어요. 상대 세션이 뭔가 특별한 걸 할 필요도 없어요. 평범한 `git commit` 하나면 제 staged 파일까지 들고 가서 자기 메시지를 단 자기 커밋에 넣어버려요.
+
+`/wrap` 스타일 스크립트가 staging 영역 전체에 `git add -A`나 `git add <session-dir>/`를 돌리면 이게 통째로 일어나요. 이때는 두 문제가 한꺼번에 터져요. 내 파일이 staged돼 있는데, 다른 세션의 `git add`가 나머지까지 전부 쓸어 담아서 **그쪽** 메시지를 단 **그쪽** 커밋에 넣어버려요. 내가 쓰려던 커밋 메시지는 날아가고, 파일은 로그 엉뚱한 데 가 있는 거죠.
 
 제가 겪었을 때 이렇게 보였어요:
 
@@ -41,6 +43,12 @@ fatal: cannot lock ref 'HEAD': is at <new-sha> but expected <prev-sha>
 4. `git log -1 --stat`을 보면 파일이 전혀 무관한 작업 메시지를 단 커밋 — 병렬 세션의 wrap 커밋 — 안에 들어가 있음.
 
 파일 자체는 멀쩡히 들어갔어요. 사라진 건 attribution이랑 커밋 메시지 의도였죠. 이렇게 파일을 쓸어 담은 장본인이 바로 wrap 스타일 자동화에 쓰인 넓은 `git add` glob이에요.
+
+## lint-staged에도 자기만의 race가 있어요
+
+같은 계열의 세 번째 실패가 하나 더 있는데, 이건 git 잘못이 아니에요. lint-staged는 unstaged 변경을 stash해 두고, staged된 것만 formatter에 돌린 다음, stash를 다시 되돌려요. hook이 도는 동안 다른 세션이 같은 파일을 건드리면 이 복원이 실패해요 — 원래 상태로 되돌려 놓고 커밋은 중단돼요.
+
+헷갈리는 지점은 중단 메시지가 마치 내 변경에 문제가 있는 것처럼 보인다는 거예요. 실제로는 아니고요. 다른 세션이 조용해진 다음에 다시 시도하는 게 해결책의 전부예요.
 
 ## fix는 "hook을 더 빠르게"가 아니라 구조적
 
@@ -58,6 +66,8 @@ git -C <main> worktree add <main>/.worktrees/<branch-slug> \
 ```
 
 그러면 두 세션이 독립적으로 커밋하고, worktree 브랜치가 다시 merge되면 모두가 결과를 봐요 — 하지만 커밋 자체는 절대 race하지 않아요.
+
+worktree를 쓰기 어려운 상황도 있어요. 이미 세팅해 둔 체크아웃에서 뭐 하나 빠르게 고쳐야 할 때 같은 경우요. 그럴 땐 공유 index를 그대로 둔 채로 쓰는 더 가벼운 선택지도 있어요. `git commit -m ... -- <paths>`는 이름을 적은 path만 커밋하고 나머지 index는 건드리지 않아요. 그래서 공유 index 하나를 놓고도 두 세션이 각자의 커밋을 따로 남길 수 있어요. 대신 pathspec 커밋은 디스크에 있는 index가 아니라 임시 index로 만들어져서, pre-commit hook이 보는 게 평범한 커밋 때와 똑같지는 않아요. 여기에 기대기 전에 자기 hook 기준으로 한 번 확인해 보는 게 좋아요.
 
 ## 열려 있는 틈은 hook 시간만이 아니에요
 

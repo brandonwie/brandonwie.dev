@@ -2,7 +2,7 @@
 title: 'The pre-commit hook race that put my files in someone else''s commit'
 description: 'Two sessions committing to one repo, a slow pre-commit hook, and `fatal: cannot lock ref HEAD`. The loud failure is the easy one — the quiet failure hands your staged files to the other session''s commit under its message.'
 date: 2026-05-14T00:00:00.000Z
-updated: "2026-08-12"
+updated: "2026-09-03"
 tags:
   - devops
   - transferable
@@ -14,7 +14,7 @@ references:
   - url: 'https://git-scm.com/docs/git-worktree'
     title: git-worktree — Manage multiple working trees
     type: official
-source_content_hash: 3062f1df5dafa7a9eebc40bd3893a784c6f7d9f535ec73904a793b6bbbe23ef9
+source_content_hash: 2eb00ade778b2f1fa547ef2ff9cbeb1f138ab90dd9c3c772cac43046f79dfe4b
 ---
 
 I had two agent sessions working in the same repository at once, and both tried
@@ -42,12 +42,18 @@ window, and a concurrent committer is the other racer.
 
 ## The silent version is worse
 
-The loud abort at least stops you. The bad case is when the parallel session is a
-`/wrap`-style script that runs `git add -A` or `git add <session-dir>/` across the
-whole staging area. Now the two problems compound: my files are staged, the
-other session's `git add` scoops them up, and they land in **its** commit, under
-**its** message. My intended commit message is gone, and the files are somewhere
-else in the log.
+The loud abort at least stops you. The quiet failure starts one level down, at
+something I had wrong about `git add`: the index belongs to the repository, not
+to my session. Anything I stage is visible to — and committable by — every other
+session working in that checkout. The other session doesn't have to do anything
+unusual for this to bite. Its plain `git commit` picks up my staged files and
+carries them into its own commit, under its own message.
+
+A `/wrap`-style script that runs `git add -A` or `git add <session-dir>/` across
+the whole staging area just makes it wholesale. Now the two problems compound:
+my files are staged, the other session's `git add` scoops up everything else
+too, and it all lands in **its** commit, under **its** message. My intended
+commit message is gone, and the files are somewhere else in the log.
 
 Here's what that looked like when I hit it:
 
@@ -61,6 +67,17 @@ Here's what that looked like when I hit it:
 The files functionally landed. The attribution and the commit-message intent did
 not. The broad `git add` globs in wrap-style automation are the mechanism that
 swept them up.
+
+## lint-staged has its own race
+
+There's a third failure in the same family, and this one isn't git's.
+lint-staged stashes the unstaged changes, runs the formatters over what's
+staged, then restores the stash. If another session writes to those same files
+while the hook is running, the restore fails — it reverts to the original state
+and the commit aborts.
+
+The misleading part is that the abort looks like a problem with my change, and
+it isn't. Retrying once the other session goes quiet is the whole fix.
 
 ## The fix is structural, not "make the hook faster"
 
@@ -84,6 +101,15 @@ git -C <main> worktree add <main>/.worktrees/<branch-slug> \
 
 Both sessions then commit independently, and when a worktree branch merges back,
 everyone sees the result — but the commit itself never races.
+
+When a worktree isn't practical — a quick fix in a checkout that's already set
+up, say — there's a lighter option that works on the shared index as it is.
+`git commit -m ... -- <paths>` commits only the paths you name and leaves the
+rest of the index alone, so two sessions can land separate commits out of one
+shared index. The trade-off is that a pathspec commit is built from a temporary
+index rather than the one on disk, so the pre-commit hook doesn't see quite what
+it would in an ordinary commit. Worth checking against your own hook before
+leaning on it.
 
 ## The hook window isn't the only window
 

@@ -1,27 +1,42 @@
 /**
- * The frozen baseline is a PROJECTION of its parent, not a re-measurement.
+ * The committed baseline must be exactly the frozen measurement it claims to be.
  *
  *   pnpm migration:projection
  *
- * `verification/baseline/svelte-34aa7e7.json` is the evidence every candidate
- * is judged against, and `verification/README.md` says it may be rebuilt with
+ * `verification/baseline/svelte-e23e808.json` is the evidence every candidate is
+ * judged against, and `verification/README.md` says it may be rebuilt with
  * `pnpm migration:capture`. Rebuilding it is exactly where the evidence can be
- * lost, and once was: widening the capture with `articleMeta` and richer
- * `<img>` records meant re-running capture, and the re-run silently rewrote the
- * `bundle` block by three bytes — `jsBytes` -2, `cssBytes` -1 — because the
- * SvelteKit build is not byte-reproducible. Nothing caught it. `bundle` is
- * RECORDED, not compared (`migration-verify.ts` compares pages, site artifacts,
- * statuses and Pagefind, never bundle), so a full re-capture can move the AC9
- * weight evidence in `verification/thresholds.md` without a single test going
- * red.
+ * lost, and once was: widening the capture with `articleMeta` and richer `<img>`
+ * records meant re-running capture, and the re-run silently rewrote the `bundle`
+ * block by three bytes — `jsBytes` -2, `cssBytes` -1 — because the SvelteKit
+ * build is not byte-reproducible. Nothing caught it. `bundle` is RECORDED, not
+ * compared (`migration-verify.ts` compares pages, site artifacts, statuses and
+ * Pagefind, never bundle), so a re-capture can move the AC9 weight evidence in
+ * `verification/thresholds.md` without a single test going red.
  *
- * The fix is a rule, and this file is the rule: when the SCHEMA widens, graft
- * the new fields onto the parent blob and change nothing else. This asserts
- * that graft against the parent read straight out of git, so the claim survives
- * the session that made it.
+ * The rule this file enforces has two modes, and the declared field lists below
+ * select which one is live:
  *
- * Exit 0 = the committed baseline is the parent plus exactly the declared new
- * fields. Exit 1 = something else changed. Exit 2 = it could not run.
+ *   MEASUREMENT generation (both lists empty — the current state). The committed
+ *   file must be BYTE-IDENTICAL to the blob the frozen tag pins. A fresh
+ *   measurement is allowed; silently editing one afterwards is not.
+ *
+ *   PROJECTION generation (a list is non-empty). The committed file must be the
+ *   frozen parent plus exactly the declared new or widened fields, grafted on —
+ *   never re-captured. That is how generation 1 (`…svelte-34aa7e7.json`, tag
+ *   `migration-baseline-svelte-34aa7e7-v1`) added `articleMeta` and widened
+ *   `images`.
+ *
+ * Generation 3 was measured on 2026-09-03 from the same content resync that
+ * generation 1 could not absorb by projection. Generation 2 measured that
+ * resync; a review then asked for a missing citation, and one line of published
+ * prose is enough to invalidate a measurement — so generation 3 measures the
+ * corrected tree. Both earlier tags are untouched and still hold their blobs.
+ * The ordering rule that follows from it: capture LAST, after the final content
+ * edit, and push the tag before the branch.
+ *
+ * Exit 0 = the committed baseline is what the frozen tag says it is. Exit 1 =
+ * something else changed. Exit 2 = it could not run.
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -34,21 +49,23 @@ import { readFileSync } from 'node:fs';
  * cannot make the evidence unreachable. It must never be retargeted: a future
  * measurement gets a new versioned tag.
  */
-export const FROZEN_TAG_NAME = 'migration-baseline-svelte-34aa7e7-v1';
+export const FROZEN_TAG_NAME = 'migration-baseline-svelte-e23e808-v1';
 export const FROZEN_TAG = `refs/tags/${FROZEN_TAG_NAME}`;
-export const FROZEN_OBJECT_ID = 'aad4ec1e0e25156778c3695d82bf9bf3c12b6fcb';
-export const FROZEN_SHA256 = 'bb7231e83f057f204259164d78a43e00a76f38aa795625a9bd63590df2907fae';
-const BASELINE_PATH = 'verification/baseline/svelte-34aa7e7.json';
+export const FROZEN_OBJECT_ID = '4c8565889edc22c5e308a865480b366eeefa7691';
+export const FROZEN_SHA256 = 'dc7789daaeba7843b3ba417895984c4a399ba99ba913abd953e8e5c92999f827';
+const BASELINE_PATH = 'verification/baseline/svelte-e23e808.json';
 
 /**
- * Per-page fields this projection is allowed to introduce or rewrite.
+ * Per-page fields the current generation is allowed to introduce or rewrite.
  *
- * `articleMeta` did not exist in the parent. `images` did, in a two-part form;
- * the widened record is a superset whose first segment must still be the parent
- * value exactly, which is checked below rather than waved through.
+ * Both empty: generation 2 is a MEASUREMENT, so nothing may differ from the
+ * frozen blob at all. Generation 1 declared `articleMeta` as added and `images`
+ * as widened; a future schema change repopulates these lists and the projection
+ * mode below takes over again, with the same meaning it had then — a widened
+ * field's parent value must survive verbatim as the leading segment.
  */
-const ADDED_FIELDS = ['articleMeta'] as const;
-const WIDENED_FIELDS = ['images'] as const;
+const ADDED_FIELDS: readonly string[] = [];
+const WIDENED_FIELDS: readonly string[] = [];
 
 interface Baseline {
 	pages: Record<string, Record<string, unknown>>;
@@ -118,6 +135,23 @@ export function readFrozenBaseline(
 	frozenRef: string = FROZEN_TAG,
 	overrides: FrozenBaselineOverrides = {},
 ): Baseline {
+	return readFrozenBaselineWithBytes(frozenRef, overrides).baseline;
+}
+
+/**
+ * The same verification, returning the verified bytes alongside the parsed
+ * baseline. The measurement mode compares bytes, so it needs the blob itself
+ * rather than a re-serialisation of the parse.
+ *
+ * @param frozenRef Annotated tag that must resolve to the pinned baseline blob.
+ * @param overrides Test-only Git, blob, object-ID, and digest overrides.
+ * @returns The verified blob bytes and the parsed baseline.
+ * @throws {FrozenBaselineError} With a stable code when declared tag, integrity, or baseline validation fails.
+ */
+export function readFrozenBaselineWithBytes(
+	frozenRef: string = FROZEN_TAG,
+	overrides: FrozenBaselineOverrides = {},
+): { baseline: Baseline; bytes: Buffer } {
 	const expectedObjectId = overrides.expectedObjectId ?? FROZEN_OBJECT_ID;
 	const expectedSha256 = overrides.expectedSha256 ?? FROZEN_SHA256;
 	const readGitText = overrides.readGitText ?? gitText;
@@ -164,7 +198,7 @@ export function readFrozenBaseline(
 	}
 
 	try {
-		return requireBaseline(JSON.parse(blob.toString('utf8')));
+		return { baseline: requireBaseline(JSON.parse(blob.toString('utf8'))), bytes: blob };
 	} catch (error) {
 		throw new FrozenBaselineError(
 			'invalid-baseline',
@@ -192,17 +226,32 @@ export function runProjection(
 		if (!quiet) console.log(...parts);
 	};
 	let parent: Baseline;
+	let parentBytes: Buffer;
 	try {
-		parent = readFrozenBaseline(frozenRef, frozenOverrides);
+		const frozen = readFrozenBaselineWithBytes(frozenRef, frozenOverrides);
+		parent = frozen.baseline;
+		parentBytes = frozen.bytes;
 	} catch (error) {
 		console.error(
 			`FATAL: could not verify frozen baseline ${frozenRef}: ${error instanceof Error ? error.message : String(error)}`,
 		);
 		return 2;
 	}
-	const current: Baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
+	const currentBytes = readFileSync(baselinePath);
+	const current: Baseline = JSON.parse(currentBytes.toString('utf8'));
 
+	const measurementMode = ADDED_FIELDS.length === 0 && WIDENED_FIELDS.length === 0;
 	const failures: string[] = [];
+	// In measurement mode the committed file IS the frozen blob. Bytes first:
+	// the structural walk below still runs, because "3 bytes differ somewhere"
+	// is not a reviewable finding on a 1.8 MB artifact.
+	if (measurementMode && !currentBytes.equals(parentBytes)) {
+		failures.push(
+			`${baselinePath} is not byte-identical to ${frozenRef} ` +
+				`(${currentBytes.length} bytes vs ${parentBytes.length}); this generation is a measurement, ` +
+				`so the committed file may not differ from the frozen blob at all`,
+		);
+	}
 	const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 	// --- every top-level field except `pages`, `bundle` included --------------
@@ -265,10 +314,16 @@ export function runProjection(
 	}
 
 	say(
-		`projection of ${baselinePath} against ${frozenRef}: ${parentUrls.size} pages, ` +
-			`${topKeys.size - 1} top-level field(s), ${addedCount} page(s) carrying new ${ADDED_FIELDS.join('/')}`,
+		measurementMode
+			? `measurement check of ${baselinePath} against ${frozenRef}: ${parentUrls.size} pages, ` +
+					`${topKeys.size - 1} top-level field(s), ${currentBytes.length} bytes compared`
+			: `projection of ${baselinePath} against ${frozenRef}: ${parentUrls.size} pages, ` +
+					`${topKeys.size - 1} top-level field(s), ${addedCount} page(s) carrying new ${ADDED_FIELDS.join('/')}`,
 	);
-	if (addedCount === 0) {
+	// A projection generation can pass vacuously if the declared field is empty
+	// everywhere; a measurement generation cannot, because it compares bytes
+	// against an object this tree cannot edit.
+	if (!measurementMode && addedCount === 0) {
 		console.error(
 			`FATAL: no page carries a non-empty ${ADDED_FIELDS.join('/')}; this check would pass on an unchanged file and prove nothing`,
 		);
@@ -278,11 +333,17 @@ export function runProjection(
 		for (const line of failures.slice(0, 40)) console.error(`PROJECTION VIOLATION ${line}`);
 		if (failures.length > 40) console.error(`  ... and ${failures.length - 40} more`);
 		console.error(
-			`RESULT: ${failures.length} violation(s) — the baseline was re-measured, not projected`,
+			measurementMode
+				? `RESULT: ${failures.length} violation(s) — the committed baseline is not the frozen measurement`
+				: `RESULT: ${failures.length} violation(s) — the baseline was re-measured, not projected`,
 		);
 		return 1;
 	}
-	say('RESULT: every parent field survives verbatim; only the declared fields are new');
+	say(
+		measurementMode
+			? 'RESULT: the committed baseline is byte-identical to the frozen measurement'
+			: 'RESULT: every parent field survives verbatim; only the declared fields are new',
+	);
 	return 0;
 }
 

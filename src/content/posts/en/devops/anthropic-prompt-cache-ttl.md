@@ -2,7 +2,7 @@
 title: Anthropic Prompt Cache TTL + Cost Mechanics
 description: 'Anthropic silently dropped Claude Code''s prompt-cache TTL from 1 hour to 5 minutes around early March 2026. Without explicit awareness, idle gaps ≥5 min between messages evaporate the cache and force a full cold cache-write on the next message — pricing it at 1.25× base input on the entire conversation prefix.'
 date: 2026-05-03T00:00:00.000Z
-updated: 2026-05-31
+updated: "2026-09-03"
 tags:
   - knowledge
   - devops
@@ -31,7 +31,11 @@ references:
       https://www.claudecodecamp.com/p/how-prompt-caching-actually-works-in-claude-code
     title: How Prompt Caching Actually Works in Claude Code
     type: authoritative
-source_content_hash: 6116082c4c042f9464a0f578000c0116bd1411030072e3afad9ea860327cb6da
+  - url: 'https://arxiv.org/abs/2607.14159'
+    title: >-
+      MemoHarness: Agent Harnesses That Learn from Experience (Huang et al., 2026)
+    type: authoritative
+source_content_hash: 46d679c571022036b622b25ed7b257d6e670ef39352355a7b84dad268a195f17
 ---
 
 Anthropic silently dropped Claude Code's prompt-cache TTL from 1 hour to 5 minutes around early March 2026 ([issue #46829](https://github.com/anthropics/claude-code/issues/46829)). Without explicit awareness, idle gaps ≥5 min between messages evaporate the cache and force a full cold cache-write on the next message — pricing it at 1.25× base input on the **entire conversation prefix** (system prompt + tools + CLAUDE.md + every prior turn). On a 200K-token Opus session that's ~$1.25 per resume; across a working day this can raise per-session cost 30–60%.
@@ -85,6 +89,8 @@ Per Thariq Shihipar (Claude Code engineer) — prompt caching is the architectur
 
 Without prompt caching, a 100-turn Opus coding session can cost \$50–\$100 in input tokens. With 90% hit rate, ~\$10–\$19. This economics is why Claude Code Pro (\$20/mo) is viable.
 
+The same inversion shows up outside Claude Code billing. Huang et al. (2026, p.11) report spending 14.18M input tokens against Codex's 8.23M and still paying less — \$6.89 vs \$10.28 — because 13.32M of those tokens were cache hits (~94%). What surprised me there: "load more context" is not the same thing as "costs more" until the hit rate is actually measured. I can't check that on my own setup yet — my usage log has no `cached_input_tokens` field at all, so I don't know my real hit rate, and until I do I shouldn't be treating heavier rule or knowledge loading as cheap.
+
 ## Cost math for an Opus 4.7 200K-token prefix
 
 | Scenario                             | Cost                                             |
@@ -134,3 +140,4 @@ The cache TTL regression is silent and the cost is real — \$1.25 per cold-writ
 - [Cache TTL silently regressed from 1h to 5m around early March 2026 (issue #46829)](https://github.com/anthropics/claude-code/issues/46829)
 - [Anthropic: Claude quota drain not caused by cache tweaks (The Register)](https://www.theregister.com/2026/04/13/claude_code_cache_confusion/)
 - [How Prompt Caching Actually Works in Claude Code (Abhishek Ray)](https://www.claudecodecamp.com/p/how-prompt-caching-actually-works-in-claude-code)
+- [MemoHarness: Agent Harnesses That Learn from Experience (Huang et al., 2026)](https://arxiv.org/abs/2607.14159)
