@@ -15,7 +15,7 @@
  *
  *   _redirects  the exported file exists as a FILE at the baseline path; the
  *               comparator's own site-artifact hash equals the frozen value in
- *               `verification/baseline/svelte-34aa7e7.json`; and the bytes
+ *               `verification/baseline/svelte-d06939c.json`; and the bytes
  *               equal the Svelte build's bytes. Two rows because the comparator
  *               hashes the file after collapsing whitespace
  *               (`migration-verify.ts`, the `SITE_FILES` loop), so a
@@ -55,7 +55,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const BASELINE_JSON = 'verification/baseline/svelte-34aa7e7.json';
+const BASELINE_JSON = 'verification/baseline/svelte-d06939c.json';
 
 export const REDIRECTS = '_redirects';
 

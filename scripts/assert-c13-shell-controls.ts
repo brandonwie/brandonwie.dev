@@ -241,7 +241,7 @@ function treeFingerprint(dir: string, ledgerFile: string): string {
 
 async function main(): Promise<number> {
 	const source = process.argv[2] ?? 'next/build';
-	const baseline = process.argv[3] ?? 'verification/baseline/svelte-34aa7e7.json';
+	const baseline = process.argv[3] ?? 'verification/baseline/svelte-d06939c.json';
 	const scratch = 'tmp/c13-controls';
 	const scratchLedger = 'tmp/c13-controls-ledger.json';
 

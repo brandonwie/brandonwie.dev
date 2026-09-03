@@ -448,7 +448,7 @@ export async function runAssertions(
 if (process.argv[1]?.endsWith('assert-c13-shell.ts')) {
 	runAssertions(
 		process.argv[2] ?? 'next/build',
-		process.argv[3] ?? 'verification/baseline/svelte-34aa7e7.json',
+		process.argv[3] ?? 'verification/baseline/svelte-d06939c.json',
 		false,
 		process.argv[4] ?? DEFAULT_LEDGER,
 	).then((code) => process.exit(code));

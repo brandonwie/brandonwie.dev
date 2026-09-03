@@ -187,7 +187,7 @@ export interface PublishedPost {
  * result of `import.meta.glob`, and Vite sorts those keys by path, so the
  * emission order is `<category>/<slug>.md` ascending by code unit -- not slug
  * order (`listPostSlugs`) and not filesystem order (`walk`). The frozen feed
- * hashes in `verification/baseline/svelte-34aa7e7.json` are order-sensitive,
+ * hashes in `verification/baseline/svelte-d06939c.json` are order-sensitive,
  * so this ordering is a contract, not a convenience.
  */
 export function listPublishedPosts(locale: Locale): PublishedPost[] {

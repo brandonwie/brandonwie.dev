@@ -1,15 +1,28 @@
 /**
- * Negative controls for the baseline projection check.
+ * Negative controls for the baseline measurement/projection check.
  *
  *   pnpm migration:projection:controls
  *
- * The projection check exists because a full re-capture moved `bundle` by three
- * bytes and nothing noticed. A check written in response to a specific defect
- * has to be shown catching that specific defect, so BP-01 reproduces it exactly:
+ * The check exists because a full re-capture moved `bundle` by three bytes and
+ * nothing noticed. A check written in response to a specific defect has to be
+ * shown catching that specific defect, so BP-01 reproduces it exactly:
  * `jsBytes` -2 and `cssBytes` -1.
  *
  *   DEFECT      the check MUST exit 1 (or 2 for a vacuity guard)
- *   INVARIANCE  the check MUST exit 0 on a change the projection permits
+ *   INVARIANCE  the check MUST exit 0 on something it must not flag
+ *
+ * Generation 2 is a MEASUREMENT (see `assert-baseline-projection.ts`), so the
+ * committed file may not differ from the frozen blob in any way: the controls
+ * that generation 1 allowed as permitted projections — a new field holding
+ * anything, a widened field growing — are defects here, and their expectations
+ * moved accordingly rather than being deleted.
+ *
+ * That makes every structural control a defect, which is exactly how a check
+ * that simply always failed would look. BP-16 and BP-17 are the answer: an
+ * untouched copy at a different path must pass, and a parse/serialise round trip
+ * with no mutation must reproduce the committed bytes exactly. Without BP-17
+ * each defect control could be passing on the serialiser's formatting rather
+ * than on its own mutation.
  *
  * Each control runs against a throwaway copy of the baseline under `tmp/`. The
  * committed file is never mutated, and the parent blob comes from an immutable
@@ -41,9 +54,10 @@ interface ResolverControl {
 	read: () => unknown;
 }
 
-const SOURCE = 'verification/baseline/svelte-34aa7e7.json';
+const SOURCE = 'verification/baseline/svelte-d06939c.json';
 const SCRATCH = 'tmp/projection-control.json';
-const MISSING_TAG = 'refs/tags/migration-baseline-svelte-34aa7e7-missing-control';
+const SCRATCH_COPY = 'tmp/projection-control-copy.json';
+const MISSING_TAG = 'refs/tags/migration-baseline-svelte-d06939c-missing-control';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const CONTROLS: Control[] = [
@@ -75,7 +89,7 @@ const CONTROLS: Control[] = [
 	{
 		id: 'BP-04',
 		expect: 1,
-		what: 'a widened images entry no longer begins with the parent value',
+		what: 'an images entry no longer begins with the measured value',
 		apply: (b: any) => {
 			const url = Object.keys(b.pages).find((u: string) => b.pages[u].images.length > 0)!;
 			b.pages[url].images[0] = `/elsewhere.png ${b.pages[url].images[0]}`;
@@ -91,16 +105,16 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'BP-06',
-		expect: 2,
-		what: 'every articleMeta is emptied — the check must refuse to pass vacuously',
+		expect: 1,
+		what: 'every articleMeta is emptied — measured content may not be dropped (a vacuity exit 2 under generation 1)',
 		apply: (b: any) => {
 			for (const page of Object.values(b.pages) as any[]) page.articleMeta = [];
 		},
 	},
 	{
 		id: 'BP-07',
-		expect: 0,
-		what: 'articleMeta values differ — a NEW field is free to hold anything (paired with BP-06)',
+		expect: 1,
+		what: 'one articleMeta value is rewritten — measured, not free to hold anything (exit 0 under generation 1)',
 		apply: (b: any) => {
 			const url = Object.keys(b.pages).find((u: string) => b.pages[u].articleMeta.length > 0)!;
 			b.pages[url].articleMeta = ['article:tag rewritten'];
@@ -108,8 +122,8 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'BP-08',
-		expect: 0,
-		what: 'the widened part of an images entry changes — paired with BP-04',
+		expect: 1,
+		what: 'the trailing part of an images entry changes — measured, not a free widening (exit 0 under generation 1)',
 		apply: (b: any) => {
 			const url = Object.keys(b.pages).find((u: string) => b.pages[u].images.length > 0)!;
 			b.pages[url].images[0] = `${b.pages[url].images[0]} extra=1`;
@@ -216,15 +230,18 @@ function main(): number {
 		return 2;
 	}
 	const frozenPageCount = frozenPages.length;
+	// Generation 2 measured articleMeta directly, so every page carries the key.
+	// Generation 1's parent carried none, which is why this number changed with
+	// the generation rather than drifting.
 	const articleMetaCount = frozenPages.filter((page) => 'articleMeta' in page).length;
-	const frozenInvariantOk = frozenPageCount === 366 && articleMetaCount === 0;
+	const frozenInvariantOk = frozenPageCount === 366 && articleMetaCount === 366;
 	if (!frozenInvariantOk) {
 		failures.push(
-			`live frozen baseline: ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta; expected 366 and 0`,
+			`live frozen baseline: ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta; expected 366 and 366`,
 		);
 	}
 	console.log(
-		`${frozenInvariantOk ? 'PASS' : 'FAIL'}  INVARIANCE  live frozen baseline has ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta (expected 366 and 0)`,
+		`${frozenInvariantOk ? 'PASS' : 'FAIL'}  INVARIANCE  live frozen baseline has ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta (expected 366 and 366)`,
 	);
 
 	const clean = runProjection(SOURCE, undefined, true);
@@ -277,7 +294,32 @@ function main(): number {
 	}
 	rmSync(SCRATCH, { force: true });
 
-	const controlCount = RESOLVER_CONTROLS.length + CONTROLS.length + 2;
+	// BP-16: the check compares content, not paths.
+	copyFileSync(SOURCE, SCRATCH_COPY);
+	const copyExit = runProjection(SCRATCH_COPY, undefined, true);
+	const copyOk = copyExit === 0;
+	if (!copyOk)
+		failures.push(`BP-16 an untouched copy at another path: exit ${copyExit}, expected 0`);
+	console.log(
+		`${copyOk ? 'PASS' : 'FAIL'}  BP-16  INVARIANCE  exit ${copyExit} (expected 0)  an untouched copy at a different path still passes`,
+	);
+
+	// BP-17: without this, every defect control above could be passing on the
+	// serialiser's formatting rather than on its own mutation.
+	const roundTrip = `${JSON.stringify(JSON.parse(readFileSync(SOURCE, 'utf8')), null, 2)}\n`;
+	writeFileSync(SCRATCH_COPY, roundTrip);
+	const roundTripExit = runProjection(SCRATCH_COPY, undefined, true);
+	const roundTripOk = roundTripExit === 0;
+	if (!roundTripOk)
+		failures.push(
+			`BP-17 parse/serialise round trip with no mutation: exit ${roundTripExit}, expected 0 — the defect controls above would then be passing on formatting, not on their mutations`,
+		);
+	console.log(
+		`${roundTripOk ? 'PASS' : 'FAIL'}  BP-17  INVARIANCE  exit ${roundTripExit} (expected 0)  an unmutated round trip reproduces the committed bytes`,
+	);
+	rmSync(SCRATCH_COPY, { force: true });
+
+	const controlCount = RESOLVER_CONTROLS.length + CONTROLS.length + 4;
 	console.log(`\n${controlCount} controls over the projection rule`);
 	if (failures.length) {
 		for (const line of failures) console.error(`CONTROL FAILED ${line}`);
