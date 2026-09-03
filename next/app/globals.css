@@ -369,3 +369,238 @@
 	border-color: color-mix(in srgb, var(--iris) 55%, transparent);
 	color: var(--iris);
 }
+
+/* ---------------------------------------------------------------------------
+ * /system/3b graph (C11)
+ *
+ * Svelte scoped every one of these rules to its component and stamped a
+ * `svelte-<hash>` class on the matching elements. React has no equivalent, so
+ * the rules are collected here under their existing class names, which is why
+ * the ported markup keeps those names verbatim rather than being restyled.
+ * Extracted from System3bGraph/Flow/Node/BandNode.svelte with only the scoping
+ * removed — no rule was rewritten.
+ * ------------------------------------------------------------------------- */
+
+/* --- from System3bGraph.svelte --- */
+.s3b-fallback {
+	border: 1px solid var(--line2);
+	border-radius: 12px;
+	padding: 16px;
+	background: var(--panel);
+}
+.note {
+	margin: 0 0 12px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--faint);
+}
+.s3b-fallback.failed .note {
+	color: var(--gold);
+}
+.layers {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.head {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+.idx {
+	color: var(--faint);
+	font-variant-numeric: tabular-nums;
+}
+.name {
+	color: var(--ink);
+	font-weight: 600;
+}
+.count {
+	margin-left: auto;
+	color: var(--gold);
+	font-size: 11px;
+	white-space: nowrap;
+}
+.desc {
+	margin: 4px 0 0;
+	color: var(--muted);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+/* --- from System3bFlow.svelte --- */
+.s3b-flow {
+	border: 1px solid var(--line2);
+	border-radius: 12px;
+	overflow: hidden;
+	background: var(--panel);
+}
+.toolbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--line2);
+	background: var(--surface);
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+.title {
+	color: var(--ink);
+}
+.crumb {
+	color: var(--foam);
+}
+.spacer {
+	flex: 1;
+}
+.hint {
+	color: var(--faint);
+}
+.btn {
+	background: var(--bg);
+	border: 1px solid var(--line2);
+	border-radius: 6px;
+	color: var(--ink);
+	font: inherit;
+	padding: 4px 10px;
+	cursor: pointer;
+	transition:
+		border-color 120ms ease,
+		color 120ms ease;
+}
+.btn:hover {
+	border-color: var(--foam);
+	color: var(--foam);
+}
+.canvas {
+	height: clamp(440px, 70vh, 760px);
+	width: 100%;
+}
+.legend {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px 14px;
+	border-top: 1px solid var(--line2);
+	background: var(--surface);
+	font-family: var(--font-mono);
+	font-size: 11px;
+}
+.legend-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+.legend-head {
+	color: var(--faint);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	min-width: 64px;
+}
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	color: var(--faint);
+}
+.swatch {
+	width: 9px;
+	height: 9px;
+	border-radius: 2px;
+	display: inline-block;
+}
+.line {
+	width: 16px;
+	height: 0;
+	display: inline-block;
+	vertical-align: middle;
+}
+/* xyflow surface tweaks to match the terminal palette */
+.canvas .svelte-flow {
+	background: var(--panel);
+}
+.canvas .svelte-flow__controls-button {
+	background: var(--surface);
+	border-bottom: 1px solid var(--line2);
+	fill: var(--ink);
+	color: var(--ink);
+}
+.canvas .svelte-flow__controls-button:hover {
+	background: var(--overlay);
+}
+.canvas .svelte-flow__edge-path {
+	transition: opacity 120ms ease;
+}
+
+/* --- from System3bNode.svelte --- */
+.s3b-node {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 180px;
+	height: 56px;
+	padding: 0 12px;
+	background: var(--panel);
+	border: 1px solid var(--line2);
+	border-left: 3px solid var(--c);
+	border-radius: 8px;
+	color: var(--ink);
+	font-family: var(--font-mono);
+	font-size: 12px;
+	line-height: 1.2;
+	text-align: left;
+	cursor: default;
+	transition:
+		background 120ms ease,
+		border-color 120ms ease;
+}
+.s3b-node.expandable {
+	cursor: pointer;
+}
+.s3b-node.expandable:hover {
+	background: var(--overlay);
+	border-color: var(--c);
+}
+.dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--c);
+	flex: 0 0 auto;
+}
+.label {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.chev {
+	color: var(--c);
+	font-weight: 700;
+	font-size: 14px;
+	flex: 0 0 auto;
+}
+
+/* --- from System3bBandNode.svelte --- */
+.s3b-band {
+	border: 1px dashed var(--line2);
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--panel) 30%, transparent);
+	pointer-events: none;
+}
+.lane-label {
+	position: absolute;
+	top: 6px;
+	left: 10px;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--faint);
+	white-space: nowrap;
+}

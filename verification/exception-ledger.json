@@ -54,5 +54,13 @@
 		"reason": "C8 finding 4: the SvelteKit /ko/feed page ships <html lang=\"en\"> because src/hooks.server.ts substitutes %lang% from Paraglide's url strategy and vite.config.ts urlPatterns has no /feed pattern, so the KO page falls through to the base locale (one of the seven KO pages the C13 record names). The candidate ships lang=\"ko\", which is the URL locale and what assert-c13-shell.ts row 1 requires of every candidate page. The baseline value is a defect carried by the Svelte site, not a contract. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C8-feeds-redirects.md (finding 4).",
 		"approved_by": "Brandon",
 		"approved_on": "2026-09-03"
+	},
+	{
+		"url": "/system/3b",
+		"field": "shell",
+		"fingerprint": "dfe5296ce259bcf59bd6a9d88b270139",
+		"reason": "C11 ships EN /system/3b, which makes this route an intersected page whose shell is compared for the first time. Eleven normalized shell differences, in four classes, all of them already present on the six previously approved routes: (1) body:preload-data=\"hover\" dropped — the SvelteKit-only prefetch attribute with no Next equivalent, the same decision approved at / and its siblings. (2) favicon and manifest hrefs move from document-relative (../favicon.svg, ../site.webmanifest — SvelteKit resolves them against the route depth, and this is the first depth-2 route ported) to root-absolute (/favicon.svg, /site.webmanifest). Same resources, same resolved URLs when served from the site root. (3) bundler stylesheet filenames differ by construction: three SvelteKit asset chunks against one Next chunk. A framework swap renames chunks; the comparator records the link set, not its contents. (4) the Google Fonts href differs only by HTML escaping — Svelte emits & and Next emits &amp;. Both parse to the identical URL; &amp; is the correct escaping for an attribute value. NOTE ON THE OTHER ENTRIES: each of the six existing shell approvals says \"this is the ONLY difference in this route's shell after normalization\". Measured, / carries 13 differences of these same four classes, not one. That wording is inaccurate and was not copied here; it should be corrected on those entries separately rather than propagated. What is NOT approved by this entry: the field-level differences on this route from the partial port (System3bPage's stats, subsystems, evolution and blog-series sections are Slice 4). Those are expected progress and must disappear, so ledgering them would approve a difference that is supposed to go away. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C11-library-ports.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-03"
 	}
 ]
