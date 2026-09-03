@@ -5,7 +5,7 @@ description: >-
   hook 4개, system-prompt 교체, 그리고 설치 도구가 기본 ~/.claude.json에만 쓰고 프로필별 저장소는 놓치는
   함정까지 다뤄요.
 date: 2026-04-29T00:00:00.000Z
-updated: "2026-06-14"
+updated: "2026-09-03"
 tags:
   - devops
   - claude-code
@@ -20,8 +20,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: serena-claude-code-multi-profile-setup
-source_updated: "2026-06-14"
-translation_date: "2026-06-14"
+source_updated: "2026-09-03"
+translation_date: "2026-09-03"
 ---
 
 `cpers`로 Claude Code를 켰는데 `/mcp` 목록에 Serena가 안 보였어요. `serena setup claude-code`는 분명히 성공 메시지를 찍었는데도 그랬어요. 이중 프로필 환경(`cpers` / `cwork`)에 [Serena](https://oraios.github.io/serena/)를 깔면서 만난 함정과, 그걸 피해서 Claude Code 두 프로필 + Codex까지 한 번에 셋업하는 전체 절차를 정리했어요. 권장 hook 4개와 system-prompt 교체도 같이 다뤄요.
@@ -84,7 +84,7 @@ Serena의 교체본은 `"You are Claude Code, Anthropic's official CLI for Claud
 
 ### 3. 심볼릭 링크 atomic-rename 표류
 
-`~/.claude/settings.json`과 `~/.claude-work/settings.json`은 둘 다 `3b/.agents/global-claude-setup/settings.json`(SoT)로 링크돼 있어야 해요. 그런데 Claude Code UI가 부하 상황에서 이 파일을 통째로 다시 쓸 때가 있어요(임시 파일 만든 다음 rename). 그러면 심볼릭 링크 inode가 슬그머니 일반 파일로 바뀌어요. SoT에 새 hook을 넣어도, `/sync-symlink-rectify`(또는 `ln -sf {SoT} ~/.claude/settings.json`)로 링크를 복구하기 전까진 프로필 쪽 사본은 옛날 상태로 남아요. `claude-mem` 제거를 두 번이나 실패하게 만든 그 버그 부류와 똑같아요.
+`~/.claude/settings.json`과 `~/.claude-work/settings.json`은 둘 다 `3b/.agent-ssot/global-claude-setup/settings.json`(SoT)로 링크돼 있어야 해요. 그런데 Claude Code UI가 부하 상황에서 이 파일을 통째로 다시 쓸 때가 있어요(임시 파일 만든 다음 rename). 그러면 심볼릭 링크 inode가 슬그머니 일반 파일로 바뀌어요. SoT에 새 hook을 넣어도, `/sync-symlink-rectify`(또는 `ln -sf {SoT} ~/.claude/settings.json`)로 링크를 복구하기 전까진 프로필 쪽 사본은 옛날 상태로 남아요. `claude-mem` 제거를 두 번이나 실패하게 만든 그 버그 부류와 똑같아요.
 
 ### 4. Codex MCP는 별 일 없이 됐어요
 
@@ -116,7 +116,7 @@ Codex 쪽은 한 방으로 끝나요. `serena setup codex` 한 번 돌리면 `~/
 
 ### Step 2 — Claude SoT settings.json에 hook 4개
 
-`3b/.agents/global-claude-setup/settings.json`(링크된 SoT)을 편집해요.
+`3b/.agent-ssot/global-claude-setup/settings.json`(링크된 SoT)을 편집해요.
 
 ```json
 "SessionStart": [
@@ -156,7 +156,7 @@ Codex 문서는 `SessionStart`만 명시적으로 권장해요. Codex의 hook �
 
 ```bash
 # Claude Code의 /sync-symlink-rectify skill, 또는 직접:
-ln -sf /Users/brandonwie/dev/personal/3b/.agents/global-claude-setup/settings.json /Users/brandonwie/.claude/settings.json
+ln -sf /Users/brandonwie/dev/personal/3b/.agent-ssot/global-claude-setup/settings.json /Users/brandonwie/.claude/settings.json
 ln -sf /Users/brandonwie/.claude/settings.json /Users/brandonwie/.claude-work/settings.json
 ```
 
@@ -220,7 +220,7 @@ grep -A 2 '\[mcp_servers.serena\]' ~/.codex/config.toml
 jq '[.hooks.SessionStart, .hooks.PreToolUse, .hooks.Stop] | flatten
     | map(select(.hooks[].command | contains("serena-hooks")))
     | length' \
-  ~/dev/personal/3b/.agents/global-claude-setup/settings.json
+  ~/dev/personal/3b/.agent-ssot/global-claude-setup/settings.json
 
 # 4. Codex SoT의 hook 개수 (SessionStart 아래 serena-hooks 1개 기대)
 jq '.hooks.SessionStart' \
