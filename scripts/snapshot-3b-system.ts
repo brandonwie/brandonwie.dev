@@ -408,13 +408,36 @@ async function countDirectDirectories(dir: string): Promise<number> {
 	return count;
 }
 
+// First candidate directory that exists, else the first candidate (so the
+// resulting error names the expected location).
+function firstExistingDir(candidates: string[]): string {
+	for (const candidate of candidates) {
+		try {
+			if (Deno.statSync(candidate).isDirectory) return candidate;
+		} catch {
+			/* not this one */
+		}
+	}
+	return candidates[0];
+}
+
 // ---------- build ----------
 async function build(): Promise<void> {
 	const HOME = Deno.env.get('HOME')!;
-	THREEB = Deno.env.get('THREEB_PATH') ?? join(HOME, 'dev', 'personal', '3b');
+	// C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b —
+	// THREEB_PATH first, then the first existing root (~/dev/3b, then legacy).
+	// `||`, not `??`: an exported-but-empty THREEB_PATH would otherwise make every
+	// path below relative to the caller's cwd.
+	THREEB =
+		Deno.env.get('THREEB_PATH') ||
+		firstExistingDir([join(HOME, 'dev', '3b'), join(HOME, 'dev', 'personal', '3b')]);
 	const MODEL = join(THREEB, 'projects', '3b', 'architecture', 'model.json');
 	const ADR_INDEX = join(THREEB, 'projects', '3b', 'decisions', '_index.md');
-	const RULES_DIR = join(THREEB, '.agents', 'rules');
+	// C3: rules moved from .agents/rules to .agent-ssot/rules in 3B; accept either.
+	const RULES_DIR = firstExistingDir([
+		join(THREEB, '.agents', 'rules'),
+		join(THREEB, '.agent-ssot', 'rules'),
+	]);
 	const SKILLS_DIR = join(THREEB, '.agents', 'skills');
 	const KNOWLEDGE_DIR = join(THREEB, 'knowledge');
 	const model = JSON.parse(await Deno.readTextFile(MODEL));
