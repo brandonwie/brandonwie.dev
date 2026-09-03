@@ -152,12 +152,22 @@ export const CLIENT_BOUNDARY: Record<string, boolean> = {
  * `animate:flip`: adding a layout-animation library. Taking one is a decision
  * with a weight budget and a parity argument attached, so it fails a row here
  * until the list is deliberately changed.
+ *
+ * `gsap` and `fuse.js` were added by Slice 2 PR 3, and adding them here is the
+ * deliberate change the paragraph above describes rather than a weakening of
+ * the row. Neither is an answer to `animate:flip`: both are dependencies the
+ * SVELTE side already carries for the same two surfaces (`gsap` for the talk
+ * deck, `fuse.js` for the command palette), so they are ported cost, not new
+ * cost. The row still fails the moment a THIRD library appears, which is the
+ * property it exists for.
  */
 export const NEXT_RUNTIME_DEPENDENCIES = [
 	'@shikijs/rehype',
 	'@xyflow/react',
+	'fuse.js',
 	'github-slugger',
 	'gray-matter',
+	'gsap',
 	'hast-util-to-jsx-runtime',
 	'mdast-util-to-hast',
 	'mdast-util-to-string',
