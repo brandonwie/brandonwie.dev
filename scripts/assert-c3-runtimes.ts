@@ -605,7 +605,12 @@ function failureLine(captured: Captured): string {
 export async function runAssertions(options: Options): Promise<number> {
 	const repoRoot = resolve(options.repoRoot);
 	const denoDir = resolve(options.denoDir ?? repoRoot);
-	const threeB = resolve(options.threeB ?? process.env.THREEB_PATH ?? join(homedir(), 'dev', '3b'));
+	// `||` on the env var, for the reason snapshot-3b-system.ts uses it: an
+	// exported-but-empty THREEB_PATH would make resolve('') the cwd and silently
+	// fingerprint the wrong tree.
+	const threeB = resolve(
+		(options.threeB ?? process.env.THREEB_PATH) || join(homedir(), 'dev', '3b'),
+	);
 	const scratchRoot = resolve(options.scratchRoot ?? join(repoRoot, 'tmp', 'c3-scratch'));
 	const vitePorts = parseVitePorts(repoRoot);
 	const ports = {

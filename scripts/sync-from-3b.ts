@@ -67,6 +67,12 @@ const SOURCE_DIR = join(resolveThreeBRoot(), 'knowledge');
  * usual location. A default that no longer exists is the same class of bug as
  * the pre-move 3B path, so it is reported here rather than surfacing as a
  * confusing write into a directory nobody has.
+ *
+ * Deliberately asymmetric with resolveThreeBRoot(), which tries a second
+ * candidate: 3B has actually moved and both locations are in use, so
+ * auto-discovery earns its keep there. The blog has one known location, and
+ * guessing a second would only delay a clear error. If it ever moves, set
+ * BLOG_ROOT — the message names the path that was tried.
  */
 function resolveBlogRoot(): string {
 	const fromEnv = Deno.env.get('BLOG_ROOT');
