@@ -57,6 +57,11 @@ once:
 git fetch origin tag migration-baseline-svelte-d06939c-v1
 ```
 
+**Push the tag before the branch.** CI checks out at push time, so a branch
+pushed first starts a run that cannot see the tag, and `migration:projection`
+fails with `tag-unavailable` on a change that is otherwise correct. Observed on
+the generation-2 PR.
+
 ### Generation 1 (superseded, still reachable)
 
 `migration-baseline-svelte-34aa7e7-v1` → blob

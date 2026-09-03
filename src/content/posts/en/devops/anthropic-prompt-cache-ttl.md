@@ -31,6 +31,10 @@ references:
       https://www.claudecodecamp.com/p/how-prompt-caching-actually-works-in-claude-code
     title: How Prompt Caching Actually Works in Claude Code
     type: authoritative
+  - url: 'https://arxiv.org/abs/2607.14159'
+    title: >-
+      MemoHarness: Agent Harnesses That Learn from Experience (Huang et al., 2026)
+    type: authoritative
 source_content_hash: 46d679c571022036b622b25ed7b257d6e670ef39352355a7b84dad268a195f17
 ---
 
@@ -136,3 +140,4 @@ The cache TTL regression is silent and the cost is real — \$1.25 per cold-writ
 - [Cache TTL silently regressed from 1h to 5m around early March 2026 (issue #46829)](https://github.com/anthropics/claude-code/issues/46829)
 - [Anthropic: Claude quota drain not caused by cache tweaks (The Register)](https://www.theregister.com/2026/04/13/claude_code_cache_confusion/)
 - [How Prompt Caching Actually Works in Claude Code (Abhishek Ray)](https://www.claudecodecamp.com/p/how-prompt-caching-actually-works-in-claude-code)
+- [MemoHarness: Agent Harnesses That Learn from Experience (Huang et al., 2026)](https://arxiv.org/abs/2607.14159)

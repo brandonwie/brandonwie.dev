@@ -122,3 +122,4 @@ cache TTL regression은 조용해요. 대신 비용은 진짜로 들어요. 200K
 - [Cache TTL silently regressed from 1h to 5m around early March 2026 (issue #46829)](https://github.com/anthropics/claude-code/issues/46829)
 - [Anthropic: Claude quota drain not caused by cache tweaks (The Register)](https://www.theregister.com/2026/04/13/claude_code_cache_confusion/)
 - [How Prompt Caching Actually Works in Claude Code (Abhishek Ray)](https://www.claudecodecamp.com/p/how-prompt-caching-actually-works-in-claude-code)
+- [MemoHarness: Agent Harnesses That Learn from Experience (Huang et al., 2026)](https://arxiv.org/abs/2607.14159)
