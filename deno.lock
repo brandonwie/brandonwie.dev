@@ -3,7 +3,7 @@
   "specifiers": {
     "npm:@dagrejs/dagre@3": "3.0.0",
     "npm:@eslint/js@^10.0.1": "10.0.1_eslint@10.6.0",
-    "npm:@inlang/paraglide-js@^2.20.2": "2.20.2_typescript@6.0.3",
+    "npm:@inlang/paraglide-js@2.20.2": "2.20.2_typescript@6.0.3",
     "npm:@resvg/resvg-js@^2.6.2": "2.6.2",
     "npm:@sveltejs/adapter-static@^3.0.10": "3.0.10_@sveltejs+kit@2.68.0__@sveltejs+vite-plugin-svelte@7.1.2___svelte@5.56.4___vite@8.1.0____@types+node@24.13.2____tsx@4.22.4___@types+node@24.13.2___tsx@4.22.4__svelte@5.56.4__typescript@6.0.3__vite@8.1.0___@types+node@24.13.2___tsx@4.22.4__@types+node@24.13.2__tsx@4.22.4_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.56.4__vite@8.1.0___@types+node@24.13.2___tsx@4.22.4__@types+node@24.13.2__tsx@4.22.4_@types+node@24.13.2_svelte@5.56.4_tsx@4.22.4_typescript@6.0.3_vite@8.1.0__@types+node@24.13.2__tsx@4.22.4",
     "npm:@sveltejs/kit@^2.68.0": "2.68.0_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.56.4__vite@8.1.0___@types+node@24.13.2___tsx@4.22.4__@types+node@24.13.2__tsx@4.22.4_svelte@5.56.4_typescript@6.0.3_vite@8.1.0__@types+node@24.13.2__tsx@4.22.4_@types+node@24.13.2_tsx@4.22.4",
@@ -869,8 +869,8 @@
       ],
       "bin": true
     },
-    "@sinclair/typebox@0.31.28": {
-      "integrity": "sha512-/s55Jujywdw/Jpan+vsy6JZs1z2ZTGxTmbZTPiuSL2wz9mfzA2gN1zzaqmvfi4pq+uOt7Du85fkiwv5ymW84aQ=="
+    "@sinclair/typebox@0.31.30": {
+      "integrity": "sha512-MGsM7bVmHg3sUKCphlu3SGQ+T+5JTbygZWYArfKQCW5anJeACHeqLhcnf+R7XlCWZ+QR3C8JTBx3kCKJTN69ow=="
     },
     "@sindresorhus/is@7.2.0": {
       "integrity": "sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw=="
@@ -2171,8 +2171,8 @@
     "html-void-elements@3.0.0": {
       "integrity": "sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg=="
     },
-    "human-id@4.2.0": {
-      "integrity": "sha512-K3GbkIWqyvvlpfhBPlbEvD97TtqBpAYA4kt+cn2lD2x2HuohzZCibcA2nOlnJT6exqvJLggoB5nv2dNf192nEA==",
+    "human-id@4.2.1": {
+      "integrity": "sha512-zPGsiS+dWoTZtZ4AtpA9Y+BdSFSNWvnouNlWNoUFyAM6xHOHmdCvqO3k8AIbdamCOv4gUFUVNPf6rJFfc4UiJw==",
       "bin": true
     },
     "husky@9.1.7": {
@@ -3800,7 +3800,7 @@
       "dependencies": [
         "npm:@dagrejs/dagre@3",
         "npm:@eslint/js@^10.0.1",
-        "npm:@inlang/paraglide-js@^2.20.2",
+        "npm:@inlang/paraglide-js@2.20.2",
         "npm:@resvg/resvg-js@^2.6.2",
         "npm:@sveltejs/adapter-static@^3.0.10",
         "npm:@sveltejs/kit@^2.68.0",

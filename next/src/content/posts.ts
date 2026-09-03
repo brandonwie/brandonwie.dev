@@ -56,7 +56,9 @@ interface PostFileListCacheEntry {
 const postSourceCache = new Map<string, PostSourceCacheEntry>();
 const postFileListCache = new Map<string, PostFileListCacheEntry>();
 
-export type Locale = 'en' | 'ko';
+import type { Locale } from '../i18n/locale';
+
+export type { Locale };
 
 export interface PostFrontmatter {
 	title: string;

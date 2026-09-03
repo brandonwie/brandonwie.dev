@@ -22,7 +22,9 @@ import '../../app/globals.css';
  */
 
 /** Locales the site publishes. `en` is unprefixed, `ko` lives under `/ko`. */
-export type Locale = 'en' | 'ko';
+import type { Locale } from '../i18n/locale';
+
+export type { Locale };
 
 /**
  * Head elements the Metadata API owns.

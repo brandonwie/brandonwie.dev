@@ -1,5 +1,5 @@
 import * as m from '../paraglide/messages.js';
-import type { Locale } from '../shell/document';
+import type { Locale } from './locale';
 
 /**
  * Locale-resolved UI copy for the Next candidate.
@@ -12,6 +12,12 @@ import type { Locale } from '../shell/document';
  * page, silently rendering English inside the Korean route group. The route
  * groups already know their locale, so it is passed explicitly at every call
  * site and this module is the only place messages are read.
+ *
+ * EDITING A MESSAGE DURING `pnpm dev` REQUIRES A RESTART. The compile step runs
+ * once per invocation and there is no watcher, so the dev server sees the
+ * compiled output under `src/paraglide/` but never the `messages/*.json` it came
+ * from. That is the cost of the CLI form the Step 1 spike proved; the Vite
+ * plugin the Svelte side uses has no Next equivalent.
  *
  * SLICE_1_SCAFFOLDING is copy that exists only in this temporary shell and has
  * no message key on the Svelte side, because the Svelte site does not render
