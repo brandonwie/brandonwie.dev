@@ -54,10 +54,10 @@ interface ResolverControl {
 	read: () => unknown;
 }
 
-const SOURCE = 'verification/baseline/svelte-d06939c.json';
+const SOURCE = 'verification/baseline/svelte-e23e808.json';
 const SCRATCH = 'tmp/projection-control.json';
 const SCRATCH_COPY = 'tmp/projection-control-copy.json';
-const MISSING_TAG = 'refs/tags/migration-baseline-svelte-d06939c-missing-control';
+const MISSING_TAG = 'refs/tags/migration-baseline-svelte-e23e808-missing-control';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const CONTROLS: Control[] = [

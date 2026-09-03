@@ -15,7 +15,7 @@
  *   Feeds      the exported file exists as a FILE at the baseline path; its
  *              semantic shape (`feedShape` from the comparator: item/url
  *              counts, ordered links, titles) hashes to the frozen baseline
- *              value in `verification/baseline/svelte-d06939c.json`; and the
+ *              value in `verification/baseline/svelte-e23e808.json`; and the
  *              bytes equal the Svelte build's bytes once `<lastBuildDate>` --
  *              the one field that legitimately moves per build -- is removed.
  *              The byte row exists because the semantic shape does not see
@@ -51,7 +51,7 @@ import { feedShape } from './migration-verify.ts';
 
 export const ARTICLE_SLUG = 'giscus-sveltekit-integration';
 export const FEEDS = ['sitemap.xml', 'rss.xml', 'ko/rss.xml'] as const;
-const BASELINE_JSON = 'verification/baseline/svelte-d06939c.json';
+const BASELINE_JSON = 'verification/baseline/svelte-e23e808.json';
 const FRAGMENT_MARKER = 'pagefind_dcd';
 
 /** Exact expectations for the representative article's two fragments. */

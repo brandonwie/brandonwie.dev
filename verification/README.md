@@ -5,7 +5,7 @@ evidence apparatus every later slice is accepted against.
 
 | Path                                      | What it is                                                             |
 | ----------------------------------------- | ---------------------------------------------------------------------- |
-| `baseline/svelte-d06939c.json`            | The SvelteKit baseline captured from a fresh production build          |
+| `baseline/svelte-e23e808.json`            | The SvelteKit baseline captured from a fresh production build          |
 | `exception-ledger.json`                   | Approved differences. Closed format, empty until something is approved |
 | `../scripts/migration-verify.ts`          | The comparator                                                         |
 | `../scripts/migration-verify-controls.ts` | Its negative controls                                                  |
@@ -14,7 +14,7 @@ evidence apparatus every later slice is accepted against.
 pnpm migration:capture    # RE-MEASURE the baseline from build/ -- see the rule below
 pnpm migration:controls   # prove the harness fails closed
 pnpm migration:projection # prove the committed baseline is exactly the frozen measurement
-pnpm migration:verify compare verification/baseline/svelte-d06939c.json build
+pnpm migration:verify compare verification/baseline/svelte-e23e808.json build
 ```
 
 **Widening the schema is a projection, never a re-capture.** When a new field is
@@ -34,11 +34,11 @@ were re-synced from 3B on 2026-09-03.
 
 ## Frozen measurement source
 
-The current generation is **2**. The annotated tag
-`migration-baseline-svelte-d06939c-v1` points directly to blob
-`0936496fad82b073d293e05a01d2d97b66ba8177`. Its tag message records the source
-path `verification/baseline/svelte-d06939c.json` and SHA-256
-`9c0f5eb1685d839b68aac118c99b125ad4803befc6cd44aa7adcea58fe88d769`.
+The current generation is **3**. The annotated tag
+`migration-baseline-svelte-e23e808-v1` points directly to blob
+`4c8565889edc22c5e308a865480b366eeefa7691`. Its tag message records the source
+path `verification/baseline/svelte-e23e808.json` and SHA-256
+`dc7789daaeba7843b3ba417895984c4a399ba99ba913abd953e8e5c92999f827`.
 
 Because this generation is a MEASUREMENT rather than a projection,
 `migration:projection` requires the committed file to be byte-identical to that
@@ -54,13 +54,27 @@ checkouts receive them. An existing clone that predates a tag must fetch it
 once:
 
 ```bash
-git fetch origin tag migration-baseline-svelte-d06939c-v1
+git fetch origin tag migration-baseline-svelte-e23e808-v1
 ```
 
 **Push the tag before the branch.** CI checks out at push time, so a branch
 pushed first starts a run that cannot see the tag, and `migration:projection`
 fails with `tag-unavailable` on a change that is otherwise correct. Observed on
 the generation-2 PR.
+
+### Generation 2 (superseded before merge, still reachable)
+
+`migration-baseline-svelte-d06939c-v1` → blob
+`0936496fad82b073d293e05a01d2d97b66ba8177`, SHA-256
+`9c0f5eb1685d839b68aac118c99b125ad4803befc6cd44aa7adcea58fe88d769`. It measured
+the content resync correctly and was superseded within the same PR: a review
+asked for a missing citation, and one added line of published prose invalidates
+a measurement. **Capture last.** Generation 3 differs from it by exactly two
+comparator rows — the `text` of `/posts/anthropic-prompt-cache-ttl` and its `/ko`
+twin — with the page set, statuses, Pagefind count and all four site-artifact
+hashes identical, and `bundle` moved `htmlBytes` +296, `jsBytes` +443,
+`totalBytes` +877. The tag stays because tags in this scheme are never deleted
+or retargeted, even when a generation never reaches `main`.
 
 ### Generation 1 (superseded, still reachable)
 
@@ -82,7 +96,8 @@ cite that commit — [`./behavior-matrix.md`](./behavior-matrix.md),
 [`./thresholds-results.md`](./thresholds-results.md) — are historical
 measurements against it and are deliberately left as they were.
 
-The measured delta from generation 1 to 2 is 36 comparator rows: 18 post-page
+The measured delta from generation 1 to 2 — carried unchanged into generation 3
+apart from the two rows named above — is 36 comparator rows: 18 post-page
 rows (`text`, `jsonLd`, `articleMeta` on three EN/KO post pairs), 16
 listing-page rows (`/`, `/posts`, `/tags` and their `/ko` twins, reordered
 because `updated` moved), and 2 RSS artifact rows. The page set (366), served
@@ -95,7 +110,7 @@ The baseline covers 366 pages, 4 site artifacts (`sitemap.xml`, `rss.xml`,
 `ko/rss.xml`, `_redirects`), 344 Pagefind fragments, bundle weights, and the
 **served HTTP status of every URL** — 366×200 plus deliberate misses returning
 404, taken from a real static server over the build tree rather than inferred.
-Captured from the build of content commit `d06939c`.
+Captured from the build of content commit `e23e808`.
 
 **It is stable across rebuilds, and that was not free.** Two build-to-build
 differences showed up as false positives before it was: the feeds carry a

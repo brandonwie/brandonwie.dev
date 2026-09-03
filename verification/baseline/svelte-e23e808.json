@@ -372,14 +372,14 @@
     "/posts/this-post-does-not-exist": 404
   },
   "bundle": {
-    "htmlBytes": 22152191,
-    "jsBytes": 10956946,
+    "htmlBytes": 22152487,
+    "jsBytes": 10957389,
     "cssBytes": 198558,
     "imageBytes": 37464994,
-    "totalBytes": 75567676,
+    "totalBytes": 75568553,
     "fileCount": 1638,
     "largest": [
-      "pagefind/index/ko_ca5be0c.pf_index 725110",
+      "pagefind/index/ko_ce913b1.pf_index 725251",
       "_app/immutable/chunks/DNzq6p3w2.js 662650",
       "_app/immutable/chunks/Djp6vQyU.js 435383",
       "ko/tags.html 332929",
@@ -2655,7 +2655,7 @@
         "link:stylesheet:../../_app/immutable/assets/PostDetail.z0U9yqfh.css": "",
         "body:preload-data": "hover"
       },
-      "bytes": 52501,
+      "bytes": 52649,
       "title": "Anthropic Prompt Cache TTL과 비용 메커니즘 | Brandon Wie",
       "description": "Anthropic이 2026년 3월 초쯤 Claude Code의 prompt cache TTL을 1시간에서 5분으로 조용히 줄였어요. 이걸 모르면 메시지 사이에 5분 이상 비는 순간 cache가 날아가고, 다음 메시지에 전체 conversation prefix를 처음부터 다시 써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요.",
       "canonical": "https://brandonwie.dev/ko/posts/anthropic-prompt-cache-ttl",
@@ -2722,8 +2722,8 @@
       "h1": [
         "Anthropic Prompt Cache TTL과 비용 메커니즘"
       ],
-      "textHash": "bdf294f3bfb7310a",
-      "textLength": 6744
+      "textHash": "7f1d57554615fc3b",
+      "textLength": 6821
     },
     "/ko/posts/backfill-stats-manifest-early-exit": {
       "lang": "ko",
@@ -23196,7 +23196,7 @@
         "link:stylesheet:../_app/immutable/assets/PostDetail.z0U9yqfh.css": "",
         "body:preload-data": "hover"
       },
-      "bytes": 54523,
+      "bytes": 54671,
       "title": "Anthropic Prompt Cache TTL + Cost Mechanics | Brandon Wie",
       "description": "Anthropic silently dropped Claude Code's prompt-cache TTL from 1 hour to 5 minutes around early March 2026. Without explicit awareness, idle gaps ≥5 min between messages evaporate the cache and force a full cold cache-write on the next message — pricing it at 1.25× base input on the entire conversation prefix.",
       "canonical": "https://brandonwie.dev/posts/anthropic-prompt-cache-ttl",
@@ -23263,8 +23263,8 @@
       "h1": [
         "Anthropic Prompt Cache TTL + Cost Mechanics"
       ],
-      "textHash": "f410f0d72d463bc9",
-      "textLength": 9300
+      "textHash": "410e3d5a709a1c58",
+      "textLength": 9377
     },
     "/posts/backfill-stats-manifest-early-exit": {
       "lang": "en",

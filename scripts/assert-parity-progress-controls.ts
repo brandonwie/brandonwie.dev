@@ -27,7 +27,7 @@ const PARITY_UNAPPROVED = (n: number): string =>
  */
 const REAL_TRANSCRIPT = [
 	'> brandonwie.dev@0.0.1 migration:verify:next /repo',
-	'> tsx scripts/migration-verify.ts compare verification/baseline/svelte-d06939c.json next/build',
+	'> tsx scripts/migration-verify.ts compare verification/baseline/svelte-e23e808.json next/build',
 	'',
 	' ELIFECYCLE  Command failed with exit code 1.',
 	'DIFF (site) [pagefindEntries] baseline 344 != candidate null',

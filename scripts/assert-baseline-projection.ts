@@ -3,7 +3,7 @@
  *
  *   pnpm migration:projection
  *
- * `verification/baseline/svelte-d06939c.json` is the evidence every candidate is
+ * `verification/baseline/svelte-e23e808.json` is the evidence every candidate is
  * judged against, and `verification/README.md` says it may be rebuilt with
  * `pnpm migration:capture`. Rebuilding it is exactly where the evidence can be
  * lost, and once was: widening the capture with `articleMeta` and richer `<img>`
@@ -27,9 +27,13 @@
  *   `migration-baseline-svelte-34aa7e7-v1`) added `articleMeta` and widened
  *   `images`.
  *
- * Generation 2 was measured on 2026-09-03 after three expanded posts were
- * re-synced from 3B, a content change the frozen generation-1 blob could not
- * absorb by projection. The v1 tag is untouched and still holds that blob.
+ * Generation 3 was measured on 2026-09-03 from the same content resync that
+ * generation 1 could not absorb by projection. Generation 2 measured that
+ * resync; a review then asked for a missing citation, and one line of published
+ * prose is enough to invalidate a measurement — so generation 3 measures the
+ * corrected tree. Both earlier tags are untouched and still hold their blobs.
+ * The ordering rule that follows from it: capture LAST, after the final content
+ * edit, and push the tag before the branch.
  *
  * Exit 0 = the committed baseline is what the frozen tag says it is. Exit 1 =
  * something else changed. Exit 2 = it could not run.
@@ -45,11 +49,11 @@ import { readFileSync } from 'node:fs';
  * cannot make the evidence unreachable. It must never be retargeted: a future
  * measurement gets a new versioned tag.
  */
-export const FROZEN_TAG_NAME = 'migration-baseline-svelte-d06939c-v1';
+export const FROZEN_TAG_NAME = 'migration-baseline-svelte-e23e808-v1';
 export const FROZEN_TAG = `refs/tags/${FROZEN_TAG_NAME}`;
-export const FROZEN_OBJECT_ID = '0936496fad82b073d293e05a01d2d97b66ba8177';
-export const FROZEN_SHA256 = '9c0f5eb1685d839b68aac118c99b125ad4803befc6cd44aa7adcea58fe88d769';
-const BASELINE_PATH = 'verification/baseline/svelte-d06939c.json';
+export const FROZEN_OBJECT_ID = '4c8565889edc22c5e308a865480b366eeefa7691';
+export const FROZEN_SHA256 = 'dc7789daaeba7843b3ba417895984c4a399ba99ba913abd953e8e5c92999f827';
+const BASELINE_PATH = 'verification/baseline/svelte-e23e808.json';
 
 /**
  * Per-page fields the current generation is allowed to introduce or rewrite.
