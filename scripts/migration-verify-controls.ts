@@ -117,6 +117,31 @@ interface Control {
 
 const EMPTY_LEDGER = '[]\n';
 
+/** A page the baseline has never seen -- the shape a Slice 2 spike route or the
+ *  S9 mermaid fixture takes. */
+const CANDIDATE_ONLY_FILE = 'c11-spike-control.html';
+const CANDIDATE_ONLY_URL = '/c11-spike-control';
+
+function candidateOnlyPage(): string {
+	return [
+		'<!doctype html>',
+		'<html lang="en"><head><meta charset="utf-8">',
+		'<title>Candidate-only control page</title>',
+		`<link rel="canonical" href="https://brandonwie.dev${CANDIDATE_ONLY_URL}">`,
+		'</head><body><h1>Candidate-only control page</h1></body></html>',
+		'',
+	].join('\n');
+}
+
+/** The page-presence approval key, written out independently of the comparator.
+ *  Same documented inputs -- url, field, then the two presence states. */
+function presenceKey(url: string, inBaseline: boolean, inCandidate: boolean): string {
+	return createHash('sha256')
+		.update([url, 'page', JSON.stringify(inBaseline), JSON.stringify(inCandidate)].join('\u0000'))
+		.digest('hex')
+		.slice(0, 32);
+}
+
 const CONTROLS: Control[] = [
 	{
 		id: 1,
@@ -802,6 +827,77 @@ const CONTROLS: Control[] = [
 			const file = heroPage(dir);
 			const html = readFileSync(file, 'utf8');
 			writeFileSync(file, html.replace(/(<img[^>]*) onerror="[^"]*"/, '$1'));
+		},
+	},
+	{
+		id: 41,
+		name: 'unapproved candidate-only route',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			writeFileSync(join(dir, CANDIDATE_ONLY_FILE), candidateOnlyPage());
+		},
+	},
+	{
+		id: 42,
+		name: 'APPROVED candidate-only route',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir, ledgerPath) => {
+			writeFileSync(join(dir, CANDIDATE_ONLY_FILE), candidateOnlyPage());
+			writeFileSync(
+				ledgerPath,
+				`${JSON.stringify(
+					[
+						{
+							url: CANDIDATE_ONLY_URL,
+							field: 'page',
+							// Computed here from the documented key rather than by calling
+							// the comparator's own helper: a control that derives its
+							// expectation from the function under test agrees with that
+							// function by construction, including when both are wrong.
+							fingerprint: presenceKey(CANDIDATE_ONLY_URL, false, true),
+							reason: 'deliberate candidate-only route, the shape a spike route takes',
+							approved_by: 'control-42',
+							approved_on: '2026-09-03',
+						},
+					],
+					null,
+					2,
+				)}\n`,
+			);
+		},
+	},
+	{
+		id: 43,
+		name: 'a LOST route cannot be ledgered away',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir, ledgerPath) => {
+			unlinkSync(join(dir, 'about.html'));
+			writeFileSync(
+				ledgerPath,
+				`${JSON.stringify(
+					[
+						{
+							url: '/about',
+							field: 'page',
+							// The key the presence hash WOULD produce for this row if the
+							// loss direction were fingerprinted at all. Knowing exactly how
+							// the hash is computed still does not buy an approval: compare()
+							// gives a MISSING row a null fingerprint and the matcher refuses
+							// null before it compares anything. Approving away a route the
+							// baseline has is the failure plan.md names as high impact.
+							fingerprint: presenceKey('/about', true, false),
+							reason: 'attempts to approve a route the candidate no longer builds',
+							approved_by: 'control-43',
+							approved_on: '2026-09-03',
+						},
+					],
+					null,
+					2,
+				)}\n`,
+			);
 		},
 	},
 ];

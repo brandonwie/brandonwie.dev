@@ -231,13 +231,42 @@ export interface C11Options {
 	falsifyDir?: string;
 	/** Quiet the per-row log (controls run this many times). */
 	quiet?: boolean;
+	/** Seam for the pure-function rows (A, B1, S6, S7). Controls substitute a
+	 *  concatenating dimmer, a silent fallback report, and so on -- the defects
+	 *  those rows exist to catch, induced without shipping one. */
+	graph?: GraphSeam;
+	/** Seam for the mermaid rows (S9b, S9c). */
+	mermaid?: MermaidSeam;
+	/** tsconfig the C row typechecks. Controls point it at a widened copy. */
+	tsconfigProject?: string;
+	/** Content root the M2 census walks. Controls point it at a scratch corpus. */
+	contentRoot?: string;
+	/** Receives every row's outcome, so a control can assert that the RIGHT row
+	 *  flipped rather than only that the exit code moved. */
+	onRows?: (rows: RowResult[]) => void;
 }
 
-interface Row {
+export interface GraphSeam {
+	edgeStyleObject: typeof edgeStyleObject;
+	dimEdges: typeof dimEdges;
+	buildOverview: typeof buildOverview;
+	buildDrilldown: typeof buildDrilldown;
+	hasFallback: typeof hasFallback;
+}
+
+export interface MermaidSeam {
+	mermaidView: typeof mermaidView;
+	renderMermaid: typeof renderMermaid;
+}
+
+export interface RowResult {
 	id: string;
-	what: string;
 	ok: boolean;
 	detail: string;
+}
+
+interface Row extends RowResult {
+	what: string;
 }
 
 class Runner {
@@ -435,7 +464,7 @@ export interface Fence {
 	body: string;
 }
 
-export function collectMermaidFences(root: string, postsDir: string): Fence[] {
+export function collectMermaidFences(postsRoot: string): Fence[] {
 	const fences: Fence[] = [];
 	const walk = (dir: string): void => {
 		for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -448,12 +477,16 @@ export function collectMermaidFences(root: string, postsDir: string): Fence[] {
 				while ((hit = re.exec(text)) !== null) {
 					const body = hit[1];
 					const first = body.split('\n').find((l) => l.trim() !== '') ?? '';
-					fences.push({ file: relative(root, full), type: first.trim().split(/\s+/)[0], body });
+					fences.push({
+						file: relative(postsRoot, full),
+						type: first.trim().split(/\s+/)[0],
+						body,
+					});
 				}
 			}
 		}
 	};
-	walk(join(root, postsDir));
+	walk(postsRoot);
 	return fences;
 }
 
@@ -507,6 +540,15 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 	const shellClaims = options.shellClaims ?? SHELL_CLAIMS;
 	const divergences = options.mermaidDivergences ?? MERMAID_DIVERGENCES;
 	const census = options.mermaidCensus ?? MERMAID_CENSUS;
+	const graph: GraphSeam = options.graph ?? {
+		edgeStyleObject,
+		dimEdges,
+		buildOverview,
+		buildDrilldown,
+		hasFallback,
+	};
+	const mermaid: MermaidSeam = options.mermaid ?? { mermaidView, renderMermaid };
+	const contentRoot = resolve(root, options.contentRoot ?? 'src/content/posts');
 	const scratchDir = resolve(root, options.scratchDir ?? 'tmp/c11-scratch');
 	const falsifyDir = resolve(root, options.falsifyDir ?? 'tmp/c11-markerend');
 	const r = new Runner(options.quiet ?? false);
@@ -634,7 +676,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 	// ---------------------------------------------------------------- A group
 
 	await r.row('A1', 'edgeStyleObject returns a style OBJECT with stroke and width', () => {
-		const style = edgeStyleObject('dependency', 3);
+		const style = graph.edgeStyleObject('dependency', 3);
 		must(typeof style === 'object' && style !== null, 'not an object');
 		must(
 			typeof style.stroke === 'string' && style.stroke !== '',
@@ -658,11 +700,11 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 				source: 'a',
 				target: 'b',
 				animated: true,
-				style: edgeStyleObject('dependency', 3),
+				style: graph.edgeStyleObject('dependency', 3),
 				data: { kind: 'dependency', label: '' },
 			} as FlowEdge,
 		];
-		const [dimmed] = dimEdges(edges, 'zzz');
+		const [dimmed] = graph.dimEdges(edges, 'zzz');
 		eq(dimmed.style?.opacity, 0.1, 'dimmed opacity');
 		eq(dimmed.animated, false, 'dimmed animated');
 		eq(dimmed.style?.stroke, edges[0].style?.stroke, 'dimmed stroke');
@@ -680,11 +722,11 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 			source: 'a',
 			target: 'b',
 			animated: true,
-			style: edgeStyleObject('dependency', 1),
+			style: graph.edgeStyleObject('dependency', 1),
 			data: { kind: 'dependency', label: '' },
 		} as FlowEdge;
 		for (const hovered of ['a', 'b', null]) {
-			const [out] = dimEdges([base], hovered);
+			const [out] = graph.dimEdges([base], hovered);
 			must(out === base, `hovering ${JSON.stringify(hovered)} rewrote an incident edge`);
 		}
 		return 'source, target and no-hover all return the same object identity';
@@ -717,7 +759,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 	};
 
 	await r.row('B1', "markerEnd.type is the plain literal 'arrowclosed'", () => {
-		const model = buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
+		const model = graph.buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
 		must(model.edges.length > 0, 'the overview produced no edges');
 		for (const edge of model.edges) {
 			eq(
@@ -790,7 +832,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 		);
 	} else {
 		await r.row('C1', 'tsc is clean AND the ported files are in the program', () => {
-			const listed = typecheckWithFileList(root);
+			const listed = typecheckWithFileList(root, options.tsconfigProject ?? 'next/tsconfig.json');
 			must(
 				listed.exit === 0,
 				`tsc exited ${listed.exit}:\n${listed.output.split('\n').slice(0, 12).join('\n')}`,
@@ -910,9 +952,9 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 	// ---------------------------------------------------------------- S group
 
 	await r.row('S6a', 'positive half: the real snapshot falls back on NOTHING', () => {
-		const model = buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
+		const model = graph.buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
 		must(
-			!hasFallback(model.fallbacks),
+			!graph.hasFallback(model.fallbacks),
 			`the shipped data already reports fallbacks (${JSON.stringify(model.fallbacks)}), so S6b's forced failure would prove nothing`,
 		);
 		return `${model.nodes.length} nodes, ${model.edges.length} edges, empty fallback report`;
@@ -927,7 +969,12 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 		// with the fallback report. Node kinds are only visible at the drilldown
 		// altitude, so that is where the node half belongs.
 		const subKey = subsystemKey(snapshot.nodes);
-		const cleanDrill = buildDrilldown(snapshot.nodes, snapshot.edges, snapshot.layers, subKey);
+		const cleanDrill = graph.buildDrilldown(
+			snapshot.nodes,
+			snapshot.edges,
+			snapshot.layers,
+			subKey,
+		);
 		const mutatedNodes = snapshot.nodes.map((n) =>
 			n.subsystem === subKey && n.kind !== 'subsystem' ? { ...n, kind: 'no-such-kind' } : n,
 		);
@@ -935,7 +982,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 			mutatedNodes.some((n) => n.kind === 'no-such-kind'),
 			`no leaf node under subsystem ${subKey} to rewrite; the mutation matched nothing, which makes the failure a coincidence rather than an induction`,
 		);
-		const drill = buildDrilldown(mutatedNodes, snapshot.edges, snapshot.layers, subKey);
+		const drill = graph.buildDrilldown(mutatedNodes, snapshot.edges, snapshot.layers, subKey);
 		must(
 			drill.nodes.length === cleanDrill.nodes.length,
 			`the unmapped node kind removed nodes (${cleanDrill.nodes.length} -> ${drill.nodes.length}); it must still render`,
@@ -951,27 +998,27 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 		// entirely when both endpoints share a subsystem -- and the mutation then
 		// matches nothing while looking like a real induction. A mutation that
 		// changes nothing turns a defect control into a coincidence.
-		const clean = buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
+		const clean = graph.buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
 		must(
 			clean.edges.length > 0,
 			'the overview produced no edges, so no edge-kind mutation could surface',
 		);
 		const mutatedEdges = snapshot.edges.map((e) => ({ ...e, kind: 'no-such-edge-kind' }));
-		const model = buildOverview(snapshot.nodes, mutatedEdges, snapshot.layers);
+		const model = graph.buildOverview(snapshot.nodes, mutatedEdges, snapshot.layers);
 		must(
 			model.edges.length === clean.edges.length,
 			`the unmapped edge kind removed edges (${clean.edges.length} -> ${model.edges.length})`,
 		);
 		must(
-			hasFallback(model.fallbacks) && model.fallbacks.edgeKinds.includes('no-such-edge-kind'),
+			graph.hasFallback(model.fallbacks) && model.fallbacks.edgeKinds.includes('no-such-edge-kind'),
 			'the unmapped edge kind was absorbed by EDGE_FALLBACK and reported nothing',
 		);
 		return `drilldown reports ${JSON.stringify(drill.fallbacks.kinds)}, overview reports ${JSON.stringify(model.fallbacks.edgeKinds)}`;
 	});
 
 	await r.row('S7a', 'positive half: dagre actually reorders', () => {
-		const model = buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
-		const insertion = buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers, {
+		const model = graph.buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
+		const insertion = graph.buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers, {
 			layout: () => {
 				throw new Error('forced');
 			},
@@ -992,8 +1039,10 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 		const boom = (_g: DagreGraph): void => {
 			throw new Error('dagre exploded');
 		};
-		const model = buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers, { layout: boom });
-		const clean = buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
+		const model = graph.buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers, {
+			layout: boom,
+		});
+		const clean = graph.buildOverview(snapshot.nodes, snapshot.edges, snapshot.layers);
 		must(model.nodes.length === clean.nodes.length, 'the layout failure dropped nodes');
 		must(
 			model.degraded === true,
@@ -1003,7 +1052,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 			typeof model.degradedReason === 'string' && model.degradedReason !== '',
 			'degraded is set but carries no reason',
 		);
-		const drill = buildDrilldown(
+		const drill = graph.buildDrilldown(
 			snapshot.nodes,
 			snapshot.edges,
 			snapshot.layers,
@@ -1064,10 +1113,10 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 	});
 
 	await r.row('S9b', 'the rendered states are DISJOINT by attribute', () => {
-		const ok = mermaidView({ code: 'flowchart LR\n A --> B', error: null }) as {
+		const ok = mermaid.mermaidView({ code: 'flowchart LR\n A --> B', error: null }) as {
 			props: Record<string, unknown>;
 		};
-		const bad = mermaidView({ code: 'flowchart LR\n A --> B', error: 'boom' }) as {
+		const bad = mermaid.mermaidView({ code: 'flowchart LR\n A --> B', error: 'boom' }) as {
 			props: Record<string, unknown>;
 		};
 		must('data-mermaid' in ok.props, 'the healthy view carries no data-mermaid marker');
@@ -1086,7 +1135,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 		async () => {
 			const failures: string[] = [];
 			const svgs: string[] = [];
-			await renderMermaid({
+			await mermaid.renderMermaid({
 				code: 'notADiagramType XYZ',
 				id: 'probe',
 				loadMermaid: async () =>
@@ -1107,7 +1156,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 			);
 			const okSvgs: string[] = [];
 			const okErrors: string[] = [];
-			await renderMermaid({
+			await mermaid.renderMermaid({
 				code: 'flowchart LR\n A --> B',
 				id: 'probe2',
 				loadMermaid: async () =>
@@ -1161,7 +1210,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 	});
 
 	await r.row('M2', 'the corpus still supports the securityLevel divergence', () => {
-		const fences = collectMermaidFences(root, 'src/content/posts');
+		const fences = collectMermaidFences(contentRoot);
 		const byType: Record<string, number> = {};
 		for (const f of fences) byType[f.type] = (byType[f.type] ?? 0) + 1;
 		const withBr = fences.filter((f) => /<br\s*\/?>/i.test(f.body)).length;
@@ -1186,6 +1235,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 
 	// ------------------------------------------------------------------ result
 
+	options.onRows?.(r.rows.map((row) => ({ id: row.id, ok: row.ok, detail: row.detail })));
 	const failed = r.rows.filter((row) => !row.ok);
 	if (!options.quiet) {
 		console.log('');
