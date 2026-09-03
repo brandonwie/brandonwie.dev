@@ -51,6 +51,16 @@ import {
  * and without it a second update inside the animation window measures a
  * transform-contaminated rect and feeds it forward as the next `from`.
  *
+ * ONLY FLIPS ARE ABORTED. Svelte's abort reaches one thing: that element's own
+ * previous flip, the closure variable `apply()` assigned last time. Intros are
+ * a different manager and reconcile never touches them, so a running `in:fade`
+ * survives an update to the list around it. An earlier revision of this file
+ * cancelled everything it had started, intros included -- so two steps inside
+ * 120ms snapped the previous BST chip to full opacity, a defect symmetric with
+ * the one the abort was added to fix. `BstTraversalVisualizer.svelte` has an
+ * `in:fade` and NO `animate:flip`, so in Svelte that list is not even flagged
+ * as animated and nothing can abort its transitions.
+ *
  * HOW A CHILD OPTS IN. Attributes, not props, because the elements are written
  * by the visualizer and read from here, and threading refs for every list item
  * through both would be a second bookkeeping problem:
@@ -72,6 +82,17 @@ import {
  *     lists inside the same container would flip here and re-enter in Svelte.
  *     Neither ported visualizer has two keyed lists in one container, but the
  *     next one to use this component must not.
+ *   - Update filtering. Svelte measures and applies only from `reconcile()`,
+ *     so a state change that leaves the list alone cannot disturb a running
+ *     flip. This runs on every re-render of the container, so an unrelated
+ *     update mid-flight aborts and re-plans a full-duration flip from the
+ *     mid-flight position. Unreachable in both ported visualizers -- every
+ *     `setState` in either one changes its list, and the route holds no other
+ *     state -- but a container that re-renders for unrelated reasons needs
+ *     this solved before it uses this component.
+ *   - Duplicate keys. One animation is tracked per key, so two children
+ *     sharing a `data-motion-key` would leave the first one's held frame
+ *     unreleased. The contract says unique; nothing enforces it.
  */
 
 const NO_ANIMATION_API = typeof Element === 'undefined' || !('animate' in Element.prototype);
@@ -170,6 +191,41 @@ export function planEnter(attributes: MotionAttributes, metrics: TransitionMetri
 	return { kind: 'none', why: `unknown intro "${kind}"` };
 }
 
+/** One marked child, reduced to everything a plan depends on. */
+export interface MotionReading {
+	key: string;
+	attributes: MotionAttributes;
+	/** The post-mutation box. */
+	to: MotionBox;
+	flipMetrics: FlipMetrics;
+	transitionMetrics: TransitionMetrics;
+}
+
+/**
+ * Classify one commit's worth of children: survivor or entry, and what to play.
+ *
+ * Pulled out of the component so the classification is checkable without a
+ * DOM. What is NOT checkable this way is the part this file exists to get
+ * right — that `before` was measured in the pre-mutation phase and that the
+ * previous flips were aborted before `to` and the metrics were read. Those are
+ * lifecycle ordering, they need a real document, and the harness says so rather
+ * than implying otherwise.
+ */
+export function planUpdate(
+	before: Map<string, MotionBox>,
+	readings: MotionReading[],
+): { key: string; plan: MotionPlan }[] {
+	return readings.map((reading) => {
+		const previousBox = before.get(reading.key);
+		return {
+			key: reading.key,
+			plan: previousBox
+				? planFlip(reading.attributes, reading.flipMetrics, previousBox, reading.to)
+				: planEnter(reading.attributes, reading.transitionMetrics),
+		};
+	});
+}
+
 export interface KeyedMotionProps {
 	className?: string;
 	children: ReactNode;
@@ -177,8 +233,13 @@ export interface KeyedMotionProps {
 
 export class KeyedMotion extends Component<KeyedMotionProps> {
 	private host = createRef<HTMLDivElement>();
-	/** In-flight animations, so the next update can abort them as Svelte does. */
-	private running = new Map<string, Animation>();
+	/**
+	 * In-flight FLIP animations only, so the next update can abort them the way
+	 * Svelte's `apply()` does. Intros are deliberately absent: Svelte does not
+	 * abort them on reconcile, and cancelling one snaps the element to its final
+	 * opacity mid-transition.
+	 */
+	private flips = new Map<string, Animation>();
 
 	private marked(): HTMLElement[] {
 		const root = this.host.current;
@@ -203,39 +264,49 @@ export class KeyedMotion extends Component<KeyedMotionProps> {
 	): void {
 		if (before === null) return;
 
-		// Abort first, exactly as Svelte's `apply()` does: `to` and the computed
-		// transform must not carry a previous animation's applied styles.
-		for (const animation of this.running.values()) animation.cancel();
-		this.running.clear();
+		// Abort the previous FLIPS first, exactly as Svelte's `apply()` does: `to`
+		// and the computed transform must not carry a previous flip's applied
+		// styles. Intros are left alone, because Svelte leaves them alone.
+		for (const animation of this.flips.values()) animation.cancel();
+		this.flips.clear();
 
+		const elements = new Map<string, HTMLElement>();
+		const readings: MotionReading[] = [];
 		for (const element of this.marked()) {
 			const key = element.dataset.motionKey;
 			if (key === undefined) continue;
-			const attributes: MotionAttributes = {
-				flip: element.dataset.motionFlip,
-				enter: element.dataset.motionEnter,
-			};
-			const previousBox = before.get(key);
-			const plan = previousBox
-				? planFlip(attributes, flipMetricsOf(element), previousBox, boxOf(element))
-				: planEnter(attributes, transitionMetricsOf(element));
+			elements.set(key, element);
+			readings.push({
+				key,
+				attributes: { flip: element.dataset.motionFlip, enter: element.dataset.motionEnter },
+				to: boxOf(element),
+				flipMetrics: flipMetricsOf(element),
+				transitionMetrics: transitionMetricsOf(element),
+			});
+		}
+
+		for (const { key, plan } of planUpdate(before, readings)) {
+			const element = elements.get(key);
+			if (element === undefined) continue;
 			if (plan.kind === 'none') continue;
-			// `fill: 'forwards'` matches Svelte's own animate() call. It is only
-			// safe because of the abort above — without it the held final frame
-			// would be read back as this element's transform next time round.
+			// `fill: 'forwards'` matches Svelte's own animate() call, and so does
+			// releasing it: Svelte's `onfinish` runs `abort()`, which cancels the
+			// animation and drops the held frame. Holding it indefinitely would
+			// pin this element's transform and opacity against any later CSS.
 			const animation = element.animate(sampleKeyframes(plan.config), {
 				duration: plan.config.duration,
 				delay: plan.config.delay,
 				easing: 'linear',
 				fill: 'forwards',
 			});
-			this.running.set(key, animation);
+			animation.onfinish = () => animation.cancel();
+			if (plan.kind === 'flip') this.flips.set(key, animation);
 		}
 	}
 
 	componentWillUnmount(): void {
-		for (const animation of this.running.values()) animation.cancel();
-		this.running.clear();
+		for (const animation of this.flips.values()) animation.cancel();
+		this.flips.clear();
 	}
 
 	render(): ReactNode {

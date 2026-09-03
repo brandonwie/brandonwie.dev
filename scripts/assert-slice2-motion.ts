@@ -64,7 +64,12 @@ import {
 	type MotionBox,
 	type MotionConfig,
 } from '../next/src/motion/svelte-motion';
-import { planEnter, planFlip } from '../next/src/motion/KeyedMotion';
+import {
+	planEnter,
+	planFlip,
+	planUpdate,
+	type MotionReading,
+} from '../next/src/motion/KeyedMotion';
 import {
 	INITIAL_CAPACITY,
 	INSERT_QUEUE,
@@ -214,6 +219,7 @@ export interface MotionSeam {
 export interface PlanSeam {
 	planFlip: typeof planFlip;
 	planEnter: typeof planEnter;
+	planUpdate: typeof planUpdate;
 }
 
 export interface ModelSeam {
@@ -480,7 +486,7 @@ export function runAssertions(options: Slice2Options = {}): number {
 		cubicOut,
 		linear,
 	};
-	const plan: PlanSeam = options.plan ?? { planFlip, planEnter };
+	const plan: PlanSeam = options.plan ?? { planFlip, planEnter, planUpdate };
 	const model: ModelSeam = options.model ?? { insert, reset, sizeOf, isExhausted };
 	const r = new Runner(options.quiet ?? false);
 
@@ -604,10 +610,15 @@ export function runAssertions(options: Slice2Options = {}): number {
 		let compared = 0;
 		for (const opacity of ['1', '0.6']) {
 			const style = { transform: 'none', transformOrigin: '0px 0px', opacity, zoom: '1' };
-			const oracle = withComputedStyle(style, () => fade(oracleNode(10, 10), { duration: 120 }));
+			// A non-zero delay on one pass, so sameCurve's delay comparison is not
+			// 0 === 0 on every call it ever makes.
+			const delay = opacity === '1' ? 0 : 40;
+			const oracle = withComputedStyle(style, () =>
+				fade(oracleNode(10, 10), { duration: 120, delay }),
+			);
 			const ported = motion.fadeConfig(
 				{ opacity: Number(opacity), transform: 'none' },
-				{ duration: 120 },
+				{ duration: 120, delay },
 			);
 			for (const [t, u] of SAMPLES) {
 				must(
@@ -825,10 +836,29 @@ export function runAssertions(options: Slice2Options = {}): number {
 		]) {
 			const source = codeOnly(read(component));
 			must(/useReducedMotion\(\)/.test(source), `${component} does not read useReducedMotion()`);
+			const resolved = [...source.matchAll(/const\s+(\w+)\s*=\s*reduced\s*\?\s*0\s*:/g)].map(
+				(match) => match[1],
+			);
 			must(
-				/reduced\s*\?\s*0\s*:/.test(source),
+				resolved.length > 0,
 				`${component} does not resolve a duration to 0 under reduced motion`,
 			);
+			// And the resolved value actually reaches an attribute. codeOnly
+			// empties template literals, so the declaration alone proves nothing:
+			// a component could keep `const enterDuration = reduced ? 0 : 120;`
+			// and emit `data-motion-enter={'fade:120'}` beside it with every row
+			// still green, and nothing in the tsconfig objects to a dead
+			// constant. stripComments keeps the interpolation, and a JSX
+			// attribute is code either way. Both spellings count: interpolated
+			// into a template, as the BST intro is, or passed straight through,
+			// as the hash-map flip duration is.
+			const withStrings = stripComments(read(component));
+			for (const name of resolved) {
+				must(
+					new RegExp(`data-motion-[a-z-]+=\\{[^}]*\\b${name}\\b`).test(withStrings),
+					`${component} declares ${name} from the reduced-motion ternary and never puts it in a motion attribute`,
+				);
+			}
 		}
 		return 'both components resolve their own durations; the boundary reads them as data';
 	});
@@ -909,6 +939,45 @@ export function runAssertions(options: Slice2Options = {}): number {
 			'fade and scale produce the same CSS, so nothing above distinguishes them',
 		);
 		return 'fade and scale each produce their own transition; fly, zero and absent plan nothing';
+	});
+
+	r.row('R5', 'survivors flip and newcomers enter, decided from the two box maps', () => {
+		const to = box(40, 10, 64, 28);
+		const flipMetrics = {
+			clientWidth: 62,
+			clientHeight: 26,
+			transform: 'none',
+			transformOrigin: '0px 0px',
+			zoom: 1,
+		};
+		const transitionMetrics = { opacity: 1, transform: 'none' };
+		const reading = (key: string): MotionReading => ({
+			key,
+			attributes: { flip: '220', enter: 'scale:160' },
+			to,
+			flipMetrics,
+			transitionMetrics,
+		});
+		const before = new Map([['survivor', box(300, 10, 64, 28)]]);
+		const plans = plan.planUpdate(before, [reading('survivor'), reading('newcomer')]);
+		eq(
+			plans.map((entry) => [entry.key, entry.plan.kind]),
+			[
+				['survivor', 'flip'],
+				['newcomer', 'enter'],
+			],
+			'classification',
+		);
+		// The empty map is the mount case: everything is new, nothing flips. It
+		// is also the shape a broken snapshot would produce, which is why the
+		// row states it rather than assuming it.
+		const onMount = plan.planUpdate(new Map(), [reading('survivor'), reading('newcomer')]);
+		eq(
+			onMount.map((entry) => entry.plan.kind),
+			['enter', 'enter'],
+			'with no previous boxes, nothing is a survivor',
+		);
+		return 'a key in both maps flips; a key only in the new one enters';
 	});
 
 	// -- M: the hash-map model ------------------------------------------------
@@ -1233,7 +1302,11 @@ export function runAssertions(options: Slice2Options = {}): number {
 		];
 		const emitted = new Set<string>();
 		for (const component of components) {
-			for (const match of read(component).matchAll(/(data-motion-[a-z-]+)=/g)) {
+			// codeOnly on this side too. Reading raw text let a comment mentioning
+			// a `data-motion-*` name fail the row -- the same self-blindness R1
+			// was changed to close, applied to one side of this row and not the
+			// other.
+			for (const match of codeOnly(read(component)).matchAll(/(data-motion-[a-z-]+)=/g)) {
 				emitted.add(match[1]);
 			}
 		}
@@ -1251,6 +1324,22 @@ export function runAssertions(options: Slice2Options = {}): number {
 		}
 		return `${[...readAttributes].sort().join(', ')} read and emitted on both sides`;
 	});
+
+	/*
+	 * WHAT NO ROW ABOVE ASSERTS, stated here rather than left to be discovered.
+	 *
+	 * `KeyedMotion` measures `before` in `getSnapshotBeforeUpdate` and cancels
+	 * the previous flips before reading `to` and the computed transform. Both
+	 * were defects once and both are lifecycle ORDERING, so deleting either
+	 * leaves every row here green -- a text-matching row would only assert that
+	 * the file still contains the words. Proving it needs a document: jsdom does
+	 * not implement the Web Animations API or layout, so it means a real browser
+	 * and a probe that scrolls, updates, and reads the applied transform.
+	 *
+	 * That is priced work and is named as such in the contract's "not proven"
+	 * list. R5 covers what CAN be proven purely: the classification the ordering
+	 * feeds.
+	 */
 
 	// -- C: typecheck ---------------------------------------------------------
 

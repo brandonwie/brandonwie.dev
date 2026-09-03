@@ -241,7 +241,11 @@ export function scaleConfig(metrics: TransitionMetrics, params: ScaleParams = {}
  * invisible in every comparison the harness makes.
  */
 export function frameCount(duration: number): number {
-	return Math.max(1, Math.ceil(duration / (1000 / 60)));
+	// No clamp, deliberately. `Math.ceil` is already 1 or more for any positive
+	// duration, and at exactly 0 Svelte emits no keyframes at all rather than
+	// one -- a case neither planner can reach, because both reject a
+	// non-positive duration before they build a config.
+	return Math.ceil(duration / (1000 / 60));
 }
 
 /**

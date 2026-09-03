@@ -3,7 +3,7 @@
  *
  *   pnpm migration:spike2:controls
  *
- * `assert-slice2-motion.ts` reports 28 green rows on its first run, which is
+ * `assert-slice2-motion.ts` reports 29 green rows on its first run, which is
  * exactly the shape a harness has when it asserts nothing. This asks the only
  * question that makes the number mean anything: would any of them go red?
  *
@@ -47,6 +47,7 @@ import {
 	cubicOut,
 	fadeConfig,
 	flipConfig,
+	frameCount,
 	linear,
 	sampleKeyframes,
 	scaleConfig,
@@ -56,7 +57,12 @@ import {
 	type FlipParams,
 	type TransitionMetrics,
 } from '../next/src/motion/svelte-motion.ts';
-import { planEnter, planFlip, type MotionAttributes } from '../next/src/motion/KeyedMotion.tsx';
+import {
+	planEnter,
+	planFlip,
+	planUpdate,
+	type MotionAttributes,
+} from '../next/src/motion/KeyedMotion.tsx';
 import {
 	LOAD_FACTOR_LIMIT,
 	RESIZE_CAPACITY,
@@ -91,7 +97,7 @@ const REAL_MOTION: MotionSeam = {
 	cubicOut,
 	linear,
 };
-const REAL_PLAN: PlanSeam = { planFlip, planEnter };
+const REAL_PLAN: PlanSeam = { planFlip, planEnter, planUpdate };
 const REAL_MODEL: ModelSeam = { insert, reset, sizeOf, isExhausted };
 
 interface Control {
@@ -324,7 +330,11 @@ const CONTROLS: Control[] = [
 		setup: () => ({
 			skipTypecheck: true,
 			motion: motionWith({
-				sampleKeyframes: (config: MotionConfig, steps = 20) => {
+				// The CORRECT frame count, so the row's frame-count assertion is
+				// satisfied and this control reaches the one it is named for. With
+				// the old fixed 20 it died on the count instead, and the two O7
+				// controls were proving the same thing.
+				sampleKeyframes: (config: MotionConfig, steps = frameCount(config.duration)) => {
 					const frames: Keyframe[] = [];
 					for (let i = 0; i <= steps; i += 1) {
 						const p = i / steps;
@@ -661,6 +671,66 @@ const CONTROLS: Control[] = [
 			clientBoundary: { 'next/src/motion/svelte-motion.ts': true },
 		}),
 	},
+	{
+		id: 'R1-defect-dead-constant',
+		kind: 'defect',
+		row: 'R1',
+		what: 'the reduced-motion constant is declared and then not used in the attribute',
+		// The declaration alone passed once codeOnly started emptying template
+		// literals; nothing tied it to the attribute that consumes it, and no
+		// tsconfig setting objects to a dead constant.
+		setup: (dir) => ({
+			skipTypecheck: true,
+			sourceOverrides: mutateSource(
+				dir,
+				'next/src/components/study/BstTraversalVisualizer.tsx',
+				(text) =>
+					text.replace(
+						'data-motion-enter={`fade:${enterDuration}`}',
+						"data-motion-enter={'fade:120'}",
+					),
+			),
+		}),
+	},
+	{
+		id: 'R5-defect-newcomer-flips',
+		kind: 'defect',
+		row: 'R5',
+		what: 'a key with no previous box is flipped from nowhere instead of entering',
+		setup: () => ({
+			skipTypecheck: true,
+			plan: planWith({
+				planUpdate: (before, readings) =>
+					readings.map((reading) => ({
+						key: reading.key,
+						plan: planFlip(
+							reading.attributes,
+							reading.flipMetrics,
+							before.get(reading.key) ?? { left: 0, top: 0, width: 1, height: 1 },
+							reading.to,
+						),
+					})),
+			}),
+		}),
+	},
+	{
+		id: 'R5-defect-survivor-enters',
+		kind: 'defect',
+		row: 'R5',
+		what: 'the previous boxes are ignored, so every child replays its intro',
+		// Exactly what a broken pre-mutation snapshot would look like from the
+		// classification's side.
+		setup: () => ({
+			skipTypecheck: true,
+			plan: planWith({
+				planUpdate: (_before, readings) =>
+					readings.map((reading) => ({
+						key: reading.key,
+						plan: planEnter(reading.attributes, reading.transitionMetrics),
+					})),
+			}),
+		}),
+	},
 	// ------------------------------------------------------------- M group
 	{
 		id: 'M1-defect-wrong-modulus',
@@ -797,6 +867,50 @@ const CONTROLS: Control[] = [
 			}),
 		}),
 	},
+	{
+		id: 'M6-defect-status-never-cleared',
+		kind: 'defect',
+		row: 'M6',
+		what: 'a previous collision stays highlighted after the next insert',
+		// The "cleared on the next insert" half of the row, which the flat-status
+		// control does not reach.
+		setup: () => ({
+			skipTypecheck: true,
+			model: modelWith({
+				insert: (state) => {
+					const next = insert(state);
+					const previous = new Map(
+						state.chains.flat().map((chainNode) => [chainNode.id, chainNode.status]),
+					);
+					return {
+						...next,
+						chains: next.chains.map((chain) =>
+							chain.map((chainNode) => ({
+								...chainNode,
+								status: previous.get(chainNode.id) ?? chainNode.status,
+							})),
+						),
+					};
+				},
+			}),
+		}),
+	},
+	{
+		id: 'M7-defect-ninth-insert-mutates',
+		kind: 'defect',
+		row: 'M7',
+		what: 'an insert past the end reports full but still advances the table',
+		// The "changes nothing" half of the row.
+		setup: () => ({
+			skipTypecheck: true,
+			model: modelWith({
+				insert: (state) =>
+					isExhausted(state)
+						? { ...state, nodeId: state.nodeId + 1, message: { kind: 'full' } }
+						: insert(state),
+			}),
+		}),
+	},
 	// ------------------------------------------------------------- S group
 	{
 		id: 'S1-defect-indexable',
@@ -891,6 +1005,10 @@ const CONTROLS: Control[] = [
 		id: 'S5-defect-renamed-attribute',
 		kind: 'defect',
 		row: 'S5',
+		// R1 goes with it, and correctly: renaming the attribute also means the
+		// reduced-motion constant no longer reaches a motion attribute, which is
+		// the link R1 now checks.
+		alsoFails: ['R1'],
 		what: 'a component renames data-motion-flip, so the flip silently never runs',
 		setup: (dir) => ({
 			skipTypecheck: true,
@@ -1043,6 +1161,24 @@ const CONTROLS: Control[] = [
 					reason: 'an approval about a route this harness has no opinion on',
 				},
 			]),
+		}),
+	},
+	{
+		id: 'I10-attribute-named-in-a-comment',
+		kind: 'invariance',
+		row: '-',
+		what: 'a comment mentioning a data-motion attribute does not disturb S5',
+		setup: (dir) => ({
+			skipTypecheck: true,
+			sourceOverrides: mutateSource(
+				dir,
+				'next/src/components/study/BstTraversalVisualizer.tsx',
+				(text) =>
+					text.replace(
+						"'use client';",
+						"'use client';\n\n// An earlier draft used data-motion-ghost= here.",
+					),
+			),
 		}),
 	},
 	{
