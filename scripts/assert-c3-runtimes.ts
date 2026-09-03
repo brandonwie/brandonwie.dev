@@ -196,10 +196,15 @@ function run(
 	timeoutMs: number,
 ): Promise<Captured> {
 	return new Promise((resolvePromise) => {
+		// Detached for the same reason runServer is: `pnpm` and `deno task` fork
+		// grandchildren (deno, vite, svelte-check) that inherit these pipes.
+		// SIGKILL on the direct child alone leaves a grandchild holding stdout
+		// open, 'close' never fires, and the harness hangs instead of failing.
 		const child = spawn(cmd, args, {
 			cwd,
 			env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0', ...env },
 			stdio: ['ignore', 'pipe', 'pipe'],
+			detached: true,
 		});
 		let output = '';
 		let timedOut = false;
@@ -207,7 +212,11 @@ function run(
 		child.stderr.on('data', (d) => (output += d));
 		const timer = setTimeout(() => {
 			timedOut = true;
-			child.kill('SIGKILL');
+			try {
+				if (child.pid) process.kill(-child.pid, 'SIGKILL');
+			} catch {
+				child.kill('SIGKILL');
+			}
 		}, timeoutMs);
 		child.on('close', (code) => {
 			clearTimeout(timer);
@@ -279,6 +288,13 @@ async function runServer(
 	child.stdout.on('data', (d) => (output += d));
 	child.stderr.on('data', (d) => (output += d));
 	let exited: number | null | undefined;
+	// Without this listener a spawn failure (binary absent, cwd gone) is thrown
+	// as an uncaught exception: no FAIL row, no evidence table, no exit code.
+	let spawnError = '';
+	child.on('error', (err) => {
+		spawnError = `spawn error: ${err.message}`;
+		exited = null;
+	});
 	child.on('close', (code) => (exited = code));
 
 	const started = Date.now();
@@ -338,8 +354,10 @@ async function runServer(
 	if (announced && Number(announced[1]) !== port) {
 		parts.push(`server announced port ${announced[1]}, not the configured ${port}`);
 	}
+	if (spawnError) parts.unshift(spawnError);
 	parts.push(`stopped: ${stoppedBy}`, free ? `port ${port} free` : `port ${port} STILL BOUND`);
 	const ok =
+		!spawnError &&
 		status === 200 &&
 		free &&
 		(!announced || Number(announced[1]) === port) &&

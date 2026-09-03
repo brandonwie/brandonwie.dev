@@ -426,8 +426,10 @@ async function build(): Promise<void> {
 	const HOME = Deno.env.get('HOME')!;
 	// C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b —
 	// THREEB_PATH first, then the first existing root (~/dev/3b, then legacy).
+	// `||`, not `??`: an exported-but-empty THREEB_PATH would otherwise make every
+	// path below relative to the caller's cwd.
 	THREEB =
-		Deno.env.get('THREEB_PATH') ??
+		Deno.env.get('THREEB_PATH') ||
 		firstExistingDir([join(HOME, 'dev', '3b'), join(HOME, 'dev', 'personal', '3b')]);
 	const MODEL = join(THREEB, 'projects', '3b', 'architecture', 'model.json');
 	const ADR_INDEX = join(THREEB, 'projects', '3b', 'decisions', '_index.md');
