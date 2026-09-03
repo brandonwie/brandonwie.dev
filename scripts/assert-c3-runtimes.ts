@@ -40,6 +40,9 @@
  *   - Non-mutation is proven, not assumed: every real target those scripts
  *     could write is fingerprinted before and after the whole run, along with
  *     `git status --porcelain`; any change fails the harness.
+ *   - Read-only rows (`sync:check`, `sync:diff`, `hash`) run with `BLOG_ROOT`
+ *     pinned to the tree under test, because their scripts otherwise default to
+ *     the usual checkout and report on a repository the run never touched.
  *
  * Importing this module is safe — its CLI is guarded on `process.argv[1]` —
  * so `assert-c3-runtimes-controls.ts` can drive `runAssertions()` against
@@ -463,6 +466,12 @@ interface SurfaceContext {
 
 function buildSurfaces(ctx: SurfaceContext): Surface[] {
 	const scratchEnv = { BLOG_ROOT: ctx.scratchBlog, THREEB_PATH: ctx.scratchThreeB };
+	// Read-only rows still need their blog root PINNED to the tree under test.
+	// Their scripts default BLOG_ROOT to ~/dev/personal/brandonwie.dev, so a run
+	// from a worktree measured a different checkout: W2 was red for three commits
+	// that existed only in that other tree, and green again the moment it was
+	// fast-forwarded — a verdict about the wrong repository either way.
+	const readOnlyEnv = { BLOG_ROOT: ctx.repoRoot };
 	const slug = ctx.slug?.slug ?? '(no expanded post with a 3B source found)';
 	const minutes = (n: number): number => n * 60_000;
 	const make =
@@ -535,11 +544,13 @@ function buildSurfaces(ctx: SurfaceContext): Surface[] {
 		wrapper(
 			'W2',
 			'sync:check',
-			'exit 0 + Hash Guard Report; exit 1 = upstream drift, not documented as non-error, so FAIL',
+			'exit 0 + Hash Guard Report against the tree under test; exit 1 = upstream drift, not documented as non-error, so FAIL',
 			/^\s*Hash mismatches: \d+/m,
+			{ env: readOnlyEnv },
 		),
 		wrapper('W3', 'sync:diff', `exit 0 + Hash line for --slug=${slug}`, /^\s*Hash:\s+/m, {
 			args: ['--', `--slug=${slug}`],
+			env: readOnlyEnv,
 		}),
 		wrapper(
 			'W4',
@@ -579,6 +590,7 @@ function buildSurfaces(ctx: SurfaceContext): Surface[] {
 		),
 		wrapper('W9', 'hash', `exit 0 + 64-hex hash for --slug=${slug}`, /^[0-9a-f]{64}$/m, {
 			args: ['--', `--slug=${slug}`],
+			env: readOnlyEnv,
 		}),
 	];
 }
