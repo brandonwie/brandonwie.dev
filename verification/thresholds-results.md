@@ -26,23 +26,62 @@ the eleven-route representative set in
 ## Weight — measured, recorded not compared
 
 Budgets and the reasoning behind them are in
-[`./thresholds.md`](./thresholds.md) § Budgets for the Next.js candidate. They
-apply to the **candidate**, so there is nothing to judge yet: the numbers below
-are the Svelte baseline those budgets were derived from, reproduced here so the
-comparison at Slice 2 has both halves in one place.
+[`./thresholds.md`](./thresholds.md) § Budgets for the Next.js candidate.
 
-| Measure                         | Svelte baseline | Candidate budget | Candidate |
-| ------------------------------- | --------------- | ---------------- | --------- |
-| Files (excluding `.br` / `.gz`) | 1,638           | —                | Slice 2   |
-| Total build weight              | 72.1 MB         | ≤ 86 MB          | Slice 2   |
-| HTML                            | 21,626 KB       | ≤ 25,900 KB      | Slice 2   |
-| JavaScript                      | 10,695 KB       | ≤ 13,900 KB      | Slice 2   |
-| CSS                             | 194 KB          | ≤ 250 KB         | Slice 2   |
-| Images                          | 35.7 MB         | ≤ 35.7 MB        | Slice 2   |
-| Largest JS chunk                | 662,650 B       | ≤ 860 KB         | Slice 2   |
+**Read the Candidate column as a partial port, not as a result.** The candidate
+exports **10 pages against the baseline's 366**, so every total below is smaller
+because most of the site does not exist yet. "41.9 MB against a budget of 86" is
+not headroom; it is an unfinished build. Exactly one row is meaningful today —
+the largest JS chunk, because it is a per-chunk measurement rather than a sum.
+The CSS row is not: `next/app/globals.css` imports the whole of `src/app.css`,
+but Tailwind generates utilities only for the classes it finds in `next/`, so
+112 KB against 194 KB reflects ten pages' worth of markup and will grow with
+every ported surface.
 
-Source: `verification/baseline/svelte-34aa7e7.json` `bundle` block, captured by
-`pnpm migration:capture`.
+| Measure                         | Svelte baseline | Candidate budget | Candidate at `0244565`  |
+| ------------------------------- | --------------- | ---------------- | ----------------------- |
+| Files (excluding `.br` / `.gz`) | 1,638           | —                | 508                     |
+| Total build weight              | 72.1 MB         | ≤ 86 MB          | 41.9 MB (partial)       |
+| HTML                            | 21,633 KB       | ≤ 25,900 KB      | 277 KB (partial)        |
+| JavaScript                      | 10,701 KB       | ≤ 13,900 KB      | 4,895 KB (partial)      |
+| CSS                             | 194 KB          | ≤ 250 KB         | 112 KB                  |
+| Images                          | 35.7 MB         | ≤ 35.7 MB        | 35.7 MB — **identical** |
+| Largest JS chunk                | 662,650 B       | ≤ 860 KB         | 655,681 B               |
+
+Both columns come from the same `bundle` block computed by `bundleWeights()` in
+`scripts/migration-verify.ts`, which excludes `.br` and `.gz` and counts real
+file sizes. The Candidate column was produced by running the capture path
+against `next/build` into a throwaway file, never against
+`verification/baseline/` — a re-capture of the baseline is forbidden and
+`pnpm migration:projection` enforces it. Svelte column source:
+`verification/baseline/svelte-e23e808.json`.
+
+Three notes the numbers do not carry on their own:
+
+- **Images are byte-identical**, 37,464,994 in both columns. The budget for this
+  row is "no increase", which is a comparison rather than a ceiling, and it
+  holds by construction: `next/public` reaches the same `static/` tree the
+  Svelte build serves rather than owning a copy.
+- **The largest chunk is already within 31 KB of Svelte's** with a fraction of
+  the routes ported. It is the mermaid runtime, and no exported document
+  references it — it is a dynamic import, fetched only once a page with a
+  diagram asks for it. So the number is not a page-load cost today, but it is
+  the row to watch: the budget is a per-chunk ceiling, and this chunk is not
+  going to get smaller.
+- **An earlier revision of this section, and PR #40's description, reported
+  these on a `du` basis** — 58.7 MB, 5,328 KB JS, 704 KB largest chunk. `du`
+  reports allocated blocks and counts the precompressed `.br` / `.gz` copies
+  the bundle block deliberately excludes, so those figures are not comparable
+  with the Svelte column. This is the same basis-consistency error this slice
+  already corrected once in its line-ratio numbers; the table above is the one
+  to cite.
+
+The source line previously named `verification/baseline/svelte-34aa7e7.json`,
+which is no longer in the repository — the baseline moved to measured
+generation 3 (`svelte-e23e808.json`, tag
+`migration-baseline-svelte-e23e808-v1`). Two Svelte cells moved with it: HTML
+21,626 to 21,633 KB and JavaScript 10,695 to 10,701 KB. Corrected here rather
+than left pointing at a file nobody can open.
 
 ## Performance — measured
 
