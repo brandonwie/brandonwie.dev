@@ -304,13 +304,21 @@ export const SUITES: Suite[] = [
 		entry: 'scripts/assert-c3-runtimes.ts',
 		// It drives every deno task and pnpm wrapper, including build and preview.
 		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
-		tier: 'ci',
+		// PUSH, NOT CI: this suite drives the Deno scripts that read the 3B
+		// knowledge base. CI has no 3B checkout, so every sync/study/snapshot row
+		// fails there with `Could not locate 3B root`. It is reachable on the
+		// developer machine, where 3B exists, via the pre-push router.
+		tier: 'push',
 	},
 	{
 		command: 'migration:c3:controls',
 		entry: 'scripts/assert-c3-runtimes-controls.ts',
 		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
-		tier: 'ci',
+		// PUSH, NOT CI: this suite drives the Deno scripts that read the 3B
+		// knowledge base. CI has no 3B checkout, so every sync/study/snapshot row
+		// fails there with `Could not locate 3B root`. It is reachable on the
+		// developer machine, where 3B exists, via the pre-push router.
+		tier: 'push',
 	},
 	{
 		command: 'migration:publishing',

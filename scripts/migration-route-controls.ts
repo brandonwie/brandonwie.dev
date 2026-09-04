@@ -298,6 +298,17 @@ export function reachabilityFailures(
 		);
 	}
 
+	// THREE WAYS A SUITE CAN BE REACHED, and no fourth:
+	//   1. `migration:all` selects AND runs it, and CI invokes that script;
+	//   2. an active `ci.yml` step names it;
+	//   3. it is PUSH tier, so the pre-push router selects it on the developer
+	//      machine whenever its derived inputs change.
+	//
+	// (3) is what makes a CI exclusion honest rather than a hiding place:
+	// `migration:c3` drives Deno scripts that read the 3B knowledge base, which
+	// CI has no checkout of, so it is excluded there and carried at push tier
+	// instead. A CI-tier suite that is excluded and unnamed is reachable by
+	// nothing at all, and still fails here.
 	const unreached = suites
 		.filter((suite) => {
 			const viaAll =
@@ -305,7 +316,8 @@ export function reachabilityFailures(
 				allInvoked &&
 				(allTier === 'all' || suite.tier === allTier) &&
 				!allExcluded.has(suite.command);
-			return !viaAll && !invokedInCI(suite.command);
+			const viaHook = suite.tier === 'push';
+			return !viaAll && !invokedInCI(suite.command) && !viaHook;
 		})
 		.map((s) => s.command);
 	if (unreached.length > 0) {
@@ -345,6 +357,15 @@ const SELF_CHECKS: {
 		what: 'the only step naming a suite is commented out',
 		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier push' },
 		workflow: '      - run: pnpm run migration:all\n      # - run: pnpm run migration:controls\n',
+	},
+	{
+		id: 'RX-04',
+		what: 'a ci-tier suite excluded from migration:all and named by no step — reachable by nothing',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:controls',
+		},
+		workflow: '      - run: pnpm run migration:all\n',
 	},
 ];
 
