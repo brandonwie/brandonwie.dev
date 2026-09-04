@@ -376,29 +376,78 @@ function baseline(control: Control): string {
  * self-check attached.
  */
 
-/** The router invocation, as the three call sites are allowed to spell it. */
-const CANONICAL_ROUTER =
-	/^(?:printf\s+'%s\\n'\s+"\$PUSH_REFS"\s*\|\s*)?(?:corepack\s+)?(?:pnpm\s+exec\s+)?tsx\s+(?:--tsconfig\s+[\w./-]+\s+)?scripts\/migration-route\.ts((?:\s+--[a-z-]+(?:[= ][\w:,./-]+)?)*)\s*(?:\|\|\s*exit\s+\d+)?$/;
-
-/** A suite invocation inside a workflow step. */
-const canonicalSuite = (command: string): RegExp =>
-	new RegExp(
-		`^(?:corepack\\s+)?pnpm(?:\\s+-s|\\s+--silent)?(?:\\s+run)?\\s+${command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
-	);
+/**
+ * THE EXACT FORMS. Not a pattern with room in it — the whole string.
+ *
+ * `migration:all` is certified by matching its ENTIRE script text. A round-10
+ * probe showed why a permissive tail is not enough: `--list` passed an anchored
+ * pattern that allowed arbitrary router flags, and `--list` exits 0 after
+ * PRINTING thirty suite names and running none of them. The tier and the
+ * exclusions are read out of this match, so the guard and the router cannot
+ * disagree about them either.
+ */
+const CANONICAL_ALL =
+	/^tsx scripts\/migration-route\.ts --all --run --tier (push|ci|all)(?: --exclude ([\w:.,-]+))?$/;
 
 /**
- * A heredoc makes the whole file uncertifiable: its body is indistinguishable
- * from a command line without tracking redirection state, and tracking it is
- * exactly the parser this design removes. Refusing the file is the fail-closed
- * answer, and the three call sites have no reason to use one.
+ * The hook's router line, whole. `--run` is the only argv the hook may pass:
+ * it routes by changed surface, which is the entire point of running it there.
  */
-const UNCERTIFIABLE = /<</;
+const CANONICAL_HOOK =
+	/^(?:printf '%s\\n' "\$PUSH_REFS" \| )?(?:corepack )?(?:pnpm exec )?tsx scripts\/migration-route\.ts --run(?: \|\| exit \d+)?$/;
+
+/** A suite invocation inside a workflow step, whole. */
+const canonicalSuite = (command: string): RegExp =>
+	new RegExp(
+		`^(?:corepack )?pnpm(?: -s| --silent)?(?: run)? ${command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+	);
+
+/** Openers and closers, for the one question left: is this line inside a block? */
+const BLOCK_OPEN = /^(?:if|while|until|for|case|select|coproc|function)\b|^\{$|^\(|^\w+\s*\(\)/;
+const BLOCK_CLOSE = /^(?:fi|done|esac)\b|^\}$|^\)$/;
+
+/**
+ * Constructs that make a shell file uncertifiable, whatever else it contains.
+ *
+ * Each one lets a line LOOK top level while being something else, and each was
+ * demonstrated against an earlier version of this guard: a heredoc body, a
+ * process substitution, a quote left open across lines, and a line ending in an
+ * operator so the next line is its conditional right-hand side. Rather than
+ * model any of them, the file is refused — and a refused file is REPORTED as
+ * having no invocation, which is the fail-closed direction.
+ */
+function uncertifiableShell(text: string): boolean {
+	if (/<<|<\(|>\(/.test(text)) return true;
+	const joined = text.replace(/\\\n\s*/g, ' ');
+	for (const raw of joined.split('\n')) {
+		const line = raw.replace(/(^|\s)#.*$/, '$1').trim();
+		if (line === '') continue;
+		// An odd number of either quote leaves the quote open across lines.
+		if ((line.match(/'/g) ?? []).length % 2 !== 0) return true;
+		if ((line.match(/"/g) ?? []).length % 2 !== 0) return true;
+		// A trailing operator makes the NEXT line conditional or piped-into.
+		if (/(?:&&|\|\||\||&)$/.test(line)) return true;
+	}
+	return false;
+}
+
+/** Lines with comments removed, continuations joined, whitespace collapsed. */
+function shellLines(text: string): string[] {
+	return text
+		.replace(/\\\n\s*/g, ' ')
+		.split('\n')
+		.map((line) =>
+			line
+				.replace(/(^|\s)#.*$/, '$1')
+				.replace(/\s+/g, ' ')
+				.trim(),
+		)
+		.filter((line) => line !== '');
+}
 
 /**
  * Depth contributed by an unbalanced command substitution or backtick on this
- * line. `X=$(cat)` is balanced and contributes nothing; a substitution left
- * open spans following lines, and a canonical-looking line inside it is not a
- * command at top level.
+ * line. `X=$(cat)` is balanced and contributes nothing.
  */
 function spanDepth(line: string): number {
 	const opens = (line.match(/\$\(/g) ?? []).length;
@@ -407,44 +456,22 @@ function spanDepth(line: string): number {
 	return Math.max(0, opens - closes) + (ticks % 2);
 }
 
-/** Openers and closers, for the one question left: is this line inside a block? */
-const BLOCK_OPEN = /^(?:if|while|until|for|case|select|coproc|function)\b|^\{$|^\(|^\w+\s*\(\)/;
-const BLOCK_CLOSE = /^(?:fi|done|esac)\b|^\}$|^\)$/;
-
-/** Lines with comments removed, continuations joined, and blanks dropped. */
-function shellLines(text: string): string[] {
-	return text
-		.replace(/\\\n\s*/g, ' ')
-		.split('\n')
-		.map((line) => line.replace(/(^|\s)#.*$/, '$1').trim())
-		.filter((line) => line !== '');
-}
-
-/**
- * The router's own arguments, for a CERTIFIED invocation, or null.
- *
- * Certified means: the whole line matches `CANONICAL_ROUTER`, the line sits at
- * block depth zero, and the file contains no construct this contract refuses to
- * reason about. A line inside `if`, `case`, `while` or a function body is not
- * certified even when it would run, because whether it runs depends on state
- * this guard cannot see — and a guard that guesses is the thing being replaced.
- */
-export function routerSegment(text: string): string[] | null {
-	if (UNCERTIFIABLE.test(text)) return null;
+/** Does a certifiable file contain the canonical hook invocation at top level? */
+export function hookRunsRouter(text: string): boolean {
+	if (uncertifiableShell(text)) return false;
 	let depth = 0;
 	for (const line of shellLines(text)) {
 		if (BLOCK_CLOSE.test(line)) depth = Math.max(0, depth - 1);
-		const match = depth === 0 ? CANONICAL_ROUTER.exec(line) : null;
-		if (match) return match[1].trim().split(/\s+/).filter(Boolean);
+		if (depth === 0 && CANONICAL_HOOK.test(line)) return true;
 		if (BLOCK_OPEN.test(line)) depth += 1;
 		depth += spanDepth(line);
 	}
-	return null;
+	return false;
 }
 
-/** True when a certified line runs `pnpm [run] <command>`. */
+/** True when a certifiable step payload runs `pnpm [run] <command>` at top level. */
 export function invokesScript(text: string, command: string): boolean {
-	if (UNCERTIFIABLE.test(text)) return false;
+	if (uncertifiableShell(text)) return false;
 	const pattern = canonicalSuite(command);
 	let depth = 0;
 	for (const line of shellLines(text)) {
@@ -452,6 +479,24 @@ export function invokesScript(text: string, command: string): boolean {
 		if (depth === 0 && pattern.test(line)) return true;
 		if (BLOCK_OPEN.test(line)) depth += 1;
 		depth += spanDepth(line);
+	}
+	return false;
+}
+
+/**
+ * A workflow this guard will read at all.
+ *
+ * It reads plain `key: value` YAML. A quoted key (`"if":`) or a space before
+ * the colon (`if : false`) is the same mapping to a YAML parser and a different
+ * one to this reader, so a workflow using either is refused rather than
+ * half-understood.
+ */
+export function uncertifiableWorkflow(workflow: string): boolean {
+	for (const raw of workflow.split('\n')) {
+		const line = raw.replace(/(^|\s)#.*$/, '$1');
+		if (line.trim() === '') continue;
+		if (/^\s*(?:-\s+)?['"][\w.-]+['"]\s*:/.test(line)) return true;
+		if (/^\s*(?:-\s+)?[\w.-]+\s+:/.test(line)) return true;
 	}
 	return false;
 }
@@ -566,51 +611,41 @@ export function reachabilityFailures(
 ): string[] {
 	const problems: string[] = [];
 
-	// Each step's payload is observed on its own: one step's `exit` must not
+	// A workflow this reader cannot read plainly is refused whole: a quoted key
+	// or a space before the colon is the same mapping to YAML and a different one
+	// here, and half-understood is the state this guard exists to avoid.
+	if (uncertifiableWorkflow(workflow)) {
+		problems.push(
+			'ci.yml uses a YAML spelling this guard does not read plainly (a quoted key, or a space before a colon) — no step can be certified',
+		);
+	}
+	// Each step's payload is certified on its own: one step's text must not
 	// decide whether a later step's command counts.
-	const runPayloads = activeRunCommands(workflow);
+	const runPayloads = uncertifiableWorkflow(workflow) ? [] : activeRunCommands(workflow);
 	const invokedInCI = (command: string): boolean =>
 		runPayloads.some((payload) => invokesScript(payload, command));
 
-	const allArgv = scripts['migration:all'] ?? '';
-	// EVERY flag below is read off the OBSERVED router argv, never off the script
-	// text. `echo tsx scripts/migration-route.ts --all --run --tier all` carries
-	// every flag this guard looks for and executes nothing, so nothing is
-	// observed and those flags are never consulted.
-	const routerArgv = routerSegment(allArgv);
-	const allIsRouter = routerArgv !== null;
-	if (!allIsRouter) {
+	const allArgv = (scripts['migration:all'] ?? '').trim().replace(/\s+/g, ' ');
+	// The WHOLE script text must be the permitted form. Reading flags out of a
+	// pattern that allowed a free tail is how `--list` — which prints thirty
+	// suite names and runs none — passed an earlier version of this check.
+	const canonical = CANONICAL_ALL.exec(allArgv);
+	if (canonical === null) {
 		problems.push(
-			`migration:all does not run scripts/migration-route.ts in command position — its flags route nothing: ${allArgv || '(missing script)'}`,
+			`migration:all is not the certified invocation \`tsx scripts/migration-route.ts --all --run --tier <push|ci|all> [--exclude <names>]\`: ${allArgv || '(missing script)'}`,
 		);
 	}
-	const argv = routerArgv ?? [];
-	const flagValue = (name: string): string | undefined => {
-		const at = argv.indexOf(name);
-		return at >= 0 ? argv[at + 1] : undefined;
-	};
-	const allTier = (['push', 'ci', 'all'] as const).find((t) => flagValue('--tier') === t) ?? 'push';
-	// Trimmed to match `excluded()` in the router: the two must agree on what is
-	// excluded, or this guard clears a suite the router is quietly dropping.
+	const allTier = (canonical?.[1] ?? 'push') as 'push' | 'ci' | 'all';
+	// Read from the same match the router's own argv is certified by, so the two
+	// cannot disagree about what is excluded.
 	const allExcluded = new Set(
-		(flagValue('--exclude') ?? '')
+		(canonical?.[2] ?? '')
 			.split(',')
 			.map((n) => n.trim())
 			.filter(Boolean),
 	);
+	const allCertified = canonical !== null;
 
-	const allSelectsEverything = argv.includes('--all');
-	if (allIsRouter && !allSelectsEverything) {
-		problems.push(
-			`migration:all has no --all, so it routes by changed surface and a diff that touches nothing runs nothing: ${allArgv || '(missing script)'}`,
-		);
-	}
-	const allRuns = argv.includes('--run');
-	if (allIsRouter && !allRuns) {
-		problems.push(
-			`migration:all selects suites but does not run them — its argv has no --run: ${allArgv || '(missing script)'}`,
-		);
-	}
 	const allInvoked = invokedInCI('migration:all');
 	if (!allInvoked) {
 		problems.push(
@@ -622,8 +657,7 @@ export function reachabilityFailures(
 	// its tier is evidence of nothing until something confirms the hook still
 	// RUNS the router with --run. It is run whole, with the stdin git gives it,
 	// so its own conditionals decide for themselves.
-	const hookArgv = routerSegment(hook);
-	const hookRuns = hookArgv !== null && hookArgv.includes('--run');
+	const hookRuns = hookRunsRouter(hook);
 	if (!hookRuns) {
 		problems.push(
 			'.husky/pre-push does not invoke scripts/migration-route.ts --run — push-tier suites have no runner at all',
@@ -646,9 +680,7 @@ export function reachabilityFailures(
 	const unreached = suites
 		.filter((suite) => {
 			const viaAll =
-				allIsRouter &&
-				allSelectsEverything &&
-				allRuns &&
+				allCertified &&
 				allInvoked &&
 				(allTier === 'all' || suite.tier === allTier) &&
 				!allExcluded.has(suite.command);
@@ -696,7 +728,7 @@ const SELF_CHECKS: {
 }[] = [
 	{
 		id: 'RX-01',
-		expect: 'does not run them',
+		expect: 'is not the certified invocation',
 		what: 'migration:all selects but never runs (--run dropped)',
 		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --tier all' },
 		workflow: GOOD_WORKFLOW,
@@ -727,14 +759,14 @@ const SELF_CHECKS: {
 	},
 	{
 		id: 'RX-05',
-		expect: 'has no --all',
+		expect: 'is not the certified invocation',
 		what: 'migration:all loses --all, so it routes by changed surface instead of running everything',
 		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --run --tier all' },
 		workflow: GOOD_WORKFLOW,
 	},
 	{
 		id: 'RX-06',
-		expect: 'not run scripts/migration-route.ts in command position',
+		expect: 'is not the certified invocation',
 		what: 'migration:all carries every routing flag but is not the router (echo)',
 		scripts: { 'migration:all': 'echo --all --run --tier all' },
 		workflow: GOOD_WORKFLOW,
@@ -764,7 +796,7 @@ const SELF_CHECKS: {
 	{
 		id: 'RX-09',
 		what: 'migration:all echoes a correct router invocation instead of running it',
-		expect: 'not run scripts/migration-route.ts in command position',
+		expect: 'is not the certified invocation',
 		scripts: { 'migration:all': `echo ${GOOD_ALL}` },
 		workflow: GOOD_WORKFLOW,
 	},
@@ -789,7 +821,7 @@ const SELF_CHECKS: {
 	{
 		id: 'RX-13',
 		what: 'migration:all is `node -e` with the router path as a mere argument',
-		expect: 'not run scripts/migration-route.ts in command position',
+		expect: 'is not the certified invocation',
 		scripts: { 'migration:all': 'node -e "" scripts/migration-route.ts --all --run --tier all' },
 		workflow: GOOD_WORKFLOW,
 	},
@@ -803,7 +835,7 @@ const SELF_CHECKS: {
 	{
 		id: 'RX-15',
 		what: 'a quoted separator manufactures a router segment inside an echo argument',
-		expect: 'not run scripts/migration-route.ts in command position',
+		expect: 'is not the certified invocation',
 		scripts: { 'migration:all': `echo "skip; ${GOOD_ALL}"` },
 		workflow: GOOD_WORKFLOW,
 	},
@@ -892,6 +924,73 @@ const SELF_CHECKS: {
 		hook: 'route() (\n\ttsx scripts/migration-route.ts --run\n)\n',
 		suites: [{ command: 'migration:c3', tier: 'push' }],
 	},
+	// THE EXACT-FORM FAMILY. Each is a call site that a permissive pattern read
+	// as an invocation. The contract names one string per call site; these are
+	// the near-misses that used to slip past it.
+	{
+		id: 'RX-40',
+		what: 'migration:all uses --list, which prints thirty suite names and runs none',
+		expect: 'is not the certified invocation',
+		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --list --tier all' },
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-41',
+		what: 'migration:all carries an extra flag the contract does not name',
+		expect: 'is not the certified invocation',
+		scripts: { 'migration:all': `${GOOD_ALL} --plan` },
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-42',
+		what: 'the hook line before the invocation ends in `||`, making it a conditional right-hand side',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'true ||\ncorepack pnpm exec tsx scripts/migration-route.ts --run\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-43',
+		what: 'the hook invocation sits inside a quote left open across lines',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'echo "opening\ncorepack pnpm exec tsx scripts/migration-route.ts --run\nclosing"\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-44',
+		what: 'the hook invocation sits inside a process substitution',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'diff <(\ncorepack pnpm exec tsx scripts/migration-route.ts --run\n) /dev/null\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-45',
+		what: 'the disabling `if` is a QUOTED key — the same mapping to YAML, a different one to a plain reader',
+		expect: 'does not read plainly',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow: '      - run: pnpm run migration:all\n        "if": false\n',
+	},
+	{
+		id: 'RX-46',
+		what: 'the disabling key is spelled `if : false`, with a space before the colon',
+		expect: 'does not read plainly',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow: '      - run: pnpm run migration:all\n        if : false\n',
+	},
 	// THE UNCERTIFIED FAMILY. Each of these may well run the router — two of them
 	// demonstrably do. They are reported anyway, because the contract certifies a
 	// canonical line at top level and nothing else. "It probably runs" is the
@@ -899,7 +998,7 @@ const SELF_CHECKS: {
 	{
 		id: 'RX-36',
 		what: 'an echo and the invocation share a line, so no line is canonical',
-		expect: 'not run scripts/migration-route.ts in command position',
+		expect: 'is not the certified invocation',
 		scripts: { 'migration:all': `echo routing; ${GOOD_ALL}` },
 		workflow: GOOD_WORKFLOW,
 	},
@@ -930,7 +1029,7 @@ const SELF_CHECKS: {
 	{
 		id: 'RX-39',
 		what: 'a `&&` chain behind a command that fails — the router is never reached',
-		expect: 'not run scripts/migration-route.ts in command position',
+		expect: 'is not the certified invocation',
 		scripts: { 'migration:all': `node -e 'process.exit(1)' && ${GOOD_ALL} || true` },
 		workflow: GOOD_WORKFLOW,
 	},
@@ -991,7 +1090,7 @@ const SELF_CHECKS: {
 	{
 		id: 'RX-35',
 		what: 'an escaped quote inside an echo argument, with a router-looking tail',
-		expect: 'not run scripts/migration-route.ts in command position',
+		expect: 'is not the certified invocation',
 		scripts: {
 			'migration:all': 'echo "he said \\" ; tsx scripts/migration-route.ts --all --run --tier all"',
 		},
@@ -1003,7 +1102,7 @@ const SELF_CHECKS: {
 	{
 		id: 'RX-18',
 		what: 'a terminal runner flag prints and exits, the operand never runs',
-		expect: 'not run scripts/migration-route.ts in command position',
+		expect: 'is not the certified invocation',
 		scripts: {
 			'migration:all': 'node --v8-options scripts/migration-route.ts --all --run --tier all',
 		},
@@ -1118,16 +1217,6 @@ function selfCheckFailures(): string[] {
 			what: 'pnpm -s and no `run` keyword',
 			scripts: { 'migration:all': GOOD_ALL },
 			workflow: '      - run: pnpm -s migration:all\n',
-			hook: GOOD_HOOK,
-		},
-		{
-			id: 'RX-00d',
-			what: 'a runner value flag before the operand (--tsconfig)',
-			scripts: {
-				'migration:all':
-					'tsx --tsconfig tsconfig.scripts.json scripts/migration-route.ts --all --run --tier all',
-			},
-			workflow: GOOD_WORKFLOW,
 			hook: GOOD_HOOK,
 		},
 		{
