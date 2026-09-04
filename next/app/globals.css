@@ -604,3 +604,396 @@
 	color: var(--faint);
 	white-space: nowrap;
 }
+
+/* ===========================================================================
+   Slice 2 PR 3 — the GSAP slide and the command palette.
+
+   Svelte scopes a component's `<style>` block to that component. React has no
+   equivalent, and this project has no CSS Modules, so the ported rules live
+   here under class prefixes that are already unique in both stacks — the same
+   arrangement the System3b graph rules above use.
+
+   The rules are transcribed, not redesigned. Two of them look like mistakes
+   and are not: `.chip`/`.note`/`.second` start hidden because GSAP's `set`
+   drives them from there, and `.more` is dimmed with a transparent COLOR
+   rather than `opacity` because `autoAlpha` drives opacity to 1 on reveal and
+   would erase a CSS opacity.
+   =========================================================================== */
+
+/* --- from Deck.svelte: the shared type scale slides read --- */
+.deck {
+	--deck-title: clamp(2rem, 4.4vw, 3.5rem);
+	--deck-subtitle: clamp(1rem, 1.7vw, 1.35rem);
+	--deck-heading: clamp(1.15rem, 2vw, 1.6rem);
+	--deck-body: clamp(1rem, 1.5vw, 1.25rem);
+	--deck-meta: clamp(0.8rem, 1.15vw, 1rem);
+}
+
+/* --- spike-only host chrome (deleted with the route at Slice 4) --- */
+.deck-spike__controls {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 1rem 0 1.5rem;
+}
+.deck-spike__step {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--faint);
+}
+
+/* --- from AccountSeparationSlide.svelte --- */
+.account-separation {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1.35rem, 3.5vh, 2.25rem);
+}
+.account-separation .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.account-separation h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+.account-separation .state {
+	margin: 0.4rem 0 0;
+	font-size: var(--deck-subtitle);
+	opacity: 0.6;
+}
+/* Reserved for the tallest state — two account boxes — so the slide cannot
+   grow when the second one appears. */
+.account-separation .board {
+	display: grid;
+	grid-template-columns: minmax(0, 21rem) minmax(0, 24rem);
+	justify-content: start;
+	align-items: start;
+	column-gap: clamp(1.5rem, 5vw, 4rem);
+	min-height: clamp(12rem, 27vh, 15.5rem);
+}
+/* Fixed height, or the box shrinks the moment the nested account leaves it and
+   the one element that did not change becomes the one that moves. */
+.account-separation .user-box {
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 6px;
+	background: color-mix(in srgb, currentColor 4%, transparent);
+	padding: clamp(0.75rem, 1.8vw, 1.1rem);
+	display: flex;
+	flex-direction: column;
+	gap: 0.7rem;
+	height: clamp(8.5rem, 19vh, 11rem);
+}
+.account-separation .accounts {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(0.6rem, 1.5vh, 0.9rem);
+}
+.account-separation .account {
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 6px;
+	background: color-mix(in srgb, currentColor 9%, transparent);
+	padding: clamp(0.45rem, 1.1vw, 0.7rem) clamp(0.6rem, 1.4vw, 0.85rem);
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+/* A step below the user-account box in the type scale. These are the repeating
+   element, so they have to read as list items rather than as peers of the
+   thing they were extracted from. */
+.account-separation .account .box-title {
+	font-size: var(--deck-body);
+}
+/* Nested means coupled — the same visual sentence as the MODULABS gateway and
+   the Playtag seat. The audience has read it twice before this slide. */
+.account-separation .nested {
+	background: color-mix(in srgb, currentColor 9%, transparent);
+}
+.account-separation .box-title {
+	font-size: var(--deck-heading);
+	font-weight: 600;
+}
+.account-separation .box-note {
+	font-size: var(--deck-meta);
+	opacity: 0.55;
+}
+.account-separation .chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+.account-separation .chip {
+	border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+	border-radius: 999px;
+	padding: 0.1rem 0.5rem;
+	font-size: calc(var(--deck-meta) * 0.9);
+	opacity: 0;
+	visibility: hidden;
+}
+/* Dashed, because it stands for calendars rather than being one. */
+.account-separation .chip-more {
+	border-style: dashed;
+	letter-spacing: 0.08em;
+}
+/* Dimmed with a transparent color rather than `opacity`, because GSAP's
+   autoAlpha drives opacity to 1 on reveal and would erase a CSS opacity. */
+.account-separation .more {
+	font-size: var(--deck-heading);
+	letter-spacing: 0.2em;
+	padding-left: 0.6rem;
+	color: color-mix(in srgb, currentColor 45%, transparent);
+}
+.account-separation .second {
+	visibility: hidden;
+	opacity: 0;
+}
+.account-separation .notes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	font-size: var(--deck-body);
+	opacity: 0.85;
+}
+.account-separation .note {
+	padding-left: 1rem;
+	position: relative;
+	visibility: hidden;
+	opacity: 0;
+}
+.account-separation .note::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.62em;
+	width: 0.4rem;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.5;
+}
+@media (max-width: 760px) {
+	.account-separation .board {
+		grid-template-columns: minmax(0, 1fr);
+		row-gap: clamp(0.6rem, 1.5vh, 0.9rem);
+		min-height: 0;
+	}
+	.account-separation .user-box {
+		height: auto;
+	}
+}
+
+/* --- from FuzzyFinder.svelte --- */
+.cmdk-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 14vh 20px 20px;
+	background: color-mix(in srgb, #08070c 66%, transparent);
+	backdrop-filter: blur(4px);
+	animation: cmdk-fade 0.18s ease;
+}
+@keyframes cmdk-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+.cmdk-panel {
+	width: min(620px, 100%);
+	overflow: hidden;
+	border: 1px solid var(--line2);
+	border-radius: 14px;
+	background: linear-gradient(180deg, var(--bg2), #15131f);
+	box-shadow: 0 50px 120px -30px rgba(0, 0, 0, 0.8);
+	animation: cmdk-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes cmdk-pop {
+	from {
+		transform: translateY(-10px) scale(0.98);
+	}
+	to {
+		transform: none;
+	}
+}
+.cmdk-ibar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 16px 18px;
+	border-bottom: 1px solid var(--line);
+}
+.cmdk-prompt {
+	font-family: var(--font-mono);
+	font-size: 14px;
+	color: var(--foam);
+}
+.cmdk-input {
+	flex: 1;
+	min-width: 0;
+	background: transparent;
+	border: none;
+	outline: none;
+	color: var(--ink);
+	font-family: var(--font-mono);
+	font-size: 15px;
+}
+.cmdk-input::placeholder {
+	color: var(--muted);
+}
+.cmdk-esc {
+	padding: 2px 7px;
+	border: 1px solid var(--line2);
+	border-radius: 4px;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--muted);
+}
+.cmdk-results {
+	max-height: 48vh;
+	overflow-y: auto;
+	padding: 8px;
+}
+.cmdk-grp {
+	padding: 12px 12px 6px;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--muted);
+}
+.cmdk-item {
+	display: flex;
+	gap: 13px;
+	padding: 11px 12px;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background-color 0.12s;
+}
+.cmdk-item.is-selected,
+.cmdk-item:hover {
+	background: var(--overlay);
+}
+.cmdk-ic {
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	width: 26px;
+	height: 26px;
+	border: 1px solid var(--line2);
+	border-radius: 6px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--foam);
+}
+.cmdk-item.is-selected .cmdk-ic {
+	border-color: var(--foam);
+}
+.cmdk-row__main {
+	min-width: 0;
+	flex: 1;
+}
+.cmdk-post {
+	display: flex;
+	flex: 1;
+	min-width: 0;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+}
+.cmdk-post__main {
+	min-width: 0;
+	flex: 1;
+}
+.cmdk-tt {
+	font-family: var(--font-sans);
+	font-size: 15px;
+	font-weight: 500;
+	color: var(--ink);
+}
+.cmdk-post__desc {
+	margin-top: 4px;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--muted);
+}
+.cmdk-post__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
+}
+.cmdk-cat {
+	padding: 3px 7px;
+	border: 1px solid var(--line);
+	border-radius: 5px;
+	font-size: 10px;
+	color: var(--gold);
+}
+.cmdk-tag {
+	padding: 3px 7px;
+	border: 1px solid var(--line);
+	border-radius: 5px;
+	font-size: 10px;
+	color: var(--muted);
+}
+.cmdk-ds {
+	margin-top: 2px;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--muted);
+	white-space: nowrap;
+}
+.cmdk-truncate {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.cmdk-empty {
+	padding: 30px 14px;
+	text-align: center;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--muted);
+}
+.cmdk-foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 18px;
+	padding: 11px 16px;
+	border-top: 1px solid var(--line);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--muted);
+}
+.cmdk-foot__hints {
+	display: flex;
+	gap: 18px;
+}
+.cmdk-foot kbd {
+	margin-right: 5px;
+	padding: 1px 6px;
+	border: 1px solid var(--line2);
+	border-radius: 4px;
+	background: var(--overlay);
+	font-family: var(--font-mono);
+}
+@media (prefers-reduced-motion: reduce) {
+	.cmdk-overlay,
+	.cmdk-panel {
+		animation: none;
+	}
+}

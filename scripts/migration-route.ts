@@ -253,6 +253,45 @@ export const SUITES: Suite[] = [
 		tier: 'ci',
 	},
 	{
+		command: 'migration:gsap-palette',
+		entry: 'scripts/assert-slice2-gsap-palette.ts',
+		// Reads the Next export, the exception ledger (rows S4 recompute both
+		// spike routes' page-presence approvals), and the six Svelte sources the
+		// port came from -- each named individually for the same reason the
+		// spike2 rows are: SVELTE_BUILD_SOURCES contains 'src', so deleting a
+		// ported Svelte source would match the Svelte suites, set `matched`, skip
+		// the run-everything fallback, and never select this suite while P1 and
+		// T1 are exactly the rows that should have failed.
+		dataRoots: [
+			...NEXT_BUILD_SOURCES,
+			'verification/exception-ledger.json',
+			'src/lib/components/deck/gsap.ts',
+			'src/routes/talks/my-career/slides/AccountSeparationSlide.svelte',
+			'src/lib/fuzzy.ts',
+			'src/lib/palette/items.ts',
+			'src/lib/components/palette/FuzzyFinder.svelte',
+			'src/lib/stores/palette.ts',
+		],
+		tier: 'push',
+	},
+	{
+		// Copies next/build for each build-shaped control and drives tsc twice
+		// for the C group. migration:controls-class cost, so CI only.
+		command: 'migration:gsap-palette:controls',
+		entry: 'scripts/assert-slice2-gsap-palette-controls.ts',
+		dataRoots: [
+			...NEXT_BUILD_SOURCES,
+			'verification/exception-ledger.json',
+			'src/lib/components/deck/gsap.ts',
+			'src/routes/talks/my-career/slides/AccountSeparationSlide.svelte',
+			'src/lib/fuzzy.ts',
+			'src/lib/palette/items.ts',
+			'src/lib/components/palette/FuzzyFinder.svelte',
+			'src/lib/stores/palette.ts',
+		],
+		tier: 'ci',
+	},
+	{
 		// The six rows below existed in package.json with NO row here, so
 		// `migration:all` -- which iterates this table -- ran none of them, and
 		// neither did the pre-push router: an unrecognised path selects

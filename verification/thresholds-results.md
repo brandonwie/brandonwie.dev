@@ -29,24 +29,42 @@ Budgets and the reasoning behind them are in
 [`./thresholds.md`](./thresholds.md) § Budgets for the Next.js candidate.
 
 **Read the Candidate column as a partial port, not as a result.** The candidate
-exports **10 pages against the baseline's 366**, so every total below is smaller
-because most of the site does not exist yet. "41.9 MB against a budget of 86" is
+exports **12 pages against the baseline's 366**, so every total below is smaller
+because most of the site does not exist yet. "42.4 MB against a budget of 86" is
 not headroom; it is an unfinished build. Exactly one row is meaningful today —
 the largest JS chunk, because it is a per-chunk measurement rather than a sum.
 The CSS row is not: `next/app/globals.css` imports the whole of `src/app.css`,
 but Tailwind generates utilities only for the classes it finds in `next/`, so
-112 KB against 194 KB reflects ten pages' worth of markup and will grow with
+118 KB against 194 KB reflects twelve pages' worth of markup and will grow with
 every ported surface.
 
-| Measure                         | Svelte baseline | Candidate budget | Candidate at `0244565`  |
-| ------------------------------- | --------------- | ---------------- | ----------------------- |
-| Files (excluding `.br` / `.gz`) | 1,638           | —                | 508                     |
-| Total build weight              | 72.1 MB         | ≤ 86 MB          | 41.9 MB (partial)       |
-| HTML                            | 21,633 KB       | ≤ 25,900 KB      | 277 KB (partial)        |
-| JavaScript                      | 10,701 KB       | ≤ 13,900 KB      | 4,895 KB (partial)      |
-| CSS                             | 194 KB          | ≤ 250 KB         | 112 KB                  |
-| Images                          | 35.7 MB         | ≤ 35.7 MB        | 35.7 MB — **identical** |
-| Largest JS chunk                | 662,650 B       | ≤ 860 KB         | 655,681 B               |
+| Measure                         | Svelte baseline | Candidate budget | Candidate at PR 2 (`0244565`) | Candidate at PR 3 (`2658b72`) |
+| ------------------------------- | --------------- | ---------------- | ----------------------------- | ----------------------------- |
+| Files (excluding `.br` / `.gz`) | 1,638           | —                | 508                           | 524                           |
+| Total build weight              | 72.1 MB         | ≤ 86 MB          | 41.9 MB (partial)             | 42.4 MB (partial)             |
+| HTML                            | 21,633 KB       | ≤ 25,900 KB      | 277 KB (partial)              | 371 KB (partial)              |
+| JavaScript                      | 10,701 KB       | ≤ 13,900 KB      | 4,895 KB (partial)            | 5,039 KB (partial)            |
+| CSS                             | 194 KB          | ≤ 250 KB         | 112 KB                        | 118 KB                        |
+| Images                          | 35.7 MB         | ≤ 35.7 MB        | 35.7 MB — **identical**       | 35.7 MB — **identical**       |
+| Largest JS chunk                | 662,650 B       | ≤ 860 KB         | 655,681 B                     | 655,681 B — **unchanged**     |
+
+Two PR 3 movements are worth reading rather than skipping.
+
+**HTML grew 94 KB across two new pages**, which is far more than two pages of
+markup. Almost all of it is `/migration-fixture/palette`: the palette needs
+every post as a searchable item, the page is a Server Component, and the
+serialized props for 167 posts travel to the client inside the exported HTML.
+That is a real property of the port, not fixture overhead — the palette is
+mounted globally in the Svelte shell, so at Slice 3 the same payload would ride
+on **every** page unless the item set is fetched rather than embedded. It is
+recorded here so the decision is made deliberately rather than discovered by a
+budget.
+
+**The largest chunk did not move at all.** 655,681 B before GSAP and 655,681 B
+after is the dynamic-import boundary working: `gsap`, `gsap/Flip` and
+`gsap/DrawSVGPlugin` land in three chunks the exported page does not reference,
+which row S5 of `migration:gsap-palette` asserts directly. JavaScript still grew
+144 KB in total, because those lazy chunks are still files in the build.
 
 Both columns come from the same `bundle` block computed by `bundleWeights()` in
 `scripts/migration-verify.ts`, which excludes `.br` and `.gz` and counts real
