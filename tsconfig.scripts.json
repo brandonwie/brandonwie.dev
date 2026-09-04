@@ -1,0 +1,29 @@
+{
+	// WHY THIS PROJECT EXISTS. Neither existing project typechecks `scripts/`:
+	// the root tsconfig includes src/test/tests only, and next/tsconfig is rooted
+	// at next/. So the migration harness -- including C1, the row that asserts the
+	// ported modules typecheck -- was itself unchecked, and a real type error sat
+	// in it: the Slice 2 seam was declared `typeof FLIP_OPTIONS` (an `as const`,
+	// so `absolute` is the literal true) while its own control substitutes
+	// `absolute: false`. CodeRabbit found it by reading; `pnpm check` could not.
+	//
+	// SCOPE IS DELIBERATELY THE SLICE 2 PAIR, not all of scripts/. A whole-scripts
+	// project reports 137 errors across 32 files -- Deno globals, .ts import
+	// specifiers, an unrelated cast in the C11 harness -- which is a separate item
+	// the plan already names as out of Slice 2 scope. Widening the include is how
+	// the rest gets adopted, one suite at a time, each with its own fixes.
+	"extends": "./next/tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"rootDir": ".",
+		// The harness runs under tsx in Node: it reads files, spawns processes and
+		// exits with a code. next/tsconfig restricts `types`, which hides all of it.
+		"types": ["node"],
+		"allowImportingTsExtensions": true,
+		"paths": { "@/*": ["./next/src/*"] }
+	},
+	"include": [
+		"scripts/assert-slice2-gsap-palette.ts",
+		"scripts/assert-slice2-gsap-palette-controls.ts"
+	]
+}

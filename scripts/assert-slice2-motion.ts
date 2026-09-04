@@ -79,6 +79,7 @@ import {
 	isExhausted,
 	reset,
 	sizeOf,
+	type ProbeSlot,
 	type TableState,
 } from '../next/src/study/hash-map-model';
 
@@ -1188,7 +1189,7 @@ export function runAssertions(options: Slice2Options = {}): number {
 		for (let i = 0; i < INSERT_QUEUE.length; i += 1) {
 			probing = model.insert(probing);
 			const statuses = probing.slots
-				.filter((slot): slot is { key: number; status: string } => slot !== null)
+				.filter((slot): slot is ProbeSlot => slot !== null)
 				.map((slot) => slot.status);
 			const highlighted = statuses.filter((status) => status !== 'placed');
 			must(

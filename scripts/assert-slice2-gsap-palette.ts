@@ -55,8 +55,8 @@
  * the controls file can drive `runAssertions()` against substituted seams and
  * mutated copies.
  */
-import { existsSync, readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
 
 import {
 	SVELTE_IMPORT,
@@ -87,6 +87,8 @@ import {
 	type PalettePost,
 } from '../next/src/palette/items';
 import { createPaletteFuse, fuzzySearch, highlightMatches } from '../next/src/palette/fuzzy';
+import { orderPostsForPalette, paletteOrderKey } from '../next/src/palette/post-order';
+import matter from 'gray-matter';
 import {
 	DEFAULT_POST_LIMIT,
 	defaultResults,
@@ -226,7 +228,13 @@ export interface SlideSeam {
 	planStep: typeof planStep;
 	revealTweens: typeof revealTweens;
 	initialSets: typeof initialSets;
-	flipOptions: typeof FLIP_OPTIONS;
+	// NOT `typeof FLIP_OPTIONS`. The real value is `as const`, so that spelling
+	// fixes `absolute` to the LITERAL true -- and F-group's control substitutes
+	// `{ ...FLIP_OPTIONS, absolute: false }`, which the declared type forbids.
+	// The seam exists to be substituted; its type has to admit the substitution.
+	// Nothing caught it because no tsconfig in this repo included `scripts/`;
+	// tsconfig.scripts.json now does, for this pair.
+	flipOptions: { duration: number; ease: string; absolute: boolean };
 }
 
 export interface ChordSeam {
@@ -270,6 +278,13 @@ export interface Slice2GsapOptions {
 	dependencyPins?: Record<string, string>;
 	/** Replace the declared deck export counts. */
 	deckCounts?: typeof DECK_EXPORT_COUNTS;
+	/**
+	 * The palette ordering, as a SEAM. A source override cannot reach it: the row
+	 * imports the function, so mutating `post-order.ts` on disk changes nothing
+	 * the running row can see -- which is what the first I7 control proved by
+	 * failing. Behavioral rows need substitution, not text.
+	 */
+	orderPosts?: typeof orderPostsForPalette;
 	slide?: SlideSeam;
 	chord?: ChordSeam;
 	list?: ListSeam;
@@ -452,6 +467,7 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 	const buildDir = resolve(root, options.buildDir ?? 'next/build');
 	const ledgerFile = resolve(root, options.ledgerFile ?? 'verification/exception-ledger.json');
 	const overrides = options.sourceOverrides ?? {};
+	const orderPosts = options.orderPosts ?? orderPostsForPalette;
 	const clientBoundary = options.clientBoundary ?? CLIENT_BOUNDARY;
 	const dependencyPins = options.dependencyPins ?? NEW_DEPENDENCY_PINS;
 	const deckCounts = options.deckCounts ?? DECK_EXPORT_COUNTS;
@@ -1252,6 +1268,60 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		);
 		must(/const at = \{ locale \}/.test(source), '`at` no longer carries the caller locale');
 		return `en "${itemOf(en, 'nav:home').label}" vs ko "${itemOf(ko, 'nav:home').label}"`;
+	});
+
+	// I7 exists because NO comparator row can reach this. The palette renders only
+	// on a chord, so its ordering never lands in the exported HTML the harness
+	// diffs -- round 2 found the first screen ordered differently from Svelte's and
+	// nothing in 24 suites had a word to say about it.
+	r.row('I7', 'the palette receives posts in the order the Svelte layout hands them', () => {
+		// The corpus is read here rather than through `listPublishedPosts`, whose
+		// CONTENT_ROOT is resolved against `next/` as the cwd (posts.ts:38) and so
+		// points outside the repo when the harness runs from the root. The order
+		// below is `relativePath`, which is exactly what that loader would return
+		// (posts.ts:201-203) -- the input the contract has to reorder.
+		const postsDir = join(root, 'src/content/posts/en');
+		const files = (readdirSync(postsDir, { recursive: true }) as string[])
+			.filter((file) => file.endsWith('.md'))
+			.map((file) => file.split(sep).join('/'))
+			.sort();
+		const published = files
+			.map((file) => ({
+				slug: file.split('/').pop()!.replace(/\.md$/, ''),
+				frontmatter: matter(readFileSync(join(postsDir, file), 'utf8')).data as {
+					date: string | Date;
+					updated?: string | Date;
+					draft?: boolean;
+				},
+			}))
+			.filter((post) => post.frontmatter.draft !== true);
+		must(published.length > 0, 'no published EN posts were read');
+
+		const ordered = orderPosts(published);
+
+		// 1. The ordering is what it claims: effectiveDate, descending.
+		for (let i = 1; i < ordered.length; i += 1) {
+			must(
+				paletteOrderKey(ordered[i - 1]) >= paletteOrderKey(ordered[i]),
+				`posts ${i - 1} and ${i} are out of effectiveDate order`,
+			);
+		}
+
+		// 2. It is not a no-op on this corpus. Without this clause the row would
+		//    pass identically against `posts => posts`, which is the defect itself.
+		const untouched = published.map((post) => post.slug).join();
+		const sorted = ordered.map((post) => post.slug).join();
+		must(untouched !== sorted, 'the ordering changes nothing here, so it proves nothing');
+
+		// 3. The fixture page routes through the shared module rather than
+		//    re-spelling a sort that dies with the route at Slice 4.
+		const page = codeOnly(read('next/app/(en)/migration-fixture/palette/page.tsx'));
+		must(/orderPostsForPalette\(/.test(page), 'the page does not CALL the ordering contract');
+		must(!/\.sort\(/.test(page), 'the page sorts inline instead of using the contract');
+
+		return `${ordered.length} published EN posts ordered by effectiveDate, ${
+			sorted === untouched ? 0 : 1
+		} divergence from source order`;
 	});
 
 	// ------------------------------------------------------ A: A11Y-1 preserved

@@ -933,6 +933,38 @@ const CONTROLS: Control[] = [
 		}),
 	},
 
+	{
+		id: 'I7-defect-ordering-becomes-identity',
+		kind: 'defect',
+		row: 'I7',
+		what: 'the palette ordering silently returns source order — the round-2 defect itself',
+		setup: () => ({
+			// Substituted, not mutated: I7 IMPORTS the ordering, so a source override
+			// would leave the running row reading the real function. The first
+			// version of this control did exactly that and (correctly) failed.
+			orderPosts: (posts) => [...posts],
+		}),
+	},
+	{
+		id: 'I7-defect-page-sorts-inline',
+		kind: 'defect',
+		row: 'I7',
+		what: 'the fixture page re-spells the sort instead of calling the shared contract',
+		setup: (dir) => ({
+			// The whole reason the ordering is a module: a sort written here dies
+			// when Slice 4 deletes the route, and the Slice 3 port inherits nothing.
+			sourceOverrides: mutateSource(
+				dir,
+				'next/app/(en)/migration-fixture/palette/page.tsx',
+				(text) =>
+					text.replace(
+						'const posts: PalettePost[] = orderPostsForPalette(published)',
+						'const posts: PalettePost[] = [...published].sort((a, b) => 0)',
+					),
+			),
+		}),
+	},
+
 	// ---- A: A11Y-1 preserved
 	{
 		id: 'A1-defect-fixed-under-an-unlisted-name',
