@@ -372,22 +372,52 @@ const RUNNER_VALUE_FLAGS = new Set([
 /** The only flags allowed before `pnpm [run] <script>`. `--filter` is NOT one. */
 const PNPM_BOOLEAN_FLAGS = new Set(['-s', '--silent']);
 
-/** Statement heads that open a conditional block. */
-const BLOCK_OPEN = new Set(['if', 'while', 'for', 'until', 'case', '{']);
-const BLOCK_CLOSE = new Set(['fi', 'done', 'esac', '}']);
+/**
+ * BASH RESERVED WORDS — the complete set, not a list grown one bug at a time.
+ *
+ * Any of them puts the scanner inside structure whose execution depends on
+ * state this guard cannot observe, and structure is not counted. Using the
+ * whole documented set (plus `(` for a subshell and `{` for a group) is the
+ * difference between a rule and a patch: `select` was missing from an earlier
+ * hand-picked list, and a `select` body cleared reachability.
+ */
+const RESERVED_OPEN = new Set([
+	'if',
+	'while',
+	'for',
+	'until',
+	'case',
+	'select',
+	'function',
+	'coproc',
+	'time',
+	'{',
+	'(',
+	'[[',
+]);
+const RESERVED_CLOSE = new Set(['fi', 'done', 'esac', '}', ')', ']]']);
+/** Reserved words that neither open nor close: they only mark a position inside structure. */
+const RESERVED_INNER = new Set(['then', 'else', 'elif', 'do', 'in', '!', ';;']);
+
+/** `<<EOF`, `<< EOF`, `cat<<EOF`, `<<-EOF`, `<<'EOF'` — every spelling. */
+const HEREDOC = /<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/;
 
 export interface Statement {
 	tokens: string[];
-	/** Runs only if a neighbour succeeded or failed (`&&`, `||`), or sits in a block. */
+	/** Runs only if a neighbour succeeded or failed (`&&`, `||`), or sits in structure. */
 	conditional: boolean;
 }
 
 /**
- * Quote-aware, heredoc-aware statement scanner.
+ * Quote-aware, heredoc-aware, structure-aware statement scanner.
  *
  * Returns every statement with a flag saying whether it is unconditionally
- * executed. Callers use only the unconditional ones; the rest are returned so a
- * control can see them.
+ * executed at top level. Callers count only the unconditional ones.
+ *
+ * Three things are deliberately NOT parsed, and each fails closed by producing
+ * no counted statement: heredoc bodies (data, in any redirection spelling),
+ * command substitutions (`$( … )`, whose contents run in a context this scanner
+ * does not model), and anything inside shell structure.
  */
 export function statements(text: string): Statement[] {
 	const out: Statement[] = [];
@@ -407,18 +437,16 @@ export function statements(text: string): Statement[] {
 	const endStatement = (nextConditional: boolean): void => {
 		endToken();
 		if (tokens.length > 0) {
+			const opensStructure = tokens.some((t) => RESERVED_OPEN.has(t));
+			const marksStructure = tokens.some((t) => RESERVED_INNER.has(t));
 			for (const token of tokens) {
-				if (BLOCK_OPEN.has(token)) depth += 1;
-				else if (BLOCK_CLOSE.has(token)) depth = Math.max(0, depth - 1);
+				if (RESERVED_OPEN.has(token)) depth += 1;
+				else if (RESERVED_CLOSE.has(token)) depth = Math.max(0, depth - 1);
 			}
-			const opensBlock = tokens.some((t) => BLOCK_OPEN.has(t));
-			out.push({ tokens, conditional: conditional || depth > 0 || opensBlock });
-			// A heredoc redirection is announced by its own statement; the body
-			// starts after the newline that ends it.
-			for (const token of tokens) {
-				const match = /^<<-?(?:['"]?)([A-Za-z_][A-Za-z0-9_]*)(?:['"]?)$/.exec(token);
-				if (match) heredoc = match[1];
-			}
+			out.push({
+				tokens,
+				conditional: conditional || depth > 0 || opensStructure || marksStructure,
+			});
 		}
 		tokens = [];
 		conditional = nextConditional;
@@ -428,11 +456,9 @@ export function statements(text: string): Statement[] {
 		const ch = text[i];
 
 		if (heredoc !== null) {
-			// Everything up to the delimiter line is DATA. A router invocation
-			// written inside a heredoc is text being fed somewhere, not a command.
 			const lineEnd = text.indexOf('\n', i);
 			const line = text.slice(i, lineEnd === -1 ? text.length : lineEnd);
-			if (line.trim() === heredoc) heredoc = null;
+			if (line.trim().replace(/^\t+/, '') === heredoc) heredoc = null;
 			if (lineEnd === -1) break;
 			i = lineEnd;
 			continue;
@@ -444,8 +470,6 @@ export function statements(text: string): Statement[] {
 			continue;
 		}
 		if (ch === '\\') {
-			// `\` before a newline is a LINE CONTINUATION: both characters vanish and
-			// the token continues.
 			if (text[i + 1] === '\n') {
 				i += 1;
 				continue;
@@ -455,6 +479,26 @@ export function statements(text: string): Statement[] {
 				current += text[i];
 				started = true;
 			}
+			continue;
+		}
+		// `$( … )` and `` ` … ` `` run commands in a context this scanner does not
+		// model. Skipping the whole span means nothing inside is ever counted.
+		if (ch === '$' && text[i + 1] === '(') {
+			let level = 1;
+			i += 2;
+			while (i < text.length && level > 0) {
+				if (text[i] === '(') level += 1;
+				else if (text[i] === ')') level -= 1;
+				i += 1;
+			}
+			i -= 1;
+			started = true;
+			continue;
+		}
+		if (ch === '`') {
+			i += 1;
+			while (i < text.length && text[i] !== '`') i += 1;
+			started = true;
 			continue;
 		}
 		if (ch === '"' || ch === "'") {
@@ -468,7 +512,12 @@ export function statements(text: string): Statement[] {
 			continue;
 		}
 		if (ch === '\n') {
+			// A heredoc redirection anywhere on the finished line arms the skip: the
+			// body begins after this newline, whatever spelling introduced it.
+			const lineStart = text.lastIndexOf('\n', i - 1) + 1;
+			const armed = HEREDOC.exec(text.slice(lineStart, i));
 			endStatement(false);
+			if (armed) heredoc = armed[2];
 			continue;
 		}
 		if (/\s/.test(ch)) {
@@ -476,13 +525,20 @@ export function statements(text: string): Statement[] {
 			continue;
 		}
 		if (ch === '&' || ch === '|') {
-			// `a && b`, `a || b` — b is conditional. `a | b` — both members run.
 			const doubled = text[i + 1] === ch;
 			endStatement(doubled);
 			if (doubled) i += 1;
 			continue;
 		}
-		if (ch === ';' || ch === '(' || ch === ')') {
+		if (ch === ';') {
+			endStatement(false);
+			continue;
+		}
+		if (ch === '(' || ch === ')') {
+			// A bare paren is a subshell or a function body. Both are structure, so
+			// end the statement AND record the paren as its own structural token.
+			endStatement(false);
+			tokens = [ch];
 			endStatement(false);
 			continue;
 		}
@@ -493,7 +549,7 @@ export function statements(text: string): Statement[] {
 	return out;
 }
 
-/** Unconditional statements, reduced to command position. */
+/** Unconditional top-level statements, reduced to command position. */
 export function commandSegments(text: string): string[][] {
 	return statements(text)
 		.filter((statement) => !statement.conditional)
@@ -589,12 +645,18 @@ export function invokesScript(text: string, command: string): boolean {
 
 /**
  * The commands a CI run actually executes: the payloads of active `run:` keys,
- * with full-line AND inline YAML comments removed first.
+ * with comments removed and CONDITIONAL steps and jobs excluded.
  *
- * Scanning the raw workflow text was wrong twice over. A line such as
+ * Scanning the raw workflow text was wrong three times over. A line such as
  * `- # run: pnpm run migration:all` does not start with `#`, so a leading-`#`
- * filter keeps it; and any prose in a `name:` or a `with:` value matched the
- * same way a real command did.
+ * filter keeps it; prose in a `name:` or a `with:` value matched the same way a
+ * real command did; and a payload extracted without its YAML context ignored
+ * `if:` — a step or job carrying `if: false` runs nothing, while its `run:`
+ * still read as execution.
+ *
+ * An `if:` ANYWHERE in an enclosing scope disqualifies the step, whatever the
+ * expression says. Evaluating GitHub's expression language is not this guard's
+ * job, and "it might not run" is exactly the answer that must fail closed.
  */
 export function activeRunCommands(workflow: string): string[] {
 	const lines = workflow
@@ -604,12 +666,38 @@ export function activeRunCommands(workflow: string): string[] {
 		// then reports it, which is the safe error.
 		.map((line) => line.replace(/(^|\s)#.*$/, '$1').trimEnd());
 
+	// indent -> an `if:` was seen in the block currently open at that indent.
+	const guarded = new Map<number, boolean>();
+	const clearFrom = (indent: number): void => {
+		for (const key of [...guarded.keys()]) if (key >= indent) guarded.delete(key);
+	};
+	const inGuardedScope = (indent: number): boolean => {
+		for (const [key, seen] of guarded) if (seen && key <= indent) return true;
+		return false;
+	};
+
 	const commands: string[] = [];
 	for (let i = 0; i < lines.length; i += 1) {
-		const match = /^(\s*)(?:-\s+)?run:\s*(.*)$/.exec(lines[i]);
-		if (!match) continue;
-		const indent = match[1].length;
-		const inline = match[2].trim();
+		const line = lines[i];
+		if (line.trim() === '') continue;
+		const bullet = /^(\s*)-\s+/.exec(line);
+		const raw = line.length - line.trimStart().length;
+		// A new list item starts a new step: whatever the previous one declared
+		// stops applying.
+		if (bullet) clearFrom(bullet[1].length);
+		const keyMatch = /^(\s*)(?:-\s+)?([A-Za-z_][\w.-]*):(.*)$/.exec(line);
+		if (!keyMatch) continue;
+		const indent = keyMatch[1].length + (line.slice(keyMatch[1].length).startsWith('- ') ? 2 : 0);
+		const key = keyMatch[2];
+		// A sibling key at this indent closes any deeper block.
+		clearFrom(indent + 1);
+		if (key === 'if') {
+			guarded.set(indent, true);
+			continue;
+		}
+		if (key !== 'run') continue;
+		if (inGuardedScope(indent)) continue;
+		const inline = keyMatch[3].trim();
 		if (inline !== '' && !/^[|>][-+\d]*$/.test(inline)) {
 			commands.push(inline);
 			continue;
@@ -617,7 +705,7 @@ export function activeRunCommands(workflow: string): string[] {
 		// Block scalar: every following line indented past the key belongs to it.
 		for (let j = i + 1; j < lines.length; j += 1) {
 			if (lines[j].trim() === '') continue;
-			if (lines[j].length - lines[j].trimStart().length <= indent) break;
+			if (lines[j].length - lines[j].trimStart().length <= raw) break;
 			commands.push(lines[j].trim());
 		}
 	}
@@ -892,6 +980,84 @@ const SELF_CHECKS: {
 		hook: 'corepack pnpm run lint # tsx scripts/migration-route.ts --run\n',
 		suites: [{ command: 'migration:c3', tier: 'push' }],
 	},
+	// THE UNRUN-CONTEXT FAMILY. Each command is well-formed and never executes,
+	// because of the context it sits in rather than anything about the command.
+	{
+		id: 'RX-23',
+		what: 'the router appears in a spaced heredoc body — `cat << EOF`',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'cat << EOF > /tmp/note\ntsx scripts/migration-route.ts --run\nEOF\ncorepack pnpm run lint\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-24',
+		what: "the router appears in a delimiter-attached, quoted heredoc body — `cat <<-'EOF'`",
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: "cat<<-'EOF' > /tmp/note\n\ttsx scripts/migration-route.ts --run\n\tEOF\n",
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-25',
+		what: 'the CI step carrying the invocation is disabled by a step-level `if:`',
+		expect: 'never invoked by an active ci.yml step',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow:
+			'      - name: Full migration suite\n        if: false\n        run: pnpm run migration:all\n',
+	},
+	{
+		id: 'RX-26',
+		what: 'the whole job carrying the invocation is disabled by a job-level `if:`',
+		expect: 'never invoked by an active ci.yml step',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow:
+			'jobs:\n  migration:\n    if: false\n    steps:\n      - run: pnpm run migration:all\n',
+	},
+	{
+		id: 'RX-27',
+		what: 'the router sits in a `select` body — a reserved word an earlier hand-picked list missed',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'select x in a b; do\n\ttsx scripts/migration-route.ts --run\ndone\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-28',
+		what: 'the router sits in a subshell-bodied function definition',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'route() (\n\ttsx scripts/migration-route.ts --run\n)\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-29',
+		what: 'the router runs only inside a command substitution, whose context this scanner does not model',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'OUT=$(tsx scripts/migration-route.ts --run)\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
 	// THE NO-OP FAMILY. Each is a command that runs and executes no suite: a
 	// terminal runner flag, a filter that matches no project, a short-circuit
 	// that never fires, a heredoc body, and a conditional block.
@@ -1044,6 +1210,14 @@ function selfCheckFailures(): string[] {
 			what: 'a CI step wrapped across a backslash-newline continuation',
 			scripts: { 'migration:all': GOOD_ALL },
 			workflow: '      - run: |\n          pnpm run \\\n            migration:all\n',
+			hook: GOOD_HOOK,
+		},
+		{
+			id: 'RX-00j',
+			what: 'a SIBLING step carries the `if:` and ours does not',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow:
+				"      - name: other\n        if: github.event_name == 'push'\n        run: pnpm run build\n      - name: full\n        run: pnpm run migration:all\n",
 			hook: GOOD_HOOK,
 		},
 		{
