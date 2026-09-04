@@ -9,8 +9,11 @@
  * alone adds ~265 s. Bolting the whole set onto the hook makes an ordinary push
  * cost more than four minutes, and a hook that slow gets bypassed with
  * `--no-verify`, which is worse than a hook that runs less. So push-time runs
- * only the suites whose inputs actually changed, and CI runs the full superset
- * unconditionally.
+ * only the suites whose inputs actually changed, and CI runs every suite it can:
+ * `--tier all` minus `migration:controls` (its own parallel job) and minus the
+ * 3B-dependent C3 lane, which has no 3B checkout there. This hook is the only
+ * runner those two have, which is why `migration-route-controls.ts` reads the
+ * hook before crediting a push-tier suite with being reachable at all.
  *
  * WHY THE MAP IS DERIVED, NOT DECLARED
  *
@@ -321,6 +324,30 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		// THE HERMETIC HALF OF C3, which does run in CI.
+		//
+		// Moving all of C3 to push tier was too broad: only the rows that read a
+		// 3B tree need one. `--lane=hermetic` runs the four rows that shell out to
+		// `pnpm dev|build|preview|check` plus the manifest-completeness checks,
+		// which need nothing but this checkout. `lanePartitionFailures` asserts the
+		// two lanes cover every row exactly once, so a new surface cannot land in
+		// neither and be executed by nothing.
+		command: 'migration:c3:hermetic',
+		entry: 'scripts/assert-c3-runtimes.ts',
+		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		tier: 'ci',
+	},
+	{
+		// Carries LB-01 and LB-02, the regression controls for the IPv4-only
+		// loopback probe. They bind an IPv6-only listener and assert the probes
+		// reach it: pure sockets, no manifests, no 3B. Excluding them from CI with
+		// the rest of C3 left the fix this PR made with no central enforcement.
+		command: 'migration:c3:hermetic:controls',
+		entry: 'scripts/assert-c3-runtimes-controls.ts',
+		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		tier: 'ci',
+	},
+	{
 		command: 'migration:publishing',
 		entry: 'scripts/assert-publishing-surfaces.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES, ...BASELINE],
@@ -619,7 +646,13 @@ function flagValue(argv: string[], flag: string): string | undefined {
 function excluded(argv: string[]): Set<string> {
 	const raw = flagValue(argv, '--exclude');
 	if (raw === undefined) return new Set();
-	const names = raw.split(',').filter(Boolean);
+	// Trimmed because `--exclude a, b` is an ordinary shell form: untrimmed, the
+	// second name becomes `" b"`, which is unknown, which is FATAL below. A
+	// fail-closed rule that fires on a space is a rule people route around.
+	const names = raw
+		.split(',')
+		.map((n) => n.trim())
+		.filter(Boolean);
 	const known = new Set(SUITES.map((s) => s.command));
 	const unknown = names.filter((n) => !known.has(n));
 	if (unknown.length > 0) {

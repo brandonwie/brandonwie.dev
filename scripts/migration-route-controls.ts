@@ -258,33 +258,111 @@ function baseline(control: Control): string {
  *      and nothing calls it.
  *   3. a named step is commented out — inert, but still matches a naive grep.
  *
- * Every link is now checked, and `SELF_CHECKS` pins all three shapes.
+ * A SECOND ROUND found four more, every one of which also scored a clean 10/10:
  *
- * Pure by construction: it takes the package scripts and the workflow text as
- * arguments rather than reading them, so a control can hand it a mutant.
+ *   4. `migration:all` loses `--all` — it then routes by changed surface, so a
+ *      diff that touches nothing selects nothing, and CI proves nothing.
+ *   5. `migration:all` is not the router at all — `echo --all --run --tier all`
+ *      carries every flag this guard reads and executes no suite.
+ *   6. the CI invocation survives only as an INLINE comment
+ *      (`- # run: pnpm run migration:all`) — the line does not start with `#`,
+ *      so a leading-`#` filter leaves it in the active text.
+ *   7. the pre-push hook stops invoking the router — every push-tier suite was
+ *      granted reachability from its tier alone, without anything reading the
+ *      hook, which is precisely how `migration:c3`'s CI exclusion could have
+ *      become a hiding place.
+ *
+ * Every link is now checked from the runner backwards: which YAML `run:` blocks
+ * are ACTIVE, whether the script they name is the router, whether its argv makes
+ * the router select and execute, and whether the hook still calls it.
+ * `SELF_CHECKS` pins all seven shapes.
+ *
+ * Pure by construction: it takes the package scripts, the workflow text and the
+ * hook text as arguments rather than reading them, so a control can hand it a
+ * mutant.
  */
+
+/** `tsx scripts/migration-route.ts`, however the caller spells the runner. */
+const ROUTER_INVOCATION =
+	/(?:^|[\s;&|(])(?:corepack\s+)?(?:pnpm\s+exec\s+|npx\s+)?(?:tsx|node|deno\s+run(?:\s+-{1,2}\S+)*)\s+(?:-{1,2}\S+\s+)*(?:\.\/)?scripts\/migration-route\.ts(?=\s|$)/;
+
+/**
+ * The commands a CI run actually executes: the payloads of active `run:` keys,
+ * with full-line AND inline YAML comments removed first.
+ *
+ * Scanning the raw workflow text was wrong twice over. A line such as
+ * `- # run: pnpm run migration:all` does not start with `#`, so a leading-`#`
+ * filter keeps it; and any prose in a `name:` or a `with:` value matched the
+ * same way a real command did.
+ */
+export function activeRunCommands(workflow: string): string[] {
+	const lines = workflow
+		.split('\n')
+		// A `#` opens a comment at line start or after whitespace. Stripping is the
+		// fail-closed direction: over-stripping hides an invocation and this guard
+		// then reports it, which is the safe error.
+		.map((line) => line.replace(/(^|\s)#.*$/, '$1').trimEnd());
+
+	const commands: string[] = [];
+	for (let i = 0; i < lines.length; i += 1) {
+		const match = /^(\s*)(?:-\s+)?run:\s*(.*)$/.exec(lines[i]);
+		if (!match) continue;
+		const indent = match[1].length;
+		const inline = match[2].trim();
+		if (inline !== '' && !/^[|>][-+\d]*$/.test(inline)) {
+			commands.push(inline);
+			continue;
+		}
+		// Block scalar: every following line indented past the key belongs to it.
+		for (let j = i + 1; j < lines.length; j += 1) {
+			if (lines[j].trim() === '') continue;
+			if (lines[j].length - lines[j].trimStart().length <= indent) break;
+			commands.push(lines[j].trim());
+		}
+	}
+	return commands;
+}
+
 export function reachabilityFailures(
 	scripts: Record<string, string>,
 	workflow: string,
+	hook: string,
 	suites: readonly { command: string; tier: 'push' | 'ci' }[] = SUITES,
 ): string[] {
 	const problems: string[] = [];
 
-	// A commented line is inert. Counting it as execution is the same false green
-	// this guard exists to prevent.
-	const activeRuns = workflow
-		.split('\n')
-		.filter((line) => !/^\s*#/.test(line))
-		.join('\n');
+	const activeRuns = activeRunCommands(workflow).join('\n');
 	const invokedInCI = (command: string): boolean =>
-		new RegExp(`pnpm run ${command.replace(/[:]/g, '[:]')}(\\s|$)`, 'm').test(activeRuns);
+		new RegExp(`pnpm (?:run |exec )?${command.replace(/[:]/g, '[:]')}(\\s|$)`, 'm').test(
+			activeRuns,
+		);
 
 	const allArgv = scripts['migration:all'] ?? '';
 	const allTier = /--tier\s+(push|ci|all)/.exec(allArgv)?.[1] ?? 'push';
+	// Trimmed to match `excluded()` in the router: the two must agree on what is
+	// excluded, or this guard clears a suite the router is quietly dropping.
 	const allExcluded = new Set(
-		(/--exclude\s+(\S+)/.exec(allArgv)?.[1] ?? '').split(',').filter(Boolean),
+		(/--exclude\s+(\S+)/.exec(allArgv)?.[1] ?? '')
+			.split(',')
+			.map((n) => n.trim())
+			.filter(Boolean),
 	);
 
+	// The argv's flags mean nothing unless the script they belong to is the
+	// router. `echo --all --run --tier all` reads identically to every flag check
+	// below and executes nothing.
+	const allIsRouter = ROUTER_INVOCATION.test(allArgv);
+	if (!allIsRouter) {
+		problems.push(
+			`migration:all does not invoke scripts/migration-route.ts — its flags route nothing: ${allArgv || '(missing script)'}`,
+		);
+	}
+	const allSelectsEverything = /(^|\s)--all(\s|$)/.test(allArgv);
+	if (!allSelectsEverything) {
+		problems.push(
+			`migration:all has no --all, so it routes by changed surface and a diff that touches nothing runs nothing: ${allArgv || '(missing script)'}`,
+		);
+	}
 	const allRuns = /(^|\s)--run(\s|$)/.test(allArgv);
 	if (!allRuns) {
 		problems.push(
@@ -298,32 +376,49 @@ export function reachabilityFailures(
 		);
 	}
 
+	// The hook is the ONLY runner a push-tier suite has once CI excludes it, so
+	// its tier is evidence of nothing until something confirms the hook still
+	// calls the router with --run.
+	const hookRuns = hook
+		.split('\n')
+		.filter((line) => !/^\s*#/.test(line))
+		.some((line) => ROUTER_INVOCATION.test(line) && /(^|\s)--run(\s|$)/.test(line));
+	if (!hookRuns) {
+		problems.push(
+			'.husky/pre-push does not invoke scripts/migration-route.ts --run — push-tier suites have no runner at all',
+		);
+	}
+
 	// THREE WAYS A SUITE CAN BE REACHED, and no fourth:
-	//   1. `migration:all` selects AND runs it, and CI invokes that script;
-	//   2. an active `ci.yml` step names it;
-	//   3. it is PUSH tier, so the pre-push router selects it on the developer
-	//      machine whenever its derived inputs change.
+	//   1. `migration:all` selects AND runs it, it is the router, and an active
+	//      ci.yml step invokes it;
+	//   2. an active `ci.yml` step names the suite itself;
+	//   3. it is PUSH tier AND the pre-push hook verifiably runs the router, so
+	//      the router selects it on the developer machine when its inputs change.
 	//
 	// (3) is what makes a CI exclusion honest rather than a hiding place:
 	// `migration:c3` drives Deno scripts that read the 3B knowledge base, which
-	// CI has no checkout of, so it is excluded there and carried at push tier
-	// instead. A CI-tier suite that is excluded and unnamed is reachable by
-	// nothing at all, and still fails here.
+	// CI has no checkout of, so its 3B-dependent rows are excluded there and
+	// carried at push tier instead — while its hermetic rows and its loopback
+	// controls stay in CI as `migration:c3:hermetic`. A CI-tier suite that is
+	// excluded and unnamed is reachable by nothing at all, and still fails here.
 	const unreached = suites
 		.filter((suite) => {
 			const viaAll =
+				allIsRouter &&
+				allSelectsEverything &&
 				allRuns &&
 				allInvoked &&
 				(allTier === 'all' || suite.tier === allTier) &&
 				!allExcluded.has(suite.command);
-			const viaHook = suite.tier === 'push';
+			const viaHook = suite.tier === 'push' && hookRuns;
 			return !viaAll && !invokedInCI(suite.command) && !viaHook;
 		})
 		.map((s) => s.command);
 	if (unreached.length > 0) {
 		problems.push(
 			`${unreached.length} registered suite(s) are executed by nothing — ` +
-				`neither migration:all (tier ${allTier}) nor a named ci.yml step: ${unreached.join(', ')}`,
+				`neither migration:all (tier ${allTier}) nor a named ci.yml step nor the pre-push hook: ${unreached.join(', ')}`,
 		);
 	}
 	return problems;
@@ -334,22 +429,33 @@ export function reachabilityFailures(
  * deliberately broken invocation chain and asserts the guard reports it. They
  * are pure string inputs, so they neither mutate the tree nor depend on it.
  */
+const GOOD_ALL = 'tsx scripts/migration-route.ts --all --run --tier all';
+const GOOD_HOOK =
+	'printf \'%s\\n\' "$PUSH_REFS" | corepack pnpm exec tsx scripts/migration-route.ts --run || exit 1\n';
+const GOOD_WORKFLOW = '      - run: pnpm run migration:all\n';
+const DEFAULT_SUITES = [
+	{ command: 'migration:all', tier: 'push' as const },
+	{ command: 'migration:controls', tier: 'ci' as const },
+];
+
 const SELF_CHECKS: {
 	id: string;
 	what: string;
 	scripts: Record<string, string>;
 	workflow: string;
+	hook?: string;
+	suites?: { command: string; tier: 'push' | 'ci' }[];
 }[] = [
 	{
 		id: 'RX-01',
 		what: 'migration:all selects but never runs (--run dropped)',
 		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --tier all' },
-		workflow: '      - run: pnpm run migration:all\n',
+		workflow: GOOD_WORKFLOW,
 	},
 	{
 		id: 'RX-02',
 		what: 'migration:all is correct but no active ci.yml step invokes it',
-		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier all' },
+		scripts: { 'migration:all': GOOD_ALL },
 		workflow: '      - run: pnpm run build\n',
 	},
 	{
@@ -365,20 +471,62 @@ const SELF_CHECKS: {
 			'migration:all':
 				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:controls',
 		},
-		workflow: '      - run: pnpm run migration:all\n',
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-05',
+		what: 'migration:all loses --all, so it routes by changed surface instead of running everything',
+		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --run --tier all' },
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-06',
+		what: 'migration:all carries every routing flag but is not the router (echo)',
+		scripts: { 'migration:all': 'echo --all --run --tier all' },
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-07',
+		what: 'the CI invocation survives only as an inline comment on an active line',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow: '      - run: pnpm run build # run: pnpm run migration:all\n',
+	},
+	{
+		id: 'RX-08',
+		what: 'the pre-push hook stops invoking the router, stranding every CI-excluded push suite',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'echo "Running pre-push checks..."\ncorepack pnpm run lint || exit 1\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
 	},
 ];
 
 function selfCheckFailures(): string[] {
 	const problems: string[] = [];
 	for (const check of SELF_CHECKS) {
-		const reported = reachabilityFailures(check.scripts, check.workflow, [
-			{ command: 'migration:all', tier: 'push' },
-			{ command: 'migration:controls', tier: 'ci' },
-		]);
+		const reported = reachabilityFailures(
+			check.scripts,
+			check.workflow,
+			check.hook ?? GOOD_HOOK,
+			check.suites ?? DEFAULT_SUITES,
+		);
 		if (reported.length === 0) {
 			problems.push(`${check.id} did not fail closed: ${check.what}`);
 		}
+	}
+	// A self-check set that only ever feeds BROKEN chains cannot tell "the guard
+	// reports everything" from "the guard works". The intact chain must pass.
+	const intact = reachabilityFailures(
+		{ 'migration:all': GOOD_ALL },
+		GOOD_WORKFLOW,
+		GOOD_HOOK,
+		DEFAULT_SUITES,
+	);
+	if (intact.length > 0) {
+		problems.push(`RX-00 the intact invocation chain was reported as broken: ${intact.join('; ')}`);
 	}
 	return problems;
 }
@@ -423,7 +571,8 @@ function vacuityGuard(): string[] {
 		scripts: Record<string, string>;
 	};
 	const workflow = readFileSync(join(REPO_ROOT, '.github/workflows/ci.yml'), 'utf8');
-	failures.push(...reachabilityFailures(pkg.scripts, workflow));
+	const hook = readFileSync(join(REPO_ROOT, '.husky/pre-push'), 'utf8');
+	failures.push(...reachabilityFailures(pkg.scripts, workflow, hook));
 	failures.push(...selfCheckFailures());
 
 	// At least one suite must reach a real dependency graph, or the derivation is

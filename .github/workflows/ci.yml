@@ -31,17 +31,31 @@ jobs:
       - run: pnpm run validate:dates
       - run: deno task snapshot:3b:check
 
-  # The migration verification superset. The pre-push hook routes by changed
-  # surface to stay under a workable push time; CI runs EVERY suite regardless of
-  # what the diff touched, so a routing mistake costs a red CI run rather than a
-  # silent gap.
+  # The migration verification set. The pre-push hook routes by changed surface
+  # to stay under a workable push time; CI runs every suite it CAN run regardless
+  # of what the diff touched, so a routing mistake costs a red CI run rather than
+  # a silent gap.
   #
-  # That claim was FALSE until 2026-09-04. `migration:all` selected `--tier push`
-  # only, so five registered ci-tier suites ran nowhere -- including
-  # `migration:gsap-palette:controls`, the 86-control suite gate G2's approval
-  # cites as its evidence. It now selects `--tier all`, minus the one suite that
-  # has its own parallel job below, and `migration:route:controls` fails closed
-  # if any registered suite is reachable by neither path.
+  # "Every suite" was FALSE until 2026-09-04: `migration:all` selected
+  # `--tier push` only, so five registered ci-tier suites ran nowhere --
+  # including `migration:gsap-palette:controls`, the 86-control suite gate G2's
+  # approval cites as its evidence.
+  #
+  # EXACTLY WHAT THIS JOB RUNS, stated so the comment cannot drift from the
+  # command again: `migration:all` selects `--tier all` MINUS three named
+  # exclusions --
+  #
+  #   migration:controls          has its own parallel job below (~265 s)
+  #   migration:c3                its 13 3B-dependent rows need a 3B checkout
+  #   migration:c3:controls       same, for the controls that drive those rows
+  #
+  # The C3 exclusion is a lane split, not a hole: `migration:c3:hermetic` and
+  # `migration:c3:hermetic:controls` run HERE and cover the four rows that read
+  # only this checkout plus the LB-01/LB-02 loopback regressions.
+  # `assert-c3-runtimes.ts` asserts the two lanes partition its rows exactly
+  # once, and `migration:route:controls` fails closed if any registered suite is
+  # reachable by no runner at all -- including a push-tier suite whose only
+  # runner, the pre-push hook, has stopped invoking the router.
   migration:
     runs-on: ubuntu-latest
     steps:
@@ -58,12 +72,11 @@ jobs:
           node-version-file: '.node-version'
           cache: pnpm
 
-      # `migration:c3` asserts 8 deno tasks and 9 `deno run` scripts. Without a
-      # Deno toolchain it does not skip -- it runs all 17 rows and fails all 17,
-      # which is what happened the first time this job selected `--tier all`.
-      # C1's S1 scenario is the same shape and says the honest outcome of an
-      # absent runtime is INCONCLUSIVE, not pass; installing it here removes the
-      # question.
+      # `migration:c3:hermetic` drives four `deno task` surfaces. Without a Deno
+      # toolchain they do not skip -- they run and fail, which is what happened
+      # the first time this job selected `--tier all`. C1's S1 scenario is the
+      # same shape and says the honest outcome of an absent runtime is
+      # INCONCLUSIVE, not pass; installing it here removes the question.
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
