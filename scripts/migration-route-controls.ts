@@ -406,6 +406,13 @@ export function commandSegments(text: string): string[][] {
 			continue;
 		}
 		if (ch === '\\') {
+			// `\` before a newline is a LINE CONTINUATION: both characters vanish and
+			// the token continues. Keeping the newline glued the operand to the next
+			// line and made a real, wrapped invocation report as missing.
+			if (text[i + 1] === '\n') {
+				i += 1;
+				continue;
+			}
 			i += 1;
 			if (i < text.length) {
 				current += text[i];
@@ -913,6 +920,20 @@ function selfCheckFailures(): string[] {
 			what: 'an echo followed by a real invocation in the same script',
 			scripts: { 'migration:all': `echo routing; ${GOOD_ALL}` },
 			workflow: GOOD_WORKFLOW,
+			hook: GOOD_HOOK,
+		},
+		{
+			id: 'RX-00g',
+			what: 'a hook invocation wrapped across a backslash-newline continuation',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow: GOOD_WORKFLOW,
+			hook: 'corepack pnpm exec tsx \\\n\tscripts/migration-route.ts \\\n\t--run || exit 1\n',
+		},
+		{
+			id: 'RX-00h',
+			what: 'a CI step wrapped across a backslash-newline continuation',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow: '      - run: |\n          pnpm run \\\n            migration:all\n',
 			hook: GOOD_HOOK,
 		},
 		{
