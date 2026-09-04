@@ -649,6 +649,7 @@ async function main(argv: string[]): Promise<number> {
 		if (explicit !== undefined) changed = explicit.split(',').filter(Boolean);
 		else if (range) changed = changedInRange(range);
 		else changed = changedFromPushRefs(readStdin());
+		const selected = changed === null ? null : select(changed, tier);
 		selection =
 			changed === null
 				? {
@@ -657,8 +658,8 @@ async function main(argv: string[]): Promise<number> {
 						reasons: ['no resolvable push range (new branch or empty stdin)'],
 					}
 				: {
-						...select(changed, tier),
-						commands: select(changed, tier).commands.filter((c) => !skip.has(c)),
+						...selected!,
+						commands: selected!.commands.filter((c) => !skip.has(c)),
 					};
 	}
 

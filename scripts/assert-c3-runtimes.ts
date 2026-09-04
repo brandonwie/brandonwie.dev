@@ -252,11 +252,19 @@ function run(
  * Asymmetric on purpose: a port is FREE only if BOTH families refuse, and a
  * probe SUCCEEDS if EITHER answers. Both directions fail closed.
  */
-const LOOPBACK_HOSTS = ['127.0.0.1', '::1'] as const;
+export const LOOPBACK_HOSTS = ['127.0.0.1', '::1'] as const;
 
 function portFreeOn(host: string, port: number): Promise<boolean> {
 	return new Promise((resolvePromise) => {
+		// Bounded: a connection that neither completes nor errors would leave the
+		// `Promise.all` below hanging forever. A hang resolves conservatively as
+		// NOT free, because a port that will not answer is not a port to start a
+		// server on.
 		const sock = createConnection({ host, port });
+		sock.setTimeout(2000, () => {
+			sock.destroy();
+			resolvePromise(false);
+		});
 		sock.once('connect', () => {
 			sock.destroy();
 			resolvePromise(false);
@@ -265,7 +273,7 @@ function portFreeOn(host: string, port: number): Promise<boolean> {
 	});
 }
 
-async function portFree(port: number): Promise<boolean> {
+export async function portFree(port: number): Promise<boolean> {
 	const results = await Promise.all(LOOPBACK_HOSTS.map((h) => portFreeOn(h, port)));
 	return results.every(Boolean);
 }
@@ -284,7 +292,7 @@ function probeOn(host: string, port: number): Promise<number | null> {
 	});
 }
 
-async function probe(port: number): Promise<number | null> {
+export async function probe(port: number): Promise<number | null> {
 	for (const host of LOOPBACK_HOSTS) {
 		const status = await probeOn(host, port);
 		if (status !== null) return status;

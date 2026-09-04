@@ -58,6 +58,16 @@ jobs:
           node-version-file: '.node-version'
           cache: pnpm
 
+      # `migration:c3` asserts 8 deno tasks and 9 `deno run` scripts. Without a
+      # Deno toolchain it does not skip -- it runs all 17 rows and fails all 17,
+      # which is what happened the first time this job selected `--tier all`.
+      # C1's S1 scenario is the same shape and says the honest outcome of an
+      # absent runtime is INCONCLUSIVE, not pass; installing it here removes the
+      # question.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - run: pnpm install --frozen-lockfile
 
       # Both outputs: the suites read `build/` (Svelte) and `next/build/` (Next).

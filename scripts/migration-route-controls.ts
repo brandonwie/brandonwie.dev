@@ -240,6 +240,128 @@ function baseline(control: Control): string {
  * zero suites, dangling entry files, or commands that are not scripts would let
  * every control below pass while routing nothing.
  */
+
+/**
+ * Which registered suites actually reach a runner, and why the answer is not
+ * just "which tier does `migration:all` select".
+ *
+ * THE ORIGINAL DEFECT. `migration:all` selected `--tier push` while five
+ * registered ci-tier suites sat in no runner at all, including the 86-control
+ * `migration:gsap-palette:controls` that gate G2's approval cites as evidence.
+ *
+ * WHY SELECTION IS NOT EXECUTION. A first version of this check read only the
+ * tier and exclusions and therefore could not see three other ways the chain
+ * breaks, each of which scored a clean 10/10 against it:
+ *
+ *   1. `migration:all` loses `--run` — it selects suites and executes none.
+ *   2. the `pnpm run migration:all` step leaves `ci.yml` — the script is correct
+ *      and nothing calls it.
+ *   3. a named step is commented out — inert, but still matches a naive grep.
+ *
+ * Every link is now checked, and `SELF_CHECKS` pins all three shapes.
+ *
+ * Pure by construction: it takes the package scripts and the workflow text as
+ * arguments rather than reading them, so a control can hand it a mutant.
+ */
+export function reachabilityFailures(
+	scripts: Record<string, string>,
+	workflow: string,
+	suites: readonly { command: string; tier: 'push' | 'ci' }[] = SUITES,
+): string[] {
+	const problems: string[] = [];
+
+	// A commented line is inert. Counting it as execution is the same false green
+	// this guard exists to prevent.
+	const activeRuns = workflow
+		.split('\n')
+		.filter((line) => !/^\s*#/.test(line))
+		.join('\n');
+	const invokedInCI = (command: string): boolean =>
+		new RegExp(`pnpm run ${command.replace(/[:]/g, '[:]')}(\\s|$)`, 'm').test(activeRuns);
+
+	const allArgv = scripts['migration:all'] ?? '';
+	const allTier = /--tier\s+(push|ci|all)/.exec(allArgv)?.[1] ?? 'push';
+	const allExcluded = new Set(
+		(/--exclude\s+(\S+)/.exec(allArgv)?.[1] ?? '').split(',').filter(Boolean),
+	);
+
+	const allRuns = /(^|\s)--run(\s|$)/.test(allArgv);
+	if (!allRuns) {
+		problems.push(
+			`migration:all selects suites but does not run them — its argv has no --run: ${allArgv || '(missing script)'}`,
+		);
+	}
+	const allInvoked = invokedInCI('migration:all');
+	if (!allInvoked) {
+		problems.push(
+			'migration:all is never invoked by an active ci.yml step — the suites it selects reach no runner',
+		);
+	}
+
+	const unreached = suites
+		.filter((suite) => {
+			const viaAll =
+				allRuns &&
+				allInvoked &&
+				(allTier === 'all' || suite.tier === allTier) &&
+				!allExcluded.has(suite.command);
+			return !viaAll && !invokedInCI(suite.command);
+		})
+		.map((s) => s.command);
+	if (unreached.length > 0) {
+		problems.push(
+			`${unreached.length} registered suite(s) are executed by nothing — ` +
+				`neither migration:all (tier ${allTier}) nor a named ci.yml step: ${unreached.join(', ')}`,
+		);
+	}
+	return problems;
+}
+
+/**
+ * Committed negative controls for `reachabilityFailures`. Each supplies a
+ * deliberately broken invocation chain and asserts the guard reports it. They
+ * are pure string inputs, so they neither mutate the tree nor depend on it.
+ */
+const SELF_CHECKS: {
+	id: string;
+	what: string;
+	scripts: Record<string, string>;
+	workflow: string;
+}[] = [
+	{
+		id: 'RX-01',
+		what: 'migration:all selects but never runs (--run dropped)',
+		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --tier all' },
+		workflow: '      - run: pnpm run migration:all\n',
+	},
+	{
+		id: 'RX-02',
+		what: 'migration:all is correct but no active ci.yml step invokes it',
+		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier all' },
+		workflow: '      - run: pnpm run build\n',
+	},
+	{
+		id: 'RX-03',
+		what: 'the only step naming a suite is commented out',
+		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier push' },
+		workflow: '      - run: pnpm run migration:all\n      # - run: pnpm run migration:controls\n',
+	},
+];
+
+function selfCheckFailures(): string[] {
+	const problems: string[] = [];
+	for (const check of SELF_CHECKS) {
+		const reported = reachabilityFailures(check.scripts, check.workflow, [
+			{ command: 'migration:all', tier: 'push' },
+			{ command: 'migration:controls', tier: 'ci' },
+		]);
+		if (reported.length === 0) {
+			problems.push(`${check.id} did not fail closed: ${check.what}`);
+		}
+	}
+	return problems;
+}
+
 function vacuityGuard(): string[] {
 	const failures: string[] = [];
 	const scripts = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8'))
@@ -272,35 +394,16 @@ function vacuityGuard(): string[] {
 	// -- 86 controls, cited by gate G2's approval as its evidence -- was among
 	// them, and nothing would have noticed if it had started failing.
 	//
-	// The executed set is DERIVED, not declared: the tier and exclusions come
-	// from `migration:all`'s own argv in `package.json`, unioned with the suite
-	// commands `ci.yml` invokes by name. Registering a suite that no runner
-	// reaches now fails here rather than passing silently.
+	// The computation lives in `reachabilityFailures` so it can be exercised
+	// against mutated inputs without touching the working tree; `SELF_CHECKS`
+	// below does exactly that. See that function for why selection alone is not
+	// enough.
 	const pkg = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')) as {
 		scripts: Record<string, string>;
 	};
-	const allArgv = pkg.scripts['migration:all'] ?? '';
-	const allTier = /--tier\s+(push|ci|all)/.exec(allArgv)?.[1] ?? 'push';
-	const allExcluded = new Set(
-		(/--exclude\s+(\S+)/.exec(allArgv)?.[1] ?? '').split(',').filter(Boolean),
-	);
 	const workflow = readFileSync(join(REPO_ROOT, '.github/workflows/ci.yml'), 'utf8');
-	const executed = new Set<string>();
-	for (const suite of SUITES) {
-		const viaAll = (allTier === 'all' || suite.tier === allTier) && !allExcluded.has(suite.command);
-		const viaNamed = new RegExp(
-			`pnpm run ${suite.command.replace(/[:]/g, '[:]')}(\\s|$)`,
-			'm',
-		).test(workflow);
-		if (viaAll || viaNamed) executed.add(suite.command);
-	}
-	const unreached = SUITES.filter((s) => !executed.has(s.command)).map((s) => s.command);
-	if (unreached.length > 0) {
-		failures.push(
-			`${unreached.length} registered suite(s) are executed by nothing — ` +
-				`neither migration:all (tier ${allTier}) nor a named ci.yml step: ${unreached.join(', ')}`,
-		);
-	}
+	failures.push(...reachabilityFailures(pkg.scripts, workflow));
+	failures.push(...selfCheckFailures());
 
 	// At least one suite must reach a real dependency graph, or the derivation is
 	// decorative and the map is a hand-written table wearing a computation.

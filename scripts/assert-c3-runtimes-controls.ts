@@ -34,10 +34,10 @@ import {
 	statSync,
 	writeFileSync,
 } from 'node:fs';
-import { createConnection } from 'node:net';
 import { join, resolve } from 'node:path';
 
-import { runAssertions, type Options } from './assert-c3-runtimes.ts';
+import { runAssertions, probe, portFree, type Options } from './assert-c3-runtimes.ts';
+import { createServer } from 'node:http';
 
 type Kind = 'DEFECT' | 'INVARIANCE';
 
@@ -81,6 +81,50 @@ const editScripts =
 			...json,
 			scripts: edit(json.scripts as Record<string, string>),
 		}));
+
+/**
+ * LOOPBACK-FAMILY REGRESSION CONTROLS.
+ *
+ * The row controls below drive the real harness, which is the right shape for
+ * task and script surfaces but cannot pin the bug this PR fixed: both probes
+ * hard-coded `127.0.0.1` while Vite 8 binds `[::1]` only, so `dev` and
+ * `preview` were reported dead while serving, and `portFree` called a held port
+ * free. C3-06 covers a port with NO listener and passes either way, so nothing
+ * in the existing set fails against the pre-fix harness.
+ *
+ * These two are deterministic and self-contained: they bind an IPv6-only
+ * listener and assert the probes see it. Against the IPv4-only implementation
+ * both fail, which is the property a regression control has to have.
+ */
+async function loopbackFailures(): Promise<string[]> {
+	const problems: string[] = [];
+	const server = createServer((_req, res) => {
+		res.statusCode = 204;
+		res.end();
+	});
+	await new Promise<void>((done, fail) => {
+		server.once('error', fail);
+		// `::1` only — deliberately no IPv4 listener, which is what Vite 8 does.
+		server.listen(0, '::1', done);
+	});
+	const address = server.address();
+	const port = typeof address === 'object' && address ? address.port : 0;
+	try {
+		const status = await probe(port);
+		if (status !== 204) {
+			problems.push(
+				`LB-01 an IPv6-only listener was not reached: probe returned ${status ?? 'null'}, expected 204`,
+			);
+		}
+		const free = await portFree(port);
+		if (free !== false) {
+			problems.push('LB-02 a port held on [::1] was reported free');
+		}
+	} finally {
+		await new Promise<void>((done) => server.close(() => done()));
+	}
+	return problems;
+}
 
 const CONTROLS: Control[] = [
 	{
@@ -242,18 +286,26 @@ function makeScratch(realRepo: string, dir: string, guard: string): void {
 	cpSync(join(realRepo, 'src', 'lib', 'data'), guard, { recursive: true });
 }
 
-function portFree(port: number): Promise<boolean> {
-	return new Promise((resolvePromise) => {
-		const sock = createConnection({ host: '127.0.0.1', port });
-		sock.once('connect', () => {
-			sock.destroy();
-			resolvePromise(false);
-		});
-		sock.once('error', () => resolvePromise(true));
-	});
-}
+// A SECOND, UNFIXED COPY OF THE SAME PROBE LIVED HERE.
+//
+// This file carried its own IPv4-only `portFree`, used to find a closed port for
+// C3-06. Being a hoisted function declaration, it silently SHADOWED the
+// `portFree` imported at the top of this file -- so the loopback regression
+// controls below were exercising the unfixed implementation and reporting an
+// IPv6-held port as free. Deleted rather than renamed: one definition of "is
+// this port free" per repository is the point, and a scratch-port search that
+// ignores IPv6 can hand a control a port that is not actually closed.
 
 async function main(): Promise<number> {
+	const loopback = await loopbackFailures();
+	for (const failure of loopback) console.error(`LOOPBACK  ${failure}`);
+	if (loopback.length > 0) {
+		console.error(
+			`\nRESULT: loopback regression controls failed with ${loopback.length} problem(s)`,
+		);
+		return 2;
+	}
+
 	const realRepo = resolve(process.cwd());
 	const root = join(realRepo, 'tmp', 'c3-controls');
 	const dir = join(root, 'manifests');
