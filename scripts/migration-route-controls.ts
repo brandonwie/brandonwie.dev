@@ -300,35 +300,159 @@ function baseline(control: Control): string {
  * mutant.
  */
 
-/** Shell separators after which a new command begins. `||` before `|`. */
-const SEPARATORS = /\|\||&&|[;|&\n]/;
-/** Wrappers that pass their tail through unchanged: the command is what follows. */
-const TRANSPARENT = new Set(['corepack', 'env', 'sudo', 'npx', 'command', 'exec']);
-const RUNNERS = new Set(['tsx', 'node']);
+/**
+ * A DELIBERATELY NARROW COMMAND GRAMMAR.
+ *
+ * A FIFTH ROUND showed that "head token is a runner" is still not "this runs the
+ * router". Five more inert forms cleared the previous recogniser:
+ *
+ *   12. `node -e "" scripts/migration-route.ts --all --run` — `-e` runs the
+ *       string, never the file, and the path is merely an argument.
+ *   13. `pnpm --help migration:controls` — prints help; the suite name was read
+ *       as the script because every leading flag was skipped blindly.
+ *   14. `echo "skip; tsx scripts/migration-route.ts --all --run"` — quote-blind
+ *       splitting on `;` manufactured a segment whose head was `tsx`.
+ *   15. `echo "skip | pnpm run migration:all"` — the same, on a pipe.
+ *   16. `corepack pnpm run lint # tsx scripts/migration-route.ts --run` — a
+ *       shell comment is not a command, and only line-leading `#` was dropped.
+ *
+ * So the grammar below ACCEPTS a finite set of forms and rejects everything
+ * else, rather than approximating a shell and hoping. Quoting is modelled, not
+ * ignored; the script operand is identified positionally; runner flags that
+ * change what runs (`-e`, `--help`, `--version`, …) are terminal and reject the
+ * segment. Anything this grammar cannot parse simply fails to match, and an
+ * unmatched invocation is REPORTED as missing — a false alarm, which is the
+ * survivable direction.
+ */
+
+/** `scripts/migration-route.ts`, however the path is spelled. */
 const ROUTER_PATH = /(?:^|\/)scripts\/migration-route\.ts$/;
 
-const unquote = (token: string): string => token.replace(/^['"]|['"]$/g, '');
+/** Wrappers that pass their tail through unchanged: the command is what follows. */
+const TRANSPARENT = new Set(['corepack', 'env', 'sudo', 'command']);
+/** Runner heads that execute a script operand. */
+const RUNNERS = new Set(['tsx', 'node']);
+/** Runner flags that change WHAT runs, so the operand after them is not executed. */
+const TERMINAL_RUNNER_FLAGS = new Set([
+	'-e',
+	'--eval',
+	'-p',
+	'--print',
+	'-c',
+	'--check',
+	'-i',
+	'--interactive',
+	'-h',
+	'--help',
+	'-v',
+	'--version',
+	'--stdin',
+	'--completion-bash',
+]);
+/** Runner flags that consume the NEXT token, which is therefore not the operand. */
+const VALUE_RUNNER_FLAGS = new Set([
+	'--tsconfig',
+	'--require',
+	'-r',
+	'--import',
+	'--loader',
+	'--experimental-loader',
+	'--conditions',
+	'--env-file',
+]);
+/** pnpm flags that leave `pnpm [run] <script>` intact. Everything else rejects. */
+const PNPM_BOOLEAN_FLAGS = new Set([
+	'-s',
+	'--silent',
+	'-r',
+	'--recursive',
+	'--workspace-root',
+	'-w',
+	'--if-present',
+]);
+const PNPM_VALUE_FLAGS = new Set(['-C', '--dir', '--filter', '--reporter', '--loglevel']);
 
 /**
- * The tokens of each shell segment, reduced to command position: environment
- * assignments and transparent wrappers removed, so `tokens[0]` is the command
- * that actually runs.
+ * Quote-aware tokenizer. Returns one token list per shell command.
+ *
+ * Quoting is the point: inside quotes a `;`, `|` or `#` is TEXT, so
+ * `echo "skip; tsx scripts/migration-route.ts"` is one command whose head is
+ * `echo` — not two commands, the second of which looks like a router run.
+ * Outside quotes, `#` at the start of a token opens a comment to end of line.
  */
 export function commandSegments(text: string): string[][] {
-	return text
-		.split(SEPARATORS)
-		.map((segment) => segment.trim().split(/\s+/).filter(Boolean).map(unquote))
-		.map((tokens) => {
-			let head = 0;
+	const segments: string[][] = [];
+	let tokens: string[] = [];
+	let current = '';
+	let started = false;
+	let quote: string | null = null;
+
+	const endToken = (): void => {
+		if (started) tokens.push(current);
+		current = '';
+		started = false;
+	};
+	const endSegment = (): void => {
+		endToken();
+		if (tokens.length > 0) segments.push(tokens);
+		tokens = [];
+	};
+
+	for (let i = 0; i < text.length; i += 1) {
+		const ch = text[i];
+		if (quote !== null) {
+			if (ch === quote) quote = null;
+			else current += ch;
+			continue;
+		}
+		if (ch === '\\') {
+			i += 1;
+			if (i < text.length) {
+				current += text[i];
+				started = true;
+			}
+			continue;
+		}
+		if (ch === '"' || ch === "'") {
+			quote = ch;
+			started = true;
+			continue;
+		}
+		if (ch === '#' && !started) {
+			while (i < text.length && text[i] !== '\n') i += 1;
+			endSegment();
+			continue;
+		}
+		if (ch === '\n') {
+			endSegment();
+			continue;
+		}
+		if (/\s/.test(ch)) {
+			endToken();
+			continue;
+		}
+		if (ch === ';' || ch === '&' || ch === '|' || ch === '(' || ch === ')') {
+			endSegment();
+			continue;
+		}
+		current += ch;
+		started = true;
+	}
+	endSegment();
+
+	return segments
+		.map((segment) => {
+			let rest = segment;
 			// `FOO=bar cmd` — assignments precede the command, they are not it.
-			while (head < tokens.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[head])) head += 1;
-			let rest = tokens.slice(head);
+			while (rest.length > 0 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(rest[0])) rest = rest.slice(1);
 			for (;;) {
-				if (rest.length > 0 && TRANSPARENT.has(rest[0])) {
+				// A wrapper is transparent only when what follows is a command, not a
+				// flag: `corepack --help pnpm run x` runs no script.
+				if (rest.length > 1 && TRANSPARENT.has(rest[0]) && !rest[1].startsWith('-')) {
 					rest = rest.slice(1);
 					continue;
 				}
-				if (rest.length > 1 && rest[0] === 'pnpm' && (rest[1] === 'exec' || rest[1] === 'dlx')) {
+				if (rest.length > 2 && rest[0] === 'pnpm' && (rest[1] === 'exec' || rest[1] === 'dlx')) {
 					rest = rest.slice(2);
 					continue;
 				}
@@ -340,31 +464,66 @@ export function commandSegments(text: string): string[][] {
 }
 
 /**
- * The argv of the segment that RUNS `scripts/migration-route.ts`, or null.
+ * The router's OWN arguments, for the segment that executes
+ * `scripts/migration-route.ts`, or null when no segment does.
  *
- * The head token must be a runner. `echo tsx scripts/migration-route.ts --all
- * --run` has the head `echo`, prints that text, and routes nothing — it is the
- * exact false green this function exists to refuse.
+ * The operand is found positionally: runner flags are consumed by name, the
+ * first remaining non-flag token is what the runner executes, and it must be the
+ * router. `node -e "" scripts/migration-route.ts --all` rejects on `-e`;
+ * `node other.ts scripts/migration-route.ts` rejects because the operand is
+ * `other.ts` and the router path is just an argument to it.
  */
 export function routerSegment(text: string): string[] | null {
 	for (const tokens of commandSegments(text)) {
-		const isRunner =
-			RUNNERS.has(tokens[0]) ||
-			(tokens[0] === 'deno' && (tokens[1] === 'run' || tokens[1] === 'task'));
-		if (!isRunner) continue;
-		if (tokens.slice(1).some((token) => ROUTER_PATH.test(token))) return tokens;
+		let i = 0;
+		if (tokens[i] === 'deno') {
+			if (tokens[i + 1] !== 'run') continue;
+			i += 2;
+		} else if (RUNNERS.has(tokens[i])) {
+			i += 1;
+		} else {
+			continue;
+		}
+		let terminal = false;
+		while (i < tokens.length && tokens[i].startsWith('-')) {
+			const flag = tokens[i].split('=')[0];
+			if (TERMINAL_RUNNER_FLAGS.has(flag)) {
+				terminal = true;
+				break;
+			}
+			// `--flag=value` carries its value; `--flag value` eats the next token.
+			if (VALUE_RUNNER_FLAGS.has(flag) && !tokens[i].includes('=')) i += 1;
+			i += 1;
+		}
+		if (terminal || i >= tokens.length) continue;
+		if (!ROUTER_PATH.test(tokens[i])) continue;
+		return tokens.slice(i + 1);
 	}
 	return null;
 }
 
-/** True when some segment RUNS `pnpm [run] <command>` — not prints it. */
+/**
+ * True when some segment RUNS `pnpm [run] <command>` — not prints it, and not
+ * `pnpm --help <command>`, which looks the command up and runs nothing.
+ */
 export function invokesScript(text: string, command: string): boolean {
 	for (const tokens of commandSegments(text)) {
 		if (tokens[0] !== 'pnpm') continue;
 		let i = 1;
-		while (i < tokens.length && tokens[i].startsWith('-')) i += 1;
+		let rejected = false;
+		while (i < tokens.length && tokens[i].startsWith('-')) {
+			const flag = tokens[i].split('=')[0];
+			if (PNPM_BOOLEAN_FLAGS.has(flag)) i += 1;
+			else if (PNPM_VALUE_FLAGS.has(flag)) i += tokens[i].includes('=') ? 1 : 2;
+			else {
+				// An unrecognised flag may be terminal (`--help`, `--version`) or may
+				// change what runs. Refusing is the fail-closed answer.
+				rejected = true;
+				break;
+			}
+		}
+		if (rejected) continue;
 		if (tokens[i] === 'run') i += 1;
-		while (i < tokens.length && tokens[i].startsWith('-')) i += 1;
 		if (tokens[i] === command) return true;
 	}
 	return false;
@@ -636,6 +795,46 @@ const SELF_CHECKS: {
 			'      - run: pnpm run migration:all\n      - run: echo pnpm run migration:controls\n',
 	},
 	{
+		id: 'RX-13',
+		what: 'migration:all is `node -e` with the router path as a mere argument',
+		expect: 'not run scripts/migration-route.ts in command position',
+		scripts: { 'migration:all': 'node -e "" scripts/migration-route.ts --all --run --tier all' },
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-14',
+		what: 'the CI step is `pnpm --help migration:all`, which looks the script up and runs nothing',
+		expect: 'never invoked by an active ci.yml step',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow: '      - run: pnpm --help migration:all\n',
+	},
+	{
+		id: 'RX-15',
+		what: 'a quoted separator manufactures a router segment inside an echo argument',
+		expect: 'not run scripts/migration-route.ts in command position',
+		scripts: { 'migration:all': `echo "skip; ${GOOD_ALL}"` },
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-16',
+		what: 'a quoted pipe manufactures a CI invocation inside an echo argument',
+		expect: 'never invoked by an active ci.yml step',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow: '      - run: echo "skip | pnpm run migration:all"\n',
+	},
+	{
+		id: 'RX-17',
+		what: "the hook's router call survives only after an inline shell comment",
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'corepack pnpm run lint # tsx scripts/migration-route.ts --run\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
 		id: 'RX-12',
 		what: 'the hook echoes the router invocation instead of running it',
 		expect: 'does not invoke scripts/migration-route.ts --run',
@@ -668,15 +867,74 @@ function selfCheckFailures(): string[] {
 		}
 	}
 	// A self-check set that only ever feeds BROKEN chains cannot tell "the guard
-	// reports everything" from "the guard works". The intact chain must pass.
-	const intact = reachabilityFailures(
-		{ 'migration:all': GOOD_ALL },
-		GOOD_WORKFLOW,
-		GOOD_HOOK,
-		DEFAULT_SUITES,
-	);
-	if (intact.length > 0) {
-		problems.push(`RX-00 the intact invocation chain was reported as broken: ${intact.join('; ')}`);
+	// reports everything" from "the guard works", and a grammar this narrow can
+	// fail by rejecting real forms as easily as by clearing inert ones. Every
+	// shape below is a WORKING chain and must be reported as silent.
+	const POSITIVE: {
+		id: string;
+		what: string;
+		scripts: Record<string, string>;
+		workflow: string;
+		hook: string;
+	}[] = [
+		{
+			id: 'RX-00',
+			what: 'the intact chain',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow: GOOD_WORKFLOW,
+			hook: GOOD_HOOK,
+		},
+		{
+			id: 'RX-00b',
+			what: 'corepack in front of the CI invocation',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow: '      - run: corepack pnpm run migration:all\n',
+			hook: GOOD_HOOK,
+		},
+		{
+			id: 'RX-00c',
+			what: 'pnpm -s and no `run` keyword',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow: '      - run: pnpm -s migration:all\n',
+			hook: GOOD_HOOK,
+		},
+		{
+			id: 'RX-00d',
+			what: 'a runner value flag before the operand (--tsconfig)',
+			scripts: {
+				'migration:all':
+					'tsx --tsconfig tsconfig.scripts.json scripts/migration-route.ts --all --run --tier all',
+			},
+			workflow: GOOD_WORKFLOW,
+			hook: GOOD_HOOK,
+		},
+		{
+			id: 'RX-00e',
+			what: 'an echo followed by a real invocation in the same script',
+			scripts: { 'migration:all': `echo routing; ${GOOD_ALL}` },
+			workflow: GOOD_WORKFLOW,
+			hook: GOOD_HOOK,
+		},
+		{
+			id: 'RX-00f',
+			what: 'the hook invocation inside a pipeline, after a comment line',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow: GOOD_WORKFLOW,
+			hook: `# routed by changed surface\n${GOOD_HOOK}`,
+		},
+	];
+	for (const check of POSITIVE) {
+		const reported = reachabilityFailures(
+			check.scripts,
+			check.workflow,
+			check.hook,
+			DEFAULT_SUITES,
+		);
+		if (reported.length > 0) {
+			problems.push(
+				`${check.id} a working chain was reported as broken (${check.what}): ${reported.join('; ')}`,
+			);
+		}
 	}
 	return problems;
 }
