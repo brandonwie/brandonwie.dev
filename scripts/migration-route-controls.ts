@@ -21,8 +21,16 @@
  * reported success because they stopped looking.
  */
 
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -373,220 +381,166 @@ const RUNNER_VALUE_FLAGS = new Set([
 const PNPM_BOOLEAN_FLAGS = new Set(['-s', '--silent']);
 
 /**
- * BASH RESERVED WORDS — the complete set, not a list grown one bug at a time.
+ * STOP PARSING THE SHELL. RUN IT AND WATCH.
  *
- * Any of them puts the scanner inside structure whose execution depends on
- * state this guard cannot observe, and structure is not counted. Using the
- * whole documented set (plus `(` for a subshell and `{` for a group) is the
- * difference between a rule and a patch: `select` was missing from an earlier
- * hand-picked list, and a `select` body cleared reachability.
+ * Seven rounds of this guard tried to decide from TEXT whether a command runs,
+ * and seven rounds found another construct that reads like an invocation and
+ * executes nothing, or the reverse. Quoted separators, inline comments,
+ * heredocs in four spellings, `&&` / `||` short-circuits, `if` and `select`
+ * bodies, subshell-bodied functions, command substitutions, `case` patterns
+ * whose `)` closes no subshell, backslash escapes inside double quotes. Each
+ * fix was correct and each left the next construct unowned, because a
+ * hand-written approximation of a shell grammar is never finished.
+ *
+ * So the shell decides. `observe()` runs the script under `bash` with `PATH`
+ * pointing at a directory of RECORDING STUBS and nothing else, feeds it the
+ * stdin it expects, and collects the argv of every command that actually ran.
+ * A heredoc body is never executed, so it records nothing. `true || router`
+ * short-circuits for real. A `case` branch that does not match does not run. An
+ * `if` whose condition is false skips its body. None of that is modelled here;
+ * it is observed, by the program whose semantics are the question.
+ *
+ * PATH contains ONLY the stubs, so a command this harness has not stubbed
+ * cannot execute at all: a line that tried to touch the machine finds an empty
+ * world.
+ *
+ * What remains for static analysis is exactly the part the shell cannot answer.
+ * Given the argv that DID run, does that argv execute the router? `node -e ""
+ * scripts/migration-route.ts` really does run, and really does not run the
+ * file; `pnpm --filter __no_match__ x` really does run, and really runs no
+ * script. That is an argv question, not a shell question, and it is decided
+ * below by allowlists over the OBSERVED argv.
  */
-const RESERVED_OPEN = new Set([
-	'if',
-	'while',
-	'for',
-	'until',
-	'case',
-	'select',
-	'function',
-	'coproc',
-	'time',
-	'{',
-	'(',
-	'[[',
-]);
-const RESERVED_CLOSE = new Set(['fi', 'done', 'esac', '}', ')', ']]']);
-/** Reserved words that neither open nor close: they only mark a position inside structure. */
-const RESERVED_INNER = new Set(['then', 'else', 'elif', 'do', 'in', '!', ';;']);
 
-/** `<<EOF`, `<< EOF`, `cat<<EOF`, `<<-EOF`, `<<'EOF'` — every spelling. */
-const HEREDOC = /<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/;
+/** Written by each stub after its argv, so multi-word arguments survive. */
+const RECORD_END = '<<<route-record-end>>>';
 
-export interface Statement {
-	tokens: string[];
-	/** Runs only if a neighbour succeeded or failed (`&&`, `||`), or sits in structure. */
-	conditional: boolean;
+/**
+ * Commands the sandbox provides. `cat` is a real passthrough because scripts
+ * read stdin through it; every other stub records its argv and exits 0.
+ * Unlisted commands do not exist inside the sandbox.
+ */
+const STUBBED = [
+	'pnpm',
+	'corepack',
+	'npx',
+	'node',
+	'tsx',
+	'deno',
+	'git',
+	'printf',
+	'echo',
+	'sed',
+	'awk',
+	'grep',
+	'find',
+	'rm',
+	'mkdir',
+	'cp',
+	'mv',
+	'touch',
+	'sleep',
+	'true',
+	'false',
+	'env',
+	'sh',
+	'bash',
+	'curl',
+	'wget',
+	'jq',
+	'make',
+	'ls',
+	'date',
+	'lsof',
+	'kill',
+];
+
+let sandbox: string | null = null;
+function sandboxBin(): string {
+	if (sandbox !== null) return sandbox;
+	const dir = mkdtempSync(join(tmpdir(), 'route-observe-'));
+	const bin = join(dir, 'bin');
+	mkdirSync(bin);
+	for (const name of STUBBED) {
+		const file = join(bin, name);
+		writeFileSync(
+			file,
+			`#!/bin/sh\nprintf '%s\\n' "$0" "$@" >> "$ROUTE_RECORD"\nprintf '%s\\n' '${RECORD_END}' >> "$ROUTE_RECORD"\nexit 0\n`,
+		);
+		chmodSync(file, 0o755);
+	}
+	writeFileSync(join(bin, 'cat'), '#!/bin/sh\nexec /bin/cat "$@"\n');
+	chmodSync(join(bin, 'cat'), 0o755);
+	sandbox = bin;
+	return bin;
 }
 
 /**
- * Quote-aware, heredoc-aware, structure-aware statement scanner.
+ * Every command the script ACTUALLY executes, as argv arrays.
  *
- * Returns every statement with a flag saying whether it is unconditionally
- * executed at top level. Callers count only the unconditional ones.
- *
- * Three things are deliberately NOT parsed, and each fails closed by producing
- * no counted statement: heredoc bodies (data, in any redirection spelling),
- * command substitutions (`$( … )`, whose contents run in a context this scanner
- * does not model), and anything inside shell structure.
+ * Returns an empty list when the script runs nothing, which is the honest
+ * answer for a heredoc body, a skipped branch, or a short-circuit that never
+ * fires.
  */
-export function statements(text: string): Statement[] {
-	const out: Statement[] = [];
-	let tokens: string[] = [];
-	let current = '';
-	let started = false;
-	let quote: string | null = null;
-	let conditional = false;
-	let depth = 0;
-	let heredoc: string | null = null;
-
-	const endToken = (): void => {
-		if (started) tokens.push(current);
-		current = '';
-		started = false;
-	};
-	const endStatement = (nextConditional: boolean): void => {
-		endToken();
-		if (tokens.length > 0) {
-			const opensStructure = tokens.some((t) => RESERVED_OPEN.has(t));
-			const marksStructure = tokens.some((t) => RESERVED_INNER.has(t));
-			for (const token of tokens) {
-				if (RESERVED_OPEN.has(token)) depth += 1;
-				else if (RESERVED_CLOSE.has(token)) depth = Math.max(0, depth - 1);
-			}
-			out.push({
-				tokens,
-				conditional: conditional || depth > 0 || opensStructure || marksStructure,
-			});
-		}
-		tokens = [];
-		conditional = nextConditional;
-	};
-
-	for (let i = 0; i < text.length; i += 1) {
-		const ch = text[i];
-
-		if (heredoc !== null) {
-			const lineEnd = text.indexOf('\n', i);
-			const line = text.slice(i, lineEnd === -1 ? text.length : lineEnd);
-			if (line.trim().replace(/^\t+/, '') === heredoc) heredoc = null;
-			if (lineEnd === -1) break;
-			i = lineEnd;
-			continue;
-		}
-
-		if (quote !== null) {
-			if (ch === quote) quote = null;
-			else current += ch;
-			continue;
-		}
-		if (ch === '\\') {
-			if (text[i + 1] === '\n') {
-				i += 1;
+export function observe(script: string, stdin = ''): string[][] {
+	const bin = sandboxBin();
+	const record = join(bin, `record-${Math.random().toString(36).slice(2)}.log`);
+	writeFileSync(record, '');
+	try {
+		spawnSync('/bin/bash', ['-c', script], {
+			env: { PATH: bin, ROUTE_RECORD: record, HOME: bin },
+			input: stdin,
+			timeout: 15_000,
+			encoding: 'utf8',
+		});
+		const argvs: string[][] = [];
+		let current: string[] = [];
+		for (const line of readFileSync(record, 'utf8').split('\n')) {
+			if (line === RECORD_END) {
+				if (current.length > 0) argvs.push(current);
+				current = [];
 				continue;
 			}
-			i += 1;
-			if (i < text.length) {
-				current += text[i];
-				started = true;
-			}
-			continue;
+			current.push(line);
 		}
-		// `$( … )` and `` ` … ` `` run commands in a context this scanner does not
-		// model. Skipping the whole span means nothing inside is ever counted.
-		if (ch === '$' && text[i + 1] === '(') {
-			let level = 1;
-			i += 2;
-			while (i < text.length && level > 0) {
-				if (text[i] === '(') level += 1;
-				else if (text[i] === ')') level -= 1;
-				i += 1;
-			}
-			i -= 1;
-			started = true;
-			continue;
-		}
-		if (ch === '`') {
-			i += 1;
-			while (i < text.length && text[i] !== '`') i += 1;
-			started = true;
-			continue;
-		}
-		if (ch === '"' || ch === "'") {
-			quote = ch;
-			started = true;
-			continue;
-		}
-		if (ch === '#' && !started) {
-			while (i < text.length && text[i] !== '\n') i += 1;
-			endStatement(false);
-			continue;
-		}
-		if (ch === '\n') {
-			// A heredoc redirection anywhere on the finished line arms the skip: the
-			// body begins after this newline, whatever spelling introduced it.
-			const lineStart = text.lastIndexOf('\n', i - 1) + 1;
-			const armed = HEREDOC.exec(text.slice(lineStart, i));
-			endStatement(false);
-			if (armed) heredoc = armed[2];
-			continue;
-		}
-		if (/\s/.test(ch)) {
-			endToken();
-			continue;
-		}
-		if (ch === '&' || ch === '|') {
-			const doubled = text[i + 1] === ch;
-			endStatement(doubled);
-			if (doubled) i += 1;
-			continue;
-		}
-		if (ch === ';') {
-			endStatement(false);
-			continue;
-		}
-		if (ch === '(' || ch === ')') {
-			// A bare paren is a subshell or a function body. Both are structure, so
-			// end the statement AND record the paren as its own structural token.
-			endStatement(false);
-			tokens = [ch];
-			endStatement(false);
-			continue;
-		}
-		current += ch;
-		started = true;
+		return argvs;
+	} finally {
+		rmSync(record, { force: true });
 	}
-	endStatement(false);
-	return out;
 }
 
-/** Unconditional top-level statements, reduced to command position. */
-export function commandSegments(text: string): string[][] {
-	return statements(text)
-		.filter((statement) => !statement.conditional)
-		.map((statement) => {
-			let rest = statement.tokens;
-			// `FOO=bar cmd` — assignments precede the command, they are not it.
-			while (rest.length > 0 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(rest[0])) rest = rest.slice(1);
-			for (;;) {
-				// A wrapper is transparent only when what follows is a command, not a
-				// flag: `corepack --help pnpm run x` runs no script.
-				if (rest.length > 1 && TRANSPARENT.has(rest[0]) && !rest[1].startsWith('-')) {
-					rest = rest.slice(1);
-					continue;
-				}
-				if (rest.length > 2 && rest[0] === 'pnpm' && (rest[1] === 'exec' || rest[1] === 'dlx')) {
-					rest = rest.slice(2);
-					continue;
-				}
-				break;
-			}
-			return rest;
-		})
-		.filter((tokens) => tokens.length > 0);
+/** Drop the wrappers that pass their tail through unchanged. */
+function unwrap(argv: string[]): string[] {
+	const rest = argv.slice();
+	// argv[0] arrives as the stub's absolute path.
+	rest[0] = basename(rest[0]);
+	for (;;) {
+		if (rest.length > 1 && TRANSPARENT.has(rest[0]) && !rest[1].startsWith('-')) {
+			rest.shift();
+			continue;
+		}
+		if (rest.length > 2 && rest[0] === 'pnpm' && (rest[1] === 'exec' || rest[1] === 'dlx')) {
+			rest.splice(0, 2);
+			continue;
+		}
+		break;
+	}
+	return rest;
 }
 
 /**
- * The router's OWN arguments, for the statement that executes
- * `scripts/migration-route.ts`, or null when no statement does.
+ * The router's OWN arguments, for an observed argv that executes
+ * `scripts/migration-route.ts`, or null when nothing observed does.
  *
- * The operand is found positionally, and every flag before it must be on the
- * allowlist: an unknown flag rejects the statement outright rather than being
- * stepped over. `node -e ""` and `node --v8-options` both reject; `node
- * other.ts scripts/migration-route.ts` rejects because the operand is
- * `other.ts` and the router path is merely its argument.
+ * The shell has already answered "did this run"; this answers "does running it
+ * run the router". The operand is found positionally and every flag before it
+ * must be on the allowlist, so `node -e ""` and `node --v8-options` reject
+ * (they run something other than the file) and `node other.ts <router>` rejects
+ * (the router is an argument to another program).
  */
-export function routerSegment(text: string): string[] | null {
-	for (const tokens of commandSegments(text)) {
+export function routerSegment(script: string, stdin = ''): string[] | null {
+	for (const observed of observe(script, stdin)) {
+		const tokens = unwrap(observed);
 		let i = 0;
 		if (tokens[i] === 'deno') {
 			if (tokens[i + 1] !== 'run') continue;
@@ -599,8 +553,6 @@ export function routerSegment(text: string): string[] | null {
 		let rejected = false;
 		while (i < tokens.length && tokens[i].startsWith('-')) {
 			const flag = tokens[i].split('=')[0];
-			// deno's permission flags are boolean and numerous; they do not change
-			// which script runs.
 			const denoPermission = tokens[0] === 'deno' && /^--allow-|^--deny-|^--no-/.test(flag);
 			if (RUNNER_BOOLEAN_FLAGS.has(flag) || denoPermission) i += 1;
 			else if (RUNNER_VALUE_FLAGS.has(flag)) i += tokens[i].includes('=') ? 1 : 2;
@@ -617,15 +569,15 @@ export function routerSegment(text: string): string[] | null {
 }
 
 /**
- * True when some unconditional statement RUNS `pnpm [run] <command>`.
+ * True when running `script` actually executes `pnpm [run] <command>`.
  *
- * Only `-s` / `--silent` may precede it. `--help` runs nothing, and `--filter`
- * chooses which workspace projects run — `pnpm --filter __no_match__ <script>`
- * exits 0 having run nothing at all — so both reject, along with every other
- * flag this guard has not been taught.
+ * Only `-s` / `--silent` may precede it: `--help` runs nothing, and `--filter`
+ * chooses which workspace projects run, so `pnpm --filter __no_match__ <script>`
+ * exits 0 having run nothing at all.
  */
-export function invokesScript(text: string, command: string): boolean {
-	for (const tokens of commandSegments(text)) {
+export function invokesScript(script: string, command: string): boolean {
+	for (const observed of observe(script)) {
+		const tokens = unwrap(observed);
 		if (tokens[0] !== 'pnpm') continue;
 		let i = 1;
 		let rejected = false;
@@ -666,48 +618,96 @@ export function activeRunCommands(workflow: string): string[] {
 		// then reports it, which is the safe error.
 		.map((line) => line.replace(/(^|\s)#.*$/, '$1').trimEnd());
 
-	// indent -> an `if:` was seen in the block currently open at that indent.
-	const guarded = new Map<number, boolean>();
-	const clearFrom = (indent: number): void => {
-		for (const key of [...guarded.keys()]) if (key >= indent) guarded.delete(key);
+	const indentOf = (line: string): number => line.length - line.trimStart().length;
+	const keyOf = (line: string): { indent: number; key: string; rest: string } | null => {
+		const match = /^(\s*)(-\s+)?([A-Za-z_][\w.-]*):(.*)$/.exec(line);
+		if (!match) return null;
+		return {
+			indent: match[1].length + (match[2] ? match[2].length : 0),
+			key: match[3],
+			rest: match[4],
+		};
 	};
-	const inGuardedScope = (indent: number): boolean => {
-		for (const [key, seen] of guarded) if (seen && key <= indent) return true;
-		return false;
+
+	/**
+	 * The line range of the mapping a key belongs to: from the `- ` bullet or
+	 * first sibling that opens it, to the last line still inside it.
+	 *
+	 * YAML mappings are UNORDERED, so a one-pass scanner that credits `run:`
+	 * before reaching a later sibling `if:` credits a step that never runs. Each
+	 * enclosing mapping is therefore read WHOLE before the decision.
+	 */
+	const blockOf = (at: number, indent: number): [number, number] => {
+		let start = at;
+		for (let i = at - 1; i >= 0; i -= 1) {
+			if (lines[i].trim() === '') continue;
+			const ind = indentOf(lines[i]);
+			const bullet = /^\s*-\s+/.test(lines[i]);
+			if (bullet && ind + 2 === indent) {
+				start = i;
+				break;
+			}
+			if (ind < indent) break;
+			if (ind === indent) start = i;
+		}
+		let end = at;
+		for (let i = at + 1; i < lines.length; i += 1) {
+			if (lines[i].trim() === '') continue;
+			const ind = indentOf(lines[i]);
+			if (ind < indent) break;
+			if (/^\s*-\s+/.test(lines[i]) && ind + 2 === indent) break;
+			end = i;
+		}
+		return [start, end];
+	};
+
+	/** Does this scope, or any scope enclosing it, declare an `if:` — in either key order? */
+	const guarded = (at: number, indent: number): boolean => {
+		let scopeIndent = indent;
+		let cursor = at;
+		for (;;) {
+			const [start, end] = blockOf(cursor, scopeIndent);
+			for (let i = start; i <= end; i += 1) {
+				const key = keyOf(lines[i]);
+				if (key && key.key === 'if' && key.indent === scopeIndent) return true;
+			}
+			// Climb: the first line above this mapping that is less indented opens
+			// the enclosing one. A job-level `if:` kills every step inside it.
+			let outer = -1;
+			for (let i = start - 1; i >= 0; i -= 1) {
+				if (lines[i].trim() === '') continue;
+				if (indentOf(lines[i]) < indentOf(lines[start])) {
+					outer = i;
+					break;
+				}
+			}
+			if (outer === -1) return false;
+			const key = keyOf(lines[outer]);
+			if (!key) return false;
+			cursor = outer;
+			scopeIndent = key.indent;
+		}
 	};
 
 	const commands: string[] = [];
 	for (let i = 0; i < lines.length; i += 1) {
-		const line = lines[i];
-		if (line.trim() === '') continue;
-		const bullet = /^(\s*)-\s+/.exec(line);
-		const raw = line.length - line.trimStart().length;
-		// A new list item starts a new step: whatever the previous one declared
-		// stops applying.
-		if (bullet) clearFrom(bullet[1].length);
-		const keyMatch = /^(\s*)(?:-\s+)?([A-Za-z_][\w.-]*):(.*)$/.exec(line);
-		if (!keyMatch) continue;
-		const indent = keyMatch[1].length + (line.slice(keyMatch[1].length).startsWith('- ') ? 2 : 0);
-		const key = keyMatch[2];
-		// A sibling key at this indent closes any deeper block.
-		clearFrom(indent + 1);
-		if (key === 'if') {
-			guarded.set(indent, true);
-			continue;
-		}
-		if (key !== 'run') continue;
-		if (inGuardedScope(indent)) continue;
-		const inline = keyMatch[3].trim();
+		const key = keyOf(lines[i]);
+		if (!key || key.key !== 'run') continue;
+		if (guarded(i, key.indent)) continue;
+		const inline = key.rest.trim();
 		if (inline !== '' && !/^[|>][-+\d]*$/.test(inline)) {
 			commands.push(inline);
 			continue;
 		}
 		// Block scalar: every following line indented past the key belongs to it.
+		const raw = indentOf(lines[i]);
+		const body: string[] = [];
 		for (let j = i + 1; j < lines.length; j += 1) {
 			if (lines[j].trim() === '') continue;
-			if (lines[j].length - lines[j].trimStart().length <= raw) break;
-			commands.push(lines[j].trim());
+			if (indentOf(lines[j]) <= raw) break;
+			body.push(lines[j].trim());
 		}
+		if (body.length > 0) commands.push(body.join('\n'));
 	}
 	return commands;
 }
@@ -720,14 +720,17 @@ export function reachabilityFailures(
 ): string[] {
 	const problems: string[] = [];
 
-	const activeRuns = activeRunCommands(workflow).join('\n');
-	const invokedInCI = (command: string): boolean => invokesScript(activeRuns, command);
+	// Each step's payload is observed on its own: one step's `exit` must not
+	// decide whether a later step's command counts.
+	const runPayloads = activeRunCommands(workflow);
+	const invokedInCI = (command: string): boolean =>
+		runPayloads.some((payload) => invokesScript(payload, command));
 
 	const allArgv = scripts['migration:all'] ?? '';
-	// EVERY flag below is read off the ROUTER SEGMENT, never off the whole script
+	// EVERY flag below is read off the OBSERVED router argv, never off the script
 	// text. `echo tsx scripts/migration-route.ts --all --run --tier all` carries
-	// every flag this guard looks for and runs nothing; its head is `echo`, so
-	// `routerSegment` returns null and those flags are never consulted.
+	// every flag this guard looks for and executes nothing, so nothing is
+	// observed and those flags are never consulted.
 	const routerArgv = routerSegment(allArgv);
 	const allIsRouter = routerArgv !== null;
 	if (!allIsRouter) {
@@ -771,12 +774,12 @@ export function reachabilityFailures(
 
 	// The hook is the ONLY runner a push-tier suite has once CI excludes it, so
 	// its tier is evidence of nothing until something confirms the hook still
-	// RUNS the router with --run.
-	const hookActive = hook
-		.split('\n')
-		.filter((line) => !/^\s*#/.test(line))
-		.join('\n');
-	const hookArgv = routerSegment(hookActive);
+	// RUNS the router with --run. It is run whole, with the stdin git gives it,
+	// so its own conditionals decide for themselves.
+	const PUSH_REFS =
+		'refs/heads/main 1111111111111111111111111111111111111111 ' +
+		'refs/heads/main 2222222222222222222222222222222222222222\n';
+	const hookArgv = routerSegment(hook, PUSH_REFS);
 	const hookRuns = hookArgv !== null && hookArgv.includes('--run');
 	if (!hookRuns) {
 		problems.push(
@@ -1024,19 +1027,19 @@ const SELF_CHECKS: {
 	},
 	{
 		id: 'RX-27',
-		what: 'the router sits in a `select` body — a reserved word an earlier hand-picked list missed',
+		what: 'the router sits in a loop body that never executes',
 		expect: 'does not invoke scripts/migration-route.ts --run',
 		scripts: {
 			'migration:all':
 				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
 		},
 		workflow: GOOD_WORKFLOW,
-		hook: 'select x in a b; do\n\ttsx scripts/migration-route.ts --run\ndone\n',
+		hook: 'while false; do\n\ttsx scripts/migration-route.ts --run\ndone\n',
 		suites: [{ command: 'migration:c3', tier: 'push' }],
 	},
 	{
 		id: 'RX-28',
-		what: 'the router sits in a subshell-bodied function definition',
+		what: 'the router sits in a subshell-bodied function that is defined and never called',
 		expect: 'does not invoke scripts/migration-route.ts --run',
 		scripts: {
 			'migration:all':
@@ -1046,17 +1049,68 @@ const SELF_CHECKS: {
 		hook: 'route() (\n\ttsx scripts/migration-route.ts --run\n)\n',
 		suites: [{ command: 'migration:c3', tier: 'push' }],
 	},
+	// THE OBSERVED-CONTEXT FAMILY. Each is a command the shell parses fine and
+	// never executes. None of these is decided by reading text: the script runs
+	// under the sandbox and nothing is recorded.
 	{
-		id: 'RX-29',
-		what: 'the router runs only inside a command substitution, whose context this scanner does not model',
+		id: 'RX-30',
+		what: 'the router sits in the SECOND of two heredoc bodies',
 		expect: 'does not invoke scripts/migration-route.ts --run',
 		scripts: {
 			'migration:all':
 				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
 		},
 		workflow: GOOD_WORKFLOW,
-		hook: 'OUT=$(tsx scripts/migration-route.ts --run)\n',
+		hook: 'cat <<A > /tmp/a\nfirst\nA\ncat <<B > /tmp/b\ntsx scripts/migration-route.ts --run\nB\n',
 		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-31',
+		what: 'a plain `<<EOF` body whose terminator is indented, so the body never ends where a naive scan thinks',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'cat <<EOF > /tmp/a\ntsx scripts/migration-route.ts --run\n  EOF\ncorepack pnpm run lint\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-32',
+		what: 'the step `if:` comes AFTER its `run:` — YAML mappings are unordered',
+		expect: 'never invoked by an active ci.yml step',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow: '      - run: pnpm run migration:all\n        if: false\n',
+	},
+	{
+		id: 'RX-33',
+		what: 'the job `if:` comes after the steps it disables',
+		expect: 'never invoked by an active ci.yml step',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow:
+			'jobs:\n  migration:\n    steps:\n      - run: pnpm run migration:all\n    if: false\n',
+	},
+	{
+		id: 'RX-34',
+		what: 'the router sits in a `case` branch whose pattern does not match',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'case zzz in\n  aaa) tsx scripts/migration-route.ts --run ;;\nesac\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-35',
+		what: 'an escaped quote inside an echo argument, with a router-looking tail',
+		expect: 'not run scripts/migration-route.ts in command position',
+		scripts: {
+			'migration:all': 'echo "he said \\" ; tsx scripts/migration-route.ts --all --run --tier all"',
+		},
+		workflow: GOOD_WORKFLOW,
 	},
 	// THE NO-OP FAMILY. Each is a command that runs and executes no suite: a
 	// terminal runner flag, a filter that matches no project, a short-circuit
@@ -1211,6 +1265,20 @@ function selfCheckFailures(): string[] {
 			scripts: { 'migration:all': GOOD_ALL },
 			workflow: '      - run: |\n          pnpm run \\\n            migration:all\n',
 			hook: GOOD_HOOK,
+		},
+		{
+			id: 'RX-00l',
+			what: 'a conditional whose condition holds — the body really does run',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow: GOOD_WORKFLOW,
+			hook: 'if true; then\n\ttsx scripts/migration-route.ts --run\nfi\n',
+		},
+		{
+			id: 'RX-00k',
+			what: 'the hook runs the router inside a command substitution — which really does run it',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow: GOOD_WORKFLOW,
+			hook: 'OUT=$(tsx scripts/migration-route.ts --run)\n',
 		},
 		{
 			id: 'RX-00j',
