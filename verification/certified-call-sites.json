@@ -1,0 +1,19 @@
+{
+	"_why": "Eleven review rounds tried to decide, from the text of a shell script and a YAML workflow, whether the migration router is actually invoked. Parsing never finished; executing under stubs was neither faithful nor sealed; certifying a canonical line still left the container able to change its meaning (an array assignment, an escaped quote, a folded YAML scalar). This file ends the argument: the three call sites are FINGERPRINTED, and the guard compares bytes. Any edit to a call site fails `pnpm migration:route:controls` until a human re-records it here, which is what 'certified' has to mean when the alternative is a shell parser.",
+	"_how_to_update": "Change the call site, then run `pnpm migration:route:controls --record` and review the diff to this file in the same commit as the change. Re-recording is a deliberate act; a reviewer seeing this file move should ask what moved with it.",
+	"scripts": {
+		"migration:all": "tsx scripts/migration-route.ts --all --run --tier all --exclude migration:controls,migration:c3,migration:c3:controls"
+	},
+	"named_in_ci": ["migration:all", "migration:controls"],
+	"files": {
+		".husky/pre-push": {
+			"sha256": "bcb32b53f199502eeeca0aeadeaee20c4c4ac268f4b3bbfbb8acaa85fd17e539",
+			"certifies": "step 7 runs `printf '%s\\n' \"$PUSH_REFS\" | corepack pnpm exec tsx scripts/migration-route.ts --run || exit 1` unconditionally at top level, which is the only runner the push-tier suites have"
+		},
+		".github/workflows/ci.yml": {
+			"sha256": "bfd79495b8bdb8862652967b02fd69bc9cbe71e1a52e9888885508723d961bdb",
+			"certifies": "the `migration` job runs `pnpm run migration:all` in an unconditional step, and `migration-controls` runs `pnpm run migration:controls` in its own job"
+		}
+	},
+	"_named_in_ci_why": "Suites a ci.yml step names directly. Certified by the workflow fingerprint above, not by scanning the YAML: reading a `run:` payload out of its mapping is the inference this file exists to retire."
+}

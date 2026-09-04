@@ -22,6 +22,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -377,230 +378,114 @@ function baseline(control: Control): string {
  */
 
 /**
- * THE EXACT FORMS. Not a pattern with room in it — the whole string.
+ * FINGERPRINTS, NOT INFERENCE.
  *
- * `migration:all` is certified by matching its ENTIRE script text. A round-10
- * probe showed why a permissive tail is not enough: `--list` passed an anchored
- * pattern that allowed arbitrary router flags, and `--list` exits 0 after
- * PRINTING thirty suite names and running none of them. The tier and the
- * exclusions are read out of this match, so the guard and the router cannot
- * disagree about them either.
+ * Eleven review rounds tried to decide, from the TEXT of a shell script and a
+ * YAML workflow, whether the router is actually invoked. Three strategies were
+ * tried and all three leaked:
+ *
+ *   PARSING (rounds 2-7)  never finished. Quoted separators, inline comments,
+ *                         heredocs in five spellings, short-circuits, block
+ *                         bodies, `case` patterns, escapes inside quotes.
+ *   EXECUTING (round 8)   answered the shell questions and opened new ones. All
+ *                         stubs exited 0, the sandbox was a PATH rather than a
+ *                         jail, and the script under test could write the record
+ *                         it was judged by.
+ *   CERTIFYING A LINE     still left the CONTAINER able to change the line's
+ *   (rounds 9-10)         meaning: a Bash array assignment, an escaped quote
+ *                         spanning lines, a folded `>` YAML scalar.
+ *
+ * Every one of those was a model of another language's semantics, and every
+ * model had an edge its author had not met yet. So the guard stops modelling.
+ * The three call sites are FINGERPRINTED in
+ * `verification/certified-call-sites.json`, and this check compares bytes:
+ * `migration:all` against a recorded exact string, `.husky/pre-push` and
+ * `.github/workflows/ci.yml` against recorded SHA-256 digests.
+ *
+ * A call site that changes fails this guard until a human re-records it. That
+ * friction is the point — re-recording is the human decision that the changed
+ * call site still runs what it claims — and it is the only version of this
+ * check whose correctness does not depend on out-parsing a shell.
+ *
+ * What stays computed rather than recorded: the tier and the exclusions are
+ * read out of the certified string, and every excluded name must be a
+ * registered suite, exactly as `excluded()` in the router requires. The guard
+ * and the router cannot disagree about a suite that does not exist.
  */
-const CANONICAL_ALL =
-	/^tsx scripts\/migration-route\.ts --all --run --tier (push|ci|all)(?: --exclude ([\w:.,-]+))?$/;
+
+/** The certified form, as a token sequence. Nothing else is accepted. */
+const CERTIFIED_PREFIX = ['tsx', 'scripts/migration-route.ts', '--all', '--run', '--tier'];
+const TIERS = new Set(['push', 'ci', 'all']);
+
+export interface CallSiteManifest {
+	scripts: Record<string, string>;
+	/** Suites a ci.yml step names directly, certified by the workflow fingerprint. */
+	named_in_ci: string[];
+	files: Record<string, { sha256: string; certifies?: string }>;
+}
+
+export function readManifest(): CallSiteManifest {
+	return JSON.parse(
+		readFileSync(join(REPO_ROOT, 'verification/certified-call-sites.json'), 'utf8'),
+	) as CallSiteManifest;
+}
+
+export const digest = (text: string): string =>
+	createHash('sha256').update(text, 'utf8').digest('hex');
 
 /**
- * The hook's router line, whole. `--run` is the only argv the hook may pass:
- * it routes by changed surface, which is the entire point of running it there.
+ * The tier and exclusions of a certified `migration:all`, or a diagnostic.
+ *
+ * The string is split on single spaces with NO normalisation: a newline, a tab
+ * or a doubled space is a different string and is refused, because in a shell a
+ * newline between `--tier` and its value is two commands.
  */
-const CANONICAL_HOOK =
-	/^(?:printf '%s\\n' "\$PUSH_REFS" \| )?(?:corepack )?(?:pnpm exec )?tsx scripts\/migration-route\.ts --run(?: \|\| exit \d+)?$/;
+export function certifiedAll(
+	argv: string,
+	suites: readonly { command: string }[],
+): { tier: 'push' | 'ci' | 'all'; excluded: Set<string> } | string {
+	if (/[^A-Za-z0-9 :,./_-]/.test(argv)) {
+		return `migration:all contains a character the certified form does not allow (a newline, quote or shell operator): ${JSON.stringify(argv)}`;
+	}
+	const tokens = argv.split(' ');
+	for (let i = 0; i < CERTIFIED_PREFIX.length; i += 1) {
+		if (tokens[i] !== CERTIFIED_PREFIX[i]) {
+			return `migration:all is not the certified invocation \`${CERTIFIED_PREFIX.join(' ')} <push|ci|all> [--exclude <names>]\`: ${argv || '(missing script)'}`;
+		}
+	}
+	const tier = tokens[CERTIFIED_PREFIX.length];
+	if (!TIERS.has(tier)) return `migration:all names an unknown --tier: ${tier ?? '(none)'}`;
+	const rest = tokens.slice(CERTIFIED_PREFIX.length + 1);
+	if (rest.length === 0) return { tier: tier as 'push' | 'ci' | 'all', excluded: new Set() };
+	if (rest.length !== 2 || rest[0] !== '--exclude') {
+		return `migration:all carries arguments the certified form does not allow: ${rest.join(' ')}`;
+	}
+	const names = rest[1].split(',').filter(Boolean);
+	const known = new Set(suites.map((suite) => suite.command));
+	const unknown = names.filter((name) => !known.has(name));
+	if (unknown.length > 0) {
+		// The router itself exits 1 on this. A guard that accepted it would be
+		// certifying a command that cannot run.
+		return `migration:all excludes ${unknown.length} name(s) that are not registered suites, which the router rejects at startup: ${unknown.join(', ')}`;
+	}
+	return { tier: tier as 'push' | 'ci' | 'all', excluded: new Set(names) };
+}
 
-/** A suite invocation inside a workflow step, whole. */
-const canonicalSuite = (command: string): RegExp =>
-	new RegExp(
-		`^(?:corepack )?pnpm(?: -s| --silent)?(?: run)? ${command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+/** Does this text match the digest recorded for that call site? */
+export function fingerprintFailure(
+	path: string,
+	text: string,
+	manifest: CallSiteManifest,
+): string | null {
+	const recorded = manifest.files[path];
+	if (recorded === undefined) return `${path} has no recorded fingerprint`;
+	const actual = digest(text);
+	if (actual === recorded.sha256) return null;
+	return (
+		`${path} does not match its recorded fingerprint — recorded ${recorded.sha256.slice(0, 12)}, ` +
+		`found ${actual.slice(0, 12)}. It certifies: ${recorded.certifies ?? '(no note)'}. ` +
+		`If the change is intended, re-record with \`pnpm migration:route:controls --record\` in the same commit.`
 	);
-
-/** Openers and closers, for the one question left: is this line inside a block? */
-const BLOCK_OPEN = /^(?:if|while|until|for|case|select|coproc|function)\b|^\{$|^\(|^\w+\s*\(\)/;
-const BLOCK_CLOSE = /^(?:fi|done|esac)\b|^\}$|^\)$/;
-
-/**
- * Constructs that make a shell file uncertifiable, whatever else it contains.
- *
- * Each one lets a line LOOK top level while being something else, and each was
- * demonstrated against an earlier version of this guard: a heredoc body, a
- * process substitution, a quote left open across lines, and a line ending in an
- * operator so the next line is its conditional right-hand side. Rather than
- * model any of them, the file is refused — and a refused file is REPORTED as
- * having no invocation, which is the fail-closed direction.
- */
-function uncertifiableShell(text: string): boolean {
-	if (/<<|<\(|>\(/.test(text)) return true;
-	const joined = text.replace(/\\\n\s*/g, ' ');
-	for (const raw of joined.split('\n')) {
-		const line = raw.replace(/(^|\s)#.*$/, '$1').trim();
-		if (line === '') continue;
-		// An odd number of either quote leaves the quote open across lines.
-		if ((line.match(/'/g) ?? []).length % 2 !== 0) return true;
-		if ((line.match(/"/g) ?? []).length % 2 !== 0) return true;
-		// A trailing operator makes the NEXT line conditional or piped-into.
-		if (/(?:&&|\|\||\||&)$/.test(line)) return true;
-	}
-	return false;
-}
-
-/** Lines with comments removed, continuations joined, whitespace collapsed. */
-function shellLines(text: string): string[] {
-	return text
-		.replace(/\\\n\s*/g, ' ')
-		.split('\n')
-		.map((line) =>
-			line
-				.replace(/(^|\s)#.*$/, '$1')
-				.replace(/\s+/g, ' ')
-				.trim(),
-		)
-		.filter((line) => line !== '');
-}
-
-/**
- * Depth contributed by an unbalanced command substitution or backtick on this
- * line. `X=$(cat)` is balanced and contributes nothing.
- */
-function spanDepth(line: string): number {
-	const opens = (line.match(/\$\(/g) ?? []).length;
-	const closes = (line.match(/\)/g) ?? []).length;
-	const ticks = (line.match(/`/g) ?? []).length;
-	return Math.max(0, opens - closes) + (ticks % 2);
-}
-
-/** Does a certifiable file contain the canonical hook invocation at top level? */
-export function hookRunsRouter(text: string): boolean {
-	if (uncertifiableShell(text)) return false;
-	let depth = 0;
-	for (const line of shellLines(text)) {
-		if (BLOCK_CLOSE.test(line)) depth = Math.max(0, depth - 1);
-		if (depth === 0 && CANONICAL_HOOK.test(line)) return true;
-		if (BLOCK_OPEN.test(line)) depth += 1;
-		depth += spanDepth(line);
-	}
-	return false;
-}
-
-/** True when a certifiable step payload runs `pnpm [run] <command>` at top level. */
-export function invokesScript(text: string, command: string): boolean {
-	if (uncertifiableShell(text)) return false;
-	const pattern = canonicalSuite(command);
-	let depth = 0;
-	for (const line of shellLines(text)) {
-		if (BLOCK_CLOSE.test(line)) depth = Math.max(0, depth - 1);
-		if (depth === 0 && pattern.test(line)) return true;
-		if (BLOCK_OPEN.test(line)) depth += 1;
-		depth += spanDepth(line);
-	}
-	return false;
-}
-
-/**
- * A workflow this guard will read at all.
- *
- * It reads plain `key: value` YAML. A quoted key (`"if":`) or a space before
- * the colon (`if : false`) is the same mapping to a YAML parser and a different
- * one to this reader, so a workflow using either is refused rather than
- * half-understood.
- */
-export function uncertifiableWorkflow(workflow: string): boolean {
-	for (const raw of workflow.split('\n')) {
-		const line = raw.replace(/(^|\s)#.*$/, '$1');
-		if (line.trim() === '') continue;
-		if (/^\s*(?:-\s+)?['"][\w.-]+['"]\s*:/.test(line)) return true;
-		if (/^\s*(?:-\s+)?[\w.-]+\s+:/.test(line)) return true;
-	}
-	return false;
-}
-
-export function activeRunCommands(workflow: string): string[] {
-	const lines = workflow
-		.split('\n')
-		// A `#` opens a comment at line start or after whitespace. Stripping is the
-		// fail-closed direction: over-stripping hides an invocation and this guard
-		// then reports it, which is the safe error.
-		.map((line) => line.replace(/(^|\s)#.*$/, '$1').trimEnd());
-
-	const indentOf = (line: string): number => line.length - line.trimStart().length;
-	const keyOf = (line: string): { indent: number; key: string; rest: string } | null => {
-		const match = /^(\s*)(-\s+)?([A-Za-z_][\w.-]*):(.*)$/.exec(line);
-		if (!match) return null;
-		return {
-			indent: match[1].length + (match[2] ? match[2].length : 0),
-			key: match[3],
-			rest: match[4],
-		};
-	};
-
-	/**
-	 * The line range of the mapping a key belongs to: from the `- ` bullet or
-	 * first sibling that opens it, to the last line still inside it.
-	 *
-	 * YAML mappings are UNORDERED, so a one-pass scanner that credits `run:`
-	 * before reaching a later sibling `if:` credits a step that never runs. Each
-	 * enclosing mapping is therefore read WHOLE before the decision.
-	 */
-	const blockOf = (at: number, indent: number): [number, number] => {
-		let start = at;
-		for (let i = at - 1; i >= 0; i -= 1) {
-			if (lines[i].trim() === '') continue;
-			const ind = indentOf(lines[i]);
-			const bullet = /^\s*-\s+/.test(lines[i]);
-			if (bullet && ind + 2 === indent) {
-				start = i;
-				break;
-			}
-			if (ind < indent) break;
-			if (ind === indent) start = i;
-		}
-		let end = at;
-		for (let i = at + 1; i < lines.length; i += 1) {
-			if (lines[i].trim() === '') continue;
-			const ind = indentOf(lines[i]);
-			if (ind < indent) break;
-			if (/^\s*-\s+/.test(lines[i]) && ind + 2 === indent) break;
-			end = i;
-		}
-		return [start, end];
-	};
-
-	/** Does this scope, or any scope enclosing it, declare an `if:` — in either key order? */
-	const guarded = (at: number, indent: number): boolean => {
-		let scopeIndent = indent;
-		let cursor = at;
-		for (;;) {
-			const [start, end] = blockOf(cursor, scopeIndent);
-			for (let i = start; i <= end; i += 1) {
-				const key = keyOf(lines[i]);
-				if (key && key.key === 'if' && key.indent === scopeIndent) return true;
-			}
-			// Climb: the first line above this mapping that is less indented opens
-			// the enclosing one. A job-level `if:` kills every step inside it.
-			let outer = -1;
-			for (let i = start - 1; i >= 0; i -= 1) {
-				if (lines[i].trim() === '') continue;
-				if (indentOf(lines[i]) < indentOf(lines[start])) {
-					outer = i;
-					break;
-				}
-			}
-			if (outer === -1) return false;
-			const key = keyOf(lines[outer]);
-			if (!key) return false;
-			cursor = outer;
-			scopeIndent = key.indent;
-		}
-	};
-
-	const commands: string[] = [];
-	for (let i = 0; i < lines.length; i += 1) {
-		const key = keyOf(lines[i]);
-		if (!key || key.key !== 'run') continue;
-		if (guarded(i, key.indent)) continue;
-		const inline = key.rest.trim();
-		if (inline !== '' && !/^[|>][-+\d]*$/.test(inline)) {
-			commands.push(inline);
-			continue;
-		}
-		// Block scalar: every following line indented past the key belongs to it.
-		const raw = indentOf(lines[i]);
-		const body: string[] = [];
-		for (let j = i + 1; j < lines.length; j += 1) {
-			if (lines[j].trim() === '') continue;
-			if (indentOf(lines[j]) <= raw) break;
-			body.push(lines[j].trim());
-		}
-		if (body.length > 0) commands.push(body.join('\n'));
-	}
-	return commands;
 }
 
 export function reachabilityFailures(
@@ -608,61 +493,42 @@ export function reachabilityFailures(
 	workflow: string,
 	hook: string,
 	suites: readonly { command: string; tier: 'push' | 'ci' }[] = SUITES,
+	manifest: CallSiteManifest = readManifest(),
 ): string[] {
 	const problems: string[] = [];
 
-	// A workflow this reader cannot read plainly is refused whole: a quoted key
-	// or a space before the colon is the same mapping to YAML and a different one
-	// here, and half-understood is the state this guard exists to avoid.
-	if (uncertifiableWorkflow(workflow)) {
-		problems.push(
-			'ci.yml uses a YAML spelling this guard does not read plainly (a quoted key, or a space before a colon) — no step can be certified',
-		);
-	}
-	// Each step's payload is certified on its own: one step's text must not
-	// decide whether a later step's command counts.
-	const runPayloads = uncertifiableWorkflow(workflow) ? [] : activeRunCommands(workflow);
-	const invokedInCI = (command: string): boolean =>
-		runPayloads.some((payload) => invokesScript(payload, command));
+	// 1. The workflow, byte for byte. Its recorded fingerprint certifies that an
+	//    unconditional step runs `pnpm run migration:all` and that
+	//    `migration-controls` has its own job.
+	const workflowFailure = fingerprintFailure('.github/workflows/ci.yml', workflow, manifest);
+	if (workflowFailure !== null) problems.push(workflowFailure);
+	const allInvoked = workflowFailure === null;
 
-	const allArgv = (scripts['migration:all'] ?? '').trim().replace(/\s+/g, ' ');
-	// The WHOLE script text must be the permitted form. Reading flags out of a
-	// pattern that allowed a free tail is how `--list` — which prints thirty
-	// suite names and runs none — passed an earlier version of this check.
-	const canonical = CANONICAL_ALL.exec(allArgv);
-	if (canonical === null) {
-		problems.push(
-			`migration:all is not the certified invocation \`tsx scripts/migration-route.ts --all --run --tier <push|ci|all> [--exclude <names>]\`: ${allArgv || '(missing script)'}`,
-		);
-	}
-	const allTier = (canonical?.[1] ?? 'push') as 'push' | 'ci' | 'all';
-	// Read from the same match the router's own argv is certified by, so the two
-	// cannot disagree about what is excluded.
-	const allExcluded = new Set(
-		(canonical?.[2] ?? '')
-			.split(',')
-			.map((n) => n.trim())
-			.filter(Boolean),
-	);
-	const allCertified = canonical !== null;
+	// 2. The hook, byte for byte. Its fingerprint certifies that step 7 runs the
+	//    router unconditionally at top level — the only runner push-tier suites
+	//    have once CI excludes them.
+	const hookFailure = fingerprintFailure('.husky/pre-push', hook, manifest);
+	if (hookFailure !== null) problems.push(hookFailure);
+	const hookRuns = hookFailure === null;
 
-	const allInvoked = invokedInCI('migration:all');
-	if (!allInvoked) {
+	// 3. `migration:all` against the recorded string, and the recorded string
+	//    against the certified form. Two comparisons, because a fingerprint that
+	//    recorded a broken invocation would certify the breakage.
+	const allArgv = scripts['migration:all'] ?? '';
+	const recordedAll = manifest.scripts['migration:all'] ?? '';
+	if (allArgv !== recordedAll) {
 		problems.push(
-			'migration:all is never invoked by an active ci.yml step — the suites it selects reach no runner',
+			`migration:all does not match its recorded string — recorded ${JSON.stringify(recordedAll)}, found ${JSON.stringify(allArgv)}`,
 		);
 	}
-
-	// The hook is the ONLY runner a push-tier suite has once CI excludes it, so
-	// its tier is evidence of nothing until something confirms the hook still
-	// RUNS the router with --run. It is run whole, with the stdin git gives it,
-	// so its own conditionals decide for themselves.
-	const hookRuns = hookRunsRouter(hook);
-	if (!hookRuns) {
-		problems.push(
-			'.husky/pre-push does not invoke scripts/migration-route.ts --run — push-tier suites have no runner at all',
-		);
-	}
+	// Exclusion names are checked against the REAL registry, never the fixture
+	// list a control passes in: the question is whether the router would accept
+	// them, and the router reads SUITES.
+	const certified = certifiedAll(recordedAll, SUITES);
+	if (typeof certified === 'string') problems.push(certified);
+	const allCertified = typeof certified !== 'string' && allArgv === recordedAll;
+	const allTier = typeof certified === 'string' ? 'push' : certified.tier;
+	const allExcluded = typeof certified === 'string' ? new Set<string>() : certified.excluded;
 
 	// THREE WAYS A SUITE CAN BE REACHED, and no fourth:
 	//   1. `migration:all` selects AND runs it, it is the router, and an active
@@ -685,7 +551,10 @@ export function reachabilityFailures(
 				(allTier === 'all' || suite.tier === allTier) &&
 				!allExcluded.has(suite.command);
 			const viaHook = suite.tier === 'push' && hookRuns;
-			return !viaAll && !invokedInCI(suite.command) && !viaHook;
+			// A suite named by its own ci.yml step: certified by the workflow
+			// fingerprint, not by reading a `run:` payload out of its mapping.
+			const viaNamedStep = allInvoked && (manifest.named_in_ci ?? []).includes(suite.command);
+			return !viaAll && !viaNamedStep && !viaHook;
 		})
 		.map((s) => s.command);
 	if (unreached.length > 0) {
@@ -702,469 +571,147 @@ export function reachabilityFailures(
  * deliberately broken invocation chain and asserts the guard reports it. They
  * are pure string inputs, so they neither mutate the tree nor depend on it.
  */
-const GOOD_ALL = 'tsx scripts/migration-route.ts --all --run --tier all';
-const GOOD_HOOK =
-	'printf \'%s\\n\' "$PUSH_REFS" | corepack pnpm exec tsx scripts/migration-route.ts --run || exit 1\n';
-const GOOD_WORKFLOW = '      - run: pnpm run migration:all\n';
+/**
+ * Committed negative controls for `reachabilityFailures`.
+ *
+ * The forty-six shell and YAML fixtures that lived here are GONE, with the
+ * parser they tested. They pinned the behaviour of a guard that read shell
+ * constructs; this one reads bytes, so a fixture describing a heredoc or a
+ * folded scalar no longer describes anything the code does. What replaces them
+ * is smaller and total: every way a fingerprint check can be wrong.
+ *
+ * Each control supplies a broken manifest-or-call-site pair and asserts the
+ * guard reports it with the diagnostic that names the actual break.
+ */
+const RECORDED = readManifest();
+const REAL_HOOK = readFileSync(join(REPO_ROOT, '.husky/pre-push'), 'utf8');
+const REAL_WORKFLOW = readFileSync(join(REPO_ROOT, '.github/workflows/ci.yml'), 'utf8');
+const GOOD_ALL = RECORDED.scripts['migration:all'];
 const DEFAULT_SUITES = [
 	{ command: 'migration:all', tier: 'push' as const },
 	{ command: 'migration:controls', tier: 'ci' as const },
 ];
 
+/** A manifest with one field replaced, for a control to break deliberately. */
+function withManifest(patch: Partial<CallSiteManifest>): CallSiteManifest {
+	return {
+		...RECORDED,
+		...patch,
+		// Replaced wholesale, not merged: a control that REMOVES an entry has to
+		// see it gone, and a merge would quietly put it back.
+		files: patch.files ?? RECORDED.files,
+	};
+}
+
 const SELF_CHECKS: {
 	id: string;
 	what: string;
-	/**
-	 * A distinctive fragment of the diagnostic this broken chain must produce.
-	 * Asserting merely "some problem was reported" would let one recogniser's
-	 * message cover another recogniser's blind spot -- which is how four echo
-	 * shapes survived a round that already had eight self-checks.
-	 */
+	/** A distinctive fragment of the diagnostic this break must produce. */
 	expect: string;
 	scripts: Record<string, string>;
 	workflow: string;
-	hook?: string;
+	hook: string;
+	manifest?: CallSiteManifest;
 	suites?: { command: string; tier: 'push' | 'ci' }[];
 }[] = [
 	{
-		id: 'RX-01',
-		expect: 'is not the certified invocation',
-		what: 'migration:all selects but never runs (--run dropped)',
-		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --tier all' },
-		workflow: GOOD_WORKFLOW,
-	},
-	{
-		id: 'RX-02',
-		expect: 'never invoked by an active ci.yml step',
-		what: 'migration:all is correct but no active ci.yml step invokes it',
+		id: 'FP-01',
+		what: 'the workflow changed and nobody re-recorded it',
+		expect: 'ci.yml does not match its recorded fingerprint',
 		scripts: { 'migration:all': GOOD_ALL },
-		workflow: '      - run: pnpm run build\n',
+		workflow: `${REAL_WORKFLOW}\n# an edit nobody certified\n`,
+		hook: REAL_HOOK,
 	},
 	{
-		id: 'RX-03',
-		expect: 'executed by nothing',
-		what: 'the only step naming a suite is commented out',
-		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier push' },
-		workflow: '      - run: pnpm run migration:all\n      # - run: pnpm run migration:controls\n',
-	},
-	{
-		id: 'RX-04',
-		expect: 'executed by nothing',
-		what: 'a ci-tier suite excluded from migration:all and named by no step — reachable by nothing',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:controls',
-		},
-		workflow: GOOD_WORKFLOW,
-	},
-	{
-		id: 'RX-05',
-		expect: 'is not the certified invocation',
-		what: 'migration:all loses --all, so it routes by changed surface instead of running everything',
-		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --run --tier all' },
-		workflow: GOOD_WORKFLOW,
-	},
-	{
-		id: 'RX-06',
-		expect: 'is not the certified invocation',
-		what: 'migration:all carries every routing flag but is not the router (echo)',
-		scripts: { 'migration:all': 'echo --all --run --tier all' },
-		workflow: GOOD_WORKFLOW,
-	},
-	{
-		id: 'RX-07',
-		expect: 'never invoked by an active ci.yml step',
-		what: 'the CI invocation survives only as an inline comment on an active line',
+		id: 'FP-02',
+		what: 'the hook changed and nobody re-recorded it',
+		expect: 'pre-push does not match its recorded fingerprint',
 		scripts: { 'migration:all': GOOD_ALL },
-		workflow: '      - run: pnpm run build # run: pnpm run migration:all\n',
+		workflow: REAL_WORKFLOW,
+		hook: REAL_HOOK.replace('7/7 Migration verification', '7/7 Migration verification (edited)'),
 	},
 	{
-		id: 'RX-08',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		what: 'the pre-push hook stops invoking the router, stranding every CI-excluded push suite',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'echo "Running pre-push checks..."\ncorepack pnpm run lint || exit 1\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	// THE ECHO FAMILY. Each prints text spelled exactly like the command it does
-	// not run. They are separate rows rather than one because they exercise three
-	// different recognisers, and a shared message would hide two of them.
-	{
-		id: 'RX-09',
-		what: 'migration:all echoes a correct router invocation instead of running it',
-		expect: 'is not the certified invocation',
-		scripts: { 'migration:all': `echo ${GOOD_ALL}` },
-		workflow: GOOD_WORKFLOW,
+		id: 'FP-03',
+		what: 'package.json drifted from the recorded string',
+		expect: 'does not match its recorded string',
+		scripts: { 'migration:all': `${GOOD_ALL} --plan` },
+		workflow: REAL_WORKFLOW,
+		hook: REAL_HOOK,
 	},
 	{
-		id: 'RX-10',
-		what: 'the ci.yml step echoes `pnpm run migration:all` instead of running it',
-		expect: 'never invoked by an active ci.yml step',
-		scripts: { 'migration:all': GOOD_ALL },
-		workflow: '      - run: echo pnpm run migration:all\n',
-	},
-	{
-		id: 'RX-11',
-		what: 'the only step naming an excluded suite echoes it',
-		expect: 'executed by nothing',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:controls',
-		},
-		workflow:
-			'      - run: pnpm run migration:all\n      - run: echo pnpm run migration:controls\n',
-	},
-	{
-		id: 'RX-13',
-		what: 'migration:all is `node -e` with the router path as a mere argument',
-		expect: 'is not the certified invocation',
-		scripts: { 'migration:all': 'node -e "" scripts/migration-route.ts --all --run --tier all' },
-		workflow: GOOD_WORKFLOW,
-	},
-	{
-		id: 'RX-14',
-		what: 'the CI step is `pnpm --help migration:all`, which looks the script up and runs nothing',
-		expect: 'never invoked by an active ci.yml step',
-		scripts: { 'migration:all': GOOD_ALL },
-		workflow: '      - run: pnpm --help migration:all\n',
-	},
-	{
-		id: 'RX-15',
-		what: 'a quoted separator manufactures a router segment inside an echo argument',
-		expect: 'is not the certified invocation',
-		scripts: { 'migration:all': `echo "skip; ${GOOD_ALL}"` },
-		workflow: GOOD_WORKFLOW,
-	},
-	{
-		id: 'RX-16',
-		what: 'a quoted pipe manufactures a CI invocation inside an echo argument',
-		expect: 'never invoked by an active ci.yml step',
-		scripts: { 'migration:all': GOOD_ALL },
-		workflow: '      - run: echo "skip | pnpm run migration:all"\n',
-	},
-	{
-		id: 'RX-17',
-		what: "the hook's router call survives only after an inline shell comment",
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'corepack pnpm run lint # tsx scripts/migration-route.ts --run\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	// THE UNRUN-CONTEXT FAMILY. Each command is well-formed and never executes,
-	// because of the context it sits in rather than anything about the command.
-	{
-		id: 'RX-23',
-		what: 'the router appears in a spaced heredoc body — `cat << EOF`',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'cat << EOF > /tmp/note\ntsx scripts/migration-route.ts --run\nEOF\ncorepack pnpm run lint\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-24',
-		what: "the router appears in a delimiter-attached, quoted heredoc body — `cat <<-'EOF'`",
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: "cat<<-'EOF' > /tmp/note\n\ttsx scripts/migration-route.ts --run\n\tEOF\n",
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-25',
-		what: 'the CI step carrying the invocation is disabled by a step-level `if:`',
-		expect: 'never invoked by an active ci.yml step',
-		scripts: { 'migration:all': GOOD_ALL },
-		workflow:
-			'      - name: Full migration suite\n        if: false\n        run: pnpm run migration:all\n',
-	},
-	{
-		id: 'RX-26',
-		what: 'the whole job carrying the invocation is disabled by a job-level `if:`',
-		expect: 'never invoked by an active ci.yml step',
-		scripts: { 'migration:all': GOOD_ALL },
-		workflow:
-			'jobs:\n  migration:\n    if: false\n    steps:\n      - run: pnpm run migration:all\n',
-	},
-	{
-		id: 'RX-27',
-		what: 'the router sits in a loop body that never executes',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'while false; do\n\ttsx scripts/migration-route.ts --run\ndone\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-28',
-		what: 'the router sits in a subshell-bodied function that is defined and never called',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'route() (\n\ttsx scripts/migration-route.ts --run\n)\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	// THE EXACT-FORM FAMILY. Each is a call site that a permissive pattern read
-	// as an invocation. The contract names one string per call site; these are
-	// the near-misses that used to slip past it.
-	{
-		id: 'RX-40',
-		what: 'migration:all uses --list, which prints thirty suite names and runs none',
+		id: 'FP-04',
+		what: 'the RECORDED string is --list, which prints suite names and runs none',
 		expect: 'is not the certified invocation',
 		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --list --tier all' },
-		workflow: GOOD_WORKFLOW,
+		workflow: REAL_WORKFLOW,
+		hook: REAL_HOOK,
+		manifest: withManifest({
+			scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --list --tier all' },
+		}),
 	},
 	{
-		id: 'RX-41',
-		what: 'migration:all carries an extra flag the contract does not name',
-		expect: 'is not the certified invocation',
-		scripts: { 'migration:all': `${GOOD_ALL} --plan` },
-		workflow: GOOD_WORKFLOW,
+		id: 'FP-05',
+		what: 'the recorded string excludes a name that is not a registered suite — the router exits 1 on it',
+		expect: 'not registered suites',
+		scripts: { 'migration:all': `${GOOD_ALL},not-a-suite` },
+		workflow: REAL_WORKFLOW,
+		hook: REAL_HOOK,
+		manifest: withManifest({ scripts: { 'migration:all': `${GOOD_ALL},not-a-suite` } }),
 	},
 	{
-		id: 'RX-42',
-		what: 'the hook line before the invocation ends in `||`, making it a conditional right-hand side',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'true ||\ncorepack pnpm exec tsx scripts/migration-route.ts --run\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
+		id: 'FP-06',
+		what: 'the recorded string carries a newline, which in a shell is two commands',
+		expect: 'a character the certified form does not allow',
+		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier\nall' },
+		workflow: REAL_WORKFLOW,
+		hook: REAL_HOOK,
+		manifest: withManifest({
+			scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier\nall' },
+		}),
 	},
 	{
-		id: 'RX-43',
-		what: 'the hook invocation sits inside a quote left open across lines',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'echo "opening\ncorepack pnpm exec tsx scripts/migration-route.ts --run\nclosing"\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
+		id: 'FP-07',
+		what: 'the recorded string names a tier that does not exist',
+		expect: 'unknown --tier',
+		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier everything' },
+		workflow: REAL_WORKFLOW,
+		hook: REAL_HOOK,
+		manifest: withManifest({
+			scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier everything' },
+		}),
 	},
 	{
-		id: 'RX-44',
-		what: 'the hook invocation sits inside a process substitution',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'diff <(\ncorepack pnpm exec tsx scripts/migration-route.ts --run\n) /dev/null\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-45',
-		what: 'the disabling `if` is a QUOTED key — the same mapping to YAML, a different one to a plain reader',
-		expect: 'does not read plainly',
+		id: 'FP-08',
+		what: 'a call site has no recorded fingerprint at all',
+		expect: 'has no recorded fingerprint',
 		scripts: { 'migration:all': GOOD_ALL },
-		workflow: '      - run: pnpm run migration:all\n        "if": false\n',
+		workflow: REAL_WORKFLOW,
+		hook: REAL_HOOK,
+		manifest: withManifest({
+			files: Object.fromEntries(
+				Object.entries(RECORDED.files).filter(([path]) => path !== '.husky/pre-push'),
+			),
+		}),
 	},
 	{
-		id: 'RX-46',
-		what: 'the disabling key is spelled `if : false`, with a space before the colon',
-		expect: 'does not read plainly',
-		scripts: { 'migration:all': GOOD_ALL },
-		workflow: '      - run: pnpm run migration:all\n        if : false\n',
-	},
-	// THE UNCERTIFIED FAMILY. Each of these may well run the router — two of them
-	// demonstrably do. They are reported anyway, because the contract certifies a
-	// canonical line at top level and nothing else. "It probably runs" is the
-	// answer this guard exists to refuse.
-	{
-		id: 'RX-36',
-		what: 'an echo and the invocation share a line, so no line is canonical',
-		expect: 'is not the certified invocation',
-		scripts: { 'migration:all': `echo routing; ${GOOD_ALL}` },
-		workflow: GOOD_WORKFLOW,
-	},
-	{
-		id: 'RX-37',
-		what: 'the invocation runs inside a command substitution — it executes, and it is not a certified call site',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'OUT=$(\ntsx scripts/migration-route.ts --run\n)\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-38',
-		what: 'the invocation sits in a conditional body whose condition happens to hold',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'if true; then\ntsx scripts/migration-route.ts --run\nfi\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-39',
-		what: 'a `&&` chain behind a command that fails — the router is never reached',
-		expect: 'is not the certified invocation',
-		scripts: { 'migration:all': `node -e 'process.exit(1)' && ${GOOD_ALL} || true` },
-		workflow: GOOD_WORKFLOW,
-	},
-	// THE OBSERVED-CONTEXT FAMILY. Each is a command the shell parses fine and
-	// never executes. None of these is decided by reading text: the script runs
-	// under the sandbox and nothing is recorded.
-	{
-		id: 'RX-30',
-		what: 'the router sits in the SECOND of two heredoc bodies',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'cat <<A > /tmp/a\nfirst\nA\ncat <<B > /tmp/b\ntsx scripts/migration-route.ts --run\nB\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-31',
-		what: 'a plain `<<EOF` body whose terminator is indented, so the body never ends where a naive scan thinks',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'cat <<EOF > /tmp/a\ntsx scripts/migration-route.ts --run\n  EOF\ncorepack pnpm run lint\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-32',
-		what: 'the step `if:` comes AFTER its `run:` — YAML mappings are unordered',
-		expect: 'never invoked by an active ci.yml step',
-		scripts: { 'migration:all': GOOD_ALL },
-		workflow: '      - run: pnpm run migration:all\n        if: false\n',
-	},
-	{
-		id: 'RX-33',
-		what: 'the job `if:` comes after the steps it disables',
-		expect: 'never invoked by an active ci.yml step',
-		scripts: { 'migration:all': GOOD_ALL },
-		workflow:
-			'jobs:\n  migration:\n    steps:\n      - run: pnpm run migration:all\n    if: false\n',
-	},
-	{
-		id: 'RX-34',
-		what: 'the router sits in a `case` branch whose pattern does not match',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'case zzz in\n  aaa) tsx scripts/migration-route.ts --run ;;\nesac\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-35',
-		what: 'an escaped quote inside an echo argument, with a router-looking tail',
-		expect: 'is not the certified invocation',
-		scripts: {
-			'migration:all': 'echo "he said \\" ; tsx scripts/migration-route.ts --all --run --tier all"',
-		},
-		workflow: GOOD_WORKFLOW,
-	},
-	// THE NO-OP FAMILY. Each is a command that runs and executes no suite: a
-	// terminal runner flag, a filter that matches no project, a short-circuit
-	// that never fires, a heredoc body, and a conditional block.
-	{
-		id: 'RX-18',
-		what: 'a terminal runner flag prints and exits, the operand never runs',
-		expect: 'is not the certified invocation',
-		scripts: {
-			'migration:all': 'node --v8-options scripts/migration-route.ts --all --run --tier all',
-		},
-		workflow: GOOD_WORKFLOW,
-	},
-	{
-		id: 'RX-19',
-		what: 'pnpm --filter selects no project, so the named suite runs nowhere',
+		id: 'FP-09',
+		what: 'a ci-tier suite excluded from migration:all and named by no step is reachable by nothing',
 		expect: 'executed by nothing',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:controls',
-		},
-		workflow:
-			'      - run: pnpm run migration:all\n      - run: pnpm --filter __no_match__ migration:controls\n',
+		scripts: { 'migration:all': `${GOOD_ALL},migration:route:controls` },
+		workflow: REAL_WORKFLOW,
+		hook: REAL_HOOK,
+		manifest: withManifest({
+			scripts: { 'migration:all': `${GOOD_ALL},migration:route:controls` },
+		}),
+		suites: [{ command: 'migration:route:controls', tier: 'ci' }],
 	},
 	{
-		id: 'RX-20',
-		what: 'the hook router call is short-circuited behind `true ||`, so it never fires',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'true || tsx scripts/migration-route.ts --run\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-21',
-		what: 'the router appears only inside a heredoc body — data being written, not a command',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'cat <<EOF > /tmp/note\ntsx scripts/migration-route.ts --run\nEOF\ncorepack pnpm run lint\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-22',
-		what: 'the router call sits inside an if-block, so whether it runs depends on state this guard cannot see',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'if [ -n "$SKIP" ]; then\n\ttsx scripts/migration-route.ts --run\nfi\n',
-		suites: [{ command: 'migration:c3', tier: 'push' }],
-	},
-	{
-		id: 'RX-12',
-		what: 'the hook echoes the router invocation instead of running it',
-		expect: 'does not invoke scripts/migration-route.ts --run',
-		scripts: {
-			'migration:all':
-				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
-		},
-		workflow: GOOD_WORKFLOW,
-		hook: 'echo tsx scripts/migration-route.ts --run\n',
+		id: 'FP-10',
+		what: 'the hook stops being certified, stranding the push-tier suites CI excludes',
+		expect: 'executed by nothing',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow: REAL_WORKFLOW,
+		hook: 'echo "no routing here"\n',
 		suites: [{ command: 'migration:c3', tier: 'push' }],
 	},
 ];
@@ -1175,8 +722,9 @@ function selfCheckFailures(): string[] {
 		const reported = reachabilityFailures(
 			check.scripts,
 			check.workflow,
-			check.hook ?? GOOD_HOOK,
+			check.hook,
 			check.suites ?? DEFAULT_SUITES,
+			check.manifest ?? RECORDED,
 		);
 		if (reported.length === 0) {
 			problems.push(`${check.id} did not fail closed: ${check.what}`);
@@ -1187,91 +735,42 @@ function selfCheckFailures(): string[] {
 			);
 		}
 	}
-	// A self-check set that only ever feeds BROKEN chains cannot tell "the guard
-	// reports everything" from "the guard works", and a grammar this narrow can
-	// fail by rejecting real forms as easily as by clearing inert ones. Every
-	// shape below is a WORKING chain and must be reported as silent.
-	const POSITIVE: {
-		id: string;
-		what: string;
-		scripts: Record<string, string>;
-		workflow: string;
-		hook: string;
-	}[] = [
-		{
-			id: 'RX-00',
-			what: 'the intact chain',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow: GOOD_WORKFLOW,
-			hook: GOOD_HOOK,
-		},
-		{
-			id: 'RX-00b',
-			what: 'corepack in front of the CI invocation',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow: '      - run: corepack pnpm run migration:all\n',
-			hook: GOOD_HOOK,
-		},
-		{
-			id: 'RX-00c',
-			what: 'pnpm -s and no `run` keyword',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow: '      - run: pnpm -s migration:all\n',
-			hook: GOOD_HOOK,
-		},
-		{
-			id: 'RX-00g',
-			what: 'a hook invocation wrapped across a backslash-newline continuation',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow: GOOD_WORKFLOW,
-			hook: 'corepack pnpm exec tsx \\\n\tscripts/migration-route.ts \\\n\t--run || exit 1\n',
-		},
-		{
-			id: 'RX-00h',
-			what: 'a CI step wrapped across a backslash-newline continuation',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow: '      - run: |\n          pnpm run \\\n            migration:all\n',
-			hook: GOOD_HOOK,
-		},
-		{
-			id: 'RX-00j',
-			what: 'a SIBLING step carries the `if:` and ours does not',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow:
-				"      - name: other\n        if: github.event_name == 'push'\n        run: pnpm run build\n      - name: full\n        run: pnpm run migration:all\n",
-			hook: GOOD_HOOK,
-		},
-		{
-			id: 'RX-00i',
-			what: 'the real hook shape: an assignment, an if-block, then the router at top level',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow: GOOD_WORKFLOW,
-			hook:
-				'PUSH_REFS=$(cat)\nif command -v deno >/dev/null 2>&1; then\n\tdeno install --frozen || exit 1\nelse\n\techo skip\nfi\n' +
-				GOOD_HOOK,
-		},
-		{
-			id: 'RX-00f',
-			what: 'the hook invocation inside a pipeline, after a comment line',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow: GOOD_WORKFLOW,
-			hook: `# routed by changed surface\n${GOOD_HOOK}`,
-		},
-	];
-	for (const check of POSITIVE) {
-		const reported = reachabilityFailures(
-			check.scripts,
-			check.workflow,
-			check.hook,
-			DEFAULT_SUITES,
-		);
-		if (reported.length > 0) {
-			problems.push(
-				`${check.id} a working chain was reported as broken (${check.what}): ${reported.join('; ')}`,
-			);
-		}
+	// A control set that only ever feeds BROKEN state cannot tell "the guard
+	// reports everything" from "the guard works". The recorded trio must pass.
+	const intact = reachabilityFailures(
+		{ 'migration:all': GOOD_ALL },
+		REAL_WORKFLOW,
+		REAL_HOOK,
+		DEFAULT_SUITES,
+		RECORDED,
+	);
+	if (intact.length > 0) {
+		problems.push(`FP-00 the recorded call sites were reported as broken: ${intact.join('; ')}`);
 	}
 	return problems;
+}
+
+/** `--record` mode: rewrite the manifest from the working tree. */
+function record(): void {
+	const pkg = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')) as {
+		scripts: Record<string, string>;
+	};
+	const next: CallSiteManifest & Record<string, unknown> = {
+		...(RECORDED as CallSiteManifest & Record<string, unknown>),
+		scripts: { 'migration:all': pkg.scripts['migration:all'] },
+		files: Object.fromEntries(
+			Object.entries(RECORDED.files).map(([path, entry]) => [
+				path,
+				{ ...entry, sha256: digest(readFileSync(join(REPO_ROOT, path), 'utf8')) },
+			]),
+		),
+	};
+	writeFileSync(
+		join(REPO_ROOT, 'verification/certified-call-sites.json'),
+		`${JSON.stringify(next, null, '\t')}\n`,
+	);
+	console.log('Recorded the working tree into verification/certified-call-sites.json.');
+	console.log('Review that diff in the same commit as the call-site change it certifies.');
 }
 
 function vacuityGuard(): string[] {
@@ -1330,6 +829,10 @@ function vacuityGuard(): string[] {
 }
 
 async function main(): Promise<number> {
+	if (process.argv.includes('--record')) {
+		record();
+		return 0;
+	}
 	const vacuity = vacuityGuard();
 	for (const failure of vacuity) console.error(`VACUITY  ${failure}`);
 	if (vacuity.length > 0) {
