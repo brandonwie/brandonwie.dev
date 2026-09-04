@@ -272,19 +272,103 @@ function baseline(control: Control): string {
  *      hook, which is precisely how `migration:c3`'s CI exclusion could have
  *      become a hiding place.
  *
+ * A THIRD ROUND found the shape underneath all of them. Matching a command
+ * ANYWHERE in a string is not recognising a command: `echo tsx
+ * scripts/migration-route.ts --all --run` and `echo pnpm run migration:all` are
+ * inert, and every regex above accepted both because the text they print is
+ * spelled exactly like the command they do not run.
+ *
+ *   8.  `migration:all` = `echo tsx scripts/migration-route.ts --all --run …`
+ *   9.  the CI step is `echo pnpm run migration:all`
+ *   10. the only step naming an excluded suite is `echo pnpm run migration:controls`
+ *   11. the hook line is `echo tsx scripts/migration-route.ts --run`
+ *
+ * So a command is now recognised only in COMMAND POSITION. The text is split on
+ * shell separators, each segment is tokenised, leading environment assignments
+ * and transparent wrappers (`corepack`, `env`, `npx`, `pnpm exec`) are stripped,
+ * and the recognisers look at the resulting HEAD token. `echo` is a head like
+ * any other, and it is not a runner.
+ *
  * Every link is now checked from the runner backwards: which YAML `run:` blocks
- * are ACTIVE, whether the script they name is the router, whether its argv makes
- * the router select and execute, and whether the hook still calls it.
- * `SELF_CHECKS` pins all seven shapes.
+ * are ACTIVE, which segment of them is in command position, whether that command
+ * is the router, whether its own argv makes the router select and execute, and
+ * whether the hook still calls it. `SELF_CHECKS` pins all eleven shapes, each
+ * asserting the SPECIFIC diagnostic rather than merely a non-empty list.
  *
  * Pure by construction: it takes the package scripts, the workflow text and the
  * hook text as arguments rather than reading them, so a control can hand it a
  * mutant.
  */
 
-/** `tsx scripts/migration-route.ts`, however the caller spells the runner. */
-const ROUTER_INVOCATION =
-	/(?:^|[\s;&|(])(?:corepack\s+)?(?:pnpm\s+exec\s+|npx\s+)?(?:tsx|node|deno\s+run(?:\s+-{1,2}\S+)*)\s+(?:-{1,2}\S+\s+)*(?:\.\/)?scripts\/migration-route\.ts(?=\s|$)/;
+/** Shell separators after which a new command begins. `||` before `|`. */
+const SEPARATORS = /\|\||&&|[;|&\n]/;
+/** Wrappers that pass their tail through unchanged: the command is what follows. */
+const TRANSPARENT = new Set(['corepack', 'env', 'sudo', 'npx', 'command', 'exec']);
+const RUNNERS = new Set(['tsx', 'node']);
+const ROUTER_PATH = /(?:^|\/)scripts\/migration-route\.ts$/;
+
+const unquote = (token: string): string => token.replace(/^['"]|['"]$/g, '');
+
+/**
+ * The tokens of each shell segment, reduced to command position: environment
+ * assignments and transparent wrappers removed, so `tokens[0]` is the command
+ * that actually runs.
+ */
+export function commandSegments(text: string): string[][] {
+	return text
+		.split(SEPARATORS)
+		.map((segment) => segment.trim().split(/\s+/).filter(Boolean).map(unquote))
+		.map((tokens) => {
+			let head = 0;
+			// `FOO=bar cmd` — assignments precede the command, they are not it.
+			while (head < tokens.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[head])) head += 1;
+			let rest = tokens.slice(head);
+			for (;;) {
+				if (rest.length > 0 && TRANSPARENT.has(rest[0])) {
+					rest = rest.slice(1);
+					continue;
+				}
+				if (rest.length > 1 && rest[0] === 'pnpm' && (rest[1] === 'exec' || rest[1] === 'dlx')) {
+					rest = rest.slice(2);
+					continue;
+				}
+				break;
+			}
+			return rest;
+		})
+		.filter((tokens) => tokens.length > 0);
+}
+
+/**
+ * The argv of the segment that RUNS `scripts/migration-route.ts`, or null.
+ *
+ * The head token must be a runner. `echo tsx scripts/migration-route.ts --all
+ * --run` has the head `echo`, prints that text, and routes nothing — it is the
+ * exact false green this function exists to refuse.
+ */
+export function routerSegment(text: string): string[] | null {
+	for (const tokens of commandSegments(text)) {
+		const isRunner =
+			RUNNERS.has(tokens[0]) ||
+			(tokens[0] === 'deno' && (tokens[1] === 'run' || tokens[1] === 'task'));
+		if (!isRunner) continue;
+		if (tokens.slice(1).some((token) => ROUTER_PATH.test(token))) return tokens;
+	}
+	return null;
+}
+
+/** True when some segment RUNS `pnpm [run] <command>` — not prints it. */
+export function invokesScript(text: string, command: string): boolean {
+	for (const tokens of commandSegments(text)) {
+		if (tokens[0] !== 'pnpm') continue;
+		let i = 1;
+		while (i < tokens.length && tokens[i].startsWith('-')) i += 1;
+		if (tokens[i] === 'run') i += 1;
+		while (i < tokens.length && tokens[i].startsWith('-')) i += 1;
+		if (tokens[i] === command) return true;
+	}
+	return false;
+}
 
 /**
  * The commands a CI run actually executes: the payloads of active `run:` keys,
@@ -332,39 +416,43 @@ export function reachabilityFailures(
 	const problems: string[] = [];
 
 	const activeRuns = activeRunCommands(workflow).join('\n');
-	const invokedInCI = (command: string): boolean =>
-		new RegExp(`pnpm (?:run |exec )?${command.replace(/[:]/g, '[:]')}(\\s|$)`, 'm').test(
-			activeRuns,
-		);
+	const invokedInCI = (command: string): boolean => invokesScript(activeRuns, command);
 
 	const allArgv = scripts['migration:all'] ?? '';
-	const allTier = /--tier\s+(push|ci|all)/.exec(allArgv)?.[1] ?? 'push';
+	// EVERY flag below is read off the ROUTER SEGMENT, never off the whole script
+	// text. `echo tsx scripts/migration-route.ts --all --run --tier all` carries
+	// every flag this guard looks for and runs nothing; its head is `echo`, so
+	// `routerSegment` returns null and those flags are never consulted.
+	const routerArgv = routerSegment(allArgv);
+	const allIsRouter = routerArgv !== null;
+	if (!allIsRouter) {
+		problems.push(
+			`migration:all does not run scripts/migration-route.ts in command position — its flags route nothing: ${allArgv || '(missing script)'}`,
+		);
+	}
+	const argv = routerArgv ?? [];
+	const flagValue = (name: string): string | undefined => {
+		const at = argv.indexOf(name);
+		return at >= 0 ? argv[at + 1] : undefined;
+	};
+	const allTier = (['push', 'ci', 'all'] as const).find((t) => flagValue('--tier') === t) ?? 'push';
 	// Trimmed to match `excluded()` in the router: the two must agree on what is
 	// excluded, or this guard clears a suite the router is quietly dropping.
 	const allExcluded = new Set(
-		(/--exclude\s+(\S+)/.exec(allArgv)?.[1] ?? '')
+		(flagValue('--exclude') ?? '')
 			.split(',')
 			.map((n) => n.trim())
 			.filter(Boolean),
 	);
 
-	// The argv's flags mean nothing unless the script they belong to is the
-	// router. `echo --all --run --tier all` reads identically to every flag check
-	// below and executes nothing.
-	const allIsRouter = ROUTER_INVOCATION.test(allArgv);
-	if (!allIsRouter) {
-		problems.push(
-			`migration:all does not invoke scripts/migration-route.ts — its flags route nothing: ${allArgv || '(missing script)'}`,
-		);
-	}
-	const allSelectsEverything = /(^|\s)--all(\s|$)/.test(allArgv);
-	if (!allSelectsEverything) {
+	const allSelectsEverything = argv.includes('--all');
+	if (allIsRouter && !allSelectsEverything) {
 		problems.push(
 			`migration:all has no --all, so it routes by changed surface and a diff that touches nothing runs nothing: ${allArgv || '(missing script)'}`,
 		);
 	}
-	const allRuns = /(^|\s)--run(\s|$)/.test(allArgv);
-	if (!allRuns) {
+	const allRuns = argv.includes('--run');
+	if (allIsRouter && !allRuns) {
 		problems.push(
 			`migration:all selects suites but does not run them — its argv has no --run: ${allArgv || '(missing script)'}`,
 		);
@@ -378,11 +466,13 @@ export function reachabilityFailures(
 
 	// The hook is the ONLY runner a push-tier suite has once CI excludes it, so
 	// its tier is evidence of nothing until something confirms the hook still
-	// calls the router with --run.
-	const hookRuns = hook
+	// RUNS the router with --run.
+	const hookActive = hook
 		.split('\n')
 		.filter((line) => !/^\s*#/.test(line))
-		.some((line) => ROUTER_INVOCATION.test(line) && /(^|\s)--run(\s|$)/.test(line));
+		.join('\n');
+	const hookArgv = routerSegment(hookActive);
+	const hookRuns = hookArgv !== null && hookArgv.includes('--run');
 	if (!hookRuns) {
 		problems.push(
 			'.husky/pre-push does not invoke scripts/migration-route.ts --run — push-tier suites have no runner at all',
@@ -441,6 +531,13 @@ const DEFAULT_SUITES = [
 const SELF_CHECKS: {
 	id: string;
 	what: string;
+	/**
+	 * A distinctive fragment of the diagnostic this broken chain must produce.
+	 * Asserting merely "some problem was reported" would let one recogniser's
+	 * message cover another recogniser's blind spot -- which is how four echo
+	 * shapes survived a round that already had eight self-checks.
+	 */
+	expect: string;
 	scripts: Record<string, string>;
 	workflow: string;
 	hook?: string;
@@ -448,24 +545,28 @@ const SELF_CHECKS: {
 }[] = [
 	{
 		id: 'RX-01',
+		expect: 'does not run them',
 		what: 'migration:all selects but never runs (--run dropped)',
 		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --tier all' },
 		workflow: GOOD_WORKFLOW,
 	},
 	{
 		id: 'RX-02',
+		expect: 'never invoked by an active ci.yml step',
 		what: 'migration:all is correct but no active ci.yml step invokes it',
 		scripts: { 'migration:all': GOOD_ALL },
 		workflow: '      - run: pnpm run build\n',
 	},
 	{
 		id: 'RX-03',
+		expect: 'executed by nothing',
 		what: 'the only step naming a suite is commented out',
 		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --all --run --tier push' },
 		workflow: '      - run: pnpm run migration:all\n      # - run: pnpm run migration:controls\n',
 	},
 	{
 		id: 'RX-04',
+		expect: 'executed by nothing',
 		what: 'a ci-tier suite excluded from migration:all and named by no step — reachable by nothing',
 		scripts: {
 			'migration:all':
@@ -475,24 +576,28 @@ const SELF_CHECKS: {
 	},
 	{
 		id: 'RX-05',
+		expect: 'has no --all',
 		what: 'migration:all loses --all, so it routes by changed surface instead of running everything',
 		scripts: { 'migration:all': 'tsx scripts/migration-route.ts --run --tier all' },
 		workflow: GOOD_WORKFLOW,
 	},
 	{
 		id: 'RX-06',
+		expect: 'not run scripts/migration-route.ts in command position',
 		what: 'migration:all carries every routing flag but is not the router (echo)',
 		scripts: { 'migration:all': 'echo --all --run --tier all' },
 		workflow: GOOD_WORKFLOW,
 	},
 	{
 		id: 'RX-07',
+		expect: 'never invoked by an active ci.yml step',
 		what: 'the CI invocation survives only as an inline comment on an active line',
 		scripts: { 'migration:all': GOOD_ALL },
 		workflow: '      - run: pnpm run build # run: pnpm run migration:all\n',
 	},
 	{
 		id: 'RX-08',
+		expect: 'does not invoke scripts/migration-route.ts --run',
 		what: 'the pre-push hook stops invoking the router, stranding every CI-excluded push suite',
 		scripts: {
 			'migration:all':
@@ -500,6 +605,46 @@ const SELF_CHECKS: {
 		},
 		workflow: GOOD_WORKFLOW,
 		hook: 'echo "Running pre-push checks..."\ncorepack pnpm run lint || exit 1\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	// THE ECHO FAMILY. Each prints text spelled exactly like the command it does
+	// not run. They are separate rows rather than one because they exercise three
+	// different recognisers, and a shared message would hide two of them.
+	{
+		id: 'RX-09',
+		what: 'migration:all echoes a correct router invocation instead of running it',
+		expect: 'not run scripts/migration-route.ts in command position',
+		scripts: { 'migration:all': `echo ${GOOD_ALL}` },
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-10',
+		what: 'the ci.yml step echoes `pnpm run migration:all` instead of running it',
+		expect: 'never invoked by an active ci.yml step',
+		scripts: { 'migration:all': GOOD_ALL },
+		workflow: '      - run: echo pnpm run migration:all\n',
+	},
+	{
+		id: 'RX-11',
+		what: 'the only step naming an excluded suite echoes it',
+		expect: 'executed by nothing',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:controls',
+		},
+		workflow:
+			'      - run: pnpm run migration:all\n      - run: echo pnpm run migration:controls\n',
+	},
+	{
+		id: 'RX-12',
+		what: 'the hook echoes the router invocation instead of running it',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'echo tsx scripts/migration-route.ts --run\n',
 		suites: [{ command: 'migration:c3', tier: 'push' }],
 	},
 ];
@@ -515,6 +660,11 @@ function selfCheckFailures(): string[] {
 		);
 		if (reported.length === 0) {
 			problems.push(`${check.id} did not fail closed: ${check.what}`);
+		} else if (!reported.some((line) => line.includes(check.expect))) {
+			problems.push(
+				`${check.id} reported the wrong break — expected a diagnostic containing ` +
+					`"${check.expect}", got: ${reported.join('; ')}`,
+			);
 		}
 	}
 	// A self-check set that only ever feeds BROKEN chains cannot tell "the guard
