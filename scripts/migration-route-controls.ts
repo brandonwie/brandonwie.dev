@@ -21,16 +21,8 @@
  * reported success because they stopped looking.
  */
 
-import { execFileSync, spawnSync } from 'node:child_process';
-import {
-	chmodSync,
-	existsSync,
-	mkdirSync,
-	mkdtempSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -348,268 +340,122 @@ function baseline(control: Control): string {
  * deliberate edit with a positive self-check attached, which is the point.
  */
 
-/** `scripts/migration-route.ts`, however the path is spelled. */
-const ROUTER_PATH = /(?:^|\/)scripts\/migration-route\.ts$/;
-
-/** Wrappers that pass their tail through unchanged: the command is what follows. */
-const TRANSPARENT = new Set(['corepack', 'env', 'sudo', 'command']);
-/** Runner heads that execute a script operand. */
-const RUNNERS = new Set(['tsx', 'node']);
 /**
- * The ONLY runner flags allowed before the operand. Everything else — `-e`,
- * `--help`, `--v8-options`, tomorrow's flag nobody here has read about —
- * rejects the statement, because a flag this guard does not know may change
- * what runs or run nothing at all.
- */
-const RUNNER_BOOLEAN_FLAGS = new Set([
-	'--no-warnings',
-	'--enable-source-maps',
-	'--experimental-strip-types',
-	'--no-deprecation',
-]);
-/** Allowed runner flags that consume the NEXT token, which is not the operand. */
-const RUNNER_VALUE_FLAGS = new Set([
-	'--tsconfig',
-	'--require',
-	'-r',
-	'--import',
-	'--loader',
-	'--conditions',
-	'--env-file',
-]);
-/** The only flags allowed before `pnpm [run] <script>`. `--filter` is NOT one. */
-const PNPM_BOOLEAN_FLAGS = new Set(['-s', '--silent']);
-
-/**
- * STOP PARSING THE SHELL. RUN IT AND WATCH.
+ * A DECLARATIVE INVOCATION CONTRACT.
  *
- * Seven rounds of this guard tried to decide from TEXT whether a command runs,
- * and seven rounds found another construct that reads like an invocation and
- * executes nothing, or the reverse. Quoted separators, inline comments,
- * heredocs in four spellings, `&&` / `||` short-circuits, `if` and `select`
- * bodies, subshell-bodied functions, command substitutions, `case` patterns
- * whose `)` closes no subshell, backslash escapes inside double quotes. Each
- * fix was correct and each left the next construct unowned, because a
- * hand-written approximation of a shell grammar is never finished.
+ * Two strategies failed here before this one, and both failed the same way.
  *
- * So the shell decides. `observe()` runs the script under `bash` with `PATH`
- * pointing at a directory of RECORDING STUBS and nothing else, feeds it the
- * stdin it expects, and collects the argv of every command that actually ran.
- * A heredoc body is never executed, so it records nothing. `true || router`
- * short-circuits for real. A `case` branch that does not match does not run. An
- * `if` whose condition is false skips its body. None of that is modelled here;
- * it is observed, by the program whose semantics are the question.
+ * PARSING (rounds 2-7). Seven rounds decided from text whether a command runs.
+ * Each round found another construct that reads like an invocation and executes
+ * nothing, or the reverse: quoted separators, inline comments, heredocs in five
+ * spellings, short-circuits, block bodies, subshell functions, `case` patterns
+ * whose `)` closes no subshell, escapes inside double quotes. A hand-written
+ * approximation of a shell grammar is never finished.
  *
- * PATH contains ONLY the stubs, so a command this harness has not stubbed
- * cannot execute at all: a line that tried to touch the machine finds an empty
- * world.
+ * OBSERVING (round 8). Running the script under recording stubs answered the
+ * shell questions and opened new ones. Every stub exited 0, so
+ * `node -e 'process.exit(1)' && <router>` credited a router the real shell
+ * never reaches; the sandbox was a PATH, not a jail, so builtins and absolute
+ * paths still touched the host; and the record file was writable by the script
+ * under test, which could forge the evidence. An oracle that the subject can
+ * lie to is not an oracle.
  *
- * What remains for static analysis is exactly the part the shell cannot answer.
- * Given the argv that DID run, does that argv execute the router? `node -e ""
- * scripts/migration-route.ts` really does run, and really does not run the
- * file; `pnpm --filter __no_match__ x` really does run, and really runs no
- * script. That is an argv question, not a shell question, and it is decided
- * below by allowlists over the OBSERVED argv.
+ * So this guard stops trying to certify ARBITRARY shell and instead requires
+ * the three call sites to be written in a CANONICAL form it can certify. A
+ * canonical invocation is one whole line, at nesting depth zero, matching an
+ * anchored pattern with no room for a separator, a substitution, a redirection
+ * or a comment. Anything else — an `echo` prefix, a `&&` chain, a `case` branch,
+ * a heredoc body, a clever equivalent — is NOT CERTIFIED, and not-certified is
+ * REPORTED as a missing invocation.
+ *
+ * That is a real constraint on the repository: these three lines must stay
+ * boring. It is also the only version of this guard that cannot be talked out
+ * of its answer, because it never asks what the shell would do — it asks
+ * whether the call site is written in the one shape whose meaning is not in
+ * question. Widening the accepted shapes is a deliberate edit with a positive
+ * self-check attached.
  */
 
-/** Written by each stub after its argv, so multi-word arguments survive. */
-const RECORD_END = '<<<route-record-end>>>';
+/** The router invocation, as the three call sites are allowed to spell it. */
+const CANONICAL_ROUTER =
+	/^(?:printf\s+'%s\\n'\s+"\$PUSH_REFS"\s*\|\s*)?(?:corepack\s+)?(?:pnpm\s+exec\s+)?tsx\s+(?:--tsconfig\s+[\w./-]+\s+)?scripts\/migration-route\.ts((?:\s+--[a-z-]+(?:[= ][\w:,./-]+)?)*)\s*(?:\|\|\s*exit\s+\d+)?$/;
+
+/** A suite invocation inside a workflow step. */
+const canonicalSuite = (command: string): RegExp =>
+	new RegExp(
+		`^(?:corepack\\s+)?pnpm(?:\\s+-s|\\s+--silent)?(?:\\s+run)?\\s+${command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+	);
 
 /**
- * Commands the sandbox provides. `cat` is a real passthrough because scripts
- * read stdin through it; every other stub records its argv and exits 0.
- * Unlisted commands do not exist inside the sandbox.
+ * A heredoc makes the whole file uncertifiable: its body is indistinguishable
+ * from a command line without tracking redirection state, and tracking it is
+ * exactly the parser this design removes. Refusing the file is the fail-closed
+ * answer, and the three call sites have no reason to use one.
  */
-const STUBBED = [
-	'pnpm',
-	'corepack',
-	'npx',
-	'node',
-	'tsx',
-	'deno',
-	'git',
-	'printf',
-	'echo',
-	'sed',
-	'awk',
-	'grep',
-	'find',
-	'rm',
-	'mkdir',
-	'cp',
-	'mv',
-	'touch',
-	'sleep',
-	'true',
-	'false',
-	'env',
-	'sh',
-	'bash',
-	'curl',
-	'wget',
-	'jq',
-	'make',
-	'ls',
-	'date',
-	'lsof',
-	'kill',
-];
+const UNCERTIFIABLE = /<</;
 
-let sandbox: string | null = null;
-function sandboxBin(): string {
-	if (sandbox !== null) return sandbox;
-	const dir = mkdtempSync(join(tmpdir(), 'route-observe-'));
-	const bin = join(dir, 'bin');
-	mkdirSync(bin);
-	for (const name of STUBBED) {
-		const file = join(bin, name);
-		writeFileSync(
-			file,
-			`#!/bin/sh\nprintf '%s\\n' "$0" "$@" >> "$ROUTE_RECORD"\nprintf '%s\\n' '${RECORD_END}' >> "$ROUTE_RECORD"\nexit 0\n`,
-		);
-		chmodSync(file, 0o755);
-	}
-	writeFileSync(join(bin, 'cat'), '#!/bin/sh\nexec /bin/cat "$@"\n');
-	chmodSync(join(bin, 'cat'), 0o755);
-	sandbox = bin;
-	return bin;
+/**
+ * Depth contributed by an unbalanced command substitution or backtick on this
+ * line. `X=$(cat)` is balanced and contributes nothing; a substitution left
+ * open spans following lines, and a canonical-looking line inside it is not a
+ * command at top level.
+ */
+function spanDepth(line: string): number {
+	const opens = (line.match(/\$\(/g) ?? []).length;
+	const closes = (line.match(/\)/g) ?? []).length;
+	const ticks = (line.match(/`/g) ?? []).length;
+	return Math.max(0, opens - closes) + (ticks % 2);
+}
+
+/** Openers and closers, for the one question left: is this line inside a block? */
+const BLOCK_OPEN = /^(?:if|while|until|for|case|select|coproc|function)\b|^\{$|^\(|^\w+\s*\(\)/;
+const BLOCK_CLOSE = /^(?:fi|done|esac)\b|^\}$|^\)$/;
+
+/** Lines with comments removed, continuations joined, and blanks dropped. */
+function shellLines(text: string): string[] {
+	return text
+		.replace(/\\\n\s*/g, ' ')
+		.split('\n')
+		.map((line) => line.replace(/(^|\s)#.*$/, '$1').trim())
+		.filter((line) => line !== '');
 }
 
 /**
- * Every command the script ACTUALLY executes, as argv arrays.
+ * The router's own arguments, for a CERTIFIED invocation, or null.
  *
- * Returns an empty list when the script runs nothing, which is the honest
- * answer for a heredoc body, a skipped branch, or a short-circuit that never
- * fires.
+ * Certified means: the whole line matches `CANONICAL_ROUTER`, the line sits at
+ * block depth zero, and the file contains no construct this contract refuses to
+ * reason about. A line inside `if`, `case`, `while` or a function body is not
+ * certified even when it would run, because whether it runs depends on state
+ * this guard cannot see — and a guard that guesses is the thing being replaced.
  */
-export function observe(script: string, stdin = ''): string[][] {
-	const bin = sandboxBin();
-	const record = join(bin, `record-${Math.random().toString(36).slice(2)}.log`);
-	writeFileSync(record, '');
-	try {
-		spawnSync('/bin/bash', ['-c', script], {
-			env: { PATH: bin, ROUTE_RECORD: record, HOME: bin },
-			input: stdin,
-			timeout: 15_000,
-			encoding: 'utf8',
-		});
-		const argvs: string[][] = [];
-		let current: string[] = [];
-		for (const line of readFileSync(record, 'utf8').split('\n')) {
-			if (line === RECORD_END) {
-				if (current.length > 0) argvs.push(current);
-				current = [];
-				continue;
-			}
-			current.push(line);
-		}
-		return argvs;
-	} finally {
-		rmSync(record, { force: true });
-	}
-}
-
-/** Drop the wrappers that pass their tail through unchanged. */
-function unwrap(argv: string[]): string[] {
-	const rest = argv.slice();
-	// argv[0] arrives as the stub's absolute path.
-	rest[0] = basename(rest[0]);
-	for (;;) {
-		if (rest.length > 1 && TRANSPARENT.has(rest[0]) && !rest[1].startsWith('-')) {
-			rest.shift();
-			continue;
-		}
-		if (rest.length > 2 && rest[0] === 'pnpm' && (rest[1] === 'exec' || rest[1] === 'dlx')) {
-			rest.splice(0, 2);
-			continue;
-		}
-		break;
-	}
-	return rest;
-}
-
-/**
- * The router's OWN arguments, for an observed argv that executes
- * `scripts/migration-route.ts`, or null when nothing observed does.
- *
- * The shell has already answered "did this run"; this answers "does running it
- * run the router". The operand is found positionally and every flag before it
- * must be on the allowlist, so `node -e ""` and `node --v8-options` reject
- * (they run something other than the file) and `node other.ts <router>` rejects
- * (the router is an argument to another program).
- */
-export function routerSegment(script: string, stdin = ''): string[] | null {
-	for (const observed of observe(script, stdin)) {
-		const tokens = unwrap(observed);
-		let i = 0;
-		if (tokens[i] === 'deno') {
-			if (tokens[i + 1] !== 'run') continue;
-			i += 2;
-		} else if (RUNNERS.has(tokens[i])) {
-			i += 1;
-		} else {
-			continue;
-		}
-		let rejected = false;
-		while (i < tokens.length && tokens[i].startsWith('-')) {
-			const flag = tokens[i].split('=')[0];
-			const denoPermission = tokens[0] === 'deno' && /^--allow-|^--deny-|^--no-/.test(flag);
-			if (RUNNER_BOOLEAN_FLAGS.has(flag) || denoPermission) i += 1;
-			else if (RUNNER_VALUE_FLAGS.has(flag)) i += tokens[i].includes('=') ? 1 : 2;
-			else {
-				rejected = true;
-				break;
-			}
-		}
-		if (rejected || i >= tokens.length) continue;
-		if (!ROUTER_PATH.test(tokens[i])) continue;
-		return tokens.slice(i + 1);
+export function routerSegment(text: string): string[] | null {
+	if (UNCERTIFIABLE.test(text)) return null;
+	let depth = 0;
+	for (const line of shellLines(text)) {
+		if (BLOCK_CLOSE.test(line)) depth = Math.max(0, depth - 1);
+		const match = depth === 0 ? CANONICAL_ROUTER.exec(line) : null;
+		if (match) return match[1].trim().split(/\s+/).filter(Boolean);
+		if (BLOCK_OPEN.test(line)) depth += 1;
+		depth += spanDepth(line);
 	}
 	return null;
 }
 
-/**
- * True when running `script` actually executes `pnpm [run] <command>`.
- *
- * Only `-s` / `--silent` may precede it: `--help` runs nothing, and `--filter`
- * chooses which workspace projects run, so `pnpm --filter __no_match__ <script>`
- * exits 0 having run nothing at all.
- */
-export function invokesScript(script: string, command: string): boolean {
-	for (const observed of observe(script)) {
-		const tokens = unwrap(observed);
-		if (tokens[0] !== 'pnpm') continue;
-		let i = 1;
-		let rejected = false;
-		while (i < tokens.length && tokens[i].startsWith('-')) {
-			if (!PNPM_BOOLEAN_FLAGS.has(tokens[i])) {
-				rejected = true;
-				break;
-			}
-			i += 1;
-		}
-		if (rejected) continue;
-		if (tokens[i] === 'run') i += 1;
-		if (tokens[i] === command) return true;
+/** True when a certified line runs `pnpm [run] <command>`. */
+export function invokesScript(text: string, command: string): boolean {
+	if (UNCERTIFIABLE.test(text)) return false;
+	const pattern = canonicalSuite(command);
+	let depth = 0;
+	for (const line of shellLines(text)) {
+		if (BLOCK_CLOSE.test(line)) depth = Math.max(0, depth - 1);
+		if (depth === 0 && pattern.test(line)) return true;
+		if (BLOCK_OPEN.test(line)) depth += 1;
+		depth += spanDepth(line);
 	}
 	return false;
 }
 
-/**
- * The commands a CI run actually executes: the payloads of active `run:` keys,
- * with comments removed and CONDITIONAL steps and jobs excluded.
- *
- * Scanning the raw workflow text was wrong three times over. A line such as
- * `- # run: pnpm run migration:all` does not start with `#`, so a leading-`#`
- * filter keeps it; prose in a `name:` or a `with:` value matched the same way a
- * real command did; and a payload extracted without its YAML context ignored
- * `if:` — a step or job carrying `if: false` runs nothing, while its `run:`
- * still read as execution.
- *
- * An `if:` ANYWHERE in an enclosing scope disqualifies the step, whatever the
- * expression says. Evaluating GitHub's expression language is not this guard's
- * job, and "it might not run" is exactly the answer that must fail closed.
- */
 export function activeRunCommands(workflow: string): string[] {
 	const lines = workflow
 		.split('\n')
@@ -776,10 +622,7 @@ export function reachabilityFailures(
 	// its tier is evidence of nothing until something confirms the hook still
 	// RUNS the router with --run. It is run whole, with the stdin git gives it,
 	// so its own conditionals decide for themselves.
-	const PUSH_REFS =
-		'refs/heads/main 1111111111111111111111111111111111111111 ' +
-		'refs/heads/main 2222222222222222222222222222222222222222\n';
-	const hookArgv = routerSegment(hook, PUSH_REFS);
+	const hookArgv = routerSegment(hook);
 	const hookRuns = hookArgv !== null && hookArgv.includes('--run');
 	if (!hookRuns) {
 		problems.push(
@@ -1049,6 +892,48 @@ const SELF_CHECKS: {
 		hook: 'route() (\n\ttsx scripts/migration-route.ts --run\n)\n',
 		suites: [{ command: 'migration:c3', tier: 'push' }],
 	},
+	// THE UNCERTIFIED FAMILY. Each of these may well run the router — two of them
+	// demonstrably do. They are reported anyway, because the contract certifies a
+	// canonical line at top level and nothing else. "It probably runs" is the
+	// answer this guard exists to refuse.
+	{
+		id: 'RX-36',
+		what: 'an echo and the invocation share a line, so no line is canonical',
+		expect: 'not run scripts/migration-route.ts in command position',
+		scripts: { 'migration:all': `echo routing; ${GOOD_ALL}` },
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-37',
+		what: 'the invocation runs inside a command substitution — it executes, and it is not a certified call site',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'OUT=$(\ntsx scripts/migration-route.ts --run\n)\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-38',
+		what: 'the invocation sits in a conditional body whose condition happens to hold',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'if true; then\ntsx scripts/migration-route.ts --run\nfi\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-39',
+		what: 'a `&&` chain behind a command that fails — the router is never reached',
+		expect: 'not run scripts/migration-route.ts in command position',
+		scripts: { 'migration:all': `node -e 'process.exit(1)' && ${GOOD_ALL} || true` },
+		workflow: GOOD_WORKFLOW,
+	},
 	// THE OBSERVED-CONTEXT FAMILY. Each is a command the shell parses fine and
 	// never executes. None of these is decided by reading text: the script runs
 	// under the sandbox and nothing is recorded.
@@ -1246,13 +1131,6 @@ function selfCheckFailures(): string[] {
 			hook: GOOD_HOOK,
 		},
 		{
-			id: 'RX-00e',
-			what: 'an echo followed by a real invocation in the same script',
-			scripts: { 'migration:all': `echo routing; ${GOOD_ALL}` },
-			workflow: GOOD_WORKFLOW,
-			hook: GOOD_HOOK,
-		},
-		{
 			id: 'RX-00g',
 			what: 'a hook invocation wrapped across a backslash-newline continuation',
 			scripts: { 'migration:all': GOOD_ALL },
@@ -1265,20 +1143,6 @@ function selfCheckFailures(): string[] {
 			scripts: { 'migration:all': GOOD_ALL },
 			workflow: '      - run: |\n          pnpm run \\\n            migration:all\n',
 			hook: GOOD_HOOK,
-		},
-		{
-			id: 'RX-00l',
-			what: 'a conditional whose condition holds — the body really does run',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow: GOOD_WORKFLOW,
-			hook: 'if true; then\n\ttsx scripts/migration-route.ts --run\nfi\n',
-		},
-		{
-			id: 'RX-00k',
-			what: 'the hook runs the router inside a command substitution — which really does run it',
-			scripts: { 'migration:all': GOOD_ALL },
-			workflow: GOOD_WORKFLOW,
-			hook: 'OUT=$(tsx scripts/migration-route.ts --run)\n',
 		},
 		{
 			id: 'RX-00j',
