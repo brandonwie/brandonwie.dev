@@ -303,26 +303,41 @@ function baseline(control: Control): string {
 /**
  * A DELIBERATELY NARROW COMMAND GRAMMAR.
  *
- * A FIFTH ROUND showed that "head token is a runner" is still not "this runs the
- * router". Five more inert forms cleared the previous recogniser:
+ * Rounds five and six killed the same illusion twice: scanning text for
+ * something that looks like a command is not deciding that a command RUNS.
+ * Every form below cleared an earlier version of this recogniser while
+ * executing no suite —
  *
- *   12. `node -e "" scripts/migration-route.ts --all --run` — `-e` runs the
- *       string, never the file, and the path is merely an argument.
- *   13. `pnpm --help migration:controls` — prints help; the suite name was read
- *       as the script because every leading flag was skipped blindly.
- *   14. `echo "skip; tsx scripts/migration-route.ts --all --run"` — quote-blind
- *       splitting on `;` manufactured a segment whose head was `tsx`.
- *   15. `echo "skip | pnpm run migration:all"` — the same, on a pipe.
- *   16. `corepack pnpm run lint # tsx scripts/migration-route.ts --run` — a
- *       shell comment is not a command, and only line-leading `#` was dropped.
+ *   `node -e "" scripts/migration-route.ts …`   -e runs the string, not the file
+ *   `node --v8-options scripts/…`               prints options and exits
+ *   `node other.ts scripts/migration-route.ts`  the router is an argument
+ *   `pnpm --help migration:controls`            looks it up, runs nothing
+ *   `pnpm --filter __no_match__ migration:…`    matches no project, runs nothing
+ *   `echo "skip; tsx scripts/…"`                quoted separator, one echo
+ *   `echo "skip | pnpm run migration:all"`      quoted pipe, one echo
+ *   `true || tsx scripts/… --run`               only runs if `true` fails
+ *   `corepack pnpm run lint # tsx … --run`      a comment is not a command
+ *   a heredoc body naming the router            data, not commands
  *
- * So the grammar below ACCEPTS a finite set of forms and rejects everything
- * else, rather than approximating a shell and hoping. Quoting is modelled, not
- * ignored; the script operand is identified positionally; runner flags that
- * change what runs (`-e`, `--help`, `--version`, …) are terminal and reject the
- * segment. Anything this grammar cannot parse simply fails to match, and an
- * unmatched invocation is REPORTED as missing — a false alarm, which is the
- * survivable direction.
+ * THE RULE. A command counts only when it is a TOP-LEVEL, UNCONDITIONAL
+ * statement whose head, after transparent wrappers, is an accepted runner, and
+ * whose every flag is on an allowlist. Concretely:
+ *
+ *   - quoting is modelled, so a quoted separator cannot manufacture a statement;
+ *   - heredoc bodies are consumed as DATA, never parsed as commands;
+ *   - `&&` and `||` make what follows conditional, and conditional statements do
+ *     not count — `true || <router>` runs nothing when `true` succeeds;
+ *   - statements inside `if` / `while` / `for` / `until` / `case` / `{ }` do not
+ *     count, because whether they run depends on state this guard cannot see;
+ *   - a pipeline counts: every member of `a | b` runs;
+ *   - an UNKNOWN runner flag rejects the statement rather than being skipped,
+ *     and only `-s` / `--silent` may precede `pnpm [run] <script>`.
+ *
+ * The accepted set is therefore finite and small: it is what this repository
+ * actually writes in `package.json`, `ci.yml` and `.husky/pre-push`. Everything
+ * else fails to match, and no match is REPORTED as a missing invocation — a
+ * false alarm that reddens CI, never a silent clearance. Widening the set is a
+ * deliberate edit with a positive self-check attached, which is the point.
  */
 
 /** `scripts/migration-route.ts`, however the path is spelled. */
@@ -332,74 +347,97 @@ const ROUTER_PATH = /(?:^|\/)scripts\/migration-route\.ts$/;
 const TRANSPARENT = new Set(['corepack', 'env', 'sudo', 'command']);
 /** Runner heads that execute a script operand. */
 const RUNNERS = new Set(['tsx', 'node']);
-/** Runner flags that change WHAT runs, so the operand after them is not executed. */
-const TERMINAL_RUNNER_FLAGS = new Set([
-	'-e',
-	'--eval',
-	'-p',
-	'--print',
-	'-c',
-	'--check',
-	'-i',
-	'--interactive',
-	'-h',
-	'--help',
-	'-v',
-	'--version',
-	'--stdin',
-	'--completion-bash',
+/**
+ * The ONLY runner flags allowed before the operand. Everything else — `-e`,
+ * `--help`, `--v8-options`, tomorrow's flag nobody here has read about —
+ * rejects the statement, because a flag this guard does not know may change
+ * what runs or run nothing at all.
+ */
+const RUNNER_BOOLEAN_FLAGS = new Set([
+	'--no-warnings',
+	'--enable-source-maps',
+	'--experimental-strip-types',
+	'--no-deprecation',
 ]);
-/** Runner flags that consume the NEXT token, which is therefore not the operand. */
-const VALUE_RUNNER_FLAGS = new Set([
+/** Allowed runner flags that consume the NEXT token, which is not the operand. */
+const RUNNER_VALUE_FLAGS = new Set([
 	'--tsconfig',
 	'--require',
 	'-r',
 	'--import',
 	'--loader',
-	'--experimental-loader',
 	'--conditions',
 	'--env-file',
 ]);
-/** pnpm flags that leave `pnpm [run] <script>` intact. Everything else rejects. */
-const PNPM_BOOLEAN_FLAGS = new Set([
-	'-s',
-	'--silent',
-	'-r',
-	'--recursive',
-	'--workspace-root',
-	'-w',
-	'--if-present',
-]);
-const PNPM_VALUE_FLAGS = new Set(['-C', '--dir', '--filter', '--reporter', '--loglevel']);
+/** The only flags allowed before `pnpm [run] <script>`. `--filter` is NOT one. */
+const PNPM_BOOLEAN_FLAGS = new Set(['-s', '--silent']);
+
+/** Statement heads that open a conditional block. */
+const BLOCK_OPEN = new Set(['if', 'while', 'for', 'until', 'case', '{']);
+const BLOCK_CLOSE = new Set(['fi', 'done', 'esac', '}']);
+
+export interface Statement {
+	tokens: string[];
+	/** Runs only if a neighbour succeeded or failed (`&&`, `||`), or sits in a block. */
+	conditional: boolean;
+}
 
 /**
- * Quote-aware tokenizer. Returns one token list per shell command.
+ * Quote-aware, heredoc-aware statement scanner.
  *
- * Quoting is the point: inside quotes a `;`, `|` or `#` is TEXT, so
- * `echo "skip; tsx scripts/migration-route.ts"` is one command whose head is
- * `echo` — not two commands, the second of which looks like a router run.
- * Outside quotes, `#` at the start of a token opens a comment to end of line.
+ * Returns every statement with a flag saying whether it is unconditionally
+ * executed. Callers use only the unconditional ones; the rest are returned so a
+ * control can see them.
  */
-export function commandSegments(text: string): string[][] {
-	const segments: string[][] = [];
+export function statements(text: string): Statement[] {
+	const out: Statement[] = [];
 	let tokens: string[] = [];
 	let current = '';
 	let started = false;
 	let quote: string | null = null;
+	let conditional = false;
+	let depth = 0;
+	let heredoc: string | null = null;
 
 	const endToken = (): void => {
 		if (started) tokens.push(current);
 		current = '';
 		started = false;
 	};
-	const endSegment = (): void => {
+	const endStatement = (nextConditional: boolean): void => {
 		endToken();
-		if (tokens.length > 0) segments.push(tokens);
+		if (tokens.length > 0) {
+			for (const token of tokens) {
+				if (BLOCK_OPEN.has(token)) depth += 1;
+				else if (BLOCK_CLOSE.has(token)) depth = Math.max(0, depth - 1);
+			}
+			const opensBlock = tokens.some((t) => BLOCK_OPEN.has(t));
+			out.push({ tokens, conditional: conditional || depth > 0 || opensBlock });
+			// A heredoc redirection is announced by its own statement; the body
+			// starts after the newline that ends it.
+			for (const token of tokens) {
+				const match = /^<<-?(?:['"]?)([A-Za-z_][A-Za-z0-9_]*)(?:['"]?)$/.exec(token);
+				if (match) heredoc = match[1];
+			}
+		}
 		tokens = [];
+		conditional = nextConditional;
 	};
 
 	for (let i = 0; i < text.length; i += 1) {
 		const ch = text[i];
+
+		if (heredoc !== null) {
+			// Everything up to the delimiter line is DATA. A router invocation
+			// written inside a heredoc is text being fed somewhere, not a command.
+			const lineEnd = text.indexOf('\n', i);
+			const line = text.slice(i, lineEnd === -1 ? text.length : lineEnd);
+			if (line.trim() === heredoc) heredoc = null;
+			if (lineEnd === -1) break;
+			i = lineEnd;
+			continue;
+		}
+
 		if (quote !== null) {
 			if (ch === quote) quote = null;
 			else current += ch;
@@ -407,8 +445,7 @@ export function commandSegments(text: string): string[][] {
 		}
 		if (ch === '\\') {
 			// `\` before a newline is a LINE CONTINUATION: both characters vanish and
-			// the token continues. Keeping the newline glued the operand to the next
-			// line and made a real, wrapped invocation report as missing.
+			// the token continues.
 			if (text[i + 1] === '\n') {
 				i += 1;
 				continue;
@@ -427,29 +464,41 @@ export function commandSegments(text: string): string[][] {
 		}
 		if (ch === '#' && !started) {
 			while (i < text.length && text[i] !== '\n') i += 1;
-			endSegment();
+			endStatement(false);
 			continue;
 		}
 		if (ch === '\n') {
-			endSegment();
+			endStatement(false);
 			continue;
 		}
 		if (/\s/.test(ch)) {
 			endToken();
 			continue;
 		}
-		if (ch === ';' || ch === '&' || ch === '|' || ch === '(' || ch === ')') {
-			endSegment();
+		if (ch === '&' || ch === '|') {
+			// `a && b`, `a || b` — b is conditional. `a | b` — both members run.
+			const doubled = text[i + 1] === ch;
+			endStatement(doubled);
+			if (doubled) i += 1;
+			continue;
+		}
+		if (ch === ';' || ch === '(' || ch === ')') {
+			endStatement(false);
 			continue;
 		}
 		current += ch;
 		started = true;
 	}
-	endSegment();
+	endStatement(false);
+	return out;
+}
 
-	return segments
-		.map((segment) => {
-			let rest = segment;
+/** Unconditional statements, reduced to command position. */
+export function commandSegments(text: string): string[][] {
+	return statements(text)
+		.filter((statement) => !statement.conditional)
+		.map((statement) => {
+			let rest = statement.tokens;
 			// `FOO=bar cmd` — assignments precede the command, they are not it.
 			while (rest.length > 0 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(rest[0])) rest = rest.slice(1);
 			for (;;) {
@@ -471,14 +520,14 @@ export function commandSegments(text: string): string[][] {
 }
 
 /**
- * The router's OWN arguments, for the segment that executes
- * `scripts/migration-route.ts`, or null when no segment does.
+ * The router's OWN arguments, for the statement that executes
+ * `scripts/migration-route.ts`, or null when no statement does.
  *
- * The operand is found positionally: runner flags are consumed by name, the
- * first remaining non-flag token is what the runner executes, and it must be the
- * router. `node -e "" scripts/migration-route.ts --all` rejects on `-e`;
- * `node other.ts scripts/migration-route.ts` rejects because the operand is
- * `other.ts` and the router path is just an argument to it.
+ * The operand is found positionally, and every flag before it must be on the
+ * allowlist: an unknown flag rejects the statement outright rather than being
+ * stepped over. `node -e ""` and `node --v8-options` both reject; `node
+ * other.ts scripts/migration-route.ts` rejects because the operand is
+ * `other.ts` and the router path is merely its argument.
  */
 export function routerSegment(text: string): string[] | null {
 	for (const tokens of commandSegments(text)) {
@@ -491,18 +540,20 @@ export function routerSegment(text: string): string[] | null {
 		} else {
 			continue;
 		}
-		let terminal = false;
+		let rejected = false;
 		while (i < tokens.length && tokens[i].startsWith('-')) {
 			const flag = tokens[i].split('=')[0];
-			if (TERMINAL_RUNNER_FLAGS.has(flag)) {
-				terminal = true;
+			// deno's permission flags are boolean and numerous; they do not change
+			// which script runs.
+			const denoPermission = tokens[0] === 'deno' && /^--allow-|^--deny-|^--no-/.test(flag);
+			if (RUNNER_BOOLEAN_FLAGS.has(flag) || denoPermission) i += 1;
+			else if (RUNNER_VALUE_FLAGS.has(flag)) i += tokens[i].includes('=') ? 1 : 2;
+			else {
+				rejected = true;
 				break;
 			}
-			// `--flag=value` carries its value; `--flag value` eats the next token.
-			if (VALUE_RUNNER_FLAGS.has(flag) && !tokens[i].includes('=')) i += 1;
-			i += 1;
 		}
-		if (terminal || i >= tokens.length) continue;
+		if (rejected || i >= tokens.length) continue;
 		if (!ROUTER_PATH.test(tokens[i])) continue;
 		return tokens.slice(i + 1);
 	}
@@ -510,8 +561,12 @@ export function routerSegment(text: string): string[] | null {
 }
 
 /**
- * True when some segment RUNS `pnpm [run] <command>` — not prints it, and not
- * `pnpm --help <command>`, which looks the command up and runs nothing.
+ * True when some unconditional statement RUNS `pnpm [run] <command>`.
+ *
+ * Only `-s` / `--silent` may precede it. `--help` runs nothing, and `--filter`
+ * chooses which workspace projects run — `pnpm --filter __no_match__ <script>`
+ * exits 0 having run nothing at all — so both reject, along with every other
+ * flag this guard has not been taught.
  */
 export function invokesScript(text: string, command: string): boolean {
 	for (const tokens of commandSegments(text)) {
@@ -519,15 +574,11 @@ export function invokesScript(text: string, command: string): boolean {
 		let i = 1;
 		let rejected = false;
 		while (i < tokens.length && tokens[i].startsWith('-')) {
-			const flag = tokens[i].split('=')[0];
-			if (PNPM_BOOLEAN_FLAGS.has(flag)) i += 1;
-			else if (PNPM_VALUE_FLAGS.has(flag)) i += tokens[i].includes('=') ? 1 : 2;
-			else {
-				// An unrecognised flag may be terminal (`--help`, `--version`) or may
-				// change what runs. Refusing is the fail-closed answer.
+			if (!PNPM_BOOLEAN_FLAGS.has(tokens[i])) {
 				rejected = true;
 				break;
 			}
+			i += 1;
 		}
 		if (rejected) continue;
 		if (tokens[i] === 'run') i += 1;
@@ -841,6 +892,65 @@ const SELF_CHECKS: {
 		hook: 'corepack pnpm run lint # tsx scripts/migration-route.ts --run\n',
 		suites: [{ command: 'migration:c3', tier: 'push' }],
 	},
+	// THE NO-OP FAMILY. Each is a command that runs and executes no suite: a
+	// terminal runner flag, a filter that matches no project, a short-circuit
+	// that never fires, a heredoc body, and a conditional block.
+	{
+		id: 'RX-18',
+		what: 'a terminal runner flag prints and exits, the operand never runs',
+		expect: 'not run scripts/migration-route.ts in command position',
+		scripts: {
+			'migration:all': 'node --v8-options scripts/migration-route.ts --all --run --tier all',
+		},
+		workflow: GOOD_WORKFLOW,
+	},
+	{
+		id: 'RX-19',
+		what: 'pnpm --filter selects no project, so the named suite runs nowhere',
+		expect: 'executed by nothing',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:controls',
+		},
+		workflow:
+			'      - run: pnpm run migration:all\n      - run: pnpm --filter __no_match__ migration:controls\n',
+	},
+	{
+		id: 'RX-20',
+		what: 'the hook router call is short-circuited behind `true ||`, so it never fires',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'true || tsx scripts/migration-route.ts --run\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-21',
+		what: 'the router appears only inside a heredoc body — data being written, not a command',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'cat <<EOF > /tmp/note\ntsx scripts/migration-route.ts --run\nEOF\ncorepack pnpm run lint\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
+	{
+		id: 'RX-22',
+		what: 'the router call sits inside an if-block, so whether it runs depends on state this guard cannot see',
+		expect: 'does not invoke scripts/migration-route.ts --run',
+		scripts: {
+			'migration:all':
+				'tsx scripts/migration-route.ts --all --run --tier all --exclude migration:c3',
+		},
+		workflow: GOOD_WORKFLOW,
+		hook: 'if [ -n "$SKIP" ]; then\n\ttsx scripts/migration-route.ts --run\nfi\n',
+		suites: [{ command: 'migration:c3', tier: 'push' }],
+	},
 	{
 		id: 'RX-12',
 		what: 'the hook echoes the router invocation instead of running it',
@@ -935,6 +1045,15 @@ function selfCheckFailures(): string[] {
 			scripts: { 'migration:all': GOOD_ALL },
 			workflow: '      - run: |\n          pnpm run \\\n            migration:all\n',
 			hook: GOOD_HOOK,
+		},
+		{
+			id: 'RX-00i',
+			what: 'the real hook shape: an assignment, an if-block, then the router at top level',
+			scripts: { 'migration:all': GOOD_ALL },
+			workflow: GOOD_WORKFLOW,
+			hook:
+				'PUSH_REFS=$(cat)\nif command -v deno >/dev/null 2>&1; then\n\tdeno install --frozen || exit 1\nelse\n\techo skip\nfi\n' +
+				GOOD_HOOK,
 		},
 		{
 			id: 'RX-00f',
