@@ -521,9 +521,21 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 				for (const property of Object.keys(a)) {
 					eq(b[property], a[property], `${selector}.${property}`);
 				}
+				// A LOWER BOUND, or the oracle proves nothing when it finds nothing.
+				// Hoisting a tween's vars into a local on BOTH sides makes both
+				// extractions empty, `eq({}, {})` holds, and the row passes having
+				// compared zero expressions -- while its own prose says "expression
+				// for expression". The counts are the measured baseline (4 + 5 + 6),
+				// not a claim: if the Svelte tween legitimately gains a property this
+				// row fails loudly and the number is updated on purpose.
+				must(
+					Object.keys(a).length > 0,
+					`${selector} yielded no expressions on the Svelte side -- the oracle compared nothing`,
+				);
 				total += Object.keys(a).length;
 				compared.push(`${selector} ${Object.keys(a).length}`);
 			}
+			eq(total, 15, 'expressions extracted across the three tweens');
 
 			return `${total} expressions compared as text across three tweens: ${compared.join(', ')}`;
 		},
@@ -641,7 +653,15 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		// deck the moment the deck's scale changed, which is the reason the
 		// constants exist at all.
 		must(!component.includes('0.45'), 'the component hardcodes a duration');
-		must(!component.includes('power2'), 'the component hardcodes an easing curve');
+		// THE CURVE CLAUSE CANNOT READ `codeOnly`. It empties string CONTENTS, and
+		// 'power2.inOut' only ever occurs inside a string -- so `!includes('power2')`
+		// held no matter what the component did, which round 2 demonstrated by
+		// adding the ease back and watching T8 pass. `stripComments` keeps string
+		// bodies and drops only comments, which is what this clause needs.
+		const componentWithStrings = stripComments(
+			read('next/src/components/deck/AccountSeparationSlide.tsx'),
+		);
+		must(!componentWithStrings.includes('power2'), 'the component hardcodes an easing curve');
 		// Call forms, not bare identifiers: `ReturnType<typeof revealTweens>` is a
 		// TYPE reference and would satisfy an identifier check in a component that
 		// had stopped calling the planner altogether.
@@ -784,7 +804,17 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		const loader = codeOnly(read('next/src/deck/gsap.ts'));
 		must(/^let pending/m.test(loader), 'the memo is not module-scoped');
 		must(count(loader, 'registerPlugin') === 1, 'registerPlugin is called more than once');
-		must(loader.includes('if (!pending)'), 'the memo is not guarded');
+		// INSIDE the guard, not merely present alongside it. The three clauses were
+		// spelling checks -- module-scoped `pending`, one registerPlugin, an
+		// `if (!pending)` somewhere -- and all three survive moving the one
+		// registration OUT of the memo so it runs on every call, which is precisely
+		// the defect the row is named for.
+		const guard = loader.match(/if \(!pending\) \{([\s\S]*?)\n\t\}/);
+		must(guard !== null, 'the memo is not guarded');
+		must(
+			guard![1].includes('registerPlugin'),
+			'registerPlugin runs outside the memo guard, so every call re-registers',
+		);
 		return 'one module-level promise; StrictMode remounts await it rather than re-registering';
 	});
 
@@ -1208,7 +1238,18 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		// The call form, not an object shorthand that could appear anywhere: the
 		// point is that the locale reaches the message functions, not that the
 		// word appears in the file.
-		must(/m\.\w+\(\{\}, at\)/.test(source), 'the locale is not passed to the message functions');
+		// UNIVERSAL, not existential. `/m\.\w+\(\{\}, at\)/.test()` is satisfied by
+		// ONE surviving localized call: round 2 stripped `, at` from 14 of the 15
+		// and the row stayed green. Every message call has to carry the locale, so
+		// count them and require the two counts to agree.
+		const allCalls = source.match(/m\.\w+\(/g) ?? [];
+		const localizedCalls = source.match(/m\.\w+\(\{\}, at\)/g) ?? [];
+		must(allCalls.length > 0, 'no message functions are called at all');
+		eq(
+			localizedCalls.length,
+			allCalls.length,
+			'message calls carrying an explicit locale, out of all message calls',
+		);
 		must(/const at = \{ locale \}/.test(source), '`at` no longer carries the caller locale');
 		return `en "${itemOf(en, 'nav:home').label}" vs ko "${itemOf(ko, 'nav:home').label}"`;
 	});
@@ -1229,9 +1270,18 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 			'the restore target is no longer bound to restoreFocusTarget()',
 		);
 		eq(count(source, 'previouslyFocused.current ='), 1, 'assignments to the restore target');
-		must(
-			/function restoreFocusTarget\(\)[^}]*document\.activeElement/.test(source),
-			'restoreFocusTarget no longer reads document.activeElement',
+		// NOT containment. `[^}]*document.activeElement` accepts a body that
+		// consults something else FIRST and only falls back to activeElement --
+		// which is a genuine A11Y-1 fix, and round 2 demonstrated one staying green
+		// under it. The escape the blacklist rewrite closed had simply moved one
+		// function down. Assert the body exactly, so activeElement is the SOLE
+		// source of the restore target.
+		const restoreBody = source.match(/function restoreFocusTarget\(\)[^{]*\{([\s\S]*?)\n\}/);
+		must(restoreBody !== null, 'restoreFocusTarget is missing or no longer a function declaration');
+		eq(
+			restoreBody![1].replace(/\s+/g, ' ').trim(),
+			'return (document.activeElement as HTMLElement | null) ?? null;',
+			'the restoreFocusTarget body',
 		);
 		must(
 			/return \(\) => restore\?\.focus\?\.\(\);/.test(source),

@@ -953,6 +953,25 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
+		id: 'A1-defect-fixed-inside-restoreFocusTarget',
+		kind: 'defect',
+		row: 'A1',
+		what: 'A11Y-1 is fixed inside restoreFocusTarget, below the assignment the row binds',
+		setup: (dir) => ({
+			// Round 2's finding. A1 checked the assignment site exactly but the
+			// helper only by containment, so a real fix placed INSIDE the helper --
+			// return the opener, fall back to activeElement -- kept all 53 rows
+			// green. The blacklist escape had become a containment escape one
+			// function down.
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/FuzzyFinder.tsx', (text) =>
+				text.replace(
+					'return (document.activeElement as HTMLElement | null) ?? null;',
+					"return (\n\t\tdocument.querySelector<HTMLElement>('[data-palette-opener]') ??\n\t\t(document.activeElement as HTMLElement | null) ??\n\t\tnull\n\t);",
+				),
+			),
+		}),
+	},
+	{
 		id: 'A1-defect-focus-never-restored',
 		kind: 'defect',
 		row: 'A1',
@@ -1249,6 +1268,63 @@ const CONTROLS: Control[] = [
 		},
 	},
 
+	{
+		id: 'T8-defect-easing-curve-respelled',
+		kind: 'defect',
+		row: 'T8',
+		what: 'the component re-spells the easing curve instead of importing it',
+		setup: (dir) => ({
+			// The control T8's curve clause never had. It read through `codeOnly`,
+			// which empties string contents, so the clause could not fail and this
+			// mutation used to leave the suite green.
+			sourceOverrides: mutateSource(
+				dir,
+				'next/src/components/deck/AccountSeparationSlide.tsx',
+				(text) =>
+					text.replace(
+						'loaded.gsap.to(element.querySelectorAll(tween.selector), tween.vars);',
+						"loaded.gsap.to(element.querySelectorAll(tween.selector), { ...tween.vars, ease: 'power2.inOut' });",
+					),
+			),
+		}),
+	},
+	{
+		id: 'I6-defect-locale-dropped-from-most-calls',
+		kind: 'defect',
+		row: 'I6',
+		what: 'all but one message call lose their explicit locale',
+		setup: (dir) => ({
+			// I6's regex was existential: one surviving localized call satisfied it.
+			// Strip the locale from every call but the first.
+			sourceOverrides: mutateSource(dir, 'next/src/palette/items.ts', (text) => {
+				let seen = 0;
+				return text.replace(/(m\.\w+)\(\{\}, at\)/g, (whole, fn) => {
+					seen += 1;
+					return seen === 1 ? whole : `${fn}()`;
+				});
+			}),
+		}),
+	},
+	{
+		id: 'L4-defect-registration-outside-the-memo',
+		kind: 'defect',
+		row: 'L4',
+		what: 'the one registerPlugin call moves out of the memo and runs on every call',
+		setup: (dir) => ({
+			// Still exactly one call, still a module-scoped `pending`, still an
+			// `if (!pending)` guard -- so all three of L4's spelling clauses held
+			// while the plugin re-registered on every loadGsap().
+			sourceOverrides: mutateSource(dir, 'next/src/deck/gsap.ts', (text) =>
+				text
+					.replace('\t\t\tcore.gsap.registerPlugin(flip.Flip, draw.DrawSVGPlugin);\n\n', '')
+					.replace(
+						'\treturn pending;',
+						'\tvoid pending.then((g) => g.gsap.registerPlugin());\n\treturn pending;',
+					),
+			),
+		}),
+	},
+
 	// ---- C: typecheck
 	{
 		id: 'C1-defect-widened-exclude',
@@ -1276,8 +1352,21 @@ const CONTROLS: Control[] = [
 		what: 'tsc reports an error and the row still passes',
 		setup: (dir) => ({
 			// C1 is a conjunction -- tsc exits 0 AND the ported files are in the
-			// program -- and only the second half had a control. This is the first.
-			tsconfigProject: tsconfigWith(dir, { include: [brokenProgram(dir)] }),
+			// program -- and only the second half had a control. This is the first,
+			// and round 2 found it proving the second half over again: including
+			// ONLY broken.ts drops every ported module from the program, so clause 2
+			// failed and clause 1 was never exercised. Deleting the `result.code`
+			// check left this control passing. The include carries the ported tree
+			// AND the broken file, so the ONLY reason the row can fail is tsc's exit
+			// code. Absolute paths -- a relative one resolves against the scratch
+			// directory and matches nothing.
+			tsconfigProject: tsconfigWith(dir, {
+				include: [
+					resolve(ROOT, 'next/**/*.ts'),
+					resolve(ROOT, 'next/**/*.tsx'),
+					brokenProgram(dir),
+				],
+			}),
 		}),
 	},
 
@@ -1414,9 +1503,14 @@ export function runControls(filter?: string): number {
 	// forbids, so the roll-call is now computed rather than asserted in prose.
 	if (!filter) {
 		let baselineRows: RowResult[] = [];
+		// skipTypecheck was `true` here, and C1 is gated behind `!skipTypecheck` in
+		// the assertion script -- so the roll-call enumerated 52 of 53 rows and C1
+		// could carry zero defect controls without the guard noticing. A coverage
+		// guard that silently omits a row is the same class of defect it exists to
+		// catch. The tsc run is the price of the guard being complete.
 		runAssertions({
 			quiet: true,
-			skipTypecheck: true,
+			skipTypecheck: false,
 			onRows: (rows) => {
 				baselineRows = rows;
 			},

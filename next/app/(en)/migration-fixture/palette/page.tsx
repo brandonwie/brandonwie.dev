@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import PaletteSpike from '@/components/palette/PaletteSpike';
 import { sourceDate } from '@/content/article-contract';
+import { effectiveDate } from '@/content/feeds';
 import { listPublishedPosts } from '@/content/posts';
 import type { PalettePost } from '@/palette/items';
 
@@ -28,21 +29,38 @@ export const metadata: Metadata = {
 
 /** The comparator reads a stable page; the palette itself opens on a chord. */
 export default function PaletteSpikePage() {
-	const posts: PalettePost[] = listPublishedPosts('en').map((post) => ({
-		slug: post.slug,
-		title: post.frontmatter.title,
-		description: post.frontmatter.description,
-		// `sourceDate`, not String(): gray-matter hands back a Date for an
-		// unquoted YAML date, and String(Date) is a timezone- and ICU-dependent
-		// local string. It would render "Tue Jan 27 2026 09:00:00 GMT+0900
-		// (Korean Standard Time)" where the Svelte palette renders the ISO value,
-		// show the PREVIOUS calendar day on any builder west of UTC, and make the
-		// exported bytes a function of the build machine's clock. The repo's own
-		// helper is what feeds.ts and article-json-ld.ts already use.
-		date: sourceDate(post.frontmatter.date) as string,
-		tags: post.frontmatter.tags,
-		category: post.frontmatter.category,
-	}));
+	const published = listPublishedPosts('en');
+
+	// ORDER IS PART OF THE PORT. Svelte's root layout hands the palette posts
+	// already sorted by effectiveDate(date, updated) descending (+layout.ts:34-38);
+	// `listPublishedPosts` returns them in relativePath order (posts.ts:201-203).
+	// Both stacks' `defaultResults` then sort by `date` ALONE with a stable sort, so
+	// every tie resolves to whatever order it arrived in and the palette's first
+	// screen comes out differently ordered. Sorting here is what makes the two
+	// inputs the same; the shared date-only sort does the rest. No comparator row
+	// covers this -- the palette only renders on a chord.
+	const sortKey = (post: (typeof published)[number]) =>
+		new Date(
+			effectiveDate(sourceDate(post.frontmatter.date) ?? '', sourceDate(post.frontmatter.updated)),
+		).getTime();
+
+	const posts: PalettePost[] = [...published]
+		.sort((a, b) => sortKey(b) - sortKey(a))
+		.map((post) => ({
+			slug: post.slug,
+			title: post.frontmatter.title,
+			description: post.frontmatter.description,
+			// `sourceDate`, not String(): gray-matter hands back a Date for an
+			// unquoted YAML date, and String(Date) is a timezone- and ICU-dependent
+			// local string. It would render "Tue Jan 27 2026 09:00:00 GMT+0900
+			// (Korean Standard Time)" where the Svelte palette renders the ISO value,
+			// show the PREVIOUS calendar day on any builder west of UTC, and make the
+			// exported bytes a function of the build machine's clock. The repo's own
+			// helper is what feeds.ts and article-json-ld.ts already use.
+			date: sourceDate(post.frontmatter.date) ?? '',
+			tags: post.frontmatter.tags,
+			category: post.frontmatter.category,
+		}));
 
 	return (
 		<main>

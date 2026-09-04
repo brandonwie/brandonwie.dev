@@ -40,10 +40,14 @@ export default function PaletteHost({ posts, pathname, locale, navigate }: Props
 	const [open, setOpen] = useState(false);
 
 	// Memoized because it is the sole dependency of the child's Fuse index. Rebuilt
-	// per render, it re-indexes 167 posts on every parent render and leaves `fuse`
-	// pointing at a different array than the `results` on screen. Latent on this
+	// per render, it re-indexes 167 posts on every parent render. Latent on this
 	// fixture route, where the host only re-renders on open/close; live in the
 	// shell mount, where `pathname` comes from `usePathname()`.
+	//
+	// What it does NOT do is keep `fuse` aligned with the `results` on screen:
+	// `results` is seeded once by a useState initializer and thereafter only
+	// reassigned on input. Svelte builds both in `onMount` and never rebuilds
+	// either (FuzzyFinder.svelte:92-99), so that is parity, not an oversight.
 	const items = useMemo(
 		() => buildPaletteItems(posts, pathname, navigate, locale),
 		[locale, navigate, pathname, posts],
@@ -77,6 +81,8 @@ export default function PaletteHost({ posts, pathname, locale, navigate }: Props
 	}, []);
 
 	// Stable, or the child's window-listener effect re-registers every render.
+	// Latent on this fixture route for the same reason the memo above is: the host
+	// re-renders only on open/close, and either edge mounts or unmounts the child.
 	const handleClose = useCallback(() => setOpen(false), []);
 
 	if (!open) return null;
