@@ -42,6 +42,7 @@
  *   --plan                          print the selection for the given change set
  *   --run                           run the selection (sequential, first failure wins)
  *   --all                           select every suite in --tier (default push)
+ *   --exclude <c1,c2,...>           drop named suites; unknown name is FATAL
  *   --range <base>..<head>          derive changed paths from a git range
  *   --paths <p1,p2,...>             use an explicit change set (tests)
  *   (default)                       read pre-push stdin: `<lref> <lsha> <rref> <rsha>`
@@ -591,9 +592,41 @@ function flagValue(argv: string[], flag: string): string | undefined {
 	return index === -1 ? undefined : argv[index + 1];
 }
 
+/**
+ * `--exclude a,b` removes named suites from the tier selection.
+ *
+ * WHY THIS EXISTS. Before it, CI could not express "every registered suite
+ * except the one that has its own parallel job". `migration:all` therefore ran
+ * `--tier push` only, and five registered ci-tier suites -- including the
+ * 86-control `migration:gsap-palette:controls` that gate G2's approval cites as
+ * its evidence -- were executed by nothing: not by the hook, not by
+ * `migration:all`, not by any step in `ci.yml`. The workflow comment claimed the
+ * opposite and named this router's map as the guarantee.
+ *
+ * FAIL-CLOSED. An unknown command is FATAL, not ignored. A typo'd exclusion
+ * that silently matched nothing would drop the suite it was meant to keep
+ * running back into the same blind spot, which is the failure this flag exists
+ * to close.
+ */
+function excluded(argv: string[]): Set<string> {
+	const raw = flagValue(argv, '--exclude');
+	if (raw === undefined) return new Set();
+	const names = raw.split(',').filter(Boolean);
+	const known = new Set(SUITES.map((s) => s.command));
+	const unknown = names.filter((n) => !known.has(n));
+	if (unknown.length > 0) {
+		throw new Error(
+			`--exclude names ${unknown.length} command(s) not in SUITES: ${unknown.join(', ')}. ` +
+				`An exclusion that matches nothing hides the suite it was meant to keep running.`,
+		);
+	}
+	return new Set(names);
+}
+
 async function main(argv: string[]): Promise<number> {
 	const tier = (flagValue(argv, '--tier') ?? 'push') as 'push' | 'ci' | 'all';
-	const inTier = SUITES.filter((s) => tier === 'all' || s.tier === tier);
+	const skip = excluded(argv);
+	const inTier = SUITES.filter((s) => (tier === 'all' || s.tier === tier) && !skip.has(s.command));
 
 	if (argv.includes('--list')) {
 		for (const suite of inTier) {
@@ -623,7 +656,10 @@ async function main(argv: string[]): Promise<number> {
 						broad: true,
 						reasons: ['no resolvable push range (new branch or empty stdin)'],
 					}
-				: select(changed, tier);
+				: {
+						...select(changed, tier),
+						commands: select(changed, tier).commands.filter((c) => !skip.has(c)),
+					};
 	}
 
 	for (const reason of selection.reasons) console.log(`broad: ${reason}`);

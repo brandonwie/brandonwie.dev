@@ -264,6 +264,44 @@ function vacuityGuard(): string[] {
 		);
 	}
 
+	// EVERY REGISTERED SUITE MUST BE EXECUTED BY SOMETHING.
+	//
+	// This is the guard that was missing. `migration:all` selected `--tier push`
+	// only, so five registered ci-tier suites ran nowhere: not in the hook, not
+	// in `migration:all`, not in any `ci.yml` step. `migration:gsap-palette:controls`
+	// -- 86 controls, cited by gate G2's approval as its evidence -- was among
+	// them, and nothing would have noticed if it had started failing.
+	//
+	// The executed set is DERIVED, not declared: the tier and exclusions come
+	// from `migration:all`'s own argv in `package.json`, unioned with the suite
+	// commands `ci.yml` invokes by name. Registering a suite that no runner
+	// reaches now fails here rather than passing silently.
+	const pkg = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')) as {
+		scripts: Record<string, string>;
+	};
+	const allArgv = pkg.scripts['migration:all'] ?? '';
+	const allTier = /--tier\s+(push|ci|all)/.exec(allArgv)?.[1] ?? 'push';
+	const allExcluded = new Set(
+		(/--exclude\s+(\S+)/.exec(allArgv)?.[1] ?? '').split(',').filter(Boolean),
+	);
+	const workflow = readFileSync(join(REPO_ROOT, '.github/workflows/ci.yml'), 'utf8');
+	const executed = new Set<string>();
+	for (const suite of SUITES) {
+		const viaAll = (allTier === 'all' || suite.tier === allTier) && !allExcluded.has(suite.command);
+		const viaNamed = new RegExp(
+			`pnpm run ${suite.command.replace(/[:]/g, '[:]')}(\\s|$)`,
+			'm',
+		).test(workflow);
+		if (viaAll || viaNamed) executed.add(suite.command);
+	}
+	const unreached = SUITES.filter((s) => !executed.has(s.command)).map((s) => s.command);
+	if (unreached.length > 0) {
+		failures.push(
+			`${unreached.length} registered suite(s) are executed by nothing — ` +
+				`neither migration:all (tier ${allTier}) nor a named ci.yml step: ${unreached.join(', ')}`,
+		);
+	}
+
 	// At least one suite must reach a real dependency graph, or the derivation is
 	// decorative and the map is a hand-written table wearing a computation.
 	const derived = SUITES.filter((s) => importClosure(s.entry).size > 1);

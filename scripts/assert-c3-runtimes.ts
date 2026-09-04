@@ -232,9 +232,31 @@ function run(
 	});
 }
 
-function portFree(port: number): Promise<boolean> {
+/**
+ * BOTH LOOPBACK FAMILIES, AND WHY.
+ *
+ * These probes hard-coded `127.0.0.1`. Vite 8 binds `[::1]` only -- confirmed
+ * with `lsof -nP -iTCP:5173 -sTCP:LISTEN` reporting
+ * `TCP [::1]:5173 (LISTEN)` while `curl 127.0.0.1:5173` returned nothing and
+ * `curl 'http://[::1]:5173/'` returned 200. So T1 (`pnpm dev`) and T3
+ * (`pnpm preview`) reported "no HTTP response within 60000ms" against servers
+ * that were healthy, and `portFree` reported the port free while a listener
+ * held it.
+ *
+ * Nobody saw it because `migration:c3` was one of five registered suites that
+ * no runner executed; it surfaced the moment `migration:all` started selecting
+ * `--tier all`. The recorded C3 PASS 17/17 predates the Vite version that made
+ * the assumption false, so this is the probe catching up with its environment,
+ * not a regression in `dev` or `preview`.
+ *
+ * Asymmetric on purpose: a port is FREE only if BOTH families refuse, and a
+ * probe SUCCEEDS if EITHER answers. Both directions fail closed.
+ */
+const LOOPBACK_HOSTS = ['127.0.0.1', '::1'] as const;
+
+function portFreeOn(host: string, port: number): Promise<boolean> {
 	return new Promise((resolvePromise) => {
-		const sock = createConnection({ host: '127.0.0.1', port });
+		const sock = createConnection({ host, port });
 		sock.once('connect', () => {
 			sock.destroy();
 			resolvePromise(false);
@@ -243,9 +265,14 @@ function portFree(port: number): Promise<boolean> {
 	});
 }
 
-function probe(port: number): Promise<number | null> {
+async function portFree(port: number): Promise<boolean> {
+	const results = await Promise.all(LOOPBACK_HOSTS.map((h) => portFreeOn(h, port)));
+	return results.every(Boolean);
+}
+
+function probeOn(host: string, port: number): Promise<number | null> {
 	return new Promise((resolvePromise) => {
-		const req = httpGet({ host: '127.0.0.1', port, path: '/', timeout: 2000 }, (res) => {
+		const req = httpGet({ host, port, path: '/', timeout: 2000 }, (res) => {
 			res.resume();
 			resolvePromise(res.statusCode ?? null);
 		});
@@ -255,6 +282,14 @@ function probe(port: number): Promise<number | null> {
 		});
 		req.on('error', () => resolvePromise(null));
 	});
+}
+
+async function probe(port: number): Promise<number | null> {
+	for (const host of LOOPBACK_HOSTS) {
+		const status = await probeOn(host, port);
+		if (status !== null) return status;
+	}
+	return null;
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -349,10 +384,10 @@ async function runServer(
 		parts.push(
 			exitedDuringPoll !== undefined
 				? `process exited with ${exitedDuringPoll} before answering on :${port}`
-				: `no HTTP response on 127.0.0.1:${port} within ${healthTimeoutMs}ms`,
+				: `no HTTP response on 127.0.0.1:${port} or [::1]:${port} within ${healthTimeoutMs}ms`,
 		);
 	} else {
-		parts.push(`GET http://127.0.0.1:${port}/ -> ${status} after ${elapsed}ms`);
+		parts.push(`GET http://{127.0.0.1,[::1]}:${port}/ -> ${status} after ${elapsed}ms`);
 	}
 	if (announced && Number(announced[1]) !== port) {
 		parts.push(`server announced port ${announced[1]}, not the configured ${port}`);

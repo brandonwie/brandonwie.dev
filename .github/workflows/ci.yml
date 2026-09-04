@@ -34,9 +34,14 @@ jobs:
   # The migration verification superset. The pre-push hook routes by changed
   # surface to stay under a workable push time; CI runs EVERY suite regardless of
   # what the diff touched, so a routing mistake costs a red CI run rather than a
-  # silent gap. The suite list comes from the router's own map
-  # (`pnpm migration:all`), so a suite added there lands here without anyone
-  # remembering to edit this file.
+  # silent gap.
+  #
+  # That claim was FALSE until 2026-09-04. `migration:all` selected `--tier push`
+  # only, so five registered ci-tier suites ran nowhere -- including
+  # `migration:gsap-palette:controls`, the 86-control suite gate G2's approval
+  # cites as its evidence. It now selects `--tier all`, minus the one suite that
+  # has its own parallel job below, and `migration:route:controls` fails closed
+  # if any registered suite is reachable by neither path.
   migration:
     runs-on: ubuntu-latest
     steps:
@@ -61,20 +66,20 @@ jobs:
       - name: Router controls
         run: pnpm run migration:route:controls
 
+      # `migration:parity:progress` is inside this selection, not a separate step:
+      # the Next comparator exits 1 by design until the surface port closes
+      # parity. `continue-on-error` would have been the easy way to tolerate
+      # that, and it also swallows a missing build (exit 2) and a malformed or
+      # stale ledger (also exit 1). The suite JUDGES the exit instead: expected
+      # drift passes and is reported as a number, a broken harness fails the job.
       - name: Full migration suite
         run: pnpm run migration:all
 
-      # The Next comparator exits 1 by design until the surface port closes
-      # parity. `continue-on-error` would have been the easy way to tolerate
-      # that, and it also swallows a missing build (exit 2) and a malformed or
-      # stale ledger (also exit 1). This JUDGES the exit instead: expected drift
-      # passes and is reported as a number, a broken harness fails the job.
-      - name: Next parity progress
-        run: pnpm run migration:parity:progress
-
-  # Split out because it is ~265 s on its own — more than the other fifteen
-  # suites combined — since each of its 40 controls re-captures the whole
-  # 366-page build. Parallel job, so it never serializes behind the rest.
+  # Split out because it is ~265 s on its own — more than the other suites
+  # combined — since each of its controls re-captures the whole 366-page build.
+  # Parallel job, so it never serializes behind the rest. This is the one suite
+  # `migration:all` excludes by name; the router's `--exclude` is fail-closed, so
+  # a typo there breaks CI rather than silently dropping a suite.
   migration-controls:
     runs-on: ubuntu-latest
     steps:
