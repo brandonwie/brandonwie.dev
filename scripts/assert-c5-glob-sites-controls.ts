@@ -286,6 +286,28 @@ function main(): number {
 			`${missing === 2 ? 'PASS' : 'FAIL'}  MISS  ${'BASELINE'.padEnd(10)} exit ${missing} (expected 2)  a missing Svelte build cannot pass`,
 		);
 
+		// A build that emitted one oracle page and not another must also be "could
+		// not run". Before the precheck covered every page, this exited 1 -- and
+		// every DEFECT control below accepts exit 1, so a crashed harness passed
+		// as a working one.
+		const partialBuilds = scratchBuilds(join(root, 'partial'));
+		rmSync(join(partialBuilds.svelteBuild, 'ko.html'));
+		const partial = runSuite(partialBuilds);
+		if (partial !== 2) failures.push(`BASELINE partial oracle: exit ${partial}, expected 2`);
+		console.log(
+			`${partial === 2 ? 'PASS' : 'FAIL'}  PART  ${'BASELINE'.padEnd(10)} exit ${partial} (expected 2)  a build missing one oracle page cannot pass`,
+		);
+
+		// An unexpected throw is also "could not run": an empty fixture root makes
+		// the probe child fail to read a corpus at all.
+		const emptyFixture = join(root, 'empty-fixture');
+		mkdirSync(join(emptyFixture, 'next'), { recursive: true });
+		const crashed = runSuite(scratchBuilds(join(root, 'crash')), emptyFixture);
+		if (crashed !== 2) failures.push(`BASELINE harness crash: exit ${crashed}, expected 2`);
+		console.log(
+			`${crashed === 2 ? 'PASS' : 'FAIL'}  CRSH  ${'BASELINE'.padEnd(10)} exit ${crashed} (expected 2)  an unexpected throw exits 2, not 1`,
+		);
+
 		for (const control of CONTROLS) {
 			const scratch = join(root, control.id);
 			const builds = scratchBuilds(scratch);
@@ -320,7 +342,7 @@ function main(): number {
 		rmSync(root, { recursive: true, force: true });
 	}
 
-	const total = CONTROLS.length + 2;
+	const total = CONTROLS.length + 4;
 	const defects = CONTROLS.filter((control) => control.kind === 'DEFECT').length;
 	console.log(
 		`\n${total} controls: ${defects} defect (must exit 1), ${total - defects} invariance/baseline (must exit 0 or 2)`,

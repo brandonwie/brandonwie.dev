@@ -215,7 +215,7 @@ function probeFixture(root: string): ProbeResult {
 
 /** The child half: prints what the data layer makes of the fixture corpus. */
 async function runProbe(): Promise<number> {
-	const { listPostsForLocale, listKoreanPostsWithEnglishFallback } =
+	const { listPostsForLocale, listKoreanPostsWithEnglishFallback, koreanTitleBySlug } =
 		await import('../next/src/content/post-list.ts');
 	const { postSlugFrom } = await import('../next/src/content/posts.ts');
 	const { rssXml } = await import('../next/src/content/feeds.ts');
@@ -227,7 +227,6 @@ async function runProbe(): Promise<number> {
 		emptySlug = error instanceof Error ? error.message : String(error);
 	}
 
-	const { koreanTitleBySlug } = await import('../next/src/content/post-list.ts');
 	const { localizeSnapshot } = await import('../next/src/content/localize-snapshot.ts');
 
 	// The seventeenth call site's rule, on a corpus that can show all three
@@ -294,9 +293,15 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	const check = (row: string, ok: boolean, okDetail: string, failDetail: string): void => {
 		rows.push({ row, status: ok ? 'PASS' : 'FAIL', detail: ok ? okDetail : failDetail });
 	};
-	if (!existsSync(join(svelteBuild, 'posts.html'))) {
+	// Every page the oracle rows read, not just the first one. A build that
+	// emitted `posts.html` and not `ko.html` used to reach the row and throw, and
+	// an uncaught throw exits 1 -- the same code a red row uses, which every
+	// DEFECT control accepts as success.
+	const oraclePages = ['index.html', 'posts.html', 'ko.html', join('ko', 'posts.html')];
+	const absent = oraclePages.filter((page) => !existsSync(join(svelteBuild, page)));
+	if (absent.length > 0) {
 		console.error(
-			`C5 cannot run: ${join(svelteBuild, 'posts.html')} is missing. Run \`pnpm build:svelte\` first.`,
+			`C5 cannot run: ${absent.map((page) => join(svelteBuild, page)).join(', ')} missing. Run \`pnpm build:svelte\` first.`,
 		);
 		return 2;
 	}
@@ -309,7 +314,7 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	// `posts.ts` derives its content root from the working directory, the same
 	// assumption `next build` makes. Everything else here is absolute.
 	process.chdir(NEXT_ROOT);
-	const { listPostsForLocale, listKoreanPostsWithEnglishFallback } =
+	const { listPostsForLocale, listKoreanPostsWithEnglishFallback, koreanTitleBySlug } =
 		await import('../next/src/content/post-list.ts');
 	const { listPublishedPosts, loadPost, postSlugFrom } =
 		await import('../next/src/content/posts.ts');
@@ -525,7 +530,6 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	);
 
 	// --- site 16: the Korean system page, as built -----------------------------
-	const { koreanTitleBySlug } = await import('../next/src/content/post-list.ts');
 	const koreanTitles = koreanTitleBySlug();
 	const seriesSource = (await import('../next/src/data/system-snapshot.ts')).default.blog_series;
 	/**
@@ -676,5 +680,13 @@ export { linkedSlugs, runAssertions, writeFixture };
 if (process.argv[1]?.endsWith('assert-c5-glob-sites.ts')) {
 	const run =
 		process.env[PROBE_ENV] === '1' ? runProbe() : runAssertions(optionsFrom(process.argv));
-	run.then((code) => process.exit(code));
+	run.then(
+		(code) => process.exit(code),
+		(error: unknown) => {
+			// Exit 2, never 1. The controls expect 1 from every DEFECT row, so a
+			// harness that crashed would otherwise pass as one of them.
+			console.error(`C5 could not run: ${error instanceof Error ? error.stack : String(error)}`);
+			process.exit(2);
+		},
+	);
 }

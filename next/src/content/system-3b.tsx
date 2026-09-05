@@ -30,7 +30,7 @@ function snapshotFor(locale: Locale) {
 	if (locale === 'en') return snapshot;
 	// `koTitleBySlug` in the Svelte loader; the overlay covers layers and nodes,
 	// the corpus covers series titles.
-	return localizeSnapshot(snapshot, koOverlay as SnapshotOverlay, koreanTitleBySlug());
+	return localizeSnapshot(snapshot, koOverlay satisfies SnapshotOverlay, koreanTitleBySlug());
 }
 
 export function generateSystem3bMetadata(locale: Locale): Metadata {
