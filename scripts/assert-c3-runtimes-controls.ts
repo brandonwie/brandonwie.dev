@@ -34,17 +34,32 @@ import {
 	statSync,
 	writeFileSync,
 } from 'node:fs';
-import { createConnection } from 'node:net';
 import { join, resolve } from 'node:path';
 
-import { runAssertions, type Options } from './assert-c3-runtimes.ts';
+import {
+	runAssertions,
+	probe,
+	portFree,
+	HERMETIC_ROWS,
+	THREEB_ROWS,
+	type Options,
+} from './assert-c3-runtimes.ts';
+import { createServer } from 'node:http';
 
 type Kind = 'DEFECT' | 'INVARIANCE';
+type Lane = 'hermetic' | 'threeb';
 
 interface Control {
 	id: string;
 	kind: Kind;
 	what: string;
+	/**
+	 * Which lane this control belongs to. `hermetic` controls need nothing but
+	 * this checkout, so CI runs them; `threeb` controls drive rows that read a 3B
+	 * tree and run at push tier. Asserted against the row lanes below, so a
+	 * control cannot claim a lane its rows do not belong to.
+	 */
+	lane: Lane;
 	/** Which single row the control drives. */
 	only: string[];
 	/** Mutate the scratch manifests directory in place. */
@@ -82,9 +97,54 @@ const editScripts =
 			scripts: edit(json.scripts as Record<string, string>),
 		}));
 
+/**
+ * LOOPBACK-FAMILY REGRESSION CONTROLS.
+ *
+ * The row controls below drive the real harness, which is the right shape for
+ * task and script surfaces but cannot pin the bug this PR fixed: both probes
+ * hard-coded `127.0.0.1` while Vite 8 binds `[::1]` only, so `dev` and
+ * `preview` were reported dead while serving, and `portFree` called a held port
+ * free. C3-06 covers a port with NO listener and passes either way, so nothing
+ * in the existing set fails against the pre-fix harness.
+ *
+ * These two are deterministic and self-contained: they bind an IPv6-only
+ * listener and assert the probes see it. Against the IPv4-only implementation
+ * both fail, which is the property a regression control has to have.
+ */
+async function loopbackFailures(): Promise<string[]> {
+	const problems: string[] = [];
+	const server = createServer((_req, res) => {
+		res.statusCode = 204;
+		res.end();
+	});
+	await new Promise<void>((done, fail) => {
+		server.once('error', fail);
+		// `::1` only — deliberately no IPv4 listener, which is what Vite 8 does.
+		server.listen(0, '::1', done);
+	});
+	const address = server.address();
+	const port = typeof address === 'object' && address ? address.port : 0;
+	try {
+		const status = await probe(port);
+		if (status !== 204) {
+			problems.push(
+				`LB-01 an IPv6-only listener was not reached: probe returned ${status ?? 'null'}, expected 204`,
+			);
+		}
+		const free = await portFree(port);
+		if (free !== false) {
+			problems.push('LB-02 a port held on [::1] was reported free');
+		}
+	} finally {
+		await new Promise<void>((done) => server.close(() => done()));
+	}
+	return problems;
+}
+
 const CONTROLS: Control[] = [
 	{
 		id: 'C3-01',
+		lane: 'threeb',
 		kind: 'DEFECT',
 		what: 'the study:check task removed from deno.json — the surface must be reported missing',
 		only: ['T6'],
@@ -92,6 +152,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-02',
+		lane: 'threeb',
 		kind: 'DEFECT',
 		what: 'the study:check wrapper replaced by `true` — exit 0 with no evidence must not pass',
 		only: ['W8'],
@@ -99,6 +160,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-03',
+		lane: 'threeb',
 		kind: 'DEFECT',
 		what: 'the wrapper keeps its deno run form but its output is silenced — an empty pass line must not pass',
 		only: ['W8'],
@@ -106,6 +168,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-04',
+		lane: 'threeb',
 		kind: 'DEFECT',
 		what: 'the wrapper prints the exact pass line from node instead of running deno — manifest form must be enforced',
 		only: ['W8'],
@@ -116,6 +179,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-05',
+		lane: 'threeb',
 		kind: 'DEFECT',
 		what: 'the task prints its pass line and then exits 7 — exit codes are verbatim',
 		only: ['T6'],
@@ -123,6 +187,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-06',
+		lane: 'hermetic',
 		kind: 'DEFECT',
 		what: 'the dev health poll pointed at a port nothing listens on — the dev row must FAIL',
 		only: ['T1'],
@@ -135,6 +200,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-07',
+		lane: 'threeb',
 		kind: 'DEFECT',
 		what: 'a file under a guarded target written during the run — the mutation guard must FAIL',
 		only: ['T6'],
@@ -145,6 +211,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-12',
+		lane: 'threeb',
 		kind: 'INVARIANCE',
 		what: 'a file written OUTSIDE the guard roots during the run — the guard must not trip; paired with C3-07',
 		only: ['T6'],
@@ -159,6 +226,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-08',
+		lane: 'threeb',
 		kind: 'INVARIANCE',
 		what: 'deno.json re-indented with four spaces and a trailing blank line — paired with C3-01/05',
 		only: ['T6'],
@@ -170,6 +238,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-09',
+		lane: 'threeb',
 		kind: 'INVARIANCE',
 		what: 'package.json scripts listed in reverse order — paired with C3-02/03/04',
 		only: ['W8'],
@@ -177,6 +246,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-10',
+		lane: 'threeb',
 		kind: 'INVARIANCE',
 		what: 'an unrelated non-deno script added to package.json — only deno run wrappers are in scope; paired with C3-11',
 		only: ['W8'],
@@ -184,6 +254,7 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 'C3-11',
+		lane: 'threeb',
 		kind: 'DEFECT',
 		what: 'an extra deno run wrapper added with no C3 row — an unlisted Deno surface must fail closed',
 		only: ['W8'],
@@ -242,18 +313,81 @@ function makeScratch(realRepo: string, dir: string, guard: string): void {
 	cpSync(join(realRepo, 'src', 'lib', 'data'), guard, { recursive: true });
 }
 
-function portFree(port: number): Promise<boolean> {
-	return new Promise((resolvePromise) => {
-		const sock = createConnection({ host: '127.0.0.1', port });
-		sock.once('connect', () => {
-			sock.destroy();
-			resolvePromise(false);
-		});
-		sock.once('error', () => resolvePromise(true));
-	});
+// A SECOND, UNFIXED COPY OF THE SAME PROBE LIVED HERE.
+//
+// This file carried its own IPv4-only `portFree`, used to find a closed port for
+// C3-06. Being a hoisted function declaration, it silently SHADOWED the
+// `portFree` imported at the top of this file -- so the loopback regression
+// controls below were exercising the unfixed implementation and reporting an
+// IPv6-held port as free. Deleted rather than renamed: one definition of "is
+// this port free" per repository is the point, and a scratch-port search that
+// ignores IPv6 can hand a control a port that is not actually closed.
+
+/**
+ * A control may only claim a lane its rows belong to. Without this, tagging a
+ * 3B-dependent control `hermetic` would put it in the CI lane, where it fails
+ * for the wrong reason -- and tagging a hermetic one `threeb` would quietly
+ * remove it from CI, which is the move this whole PR is repairing.
+ */
+function laneTagFailures(controls: Control[]): string[] {
+	const rows: Record<Lane, Set<string>> = {
+		hermetic: new Set<string>(HERMETIC_ROWS),
+		threeb: new Set<string>(THREEB_ROWS),
+	};
+	const problems: string[] = [];
+	for (const control of controls) {
+		const stray = control.only.filter((id) => !rows[control.lane].has(id));
+		if (stray.length > 0) {
+			problems.push(
+				`${control.id} is tagged ${control.lane} but drives row(s) ${stray.join(', ')}`,
+			);
+		}
+	}
+	for (const lane of ['hermetic', 'threeb'] as Lane[]) {
+		if (!controls.some((c) => c.lane === lane))
+			problems.push(`lane ${lane} has no controls at all`);
+	}
+	return problems;
 }
 
 async function main(): Promise<number> {
+	const laneArg = process.argv
+		.slice(2)
+		.find((a) => a.startsWith('--lane='))
+		?.split('=')[1];
+	if (laneArg !== undefined && !['hermetic', 'threeb', 'all'].includes(laneArg)) {
+		console.error(`FATAL: unknown --lane=${laneArg} (expected hermetic, threeb or all)`);
+		return 2;
+	}
+	const lane = (laneArg ?? 'all') as Lane | 'all';
+
+	// Tag consistency is checked in EVERY lane: a mis-tagged control is invisible
+	// precisely in the lane it was wrongly excluded from.
+	const tagProblems = laneTagFailures(CONTROLS);
+	for (const problem of tagProblems) console.error(`LANE  ${problem}`);
+	if (tagProblems.length > 0) {
+		console.error(`\nRESULT: ${tagProblems.length} control(s) are tagged with the wrong lane`);
+		return 2;
+	}
+
+	// The loopback controls are lane-independent by construction -- pure sockets,
+	// no manifests, no 3B -- so both lanes run them. They are the regression
+	// evidence for the IPv4-only probe, and CI would carry none of it otherwise.
+	const loopback = await loopbackFailures();
+	for (const failure of loopback) console.error(`LOOPBACK  ${failure}`);
+	if (loopback.length > 0) {
+		console.error(
+			`\nRESULT: loopback regression controls failed with ${loopback.length} problem(s)`,
+		);
+		return 2;
+	}
+
+	const selected = lane === 'all' ? CONTROLS : CONTROLS.filter((c) => c.lane === lane);
+	if (selected.length === 0) {
+		console.error(`FATAL: lane ${lane} selected no controls — an empty control run proves nothing`);
+		return 2;
+	}
+
 	const realRepo = resolve(process.cwd());
 	const root = join(realRepo, 'tmp', 'c3-controls');
 	const dir = join(root, 'manifests');
@@ -275,8 +409,17 @@ async function main(): Promise<number> {
 	// A control suite that never sees the unbroken manifests passing is not a
 	// baseline, it is a coincidence.
 	makeScratch(realRepo, dir, guard);
-	const clean = await runAssertions({ ...baseOptions(), only: ['T6', 'W8'] });
-	console.log(`BASELINE  scratch manifests unmodified (rows T6, W8) -> exit ${clean} (expected 0)`);
+	// The baseline must be drivable in the lane being run: the hermetic lane has
+	// no 3B tree, so `T6`/`W8` would fail there for a reason no control is about.
+	const baselineRows = lane === 'hermetic' ? ['T1'] : ['T6', 'W8'];
+	const baselineOptions =
+		lane === 'hermetic'
+			? { ...baseOptions(), repoRoot: realRepo, denoDir: realRepo, healthTimeoutMs: 60_000 }
+			: baseOptions();
+	const clean = await runAssertions({ ...baselineOptions, only: baselineRows });
+	console.log(
+		`BASELINE  unmodified manifests (rows ${baselineRows.join(', ')}) -> exit ${clean} (expected 0)`,
+	);
 	if (clean !== 0) {
 		console.error(
 			'FATAL: the unmodified manifests do not pass; fix that before trusting any control below',
@@ -286,7 +429,7 @@ async function main(): Promise<number> {
 	}
 
 	const failures: string[] = [];
-	for (const control of CONTROLS) {
+	for (const control of selected) {
 		makeScratch(realRepo, dir, guard);
 		const before = signature(dir, guard, undefined);
 		control.apply?.(dir);
@@ -313,19 +456,19 @@ async function main(): Promise<number> {
 	}
 	rmSync(root, { recursive: true, force: true });
 
-	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length;
-	const invariance = CONTROLS.length - defects;
+	const defects = selected.filter((c) => c.kind === 'DEFECT').length;
+	const invariance = selected.length - defects;
 	console.log(
-		`\n${CONTROLS.length} controls: ${defects} defect (must exit 1), ${invariance} invariance (must exit 0)`,
+		`\nlane ${lane}: ${selected.length} controls (${defects} defect (must exit 1), ${invariance} invariance (must exit 0)) + LB-01, LB-02`,
 	);
 	if (failures.length) {
 		for (const line of failures) console.error(`CONTROL FAILED ${line}`);
 		console.error(
-			`RESULT: ${failures.length}/${CONTROLS.length} control(s) failed — the C3 harness does not fail closed`,
+			`RESULT: ${failures.length}/${selected.length} control(s) failed — the C3 harness does not fail closed`,
 		);
 		return 1;
 	}
-	console.log(`RESULT: ${CONTROLS.length}/${CONTROLS.length} controls behaved as specified`);
+	console.log(`RESULT: ${selected.length}/${selected.length} controls behaved as specified`);
 	return 0;
 }
 

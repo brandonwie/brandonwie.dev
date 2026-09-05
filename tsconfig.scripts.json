@@ -10,10 +10,13 @@
 	// SCOPE IS DELIBERATELY THE SLICE 2 PAIR, not all of scripts/. Measured basis:
 	// this exact config with `include` widened to scripts/**/*.ts and nothing else
 	// changed, `npx tsc --noEmit -p` reports 111 errors across 7 files -- almost
-	// all Deno globals, plus one unrelated cast in the C11 harness. plan.md
-	// "Raised, not scheduled" books that as out of Slice 2 scope. Widening the
-	// include is how the rest gets adopted, one suite at a time, each with its own
-	// fixes. Re-measure before quoting the number; it moves as suites are fixed.
+	// all Deno globals, plus one unrelated cast in the C11 harness. The seven are
+	// tracked by the "scripts/ typecheck debt" row in the nextjs-migration task's
+	// todos.md, which names them and carries the completion condition. An earlier
+	// version of this comment cited plan.md "Raised, not scheduled" as their home;
+	// that section does not exist and never did. Widening the include is how the
+	// rest gets adopted, one suite at a time, each with its own fixes. Re-measure
+	// before quoting the number; it moves as suites are fixed.
 	"extends": "./next/tsconfig.json",
 	"compilerOptions": {
 		"noEmit": true,

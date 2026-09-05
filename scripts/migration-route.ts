@@ -9,8 +9,11 @@
  * alone adds ~265 s. Bolting the whole set onto the hook makes an ordinary push
  * cost more than four minutes, and a hook that slow gets bypassed with
  * `--no-verify`, which is worse than a hook that runs less. So push-time runs
- * only the suites whose inputs actually changed, and CI runs the full superset
- * unconditionally.
+ * only the suites whose inputs actually changed, and CI runs every suite it can:
+ * `--tier all` minus `migration:controls` (its own parallel job) and minus the
+ * 3B-dependent C3 lane, which has no 3B checkout there. This hook is the only
+ * runner those two have, which is why `migration-route-controls.ts` reads the
+ * hook before crediting a push-tier suite with being reachable at all.
  *
  * WHY THE MAP IS DERIVED, NOT DECLARED
  *
@@ -42,6 +45,7 @@
  *   --plan                          print the selection for the given change set
  *   --run                           run the selection (sequential, first failure wins)
  *   --all                           select every suite in --tier (default push)
+ *   --exclude <c1,c2,...>           drop named suites; unknown name is FATAL
  *   --range <base>..<head>          derive changed paths from a git range
  *   --paths <p1,p2,...>             use an explicit change set (tests)
  *   (default)                       read pre-push stdin: `<lref> <lsha> <rref> <rsha>`
@@ -303,10 +307,42 @@ export const SUITES: Suite[] = [
 		entry: 'scripts/assert-c3-runtimes.ts',
 		// It drives every deno task and pnpm wrapper, including build and preview.
 		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
-		tier: 'ci',
+		// PUSH, NOT CI: this suite drives the Deno scripts that read the 3B
+		// knowledge base. CI has no 3B checkout, so every sync/study/snapshot row
+		// fails there with `Could not locate 3B root`. It is reachable on the
+		// developer machine, where 3B exists, via the pre-push router.
+		tier: 'push',
 	},
 	{
 		command: 'migration:c3:controls',
+		entry: 'scripts/assert-c3-runtimes-controls.ts',
+		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		// PUSH, NOT CI: this suite drives the Deno scripts that read the 3B
+		// knowledge base. CI has no 3B checkout, so every sync/study/snapshot row
+		// fails there with `Could not locate 3B root`. It is reachable on the
+		// developer machine, where 3B exists, via the pre-push router.
+		tier: 'push',
+	},
+	{
+		// THE HERMETIC HALF OF C3, which does run in CI.
+		//
+		// Moving all of C3 to push tier was too broad: only the rows that read a
+		// 3B tree need one. `--lane=hermetic` runs the four rows that shell out to
+		// `pnpm dev|build|preview|check` plus the manifest-completeness checks,
+		// which need nothing but this checkout. `lanePartitionFailures` asserts the
+		// two lanes cover every row exactly once, so a new surface cannot land in
+		// neither and be executed by nothing.
+		command: 'migration:c3:hermetic',
+		entry: 'scripts/assert-c3-runtimes.ts',
+		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		tier: 'ci',
+	},
+	{
+		// Carries LB-01 and LB-02, the regression controls for the IPv4-only
+		// loopback probe. They bind an IPv6-only listener and assert the probes
+		// reach it: pure sockets, no manifests, no 3B. Excluding them from CI with
+		// the rest of C3 left the fix this PR made with no central enforcement.
+		command: 'migration:c3:hermetic:controls',
 		entry: 'scripts/assert-c3-runtimes-controls.ts',
 		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
 		tier: 'ci',
@@ -591,9 +627,47 @@ function flagValue(argv: string[], flag: string): string | undefined {
 	return index === -1 ? undefined : argv[index + 1];
 }
 
+/**
+ * `--exclude a,b` removes named suites from the tier selection.
+ *
+ * WHY THIS EXISTS. Before it, CI could not express "every registered suite
+ * except the one that has its own parallel job". `migration:all` therefore ran
+ * `--tier push` only, and five registered ci-tier suites -- including the
+ * 86-control `migration:gsap-palette:controls` that gate G2's approval cites as
+ * its evidence -- were executed by nothing: not by the hook, not by
+ * `migration:all`, not by any step in `ci.yml`. The workflow comment claimed the
+ * opposite and named this router's map as the guarantee.
+ *
+ * FAIL-CLOSED. An unknown command is FATAL, not ignored. A typo'd exclusion
+ * that silently matched nothing would drop the suite it was meant to keep
+ * running back into the same blind spot, which is the failure this flag exists
+ * to close.
+ */
+function excluded(argv: string[]): Set<string> {
+	const raw = flagValue(argv, '--exclude');
+	if (raw === undefined) return new Set();
+	// Trimmed because `--exclude a, b` is an ordinary shell form: untrimmed, the
+	// second name becomes `" b"`, which is unknown, which is FATAL below. A
+	// fail-closed rule that fires on a space is a rule people route around.
+	const names = raw
+		.split(',')
+		.map((n) => n.trim())
+		.filter(Boolean);
+	const known = new Set(SUITES.map((s) => s.command));
+	const unknown = names.filter((n) => !known.has(n));
+	if (unknown.length > 0) {
+		throw new Error(
+			`--exclude names ${unknown.length} command(s) not in SUITES: ${unknown.join(', ')}. ` +
+				`An exclusion that matches nothing hides the suite it was meant to keep running.`,
+		);
+	}
+	return new Set(names);
+}
+
 async function main(argv: string[]): Promise<number> {
 	const tier = (flagValue(argv, '--tier') ?? 'push') as 'push' | 'ci' | 'all';
-	const inTier = SUITES.filter((s) => tier === 'all' || s.tier === tier);
+	const skip = excluded(argv);
+	const inTier = SUITES.filter((s) => (tier === 'all' || s.tier === tier) && !skip.has(s.command));
 
 	if (argv.includes('--list')) {
 		for (const suite of inTier) {
@@ -616,6 +690,7 @@ async function main(argv: string[]): Promise<number> {
 		if (explicit !== undefined) changed = explicit.split(',').filter(Boolean);
 		else if (range) changed = changedInRange(range);
 		else changed = changedFromPushRefs(readStdin());
+		const selected = changed === null ? null : select(changed, tier);
 		selection =
 			changed === null
 				? {
@@ -623,7 +698,10 @@ async function main(argv: string[]): Promise<number> {
 						broad: true,
 						reasons: ['no resolvable push range (new branch or empty stdin)'],
 					}
-				: select(changed, tier);
+				: {
+						...selected!,
+						commands: selected!.commands.filter((c) => !skip.has(c)),
+					};
 	}
 
 	for (const reason of selection.reasons) console.log(`broad: ${reason}`);

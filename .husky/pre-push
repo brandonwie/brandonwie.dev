@@ -7,8 +7,12 @@
 # Step 7 is the migration verification set, routed by changed surface
 # (scripts/migration-route.ts). Steps 1-6 already cost ~123 s; the full
 # migration set adds ~100 s and `migration:controls` alone adds ~265 s, so the
-# hook runs only the suites whose inputs this push actually changed and CI runs
-# the whole superset unconditionally. The router fails closed — an unknown path,
+# hook runs only the suites whose inputs this push actually changed. CI runs
+# every suite EXCEPT `migration:controls` (its own parallel job) and the
+# 3B-dependent lane of C3 (`migration:c3`, `migration:c3:controls`), which have
+# no 3B checkout there — this hook is their only runner, and
+# `migration:route:controls` fails closed if it stops invoking the router below.
+# The router fails closed — an unknown path,
 # a shared config, a change to the router itself, or a new branch all select
 # everything.
 

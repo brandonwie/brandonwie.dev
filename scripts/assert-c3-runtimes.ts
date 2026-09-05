@@ -91,6 +91,69 @@ export const DENO_WRAPPERS = [
 /** Rows that need the scratch copies (they can write). */
 const SCRATCH_ROWS = ['T4', 'T7', 'W1', 'W4', 'W5', 'W6'];
 
+/**
+ * THE TWO LANES, and why the partition exists.
+ *
+ * C3 was moved to push tier wholesale after CI installed Deno and the suite
+ * still failed: eight rows drive Deno scripts that read the 3B knowledge base
+ * (`Could not locate 3B root`), and CI has no 3B checkout. Excluding the whole
+ * suite from CI was too broad — it also removed the rows that need nothing but
+ * this repository, including the two loopback regression controls that pin the
+ * IPv4-only probe bug.
+ *
+ * HERMETIC rows shell out to `pnpm dev|build|preview|check` through deno.json
+ * and read only this checkout, so CI runs them on every push and pull request.
+ * THREEB rows read or write a 3B tree and stay push-tier, where that tree
+ * exists. The manifest completeness checks are hermetic and run in BOTH lanes.
+ *
+ * The partition is asserted complete and disjoint below: a new surface that
+ * lands in neither lane runs in neither runner, which is the exact defect class
+ * this whole PR exists to close.
+ */
+export const HERMETIC_ROWS = ['T1', 'T2', 'T3', 'T5'] as const;
+export const THREEB_ROWS = [
+	'T4',
+	'T6',
+	'T7',
+	'T8',
+	'W1',
+	'W2',
+	'W3',
+	'W4',
+	'W5',
+	'W6',
+	'W7',
+	'W8',
+	'W9',
+] as const;
+export type Lane = 'hermetic' | 'threeb' | 'all';
+
+export function laneRows(lane: Lane): string[] | undefined {
+	if (lane === 'hermetic') return [...HERMETIC_ROWS];
+	if (lane === 'threeb') return [...THREEB_ROWS];
+	return undefined;
+}
+
+/** Every row id belongs to exactly one lane, or it is executed by nothing. */
+export function lanePartitionFailures(allIds: string[]): string[] {
+	const problems: string[] = [];
+	const hermetic = new Set<string>(HERMETIC_ROWS);
+	const threeB = new Set<string>(THREEB_ROWS);
+	for (const id of allIds) {
+		const inHermetic = hermetic.has(id);
+		const inThreeB = threeB.has(id);
+		if (!inHermetic && !inThreeB) {
+			problems.push(`row ${id} is in neither lane — it would run in neither runner`);
+		}
+		if (inHermetic && inThreeB) problems.push(`row ${id} is in both lanes`);
+	}
+	const known = new Set(allIds);
+	for (const id of [...hermetic, ...threeB]) {
+		if (!known.has(id)) problems.push(`lane names row ${id}, which no surface defines`);
+	}
+	return problems;
+}
+
 export interface Options {
 	/** Directory holding package.json — `pnpm -s <script>` runs here. */
 	repoRoot: string;
@@ -104,8 +167,10 @@ export interface Options {
 	ports?: { dev?: number; preview?: number };
 	/** How long the health poll waits for the first HTTP response. */
 	healthTimeoutMs?: number;
-	/** Run only these row ids (controls use this to stay fast). */
+	/** Run only these row ids (controls use this to stay fast). Overrides `lane`. */
 	only?: string[];
+	/** Which lane to run: `hermetic` needs no 3B checkout, `threeb` needs one. Default: all. */
+	lane?: Lane;
 	/** Paths the mutation guard fingerprints. Default: the real write targets. */
 	guardPaths?: string[];
 	/** Git checkout whose `status --porcelain` must be unchanged. Default: repoRoot. */
@@ -232,9 +297,39 @@ function run(
 	});
 }
 
-function portFree(port: number): Promise<boolean> {
+/**
+ * BOTH LOOPBACK FAMILIES, AND WHY.
+ *
+ * These probes hard-coded `127.0.0.1`. Vite 8 binds `[::1]` only -- confirmed
+ * with `lsof -nP -iTCP:5173 -sTCP:LISTEN` reporting
+ * `TCP [::1]:5173 (LISTEN)` while `curl 127.0.0.1:5173` returned nothing and
+ * `curl 'http://[::1]:5173/'` returned 200. So T1 (`pnpm dev`) and T3
+ * (`pnpm preview`) reported "no HTTP response within 60000ms" against servers
+ * that were healthy, and `portFree` reported the port free while a listener
+ * held it.
+ *
+ * Nobody saw it because `migration:c3` was one of five registered suites that
+ * no runner executed; it surfaced the moment `migration:all` started selecting
+ * `--tier all`. The recorded C3 PASS 17/17 predates the Vite version that made
+ * the assumption false, so this is the probe catching up with its environment,
+ * not a regression in `dev` or `preview`.
+ *
+ * Asymmetric on purpose: a port is FREE only if BOTH families refuse, and a
+ * probe SUCCEEDS if EITHER answers. Both directions fail closed.
+ */
+export const LOOPBACK_HOSTS = ['127.0.0.1', '::1'] as const;
+
+function portFreeOn(host: string, port: number): Promise<boolean> {
 	return new Promise((resolvePromise) => {
-		const sock = createConnection({ host: '127.0.0.1', port });
+		// Bounded: a connection that neither completes nor errors would leave the
+		// `Promise.all` below hanging forever. A hang resolves conservatively as
+		// NOT free, because a port that will not answer is not a port to start a
+		// server on.
+		const sock = createConnection({ host, port });
+		sock.setTimeout(2000, () => {
+			sock.destroy();
+			resolvePromise(false);
+		});
 		sock.once('connect', () => {
 			sock.destroy();
 			resolvePromise(false);
@@ -243,9 +338,14 @@ function portFree(port: number): Promise<boolean> {
 	});
 }
 
-function probe(port: number): Promise<number | null> {
+export async function portFree(port: number): Promise<boolean> {
+	const results = await Promise.all(LOOPBACK_HOSTS.map((h) => portFreeOn(h, port)));
+	return results.every(Boolean);
+}
+
+function probeOn(host: string, port: number): Promise<number | null> {
 	return new Promise((resolvePromise) => {
-		const req = httpGet({ host: '127.0.0.1', port, path: '/', timeout: 2000 }, (res) => {
+		const req = httpGet({ host, port, path: '/', timeout: 2000 }, (res) => {
 			res.resume();
 			resolvePromise(res.statusCode ?? null);
 		});
@@ -255,6 +355,14 @@ function probe(port: number): Promise<number | null> {
 		});
 		req.on('error', () => resolvePromise(null));
 	});
+}
+
+export async function probe(port: number): Promise<number | null> {
+	for (const host of LOOPBACK_HOSTS) {
+		const status = await probeOn(host, port);
+		if (status !== null) return status;
+	}
+	return null;
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -349,10 +457,12 @@ async function runServer(
 		parts.push(
 			exitedDuringPoll !== undefined
 				? `process exited with ${exitedDuringPoll} before answering on :${port}`
-				: `no HTTP response on 127.0.0.1:${port} within ${healthTimeoutMs}ms`,
+				: `no HTTP response on 127.0.0.1:${port} or [::1]:${port} within ${healthTimeoutMs}ms`,
 		);
 	} else {
-		parts.push(`GET http://127.0.0.1:${port}/ -> ${status} after ${elapsed}ms`);
+		parts.push(
+			`GET http://127.0.0.1:${port}/ or http://[::1]:${port}/ -> ${status} after ${elapsed}ms`,
+		);
 	}
 	if (announced && Number(announced[1]) !== port) {
 		parts.push(`server announced port ${announced[1]}, not the configured ${port}`);
@@ -655,7 +765,9 @@ export async function runAssertions(options: Options): Promise<number> {
 	}
 	const tasks = (readJson(denoJson).tasks ?? {}) as Record<string, string>;
 	const scripts = (readJson(pkgJson).scripts ?? {}) as Record<string, string>;
-	const only = options.only ? new Set(options.only) : null;
+	const laneOnly = laneRows(options.lane ?? 'all');
+	const selected = options.only ?? laneOnly;
+	const only = selected ? new Set(selected) : null;
 
 	for (const name of Object.keys(tasks)) {
 		if (!(DENO_TASKS as readonly string[]).includes(name)) {
@@ -705,6 +817,16 @@ export async function runAssertions(options: Options): Promise<number> {
 		slug,
 		allowFile,
 	});
+
+	// Fails in EVERY lane, including a control's single-row run: a surface that
+	// belongs to no lane is executed by no runner, and a lane naming a row that
+	// no longer exists silently shrinks the set CI proves.
+	const laneProblems = lanePartitionFailures(surfaces.map((s) => s.id));
+	failures.push(...laneProblems);
+	for (const problem of laneProblems) console.error(`C3 LANE  ${problem}`);
+	say(
+		`LANE     ${options.lane ?? 'all'}${options.only ? ` (only ${options.only.join(',')})` : ''} — ${HERMETIC_ROWS.length} hermetic + ${THREEB_ROWS.length} 3B-dependent = ${surfaces.length} surfaces`,
+	);
 
 	for (const surface of surfaces) {
 		if (only && !only.has(surface.id)) continue;
@@ -832,5 +954,18 @@ export async function runAssertions(options: Options): Promise<number> {
 }
 
 if (process.argv[1]?.endsWith('assert-c3-runtimes.ts')) {
-	runAssertions({ repoRoot: process.cwd() }).then((code) => process.exit(code));
+	const flag = process.argv
+		.slice(2)
+		.find((a) => a.startsWith('--lane='))
+		?.split('=')[1];
+	// Fail closed: an unrecognised lane must not quietly fall back to "all" in a
+	// runner that cannot support all — that is how a suite reports green while
+	// proving a different set than the one its command name claims.
+	if (flag !== undefined && !['hermetic', 'threeb', 'all'].includes(flag)) {
+		console.error(`FATAL: unknown --lane=${flag} (expected hermetic, threeb or all)`);
+		process.exit(2);
+	}
+	runAssertions({ repoRoot: process.cwd(), lane: (flag ?? 'all') as Lane }).then((code) =>
+		process.exit(code),
+	);
 }
