@@ -35,7 +35,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { linkedSlugs, sitemapVerdict, writeFixture } from './assert-c5-glob-sites.ts';
+import {
+	articleLocaleVerdict,
+	linkedSlugs,
+	sitemapVerdict,
+	writeFixture,
+	type ArticleLocaleFields,
+} from './assert-c5-glob-sites.ts';
 
 const require = createRequire(import.meta.url);
 const CONTROLS_PATH = fileURLToPath(import.meta.url);
@@ -299,6 +305,63 @@ function main(): number {
 			);
 		}
 
+		// The fallback's language fields come from a rendered page and a metadata
+		// object, so no scratch file can doctor those either. Their verdict is pure
+		// for the same reason, and D14 is the exact defect this PR shipped once:
+		// `og:locale`, the JSON-LD `inLanguage` and its `@id` following the ROUTE
+		// locale, so a Korean URL announced `ko_KR` over English prose.
+		const englishOriginal = 'https://brandonwie.dev/posts/only-en';
+		const englishBody: ArticleLocaleFields = {
+			ogLocale: 'en_US',
+			alternateLocale: [],
+			canonical: englishOriginal,
+			noindex: true,
+			jsonLdInLanguage: 'en-US',
+			jsonLdId: englishOriginal,
+			langFacet: 'en',
+		};
+		const expectEnglish = {
+			locale: 'en' as const,
+			url: englishOriginal,
+			alternateLocale: [] as string[],
+			noindex: true,
+		};
+		const localeChecks: [string, string, string | null, boolean][] = [
+			[
+				'D14',
+				'the fallback declares the route locale instead of the content locale',
+				articleLocaleVerdict(
+					{
+						...englishBody,
+						ogLocale: 'ko_KR',
+						jsonLdInLanguage: 'ko-KR',
+						jsonLdId: 'https://brandonwie.dev/ko/posts/only-en',
+					},
+					expectEnglish,
+				),
+				true,
+			],
+			[
+				'D15',
+				'the fallback is left indexable beside the English original it copies',
+				articleLocaleVerdict({ ...englishBody, noindex: false }, expectEnglish),
+				true,
+			],
+			[
+				'I5',
+				'the same English fields arrive intact',
+				articleLocaleVerdict(englishBody, expectEnglish),
+				false,
+			],
+		];
+		for (const [id, what, verdict, mustReject] of localeChecks) {
+			const ok = mustReject ? verdict !== null : verdict === null;
+			if (!ok) failures.push(`${id} ${what}: verdict ${String(verdict)}`);
+			console.log(
+				`${ok ? 'PASS' : 'FAIL'}  ${id.padEnd(4)}  ${(mustReject ? 'DEFECT' : 'INVARIANCE').padEnd(10)} verdict ${verdict === null ? 'null' : 'set'} (expected ${mustReject ? 'set' : 'null'})  ${what}`,
+			);
+		}
+
 		for (const control of CONTROLS) {
 			const scratch = join(root, control.id);
 			const svelteBuild = scratchBuild(scratch);
@@ -330,12 +393,13 @@ function main(): number {
 		rmSync(root, { recursive: true, force: true });
 	}
 
-	// 4 baseline runs (BASE, MISS, PART, CRSH) and 3 verdict controls (D12, D13,
-	// I4) sit outside CONTROLS: the first four assert whole-suite exit codes and
-	// the last three call `sitemapVerdict` directly, because the sitemap row
-	// generates its own input and no scratch file can doctor it.
-	const total = CONTROLS.length + 7;
-	const defects = CONTROLS.filter((control) => control.kind === 'DEFECT').length + 2;
+	// 4 baseline runs (BASE, MISS, PART, CRSH) and 6 verdict controls (D12, D13,
+	// I4 for the sitemap; D14, D15, I5 for the fallback's language) sit outside
+	// CONTROLS: the first four assert whole-suite exit codes and the last six call
+	// a pure verdict directly, because those two rows generate their own input
+	// and no scratch file can doctor it.
+	const total = CONTROLS.length + 10;
+	const defects = CONTROLS.filter((control) => control.kind === 'DEFECT').length + 4;
 	console.log(
 		`\n${total} controls: ${defects} defect (a doctored input must be rejected), ${total - defects} invariance/baseline (an untouched or benign input must be accepted)`,
 	);

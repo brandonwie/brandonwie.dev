@@ -22,6 +22,21 @@ export function generateArticleStaticParams(): Array<{ slug: string }> {
 }
 
 /**
+ * The locale of the BODY, which is not always the locale of the URL.
+ *
+ * `PostDetail.svelte:73` derives `contentLocale = isFallback ? 'en' : locale`
+ * and every language-declaring field hangs off it: `og:locale` (line 164), its
+ * `alternate` sibling (lines 165-169), the JSON-LD `inLanguage` (line 142 via
+ * `contentLanguage`) and `@id`/canonical (line 71 via `postUrl`). A Korean URL
+ * serving the English body therefore declares ENGLISH -- announcing `ko_KR`
+ * over English prose mislabels the page for search and social crawlers, which
+ * is why the facet at `PostDetail.svelte:204` follows the content too.
+ */
+function contentLocaleOf(locale: Locale, isFallback: boolean): Locale {
+	return isFallback ? 'en' : locale;
+}
+
+/**
  * The post a route renders, and whether it is the English fallback.
  *
  * Ports `src/routes/ko/posts/[slug]/+page.ts:44-88`, the seventeenth C5 call
@@ -57,7 +72,7 @@ export async function generateArticleMetadata(slug: string, locale: Locale): Pro
 	// original and asks not to be indexed, as `PostDetail.svelte:71,185` does --
 	// otherwise the same body competes with itself in search results.
 	const canonicalUrl = isFallback ? englishUrl : locale === 'ko' ? koreanUrl : englishUrl;
-	const alternateLocale = locale === 'ko' ? 'en' : 'ko';
+	const contentLocale = contentLocaleOf(locale, isFallback);
 	const ogImageUrl = `${SITE_URL}/og/${slug}.png`;
 
 	return {
@@ -79,8 +94,13 @@ export async function generateArticleMetadata(slug: string, locale: Locale): Pro
 			siteName: SITE_NAME,
 			url: canonicalUrl,
 			images: [{ url: ogImageUrl, width: 1200, height: 630 }],
-			locale: localeCode(locale),
-			alternateLocale: post.hasKoreanTranslation ? [localeCode(alternateLocale)] : [],
+			locale: localeCode(contentLocale),
+			alternateLocale:
+				contentLocale === 'ko'
+					? [localeCode('en')]
+					: post.hasKoreanTranslation
+						? [localeCode('ko')]
+						: [],
 			publishedTime: sourceDate(meta.date),
 			modifiedTime: sourceDate(meta.updated),
 			authors: [SITE_AUTHOR],
@@ -102,6 +122,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 
 	const meta = post.frontmatter;
 	const copy = articleCopy(locale);
+	const contentLocale = contentLocaleOf(locale, isFallback);
 	const otherLocale: Locale = locale === 'ko' ? 'en' : 'ko';
 	const switchPath = articlePath(slug, otherLocale);
 
@@ -110,7 +131,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 			{/* Pagefind locale facet, as PostDetail.svelte:73,204: the facet follows the CONTENT,
 			   not the route, so a Korean URL serving the English body indexes as "en". */}
 			<span data-pagefind-filter="lang" className="hidden">
-				{isFallback ? 'en' : locale}
+				{contentLocale}
 			</span>
 			{isFallback && (
 				<div className="post__fallback" data-pagefind-ignore>
@@ -120,7 +141,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 			)}
 			<script
 				type="application/ld+json"
-				dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta, locale) }}
+				dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta, contentLocale) }}
 			/>
 			<nav aria-label={copy.breadcrumb} data-pagefind-ignore>
 				<ol className="breadcrumb-list">

@@ -57,6 +57,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { SITE_URL } from '../src/lib/seo.ts';
+
 const require = createRequire(import.meta.url);
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
@@ -259,12 +261,55 @@ function probeFixture<T>(root: string, mode: 'lists' | 'article' | 'generators')
 	return JSON.parse(child.stdout) as T;
 }
 
+/** Every field a page uses to declare which language its body is in. */
+export interface ArticleLocaleFields {
+	ogLocale: string | null;
+	alternateLocale: string[];
+	canonical: string | null;
+	noindex: boolean;
+	jsonLdInLanguage: string | null;
+	jsonLdId: string | null;
+	langFacet: string | null;
+}
+
+/** What those fields must say for a body written in `locale`, served at `url`. */
+export function articleLocaleVerdict(
+	fields: ArticleLocaleFields,
+	expected: { locale: 'en' | 'ko'; url: string; alternateLocale: string[]; noindex: boolean },
+): string | null {
+	const ogCode = expected.locale === 'ko' ? 'ko_KR' : 'en_US';
+	const languageTag = expected.locale === 'ko' ? 'ko-KR' : 'en-US';
+	const problems: string[] = [];
+	if (fields.ogLocale !== ogCode)
+		problems.push(`og:locale is ${String(fields.ogLocale)}, expected ${ogCode}`);
+	if (fields.alternateLocale.join(',') !== expected.alternateLocale.join(','))
+		problems.push(
+			`og:locale:alternate is [${fields.alternateLocale.join(', ')}], expected [${expected.alternateLocale.join(', ')}]`,
+		);
+	if (fields.jsonLdInLanguage !== languageTag)
+		problems.push(
+			`JSON-LD inLanguage is ${String(fields.jsonLdInLanguage)}, expected ${languageTag}`,
+		);
+	if (fields.jsonLdId !== expected.url)
+		problems.push(`JSON-LD @id is ${String(fields.jsonLdId)}, expected ${expected.url}`);
+	if (fields.canonical !== expected.url)
+		problems.push(`canonical is ${String(fields.canonical)}, expected ${expected.url}`);
+	if (fields.langFacet !== expected.locale)
+		problems.push(
+			`the Pagefind lang facet is ${String(fields.langFacet)}, expected ${expected.locale}`,
+		);
+	if (fields.noindex !== expected.noindex)
+		problems.push(`noindex is ${fields.noindex}, expected ${expected.noindex}`);
+	return problems.length === 0 ? null : problems.join('; ');
+}
+
 /** What the Korean article route does with a fixture corpus, as rendered markup. */
 interface ArticleProbe {
 	fallbackMarkup: string;
-	fallbackLangFacet: string | null;
+	fallbackFields: ArticleLocaleFields;
 	draftedOutcome: 'not-found' | 'rendered' | 'other';
-	translatedLangFacet: string | null;
+	draftedMetadataKeys: string[];
+	translatedFields: ArticleLocaleFields;
 }
 
 /** What the feed and sitemap generators do with an underivable path. */
@@ -323,7 +368,7 @@ async function runProbe(mode: string): Promise<number> {
  * for both.
  */
 async function runArticleProbe(): Promise<number> {
-	const { Article } = await import('../next/src/content/article.tsx');
+	const { Article, generateArticleMetadata } = await import('../next/src/content/article.tsx');
 	// `react-dom` lives in `next/node_modules`, and this child runs with its
 	// working directory inside the fixture, so a bare specifier from `scripts/`
 	// does not resolve. Ask the Next package for it.
@@ -340,8 +385,37 @@ async function runArticleProbe(): Promise<number> {
 		renderToStaticMarkup(await Article({ slug, locale: 'ko' }));
 	const langFacet = (markup: string) =>
 		markup.match(/data-pagefind-filter="lang"[^>]*>([^<]*)</)?.[1] ?? null;
+	// The JSON-LD is the ONLY place `inLanguage` and `@id` become observable, so
+	// it is read from the script block rather than from the module that wrote it.
+	const jsonLd = (markup: string): Record<string, unknown> => {
+		const raw = markup.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)?.[1];
+		return raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+	};
+
+	/** Every language-declaring field of one Korean-route render. */
+	const fieldsOf = async (slug: string): Promise<ArticleLocaleFields> => {
+		const markup = await render(slug);
+		const structured = jsonLd(markup);
+		const metadata = (await generateArticleMetadata(slug, 'ko')) as {
+			alternates?: { canonical?: string };
+			robots?: { index?: boolean };
+			openGraph?: { locale?: string; alternateLocale?: string[] };
+		};
+		return {
+			ogLocale: metadata.openGraph?.locale ?? null,
+			alternateLocale: metadata.openGraph?.alternateLocale ?? [],
+			canonical: metadata.alternates?.canonical ?? null,
+			noindex: metadata.robots?.index === false,
+			jsonLdInLanguage: (structured.inLanguage as string | undefined) ?? null,
+			jsonLdId:
+				((structured.mainEntityOfPage as { '@id'?: string } | undefined)?.['@id'] as
+					string | undefined) ?? null,
+			langFacet: langFacet(markup),
+		};
+	};
 
 	const fallbackMarkup = await render('only-en');
+	const fallbackFields = await fieldsOf('only-en');
 	let draftedOutcome: ArticleProbe['draftedOutcome'] = 'rendered';
 	try {
 		await render('ko-drafted');
@@ -351,13 +425,17 @@ async function runArticleProbe(): Promise<number> {
 				? 'not-found'
 				: 'other';
 	}
-	const translatedMarkup = await render('three');
+	// A withdrawn URL must not describe itself either: `generateArticleMetadata`
+	// returns an empty object where the page 404s.
+	const draftedMetadataKeys = Object.keys(await generateArticleMetadata('ko-drafted', 'ko'));
+	const translatedFields = await fieldsOf('three');
 
 	const result: ArticleProbe = {
 		fallbackMarkup,
-		fallbackLangFacet: langFacet(fallbackMarkup),
+		fallbackFields,
 		draftedOutcome,
-		translatedLangFacet: langFacet(translatedMarkup),
+		draftedMetadataKeys,
+		translatedFields,
 	};
 	process.stdout.write(JSON.stringify(result));
 	return 0;
@@ -692,19 +770,50 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 
 		// --- row 11: the Korean article's English fallback, as rendered ----------
 		const article = probeFixture<ArticleProbe>(fixtureRoot, 'article');
+		// The title also appears inside the JSON-LD, so the body assertion reads the
+		// markup with the script blocks removed -- otherwise structured data alone
+		// could satisfy it.
+		const fallbackBody = article.fallbackMarkup.replace(/<script[\s\S]*?<\/script>/g, '');
 		check(
 			'site 11  ko/posts/[slug]/+page.ts:38 -> English fallback under a Korean URL',
-			article.fallbackMarkup.includes('EN Only') &&
-				article.fallbackMarkup.includes('post__fallback') &&
-				article.fallbackLangFacet === 'en',
-			'a slug with no Korean post renders the English body under the Korean route, carries the translation notice, and indexes as `en` because the facet follows the content',
-			`fallback markup carried lang=${String(article.fallbackLangFacet)}, notice present: ${article.fallbackMarkup.includes('post__fallback')}`,
+			fallbackBody.includes('<h1>EN Only</h1>') && fallbackBody.includes('post__fallback'),
+			'a slug with no Korean post renders the English body under the Korean route and carries the translation notice',
+			`fallback body carried the heading: ${fallbackBody.includes('<h1>EN Only</h1>')}, notice present: ${fallbackBody.includes('post__fallback')}`,
 		);
 		check(
 			'site 11b  a drafted translation is withdrawn, not replaced',
-			article.draftedOutcome === 'not-found' && article.translatedLangFacet === 'ko',
-			'a drafted Korean post 404s instead of falling back to English, and a translated one still indexes as `ko`',
-			`drafted outcome was ${article.draftedOutcome}; translated facet was ${String(article.translatedLangFacet)}`,
+			article.draftedOutcome === 'not-found' && article.draftedMetadataKeys.length === 0,
+			'a drafted Korean post 404s instead of falling back to English, and describes itself with no metadata at all',
+			`drafted outcome was ${article.draftedOutcome}; metadata carried ${article.draftedMetadataKeys.length} keys (${article.draftedMetadataKeys.join(', ')})`,
+		);
+		// Rows 11c/11d: the fallback's LANGUAGE, which row 11 does not constrain.
+		// `PostDetail.svelte:73` derives one `contentLocale` and hangs `og:locale`
+		// (164), its alternate (165-169), the JSON-LD `inLanguage` (142) and
+		// `@id`/canonical (71) plus the Pagefind facet (204) off it, so an English
+		// body under a Korean URL declares English in all six places.
+		const fallbackVerdict = articleLocaleVerdict(article.fallbackFields, {
+			locale: 'en',
+			url: `${SITE_URL}/posts/only-en`,
+			alternateLocale: [],
+			noindex: true,
+		});
+		check(
+			'site 11c  the English fallback declares English, not the route locale',
+			fallbackVerdict === null,
+			'og:locale, its alternate, the JSON-LD inLanguage and @id, the canonical and the Pagefind facet all follow the CONTENT, and the page asks not to be indexed',
+			`fallback declared: ${String(fallbackVerdict)}`,
+		);
+		const translatedVerdict = articleLocaleVerdict(article.translatedFields, {
+			locale: 'ko',
+			url: `${SITE_URL}/ko/posts/three`,
+			alternateLocale: ['en_US'],
+			noindex: false,
+		});
+		check(
+			'site 11d  a real translation still declares Korean',
+			translatedVerdict === null,
+			'the same six fields say Korean for a Korean body, and the page stays indexable -- the fallback rule must not leak into translated pages',
+			`translated declared: ${String(translatedVerdict)}`,
 		);
 
 		// --- S2 forced failure, through the generators themselves ----------------
