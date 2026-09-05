@@ -77,16 +77,33 @@ interface Control {
 	nextPage?: (typeof NEXT_PAGES)[number];
 }
 
-/** The series titles a built page actually renders, in document order.
+/** One rendered series item: the whole `<li>`, and the title inside it.
  *
  *  Read from the MARKUP with the script blocks stripped, exactly as row 16
- *  reads them -- a control that doctored the RSC payload instead would not be
- *  changing what the row inspects. */
-function renderedSeriesTitles(html: string): string[] {
+ *  reads it -- a control that doctored the RSC payload instead would not be
+ *  changing what the row inspects.
+ *
+ *  The title is addressed EXPLICITLY: a published entry renders it in the
+ *  anchor, a planned one in `<span class="name">`. An earlier version took the
+ *  first `<a>`-or-`<span>` in the item, which only avoided the leading
+ *  `<span class="idx">` because React splits `{order}.` into `1<!-- -->.` and
+ *  the marker breaks a `[^<]+` run. That is correctness by accident: it would
+ *  start returning "1" the moment the index stopped being interpolated. */
+interface RenderedSeriesItem {
+	block: string;
+	title: string;
+}
+
+function renderedSeriesItems(html: string): RenderedSeriesItem[] {
 	const markup = html.replace(/<script[\s\S]*?<\/script>/g, '');
-	return [...markup.matchAll(/<li[^>]*class="series-item"[\s\S]*?<\/li>/g)].map(
-		(item) => item[0].match(/<(?:a|span)[^>]*>([^<]+)<\/(?:a|span)>/)?.[1]?.trim() ?? '',
-	);
+	return [...markup.matchAll(/<li[^>]*class="series-item"[\s\S]*?<\/li>/g)].map((match) => {
+		const block = match[0];
+		const title =
+			block.match(/<a[^>]*href="[^"]*\/posts\/[^"]*"[^>]*>([^<]+)<\/a>/)?.[1] ??
+			block.match(/<span[^>]*class="name"[^>]*>([^<]+)<\/span>/)?.[1] ??
+			'';
+		return { block, title: title.trim() };
+	});
 }
 
 /** Drop the nth `/posts/<slug>` link from a page, leaving the card around it. */
@@ -236,9 +253,13 @@ const CONTROLS: Control[] = [
 		nextPage: join('ko', 'system', '3b.html'),
 		apply: (html) => {
 			let out = html;
-			renderedSeriesTitles(html).forEach((title, index) => {
+			// Replace INSIDE the item, not the first match in the document: a bare
+			// `html.replace(title, english)` would rewrite whichever earlier
+			// occurrence happened to match first.
+			renderedSeriesItems(html).forEach(({ block, title }, index) => {
 				const english = SERIES_TITLES[index];
-				if (title && english && title !== english) out = out.replace(title, english);
+				if (!title || !english || title === english) return;
+				out = out.replace(block, block.replace(`>${title}<`, `>${english}<`));
 			});
 			return out;
 		},
