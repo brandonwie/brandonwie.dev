@@ -567,11 +567,6 @@ export function reachabilityFailures(
 }
 
 /**
- * Committed negative controls for `reachabilityFailures`. Each supplies a
- * deliberately broken invocation chain and asserts the guard reports it. They
- * are pure string inputs, so they neither mutate the tree nor depend on it.
- */
-/**
  * Committed negative controls for `reachabilityFailures`.
  *
  * The forty-six shell and YAML fixtures that lived here are GONE, with the
@@ -591,6 +586,21 @@ const DEFAULT_SUITES = [
 	{ command: 'migration:all', tier: 'push' as const },
 	{ command: 'migration:controls', tier: 'ci' as const },
 ];
+
+/**
+ * A byte difference that cannot be a no-op.
+ *
+ * FP-02 used to edit the hook with
+ * `REAL_HOOK.replace('7/7 Migration verification', ...)`. Rename that display
+ * label and the replacement matches nothing, so the "changed" hook is
+ * byte-identical to the recorded one and the control fails for a reason that
+ * has nothing to do with the guard — a legitimate re-record would have been
+ * reported as a broken control. A mutation used as a fixture must not depend on
+ * the wording of the file it mutates, so this one appends.
+ */
+function mutated(text: string): string {
+	return `${text}\n# an edit nobody certified\n`;
+}
 
 /** A manifest with one field replaced, for a control to break deliberately. */
 function withManifest(patch: Partial<CallSiteManifest>): CallSiteManifest {
@@ -619,7 +629,7 @@ const SELF_CHECKS: {
 		what: 'the workflow changed and nobody re-recorded it',
 		expect: 'ci.yml does not match its recorded fingerprint',
 		scripts: { 'migration:all': GOOD_ALL },
-		workflow: `${REAL_WORKFLOW}\n# an edit nobody certified\n`,
+		workflow: mutated(REAL_WORKFLOW),
 		hook: REAL_HOOK,
 	},
 	{
@@ -628,7 +638,7 @@ const SELF_CHECKS: {
 		expect: 'pre-push does not match its recorded fingerprint',
 		scripts: { 'migration:all': GOOD_ALL },
 		workflow: REAL_WORKFLOW,
-		hook: REAL_HOOK.replace('7/7 Migration verification', '7/7 Migration verification (edited)'),
+		hook: mutated(REAL_HOOK),
 	},
 	{
 		id: 'FP-03',
@@ -747,7 +757,60 @@ function selfCheckFailures(): string[] {
 	if (intact.length > 0) {
 		problems.push(`FP-00 the recorded call sites were reported as broken: ${intact.join('; ')}`);
 	}
+	// FP-00b: the fixtures that claim to change a file must actually change it.
+	// This is the check that would have caught FP-02's text-dependent edit.
+	if (mutated(REAL_HOOK) === REAL_HOOK || mutated(REAL_WORKFLOW) === REAL_WORKFLOW) {
+		problems.push('FP-00b the mutation helper produced no byte difference');
+	}
+	// FP-11: A LEGITIMATE CHANGE, RE-RECORDED, PASSES.
+	//
+	// Refusing everything is not correctness. The whole design rests on a human
+	// being able to edit a call site, run `--record`, and get a green guard; if
+	// that path did not work the guard would be unusable and the pressure would
+	// be to delete it. The edited hook here is the SAME text FP-02 rejects, and
+	// the manifest comes from record()'s own algorithm.
+	const editedHook = mutated(REAL_HOOK);
+	const rerecorded = recordedManifest(RECORDED, GOOD_ALL, {
+		'.husky/pre-push': editedHook,
+		'.github/workflows/ci.yml': REAL_WORKFLOW,
+	});
+	const afterRecord = reachabilityFailures(
+		{ 'migration:all': GOOD_ALL },
+		REAL_WORKFLOW,
+		editedHook,
+		DEFAULT_SUITES,
+		rerecorded,
+	);
+	if (afterRecord.length > 0) {
+		problems.push(
+			`FP-11 a re-recorded call-site change was still reported as broken: ${afterRecord.join('; ')}`,
+		);
+	}
 	return problems;
+}
+
+/**
+ * The manifest that recording the given call sites produces.
+ *
+ * Separated from `record()` so FP-11 can run THIS algorithm over an edited
+ * hook held in memory rather than re-implementing it. A control that
+ * re-implements the thing it certifies proves only that two copies agree.
+ */
+export function recordedManifest(
+	base: CallSiteManifest,
+	allScript: string,
+	fileTexts: Record<string, string>,
+): CallSiteManifest {
+	return {
+		...(base as CallSiteManifest & Record<string, unknown>),
+		scripts: { 'migration:all': allScript },
+		files: Object.fromEntries(
+			Object.entries(base.files).map(([path, entry]) => [
+				path,
+				{ ...entry, sha256: digest(fileTexts[path]) },
+			]),
+		),
+	};
 }
 
 /** `--record` mode: rewrite the manifest from the working tree. */
@@ -755,16 +818,16 @@ function record(): void {
 	const pkg = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')) as {
 		scripts: Record<string, string>;
 	};
-	const next: CallSiteManifest & Record<string, unknown> = {
-		...(RECORDED as CallSiteManifest & Record<string, unknown>),
-		scripts: { 'migration:all': pkg.scripts['migration:all'] },
-		files: Object.fromEntries(
-			Object.entries(RECORDED.files).map(([path, entry]) => [
+	const next = recordedManifest(
+		RECORDED,
+		pkg.scripts['migration:all'],
+		Object.fromEntries(
+			Object.keys(RECORDED.files).map((path) => [
 				path,
-				{ ...entry, sha256: digest(readFileSync(join(REPO_ROOT, path), 'utf8')) },
+				readFileSync(join(REPO_ROOT, path), 'utf8'),
 			]),
 		),
-	};
+	);
 	writeFileSync(
 		join(REPO_ROOT, 'verification/certified-call-sites.json'),
 		`${JSON.stringify(next, null, '\t')}\n`,
