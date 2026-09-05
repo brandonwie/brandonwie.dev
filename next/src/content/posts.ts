@@ -129,6 +129,29 @@ function readParsedPost(file: string): ParsedMarkdownSource {
 	return parsed;
 }
 
+/**
+ * The slug of a post file: its basename with `.md` removed.
+ *
+ * WHY IT THROWS. Every SvelteKit call site derives the slug the same way --
+ * `path.split('/').pop()?.replace('.md', '') ?? ''` -- and the `?? ''` makes an
+ * underivable path a SILENT empty slug. An empty slug does not stop anything:
+ * `sitemap.xml` would emit `<loc>https://brandonwie.dev/posts/</loc>` and
+ * `rss.xml` a `<guid>` pointing at the list page, both well-formed XML naming
+ * the wrong resource. That is the failure S2 exists to forbid, so the port
+ * fails loudly at the derivation instead of passing '' downstream.
+ *
+ * The trailing `.md` is anchored, where the Svelte expression's
+ * `replace('.md', '')` is not. They differ only for a basename that contains
+ * `.md` before its extension (`a.mdx.md` -> `a.mdx` here, `ax.md` there); no
+ * file in either locale does, which `pnpm migration:c5` asserts rather than
+ * assumes.
+ */
+export function postSlugFrom(pathOrGlobKey: string): string {
+	const slug = pathOrGlobKey.split('/').pop()!.replace(/\.md$/, '');
+	if (slug === '') throw new Error(`post slug is empty; cannot derive one from ${pathOrGlobKey}`);
+	return slug;
+}
+
 /** Absolute path of `<slug>.md` under a locale, or null. */
 export function findPostFile(slug: string, locale: Locale): string | null {
 	return listPostFiles(locale).find((file) => file.endsWith(`/${slug}.md`)) ?? null;
@@ -137,7 +160,7 @@ export function findPostFile(slug: string, locale: Locale): string | null {
 /** Every slug published in a locale, drafts excluded. */
 export function listPostSlugs(locale: Locale): string[] {
 	return listPostFiles(locale)
-		.map((file) => ({ file, slug: file.split('/').pop()!.replace(/\.md$/, '') }))
+		.map((file) => ({ file, slug: postSlugFrom(file) }))
 		.filter(({ file }) => readParsedPost(file).data.draft !== true)
 		.map(({ slug }) => slug)
 		.sort();
@@ -204,7 +227,7 @@ export function listPublishedPosts(locale: Locale): PublishedPost[] {
 			.map(({ file, relativePath }) => ({ file, relativePath, parsed: readParsedPost(file) }))
 			.filter(({ parsed }) => parsed.data.draft !== true)
 			.map(({ relativePath, parsed }) => ({
-				slug: relativePath.split('/').pop()!.replace(/\.md$/, ''),
+				slug: postSlugFrom(relativePath),
 				relativePath,
 				frontmatter: parsed.data as PostFrontmatter,
 			}))

@@ -14,10 +14,19 @@ import raw from '../../../src/lib/data/system-snapshot.json';
 
 import type { SnapEdge, SnapLayer, SnapNode } from '../graph/system3b-graph';
 
+/** One entry of the `/system/3b` blog-series list. */
+export interface SnapBlogSeries {
+	order: number;
+	slug: string;
+	title: string;
+	status: 'published' | 'planned';
+}
+
 export interface SystemSnapshot {
 	nodes: SnapNode[];
 	edges: SnapEdge[];
 	layers: SnapLayer[];
+	blog_series: SnapBlogSeries[];
 }
 
 const snapshot: SystemSnapshot = raw as SystemSnapshot;

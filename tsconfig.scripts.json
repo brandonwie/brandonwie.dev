@@ -29,6 +29,8 @@
 	},
 	"include": [
 		"scripts/assert-slice2-gsap-palette.ts",
-		"scripts/assert-slice2-gsap-palette-controls.ts"
+		"scripts/assert-slice2-gsap-palette-controls.ts",
+		"scripts/assert-c5-glob-sites.ts",
+		"scripts/assert-c5-glob-sites-controls.ts"
 	]
 }

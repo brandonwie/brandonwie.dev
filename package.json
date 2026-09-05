@@ -42,6 +42,8 @@
 		"migration:feed": "tsx scripts/assert-feed-redirects.ts",
 		"migration:feed:controls": "tsx scripts/assert-feed-redirects-controls.ts",
 		"migration:projection": "tsx scripts/assert-baseline-projection.ts",
+		"migration:c5": "tsx --tsconfig next/tsconfig.json scripts/assert-c5-glob-sites.ts",
+		"migration:c5:controls": "tsx --tsconfig next/tsconfig.json scripts/assert-c5-glob-sites-controls.ts",
 		"migration:projection:controls": "tsx scripts/assert-baseline-projection-controls.ts",
 		"migration:typography": "tsx --tsconfig next/tsconfig.json next/scripts/assert-corpus-typography.ts",
 		"migration:ast": "tsx --tsconfig next/tsconfig.json next/scripts/assert-mdsvex-ast.ts",

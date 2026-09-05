@@ -396,6 +396,18 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		command: 'migration:c5',
+		entry: 'scripts/assert-c5-glob-sites.ts',
+		dataRoots: [...SVELTE_BUILD_SOURCES, ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		command: 'migration:c5:controls',
+		entry: 'scripts/assert-c5-glob-sites-controls.ts',
+		dataRoots: [...SVELTE_BUILD_SOURCES, ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
 		command: 'migration:verify:svelte',
 		entry: 'scripts/migration-verify.ts',
 		dataRoots: [...SVELTE_BUILD_SOURCES, ...BASELINE],
