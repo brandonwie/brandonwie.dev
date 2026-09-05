@@ -196,6 +196,16 @@ const CONTROLS: Control[] = [
 		mutate: (root) => rmSync(join(root, 'src/content/posts/ko/gamma/two.md')),
 	},
 	{
+		id: 'D11',
+		kind: 'DEFECT',
+		surface: 'fixture',
+		what: 'the drafted Korean twin is published, so its English source stops falling back',
+		mutate: (root) => {
+			const file = join(root, 'src/content/posts/ko/beta/ko-drafted.md');
+			writeFileSync(file, readFileSync(file, 'utf8').replace('\ndraft: true', ''));
+		},
+	},
+	{
 		id: 'I2',
 		kind: 'INVARIANCE',
 		surface: 'fixture',

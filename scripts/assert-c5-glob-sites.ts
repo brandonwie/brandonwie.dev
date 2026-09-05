@@ -43,10 +43,18 @@
  *   2   the script could not run at all (a build is missing)
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
@@ -57,6 +65,61 @@ const PROBE_ENV = 'C5_FIXTURE_PROBE';
 
 /** Files whose basenames the S2 rows check, and the two that are not lower-case. */
 const MIXED_CASE_SLUGS = ['updatedAt-staleness-guard', 'test-L-vs-realpath-symlink-detection'];
+
+/**
+ * The one slug-derivation expression, written the same way at all twelve sites.
+ *
+ * S2's positive half is "all twelve slug-derivation sites enumerated, each
+ * producing the expected slug from a real path" (`plan.md:677`). Enumerating
+ * them as a hard-coded list would prove nothing on its own -- a thirteenth site
+ * could appear and the list would still pass -- so the row RECOMPUTES the set
+ * from source and compares it to this one, then runs the source expression
+ * itself against every real path.
+ */
+const SVELTE_SLUG_EXPRESSION = ".split('/').pop()?.replace('.md', '') ?? ''";
+
+/** The twelve sites, as `plan.md:612-618` enumerates them. */
+const SLUG_SITES = [
+	'src/routes/+layout.ts:30',
+	'src/routes/+page.ts:24',
+	'src/routes/ko/+page.ts:22',
+	'src/routes/ko/posts/+page.ts:28',
+	'src/routes/ko/posts/+page.ts:37',
+	'src/routes/ko/rss.xml/+server.ts:38',
+	'src/routes/ko/rss.xml/+server.ts:53',
+	'src/routes/ko/system/3b/+page.ts:19',
+	'src/routes/posts/+page.ts:16',
+	'src/routes/rss.xml/+server.ts:30',
+	'src/routes/sitemap.xml/+server.ts:33',
+	'src/routes/sitemap.xml/+server.ts:40',
+] as const;
+
+/** The source expression, evaluated exactly as the twelve sites evaluate it. */
+function svelteSlug(pathOrGlobKey: string): string {
+	return pathOrGlobKey.split('/').pop()?.replace('.md', '') ?? '';
+}
+
+/** Every `file:line` under `src/` whose line holds the derivation expression. */
+function findSlugSites(repoRoot: string): string[] {
+	const found: string[] = [];
+	const walk = (dir: string) => {
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			const full = join(dir, entry.name);
+			if (entry.isDirectory()) {
+				walk(full);
+			} else if (/\.(ts|svelte|js)$/.test(entry.name)) {
+				readFileSync(full, 'utf8')
+					.split('\n')
+					.forEach((line, index) => {
+						if (line.includes(SVELTE_SLUG_EXPRESSION))
+							found.push(`${relative(repoRoot, full)}:${index + 1}`);
+					});
+			}
+		}
+	};
+	walk(join(repoRoot, 'src'));
+	return found.sort();
+}
 
 interface Row {
 	row: string;
@@ -99,12 +162,19 @@ function writeFixture(root: string): void {
 		['src/content/posts/en/beta/three.md', post('EN Three', '2026-01-02', '2026-03-01')],
 		['src/content/posts/en/beta/hidden.md', post('EN Hidden', '2026-04-01', undefined, true)],
 		['src/content/posts/en/beta/only-en.md', post('EN Only', '2026-02-01')],
+		// Published in English, DRAFTED in Korean. Both stacks add to the dedup set
+		// AFTER the draft filter, so this must still fall back to English.
+		['src/content/posts/en/beta/ko-drafted.md', post('EN Ko-Drafted', '2026-01-15')],
 		// Korean: `two` is filed under a DIFFERENT category, so a path-keyed
 		// fallback would wrongly re-add the English `two`.
 		['src/content/posts/ko/alpha/one.md', post('KO One', '2026-01-01')],
 		['src/content/posts/ko/gamma/two.md', post('KO Two', '2026-01-01')],
 		['src/content/posts/ko/beta/three.md', post('KO Three', '2026-01-02', '2026-03-01')],
 		['src/content/posts/ko/beta/hidden-ko.md', post('KO Hidden', '2026-04-01', undefined, true)],
+		[
+			'src/content/posts/ko/beta/ko-drafted.md',
+			post('KO Ko-Drafted', '2026-01-15', undefined, true),
+		],
 	];
 
 	mkdirSync(join(root, 'next'), { recursive: true });
@@ -315,6 +385,22 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		`locale selection did not swap titles for ${sample}: ${String(koreanTitle)}`,
 	);
 
+	// --- S2 positive: the twelve sites, then every real path through them ----
+	const foundSites = findSlugSites(REPO_ROOT);
+	const expectedSites = [...SLUG_SITES].sort();
+	const siteProblem =
+		foundSites.length !== expectedSites.length
+			? `source holds ${foundSites.length} derivation site(s), the enumeration names ${expectedSites.length}`
+			: (foundSites.find((site, index) => site !== expectedSites[index]) ?? null);
+	check(
+		'S2 positive  the twelve slug-derivation sites',
+		siteProblem === null,
+		`all ${foundSites.length} sites recomputed from source and matched: ${foundSites.join(', ')}`,
+		typeof siteProblem === 'string' && siteProblem.includes('derivation site')
+			? siteProblem
+			: `enumeration drifted from source at ${String(siteProblem)}`,
+	);
+
 	// --- S2 positive: every slug derivation site, over the whole corpus --------
 	const derivations = (['en', 'ko'] as const).flatMap((locale) =>
 		listPublishedPosts(locale).map((post) => ({
@@ -323,9 +409,9 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 			slug: post.slug,
 		})),
 	);
-	const wrong = derivations.filter(
-		({ relativePath, slug }) => slug !== relativePath.split('/').pop()!.slice(0, -3),
-	);
+	// Not a restatement of the port's own logic: `svelteSlug` IS the source
+	// expression, so this compares the two implementations on every real path.
+	const wrong = derivations.filter(({ relativePath, slug }) => slug !== svelteSlug(relativePath));
 	const ambiguous = derivations.filter(({ relativePath }) =>
 		relativePath.split('/').pop()!.slice(0, -3).includes('.md'),
 	);
@@ -333,11 +419,11 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		derivations.some((entry) => entry.slug === slug),
 	);
 	check(
-		'S2 positive  slug derivation, all source files',
+		'S2 positive  every real path through both implementations',
 		wrong.length === 0 &&
 			ambiguous.length === 0 &&
 			mixedCaseFound.length === MIXED_CASE_SLUGS.length,
-		`${derivations.length} files derive their basename verbatim, including ${MIXED_CASE_SLUGS.join(' and ')}`,
+		`${derivations.length} paths derive identically under the source expression and the port, including ${MIXED_CASE_SLUGS.join(' and ')}`,
 		wrong.length > 0
 			? `${wrong.length} mis-derived, first: ${wrong[0].relativePath} -> ${wrong[0].slug}`
 			: ambiguous.length > 0
@@ -512,14 +598,15 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 
 		check(
 			'F2 Korean fallback, keyed by slug',
-			probe.fallback.join(',') === 'ko:three,en:only-en,ko:one,ko:two',
-			'the untranslated post falls back as English; the Korean twin filed under another category still suppresses its English source',
+			probe.fallback.join(',') === 'ko:three,en:only-en,en:ko-drafted,ko:one,ko:two',
+			'the untranslated post falls back as English; a post whose Korean twin is a DRAFT also falls back, because the dedup set is filled after the draft filter; and a Korean twin filed under another category still suppresses its English source',
 			`fallback order was ${probe.fallback.join(',')}`,
 		);
 
 		check(
 			'F3 tie-break and effectiveDate',
-			probe.en.join(',') === 'three,only-en,one,two' && probe.ko.join(',') === 'three,one,two',
+			probe.en.join(',') === 'three,only-en,ko-drafted,one,two' &&
+				probe.ko.join(',') === 'three,one,two',
 			'`updated` outranks `date`, and same-date posts keep path-ascending order',
 			`en=${probe.en.join(',')} ko=${probe.ko.join(',')}`,
 		);
