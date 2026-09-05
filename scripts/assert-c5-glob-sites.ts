@@ -832,7 +832,11 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 				'S2 forced failure  the generators stop before emitting a URL',
 				generators.sitemapError !== null &&
 					generators.rssError !== null &&
+					// BOTH diagnostics must name the path. Requiring only the sitemap's
+					// let any unrelated RSS exception satisfy the row: a failure that
+					// never reached the derivation still leaves `rssEmitted` null.
 					generators.sitemapError.includes('.md') &&
+					generators.rssError.includes('.md') &&
 					generators.sitemapEmitted === null &&
 					generators.rssEmitted === null,
 				`an underivable corpus path stops sitemapXml() and rssXml() at the derivation: ${generators.sitemapError}`,
