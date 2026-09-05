@@ -13,11 +13,16 @@ import { koreanTitleBySlug } from './post-list';
  * The /system/3b page, at the graph and blog-series altitudes.
  *
  * SCOPE. This is still a PARTIAL port and says so. The Svelte System3bPage also
- * carries stats, a subsystems table and an evolution section; those are Slice 4
- * cohort work, so the parity comparator will report field differences on this
- * route until Slice 4 closes them. That is expected progress, not a regression,
- * and is deliberately NOT ledgered — a ledger entry would approve a difference
- * that is supposed to disappear.
+ * carries stats, a subsystems table and an evolution section, so the parity
+ * comparator reports field differences on BOTH `/system/3b` and `/ko/system/3b`
+ * until those sections land.
+ *
+ * OWNERSHIP. Those remaining differences are **Slice 3** work and must be
+ * repaired before G3, not deferred to Slice 4. An earlier version of this note
+ * assigned them to Slice 4; that was superseded when `/ko/system/3b` moved onto
+ * the Slice 3 row in `verification/behavior-matrix.md`. They are expected
+ * progress rather than a regression, and are deliberately NOT ledgered — a
+ * ledger entry would approve a difference that is supposed to disappear.
  *
  * The blog-series list is here ahead of those sections for one reason: it is
  * the consumer of the seventeenth `import.meta.glob` call site

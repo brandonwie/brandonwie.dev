@@ -40,6 +40,8 @@ import {
 	linkedSlugs,
 	sitemapVerdict,
 	writeFixture,
+	writeSystemFixture,
+	SYSTEM_FIXTURE,
 	type ArticleLocaleFields,
 } from './assert-c5-glob-sites.ts';
 
@@ -61,7 +63,7 @@ const SERIES_TITLES: string[] = (
 ).blog_series.map((entry) => entry.title);
 
 type Kind = 'DEFECT' | 'INVARIANCE';
-type Surface = 'oracle' | 'fixture' | 'next';
+type Surface = 'oracle' | 'fixture' | 'next' | 'system';
 
 interface Control {
 	id: string;
@@ -75,6 +77,8 @@ interface Control {
 	mutate?: (root: string) => void;
 	/** Rewrites one exported Next page, addressed under the scratch Next build. */
 	nextPage?: (typeof NEXT_PAGES)[number];
+	/** Rewrites the system fixture corpus the F7 rows render against. */
+	mutateSystem?: (root: string) => void;
 }
 
 /** One rendered series item: the whole `<li>`, and the title inside it.
@@ -275,6 +279,76 @@ const CONTROLS: Control[] = [
 		apply: (html) =>
 			html.replaceAll('<li class="series-item"', '<li data-reformatted="1" class="series-item"'),
 	},
+	{
+		id: 'D16',
+		kind: 'DEFECT',
+		surface: 'next',
+		what: 'the built Korean page keeps ten series items but moves every title out of them',
+		nextPage: join('ko', 'system', '3b.html'),
+		// The counterexample that failed review: page-wide presence plus an
+		// independent item count both pass against ten EMPTY items whose titles
+		// were relocated. Row 16b now reads the title INSIDE each item, so this
+		// must go red.
+		apply: (html) => {
+			const stashed: string[] = [];
+			const emptied = html.replace(/<li[^>]*class="series-item"[\s\S]*?<\/li>/g, (block) => {
+				const title = renderedSeriesItems(block)[0]?.title ?? '';
+				if (!title) return block;
+				stashed.push(title);
+				return block.replace(`>${title}<`, '><');
+			});
+			return emptied.replace(
+				'</body>',
+				`<aside class="stash">${stashed.map((title) => `<p>${title}</p>`).join('')}</aside></body>`,
+			);
+		},
+	},
+	{
+		id: 'I6',
+		kind: 'INVARIANCE',
+		surface: 'next',
+		what: 'unrelated markup is appended to the built Korean page, leaving the series items intact',
+		nextPage: join('ko', 'system', '3b.html'),
+		apply: (html) => html.replace('</body>', '<aside class="unrelated"><p>x</p></aside></body>'),
+	},
+	{
+		id: 'D17',
+		kind: 'DEFECT',
+		surface: 'system',
+		what: 'the drafted Korean series post is published, so its title reaches the page',
+		mutateSystem: (root) => {
+			const file = join(root, `src/content/posts/ko/fixture/${SYSTEM_FIXTURE.drafted}.md`);
+			writeFileSync(file, readFileSync(file, 'utf8').replace('\ndraft: true', ''));
+		},
+	},
+	{
+		id: 'D18',
+		kind: 'DEFECT',
+		surface: 'system',
+		what: 'the untranslated series slug gains a Korean post, so it stops falling back to English',
+		mutateSystem: (root) => {
+			const file = join(root, `src/content/posts/ko/fixture/${SYSTEM_FIXTURE.untranslated}.md`);
+			mkdirSync(dirname(file), { recursive: true });
+			writeFileSync(
+				file,
+				`---\ntitle: KO Should Not Appear\ndescription: Fixture\ndate: '2026-01-01'\ntags:\n  - fixture\ncategory: fixture\n---\n\nBody.\n`,
+			);
+		},
+	},
+	{
+		id: 'I7',
+		kind: 'INVARIANCE',
+		surface: 'system',
+		what: 'the system corpus gains a Korean post that is not a series entry',
+		mutateSystem: (root) => {
+			const file = join(root, 'src/content/posts/ko/fixture/unrelated-post.md');
+			mkdirSync(dirname(file), { recursive: true });
+			writeFileSync(
+				file,
+				`---\ntitle: KO Unrelated\ndescription: Fixture\ndate: '2026-01-01'\ntags:\n  - fixture\ncategory: fixture\n---\n\nBody.\n`,
+			);
+		},
+	},
 ];
 
 /** A scratch copy of only the four oracle pages the suite reads. */
@@ -299,7 +373,12 @@ function scratchNextBuild(root: string): string {
 	return nextBuild;
 }
 
-function runSuite(svelteBuild: string, fixtureRoot?: string, nextBuild?: string): number {
+function runSuite(
+	svelteBuild: string,
+	fixtureRoot?: string,
+	nextBuild?: string,
+	systemFixtureRoot?: string,
+): number {
 	const args = [
 		'--import',
 		require.resolve('tsx'),
@@ -308,6 +387,7 @@ function runSuite(svelteBuild: string, fixtureRoot?: string, nextBuild?: string)
 		svelteBuild,
 		...(fixtureRoot ? ['--fixture-root', fixtureRoot] : []),
 		...(nextBuild ? ['--next-build', nextBuild] : []),
+		...(systemFixtureRoot ? ['--system-fixture-root', systemFixtureRoot] : []),
 	];
 	const child = spawnSync(process.execPath, args, {
 		cwd: REPO_ROOT,
@@ -482,6 +562,7 @@ function main(): number {
 			let fixtureRoot: string | undefined;
 
 			let nextBuild: string | undefined;
+			let systemFixtureRoot: string | undefined;
 
 			if (control.surface === 'oracle') {
 				const target = join(svelteBuild, control.page!);
@@ -498,6 +579,10 @@ function main(): number {
 				if (after === before)
 					throw new Error(`${control.id} changed nothing in ${target}; the control proves nothing`);
 				writeFileSync(target, after);
+			} else if (control.surface === 'system') {
+				systemFixtureRoot = join(scratch, 'system-fixture');
+				writeSystemFixture(systemFixtureRoot);
+				control.mutateSystem!(systemFixtureRoot);
 			} else {
 				fixtureRoot = join(scratch, 'fixture');
 				writeFixture(fixtureRoot);
@@ -505,7 +590,7 @@ function main(): number {
 			}
 
 			const expected = control.kind === 'DEFECT' ? 1 : 0;
-			const code = runSuite(svelteBuild, fixtureRoot, nextBuild);
+			const code = runSuite(svelteBuild, fixtureRoot, nextBuild, systemFixtureRoot);
 			const ok = code === expected;
 			if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
 			console.log(

@@ -578,6 +578,12 @@ export interface C5Options {
 	 * deliberately broken corpus; the directory is left where it was found.
 	 */
 	fixtureRoot?: string;
+	/**
+	 * A system corpus the F7 rows use instead of the one this script writes.
+	 * `--system-fixture-root <dir>` exists so the fallback and draft controls can
+	 * hand over a doctored corpus; the directory is left where it was found.
+	 */
+	systemFixtureRoot?: string;
 }
 
 async function runAssertions(options: C5Options = {}): Promise<number> {
@@ -863,15 +869,6 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	 * demonstrated before this stripped the scripts out.
 	 */
 	const renderedMarkup = (html: string) => html.replace(/<script[\s\S]*?<\/script>/g, '');
-	const escapeHtml = (value: string) =>
-		value
-			.replaceAll('&', '&amp;')
-			.replaceAll('<', '&lt;')
-			.replaceAll('>', '&gt;')
-			.replaceAll('"', '&quot;')
-			.replaceAll("'", '&#x27;');
-	const contains = (html: string, text: string) =>
-		html.includes(escapeHtml(text)) || html.includes(text);
 
 	const koreanSystemHtml = renderedMarkup(
 		readFileSync(join(nextBuild, 'ko', 'system', '3b.html'), 'utf8'),
@@ -880,11 +877,11 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		readFileSync(join(nextBuild, 'system', '3b.html'), 'utf8'),
 	);
 
-	// CARDINALITY FIRST. Every assertion below is a `.filter(...).length === 0`
-	// over `seriesSource`, and all of them are vacuously true when it is empty.
-	// The count is recomputed from the snapshot rather than hard-coded as the
-	// only check, so a snapshot that legitimately grows fails LOUDLY here
-	// instead of silently weakening the three rows that follow.
+	// CARDINALITY FIRST. Every assertion below is over `seriesSource`, and all of
+	// them are vacuously true when it is empty. The count is recomputed from the
+	// snapshot rather than hard-coded as the only check, so a snapshot that
+	// legitimately grows fails LOUDLY here instead of silently weakening the
+	// rows that follow.
 	const SERIES_EXPECTED = 10;
 	const translated = seriesSource.filter((entry) => koreanTitles[entry.slug] !== undefined);
 	check(
@@ -897,49 +894,68 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 			.join(', ')})`,
 	);
 
-	const missingKorean = seriesSource.filter(
-		(entry) => !contains(koreanSystemHtml, koreanTitles[entry.slug] ?? entry.title),
-	);
-	const englishLeak = seriesSource.filter(
-		(entry) =>
-			koreanTitles[entry.slug] !== undefined &&
-			koreanTitles[entry.slug] !== entry.title &&
-			contains(koreanSystemHtml, entry.title),
-	);
+	/**
+	 * The rendered series items, and the title INSIDE each one.
+	 *
+	 * WHY THIS IS POSITIONAL AND NOT A PAGE-WIDE SEARCH. An earlier version of
+	 * these rows asked whether each expected title appeared anywhere on the page
+	 * and, separately, how many `series-item` elements existed. Both questions
+	 * pass against a page whose ten items are EMPTY and whose ten titles have
+	 * been moved into an unrelated element -- reproduced, 31 rows green. Nothing
+	 * bound a title to the entry it belongs to. These rows now compare the
+	 * sequence of titles read out of the items against the sequence the merge
+	 * should have produced, so position, identity and count all have to agree.
+	 */
+	const titleInItem = (block: string) =>
+		block.match(/<a[^>]*href="[^"]*\/posts\/[^"]*"[^>]*>([^<]+)<\/a>/)?.[1]?.trim() ??
+		block.match(/<span[^>]*class="name"[^>]*>([^<]+)<\/span>/)?.[1]?.trim() ??
+		'';
+	const itemsIn = (html: string) =>
+		[...html.matchAll(/<li[^>]*class="series-item"[\s\S]*?<\/li>/g)].map((match) => match[0]);
+
+	const koreanItems = itemsIn(koreanSystemHtml);
+	const englishItems = itemsIn(englishSystemHtml);
+	const koreanRendered = koreanItems.map(titleInItem);
+	const englishRendered = englishItems.map(titleInItem);
+	const koreanExpected = seriesSource.map((entry) => koreanTitles[entry.slug] ?? entry.title);
+	const englishExpected = seriesSource.map((entry) => entry.title);
+	const sameSequence = (a: string[], b: string[]) =>
+		a.length === b.length && a.every((value, index) => value === b[index]);
+	const firstMismatch = (a: string[], b: string[]) => {
+		for (let index = 0; index < Math.max(a.length, b.length); index += 1)
+			if (a[index] !== b[index])
+				return `index ${index}: ${String(a[index])} != ${String(b[index])}`;
+		return 'none';
+	};
+
 	check(
-		'site 16b  the built Korean page carries the localized titles, not the English ones',
-		seriesSource.length > 0 && missingKorean.length === 0 && englishLeak.length === 0,
-		`all ${seriesSource.length} localized titles render on the built Korean page and no English source title survived the merge`,
-		missingKorean.length > 0
-			? `missing from the built Korean page: ${missingKorean.map((entry) => entry.slug).join(', ')}`
-			: `English titles survived localization: ${englishLeak.map((entry) => entry.slug).join(', ')}`,
+		'site 16b  each built Korean item carries ITS entry localized title',
+		koreanExpected.length > 0 && sameSequence(koreanRendered, koreanExpected),
+		`all ${koreanRendered.length} series items carry their own entry's localized title, in snapshot order`,
+		`rendered ${koreanRendered.length} titles against ${koreanExpected.length} expected; ${firstMismatch(koreanRendered, koreanExpected)}`,
 	);
 
-	// STRUCTURE, not just substrings. The titles could appear anywhere on the
-	// page and the rows above would pass; this one fails if the series LIST is
-	// gone. It is also the row that makes "delete all the output" unable to pass.
-	const seriesItems = (koreanSystemHtml.match(/<li[^>]*class="series-item"/g) ?? []).length;
-	const englishSeriesItems = (englishSystemHtml.match(/<li[^>]*class="series-item"/g) ?? []).length;
+	// A title that is present but EMPTY, or an item that rendered no title at
+	// all, is the failure the sequence check above is built to catch; this row
+	// states it separately so the diagnostic names it directly.
+	const emptyKorean = koreanRendered.filter((title) => title === '').length;
 	check(
-		'site 16c  the series list renders as a list, on both locales',
-		seriesItems === seriesSource.length && englishSeriesItems === seriesSource.length,
-		`both built pages render ${seriesItems} series items, one per snapshot entry`,
-		`series items: Korean ${seriesItems}, English ${englishSeriesItems}, expected ${seriesSource.length} on each`,
+		'site 16c  the series list renders as a list, with a title in every item',
+		koreanItems.length === seriesSource.length &&
+			englishItems.length === seriesSource.length &&
+			emptyKorean === 0,
+		`both built pages render ${koreanItems.length} series items and every Korean item holds a non-empty title`,
+		`series items: Korean ${koreanItems.length}, English ${englishItems.length}, expected ${seriesSource.length} on each; empty Korean titles: ${emptyKorean}`,
 	);
 
-	// The English page keeps the English snapshot titles: the merge is per-route,
-	// not global. No `englishSystemHtml === ''` escape hatch -- the precheck above
-	// makes an absent English export exit 2, so reaching here means it was built.
-	const englishLostTitles = seriesSource.filter(
-		(entry) => !contains(englishSystemHtml, entry.title),
-	);
+	// The merge is per-route, not global. No `englishSystemHtml === ''` escape
+	// hatch -- the precheck above makes an absent English export exit 2, so
+	// reaching here means it was built.
 	check(
 		'site 16d  localization is locale-scoped',
-		seriesSource.length > 0 && englishLostTitles.length === 0,
-		'the English page keeps every English snapshot title, so the Korean merge did not leak across routes',
-		`the English page lost snapshot titles to the Korean overlay: ${englishLostTitles
-			.map((entry) => entry.slug)
-			.join(', ')}`,
+		englishExpected.length > 0 && sameSequence(englishRendered, englishExpected),
+		'every English item keeps its own English snapshot title, so the Korean merge did not leak across routes',
+		`English page: ${firstMismatch(englishRendered, englishExpected)}`,
 	);
 
 	// --- fixture rows: what 167/167/no-drafts cannot show ----------------------
@@ -1075,25 +1091,35 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	// no Korean post keeps its English title, and a drafted Korean title never
 	// appears. This corpus supplies exactly one of each and renders the real
 	// composition against it.
-	const systemFixtureRoot = mkdtempSync(join(tmpdir(), 'c5-system-'));
+	const suppliedSystemFixture = options.systemFixtureRoot;
+	const systemFixtureRoot = suppliedSystemFixture ?? mkdtempSync(join(tmpdir(), 'c5-system-'));
 	try {
-		writeSystemFixture(systemFixtureRoot);
+		if (!suppliedSystemFixture) writeSystemFixture(systemFixtureRoot);
 		const system = probeFixture<SystemProbe>(systemFixtureRoot, 'system');
 		const titleOf = (slug: string) =>
 			seriesSource.find((entry) => entry.slug === slug)?.title ?? '';
-		const localizedRendered = contains(system.markup, SYSTEM_FIXTURE.localizedTitle);
-		const untranslatedFellBack = contains(system.markup, titleOf(SYSTEM_FIXTURE.untranslated));
-		const draftedFellBack = contains(system.markup, titleOf(SYSTEM_FIXTURE.drafted));
-		const draftLeaked = contains(system.markup, SYSTEM_FIXTURE.draftedTitle);
+		// Bound to the ITEM, exactly as the built-page rows are: a page-wide
+		// search would accept a title that had been detached from its entry.
+		const fixtureItems = itemsIn(system.markup);
+		const fixtureTitles = fixtureItems.map(titleInItem);
+		const titleAt = (slug: string) => {
+			const index = seriesSource.findIndex((entry) => entry.slug === slug);
+			return index === -1 ? '' : (fixtureTitles[index] ?? '');
+		};
+		const localizedBound = titleAt(SYSTEM_FIXTURE.localized) === SYSTEM_FIXTURE.localizedTitle;
+		const untranslatedBound =
+			titleAt(SYSTEM_FIXTURE.untranslated) === titleOf(SYSTEM_FIXTURE.untranslated);
+		const draftedBound = titleAt(SYSTEM_FIXTURE.drafted) === titleOf(SYSTEM_FIXTURE.drafted);
+		const draftLeaked = system.markup.includes(SYSTEM_FIXTURE.draftedTitle);
 		check(
 			'F7 series titles: translated, untranslated, drafted',
-			system.seriesItems === seriesSource.length &&
-				localizedRendered &&
-				untranslatedFellBack &&
-				draftedFellBack &&
+			fixtureItems.length === seriesSource.length &&
+				localizedBound &&
+				untranslatedBound &&
+				draftedBound &&
 				!draftLeaked,
-			`the rendered page keeps ${system.seriesItems} entries: the translated slug takes its Korean title, the untranslated and drafted slugs keep their English snapshot titles, and the drafted Korean title appears nowhere`,
-			`items ${system.seriesItems} (expected ${seriesSource.length}); localized rendered: ${localizedRendered}; untranslated fell back: ${untranslatedFellBack}; drafted fell back: ${draftedFellBack}; drafted title leaked: ${draftLeaked}`,
+			`the rendered page keeps ${fixtureItems.length} entries, each carrying its own title: the translated slug takes its Korean title, the untranslated and drafted slugs keep their English snapshot titles, and the drafted Korean title appears nowhere`,
+			`items ${fixtureItems.length} (expected ${seriesSource.length}); localized bound to its item: ${localizedBound}; untranslated bound: ${untranslatedBound}; drafted bound: ${draftedBound}; drafted title leaked: ${draftLeaked}`,
 		);
 		// The draft filter is the only reason `drafted` falls back, so prove the
 		// map itself excluded it rather than inferring it from the markup alone.
@@ -1106,7 +1132,7 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 			`map held: localized=${String(system.koreanTitles[SYSTEM_FIXTURE.localized])}, drafted=${String(system.koreanTitles[SYSTEM_FIXTURE.drafted])}, untranslated=${String(system.koreanTitles[SYSTEM_FIXTURE.untranslated])}`,
 		);
 	} finally {
-		rmSync(systemFixtureRoot, { recursive: true, force: true });
+		if (!suppliedSystemFixture) rmSync(systemFixtureRoot, { recursive: true, force: true });
 	}
 
 	// --- report ----------------------------------------------------------------
@@ -1132,10 +1158,11 @@ function optionsFrom(argv: string[]): C5Options {
 		svelteBuild: value('--svelte-build'),
 		nextBuild: value('--next-build'),
 		fixtureRoot: value('--fixture-root'),
+		systemFixtureRoot: value('--system-fixture-root'),
 	};
 }
 
-export { linkedSlugs, runAssertions, writeFixture };
+export { linkedSlugs, runAssertions, writeFixture, writeSystemFixture, SYSTEM_FIXTURE };
 
 if (process.argv[1]?.endsWith('assert-c5-glob-sites.ts')) {
 	const run =
