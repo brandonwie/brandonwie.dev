@@ -584,6 +584,12 @@ export interface C5Options {
 	 * hand over a doctored corpus; the directory is left where it was found.
 	 */
 	systemFixtureRoot?: string;
+	/**
+	 * Overrides for the three series slugs the F7 rows pin. Exists so a control
+	 * can point a pin at a slug the snapshot does not carry and prove `F7a`
+	 * rejects it; nothing in normal operation passes this.
+	 */
+	systemPins?: Partial<Record<keyof typeof SYSTEM_FIXTURE, string>>;
 }
 
 async function runAssertions(options: C5Options = {}): Promise<number> {
@@ -1091,6 +1097,10 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	// no Korean post keeps its English title, and a drafted Korean title never
 	// appears. This corpus supplies exactly one of each and renders the real
 	// composition against it.
+	const systemPins: Record<keyof typeof SYSTEM_FIXTURE, string> = {
+		...SYSTEM_FIXTURE,
+		...(options.systemPins ?? {}),
+	};
 	const suppliedSystemFixture = options.systemFixtureRoot;
 	const systemFixtureRoot = suppliedSystemFixture ?? mkdtempSync(join(tmpdir(), 'c5-system-'));
 	try {
@@ -1102,18 +1112,44 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		// search would accept a title that had been detached from its entry.
 		const fixtureItems = itemsIn(system.markup);
 		const fixtureTitles = fixtureItems.map(titleInItem);
+		// GUARD THE PINS FIRST. `titleAt` and `titleOf` both return '' for a slug
+		// the snapshot does not contain, so `titleAt(x) === titleOf(x)` is
+		// SATISFIED BY TWO EMPTY STRINGS -- retargeting a pin at an absent slug
+		// passed with 31 rows green. A pin that names nothing proves nothing, so
+		// existence and non-emptiness are asserted before the comparisons below.
+		const pins = [
+			['localized', systemPins.localized],
+			['untranslated', systemPins.untranslated],
+			['drafted', systemPins.drafted],
+		] as const;
+		const pinProblems = pins.flatMap(([label, slug]) => {
+			const index = seriesSource.findIndex((entry) => entry.slug === slug);
+			if (index === -1) return [`${label} pin ${slug} is not a snapshot series slug`];
+			if ((seriesSource[index]?.title ?? '') === '')
+				return [`${label} pin ${slug} has an empty snapshot title`];
+			if ((fixtureTitles[index] ?? '') === '')
+				return [`${label} pin ${slug} rendered no title in the fixture page`];
+			return [];
+		});
+		check(
+			'F7a every fixture pin names a real series entry that rendered a title',
+			pinProblems.length === 0,
+			`all ${pins.length} fixture pins resolve to snapshot entries that rendered a non-empty title`,
+			pinProblems.join('; '),
+		);
+
 		const titleAt = (slug: string) => {
 			const index = seriesSource.findIndex((entry) => entry.slug === slug);
 			return index === -1 ? '' : (fixtureTitles[index] ?? '');
 		};
-		const localizedBound = titleAt(SYSTEM_FIXTURE.localized) === SYSTEM_FIXTURE.localizedTitle;
-		const untranslatedBound =
-			titleAt(SYSTEM_FIXTURE.untranslated) === titleOf(SYSTEM_FIXTURE.untranslated);
-		const draftedBound = titleAt(SYSTEM_FIXTURE.drafted) === titleOf(SYSTEM_FIXTURE.drafted);
+		const localizedBound = titleAt(systemPins.localized) === SYSTEM_FIXTURE.localizedTitle;
+		const untranslatedBound = titleAt(systemPins.untranslated) === titleOf(systemPins.untranslated);
+		const draftedBound = titleAt(systemPins.drafted) === titleOf(systemPins.drafted);
 		const draftLeaked = system.markup.includes(SYSTEM_FIXTURE.draftedTitle);
 		check(
 			'F7 series titles: translated, untranslated, drafted',
-			fixtureItems.length === seriesSource.length &&
+			pinProblems.length === 0 &&
+				fixtureItems.length === seriesSource.length &&
 				localizedBound &&
 				untranslatedBound &&
 				draftedBound &&
@@ -1159,6 +1195,10 @@ function optionsFrom(argv: string[]): C5Options {
 		nextBuild: value('--next-build'),
 		fixtureRoot: value('--fixture-root'),
 		systemFixtureRoot: value('--system-fixture-root'),
+		systemPins: (() => {
+			const at = argv.indexOf('--system-pin-untranslated');
+			return at !== -1 && argv[at + 1] ? { untranslated: argv[at + 1] } : undefined;
+		})(),
 	};
 }
 

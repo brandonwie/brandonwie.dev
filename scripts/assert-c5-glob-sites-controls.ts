@@ -79,6 +79,8 @@ interface Control {
 	nextPage?: (typeof NEXT_PAGES)[number];
 	/** Rewrites the system fixture corpus the F7 rows render against. */
 	mutateSystem?: (root: string) => void;
+	/** Retargets one F7 pin at a slug the snapshot does not carry. */
+	systemPinUntranslated?: string;
 }
 
 /** One rendered series item: the whole `<li>`, and the title inside it.
@@ -349,6 +351,32 @@ const CONTROLS: Control[] = [
 			);
 		},
 	},
+	{
+		id: 'D19',
+		kind: 'DEFECT',
+		surface: 'system',
+		what: 'a fixture pin is retargeted at a slug the snapshot does not carry',
+		// The counterexample review found: titleAt() and titleOf() BOTH return ''
+		// for an unknown slug, so the fallback comparison was satisfied by two
+		// empty strings and the suite stayed green with a pin naming nothing.
+		// Snapshot cardinality is untouched; only the pin moves.
+		systemPinUntranslated: 'this-slug-is-not-in-the-snapshot',
+		mutateSystem: () => {},
+	},
+	{
+		id: 'I8',
+		kind: 'INVARIANCE',
+		surface: 'system',
+		what: 'the fixture pins are left alone and the corpus gains a draft outside the series',
+		mutateSystem: (root) => {
+			const file = join(root, 'src/content/posts/ko/fixture/unrelated-draft.md');
+			mkdirSync(dirname(file), { recursive: true });
+			writeFileSync(
+				file,
+				`---\ntitle: KO Unrelated Draft\ndescription: Fixture\ndate: '2026-01-01'\ntags:\n  - fixture\ncategory: fixture\ndraft: true\n---\n\nBody.\n`,
+			);
+		},
+	},
 ];
 
 /** A scratch copy of only the four oracle pages the suite reads. */
@@ -378,6 +406,7 @@ function runSuite(
 	fixtureRoot?: string,
 	nextBuild?: string,
 	systemFixtureRoot?: string,
+	systemPinUntranslated?: string,
 ): number {
 	const args = [
 		'--import',
@@ -388,6 +417,7 @@ function runSuite(
 		...(fixtureRoot ? ['--fixture-root', fixtureRoot] : []),
 		...(nextBuild ? ['--next-build', nextBuild] : []),
 		...(systemFixtureRoot ? ['--system-fixture-root', systemFixtureRoot] : []),
+		...(systemPinUntranslated ? ['--system-pin-untranslated', systemPinUntranslated] : []),
 	];
 	const child = spawnSync(process.execPath, args, {
 		cwd: REPO_ROOT,
@@ -582,7 +612,10 @@ function main(): number {
 			} else if (control.surface === 'system') {
 				systemFixtureRoot = join(scratch, 'system-fixture');
 				writeSystemFixture(systemFixtureRoot);
-				control.mutateSystem!(systemFixtureRoot);
+				// A pin-retargeting control changes the SUITE's input, not the
+				// corpus, so an empty corpus mutation is the point rather than a
+				// no-op to reject.
+				if (!control.systemPinUntranslated) control.mutateSystem!(systemFixtureRoot);
 			} else {
 				fixtureRoot = join(scratch, 'fixture');
 				writeFixture(fixtureRoot);
@@ -590,7 +623,13 @@ function main(): number {
 			}
 
 			const expected = control.kind === 'DEFECT' ? 1 : 0;
-			const code = runSuite(svelteBuild, fixtureRoot, nextBuild, systemFixtureRoot);
+			const code = runSuite(
+				svelteBuild,
+				fixtureRoot,
+				nextBuild,
+				systemFixtureRoot,
+				control.systemPinUntranslated,
+			);
 			const ok = code === expected;
 			if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
 			console.log(
