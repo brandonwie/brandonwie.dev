@@ -147,20 +147,10 @@ instantiates nine of them; the remaining seventeen are inventoried here.
 | `StudyIndexPage`                                                                                                           | `/study`                          | Slice 4                                       |
 | KO study routes                                                                                                            | `/ko/study`, `/ko/study/dsa-i…iv` | Slice 4                                       |
 | The other 19 deck slides and the video behavior                                                                            | `/talks/my-career`                | Slice 4                                       |
-| `/system` index, `/ko/system`                                                                                              | those routes                      | Slice 4                                       |
-| `/ko/system/3b` in a browser: graph mount, controls, screenshots                                                           | `/ko/system/3b`                   | Slice 4 — its data is closed, see note below  |
+| `/system` index, `/ko/system`, `/ko/system/3b`                                                                             | those routes                      | Slice 4                                       |
 | `/about`, `/contact`, `/projects`, `/feed`, `/404` and their KO twins                                                      | those routes                      | Slice 3                                       |
 | The other 166 EN posts and 166 KO posts                                                                                    | post detail routes                | Slice 3                                       |
 | Giscus thread rendering against the live GitHub backend                                                                    | any post detail                   | Slice 3 — needs network and a real discussion |
 
 A pending row is closed by adding a captured row for its surface, not by
 deleting it.
-
-`/ko/system/3b` is a partial exception worth stating plainly. The route now
-exists and is built, and the part of it C5 is about -- the Korean blog-series
-titles merged from the Korean corpus over the English snapshot -- is asserted
-per commit by `pnpm migration:c5` (rows `site 16` and `site 16b`, plus the
-fixture row `F7` for the untranslated and drafted branches the live corpus
-cannot show). What stays pending is the browser behavior this table captures:
-the graph's scroll-triggered mount, its controls, and the viewport screenshots.
-The row above records that remainder rather than dropping the surface.

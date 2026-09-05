@@ -73,6 +73,8 @@ export function articleCopy(locale: Locale) {
 		published: m.published({}, { locale }),
 		updated: m.updated({}, { locale }),
 		tags: m.nav_tags({}, { locale }),
+		translationNotice: m.translation_notice({}, { locale }),
+		viewInEnglish: m.view_in_english({}, { locale }),
 		toc: m.on_this_page({}, { locale }),
 		comments: m.comments_title({}, { locale }),
 		breadcrumb: scaffold.breadcrumb,

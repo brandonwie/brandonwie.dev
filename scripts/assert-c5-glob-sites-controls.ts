@@ -35,24 +35,17 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { linkedSlugs, writeFixture } from './assert-c5-glob-sites.ts';
+import { linkedSlugs, sitemapVerdict, writeFixture } from './assert-c5-glob-sites.ts';
 
 const require = createRequire(import.meta.url);
 const CONTROLS_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(CONTROLS_PATH), '..');
 const SUITE = join(REPO_ROOT, 'scripts/assert-c5-glob-sites.ts');
 const SOURCE_BUILD = join(REPO_ROOT, 'build');
-const SOURCE_NEXT_BUILD = join(REPO_ROOT, 'next/build');
 const ORACLE_PAGES = ['index.html', 'posts.html', 'ko.html', join('ko', 'posts.html')] as const;
-/** The built Next pages the seventeenth call site's row reads. */
-const NEXT_PAGES = [join('ko', 'system', '3b.html'), join('system', '3b.html')] as const;
-/** A title the Korean page must render, resolved from the Korean corpus. */
-const KOREAN_SERIES_TITLE = '토큰 스택: 다시 스캔하지 않는 네 겹의 코드 인텔리전스';
-const ENGLISH_SERIES_TITLE =
-	'The Token Stack: Four Layers of Code Intelligence Without Re-Scanning';
 
 type Kind = 'DEFECT' | 'INVARIANCE';
-type Surface = 'oracle' | 'next' | 'fixture';
+type Surface = 'oracle' | 'fixture';
 
 interface Control {
 	id: string;
@@ -61,8 +54,6 @@ interface Control {
 	what: string;
 	/** Rewrites one oracle page, addressed by its path under the scratch build. */
 	page?: (typeof ORACLE_PAGES)[number];
-	/** Rewrites one built Next page, addressed by its path under the scratch Next build. */
-	nextPage?: (typeof NEXT_PAGES)[number];
 	apply?: (html: string) => string;
 	/** Rewrites the fixture corpus in place. */
 	mutate?: (root: string) => void;
@@ -137,31 +128,6 @@ const CONTROLS: Control[] = [
 				.replaceAll('loading="lazy"', 'loading="eager"'),
 	},
 	{
-		id: 'D9',
-		kind: 'DEFECT',
-		surface: 'next',
-		what: 'the built Korean page drops one series title',
-		nextPage: join('ko', 'system', '3b.html'),
-		apply: (html) => html.replace(KOREAN_SERIES_TITLE, ''),
-	},
-	{
-		id: 'D10',
-		kind: 'DEFECT',
-		surface: 'next',
-		what: 'the built Korean page keeps the English snapshot title, as if the merge never ran',
-		nextPage: join('ko', 'system', '3b.html'),
-		apply: (html) => html.replace(KOREAN_SERIES_TITLE, ENGLISH_SERIES_TITLE),
-	},
-	{
-		id: 'I3',
-		kind: 'INVARIANCE',
-		surface: 'next',
-		what: 'the series markup is reformatted around unchanged titles',
-		nextPage: join('ko', 'system', '3b.html'),
-		apply: (html) =>
-			html.replaceAll('<li class="series-item"', '<li data-control="c5" class="series-item"'),
-	},
-	{
 		id: 'D6',
 		kind: 'DEFECT',
 		surface: 'fixture',
@@ -220,35 +186,24 @@ const CONTROLS: Control[] = [
 	},
 ];
 
-/** Scratch copies of only the pages the suite reads, from both builds. */
-function scratchBuilds(root: string): { svelteBuild: string; nextBuild: string } {
+/** A scratch copy of only the four oracle pages the suite reads. */
+function scratchBuild(root: string): string {
 	const svelteBuild = join(root, 'build');
-	const nextBuild = join(root, 'next-build');
 	for (const page of ORACLE_PAGES) {
 		const target = join(svelteBuild, page);
 		mkdirSync(dirname(target), { recursive: true });
 		cpSync(join(SOURCE_BUILD, page), target);
 	}
-	for (const page of NEXT_PAGES) {
-		const target = join(nextBuild, page);
-		mkdirSync(dirname(target), { recursive: true });
-		cpSync(join(SOURCE_NEXT_BUILD, page), target);
-	}
-	return { svelteBuild, nextBuild };
+	return svelteBuild;
 }
 
-function runSuite(
-	builds: { svelteBuild: string; nextBuild: string },
-	fixtureRoot?: string,
-): number {
+function runSuite(svelteBuild: string, fixtureRoot?: string): number {
 	const args = [
 		'--import',
 		require.resolve('tsx'),
 		SUITE,
 		'--svelte-build',
-		builds.svelteBuild,
-		'--next-build',
-		builds.nextBuild,
+		svelteBuild,
 		...(fixtureRoot ? ['--fixture-root', fixtureRoot] : []),
 	];
 	const child = spawnSync(process.execPath, args, {
@@ -268,10 +223,10 @@ function main(): number {
 	try {
 		// Baseline: unmodified copies must stay green, so a red control below is
 		// the mutation and not the scratch directory.
-		const baselineBuilds = scratchBuilds(join(root, 'baseline'));
+		const baselineBuild = scratchBuild(join(root, 'baseline'));
 		const baselineFixture = join(root, 'baseline-fixture');
 		writeFixture(baselineFixture);
-		const baseline = runSuite(baselineBuilds, baselineFixture);
+		const baseline = runSuite(baselineBuild, baselineFixture);
 		if (baseline !== 0) failures.push(`BASELINE unmodified copies: exit ${baseline}, expected 0`);
 		console.log(
 			`${baseline === 0 ? 'PASS' : 'FAIL'}  BASE  ${'BASELINE'.padEnd(10)} exit ${baseline} (expected 0)  unmodified scratch oracle and fixture`,
@@ -280,7 +235,7 @@ function main(): number {
 		// A missing oracle is "could not run", not "passed".
 		const emptyBuild = join(root, 'empty/build');
 		mkdirSync(emptyBuild, { recursive: true });
-		const missing = runSuite({ svelteBuild: emptyBuild, nextBuild: emptyBuild });
+		const missing = runSuite(emptyBuild);
 		if (missing !== 2) failures.push(`BASELINE missing oracle: exit ${missing}, expected 2`);
 		console.log(
 			`${missing === 2 ? 'PASS' : 'FAIL'}  MISS  ${'BASELINE'.padEnd(10)} exit ${missing} (expected 2)  a missing Svelte build cannot pass`,
@@ -290,9 +245,9 @@ function main(): number {
 		// not run". Before the precheck covered every page, this exited 1 -- and
 		// every DEFECT control below accepts exit 1, so a crashed harness passed
 		// as a working one.
-		const partialBuilds = scratchBuilds(join(root, 'partial'));
-		rmSync(join(partialBuilds.svelteBuild, 'ko.html'));
-		const partial = runSuite(partialBuilds);
+		const partialBuild = scratchBuild(join(root, 'partial'));
+		rmSync(join(partialBuild, 'ko.html'));
+		const partial = runSuite(partialBuild);
 		if (partial !== 2) failures.push(`BASELINE partial oracle: exit ${partial}, expected 2`);
 		console.log(
 			`${partial === 2 ? 'PASS' : 'FAIL'}  PART  ${'BASELINE'.padEnd(10)} exit ${partial} (expected 2)  a build missing one oracle page cannot pass`,
@@ -302,22 +257,55 @@ function main(): number {
 		// the probe child fail to read a corpus at all.
 		const emptyFixture = join(root, 'empty-fixture');
 		mkdirSync(join(emptyFixture, 'next'), { recursive: true });
-		const crashed = runSuite(scratchBuilds(join(root, 'crash')), emptyFixture);
+		const crashed = runSuite(scratchBuild(join(root, 'crash')), emptyFixture);
 		if (crashed !== 2) failures.push(`BASELINE harness crash: exit ${crashed}, expected 2`);
 		console.log(
 			`${crashed === 2 ? 'PASS' : 'FAIL'}  CRSH  ${'BASELINE'.padEnd(10)} exit ${crashed} (expected 2)  an unexpected throw exits 2, not 1`,
 		);
 
+		// The sitemap row generates its own input, so no scratch file can doctor it.
+		// Its verdict is a pure function for exactly that reason, and these three
+		// feed it the deletions the row used to accept. D12 is the reviewer's
+		// counterexample: with every Korean URL block removed, `.some()` and
+		// `.every()` were both vacuously satisfied and the row stayed green.
+		const sitemapSets = () => ({
+			englishUrls: ['a', 'b'],
+			koreanUrls: ['a', 'b'],
+			alternates: ['a', 'b'],
+			englishExpected: ['a', 'b'],
+			koreanExpected: ['a', 'b'],
+			alternatesExpected: ['a', 'b'],
+		});
+		const sitemapChecks: [string, string, string | null, boolean][] = [
+			[
+				'D12',
+				'every Korean post URL is removed',
+				sitemapVerdict({ ...sitemapSets(), koreanUrls: [] }),
+				true,
+			],
+			[
+				'D13',
+				'every hreflang alternate is removed',
+				sitemapVerdict({ ...sitemapSets(), alternates: [] }),
+				true,
+			],
+			['I4', 'the same sets arrive intact', sitemapVerdict(sitemapSets()), false],
+		];
+		for (const [id, what, verdict, mustReject] of sitemapChecks) {
+			const ok = mustReject ? verdict !== null : verdict === null;
+			if (!ok) failures.push(`${id} ${what}: verdict ${String(verdict)}`);
+			console.log(
+				`${ok ? 'PASS' : 'FAIL'}  ${id.padEnd(4)}  ${(mustReject ? 'DEFECT' : 'INVARIANCE').padEnd(10)} verdict ${verdict === null ? 'null' : 'set'} (expected ${mustReject ? 'set' : 'null'})  ${what}`,
+			);
+		}
+
 		for (const control of CONTROLS) {
 			const scratch = join(root, control.id);
-			const builds = scratchBuilds(scratch);
+			const svelteBuild = scratchBuild(scratch);
 			let fixtureRoot: string | undefined;
 
-			if (control.surface === 'oracle' || control.surface === 'next') {
-				const target =
-					control.surface === 'oracle'
-						? join(builds.svelteBuild, control.page!)
-						: join(builds.nextBuild, control.nextPage!);
+			if (control.surface === 'oracle') {
+				const target = join(svelteBuild, control.page!);
 				const before = readFileSync(target, 'utf8');
 				const after = control.apply!(before);
 				if (after === before)
@@ -330,7 +318,7 @@ function main(): number {
 			}
 
 			const expected = control.kind === 'DEFECT' ? 1 : 0;
-			const code = runSuite(builds, fixtureRoot);
+			const code = runSuite(svelteBuild, fixtureRoot);
 			const ok = code === expected;
 			if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
 			console.log(
@@ -342,10 +330,14 @@ function main(): number {
 		rmSync(root, { recursive: true, force: true });
 	}
 
-	const total = CONTROLS.length + 4;
-	const defects = CONTROLS.filter((control) => control.kind === 'DEFECT').length;
+	// 4 baseline runs (BASE, MISS, PART, CRSH) and 3 verdict controls (D12, D13,
+	// I4) sit outside CONTROLS: the first four assert whole-suite exit codes and
+	// the last three call `sitemapVerdict` directly, because the sitemap row
+	// generates its own input and no scratch file can doctor it.
+	const total = CONTROLS.length + 7;
+	const defects = CONTROLS.filter((control) => control.kind === 'DEFECT').length + 2;
 	console.log(
-		`\n${total} controls: ${defects} defect (must exit 1), ${total - defects} invariance/baseline (must exit 0 or 2)`,
+		`\n${total} controls: ${defects} defect (a doctored input must be rejected), ${total - defects} invariance/baseline (an untouched or benign input must be accepted)`,
 	);
 	if (failures.length) {
 		for (const line of failures) console.error(`CONTROL FAILED ${line}`);

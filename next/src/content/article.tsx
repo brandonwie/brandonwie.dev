@@ -6,7 +6,7 @@ import { SLICE_1_ARTICLE_SLUG, articlePath, sourceDate } from './article-contrac
 import { articleCopy } from '../i18n/copy';
 import { articleJsonLd } from './article-json-ld';
 import { heroBlockHtml } from './hero';
-import { loadPost, type Locale } from './posts';
+import { findPostFile, loadPost, type Locale } from './posts';
 
 function displayDate(value: string | Date, locale: Locale): string {
 	return new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-US', {
@@ -21,20 +21,49 @@ export function generateArticleStaticParams(): Array<{ slug: string }> {
 	return [{ slug: SLICE_1_ARTICLE_SLUG }];
 }
 
+/**
+ * The post a route renders, and whether it is the English fallback.
+ *
+ * Ports `src/routes/ko/posts/[slug]/+page.ts:44-88`, the seventeenth C5 call
+ * site's sibling: the Korean route tries Korean first and falls through to the
+ * English body under the Korean URL when no Korean post exists.
+ *
+ * A DRAFTED translation is not a missing one. The Svelte loader calls
+ * `error(404, ...)` inside the Korean loop, so a retired Korean post withdraws
+ * the Korean URL instead of quietly serving English in its place. `loadPost`
+ * returns null for both cases, so existence is re-checked with `findPostFile`
+ * to tell them apart -- without that check a drafted translation would silently
+ * become an English page, which is the opposite of withdrawing it.
+ */
+async function resolveArticle(slug: string, locale: Locale) {
+	const requested = await loadPost(slug, locale);
+	if (requested) return { post: requested, isFallback: false };
+	if (locale !== 'ko') return { post: null, isFallback: false };
+	// The Korean file exists but did not load: it is drafted, so 404 rather than
+	// fall back.
+	if (findPostFile(slug, 'ko') !== null) return { post: null, isFallback: false };
+	const english = await loadPost(slug, 'en');
+	return { post: english, isFallback: english !== null };
+}
+
 export async function generateArticleMetadata(slug: string, locale: Locale): Promise<Metadata> {
-	const post = await loadPost(slug, locale);
+	const { post, isFallback } = await resolveArticle(slug, locale);
 	if (!post) return {};
 
 	const meta = post.frontmatter;
 	const englishUrl = absoluteUrl(`/posts/${slug}`);
 	const koreanUrl = absoluteUrl(`/ko/posts/${slug}`);
-	const canonicalUrl = locale === 'ko' ? koreanUrl : englishUrl;
+	// A Korean URL serving the English body points its canonical at the English
+	// original and asks not to be indexed, as `PostDetail.svelte:71,185` does --
+	// otherwise the same body competes with itself in search results.
+	const canonicalUrl = isFallback ? englishUrl : locale === 'ko' ? koreanUrl : englishUrl;
 	const alternateLocale = locale === 'ko' ? 'en' : 'ko';
 	const ogImageUrl = `${SITE_URL}/og/${slug}.png`;
 
 	return {
 		title: `${meta.title} | ${SITE_NAME}`,
 		description: meta.description,
+		...(isFallback ? { robots: { index: false, follow: true } } : {}),
 		alternates: {
 			canonical: canonicalUrl,
 			languages: {
@@ -68,7 +97,7 @@ export async function generateArticleMetadata(slug: string, locale: Locale): Pro
 }
 
 export async function Article({ slug, locale }: { slug: string; locale: Locale }) {
-	const post = await loadPost(slug, locale);
+	const { post, isFallback } = await resolveArticle(slug, locale);
 	if (!post) notFound();
 
 	const meta = post.frontmatter;
@@ -78,12 +107,17 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 
 	return (
 		<article className="article-shell" data-article-locale={locale} data-pagefind-body>
-			{/* Pagefind locale facet, as PostDetail.svelte:204. The Svelte page indexes a KO route
-			   showing EN fallback content as "en"; this slice has no fallback rendering (a missing
-			   translation is a 404), so the facet is the route locale. */}
+			{/* Pagefind locale facet, as PostDetail.svelte:73,204: the facet follows the CONTENT,
+			   not the route, so a Korean URL serving the English body indexes as "en". */}
 			<span data-pagefind-filter="lang" className="hidden">
-				{locale}
+				{isFallback ? 'en' : locale}
 			</span>
+			{isFallback && (
+				<div className="post__fallback" data-pagefind-ignore>
+					<p>{copy.translationNotice}</p>
+					<a href={articlePath(slug, 'en')}>{copy.viewInEnglish}</a>
+				</div>
+			)}
 			<script
 				type="application/ld+json"
 				dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta, locale) }}

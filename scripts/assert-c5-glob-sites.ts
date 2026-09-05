@@ -147,6 +147,42 @@ function sequenceProblem(actual: string[], expected: string[]): string | null {
 	return `position ${at}: ${actual[at]} != ${expected[at]}`;
 }
 
+/** The sitemap row's verdict, as a pure function so a control can doctor its input. */
+export interface SitemapSets {
+	englishUrls: string[];
+	koreanUrls: string[];
+	alternates: string[];
+	englishExpected: string[];
+	koreanExpected: string[];
+	alternatesExpected: string[];
+}
+
+/**
+ * Null when the sitemap matches, else the first disagreement.
+ *
+ * EVERY CLAUSE NAMES A COUNT. The first version asked only whether any Korean
+ * URL was empty and whether every alternate was backed by a Korean file. Both
+ * are vacuously true of an EMPTY array, so deleting all 167 Korean URL blocks
+ * left the row green — the reviewer demonstrated exactly that. Controls D12 and
+ * D13 are those deletions, and they are why this is a function rather than a
+ * chain of `??` inside the row.
+ */
+export function sitemapVerdict(sets: SitemapSets): string | null {
+	const sameSet = (actual: string[], expected: string[]) =>
+		actual.length === expected.length &&
+		[...actual].sort().join(',') === [...expected].sort().join(',');
+	return (
+		sequenceProblem(sets.englishUrls, sets.englishExpected) ??
+		sequenceProblem(sets.koreanUrls, sets.koreanExpected) ??
+		(sets.englishUrls.some((slug) => slug === '') ? 'an English URL has an empty slug' : null) ??
+		(sets.koreanUrls.some((slug) => slug === '') ? 'a Korean URL has an empty slug' : null) ??
+		(sets.alternates.length === 0 ? 'the sitemap emits no hreflang alternates at all' : null) ??
+		(sameSet(sets.alternates, sets.alternatesExpected)
+			? null
+			: `alternates are ${sets.alternates.length} entries, expected exactly the ${sets.alternatesExpected.length} English posts with a Korean file`)
+	);
+}
+
 /** One fixture corpus, written under a scratch root shaped like the repository. */
 function writeFixture(root: string): void {
 	const post = (title: string, date: string, updated?: string, draft = false) =>
@@ -185,37 +221,66 @@ function writeFixture(root: string): void {
 	}
 }
 
+/** A corpus holding one file whose basename derives an empty slug. */
+function writeBrokenFixture(root: string): void {
+	writeFixture(root);
+	// `walk()` collects anything ending in `.md`, so a file named exactly `.md`
+	// reaches slug derivation and must stop it there -- before a `<loc>` or a
+	// `<guid>` naming the list page is emitted.
+	writeFileSync(
+		join(root, 'src/content/posts/en/beta/.md'),
+		`---\ntitle: Broken\ndescription: Fixture\ndate: '2026-01-01'\ntags:\n  - fixture\ncategory: fixture\n---\n\nBody.\n`,
+	);
+}
+
 interface ProbeResult {
 	en: string[];
 	ko: string[];
 	koTitles: string[];
 	fallback: string[];
 	emptySlug: string | null;
-	/** `[series slug, resolved title]` for a translated, an untranslated and a drafted entry. */
-	seriesTitles: [string, string][];
 	feedsAgree: boolean;
 	rssHasEmptyLink: boolean;
 }
 
-/** Run the real data layer against a fixture corpus, in a child rooted at it. */
-function probeFixture(root: string): ProbeResult {
+/** Run the real modules against a fixture corpus, in a child rooted at it. */
+function probeFixture<T>(root: string, mode: 'lists' | 'article' | 'generators'): T {
 	const child = spawnSync(process.execPath, ['--import', require.resolve('tsx'), SCRIPT_PATH], {
 		cwd: join(root, 'next'),
 		encoding: 'utf8',
 		env: {
 			...process.env,
-			[PROBE_ENV]: '1',
+			[PROBE_ENV]: mode,
 			TSX_TSCONFIG_PATH: join(NEXT_ROOT, 'tsconfig.json'),
 		},
 	});
 	if (child.status !== 0)
 		throw new Error(`fixture probe failed (${child.status ?? child.signal}):\n${child.stderr}`);
-	return JSON.parse(child.stdout) as ProbeResult;
+	return JSON.parse(child.stdout) as T;
 }
 
-/** The child half: prints what the data layer makes of the fixture corpus. */
-async function runProbe(): Promise<number> {
-	const { listPostsForLocale, listKoreanPostsWithEnglishFallback, koreanTitleBySlug } =
+/** What the Korean article route does with a fixture corpus, as rendered markup. */
+interface ArticleProbe {
+	fallbackMarkup: string;
+	fallbackLangFacet: string | null;
+	draftedOutcome: 'not-found' | 'rendered' | 'other';
+	translatedLangFacet: string | null;
+}
+
+/** What the feed and sitemap generators do with an underivable path. */
+interface GeneratorProbe {
+	sitemapError: string | null;
+	rssError: string | null;
+	sitemapEmitted: string | null;
+	rssEmitted: string | null;
+}
+
+/** The child half: prints what the real modules make of the fixture corpus. */
+async function runProbe(mode: string): Promise<number> {
+	if (mode === 'article') return runArticleProbe();
+	if (mode === 'generators') return runGeneratorProbe();
+
+	const { listPostsForLocale, listKoreanPostsWithEnglishFallback } =
 		await import('../next/src/content/post-list.ts');
 	const { postSlugFrom } = await import('../next/src/content/posts.ts');
 	const { rssXml } = await import('../next/src/content/feeds.ts');
@@ -227,26 +292,6 @@ async function runProbe(): Promise<number> {
 		emptySlug = error instanceof Error ? error.message : String(error);
 	}
 
-	const { localizeSnapshot } = await import('../next/src/content/localize-snapshot.ts');
-
-	// The seventeenth call site's rule, on a corpus that can show all three
-	// branches: a translated entry, an entry with no Korean post, and an entry
-	// whose Korean post is a draft.
-	const localized = localizeSnapshot(
-		{
-			nodes: [],
-			edges: [],
-			layers: [],
-			blog_series: [
-				{ order: 1, slug: 'one', title: 'EN One', status: 'published' },
-				{ order: 2, slug: 'only-en', title: 'EN Only', status: 'planned' },
-				{ order: 3, slug: 'hidden-ko', title: 'EN Hidden', status: 'planned' },
-			],
-		},
-		{},
-		koreanTitleBySlug(),
-	);
-
 	const fallback = listKoreanPostsWithEnglishFallback();
 	const koreanRss = rssXml('ko');
 	const result: ProbeResult = {
@@ -255,7 +300,6 @@ async function runProbe(): Promise<number> {
 		koTitles: listPostsForLocale('ko').map((post) => post.frontmatter.title),
 		fallback: fallback.map((post) => `${post.lang}:${post.slug}`),
 		emptySlug,
-		seriesTitles: localized.blog_series.map((entry) => [entry.slug, entry.title]),
 		// The Korean feed derives the same fallback independently
 		// (`feeds.ts:178-187`); a row asserts the two agree rather than
 		// assuming it.
@@ -269,11 +313,83 @@ async function runProbe(): Promise<number> {
 	return 0;
 }
 
+/**
+ * Render the Korean article route against the fixture corpus.
+ *
+ * `only-en` has no Korean post, so the route must serve the English body with
+ * the notice and index it as English. `ko-drafted` HAS a Korean post that is
+ * drafted, so the route must 404 rather than quietly serve English in its
+ * place -- the distinction `loadPost` alone cannot make, since it returns null
+ * for both.
+ */
+async function runArticleProbe(): Promise<number> {
+	const { Article } = await import('../next/src/content/article.tsx');
+	// `react-dom` lives in `next/node_modules`, and this child runs with its
+	// working directory inside the fixture, so a bare specifier from `scripts/`
+	// does not resolve. Ask the Next package for it.
+	// Typed structurally rather than via `typeof import('react-dom/server')`:
+	// `tsconfig.scripts.json` restricts `types` to node, so the module's own
+	// declarations are not visible from `scripts/` and the type-only import does
+	// not resolve there.
+	const nextRequire = createRequire(join(NEXT_ROOT, 'package.json'));
+	const { renderToStaticMarkup } = nextRequire('react-dom/server') as {
+		renderToStaticMarkup: (node: unknown) => string;
+	};
+
+	const render = async (slug: string) =>
+		renderToStaticMarkup(await Article({ slug, locale: 'ko' }));
+	const langFacet = (markup: string) =>
+		markup.match(/data-pagefind-filter="lang"[^>]*>([^<]*)</)?.[1] ?? null;
+
+	const fallbackMarkup = await render('only-en');
+	let draftedOutcome: ArticleProbe['draftedOutcome'] = 'rendered';
+	try {
+		await render('ko-drafted');
+	} catch (error) {
+		draftedOutcome =
+			error instanceof Error && /NEXT_HTTP_ERROR_FALLBACK;404|NEXT_NOT_FOUND/.test(error.message)
+				? 'not-found'
+				: 'other';
+	}
+	const translatedMarkup = await render('three');
+
+	const result: ArticleProbe = {
+		fallbackMarkup,
+		fallbackLangFacet: langFacet(fallbackMarkup),
+		draftedOutcome,
+		translatedLangFacet: langFacet(translatedMarkup),
+	};
+	process.stdout.write(JSON.stringify(result));
+	return 0;
+}
+
+/** Feed and sitemap generation over a corpus holding an underivable path. */
+async function runGeneratorProbe(): Promise<number> {
+	const { rssXml, sitemapXml } = await import('../next/src/content/feeds.ts');
+
+	const attempt = (generate: () => string) => {
+		try {
+			return { error: null, emitted: generate() };
+		} catch (error) {
+			return { error: error instanceof Error ? error.message : String(error), emitted: null };
+		}
+	};
+	const sitemap = attempt(() => sitemapXml());
+	const rss = attempt(() => rssXml('en'));
+
+	const result: GeneratorProbe = {
+		sitemapError: sitemap.error,
+		rssError: rss.error,
+		sitemapEmitted: sitemap.emitted,
+		rssEmitted: rss.emitted,
+	};
+	process.stdout.write(JSON.stringify(result));
+	return 0;
+}
+
 export interface C5Options {
 	/** Exported Svelte site the oracle rows read. Default `<repo>/build`. */
 	svelteBuild?: string;
-	/** Exported Next site the Korean-page row reads. Default `<repo>/next/build`. */
-	nextBuild?: string;
 	/**
 	 * A corpus the fixture rows use instead of the one this script writes.
 	 * `--fixture-root <dir>` exists so the negative controls can hand over a
@@ -284,7 +400,6 @@ export interface C5Options {
 
 async function runAssertions(options: C5Options = {}): Promise<number> {
 	const svelteBuild = options.svelteBuild ?? join(REPO_ROOT, 'build');
-	const nextBuild = options.nextBuild ?? join(REPO_ROOT, 'next/build');
 
 	// Row state is per-run, not module-level: the controls invoke this file
 	// repeatedly, and a shared array would carry one run's rows into the next.
@@ -305,16 +420,10 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		);
 		return 2;
 	}
-	const koreanSystemPage = join(nextBuild, 'ko/system/3b.html');
-	if (!existsSync(koreanSystemPage)) {
-		console.error(`C5 cannot run: ${koreanSystemPage} is missing. Run \`pnpm build:next\` first.`);
-		return 2;
-	}
-
 	// `posts.ts` derives its content root from the working directory, the same
 	// assumption `next build` makes. Everything else here is absolute.
 	process.chdir(NEXT_ROOT);
-	const { listPostsForLocale, listKoreanPostsWithEnglishFallback, koreanTitleBySlug } =
+	const { listPostsForLocale, listKoreanPostsWithEnglishFallback } =
 		await import('../next/src/content/post-list.ts');
 	const { listPublishedPosts, loadPost, postSlugFrom } =
 		await import('../next/src/content/posts.ts');
@@ -496,20 +605,20 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 			),
 		),
 	];
-	const sitemapProblem =
-		sequenceProblem(
-			englishUrls,
-			listPublishedPosts('en').map((post) => post.slug),
-		) ??
-		(englishUrls.some((slug) => slug === '') ? 'an English URL has an empty slug' : null) ??
-		(koreanUrls.some((slug) => slug === '') ? 'a Korean URL has an empty slug' : null) ??
-		(alternates.every((slug) => koTwins.has(slug))
-			? null
-			: 'an hreflang alternate points at a slug with no Korean file');
+	const sitemapProblem = sitemapVerdict({
+		englishUrls,
+		koreanUrls,
+		alternates,
+		englishExpected: listPublishedPosts('en').map((post) => post.slug),
+		koreanExpected: listPublishedPosts('ko').map((post) => post.slug),
+		alternatesExpected: listPublishedPosts('en')
+			.map((post) => post.slug)
+			.filter((slug) => koTwins.has(slug)),
+	});
 	check(
 		'sites 10-11  sitemap.xml/+server.ts:22,23 -> sitemap URLs',
 		sitemapProblem === null,
-		`${englishUrls.length} English and ${koreanUrls.length} Korean post URLs in path order, no empty slug, ${alternates.length} Korean alternates all backed by a Korean file`,
+		`${englishUrls.length} English and ${koreanUrls.length} Korean post URLs, both in path order, no empty slug, and exactly ${alternates.length} hreflang alternates matching the English posts that have a Korean file`,
 		`sitemap disagrees: ${sitemapProblem}`,
 	);
 
@@ -529,67 +638,12 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		`${sample}: the Korean article did not load`,
 	);
 
-	// --- site 16: the Korean system page, as built -----------------------------
-	const koreanTitles = koreanTitleBySlug();
-	const seriesSource = (await import('../next/src/data/system-snapshot.ts')).default.blog_series;
-	/**
-	 * Rendered markup only.
-	 *
-	 * A Next page carries its RSC payload inline, in `self.__next_f.push(...)`
-	 * calls, so every string it renders also appears inside a `<script>` as JSON.
-	 * Searching the whole file would let a page that dropped a title from its
-	 * markup still match on the payload copy -- which is exactly what control D9
-	 * demonstrated before this stripped the scripts out.
-	 */
-	const renderedMarkup = (html: string) => html.replace(/<script[\s\S]*?<\/script>/g, '');
-	const koreanSystemHtml = renderedMarkup(readFileSync(koreanSystemPage, 'utf8'));
-	const englishSystemHtml = existsSync(join(nextBuild, 'system/3b.html'))
-		? renderedMarkup(readFileSync(join(nextBuild, 'system/3b.html'), 'utf8'))
-		: '';
-	const escapeHtml = (value: string) =>
-		value
-			.replaceAll('&', '&amp;')
-			.replaceAll('<', '&lt;')
-			.replaceAll('>', '&gt;')
-			.replaceAll('"', '&quot;')
-			.replaceAll("'", '&#x27;');
-	const contains = (html: string, text: string) =>
-		html.includes(escapeHtml(text)) || html.includes(text);
-
-	const missingKorean = seriesSource.filter(
-		(entry) => !contains(koreanSystemHtml, koreanTitles[entry.slug] ?? entry.title),
-	);
-	const translatedCount = seriesSource.filter((entry) => koreanTitles[entry.slug]).length;
-	const englishOnlyLeak = seriesSource.filter(
-		(entry) =>
-			koreanTitles[entry.slug] !== undefined &&
-			koreanTitles[entry.slug] !== entry.title &&
-			contains(koreanSystemHtml, entry.title),
-	);
-	check(
-		'site 16  ko/system/3b/+page.ts:11 -> built Korean page',
-		missingKorean.length === 0 && englishOnlyLeak.length === 0,
-		`all ${seriesSource.length} series titles render on the built page, ${translatedCount} of them resolved from the Korean corpus and no English source title left behind`,
-		missingKorean.length > 0
-			? `missing from the built page: ${missingKorean.map((entry) => entry.slug).join(', ')}`
-			: `English titles survived localization: ${englishOnlyLeak.map((entry) => entry.slug).join(', ')}`,
-	);
-	check(
-		'site 16b  localization is locale-scoped',
-		englishSystemHtml === '' ||
-			seriesSource.every((entry) => contains(englishSystemHtml, entry.title)),
-		englishSystemHtml === ''
-			? 'the English page was not built; the Korean row above still stands alone'
-			: 'the English page keeps the English snapshot titles, so the merge is per-route and not global',
-		'the English page lost its snapshot titles to the Korean overlay',
-	);
-
 	// --- fixture rows: what 167/167/no-drafts cannot show ----------------------
 	const suppliedFixture = options.fixtureRoot;
 	const fixtureRoot = suppliedFixture ?? mkdtempSync(join(tmpdir(), 'c5-glob-sites-'));
 	try {
 		if (!suppliedFixture) writeFixture(fixtureRoot);
-		const probe = probeFixture(fixtureRoot);
+		const probe = probeFixture<ProbeResult>(fixtureRoot, 'lists');
 
 		check(
 			'F1 draft filtering',
@@ -636,15 +690,41 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 			'an underivable path did not raise in the fixture child',
 		);
 
-		const titles = Object.fromEntries(probe.seriesTitles);
+		// --- row 11: the Korean article's English fallback, as rendered ----------
+		const article = probeFixture<ArticleProbe>(fixtureRoot, 'article');
 		check(
-			'F7 series titles: translated, untranslated, drafted',
-			titles.one === 'KO One' &&
-				titles['only-en'] === 'EN Only' &&
-				titles['hidden-ko'] === 'EN Hidden',
-			'a translated entry takes its Korean post title; one without a Korean post keeps the English snapshot title; a drafted translation never supplies one',
-			`resolved titles were ${JSON.stringify(titles)}`,
+			'site 11  ko/posts/[slug]/+page.ts:38 -> English fallback under a Korean URL',
+			article.fallbackMarkup.includes('EN Only') &&
+				article.fallbackMarkup.includes('post__fallback') &&
+				article.fallbackLangFacet === 'en',
+			'a slug with no Korean post renders the English body under the Korean route, carries the translation notice, and indexes as `en` because the facet follows the content',
+			`fallback markup carried lang=${String(article.fallbackLangFacet)}, notice present: ${article.fallbackMarkup.includes('post__fallback')}`,
 		);
+		check(
+			'site 11b  a drafted translation is withdrawn, not replaced',
+			article.draftedOutcome === 'not-found' && article.translatedLangFacet === 'ko',
+			'a drafted Korean post 404s instead of falling back to English, and a translated one still indexes as `ko`',
+			`drafted outcome was ${article.draftedOutcome}; translated facet was ${String(article.translatedLangFacet)}`,
+		);
+
+		// --- S2 forced failure, through the generators themselves ----------------
+		const brokenRoot = mkdtempSync(join(tmpdir(), 'c5-broken-'));
+		try {
+			writeBrokenFixture(brokenRoot);
+			const generators = probeFixture<GeneratorProbe>(brokenRoot, 'generators');
+			check(
+				'S2 forced failure  the generators stop before emitting a URL',
+				generators.sitemapError !== null &&
+					generators.rssError !== null &&
+					generators.sitemapError.includes('.md') &&
+					generators.sitemapEmitted === null &&
+					generators.rssEmitted === null,
+				`an underivable corpus path stops sitemapXml() and rssXml() at the derivation: ${generators.sitemapError}`,
+				`sitemap emitted ${generators.sitemapEmitted === null ? 'nothing' : 'output'} (error: ${String(generators.sitemapError)}); rss emitted ${generators.rssEmitted === null ? 'nothing' : 'output'} (error: ${String(generators.rssError)})`,
+			);
+		} finally {
+			rmSync(brokenRoot, { recursive: true, force: true });
+		}
 	} finally {
 		if (!suppliedFixture) rmSync(fixtureRoot, { recursive: true, force: true });
 	}
@@ -658,7 +738,7 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	say(`\nRESULT: ${rows.length - failed.length} pass, ${failed.length} fail`);
 	if (failed.length) return 1;
 	say(
-		'Scope: all 17 glob call sites, each through a consumer. Drafts, the Korean-to-English fallback and the untranslated series title are proven on fixtures, because the live corpus has 167 English posts, 167 Korean posts with the same slugs, and no drafts.',
+		'Scope: 16 of the 17 glob call sites, each through a consumer. `src/routes/ko/system/3b/+page.ts:11` is the seventeenth and is NOT covered here — it needs the Korean system page, which the agreed split defers to its own PR, so C5 stays OPEN. Drafts, the Korean-to-English fallback and its slug-keyed dedup are proven on fixtures, because the live corpus has 167 English posts, 167 Korean posts with the same slugs, and no drafts.',
 	);
 	return 0;
 }
@@ -670,7 +750,6 @@ function optionsFrom(argv: string[]): C5Options {
 	};
 	return {
 		svelteBuild: value('--svelte-build'),
-		nextBuild: value('--next-build'),
 		fixtureRoot: value('--fixture-root'),
 	};
 }
@@ -679,7 +758,9 @@ export { linkedSlugs, runAssertions, writeFixture };
 
 if (process.argv[1]?.endsWith('assert-c5-glob-sites.ts')) {
 	const run =
-		process.env[PROBE_ENV] === '1' ? runProbe() : runAssertions(optionsFrom(process.argv));
+		process.env[PROBE_ENV] !== undefined
+			? runProbe(process.env[PROBE_ENV])
+			: runAssertions(optionsFrom(process.argv));
 	run.then(
 		(code) => process.exit(code),
 		(error: unknown) => {

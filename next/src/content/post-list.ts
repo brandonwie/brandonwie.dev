@@ -67,20 +67,3 @@ export function listKoreanPostsWithEnglishFallback(): LocalizedPost[] {
 		...english.map((post) => ({ ...post, lang: 'en' as const })),
 	]);
 }
-
-/**
- * Published Korean post titles, keyed by slug.
- *
- * Ports `src/routes/ko/system/3b/+page.ts:16-21`, the seventeenth glob call
- * site. The Korean `/system/3b` page localizes its blog-series titles from the
- * Korean corpus rather than from the snapshot overlay, because the series
- * entries ARE posts: the Korean title of a translated post is the Korean title
- * of that series entry. Drafts are skipped for the same reason the lists skip
- * them -- an unpublished translation must not surface its title on a page that
- * links to it.
- */
-export function koreanTitleBySlug(): Record<string, string> {
-	const titles: Record<string, string> = {};
-	for (const post of listPublishedPosts('ko')) titles[post.slug] = post.frontmatter.title;
-	return titles;
-}
