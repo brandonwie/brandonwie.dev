@@ -683,20 +683,27 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 			),
 		),
 	];
+	// `sitemapXml()` has ONE loop, over the English posts, and emits the Korean
+	// `<url>` block inside it (`feeds.ts:138-165`), exactly as
+	// `src/routes/sitemap.xml/+server.ts:37-49` does. So the Korean URLs follow
+	// the ENGLISH path order restricted to twinned slugs -- not Korean path
+	// order, which differs the moment a translation is filed under another
+	// category, as the fixture's `two` already is.
+	const twinnedInEnglishOrder = listPublishedPosts('en')
+		.map((post) => post.slug)
+		.filter((slug) => koTwins.has(slug));
 	const sitemapProblem = sitemapVerdict({
 		englishUrls,
 		koreanUrls,
 		alternates,
 		englishExpected: listPublishedPosts('en').map((post) => post.slug),
-		koreanExpected: listPublishedPosts('ko').map((post) => post.slug),
-		alternatesExpected: listPublishedPosts('en')
-			.map((post) => post.slug)
-			.filter((slug) => koTwins.has(slug)),
+		koreanExpected: twinnedInEnglishOrder,
+		alternatesExpected: twinnedInEnglishOrder,
 	});
 	check(
 		'sites 10-11  sitemap.xml/+server.ts:22,23 -> sitemap URLs',
 		sitemapProblem === null,
-		`${englishUrls.length} English and ${koreanUrls.length} Korean post URLs, both in path order, no empty slug, and exactly ${alternates.length} hreflang alternates matching the English posts that have a Korean file`,
+		`${englishUrls.length} English post URLs in path order and ${koreanUrls.length} Korean ones in the English iteration's order, no empty slug, and exactly ${alternates.length} hreflang alternates matching the English posts that have a Korean file`,
 		`sitemap disagrees: ${sitemapProblem}`,
 	);
 
