@@ -9,6 +9,10 @@ import type { Locale } from '@/i18n/locale';
  * redesign (dark-only), and the Svelte original's docblock says so. The
  * component is kept rather than inlined because it is the single source of
  * truth for the header control row — the seam a second control would land on.
+ *
+ * SiteHeader's client boundary includes this module and LanguageToggle through
+ * their imports; neither needs its own directive. Copy arrives through props
+ * so the client graph does not import Paraglide message generation.
  */
 export function HeaderControls({
 	locale,

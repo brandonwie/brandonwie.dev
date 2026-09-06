@@ -127,6 +127,7 @@
 	color: var(--ink);
 	background: var(--surface-2);
 }
+/* Preserve the baseline's is-active/is-current tokens used by migration:shell. */
 .site-nav__link.is-active {
 	color: var(--foam);
 }

@@ -156,6 +156,11 @@ function readRoute(dir: string, route: string): string | null {
 /**
  * The suite, callable in process.
  *
+ * Reads both export directories without modifying them. Returns 0 on success,
+ * 1 for failed assertions, or 2 for a missing export. `quiet` suppresses row
+ * reports. The CLI takes candidate/baseline paths in argv[2]/argv[3], defaulting
+ * to `next/build` and `build` respectively.
+ *
  * `assert-shell-controls.ts` imports this rather than spawning the script,
  * exactly as every sibling controls suite does. That is a CHANGE-SELECTOR
  * requirement, not a style preference: `migration-route.ts` derives a suite's

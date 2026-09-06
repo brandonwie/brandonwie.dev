@@ -201,6 +201,11 @@ function fingerprint(file: string): string {
 	return createHash('sha256').update(readFileSync(file)).digest('hex');
 }
 
+/**
+ * Run controls against `next/build` and `build`; no CLI parameters are read.
+ * Creates and removes scratch copies, leaving the original exports untouched.
+ * Returns 0 when all outcomes match, 1 for failures, or 2 for missing exports.
+ */
 async function main(): Promise<number> {
 	const source = resolve('next/build');
 	const baseline = resolve('build');
