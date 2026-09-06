@@ -31,6 +31,8 @@
 		"scripts/assert-slice2-gsap-palette.ts",
 		"scripts/assert-slice2-gsap-palette-controls.ts",
 		"scripts/assert-c5-glob-sites.ts",
-		"scripts/assert-c5-glob-sites-controls.ts"
+		"scripts/assert-c5-glob-sites-controls.ts",
+		"scripts/assert-shell.ts",
+		"scripts/assert-shell-controls.ts"
 	]
 }
