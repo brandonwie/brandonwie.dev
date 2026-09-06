@@ -320,7 +320,6 @@ export interface LinkReport {
 function internalLinkReport(candidateDir: string, html: string, locale: 'en' | 'ko'): LinkReport {
 	const problems: string[] = [];
 	const deferred: string[] = [];
-	const used = new Set<string>();
 
 	// Iterate matches, not tag STRINGS. An earlier revision looped over
 	// `tagsOf(html, 'a')` and located each one with `html.indexOf(tag)`, which
@@ -344,7 +343,6 @@ function internalLinkReport(candidateDir: string, html: string, locale: 'en' | '
 			: undefined;
 
 		if (entry) {
-			used.add(`${entry.locale}|${entry.container}|${entry.destination}`);
 			deferred.push(`${href} (${entry.container}, ${entry.owner})`);
 		} else {
 			problems.push(`${href} has no exported target`);
@@ -363,7 +361,6 @@ function internalLinkReport(candidateDir: string, html: string, locale: 'en' | '
 		}
 	}
 
-	void used;
 	return { problems, deferred };
 }
 
