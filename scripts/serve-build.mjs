@@ -75,7 +75,7 @@ function viewportPage(url) {
 <body><iframe id="frame" src="${safe}"></iframe></body></html>`;
 }
 
-createServer((req, res) => {
+const server = createServer((req, res) => {
 	const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
 	if (url.pathname === '/__viewport') {
 		res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -104,6 +104,12 @@ createServer((req, res) => {
 	const notFound = join(buildDir, '404.html');
 	res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
 	res.end(existsSync(notFound) ? readFileSync(notFound) : 'not found');
-}).listen(port, '127.0.0.1', () => {
-	console.log(`serving ${buildDir} on http://127.0.0.1:${port}`);
+});
+
+// Report the ADDRESS ACTUALLY BOUND, not the requested one. Passing 0 asks the
+// OS for a free port, which is how concurrent probes avoid the collision that
+// failed a migration:c3 run when a previous server still held 4173 -- but the
+// caller can only learn the choice from here.
+server.listen(port, '127.0.0.1', () => {
+	console.log(`serving ${buildDir} on http://127.0.0.1:${server.address().port}`);
 });
