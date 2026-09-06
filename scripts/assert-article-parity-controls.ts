@@ -351,6 +351,36 @@ const CONTROLS: Control[] = [
 		createFile: { path: 'tags.html', body: '<!doctype html><title>tags</title>' },
 	},
 	{
+		/**
+		 * The counterexample for A12's occurrence lookup. An earlier revision
+		 * found each anchor with `html.indexOf(tag)`, which returns the first
+		 * IDENTICAL opening tag, so this duplicate — spelled exactly like the
+		 * header's link but sitting in <main> — was excused as a header
+		 * deferral. The deferral count rose 19 -> 20 and the suite still passed.
+		 * AP-35 does not cover it: its anchor is spelled differently, so the
+		 * first-match collision never arises there.
+		 */
+		id: 'AP-48',
+		kind: 'DEFECT',
+		what: 'a chrome link is duplicated outside the chrome, where its deferral must not apply',
+		apply: (html) =>
+			html.replace(
+				/(<main\b[^>]*id="main-content"[^>]*>)/,
+				'$1<a href="/about" class="site-nav__link"></a>',
+			),
+	},
+	{
+		/**
+		 * Paired with AP-48 over the same surface: a formatting-only edit inside
+		 * <main> that adds no anchor must NOT move A12. Without this, AP-48 alone
+		 * could pass because any edit near <main> breaks something.
+		 */
+		id: 'AP-49',
+		kind: 'INVARIANCE',
+		what: 'whitespace inside main leaves the link report unchanged',
+		apply: (html) => html.replace('<main id="main-content"', '<main  id="main-content"'),
+	},
+	{
 		id: 'AP-37',
 		kind: 'DEFECT',
 		what: 'one word of the Korean prose differs from its baseline',

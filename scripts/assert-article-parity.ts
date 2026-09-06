@@ -322,12 +322,21 @@ function internalLinkReport(candidateDir: string, html: string, locale: 'en' | '
 	const deferred: string[] = [];
 	const used = new Set<string>();
 
-	for (const tag of tagsOf(html, 'a')) {
+	// Iterate matches, not tag STRINGS. An earlier revision looped over
+	// `tagsOf(html, 'a')` and located each one with `html.indexOf(tag)`, which
+	// returns the FIRST identical opening tag — so a second anchor spelled the
+	// same way anywhere in the document inherited the first one's container. A
+	// duplicate of the header's `<a href="/about" class="site-nav__link">`
+	// placed inside <main> was classified as a header deferral and excused, and
+	// the suite still reported 15 pass / 0 fail. AP-48 is that counterexample,
+	// executed. Matching gives each occurrence its own offset.
+	for (const match of html.matchAll(/<a\b[^>]*>/gi)) {
+		const tag = match[0];
 		const href = decodeEntities(attrOf(tag, 'href') ?? '');
 		if (!href.startsWith('/') || href.startsWith('//')) continue;
 		if (exportedRouteExists(candidateDir, href)) continue;
 
-		const container = containerAt(html, html.indexOf(tag));
+		const container = containerAt(html, match.index);
 		const entry = container
 			? CHROME_LINK_DEFERRALS.find(
 					(d) => d.destination === href && d.locale === locale && d.container === container,
