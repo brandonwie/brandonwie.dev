@@ -121,21 +121,61 @@ export async function launch({ headless = true } = {}) {
 	];
 	if (headless) args.unshift('--headless=new');
 
-	const child = spawn(binary, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-	let err = '';
-	const wsUrl = await new Promise((resolve, reject) => {
-		child.stderr.on('data', (chunk) => {
-			err += String(chunk);
-			const m = /ws:\/\/[^\s]+/.exec(err);
-			if (m) resolve(m[0]);
-		});
-		child.once('exit', (code) => reject(new Error(`chrome exited (${code}): ${err}`)));
-		setTimeout(() => reject(new Error(`chrome did not expose DevTools: ${err}`)), 15000);
-	});
+	// EVERY acquisition from here is covered by rollback. Found in review: when
+	// the DevTools handshake failed, the profile directory and the Chrome process
+	// both leaked, and the caller's own `finally` had not been entered yet
+	// because `launch()` threw before it. A partially acquired resource is the
+	// acquirer's to release.
+	let child = null;
+	let cdp = null;
+	const rollback = async () => {
+		try {
+			cdp?.close();
+		} catch {
+			/* socket may already be gone */
+		}
+		if (child && child.exitCode === null && child.signalCode === null) {
+			child.kill('SIGKILL');
+		}
+		rmSync(profile, { recursive: true, force: true });
+	};
 
-	const cdp = await connect(wsUrl);
-	const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
-	const { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
+	try {
+		child = spawn(binary, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+		let err = '';
+		const wsUrl = await new Promise((resolve, reject) => {
+			let timer;
+			const settle = (fn, value) => {
+				clearTimeout(timer);
+				fn(value);
+			};
+			// `spawn` reports an unspawnable binary asynchronously on 'error', not
+			// by throwing. Without this, CHROME_BINARY=/etc/hosts raised an
+			// unhandled EACCES and the process died with the wrong exit code.
+			child.once('error', (error) =>
+				settle(reject, new Error(`could not start ${binary}: ${error.message}`)),
+			);
+			child.stderr.on('data', (chunk) => {
+				err += String(chunk);
+				const m = /ws:\/\/[^\s]+/.exec(err);
+				if (m) settle(resolve, m[0]);
+			});
+			child.once('exit', (code) =>
+				settle(reject, new Error(`chrome exited (${code}): ${err.trim() || 'no output'}`)),
+			);
+			timer = setTimeout(
+				() => settle(reject, new Error(`chrome did not expose DevTools: ${err.trim()}`)),
+				15000,
+			);
+		});
+
+		cdp = await connect(wsUrl);
+		var { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
+		var { sessionId } = await cdp.send('Target.attachToTarget', { targetId, flatten: true });
+	} catch (error) {
+		await rollback();
+		throw error;
+	}
 
 	return {
 		binary,
@@ -179,8 +219,27 @@ export async function launch({ headless = true } = {}) {
 async function connect(wsUrl) {
 	const ws = new WebSocket(wsUrl);
 	await new Promise((resolve, reject) => {
-		ws.addEventListener('open', resolve, { once: true });
-		ws.addEventListener('error', () => reject(new Error('CDP socket failed')), { once: true });
+		// The open/error race must clear its own timer, or an imported helper keeps
+		// the event loop alive after teardown. Found in review: a child process
+		// that imported `launch` and awaited `close` stayed up another 19.9
+		// seconds; the CLI's `process.exit` had been hiding it.
+		const timer = setTimeout(() => reject(new Error('CDP socket did not open')), 15000);
+		ws.addEventListener(
+			'open',
+			() => {
+				clearTimeout(timer);
+				resolve();
+			},
+			{ once: true },
+		);
+		ws.addEventListener(
+			'error',
+			() => {
+				clearTimeout(timer);
+				reject(new Error('CDP socket failed'));
+			},
+			{ once: true },
+		);
 	});
 
 	let nextId = 1;
@@ -190,7 +249,8 @@ async function connect(wsUrl) {
 	ws.addEventListener('message', (event) => {
 		const msg = JSON.parse(event.data);
 		if (msg.id && pending.has(msg.id)) {
-			const { resolve, reject } = pending.get(msg.id);
+			const { resolve, reject, timer } = pending.get(msg.id);
+			clearTimeout(timer);
 			pending.delete(msg.id);
 			if (msg.error) reject(new Error(`${msg.error.message} (${msg.error.code})`));
 			else resolve(msg.result ?? {});
@@ -207,27 +267,44 @@ async function connect(wsUrl) {
 			if (sessionId) payload.sessionId = sessionId;
 			ws.send(JSON.stringify(payload));
 			return new Promise((resolve, reject) => {
-				pending.set(id, { resolve, reject });
-				setTimeout(() => {
+				const timer = setTimeout(() => {
 					if (pending.delete(id)) reject(new Error(`${method} timed out`));
 				}, 20000);
+				pending.set(id, { resolve, reject, timer });
 			});
 		},
 		on(method, handler) {
 			if (!listeners.has(method)) listeners.set(method, []);
 			listeners.get(method).push(handler);
 		},
-		close: () => ws.close(),
+		close: () => {
+			// Reject anything still in flight rather than leaving its promise
+			// forever pending, and clear its timer so the loop can drain.
+			for (const [id, entry] of pending) {
+				clearTimeout(entry.timer);
+				entry.reject(new Error('CDP socket closed with a request in flight'));
+				pending.delete(id);
+			}
+			ws.close();
+		},
 	};
 }
 
 /** Evaluate an expression in the page and return its JSON value. */
 export async function evaluate(page, expression) {
-	const { result } = await page.send('Runtime.evaluate', {
+	const { result, exceptionDetails } = await page.send('Runtime.evaluate', {
 		expression,
 		returnByValue: true,
 		awaitPromise: true,
 	});
+	// A throwing expression returns `{ result: { value: undefined } }` with the
+	// error only in `exceptionDetails`. Ignoring it — as the first version did —
+	// turns every runtime fault into a falsy value, so a broken selector reads as
+	// "the element is not there" and a harness bug becomes an assertion failure.
+	if (exceptionDetails) {
+		const text = exceptionDetails.exception?.description ?? exceptionDetails.text;
+		throw new Error(`page evaluation threw: ${text}`);
+	}
 	return result.value;
 }
 

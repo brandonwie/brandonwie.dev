@@ -45,15 +45,19 @@ async function main() {
 		return EXIT.SKIPPED;
 	}
 
-	const server = await serve('next/build');
-	const page = await launch();
-	if (!page) {
-		server.close();
-		console.log('SKIP  browser could not launch');
-		return EXIT.SKIPPED;
-	}
-
+	// Acquisition is inside the try, so a launch fault cannot skip the server's
+	// teardown. Found in review: `launch()` throwing left the server running and
+	// the profile on disk, because the finally block had not been entered yet.
+	let server = null;
+	let page = null;
 	try {
+		server = await serve('next/build');
+		page = await launch();
+		if (!page) {
+			console.log('SKIP  browser could not launch');
+			return EXIT.SKIPPED;
+		}
+
 		await page.send('Page.enable');
 		await page.send('Runtime.enable');
 		if (SUPPRESS) await mutateBehavior(page, SUPPRESS_CHORD);
@@ -107,17 +111,18 @@ async function main() {
 		);
 		return EXIT.PASS;
 	} finally {
-		// Each teardown is independent. Found by running the spike: when
+		// Each teardown is independent, and each is null-safe because either
+		// acquisition may not have happened. Found by running the spike: when
 		// `page.close()` threw, `server.close()` never ran and a server process
 		// outlived the probe — the same leak that later fails an unrelated suite
 		// on a busy port. A teardown step must not be able to skip its sibling.
 		try {
-			await page.close();
+			await page?.close();
 		} catch (error) {
 			console.warn(`WARN  browser teardown: ${error.message}`);
 		}
 		try {
-			server.close();
+			server?.close();
 		} catch (error) {
 			console.warn(`WARN  server teardown: ${error.message}`);
 		}
