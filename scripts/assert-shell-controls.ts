@@ -25,6 +25,8 @@ interface Control {
 	target: string;
 	apply?: (html: string) => string;
 	remove?: boolean;
+	/** Mutates the BASELINE copy instead of the candidate. */
+	side?: 'candidate' | 'baseline';
 }
 
 const EN = 'posts/giscus-sveltekit-integration.html';
@@ -120,6 +122,59 @@ const CONTROLS: Control[] = [
 		target: EN,
 		apply: (html) => html.replace('~/<!-- -->', '~/<!-- --><!-- -->'),
 	},
+	/**
+	 * SC-11..SC-15 are the implementation-review findings, executed. The first
+	 * four cover false-green cases the suite genuinely had; the last proves the
+	 * fallback recognition is evidence-driven rather than a hole.
+	 */
+	{
+		id: 'SC-11',
+		kind: 'DEFECT',
+		what: 'the candidate header exists only inside an HTML comment',
+		target: EN,
+		apply: (html) =>
+			html.replace(
+				/<header\b[^>]*class="[^"]*site-nav[^"]*"[\s\S]*?<\/header>/i,
+				(match) => `<!--${match}-->`,
+			),
+	},
+	{
+		id: 'SC-12',
+		kind: 'DEFECT',
+		what: 'the candidate footer exists only inside an HTML comment',
+		target: EN,
+		apply: (html) =>
+			html.replace(
+				/<footer\b[^>]*class="[^"]*site-footer[^"]*"[\s\S]*?<\/footer>/i,
+				(match) => `<!--${match}-->`,
+			),
+	},
+	{
+		id: 'SC-13',
+		kind: 'DEFECT',
+		what: 'the baseline header is missing, so there is nothing to compare against',
+		target: EN,
+		side: 'baseline',
+		apply: (html) =>
+			html.replace(/<header\b[^>]*class="[^"]*site-nav[^"]*"[\s\S]*?<\/header>/i, ''),
+	},
+	{
+		id: 'SC-14',
+		kind: 'DEFECT',
+		what: 'the baseline footer is missing, so there is nothing to compare against',
+		target: EN,
+		side: 'baseline',
+		apply: (html) =>
+			html.replace(/<footer\b[^>]*class="[^"]*site-footer[^"]*"[\s\S]*?<\/footer>/i, ''),
+	},
+	{
+		id: 'SC-15',
+		kind: 'DEFECT',
+		what: 'the SPA fallback stops booting, so it is no longer recognized and must be compared strictly',
+		target: '404.html',
+		side: 'baseline',
+		apply: (html) => html.replace(/kit\.start\s*\(/, 'kit.notStart('),
+	},
 ];
 
 function fingerprint(file: string): string {
@@ -136,8 +191,9 @@ async function main(): Promise<number> {
 		return 2;
 	}
 
-	const exec = (dir: string): number => {
-		const result = spawnSync('pnpm', ['exec', 'tsx', 'scripts/assert-shell.ts', dir, baseline], {
+	const scratchBaseline = resolve('.migration-shell-controls-baseline');
+	const exec = (dir: string, baseDir: string): number => {
+		const result = spawnSync('pnpm', ['exec', 'tsx', 'scripts/assert-shell.ts', dir, baseDir], {
 			stdio: 'ignore',
 		});
 		return result.status ?? 1;
@@ -145,7 +201,7 @@ async function main(): Promise<number> {
 
 	rmSync(scratch, { recursive: true, force: true });
 	cpSync(source, scratch, { recursive: true });
-	const baselineCode = exec(scratch);
+	const baselineCode = exec(scratch, baseline);
 	console.log(
 		`${baselineCode === 0 ? 'PASS' : 'FAIL'}  SC-00  BASELINE   exit ${baselineCode} (expected 0)  an untouched candidate is green`,
 	);
@@ -153,8 +209,11 @@ async function main(): Promise<number> {
 
 	for (const control of CONTROLS) {
 		rmSync(scratch, { recursive: true, force: true });
+		rmSync(scratchBaseline, { recursive: true, force: true });
 		cpSync(source, scratch, { recursive: true });
-		const file = join(scratch, control.target);
+		const onBaseline = control.side === 'baseline';
+		if (onBaseline) cpSync(baseline, scratchBaseline, { recursive: true });
+		const file = join(onBaseline ? scratchBaseline : scratch, control.target);
 		if (!existsSync(file) || !statSync(file).isFile()) {
 			failures.push(`${control.id}: target ${control.target} is missing`);
 			console.log(
@@ -173,7 +232,7 @@ async function main(): Promise<number> {
 			);
 			continue;
 		}
-		const code = exec(scratch);
+		const code = exec(scratch, onBaseline ? scratchBaseline : baseline);
 		const expected = control.kind === 'DEFECT' ? 1 : 0;
 		const ok = code === expected;
 		if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
@@ -182,6 +241,7 @@ async function main(): Promise<number> {
 		);
 	}
 	rmSync(scratch, { recursive: true, force: true });
+	rmSync(scratchBaseline, { recursive: true, force: true });
 
 	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length;
 	console.log(

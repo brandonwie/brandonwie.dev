@@ -131,11 +131,24 @@ function routesOf(dir: string): string[] {
 	return out.sort();
 }
 
+/**
+ * Comments are removed HERE, before any structural extraction, and that
+ * placement is the whole point. An earlier revision stripped them only inside
+ * `normalizeText`, so `region()` matched raw HTML: a header commented out
+ * entirely still counted as present, and the suite returned 6 pass / 0 fail on
+ * a page with no chrome at all. SC-11 and SC-12 execute that counterexample.
+ *
+ * Stripping globally does not weaken SC-10, the adjacent-text comment
+ * invariance row: React's `<!-- -->` separators still must not change any
+ * result, and now they cannot reach a comparison at all.
+ */
 function readRoute(dir: string, route: string): string | null {
 	const base = route === '/' ? 'index' : route.replace(/^\//, '');
 	for (const candidate of [`${base}.html`, join(base, 'index.html')]) {
 		const file = resolve(dir, candidate);
-		if (existsSync(file) && statSync(file).isFile()) return readFileSync(file, 'utf8');
+		if (existsSync(file) && statSync(file).isFile()) {
+			return readFileSync(file, 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+		}
 	}
 	return null;
 }
@@ -186,27 +199,120 @@ function main(): number {
 	// Guard 2: both containers must exist on every shared route before any row
 	// inspects their contents. Without this, a missing header would surface as
 	// "0 nav links, 0 expected" rather than as the regression it is.
-	const missing: string[] = [];
+	// Both sides are checked, and the classification is asserted before any
+	// content is compared. An earlier revision asserted only the candidate and
+	// let every row `continue` past a baseline it could not extract, so deleting
+	// the baseline's header made the comparison silently vanish and a retargeted
+	// candidate nav link still passed. Missing comparison data is a failure,
+	// never a skip: SC-13 and SC-14 execute that counterexample.
+	//
+	// Not every baseline route carries chrome -- the SvelteKit 404 is a
+	// standalone error document with no header or footer. Those routes are
+	// classified, not skipped: the candidate must agree about whether a route
+	// has chrome, and only chrome-bearing routes go on to the content rows. A
+	// route the baseline dresses and the candidate does not (or the reverse) is
+	// a finding, which is exactly how the candidate's dressed /404 surfaced.
+	const hasChrome = (dir: string, route: string): boolean => {
+		const html = readRoute(dir, route) ?? '';
+		return region(html, 'header', 'site-nav') !== null && navOf(html) !== null;
+	};
+
+	/**
+	 * The SPA fallback is a different RENDERING STAGE, not a chrome regression.
+	 *
+	 * `svelte.config.js:70` sets `fallback: '404.html'`, so the baseline's
+	 * `404.html` is a bootstrap shell: its body is script only, it calls
+	 * `kit.start`, and `src/routes/+error.svelte:5-6` states the error page
+	 * "Renders inside the root layout, so the SiteHeader + Footer chrome is
+	 * present" — after client startup. The Next candidate prerenders its 404
+	 * instead, chrome included.
+	 *
+	 * An earlier revision compared the two statically and reported "baseline has
+	 * no chrome, candidate has chrome" as a defect. That was comparing a
+	 * pre-hydration shell against a rendered page. The row below RECOGNIZES the
+	 * fallback from evidence rather than hardcoding `/404` as an exclusion: it
+	 * must boot the app AND carry no static chrome. A fallback that stops
+	 * booting, or a baseline route that merely lost its chrome, fails
+	 * recognition and falls back into the strict comparison — so this cannot
+	 * become a hole. SC-15 executes that.
+	 *
+	 * NOT VERIFIED HERE: that the baseline's chrome actually appears after
+	 * startup in a browser. The static evidence establishes the mechanism; the
+	 * rendered-stage check is owed and is recorded as owed.
+	 */
+	const isBootstrapFallback = (dir: string, route: string): boolean => {
+		const html = readRoute(dir, route) ?? '';
+		const body = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)?.[1] ?? '';
+		const boots = /kit\.start\s*\(/.test(html);
+		const visible = body
+			.replace(/<script[\s\S]*?<\/script>/gi, '')
+			.replace(/<[^>]+>/g, '')
+			.trim();
+		return boots && visible.length === 0 && region(html, 'header', 'site-nav') === null;
+	};
+
+	const asymmetric: string[] = [];
+	const chromeRoutes: string[] = [];
+	const fallbacks: string[] = [];
 	for (const route of shared) {
-		const html = readRoute(candidateDir, route) ?? '';
-		if (region(html, 'header', 'site-nav') === null) missing.push(`${route}: header`);
-		if (region(html, 'footer', 'site-footer') === null) missing.push(`${route}: footer`);
+		if (isBootstrapFallback(baselineDir, route)) {
+			fallbacks.push(route);
+			continue;
+		}
+		const cand = hasChrome(candidateDir, route);
+		const base = hasChrome(baselineDir, route);
+		if (cand !== base) {
+			asymmetric.push(
+				`${route}: baseline ${base ? 'has' : 'has no'} chrome, candidate ${cand ? 'has' : 'has no'} chrome`,
+			);
+		} else if (base) chromeRoutes.push(route);
+	}
+	if (asymmetric.length > 0) {
+		record('FAIL', 'SH-01 chrome routes', asymmetric.join('; '));
+	} else {
+		record(
+			'PASS',
+			'SH-01 chrome routes',
+			`${chromeRoutes.length} chrome-bearing route(s), both sides agreeing on every classification` +
+				(fallbacks.length > 0
+					? `; ${fallbacks.length} client-rendered fallback(s) recognized and compared at their own stage: ${fallbacks.join(', ')} (rendered-stage check OWED, not run here)`
+					: ''),
+		);
+	}
+
+	// Containers, on the routes both sides dress.
+	const missing: string[] = [];
+	for (const route of chromeRoutes) {
+		for (const [side, dir] of [
+			['candidate', candidateDir],
+			['baseline', baselineDir],
+		] as const) {
+			const html = readRoute(dir, route) ?? '';
+			if (region(html, 'footer', 'site-footer') === null) missing.push(`${route}: ${side} footer`);
+		}
 	}
 	if (missing.length > 0) {
-		record('FAIL', 'SH-01 containers', missing.join('; '));
+		record('FAIL', 'SH-02 containers', missing.join('; '));
 		report();
 		return 1;
 	}
 	record(
 		'PASS',
-		'SH-01 containers',
-		`header and footer present on ${shared.length}/${shared.length} routes`,
+		'SH-02 containers',
+		`footer present on both sides of ${chromeRoutes.length} route(s)`,
 	);
 
-	assertNav(candidateDir, baselineDir, shared);
-	assertActive(candidateDir, baselineDir, shared);
-	assertFooter(candidateDir, baselineDir, shared);
-	assertSkipLink(candidateDir, shared);
+	if (chromeRoutes.length === 0) {
+		record('FAIL', 'SH-02 containers', 'no chrome-bearing route to compare');
+		report();
+		return 1;
+	}
+
+	const shared2 = chromeRoutes;
+	assertNav(candidateDir, baselineDir, shared2);
+	assertActive(candidateDir, baselineDir, shared2);
+	assertFooter(candidateDir, baselineDir, shared2);
+	assertSkipLink(candidateDir, shared2);
 
 	report();
 	return failures > 0 ? 1 : 0;
@@ -225,9 +331,8 @@ function assertNav(candidateDir: string, baselineDir: string, routes: string[]):
 	for (const route of routes) {
 		const cand = navOf(readRoute(candidateDir, route) ?? '');
 		const base = navOf(readRoute(baselineDir, route) ?? '');
-		if (!base) continue;
-		if (!cand) {
-			problems.push(`${route}: candidate has no nav`);
+		if (!base || !cand) {
+			problems.push(`${route}: nav missing on ${!cand ? 'candidate' : 'baseline'}`);
 			continue;
 		}
 		const shape = (links: Link[]): string =>
@@ -236,11 +341,11 @@ function assertNav(candidateDir: string, baselineDir: string, routes: string[]):
 			problems.push(`${route}: nav is ${shape(cand)}, baseline is ${shape(base)}`);
 		}
 	}
-	if (problems.length > 0) record('FAIL', 'SH-02 nav links', problems.join('; '));
+	if (problems.length > 0) record('FAIL', 'SH-03 nav links', problems.join('; '));
 	else
 		record(
 			'PASS',
-			'SH-02 nav links',
+			'SH-03 nav links',
 			`href, label and order match the baseline inside the header nav on ${routes.length} route(s)`,
 		);
 }
@@ -250,7 +355,10 @@ function assertActive(candidateDir: string, baselineDir: string, routes: string[
 	for (const route of routes) {
 		const cand = navOf(readRoute(candidateDir, route) ?? '');
 		const base = navOf(readRoute(baselineDir, route) ?? '');
-		if (!base || !cand) continue;
+		if (!base || !cand) {
+			problems.push(`${route}: nav missing on ${!cand ? 'candidate' : 'baseline'}`);
+			continue;
+		}
 		const marks = (links: Link[]): string =>
 			links
 				.map(
@@ -262,11 +370,11 @@ function assertActive(candidateDir: string, baselineDir: string, routes: string[
 			problems.push(`${route}: ${marks(cand)} vs baseline ${marks(base)}`);
 		}
 	}
-	if (problems.length > 0) record('FAIL', 'SH-03 active section', problems.join('; '));
+	if (problems.length > 0) record('FAIL', 'SH-04 active section', problems.join('; '));
 	else
 		record(
 			'PASS',
-			'SH-03 active section',
+			'SH-04 active section',
 			`is-active and aria-current are bound to the same nav item as the baseline, per route`,
 		);
 }
@@ -276,7 +384,12 @@ function assertFooter(candidateDir: string, baselineDir: string, routes: string[
 	for (const route of routes) {
 		const candFooter = region(readRoute(candidateDir, route) ?? '', 'footer', 'site-footer');
 		const baseFooter = region(readRoute(baselineDir, route) ?? '', 'footer', 'site-footer');
-		if (candFooter === null || baseFooter === null) continue;
+		if (candFooter === null || baseFooter === null) {
+			problems.push(
+				`${route}: footer missing on ${candFooter === null ? 'candidate' : 'baseline'}`,
+			);
+			continue;
+		}
 		const shape = (html: string): string =>
 			linksIn(html)
 				.map((link) => `${link.href}=${link.text}`)
@@ -285,11 +398,11 @@ function assertFooter(candidateDir: string, baselineDir: string, routes: string[
 			problems.push(`${route}: footer links differ from the baseline`);
 		}
 	}
-	if (problems.length > 0) record('FAIL', 'SH-04 footer links', problems.join('; '));
+	if (problems.length > 0) record('FAIL', 'SH-05 footer links', problems.join('; '));
 	else
 		record(
 			'PASS',
-			'SH-04 footer links',
+			'SH-05 footer links',
 			`href, label and order match the baseline inside the footer on ${routes.length} route(s)`,
 		);
 }
@@ -304,11 +417,11 @@ function assertSkipLink(candidateDir: string, routes: string[]): void {
 		else if (!/<main\b[^>]*id="main-content"/i.test(html))
 			problems.push(`${route}: skip target missing`);
 	}
-	if (problems.length > 0) record('FAIL', 'SH-05 skip link', problems.join('; '));
+	if (problems.length > 0) record('FAIL', 'SH-06 skip link', problems.join('; '));
 	else
 		record(
 			'PASS',
-			'SH-05 skip link',
+			'SH-06 skip link',
 			`skip link and its target present on ${routes.length} route(s)`,
 		);
 }
