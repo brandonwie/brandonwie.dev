@@ -237,12 +237,125 @@ function exportedRouteExists(candidateDir: string, href: string): boolean {
 	);
 }
 
-function internalLinkProblems(candidateDir: string, html: string): string[] {
-	return tagsOf(html, 'a')
-		.map((tag) => decodeEntities(attrOf(tag, 'href') ?? ''))
-		.filter((href) => href.startsWith('/') && !href.startsWith('//'))
-		.filter((href) => !exportedRouteExists(candidateDir, href))
-		.map((href) => `${href} has no exported target`);
+/**
+ * Chrome link deferrals — the interim A12 criteria adopted 2026-09-06.
+ *
+ * Slice 3 PR 2a ported the real header and footer, whose nav and footer columns
+ * link to routes later PRs build. Those links do not resolve yet. Rather than
+ * drop the link-integrity assertion, each excused link is declared as a triple:
+ * destination, locale, and the container it must appear in. A route-only
+ * allowlist would also excuse an unrelated broken article-body link to the same
+ * destination, which is exactly what this scoping prevents — and it is why the
+ * AP-35 control, which mutates a bare `<a href="/">` in the article body, still
+ * fails: the chrome's home link carries `class="site-brand"` and is a different
+ * occurrence.
+ *
+ * A deferral asserts its destination is STILL ABSENT. When the owning port lands
+ * and the route appears, the stale entry fails until it is removed, so the list
+ * cannot outlive its reason.
+ *
+ * Full criteria, ownership and retirement schedule:
+ * 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/
+ * A12-chrome-link-deferrals.md. Retire with PR 3 (posts, tags, /ko), PR 6 (the
+ * static pages) and Slice 4 (study); zero deferrals before cutover.
+ */
+type ChromeContainer = 'header' | 'footer';
+
+interface LinkDeferral {
+	destination: string;
+	locale: 'en' | 'ko';
+	container: ChromeContainer;
+	owner: string;
+}
+
+const CHROME_LINK_DEFERRALS: readonly LinkDeferral[] = [
+	{ destination: '/about', locale: 'en', container: 'header', owner: 'PR 6' },
+	{ destination: '/posts', locale: 'en', container: 'header', owner: 'PR 3' },
+	{ destination: '/study', locale: 'en', container: 'header', owner: 'Slice 4' },
+	{ destination: '/about', locale: 'en', container: 'footer', owner: 'PR 6' },
+	{ destination: '/posts', locale: 'en', container: 'footer', owner: 'PR 3' },
+	{ destination: '/study', locale: 'en', container: 'footer', owner: 'Slice 4' },
+	{ destination: '/projects', locale: 'en', container: 'footer', owner: 'PR 6' },
+	{ destination: '/tags', locale: 'en', container: 'footer', owner: 'PR 3' },
+	{ destination: '/contact', locale: 'en', container: 'footer', owner: 'PR 6' },
+	{ destination: '/ko', locale: 'ko', container: 'header', owner: 'PR 3' },
+	{ destination: '/ko/about', locale: 'ko', container: 'header', owner: 'PR 6' },
+	{ destination: '/ko/posts', locale: 'ko', container: 'header', owner: 'PR 3' },
+	{ destination: '/ko/study', locale: 'ko', container: 'header', owner: 'Slice 4' },
+	{ destination: '/ko/about', locale: 'ko', container: 'footer', owner: 'PR 6' },
+	{ destination: '/ko/posts', locale: 'ko', container: 'footer', owner: 'PR 3' },
+	{ destination: '/ko/study', locale: 'ko', container: 'footer', owner: 'Slice 4' },
+	{ destination: '/ko/projects', locale: 'ko', container: 'footer', owner: 'PR 6' },
+	{ destination: '/ko/tags', locale: 'ko', container: 'footer', owner: 'PR 3' },
+	{ destination: '/ko/contact', locale: 'ko', container: 'footer', owner: 'PR 6' },
+];
+
+/** The byte range of the baseline header / footer element, or null if absent. */
+function chromeRange(html: string, container: ChromeContainer): [number, number] | null {
+	const open =
+		container === 'header'
+			? /<header\b[^>]*class="[^"]*\bsite-nav\b/i
+			: /<footer\b[^>]*class="[^"]*\bsite-footer\b/i;
+	const match = open.exec(html);
+	if (!match) return null;
+	const closeTag = container === 'header' ? '</header>' : '</footer>';
+	const end = html.indexOf(closeTag, match.index);
+	if (end === -1) return null;
+	return [match.index, end + closeTag.length];
+}
+
+function containerAt(html: string, index: number): ChromeContainer | null {
+	for (const container of ['header', 'footer'] as const) {
+		const range = chromeRange(html, container);
+		if (range && index >= range[0] && index < range[1]) return container;
+	}
+	return null;
+}
+
+export interface LinkReport {
+	problems: string[];
+	deferred: string[];
+}
+
+function internalLinkReport(candidateDir: string, html: string, locale: 'en' | 'ko'): LinkReport {
+	const problems: string[] = [];
+	const deferred: string[] = [];
+	const used = new Set<string>();
+
+	for (const tag of tagsOf(html, 'a')) {
+		const href = decodeEntities(attrOf(tag, 'href') ?? '');
+		if (!href.startsWith('/') || href.startsWith('//')) continue;
+		if (exportedRouteExists(candidateDir, href)) continue;
+
+		const container = containerAt(html, html.indexOf(tag));
+		const entry = container
+			? CHROME_LINK_DEFERRALS.find(
+					(d) => d.destination === href && d.locale === locale && d.container === container,
+				)
+			: undefined;
+
+		if (entry) {
+			used.add(`${entry.locale}|${entry.container}|${entry.destination}`);
+			deferred.push(`${href} (${entry.container}, ${entry.owner})`);
+		} else {
+			problems.push(`${href} has no exported target`);
+		}
+	}
+
+	// A deferral whose destination now exists is obsolete: the owning port landed
+	// and the entry must go. Failing here is what forces that, instead of letting
+	// the list quietly outlive its reason.
+	for (const entry of CHROME_LINK_DEFERRALS) {
+		if (entry.locale !== locale) continue;
+		if (exportedRouteExists(candidateDir, entry.destination)) {
+			problems.push(
+				`${entry.destination} now exists — remove its ${entry.container} deferral (${entry.owner})`,
+			);
+		}
+	}
+
+	void used;
+	return { problems, deferred };
 }
 
 function shellProblems(html: string, locale: 'en' | 'ko'): string[] {
@@ -251,8 +364,17 @@ function shellProblems(html: string, locale: 'en' | 'ko'): string[] {
 	if (attrOf(htmlTag, 'lang') !== locale) problems.push(`html lang is not ${locale}`);
 	if (tagsOf(html, 'main').length !== 1) problems.push('expected exactly one main landmark');
 	if (tagsOf(html, 'h1').length !== 1) problems.push('expected exactly one h1');
-	if (!classToken(html, 'header', 'site-header')) problems.push('site header missing');
-	if (!classToken(html, 'nav', 'site-nav')) problems.push('site navigation missing');
+	/**
+	 * These three tokens follow the BASELINE's chrome, not the candidate's.
+	 * They previously read `site-header` / `site-nav`, which were the Slice 1
+	 * PLACEHOLDER shell's class names -- the SvelteKit baseline has never
+	 * emitted them (`SiteHeader.svelte:36,41` emits `<header class="site-nav">`
+	 * wrapping `<nav class="site-nav__links">`). So the rows asserted that the
+	 * candidate looked like the scaffolding rather than like the thing it must
+	 * match, and Slice 3 PR 2a's real chrome port is what exposed it.
+	 */
+	if (!classToken(html, 'header', 'site-nav')) problems.push('site header missing');
+	if (!classToken(html, 'nav', 'site-nav__links')) problems.push('site navigation missing');
 	if (!classToken(html, 'footer', 'site-footer')) problems.push('site footer missing');
 	if (tagsOf(html, 'article').length !== 1 || !classToken(html, 'article', 'article-shell')) {
 		problems.push('expected exactly one article-shell landmark');
@@ -593,16 +715,26 @@ export async function runAssertions(
 		fail('A11 semantic article chrome', chromeIssues.join('; ') || 'Korean chrome unavailable');
 	}
 
+	const enLinks = internalLinkReport(candidateDir, cand, 'en');
+	const koLinks = candKo
+		? internalLinkReport(candidateDir, candKo, 'ko')
+		: { problems: [], deferred: [] };
 	const linkIssues = [
-		...internalLinkProblems(candidateDir, cand).map((problem) => `en: ${problem}`),
-		...(candKo
-			? internalLinkProblems(candidateDir, candKo).map((problem) => `ko: ${problem}`)
-			: []),
+		...enLinks.problems.map((problem) => `en: ${problem}`),
+		...koLinks.problems.map((problem) => `ko: ${problem}`),
+	];
+	const deferredLinks = [
+		...enLinks.deferred.map((d) => `en: ${d}`),
+		...koLinks.deferred.map((d) => `ko: ${d}`),
 	];
 	if (linkIssues.length === 0 && candKo) {
+		// Never claim every link resolves while deferrals stand: the count and the
+		// entries are named, so a reader sees the gap rather than a false all-clear.
 		pass(
 			'A12 exported internal links',
-			'every emitted internal anchor resolves in the static tree',
+			deferredLinks.length === 0
+				? 'every emitted internal anchor resolves in the static tree'
+				: `every non-deferred internal anchor resolves; ${deferredLinks.length} chrome link(s) deferred to their owning ports: ${deferredLinks.join(', ')}`,
 		);
 	} else {
 		fail('A12 exported internal links', linkIssues.join('; ') || 'Korean links unavailable');
