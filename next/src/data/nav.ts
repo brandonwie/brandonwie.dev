@@ -91,16 +91,6 @@ export function homeHref(locale: Locale): string {
 	return base(locale) || '/';
 }
 
-/** Locale-aware posts-list href (in-page back affordance). */
-export function postsHref(locale: Locale): string {
-	return `${base(locale)}/posts`;
-}
-
-/** Locale-aware search href (header action). */
-export function searchHref(locale: Locale): string {
-	return `${base(locale)}/search`;
-}
-
 /**
  * Active nav section for a path. Locale-stripped, then matched on full path
  * segments so list and detail routes share a section (`/posts` and `/posts/x`
