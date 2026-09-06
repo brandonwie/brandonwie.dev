@@ -78,24 +78,70 @@ export async function serve(buildDir) {
 	const child = spawn(process.execPath, ['scripts/serve-build.mjs', buildDir, '0'], {
 		stdio: ['ignore', 'pipe', 'pipe'],
 	});
-	let out = '';
-	const port = await new Promise((resolve, reject) => {
-		const onData = (chunk) => {
-			out += String(chunk);
-			const m = /http:\/\/127\.0\.0\.1:(\d+)/.exec(out);
-			if (m) resolve(Number(m[1]));
-		};
-		child.stdout.on('data', onData);
-		child.stderr.on('data', onData);
-		child.once('exit', (code) => reject(new Error(`server exited early (${code}): ${out}`)));
-		setTimeout(() => reject(new Error(`server did not report a port: ${out}`)), 10000);
-	});
-	return {
-		port,
-		close: () => {
-			child.kill('SIGTERM');
-		},
+
+	// The server is an acquired resource from the spawn call onward, so its
+	// release is defined once and used by both the failure path and the caller.
+	// Found in review: a server that never reported readiness timed out and its
+	// child survived -- and because the child inherited the parent's stdio pipes,
+	// the parent then never exited at all. A leaked helper is not merely untidy;
+	// it hangs whoever leaked it.
+	const stop = async () => {
+		if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+		await new Promise((resolve) => {
+			if (child.exitCode !== null || child.signalCode !== null) return resolve();
+			const timer = setTimeout(() => {
+				child.kill('SIGKILL');
+				resolve();
+			}, 5000);
+			child.once('exit', () => {
+				clearTimeout(timer);
+				resolve();
+			});
+		});
 	};
+
+	let out = '';
+	let port;
+	try {
+		port = await new Promise((resolve, reject) => {
+			let timer;
+			// Every settlement clears the readiness timer and detaches the output
+			// listeners. Found in review: the timer stayed armed for its full 10
+			// seconds after the port had already been reported, so an importing
+			// caller that closed the server still sat in the event loop -- measured
+			// at 10,049ms for a probe whose work took under a second.
+			const settle = (fn, value) => {
+				clearTimeout(timer);
+				child.stdout.off('data', onData);
+				child.stderr.off('data', onData);
+				fn(value);
+			};
+			const onData = (chunk) => {
+				out += String(chunk);
+				const m = /http:\/\/127\.0\.0\.1:(\d+)/.exec(out);
+				if (m) settle(resolve, Number(m[1]));
+			};
+			child.stdout.on('data', onData);
+			child.stderr.on('data', onData);
+			// An unspawnable interpreter arrives on 'error', not as a throw -- the
+			// same asynchronous shape that made a bad CHROME_BINARY crash the probe.
+			child.once('error', (error) =>
+				settle(reject, new Error(`could not start the server: ${error.message}`)),
+			);
+			child.once('exit', (code) =>
+				settle(reject, new Error(`server exited early (${code}): ${out.trim()}`)),
+			);
+			timer = setTimeout(
+				() => settle(reject, new Error(`server did not report a port: ${out.trim()}`)),
+				10000,
+			);
+		});
+	} catch (error) {
+		await stop();
+		throw error;
+	}
+
+	return { port, close: stop };
 }
 
 /**
@@ -243,8 +289,29 @@ async function connect(wsUrl) {
 	});
 
 	let nextId = 1;
+	let closed = false;
 	const pending = new Map();
 	const listeners = new Map();
+
+	// A disconnected peer must fail its in-flight requests NOW. Found in review:
+	// after `Browser.close` dropped the connection, an outstanding evaluation sat
+	// pending until its own 20-second timeout -- reproduced at 20,002ms -- and
+	// reported "timed out" rather than "the socket went away". Every subsequent
+	// teardown call then paid the same 20 seconds.
+	const failAll = (reason) => {
+		closed = true;
+		for (const [id, entry] of pending) {
+			clearTimeout(entry.timer);
+			pending.delete(id);
+			entry.reject(new Error(reason));
+		}
+	};
+	ws.addEventListener('close', () => failAll('CDP socket closed with a request in flight'), {
+		once: true,
+	});
+	ws.addEventListener('error', () => failAll('CDP socket errored with a request in flight'), {
+		once: true,
+	});
 
 	ws.addEventListener('message', (event) => {
 		const msg = JSON.parse(event.data);
@@ -262,10 +329,20 @@ async function connect(wsUrl) {
 
 	return {
 		send(method, params = {}, sessionId) {
+			// Sending into a dead socket must fail immediately rather than wait out
+			// a timeout, so teardown after a disconnect stays fast and truthful.
+			if (closed) {
+				return Promise.reject(new Error(`${method} sent on a closed CDP socket`));
+			}
 			const id = nextId++;
 			const payload = { id, method, params };
 			if (sessionId) payload.sessionId = sessionId;
-			ws.send(JSON.stringify(payload));
+			try {
+				ws.send(JSON.stringify(payload));
+			} catch (error) {
+				failAll(`CDP send failed: ${error.message}`);
+				return Promise.reject(new Error(`${method} could not be sent: ${error.message}`));
+			}
 			return new Promise((resolve, reject) => {
 				const timer = setTimeout(() => {
 					if (pending.delete(id)) reject(new Error(`${method} timed out`));
@@ -278,13 +355,7 @@ async function connect(wsUrl) {
 			listeners.get(method).push(handler);
 		},
 		close: () => {
-			// Reject anything still in flight rather than leaving its promise
-			// forever pending, and clear its timer so the loop can drain.
-			for (const [id, entry] of pending) {
-				clearTimeout(entry.timer);
-				entry.reject(new Error('CDP socket closed with a request in flight'));
-				pending.delete(id);
-			}
+			failAll('CDP socket closed with a request in flight');
 			ws.close();
 		},
 	};

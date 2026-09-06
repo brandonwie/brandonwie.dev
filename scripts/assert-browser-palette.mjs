@@ -122,7 +122,7 @@ async function main() {
 			console.warn(`WARN  browser teardown: ${error.message}`);
 		}
 		try {
-			server?.close();
+			await server?.close();
 		} catch (error) {
 			console.warn(`WARN  server teardown: ${error.message}`);
 		}

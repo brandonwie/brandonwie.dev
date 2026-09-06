@@ -4,16 +4,28 @@
  * A probe that only ever passes proves nothing about the probe. These rows
  * execute the fault paths the runner advertises, so "the exit contract holds"
  * is a result rather than a claim. Every row here corresponds to a defect the
- * first spike revision actually had.
+ * spike actually had.
+ *
+ * EVERY ROW CHECKS THREE THINGS: the process outcome (exit code, signal, and
+ * whether it had to be killed), the resources it left behind, and — where the
+ * row is about timing — how long it took. Found in review: the first two
+ * process-level rows checked neither exit code nor resources, so injecting
+ * `process.exit(1)` into the BC-07 child and `process.exit(2)` into the BC-08
+ * child still produced "8 controls: 8 behaved as specified" and suite exit 0.
+ * BC-07's line even read "exited without process.exit" while the child was
+ * calling exactly that. A control that reads one signal out of three is a
+ * control that can pass a broken subject.
  *
  * Exit 0 all rows behaved as specified, 1 otherwise, 3 skipped (no browser).
  */
 import { spawnSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { findBrowser, EXIT } from './browser-probe.mjs';
 
 const PROBE = 'scripts/assert-browser-palette.mjs';
+const RUNNER = new URL('./browser-probe.mjs', import.meta.url).href;
 
 /** Profiles the runner may have left behind; the name prefix is its own. */
 const profiles = () => {
@@ -29,6 +41,47 @@ const servers = () =>
 		.stdout.trim()
 		.split('\n')
 		.filter(Boolean);
+
+/** One measurement of everything a row is allowed to assert on. */
+function observe(run) {
+	const before = { profiles: profiles().length, servers: servers().length };
+	const started = Date.now();
+	const result = run();
+	const elapsedMs = Date.now() - started;
+	const after = { profiles: profiles().length, servers: servers().length };
+	return {
+		code: result.status,
+		signal: result.signal ?? null,
+		timedOut: result.error?.code === 'ETIMEDOUT',
+		stdout: (result.stdout ?? '').trim(),
+		elapsedMs,
+		leakedProfile: after.profiles > before.profiles,
+		leakedServer: after.servers > before.servers,
+	};
+}
+
+const runChild = (source, timeout, cwd) =>
+	observe(() =>
+		spawnSync(process.execPath, ['--input-type=module', '-e', source], {
+			encoding: 'utf8',
+			timeout,
+			cwd,
+		}),
+	);
+
+/** Shared complaints, so no row can quietly check fewer things than its siblings. */
+function faults(id, o, { expect = EXIT.PASS, underMs = null } = {}) {
+	const out = [];
+	if (o.timedOut) out.push(`${id}: had to be killed after ${o.elapsedMs}ms`);
+	if (o.signal) out.push(`${id}: died on ${o.signal}`);
+	if (o.code !== expect) out.push(`${id}: exit ${o.code}, expected ${expect}`);
+	if (underMs !== null && o.elapsedMs >= underMs) {
+		out.push(`${id}: took ${o.elapsedMs}ms, expected under ${underMs}ms`);
+	}
+	if (o.leakedProfile) out.push(`${id}: leaked a profile directory`);
+	if (o.leakedServer) out.push(`${id}: leaked a server process`);
+	return out;
+}
 
 const ROWS = [
 	{
@@ -76,64 +129,87 @@ const ROWS = [
 	},
 ];
 
-function runRow(row) {
-	const before = { profiles: profiles().length, servers: servers().length };
-	const result = spawnSync(process.execPath, [PROBE, ...(row.args ?? [])], {
-		env: { ...process.env, ...row.env },
-		encoding: 'utf8',
-	});
-	const after = { profiles: profiles().length, servers: servers().length };
-	return { code: result.status, before, after };
-}
-
 /**
- * R2's control: an IMPORTING caller must exit on its own.
+ * BC-07 — an IMPORTING caller must exit on its own, having held BOTH resources.
  *
  * The CLI calls `process.exit`, which masks a live handle. A suite that imports
- * the runner has no such escape — an uncleared timer keeps its process alive
- * long past teardown. This spawns a child that imports, launches, closes, and
- * then must exit naturally well inside the timer window.
+ * the runner has no such escape. The row now acquires the server as well as the
+ * browser, because the two armed their timers separately: the server's readiness
+ * timer stayed armed for its full 10 seconds after the port had been reported,
+ * measured at 10,049ms for work that took under a second, and no browser-only
+ * row could see it.
  */
-function naturalExitRow() {
-	const source = `
-		import { launch } from './scripts/browser-probe.mjs';
-		const page = await launch();
-		if (page) await page.close();
-		// No process.exit: if a timer is still armed, this child outlives the wait.
-	`;
-	const started = Date.now();
-	const child = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
-		encoding: 'utf8',
-		timeout: 12000,
-	});
-	return {
-		elapsedMs: Date.now() - started,
-		code: child.status,
-		timedOut: child.error?.code === 'ETIMEDOUT',
-	};
-}
+const naturalExitSource = `
+	import { serve, launch } from ${JSON.stringify(RUNNER)};
+	const server = await serve('next/build');
+	const page = await launch();
+	if (page) await page.close();
+	await server.close();
+	console.log('CLOSED port ' + server.port);
+	// No process.exit: an armed timer on either resource outlives this line.
+`;
 
-/** R3's control: a throwing page expression must be a harness error, not `false`. */
-async function evaluateThrowRow() {
-	const source = `
-		import { launch, evaluate } from './scripts/browser-probe.mjs';
-		const page = await launch();
-		try {
-			await page.send('Runtime.enable');
-			await evaluate(page, 'throw new Error("bc-evaluation-fault")');
-			console.log('SWALLOWED');
-		} catch (error) {
-			console.log(error.message.includes('bc-evaluation-fault') ? 'PROPAGATED' : 'WRONG');
-		} finally {
-			await page.close();
-		}
-	`;
-	const child = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
-		encoding: 'utf8',
-		timeout: 30000,
-	});
-	return (child.stdout ?? '').trim();
-}
+/** BC-08 — a throwing page expression must be a harness error, not `false`. */
+const evaluateThrowSource = `
+	import { launch, evaluate } from ${JSON.stringify(RUNNER)};
+	const page = await launch();
+	try {
+		await page.send('Runtime.enable');
+		await evaluate(page, 'throw new Error("bc-evaluation-fault")');
+		console.log('SWALLOWED');
+	} catch (error) {
+		console.log(error.message.includes('bc-evaluation-fault') ? 'PROPAGATED' : 'WRONG');
+	} finally {
+		await page.close();
+	}
+`;
+
+/**
+ * BC-09 — a server that never reports readiness must fail AND release its child.
+ *
+ * Reproduced before the repair: the readiness timeout rejected, the spawned
+ * child survived, and because that child held the parent's inherited stdio
+ * pipes, the parent never exited either — the run had to be killed at 120
+ * seconds. The row runs against a stub `scripts/serve-build.mjs` that starts and
+ * says nothing, so the timeout is the subject rather than an accident.
+ */
+const silentServerSource = `
+	import { serve } from ${JSON.stringify(RUNNER)};
+	try {
+		await serve('anything');
+		console.log('RESOLVED');
+	} catch (error) {
+		console.log(error.message.startsWith('server did not report a port') ? 'TIMED-OUT' : 'WRONG');
+	}
+`;
+
+/**
+ * BC-10 — a request in flight when the peer disconnects must reject promptly.
+ *
+ * Reproduced before the repair at 20,002ms with the message "Runtime.evaluate
+ * timed out": the pending entry was cleared only by explicit `close()`, so a
+ * dead browser cost every outstanding call its full timeout and reported the
+ * wrong cause.
+ */
+const disconnectSource = `
+	import { launch, evaluate } from ${JSON.stringify(RUNNER)};
+	const page = await launch();
+	await page.send('Runtime.enable');
+	const started = Date.now();
+	const inflight = evaluate(page, 'new Promise(r => setTimeout(r, 60000))').then(
+		() => 'RESOLVED',
+		(error) => ({ ms: Date.now() - started, message: error.message }),
+	);
+	await new Promise((r) => setTimeout(r, 500));
+	page.cdp.send('Browser.close').catch(() => {});
+	const outcome = await inflight;
+	// Teardown AFTER the peer is already gone: it must still remove the profile
+	// rather than throw on a socket that no longer answers. Found by this row's
+	// own leak check, which the previous revision did not have.
+	await page.close();
+	if (typeof outcome === 'string') console.log('RESOLVED');
+	else console.log(outcome.message.includes('socket') && outcome.ms < 5000 ? 'REJECTED' : 'WRONG ' + outcome.ms + 'ms ' + outcome.message);
+`;
 
 async function main() {
 	if (!findBrowser()) {
@@ -142,39 +218,93 @@ async function main() {
 	}
 
 	const failures = [];
+	const report = (id, kind, detail, rowFaults) => {
+		failures.push(...rowFaults);
+		console.log(`${rowFaults.length === 0 ? 'PASS' : 'FAIL'}  ${id}  ${kind.padEnd(10)} ${detail}`);
+	};
+
 	for (const row of ROWS) {
-		const { code, before, after } = runRow(row);
-		const ok = code === row.expect;
-		const leakedProfile = after.profiles > before.profiles;
-		const leakedServer = after.servers > before.servers;
-		const clean = !leakedProfile && !leakedServer;
-		if (!ok) failures.push(`${row.id}: exit ${code}, expected ${row.expect}`);
-		if (!clean) {
-			failures.push(
-				`${row.id}: leaked ${[leakedProfile && 'a profile', leakedServer && 'a server'].filter(Boolean).join(' and ')}`,
-			);
-		}
-		console.log(
-			`${ok && clean ? 'PASS' : 'FAIL'}  ${row.id}  ${row.kind.padEnd(10)} exit ${code} (expected ${row.expect})  ${clean ? 'no leak' : 'LEAKED'}  ${row.what}`,
+		const o = observe(() =>
+			spawnSync(process.execPath, [PROBE, ...(row.args ?? [])], {
+				env: { ...process.env, ...row.env },
+				encoding: 'utf8',
+				timeout: 60000,
+			}),
+		);
+		report(
+			row.id,
+			row.kind,
+			`exit ${o.code} (expected ${row.expect})  ${o.leakedProfile || o.leakedServer ? 'LEAKED' : 'no leak'}  ${row.what}`,
+			faults(row.id, o, { expect: row.expect }),
 		);
 	}
 
-	const natural = naturalExitRow();
-	const naturalOk = !natural.timedOut && natural.elapsedMs < 12000;
-	if (!naturalOk) failures.push('BC-07: an importing caller did not exit on its own');
-	console.log(
-		`${naturalOk ? 'PASS' : 'FAIL'}  BC-07  IMPORTED   exited in ${natural.elapsedMs}ms without process.exit  an uncleared timer would hold the loop`,
+	const natural = runChild(naturalExitSource, 30000);
+	report(
+		'BC-07',
+		'IMPORTED',
+		`exited in ${natural.elapsedMs}ms holding a server and a browser  an armed timer on either would hold the loop`,
+		[
+			...faults('BC-07', natural, { expect: EXIT.PASS, underMs: 8000 }),
+			...(natural.stdout.startsWith('CLOSED port')
+				? []
+				: [`BC-07: child reported ${natural.stdout || 'nothing'}`]),
+		],
 	);
 
-	const propagation = await evaluateThrowRow();
-	const propagationOk = propagation === 'PROPAGATED';
-	if (!propagationOk) failures.push(`BC-08: page exception was ${propagation || 'not observed'}`);
-	console.log(
-		`${propagationOk ? 'PASS' : 'FAIL'}  BC-08  FAULT      a throwing page expression surfaces as a harness error, not a falsy value`,
+	const propagation = runChild(evaluateThrowSource, 60000);
+	report(
+		'BC-08',
+		'FAULT',
+		'a throwing page expression surfaces as a harness error, not a falsy value',
+		[
+			...faults('BC-08', propagation, { expect: EXIT.PASS }),
+			...(propagation.stdout === 'PROPAGATED'
+				? []
+				: [`BC-08: page exception was ${propagation.stdout || 'not observed'}`]),
+		],
 	);
 
-	const total = ROWS.length + 2;
-	console.log(`\n${total} controls: ${total - failures.length} behaved as specified`);
+	// The stub lives in its own tree so `serve()` resolves the silent script by
+	// its usual relative path without touching the repository's real one.
+	const stub = mkdtempSync(join(tmpdir(), 'browser-probe-stub-'));
+	let silent;
+	try {
+		mkdirSync(join(stub, 'scripts'));
+		writeFileSync(join(stub, 'scripts', 'serve-build.mjs'), 'setInterval(() => {}, 1000);\n');
+		silent = runChild(silentServerSource, 30000, stub);
+	} finally {
+		rmSync(stub, { recursive: true, force: true });
+	}
+	report(
+		'BC-09',
+		'FAULT',
+		`a server that never reports readiness fails in ${silent.elapsedMs}ms and leaves no child behind`,
+		[
+			...faults('BC-09', silent, { expect: EXIT.PASS, underMs: 15000 }),
+			...(silent.stdout === 'TIMED-OUT'
+				? []
+				: [`BC-09: child reported ${silent.stdout || 'nothing'}`]),
+		],
+	);
+
+	const disconnect = runChild(disconnectSource, 60000);
+	report(
+		'BC-10',
+		'FAULT',
+		`a request in flight rejects when the peer disconnects, and teardown still cleans up (${disconnect.elapsedMs}ms)`,
+		[
+			...faults('BC-10', disconnect, { expect: EXIT.PASS }),
+			...(disconnect.stdout === 'REJECTED'
+				? []
+				: [`BC-10: outstanding request was ${disconnect.stdout || 'not observed'}`]),
+		],
+	);
+
+	const total = ROWS.length + 4;
+	console.log(
+		`\n${total} controls: ${total - new Set(failures.map((f) => f.split(':')[0])).size} behaved as specified`,
+	);
 	if (failures.length > 0) {
 		for (const f of failures) console.log(`  ${f}`);
 		return EXIT.FAIL;

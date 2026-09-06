@@ -172,6 +172,24 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		command: 'migration:browser',
+		entry: 'scripts/assert-browser-palette.mjs',
+		dataRoots: [...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// The controls SPAWN the probe rather than importing it -- they exist to
+		// observe its exit codes, which an in-process call cannot produce. That
+		// spawn edge is invisible to the import closure, which is exactly the
+		// defect PR45-I2 found in `migration:shell:controls`. Naming the probe as
+		// a data root is the honest repair: the dependency is declared where the
+		// router can see it instead of being lost between two processes.
+		command: 'migration:browser:controls',
+		entry: 'scripts/assert-browser-probe-controls.mjs',
+		dataRoots: ['scripts/assert-browser-palette.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
 		command: 'migration:c13:controls',
 		entry: 'scripts/assert-c13-shell-controls.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],

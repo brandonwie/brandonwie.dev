@@ -11,7 +11,7 @@
 			"certifies": "step 7 runs `printf '%s\\n' \"$PUSH_REFS\" | corepack pnpm exec tsx scripts/migration-route.ts --run || exit 1` unconditionally at top level, which is the only runner the push-tier suites have"
 		},
 		".github/workflows/ci.yml": {
-			"sha256": "bfd79495b8bdb8862652967b02fd69bc9cbe71e1a52e9888885508723d961bdb",
+			"sha256": "94fbff27003ae2e2e6f09689321475f15b2609b45b2394b541d816a183b08a1f",
 			"certifies": "the `migration` job runs `pnpm run migration:all` in an unconditional step, and `migration-controls` runs `pnpm run migration:controls` in its own job"
 		}
 	},

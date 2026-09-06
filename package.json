@@ -82,7 +82,9 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"migration:shell": "tsx scripts/assert-shell.ts",
-		"migration:shell:controls": "tsx scripts/assert-shell-controls.ts"
+		"migration:shell:controls": "tsx scripts/assert-shell-controls.ts",
+		"migration:browser": "node scripts/assert-browser-palette.mjs",
+		"migration:browser:controls": "node scripts/assert-browser-probe-controls.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
