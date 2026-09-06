@@ -80,7 +80,9 @@
 		"validate:dates": "tsx scripts/validate-dates.ts",
 		"validate:dates:fix": "tsx scripts/validate-dates.ts --fix",
 		"format": "prettier --write .",
-		"format:check": "prettier --check ."
+		"format:check": "prettier --check .",
+		"migration:shell": "tsx scripts/assert-shell.ts",
+		"migration:shell:controls": "tsx scripts/assert-shell-controls.ts"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

@@ -25,13 +25,19 @@ import type { Locale } from './locale';
  * Adding permanent catalogue keys for strings that Slice 3 deletes when it
  * ports the real shell would leave dead keys behind, so they stay here, named,
  * until the surface that owns them arrives.
+ *
+ * FOUR OF THOSE KEYS ARE NOW GONE. Slice 3 PR 2a ported the real header and
+ * footer, so `brandLabel`, `article`, `footer` and `footerText` were deleted
+ * rather than migrated: the header's brand label, the Slice 1 article link, and
+ * the placeholder footer they described no longer exist. The chrome resolves
+ * from the catalogue instead — every message the Svelte header, footer,
+ * language toggle and nav reference already resolves in both `messages/en.json`
+ * and `messages/ko.json`, so this cost no catalogue expansion. The remaining
+ * scaffolding keys belong to the article and comments surfaces, which are still
+ * ported by later PRs.
  */
 const SLICE_1_SCAFFOLDING = {
 	en: {
-		brandLabel: 'Brandon Wie home',
-		article: 'Article',
-		footer: 'Site footer',
-		footerText: 'Engineering notes by Brandon Wie.',
 		breadcrumb: 'Breadcrumb',
 		readingTime: 'min read',
 		category: 'Category',
@@ -40,10 +46,6 @@ const SLICE_1_SCAFFOLDING = {
 		commentsStatus: 'Comments will load here when the Giscus runtime is migrated.',
 	},
 	ko: {
-		brandLabel: 'Brandon Wie 홈',
-		article: '글',
-		footer: '사이트 하단',
-		footerText: 'Brandon Wie의 엔지니어링 기록.',
 		breadcrumb: '현재 위치',
 		readingTime: '분 읽기',
 		category: '카테고리',
@@ -53,18 +55,43 @@ const SLICE_1_SCAFFOLDING = {
 	},
 } as const;
 
+/**
+ * Locale-resolved copy for the global chrome: header, nav, footer and the
+ * language toggle. One call site per message, each carrying `{ locale }` for
+ * the reason this module's header gives.
+ *
+ * `nav` is keyed by `NavKey` so `@/data/nav` can stay pure path logic with no
+ * message imports. The keys are static property references, not `m[key]`, so
+ * every one resolves at build time — the same rule `graph-copy.ts` follows.
+ */
 export function shellCopy(locale: Locale) {
-	const scaffold = SLICE_1_SCAFFOLDING[locale];
 	return {
 		skip: m.skip_to_content({}, { locale }),
 		navigation: m.primary_navigation({}, { locale }),
 		home: m.palette_nav_home({}, { locale }),
-		brandLabel: scaffold.brandLabel,
-		article: scaffold.article,
-		footer: scaffold.footer,
-		footerText: scaffold.footerText,
+		search: m.search_title({}, { locale }),
+		nav: {
+			about: m.nav_about({}, { locale }),
+			posts: m.nav_posts({}, { locale }),
+			study: m.nav_study({}, { locale }),
+			system: m.nav_system({}, { locale }),
+		},
+		navProjects: m.nav_projects({}, { locale }),
+		navTags: m.nav_tags({}, { locale }),
+		navContact: m.nav_contact({}, { locale }),
+		switchToEnglish: m.language_switch_to_english({}, { locale }),
+		switchToKorean: m.language_switch_to_korean({}, { locale }),
+		footerTagline: m.footer_tagline({}, { locale }),
+		footerNavigation: m.footer_navigation_label({}, { locale }),
+		footerColSite: m.footer_col_site({}, { locale }),
+		footerColMore: m.footer_col_more({}, { locale }),
+		footerColConnect: m.footer_col_connect({}, { locale }),
+		footerCopyPrimary: m.footer_copy_primary({}, { locale }),
+		footerCopySecondary: m.footer_copy_secondary({}, { locale }),
 	};
 }
+
+export type ShellCopy = ReturnType<typeof shellCopy>;
 
 export function articleCopy(locale: Locale) {
 	const scaffold = SLICE_1_SCAFFOLDING[locale];

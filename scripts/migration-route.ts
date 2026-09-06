@@ -160,6 +160,18 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		command: 'migration:shell',
+		entry: 'scripts/assert-shell.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
+		tier: 'push',
+	},
+	{
+		command: 'migration:shell:controls',
+		entry: 'scripts/assert-shell-controls.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
+		tier: 'push',
+	},
+	{
 		command: 'migration:c13:controls',
 		entry: 'scripts/assert-c13-shell-controls.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],

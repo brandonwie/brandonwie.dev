@@ -211,19 +211,33 @@ const PAGE_MUTATIONS: PageMutation[] = [
 		apply: (html, locale) =>
 			html.replace(/<html lang="[^"]*"/, `<html lang="${locale === 'ko' ? 'en' : 'ko'}"`),
 	},
+	/**
+	 * The two shell-owned invariance rows below were re-anchored when Slice 3
+	 * PR 2a replaced the Slice 1 placeholder shell. They used to mutate
+	 * `<div class="site-footer-inner">` and `<ul class="site-links">`; the real
+	 * chrome emits `.site-footer__copy` and a `<nav class="site-nav__links">`
+	 * instead, so those patterns stopped matching and both mutations silently
+	 * became no-ops. The runner caught it -- an invariance row whose mutation
+	 * changes nothing proves nothing, and it fails rather than passing vacuously.
+	 * Re-anchoring keeps the assertion these rows exist to make: the feed
+	 * contract is page-owned, so shell edits must not move it.
+	 */
 	{
 		kind: 'INVARIANCE',
-		what: (p) => `the site footer text on ${p} changes -- shell-owned, not page-owned`,
+		what: (p) => `the site footer copy on ${p} changes -- shell-owned, not page-owned`,
 		apply: (html) =>
-			html.replace(/(<div class="site-footer-inner">)[^<]*(<\/div>)/, '$1Different footer.$2'),
+			html.replace(
+				/(<div class="site-footer__copy"><span>)[^<]*(<\/span>)/,
+				'$1Different footer.$2',
+			),
 	},
 	{
 		kind: 'INVARIANCE',
 		what: (p) => `a nav link is added to the site shell on ${p} -- shell-owned, not page-owned`,
 		apply: (html) =>
 			html.replace(
-				'<ul class="site-links">',
-				'<ul class="site-links"><li><a href="/posts">Posts</a></li>',
+				/(<nav class="site-nav__links"[^>]*>)/,
+				'$1<a class="site-nav__link" href="/posts">~/Posts</a>',
 			),
 	},
 ];

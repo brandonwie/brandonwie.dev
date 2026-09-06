@@ -37,6 +37,12 @@ interface Control {
 	target?: 'en' | 'ko' | 'hero' | 'cover' | 'default-cover';
 	remove?: boolean;
 	apply?: (html: string) => string;
+	/**
+	 * Adds a file to the export tree instead of mutating the target document.
+	 * A12's obsolete-deferral row needs a ROUTE to appear, which is a change to
+	 * the tree rather than to any one page's HTML.
+	 */
+	createFile?: { path: string; body: string };
 }
 
 function replaceJsonLdField(html: string, field: string, value: string): string {
@@ -262,9 +268,12 @@ const CONTROLS: Control[] = [
 	{
 		id: 'AP-27',
 		kind: 'DEFECT',
-		what: 'the English header links to a route the export does not contain',
+		what: 'a header link points at a route the export does not contain, and is not a declared deferral',
 		apply: (html) =>
-			html.replace(`<a href="/posts/${ARTICLE_SLUG}">`, '<a href="/posts/missing-export">'),
+			html.replace(
+				'<a class="site-brand" href="/"',
+				'<a class="site-brand" href="/missing-export"',
+			),
 	},
 	{
 		id: 'AP-28',
@@ -327,6 +336,50 @@ const CONTROLS: Control[] = [
 		what: 'an internal link uses dot segments to escape the export root',
 		apply: (html) => html.replace('<a href="/">', '<a href="/%2e%2e%2f%2e%2e%2fpackage.json">'),
 	},
+	/**
+	 * The two rows below guard A12's chrome-link deferrals (criteria:
+	 * verification/contracts/A12-chrome-link-deferrals.md). Without them the
+	 * deferral list would be a hole: nothing would prove it is closed, and
+	 * nothing would force an entry out once its route ships.
+	 */
+	{
+		// AP-47, not AP-46: the runner prints its own hardcoded AP-46
+		// dateModified-fallback control at :481, outside the CONTROLS array.
+		id: 'AP-47',
+		kind: 'DEFECT',
+		what: 'a deferral is obsolete: its destination now exists in the export',
+		createFile: { path: 'tags.html', body: '<!doctype html><title>tags</title>' },
+	},
+	{
+		/**
+		 * The counterexample for A12's occurrence lookup. An earlier revision
+		 * found each anchor with `html.indexOf(tag)`, which returns the first
+		 * IDENTICAL opening tag, so this duplicate — spelled exactly like the
+		 * header's link but sitting in <main> — was excused as a header
+		 * deferral. The deferral count rose 19 -> 20 and the suite still passed.
+		 * AP-35 does not cover it: its anchor is spelled differently, so the
+		 * first-match collision never arises there.
+		 */
+		id: 'AP-48',
+		kind: 'DEFECT',
+		what: 'a chrome link is duplicated outside the chrome, where its deferral must not apply',
+		apply: (html) =>
+			html.replace(
+				/(<main\b[^>]*id="main-content"[^>]*>)/,
+				'$1<a href="/about" class="site-nav__link"></a>',
+			),
+	},
+	{
+		/**
+		 * Paired with AP-48 over the same surface: a formatting-only edit inside
+		 * <main> that adds no anchor must NOT move A12. Without this, AP-48 alone
+		 * could pass because any edit near <main> breaks something.
+		 */
+		id: 'AP-49',
+		kind: 'INVARIANCE',
+		what: 'whitespace inside main leaves the link report unchanged',
+		apply: (html) => html.replace('<main id="main-content"', '<main  id="main-content"'),
+	},
 	{
 		id: 'AP-37',
 		kind: 'DEFECT',
@@ -371,13 +424,13 @@ const CONTROLS: Control[] = [
 		id: 'AP-42',
 		kind: 'DEFECT',
 		what: 'the site header identity is removed while the article header remains',
-		apply: (html) => html.replace('class="site-header"', 'class="shell-header"'),
+		apply: (html) => html.replace('class="site-nav site-nav--sticky"', 'class="shell-header"'),
 	},
 	{
 		id: 'AP-43',
 		kind: 'DEFECT',
 		what: 'the site navigation identity is removed while article navigation remains',
-		apply: (html) => html.replace('class="site-nav"', 'class="shell-nav"'),
+		apply: (html) => html.replace('class="site-nav__links"', 'class="shell-nav"'),
 	},
 	{
 		id: 'AP-44',
@@ -486,12 +539,27 @@ async function main(): Promise<number> {
 		cpSync(source, scratch, { recursive: true });
 		const file = controlTarget(scratch, control.target);
 		const before = fingerprint(file);
-		if (control.remove) rmSync(file);
+		let created: string | null = null;
+		if (control.createFile) {
+			created = join(scratch, control.createFile.path);
+			if (existsSync(created)) {
+				failures.push(
+					`${control.id} ${control.what}: ${control.createFile.path} already exists, so creating it proves nothing`,
+				);
+				console.log(`FAIL  ${control.id}  ${control.kind.padEnd(10)} PRE-EXISTING TARGET`);
+				continue;
+			}
+			writeFileSync(created, control.createFile.body);
+		} else if (control.remove) rmSync(file);
 		else if (control.apply) writeFileSync(file, control.apply(readFileSync(file, 'utf8')));
 		// A mutation that silently matched nothing turns an INVARIANCE control
 		// into a tautology and a DEFECT control into a coincidence. The shell
 		// suite has caught this twice; it is not a hypothetical.
-		const changed = control.remove ? !existsSync(file) : before !== fingerprint(file);
+		const changed = created
+			? existsSync(created)
+			: control.remove
+				? !existsSync(file)
+				: before !== fingerprint(file);
 		if (!changed) {
 			failures.push(`${control.id} ${control.what}: the mutation changed nothing`);
 			console.log(
