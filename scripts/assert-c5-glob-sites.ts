@@ -235,6 +235,72 @@ function writeBrokenFixture(root: string): void {
 	);
 }
 
+/**
+ * The three series slugs the system fixture pins, and the drafted title that
+ * must never reach the page.
+ *
+ * They are real slugs from the real snapshot, because the snapshot is imported
+ * by module path and is NOT redirected by the fixture's working directory --
+ * only the post corpus is. So the fixture controls exactly one variable: which
+ * Korean posts exist for those slugs.
+ */
+const SYSTEM_FIXTURE = {
+	/** Has a published Korean post: its Korean title must win. */
+	localized: 'one-folder-three-agents',
+	/** Has a DRAFTED Korean post: the English title must win and the draft must not leak. */
+	drafted: 'rules-that-route-themselves',
+	/** Has no Korean post at all: the English title must win. */
+	untranslated: 'skills-three-transports',
+	localizedTitle: 'KO Localized Series Entry',
+	draftedTitle: 'KO Drafted Series Entry',
+} as const;
+
+/**
+ * A corpus that exercises the two series branches the live corpus cannot.
+ *
+ * The live corpus has a published Korean post for all ten series slugs, so
+ * neither the untranslated fallback nor the draft exclusion has a single live
+ * instance. This writes a Korean corpus holding exactly one published and one
+ * drafted series post, and omits the third slug entirely.
+ */
+function writeSystemFixture(root: string): void {
+	const post = (title: string, draft = false) =>
+		`---\ntitle: ${title}\ndescription: Fixture\ndate: '2026-01-01'\ntags:\n  - fixture\ncategory: fixture${
+			draft ? '\ndraft: true' : ''
+		}\n---\n\nBody.\n`;
+
+	const files: [string, string][] = [
+		[
+			`src/content/posts/ko/fixture/${SYSTEM_FIXTURE.localized}.md`,
+			post(SYSTEM_FIXTURE.localizedTitle),
+		],
+		[
+			`src/content/posts/ko/fixture/${SYSTEM_FIXTURE.drafted}.md`,
+			post(SYSTEM_FIXTURE.draftedTitle, true),
+		],
+		// SYSTEM_FIXTURE.untranslated is deliberately absent.
+		['src/content/posts/en/fixture/placeholder.md', post('EN Placeholder')],
+	];
+	for (const [relative, body] of files) {
+		const absolute = join(root, relative);
+		mkdirSync(dirname(absolute), { recursive: true });
+		writeFileSync(absolute, body);
+	}
+	// `posts.ts` resolves its content root from the working directory, so the
+	// child is rooted here; the directory must exist for `next build`'s sibling
+	// assumption to hold.
+	mkdirSync(join(root, 'next'), { recursive: true });
+}
+
+interface SystemProbe {
+	/** The rendered Korean page, scripts already stripped by the child. */
+	markup: string;
+	/** What `koreanTitleBySlug()` made of the fixture corpus. */
+	koreanTitles: Record<string, string>;
+	/** Series list items in the rendered markup. */
+	seriesItems: number;
+}
+
 interface ProbeResult {
 	en: string[];
 	ko: string[];
@@ -246,7 +312,7 @@ interface ProbeResult {
 }
 
 /** Run the real modules against a fixture corpus, in a child rooted at it. */
-function probeFixture<T>(root: string, mode: 'lists' | 'article' | 'generators'): T {
+function probeFixture<T>(root: string, mode: 'lists' | 'article' | 'generators' | 'system'): T {
 	const child = spawnSync(process.execPath, ['--import', require.resolve('tsx'), SCRIPT_PATH], {
 		cwd: join(root, 'next'),
 		encoding: 'utf8',
@@ -324,6 +390,7 @@ interface GeneratorProbe {
 async function runProbe(mode: string): Promise<number> {
 	if (mode === 'article') return runArticleProbe();
 	if (mode === 'generators') return runGeneratorProbe();
+	if (mode === 'system') return runSystemProbe();
 
 	const { listPostsForLocale, listKoreanPostsWithEnglishFallback } =
 		await import('../next/src/content/post-list.ts');
@@ -441,6 +508,36 @@ async function runArticleProbe(): Promise<number> {
 	return 0;
 }
 
+/**
+ * Render the Korean /system/3b composition against the fixture corpus.
+ *
+ * This is the same arm that proves row 11: the branches cannot appear in any
+ * built page, because the live corpus translates all ten series slugs and holds
+ * no drafts. Rendering the REAL composition -- not a helper, not the localizer
+ * in isolation -- is what makes this consumer evidence.
+ */
+async function runSystemProbe(): Promise<number> {
+	const { System3bPage } = await import('../next/src/content/system-3b.tsx');
+	const { koreanTitleBySlug } = await import('../next/src/content/post-list.ts');
+	// `react-dom` lives in `next/node_modules` and this child runs inside the
+	// fixture, so a bare specifier from `scripts/` does not resolve -- the same
+	// reason `runArticleProbe` asks the Next package for it.
+	const nextRequire = createRequire(join(NEXT_ROOT, 'package.json'));
+	const { renderToStaticMarkup } = nextRequire('react-dom/server') as {
+		renderToStaticMarkup: (node: unknown) => string;
+	};
+
+	const raw = renderToStaticMarkup(System3bPage({ locale: 'ko' }));
+	const markup = raw.replace(/<script[\s\S]*?<\/script>/g, '');
+	const result: SystemProbe = {
+		markup,
+		koreanTitles: koreanTitleBySlug(),
+		seriesItems: (markup.match(/<li[^>]*class="series-item"/g) ?? []).length,
+	};
+	process.stdout.write(JSON.stringify(result));
+	return 0;
+}
+
 /** Feed and sitemap generation over a corpus holding an underivable path. */
 async function runGeneratorProbe(): Promise<number> {
 	const { rssXml, sitemapXml } = await import('../next/src/content/feeds.ts');
@@ -469,15 +566,35 @@ export interface C5Options {
 	/** Exported Svelte site the oracle rows read. Default `<repo>/build`. */
 	svelteBuild?: string;
 	/**
+	 * Exported Next site the row-16 pages are read from. Default
+	 * `<repo>/next/build`. `--next-build <dir>` exists so the D9/D10/I3 controls
+	 * can point the suite at a doctored scratch copy of the built Korean page
+	 * without touching the real export.
+	 */
+	nextBuild?: string;
+	/**
 	 * A corpus the fixture rows use instead of the one this script writes.
 	 * `--fixture-root <dir>` exists so the negative controls can hand over a
 	 * deliberately broken corpus; the directory is left where it was found.
 	 */
 	fixtureRoot?: string;
+	/**
+	 * A system corpus the F7 rows use instead of the one this script writes.
+	 * `--system-fixture-root <dir>` exists so the fallback and draft controls can
+	 * hand over a doctored corpus; the directory is left where it was found.
+	 */
+	systemFixtureRoot?: string;
+	/**
+	 * Overrides for the three series slugs the F7 rows pin. Exists so a control
+	 * can point a pin at a slug the snapshot does not carry and prove `F7a`
+	 * rejects it; nothing in normal operation passes this.
+	 */
+	systemPins?: Partial<Record<keyof typeof SYSTEM_FIXTURE, string>>;
 }
 
 async function runAssertions(options: C5Options = {}): Promise<number> {
 	const svelteBuild = options.svelteBuild ?? join(REPO_ROOT, 'build');
+	const nextBuild = options.nextBuild ?? join(REPO_ROOT, 'next/build');
 
 	// Row state is per-run, not module-level: the controls invoke this file
 	// repeatedly, and a shared array would carry one run's rows into the next.
@@ -495,6 +612,21 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	if (absent.length > 0) {
 		console.error(
 			`C5 cannot run: ${absent.map((page) => join(svelteBuild, page)).join(', ')} missing. Run \`pnpm build:svelte\` first.`,
+		);
+		return 2;
+	}
+	// The same precheck for the two exported Next pages row 16 reads.
+	//
+	// The CLI rejection handler already turns any throw into exit 2, so an
+	// unguarded read here would NOT be mistaken for a red row. This precheck is
+	// not that safety net: it exists so a missing export is reported as a named
+	// diagnostic naming the command that produces it, rather than as an ENOENT
+	// stack, and so the `PART`-shaped baseline has a specific behavior to assert.
+	const nextPages = [join('ko', 'system', '3b.html'), join('system', '3b.html')];
+	const absentNext = nextPages.filter((page) => !existsSync(join(nextBuild, page)));
+	if (absentNext.length > 0) {
+		console.error(
+			`C5 cannot run: ${absentNext.map((page) => join(nextBuild, page)).join(', ')} missing. Run \`pnpm build:next\` first.`,
 		);
 		return 2;
 	}
@@ -723,6 +855,115 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		`${sample}: the Korean article did not load`,
 	);
 
+	// --- site 16: the seventeenth call site, read from the built Korean page ---
+	//
+	// `src/routes/ko/system/3b/+page.ts:11` globs the Korean corpus to build a
+	// slug-to-title map that `localizeSnapshot` merges over the snapshot's
+	// `blog_series`. The built page is the only place that output becomes
+	// observable, so these rows read it as bytes.
+	const { koreanTitleBySlug } = await import('../next/src/content/post-list.ts');
+	const seriesSource = (await import('../next/src/data/system-snapshot.ts')).default.blog_series;
+	const koreanTitles = koreanTitleBySlug();
+
+	/**
+	 * Rendered markup only.
+	 *
+	 * A Next page carries its RSC payload inline in `self.__next_f.push(...)`,
+	 * so every string it renders also appears inside a `<script>` as JSON.
+	 * Searching the whole file would let a page that dropped a title from its
+	 * MARKUP still match on the payload copy -- which is what control D9
+	 * demonstrated before this stripped the scripts out.
+	 */
+	const renderedMarkup = (html: string) => html.replace(/<script[\s\S]*?<\/script>/g, '');
+
+	const koreanSystemHtml = renderedMarkup(
+		readFileSync(join(nextBuild, 'ko', 'system', '3b.html'), 'utf8'),
+	);
+	const englishSystemHtml = renderedMarkup(
+		readFileSync(join(nextBuild, 'system', '3b.html'), 'utf8'),
+	);
+
+	// CARDINALITY FIRST. Every assertion below is over `seriesSource`, and all of
+	// them are vacuously true when it is empty. The count is recomputed from the
+	// snapshot rather than hard-coded as the only check, so a snapshot that
+	// legitimately grows fails LOUDLY here instead of silently weakening the
+	// rows that follow.
+	const SERIES_EXPECTED = 10;
+	const translated = seriesSource.filter((entry) => koreanTitles[entry.slug] !== undefined);
+	check(
+		'site 16  ko/system/3b/+page.ts:11 -> the corpus supplies every series title',
+		seriesSource.length === SERIES_EXPECTED && translated.length === SERIES_EXPECTED,
+		`the snapshot carries ${seriesSource.length} series entries and the Korean corpus resolves a title for all ${translated.length}`,
+		`expected ${SERIES_EXPECTED} series entries each resolved from the Korean corpus; got ${seriesSource.length} entries, ${translated.length} resolved (unresolved: ${seriesSource
+			.filter((entry) => koreanTitles[entry.slug] === undefined)
+			.map((entry) => entry.slug)
+			.join(', ')})`,
+	);
+
+	/**
+	 * The rendered series items, and the title INSIDE each one.
+	 *
+	 * WHY THIS IS POSITIONAL AND NOT A PAGE-WIDE SEARCH. An earlier version of
+	 * these rows asked whether each expected title appeared anywhere on the page
+	 * and, separately, how many `series-item` elements existed. Both questions
+	 * pass against a page whose ten items are EMPTY and whose ten titles have
+	 * been moved into an unrelated element -- reproduced, 31 rows green. Nothing
+	 * bound a title to the entry it belongs to. These rows now compare the
+	 * sequence of titles read out of the items against the sequence the merge
+	 * should have produced, so position, identity and count all have to agree.
+	 */
+	const titleInItem = (block: string) =>
+		block.match(/<a[^>]*href="[^"]*\/posts\/[^"]*"[^>]*>([^<]+)<\/a>/)?.[1]?.trim() ??
+		block.match(/<span[^>]*class="name"[^>]*>([^<]+)<\/span>/)?.[1]?.trim() ??
+		'';
+	const itemsIn = (html: string) =>
+		[...html.matchAll(/<li[^>]*class="series-item"[\s\S]*?<\/li>/g)].map((match) => match[0]);
+
+	const koreanItems = itemsIn(koreanSystemHtml);
+	const englishItems = itemsIn(englishSystemHtml);
+	const koreanRendered = koreanItems.map(titleInItem);
+	const englishRendered = englishItems.map(titleInItem);
+	const koreanExpected = seriesSource.map((entry) => koreanTitles[entry.slug] ?? entry.title);
+	const englishExpected = seriesSource.map((entry) => entry.title);
+	const sameSequence = (a: string[], b: string[]) =>
+		a.length === b.length && a.every((value, index) => value === b[index]);
+	const firstMismatch = (a: string[], b: string[]) => {
+		for (let index = 0; index < Math.max(a.length, b.length); index += 1)
+			if (a[index] !== b[index])
+				return `index ${index}: ${String(a[index])} != ${String(b[index])}`;
+		return 'none';
+	};
+
+	check(
+		'site 16b  each built Korean item carries ITS entry localized title',
+		koreanExpected.length > 0 && sameSequence(koreanRendered, koreanExpected),
+		`all ${koreanRendered.length} series items carry their own entry's localized title, in snapshot order`,
+		`rendered ${koreanRendered.length} titles against ${koreanExpected.length} expected; ${firstMismatch(koreanRendered, koreanExpected)}`,
+	);
+
+	// A title that is present but EMPTY, or an item that rendered no title at
+	// all, is the failure the sequence check above is built to catch; this row
+	// states it separately so the diagnostic names it directly.
+	const emptyKorean = koreanRendered.filter((title) => title === '').length;
+	check(
+		'site 16c  the series list renders as a list, with a title in every item',
+		koreanItems.length === seriesSource.length &&
+			englishItems.length === seriesSource.length &&
+			emptyKorean === 0,
+		`both built pages render ${koreanItems.length} series items and every Korean item holds a non-empty title`,
+		`series items: Korean ${koreanItems.length}, English ${englishItems.length}, expected ${seriesSource.length} on each; empty Korean titles: ${emptyKorean}`,
+	);
+
+	// The merge is per-route, not global. No `englishSystemHtml === ''` escape
+	// hatch -- the precheck above makes an absent English export exit 2, so
+	// reaching here means it was built.
+	check(
+		'site 16d  localization is locale-scoped',
+		englishExpected.length > 0 && sameSequence(englishRendered, englishExpected),
+		'every English item keeps its own English snapshot title, so the Korean merge did not leak across routes',
+		`English page: ${firstMismatch(englishRendered, englishExpected)}`,
+	);
+
 	// --- fixture rows: what 167/167/no-drafts cannot show ----------------------
 	const suppliedFixture = options.fixtureRoot;
 	const fixtureRoot = suppliedFixture ?? mkdtempSync(join(tmpdir(), 'c5-glob-sites-'));
@@ -833,7 +1074,7 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 				generators.sitemapError !== null &&
 					generators.rssError !== null &&
 					// BOTH diagnostics must name the path. Requiring only the sitemap's
-					// let any unrelated RSS exception satisfy the row: a failure that
+					// would let any unrelated RSS exception satisfy the row: a failure that
 					// never reached the derivation still leaves `rssEmitted` null.
 					generators.sitemapError.includes('.md') &&
 					generators.rssError.includes('.md') &&
@@ -849,6 +1090,87 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		if (!suppliedFixture) rmSync(fixtureRoot, { recursive: true, force: true });
 	}
 
+	// --- F7: the two series branches the live corpus cannot show ---------------
+	//
+	// The built page proves the localized case, because all ten slugs are
+	// translated. It CANNOT prove the other two clauses of row 17: an entry with
+	// no Korean post keeps its English title, and a drafted Korean title never
+	// appears. This corpus supplies exactly one of each and renders the real
+	// composition against it.
+	const systemPins: Record<keyof typeof SYSTEM_FIXTURE, string> = {
+		...SYSTEM_FIXTURE,
+		...(options.systemPins ?? {}),
+	};
+	const suppliedSystemFixture = options.systemFixtureRoot;
+	const systemFixtureRoot = suppliedSystemFixture ?? mkdtempSync(join(tmpdir(), 'c5-system-'));
+	try {
+		if (!suppliedSystemFixture) writeSystemFixture(systemFixtureRoot);
+		const system = probeFixture<SystemProbe>(systemFixtureRoot, 'system');
+		const titleOf = (slug: string) =>
+			seriesSource.find((entry) => entry.slug === slug)?.title ?? '';
+		// Bound to the ITEM, exactly as the built-page rows are: a page-wide
+		// search would accept a title that had been detached from its entry.
+		const fixtureItems = itemsIn(system.markup);
+		const fixtureTitles = fixtureItems.map(titleInItem);
+		// GUARD THE PINS FIRST. `titleAt` and `titleOf` both return '' for a slug
+		// the snapshot does not contain, so `titleAt(x) === titleOf(x)` is
+		// SATISFIED BY TWO EMPTY STRINGS -- retargeting a pin at an absent slug
+		// passed with 31 rows green. A pin that names nothing proves nothing, so
+		// existence and non-emptiness are asserted before the comparisons below.
+		const pins = [
+			['localized', systemPins.localized],
+			['untranslated', systemPins.untranslated],
+			['drafted', systemPins.drafted],
+		] as const;
+		const pinProblems = pins.flatMap(([label, slug]) => {
+			const index = seriesSource.findIndex((entry) => entry.slug === slug);
+			if (index === -1) return [`${label} pin ${slug} is not a snapshot series slug`];
+			if ((seriesSource[index]?.title ?? '') === '')
+				return [`${label} pin ${slug} has an empty snapshot title`];
+			if ((fixtureTitles[index] ?? '') === '')
+				return [`${label} pin ${slug} rendered no title in the fixture page`];
+			return [];
+		});
+		check(
+			'F7a every fixture pin names a real series entry that rendered a title',
+			pinProblems.length === 0,
+			`all ${pins.length} fixture pins resolve to snapshot entries that rendered a non-empty title`,
+			pinProblems.join('; '),
+		);
+
+		const titleAt = (slug: string) => {
+			const index = seriesSource.findIndex((entry) => entry.slug === slug);
+			return index === -1 ? '' : (fixtureTitles[index] ?? '');
+		};
+		const localizedBound = titleAt(systemPins.localized) === SYSTEM_FIXTURE.localizedTitle;
+		const untranslatedBound = titleAt(systemPins.untranslated) === titleOf(systemPins.untranslated);
+		const draftedBound = titleAt(systemPins.drafted) === titleOf(systemPins.drafted);
+		const draftLeaked = system.markup.includes(SYSTEM_FIXTURE.draftedTitle);
+		check(
+			'F7 series titles: translated, untranslated, drafted',
+			pinProblems.length === 0 &&
+				fixtureItems.length === seriesSource.length &&
+				localizedBound &&
+				untranslatedBound &&
+				draftedBound &&
+				!draftLeaked,
+			`the rendered page keeps ${fixtureItems.length} entries, each carrying its own title: the translated slug takes its Korean title, the untranslated and drafted slugs keep their English snapshot titles, and the drafted Korean title appears nowhere`,
+			`items ${fixtureItems.length} (expected ${seriesSource.length}); localized bound to its item: ${localizedBound}; untranslated bound: ${untranslatedBound}; drafted bound: ${draftedBound}; drafted title leaked: ${draftLeaked}`,
+		);
+		// The draft filter is the only reason `drafted` falls back, so prove the
+		// map itself excluded it rather than inferring it from the markup alone.
+		check(
+			'F7b the drafted translation never enters the title map',
+			system.koreanTitles[SYSTEM_FIXTURE.localized] === SYSTEM_FIXTURE.localizedTitle &&
+				system.koreanTitles[SYSTEM_FIXTURE.drafted] === undefined &&
+				system.koreanTitles[SYSTEM_FIXTURE.untranslated] === undefined,
+			'koreanTitleBySlug() carries the published translation and neither the drafted nor the absent one',
+			`map held: localized=${String(system.koreanTitles[SYSTEM_FIXTURE.localized])}, drafted=${String(system.koreanTitles[SYSTEM_FIXTURE.drafted])}, untranslated=${String(system.koreanTitles[SYSTEM_FIXTURE.untranslated])}`,
+		);
+	} finally {
+		if (!suppliedSystemFixture) rmSync(systemFixtureRoot, { recursive: true, force: true });
+	}
+
 	// --- report ----------------------------------------------------------------
 	const width = Math.max(...rows.map((entry) => entry.row.length));
 	say('\nROW TABLE');
@@ -858,7 +1180,7 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	say(`\nRESULT: ${rows.length - failed.length} pass, ${failed.length} fail`);
 	if (failed.length) return 1;
 	say(
-		'Scope: 16 of the 17 glob call sites, each through a consumer. `src/routes/ko/system/3b/+page.ts:11` is the seventeenth and is NOT covered here — it needs the Korean system page, which the agreed split defers to its own PR, so C5 stays OPEN. Drafts, the Korean-to-English fallback and its slug-keyed dedup are proven on fixtures, because the live corpus has 167 English posts, 167 Korean posts with the same slugs, and no drafts.',
+		'Scope: all 17 glob call sites, each through a consumer. The seventeenth, `src/routes/ko/system/3b/+page.ts:11`, is read from the BUILT Korean page (rows `site 16`-`site 16d`), which is the only place its output becomes observable. Drafts, the Korean-to-English fallback, its slug-keyed dedup, and the series-title fallback and draft exclusion are proven on fixtures, because the live corpus has 167 English posts, 167 Korean posts with the same slugs, and no drafts.',
 	);
 	return 0;
 }
@@ -870,11 +1192,17 @@ function optionsFrom(argv: string[]): C5Options {
 	};
 	return {
 		svelteBuild: value('--svelte-build'),
+		nextBuild: value('--next-build'),
 		fixtureRoot: value('--fixture-root'),
+		systemFixtureRoot: value('--system-fixture-root'),
+		systemPins: (() => {
+			const at = argv.indexOf('--system-pin-untranslated');
+			return at !== -1 && argv[at + 1] ? { untranslated: argv[at + 1] } : undefined;
+		})(),
 	};
 }
 
-export { linkedSlugs, runAssertions, writeFixture };
+export { linkedSlugs, runAssertions, writeFixture, writeSystemFixture, SYSTEM_FIXTURE };
 
 if (process.argv[1]?.endsWith('assert-c5-glob-sites.ts')) {
 	const run =
