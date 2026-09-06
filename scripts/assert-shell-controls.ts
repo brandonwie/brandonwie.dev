@@ -12,8 +12,9 @@
  */
 import { cpSync, existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
+
+import { runAssertions } from './assert-shell.ts';
 
 type Kind = 'DEFECT' | 'INVARIANCE';
 
@@ -167,6 +168,24 @@ const CONTROLS: Control[] = [
 		apply: (html) =>
 			html.replace(/<footer\b[^>]*class="[^"]*site-footer[^"]*"[\s\S]*?<\/footer>/i, ''),
 	},
+	/**
+	 * SC-16 is a review finding, executed. SH-06 searched every link in the
+	 * document, so a skip link MOVED below the header still satisfied it -- and
+	 * a skip link that follows the chrome cannot skip the chrome. The mutation
+	 * relocates the link rather than deleting it, which is the whole point:
+	 * deletion was already caught, relocation was not.
+	 */
+	{
+		id: 'SC-16',
+		kind: 'DEFECT',
+		what: 'the skip link is relocated below the header, where it can no longer skip the chrome',
+		target: EN,
+		apply: (html) => {
+			const link = /<a\b[^>]*class="[^"]*\bskip-link\b[^"]*"[\s\S]*?<\/a>/i.exec(html);
+			if (!link) return html;
+			return html.replace(link[0], '').replace(/(<\/header>)/i, (close) => `${close}${link[0]}`);
+		},
+	},
 	{
 		id: 'SC-15',
 		kind: 'DEFECT',
@@ -192,12 +211,13 @@ async function main(): Promise<number> {
 	}
 
 	const scratchBaseline = resolve('.migration-shell-controls-baseline');
-	const exec = (dir: string, baseDir: string): number => {
-		const result = spawnSync('pnpm', ['exec', 'tsx', 'scripts/assert-shell.ts', dir, baseDir], {
-			stdio: 'ignore',
-		});
-		return result.status ?? 1;
-	};
+	// Imported, not spawned. `migration-route.ts` derives a suite's input set
+	// from its entry's transitive imports, and a spawn edge is invisible to that
+	// closure -- so while this ran the suite as a subprocess, editing
+	// `assert-shell.ts` selected `migration:shell` but NOT these controls, and
+	// the negative controls skipped the very change they exist to police. Every
+	// sibling controls suite imports its `runAssertions` for the same reason.
+	const exec = (dir: string, baseDir: string): number => runAssertions(dir, baseDir, true);
 
 	rmSync(scratch, { recursive: true, force: true });
 	cpSync(source, scratch, { recursive: true });

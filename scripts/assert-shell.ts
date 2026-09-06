@@ -153,9 +153,22 @@ function readRoute(dir: string, route: string): string | null {
 	return null;
 }
 
-function main(): number {
-	const candidateDir = process.argv[2] ?? 'next/build';
-	const baselineDir = process.argv[3] ?? 'build';
+/**
+ * The suite, callable in process.
+ *
+ * `assert-shell-controls.ts` imports this rather than spawning the script,
+ * exactly as every sibling controls suite does. That is a CHANGE-SELECTOR
+ * requirement, not a style preference: `migration-route.ts` derives a suite's
+ * input set from its entry's transitive imports, and a `spawnSync` edge is
+ * invisible to that closure. While the controls spawned this file, editing it
+ * selected `migration:shell` but NOT `migration:shell:controls`, so the
+ * negative controls did not rerun on the very change they exist to police.
+ *
+ * Module state is reset on entry because callers run it many times per process.
+ */
+export function runAssertions(candidateDir: string, baselineDir: string, quiet = false): number {
+	rows.length = 0;
+	failures = 0;
 
 	for (const [label, dir] of [
 		['candidate', candidateDir],
@@ -176,7 +189,7 @@ function main(): number {
 	// iterating it — a suite that can pass vacuously is not a suite.
 	if (candidateRoutes.length === 0) {
 		record('FAIL', 'SH-00 route set', 'the candidate exported no comparable routes');
-		report();
+		report(quiet);
 		return 1;
 	}
 
@@ -187,7 +200,7 @@ function main(): number {
 			'SH-00 route set',
 			'no candidate route exists in the baseline to compare against',
 		);
-		report();
+		report(quiet);
 		return 1;
 	}
 	record(
@@ -236,9 +249,12 @@ function main(): number {
 	 * recognition and falls back into the strict comparison — so this cannot
 	 * become a hole. SC-15 executes that.
 	 *
-	 * NOT VERIFIED HERE: that the baseline's chrome actually appears after
-	 * startup in a browser. The static evidence establishes the mechanism; the
-	 * rendered-stage check is owed and is recorded as owed.
+	 * NOT VERIFIED HERE, and deliberately so: that the baseline's chrome actually
+	 * appears after startup in a browser. This suite reads exported bytes, which
+	 * cannot observe a rendering stage. The rendered-stage check was run
+	 * separately over the DevTools Protocol and confirmed it -- along with a
+	 * locale divergence the bytes could not show. It is recorded in
+	 * `verification/contracts/shell-suite-review-findings.md` in the 3B lane.
 	 */
 	const isBootstrapFallback = (dir: string, route: string): boolean => {
 		const html = readRoute(dir, route) ?? '';
@@ -275,7 +291,7 @@ function main(): number {
 			'SH-01 chrome routes',
 			`${chromeRoutes.length} chrome-bearing route(s), both sides agreeing on every classification` +
 				(fallbacks.length > 0
-					? `; ${fallbacks.length} client-rendered fallback(s) recognized and compared at their own stage: ${fallbacks.join(', ')} (rendered-stage check OWED, not run here)`
+					? `; ${fallbacks.length} client-rendered fallback(s) recognized and compared at their own stage: ${fallbacks.join(', ')} (rendered stage verified separately, not by this suite)`
 					: ''),
 		);
 	}
@@ -293,7 +309,7 @@ function main(): number {
 	}
 	if (missing.length > 0) {
 		record('FAIL', 'SH-02 containers', missing.join('; '));
-		report();
+		report(quiet);
 		return 1;
 	}
 	record(
@@ -304,7 +320,7 @@ function main(): number {
 
 	if (chromeRoutes.length === 0) {
 		record('FAIL', 'SH-02 containers', 'no chrome-bearing route to compare');
-		report();
+		report(quiet);
 		return 1;
 	}
 
@@ -314,7 +330,7 @@ function main(): number {
 	assertFooter(candidateDir, baselineDir, shared2);
 	assertSkipLink(candidateDir, shared2);
 
-	report();
+	report(quiet);
 	return failures > 0 ? 1 : 0;
 }
 
@@ -407,12 +423,30 @@ function assertFooter(candidateDir: string, baselineDir: string, routes: string[
 		);
 }
 
+/**
+ * SH-06 is scoped to the markup BEFORE the header, not to the whole document.
+ *
+ * `next/src/shell/site-shell.tsx` places the skip link ahead of `SiteHeader`,
+ * which is the only position where it does its job: a link that FOLLOWS the
+ * chrome cannot skip the chrome. An earlier revision searched every link in the
+ * document, so relocating the skip link below the header -- the exact
+ * regression this row exists to catch -- left the row green as long as some
+ * `.skip-link` anchor survived anywhere on the page. SC-16 executes that
+ * counterexample.
+ */
 function assertSkipLink(candidateDir: string, routes: string[]): void {
 	const problems: string[] = [];
 	for (const route of routes) {
 		const html = readRoute(candidateDir, route) ?? '';
-		const skip = linksIn(html).find((link) => link.classes.split(' ').includes('skip-link'));
-		if (!skip) problems.push(`${route}: no skip link`);
+		const headerAt = /<header\b[^>]*class="[^"]*\bsite-nav\b[^"]*"[^>]*>/i.exec(html);
+		if (!headerAt) {
+			problems.push(`${route}: no header to place a skip link before`);
+			continue;
+		}
+		const skip = linksIn(html.slice(0, headerAt.index)).find((link) =>
+			link.classes.split(' ').includes('skip-link'),
+		);
+		if (!skip) problems.push(`${route}: no skip link before the header`);
 		else if (skip.href !== '#main-content') problems.push(`${route}: skip link href ${skip.href}`);
 		else if (!/<main\b[^>]*id="main-content"/i.test(html))
 			problems.push(`${route}: skip target missing`);
@@ -426,7 +460,8 @@ function assertSkipLink(candidateDir: string, routes: string[]): void {
 		);
 }
 
-function report(): void {
+function report(quiet: boolean): void {
+	if (quiet) return;
 	for (const row of rows)
 		console.log(`  ${row.status.padEnd(6)} ${row.id.padEnd(22)} ${row.detail}`);
 	console.log(`\nRESULT: ${rows.filter((r) => r.status === 'PASS').length} pass, ${failures} fail`);
@@ -435,4 +470,8 @@ function report(): void {
 	);
 }
 
-process.exit(main());
+// Guarded so importing this module does not exit the importer's process --
+// `assert-shell-controls.ts` calls `runAssertions` many times in one run.
+if (process.argv[1]?.endsWith('assert-shell.ts')) {
+	process.exit(runAssertions(process.argv[2] ?? 'next/build', process.argv[3] ?? 'build'));
+}

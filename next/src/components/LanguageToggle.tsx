@@ -17,8 +17,15 @@ import type { Locale } from '@/i18n/locale';
  * point the SSG crawler at a path that does not exist. The Next candidate has
  * no crawler, but the reader-facing half of that reason is unchanged.
  *
- * This stays a server component: it renders a plain anchor and reads no
- * browser API. The locale switch crosses root layouts — `(en)` to `(ko)` — so
+ * NOT A SERVER COMPONENT, despite carrying no `'use client'` directive. It is
+ * imported by `HeaderControls`, which is imported by the client `SiteHeader`,
+ * so React compiles it into the client graph. That is legal -- a module without
+ * the directive is compiled for whichever graph imports it, and only a
+ * `server-only` import or a server API would make it an error -- and it is
+ * cheap here, because this file imports nothing but `@/data/nav` and types. The
+ * design intent it must not break is that Paraglide stays out of the client
+ * bundle: the copy arrives as a prop, already resolved. The locale switch
+ * crosses root layouts — `(en)` to `(ko)` — so
  * it must stay a native anchor performing a full document navigation, which
  * `shell/document.tsx:88-89` records as a deliberate decision.
  */
