@@ -241,7 +241,9 @@ async function main() {
 	}
 
 	const failures = [];
+	const reported = [];
 	const report = (id, kind, detail, rowFaults) => {
+		reported.push(rowFaults.length === 0);
 		failures.push(...rowFaults);
 		console.log(`${rowFaults.length === 0 ? 'PASS' : 'FAIL'}  ${id}  ${kind.padEnd(10)} ${detail}`);
 	};
@@ -426,9 +428,8 @@ async function main() {
 		faults('BC-15', rollback, { stdoutIncludes: 'PRESERVED' }),
 	);
 
-	const total = ROWS.length + 8;
 	console.log(
-		`\n${total} controls: ${total - new Set(failures.map((f) => f.split(':')[0])).size} behaved as specified`,
+		`\n${reported.length} controls: ${reported.filter(Boolean).length} behaved as specified`,
 	);
 	if (failures.length > 0) {
 		for (const f of failures) console.log(`  ${f}`);
