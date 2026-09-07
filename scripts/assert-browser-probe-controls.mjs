@@ -477,10 +477,22 @@ async function main() {
 	 *
 	 * BC-15 exercises rollback (a failed handshake). The reachable teardown is
 	 * `close()`, and review found it sent SIGTERM, waited at most five seconds,
-	 * and then removed the profile whether or not Chrome had exited. These rows
-	 * substitute the child's `kill` so a REAL browser process ignores a REAL
-	 * signal: the escalation, the ordering, and the retain-on-doubt rule are
-	 * observed rather than asserted from the source.
+	 * and then removed the profile whether or not Chrome had exited.
+	 *
+	 * WHAT THE INTERCEPTION IS. These rows replace the child's `kill` so the named
+	 * signals are NEVER DELIVERED to a real, still-running Chrome. That is
+	 * SIMULATED NON-DELIVERY, not a browser ignoring a signal it received: Chrome
+	 * gets no SIGTERM in BC-16 and neither signal in BC-18. An earlier revision of
+	 * this comment claimed "a REAL browser process ignores a REAL signal", which
+	 * overstated it.
+	 *
+	 * WHAT THEY DO ESTABLISH — the RUNNER's behavior when the browser has not
+	 * exited: the escalation to SIGKILL, the ordering of removal against a
+	 * confirmed exit, the retain-on-doubt rule, and the propagation of a cleanup
+	 * failure. The Chrome process is real and alive throughout, which is what
+	 * makes BC-16's old-probe result meaningful: the profile was removed while
+	 * that process was still running. BC-16's SIGKILL is delivered for real and
+	 * does kill it; BC-17 intercepts no signal at all.
 	 *
 	 * They do NOT establish anything about Chrome's helper processes. Termination
 	 * here is scoped to the direct child this launch owns; descendant behavior is
@@ -502,7 +514,7 @@ async function main() {
 				killReal = child.kill.bind(child);
 				child.kill = (signal) => {
 					order.push('kill:' + signal);
-					// The browser under test ignores: ${ignore.join(' and ') || 'nothing'}.
+					// Swallowed, never delivered: ${ignore.join(' and ') || 'nothing'}.
 					if (${JSON.stringify(ignore)}.includes(signal)) return true;
 					return killReal(signal);
 				};
@@ -554,7 +566,7 @@ async function main() {
 	report(
 		'BC-16',
 		'FAULT',
-		`a browser that ignores SIGTERM is force-killed and its profile removed only after confirmed exit (${escalation.elapsedMs}ms)`,
+		`a SIGTERM that never reaches the browser is escalated to a delivered SIGKILL, and the profile is removed only after confirmed exit (${escalation.elapsedMs}ms)`,
 		[
 			...faults('BC-16', escalation, { expect: EXIT.PASS, underMs: 30000 }),
 			...(escalation.stdout.includes('ESCALATED')
@@ -584,7 +596,7 @@ async function main() {
 	report(
 		'BC-17',
 		'FAULT',
-		'a profile that cannot be removed fails the teardown instead of warning',
+		'a profile that cannot be removed fails the teardown instead of warning (both signals delivered normally)',
 		[
 			...faults('BC-17', removalFailure, { expect: EXIT.PASS }),
 			...(removalFailure.stdout.includes('SURFACED')
@@ -617,7 +629,7 @@ async function main() {
 	report(
 		'BC-18',
 		'FAULT',
-		`a browser that cannot be confirmed dead keeps its profile and fails the teardown (${unconfirmed.elapsedMs}ms)`,
+		`a browser that receives neither signal cannot be confirmed dead, so its profile is retained and the teardown fails (${unconfirmed.elapsedMs}ms)`,
 		[
 			...faults('BC-18', unconfirmed, { expect: EXIT.PASS, underMs: 45000 }),
 			...(unconfirmed.stdout.includes('RETAINED')
