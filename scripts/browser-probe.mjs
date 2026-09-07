@@ -174,6 +174,23 @@ export async function launch({ headless = true } = {}) {
 	// acquirer's to release.
 	let child = null;
 	let cdp = null;
+	const waitForExit = async () => {
+		if (!child?.pid || child.exitCode !== null || child.signalCode !== null) return;
+		await new Promise((resolve) => {
+			const timer = setTimeout(resolve, 5000);
+			child.once('exit', () => {
+				clearTimeout(timer);
+				resolve();
+			});
+		});
+	};
+	const removeProfile = () => {
+		try {
+			rmSync(profile, { recursive: true, force: true });
+		} catch (error) {
+			console.warn(`WARN  could not remove ${profile}: ${error.message}`);
+		}
+	};
 	const rollback = async () => {
 		try {
 			cdp?.close();
@@ -183,7 +200,9 @@ export async function launch({ headless = true } = {}) {
 		if (child && child.exitCode === null && child.signalCode === null) {
 			child.kill('SIGKILL');
 		}
-		rmSync(profile, { recursive: true, force: true });
+		// Profile cleanup follows process exit and must preserve the launch error.
+		await waitForExit();
+		removeProfile();
 	};
 
 	try {
@@ -239,24 +258,8 @@ export async function launch({ headless = true } = {}) {
 			cdp.close();
 			child.kill('SIGTERM');
 
-			// Wait for the process to actually exit before removing its profile.
-			// Found by running the spike: rmSync immediately after SIGTERM threw
-			// ENOTEMPTY because Chrome was still flushing, and that throw escaped
-			// the probe's finally block -- turning a legitimate assertion FAIL into
-			// exit 2. A teardown fault must never overwrite an assertion result.
-			await new Promise((resolve) => {
-				if (child.exitCode !== null || child.signalCode !== null) return resolve();
-				const timer = setTimeout(resolve, 5000);
-				child.once('exit', () => {
-					clearTimeout(timer);
-					resolve();
-				});
-			});
-			try {
-				rmSync(profile, { recursive: true, force: true });
-			} catch (error) {
-				console.warn(`WARN  could not remove ${profile}: ${error.message}`);
-			}
+			await waitForExit();
+			removeProfile();
 		},
 	};
 }
@@ -265,27 +268,26 @@ export async function launch({ headless = true } = {}) {
 async function connect(wsUrl) {
 	const ws = new WebSocket(wsUrl);
 	await new Promise((resolve, reject) => {
-		// The open/error race must clear its own timer, or an imported helper keeps
-		// the event loop alive after teardown. Found in review: a child process
-		// that imported `launch` and awaited `close` stayed up another 19.9
-		// seconds; the CLI's `process.exit` had been hiding it.
-		const timer = setTimeout(() => reject(new Error('CDP socket did not open')), 15000);
-		ws.addEventListener(
-			'open',
-			() => {
-				clearTimeout(timer);
-				resolve();
-			},
-			{ once: true },
-		);
-		ws.addEventListener(
-			'error',
-			() => {
-				clearTimeout(timer);
-				reject(new Error('CDP socket failed'));
-			},
-			{ once: true },
-		);
+		// Settled handshake listeners must not observe later transport failures.
+		const cleanup = () => {
+			clearTimeout(timer);
+			ws.removeEventListener('open', onOpen);
+			ws.removeEventListener('error', onError);
+		};
+		const onOpen = () => {
+			cleanup();
+			resolve();
+		};
+		const onError = () => {
+			cleanup();
+			reject(new Error('CDP socket failed'));
+		};
+		const timer = setTimeout(() => {
+			cleanup();
+			reject(new Error('CDP socket did not open'));
+		}, 15000);
+		ws.addEventListener('open', onOpen, { once: true });
+		ws.addEventListener('error', onError, { once: true });
 	});
 
 	let nextId = 1;

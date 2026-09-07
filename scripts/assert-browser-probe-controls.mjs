@@ -192,11 +192,9 @@ const evaluateThrowSource = `
 /**
  * BC-09 — a server that never reports readiness must fail AND release its child.
  *
- * Reproduced before the repair: the readiness timeout rejected, the spawned
- * child survived, and because that child held the parent's inherited stdio
- * pipes, the parent never exited either — the run had to be killed at 120
- * seconds. The row runs against a stub `scripts/serve-build.mjs` that starts and
- * says nothing, so the timeout is the subject rather than an accident.
+ * serve() resolves its script relative to the caller's cwd, so this row can
+ * substitute a silent server there. A script-path refactor must preserve an
+ * explicit substitution seam; the TIMED-OUT check rejects using the real server.
  */
 const silentServerSource = `
 	import { serve } from ${JSON.stringify(RUNNER)};
@@ -383,7 +381,52 @@ async function main() {
 		faults('BC-14', shortcutEvents, { stdoutIncludes: 'SHORTCUTS' }),
 	);
 
-	const total = ROWS.length + 7;
+	const rollback = runChild(
+		`
+			import cp from 'node:child_process';
+			import fs from 'node:fs';
+			import { syncBuiltinESMExports } from 'node:module';
+			const spawn = cp.spawn, remove = fs.rmSync;
+			let chrome, profile, removedBeforeExit = false;
+			cp.spawn = (binary, args, options) => {
+				const child = spawn(binary, args, options);
+				const arg = args.find(arg => arg.startsWith('--user-data-dir='));
+				if (arg) { chrome = child; profile = arg.slice('--user-data-dir='.length); }
+				return child;
+			};
+			fs.rmSync = (path, options) => {
+				if (path === profile && chrome.exitCode === null && chrome.signalCode === null) {
+					removedBeforeExit = true;
+					throw new Error('PROFILE_STILL_IN_USE');
+				}
+				return remove(path, options);
+			};
+			syncBuiltinESMExports();
+			globalThis.WebSocket = class extends EventTarget {
+				constructor() { super(); queueMicrotask(() => this.dispatchEvent(new Event('error'))); }
+			};
+			const { launch } = await import(${JSON.stringify(RUNNER)});
+			let message;
+			try { await launch(); } catch (error) { message = error.message; }
+			finally {
+				if (chrome && chrome.exitCode === null && chrome.signalCode === null) {
+					chrome.kill('SIGKILL');
+					await new Promise(resolve => chrome.once('exit', resolve));
+				}
+				if (profile) remove(profile, { recursive: true, force: true });
+			}
+			console.log(message === 'CDP socket failed' && !removedBeforeExit ? 'PRESERVED' : 'WRONG ' + message);
+		`,
+		15000,
+	);
+	report(
+		'BC-15',
+		'FAULT',
+		'a failed handshake waits for Chrome to exit and preserves its original error',
+		faults('BC-15', rollback, { stdoutIncludes: 'PRESERVED' }),
+	);
+
+	const total = ROWS.length + 8;
 	console.log(
 		`\n${total} controls: ${total - new Set(failures.map((f) => f.split(':')[0])).size} behaved as specified`,
 	);
