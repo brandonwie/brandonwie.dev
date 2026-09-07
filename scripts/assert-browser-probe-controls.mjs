@@ -36,11 +36,16 @@ const profiles = () => {
 	}
 };
 
-const servers = () =>
-	spawnSync('pgrep', ['-f', 'serve-build.mjs'], { encoding: 'utf8' })
-		.stdout.trim()
-		.split('\n')
-		.filter(Boolean);
+const servers = () => {
+	const result = spawnSync('pgrep', ['-f', 'serve-build.mjs'], { encoding: 'utf8' });
+	if (result.error) throw new Error(`pgrep could not run: ${result.error.message}`);
+	// Exit 1 means no matches; other failures cannot certify a leak-free run.
+	if (result.status !== 0 && result.status !== 1) {
+		throw new Error(`pgrep failed (${result.status}): ${result.stderr?.trim() || result.signal}`);
+	}
+	if (typeof result.stdout !== 'string') throw new Error('pgrep did not return text output');
+	return result.stdout.trim().split('\n').filter(Boolean);
+};
 
 /** One measurement of everything a row is allowed to assert on. */
 function observe(run) {
@@ -54,6 +59,7 @@ function observe(run) {
 		signal: result.signal ?? null,
 		timedOut: result.error?.code === 'ETIMEDOUT',
 		stdout: (result.stdout ?? '').trim(),
+		stderr: (result.stderr ?? '').trim(),
 		elapsedMs,
 		leakedProfile: after.profiles > before.profiles,
 		leakedServer: after.servers > before.servers,
@@ -70,13 +76,20 @@ const runChild = (source, timeout, cwd) =>
 	);
 
 /** Shared complaints, so no row can quietly check fewer things than its siblings. */
-function faults(id, o, { expect = EXIT.PASS, underMs = null, stdoutIncludes = null } = {}) {
+function faults(
+	id,
+	o,
+	{ expect = EXIT.PASS, underMs = null, stdoutIncludes = null, stderrIncludes = null } = {},
+) {
 	const out = [];
 	if (o.timedOut) out.push(`${id}: had to be killed after ${o.elapsedMs}ms`);
 	if (o.signal) out.push(`${id}: died on ${o.signal}`);
 	if (o.code !== expect) out.push(`${id}: exit ${o.code}, expected ${expect}`);
 	if (stdoutIncludes !== null && !o.stdout.includes(stdoutIncludes)) {
 		out.push(`${id}: expected output containing ${JSON.stringify(stdoutIncludes)}`);
+	}
+	if (stderrIncludes !== null && !o.stderr.includes(stderrIncludes)) {
+		out.push(`${id}: expected error containing ${JSON.stringify(stderrIncludes)}`);
 	}
 	if (underMs !== null && o.elapsedMs >= underMs) {
 		out.push(`${id}: took ${o.elapsedMs}ms, expected under ${underMs}ms`);
@@ -313,7 +326,38 @@ async function main() {
 		],
 	);
 
-	const total = ROWS.length + 4;
+	const missingInventory = runChild(
+		`process.env.PATH = '/nonexistent-browser-inventory'; await import(${JSON.stringify(import.meta.url)});`,
+		5000,
+	);
+	report(
+		'BC-12',
+		'FAULT',
+		'a missing process inventory tool produces an explicit harness error',
+		faults('BC-12', missingInventory, { expect: EXIT.ERROR, stderrIncludes: 'ERROR pgrep' }),
+	);
+
+	const failedInventory = runChild(
+		`
+			import cp from 'node:child_process';
+			import { syncBuiltinESMExports } from 'node:module';
+			const original = cp.spawnSync;
+			cp.spawnSync = (command, ...args) => command === 'pgrep'
+				? { status: 2, stdout: '', stderr: 'inventory failure control', signal: null }
+				: original(command, ...args);
+			syncBuiltinESMExports();
+			await import(${JSON.stringify(import.meta.url)});
+		`,
+		5000,
+	);
+	report(
+		'BC-13',
+		'FAULT',
+		'a failed process query cannot be mistaken for no matching processes',
+		faults('BC-13', failedInventory, { expect: EXIT.ERROR, stderrIncludes: 'ERROR pgrep' }),
+	);
+
+	const total = ROWS.length + 6;
 	console.log(
 		`\n${total} controls: ${total - new Set(failures.map((f) => f.split(':')[0])).size} behaved as specified`,
 	);
