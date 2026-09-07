@@ -147,9 +147,10 @@ export async function serve(buildDir) {
 /**
  * Launch Chrome and connect to its page target.
  *
- * The profile is a fresh temp directory per launch and is removed in `close()`,
- * so no probe inherits another's storage, and a crashed run leaves at most one
- * directory under the OS temp dir.
+ * The profile is a fresh temp directory per launch and is removed in `close()`
+ * ONLY after the browser's exit is confirmed, so no probe inherits another's
+ * storage, and a crashed run leaves at most one directory under the OS temp dir.
+ * A browser that cannot be confirmed dead keeps its profile on disk on purpose.
  */
 export async function launch({ headless = true } = {}) {
 	const binary = findBrowser();
@@ -174,22 +175,69 @@ export async function launch({ headless = true } = {}) {
 	// acquirer's to release.
 	let child = null;
 	let cdp = null;
-	const waitForExit = async () => {
-		if (!child?.pid || child.exitCode !== null || child.signalCode !== null) return;
-		await new Promise((resolve) => {
-			const timer = setTimeout(resolve, 5000);
+	/**
+	 * TRUE means the child is CONFIRMED gone; FALSE means the wait expired and
+	 * its state is unknown. The previous revision returned nothing, so a wedged
+	 * browser and an exited one were indistinguishable to every caller, and
+	 * cleanup continued as if the process were dead.
+	 */
+	const waitForExit = async (timeoutMs) => {
+		if (!child?.pid) return true;
+		if (child.exitCode !== null || child.signalCode !== null) return true;
+		return await new Promise((resolve) => {
+			const timer = setTimeout(() => resolve(false), timeoutMs);
 			child.once('exit', () => {
 				clearTimeout(timer);
-				resolve();
+				resolve(true);
 			});
 		});
 	};
+	/**
+	 * Terminate the browser and CONFIRM it. Returns null on confirmed exit, or a
+	 * reason string when termination could not be confirmed.
+	 *
+	 * SCOPE — this signals the DIRECT child of this launch and nothing else.
+	 * Chrome forks helper processes, so confirmed exit of the direct child is NOT
+	 * a guarantee that every descendant is gone; this function does not claim
+	 * one. Group termination was assessed: it would require spawning detached
+	 * into a new process group and signalling the group, which is a larger change
+	 * whose own failure mode (signalling a group this launch does not exclusively
+	 * own) is worse than the gap it closes. The chosen mitigation is that removal
+	 * is CONDITIONAL on confirmation rather than that termination is total.
+	 */
+	const terminate = async ({ graceMs = 5000, forceMs = 5000 } = {}) => {
+		if (!child?.pid) return null;
+		if (child.exitCode !== null || child.signalCode !== null) return null;
+		child.kill('SIGTERM');
+		if (await waitForExit(graceMs)) return null;
+		// The grace period expired, not the process. Escalate rather than assume.
+		child.kill('SIGKILL');
+		if (await waitForExit(forceMs)) return null;
+		return `chrome (pid ${child.pid}) did not exit within ${graceMs + forceMs}ms of SIGTERM then SIGKILL`;
+	};
+	/** Returns null on success, or the reason removal failed. */
 	const removeProfile = () => {
 		try {
 			rmSync(profile, { recursive: true, force: true });
+			return null;
 		} catch (error) {
-			console.warn(`WARN  could not remove ${profile}: ${error.message}`);
+			return `could not remove ${profile}: ${error.message}`;
 		}
+	};
+	/**
+	 * Confirmed termination THEN removal. Returns null on success, or the reason
+	 * cleanup failed.
+	 *
+	 * The ORDER is the point. Removing a profile out from under a browser that
+	 * may still be running is how a removed directory comes back: the live
+	 * process recreates what it still has open. When termination cannot be
+	 * confirmed the profile is RETAINED and reported — a directory left on disk
+	 * is a visible, diagnosable fault; a delete racing a live writer is not.
+	 */
+	const cleanup = async () => {
+		const undead = await terminate();
+		if (undead) return `${undead}; profile retained at ${profile}`;
+		return removeProfile();
 	};
 	const rollback = async () => {
 		try {
@@ -197,12 +245,17 @@ export async function launch({ headless = true } = {}) {
 		} catch {
 			/* socket may already be gone */
 		}
+		// A launch that already failed has no session worth a grace period, so
+		// rollback kills outright — but it still CONFIRMS the exit before removing.
 		if (child && child.exitCode === null && child.signalCode === null) {
 			child.kill('SIGKILL');
 		}
-		// Profile cleanup follows process exit and must preserve the launch error.
-		await waitForExit();
-		removeProfile();
+		const failure = (await waitForExit(5000))
+			? removeProfile()
+			: `chrome (pid ${child?.pid}) did not exit within 5000ms of SIGKILL; profile retained at ${profile}`;
+		// The LAUNCH error is what the caller must see. A teardown failure is
+		// reported alongside it and must never replace it.
+		if (failure) console.warn(`WARN  rollback cleanup: ${failure}`);
 	};
 
 	try {
@@ -249,6 +302,15 @@ export async function launch({ headless = true } = {}) {
 		sessionId,
 		send: (method, params) => cdp.send(method, params, sessionId),
 		on: (method, handler) => cdp.on(method, handler),
+		/**
+		 * Teardown THROWS when it cannot finish. Found in review: this path sent
+		 * SIGTERM, waited at most five seconds, and then removed the profile
+		 * whether or not the browser had actually exited — and a removal failure
+		 * was only warned about, so a caller could not tell a clean teardown from
+		 * a failed one. Callers that warn instead of failing (the palette probe)
+		 * still surface it, and the control suite's own leak inventory catches
+		 * what a warning would hide.
+		 */
 		close: async () => {
 			try {
 				await cdp.send('Target.closeTarget', { targetId });
@@ -256,10 +318,8 @@ export async function launch({ headless = true } = {}) {
 				/* target may already be gone; teardown continues */
 			}
 			cdp.close();
-			child.kill('SIGTERM');
-
-			await waitForExit();
-			removeProfile();
+			const failure = await cleanup();
+			if (failure) throw new Error(`teardown failed: ${failure}`);
 		},
 	};
 }

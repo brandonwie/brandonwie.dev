@@ -472,6 +472,160 @@ async function main() {
 	}
 	if (cleanupError) console.log(`WARN  BC-15 emergency cleanup failed: ${cleanupError}`);
 
+	/**
+	 * BC-16 / BC-17 / BC-18 — the NORMAL close path, which BC-15 does not reach.
+	 *
+	 * BC-15 exercises rollback (a failed handshake). The reachable teardown is
+	 * `close()`, and review found it sent SIGTERM, waited at most five seconds,
+	 * and then removed the profile whether or not Chrome had exited. These rows
+	 * substitute the child's `kill` so a REAL browser process ignores a REAL
+	 * signal: the escalation, the ordering, and the retain-on-doubt rule are
+	 * observed rather than asserted from the source.
+	 *
+	 * They do NOT establish anything about Chrome's helper processes. Termination
+	 * here is scoped to the direct child this launch owns; descendant behavior is
+	 * out of what these controls can prove and is not claimed.
+	 */
+	const wedgedChildSource = (ignore, body) => `
+		import cp from 'node:child_process';
+		import fs from 'node:fs';
+		import { syncBuiltinESMExports } from 'node:module';
+		const spawnReal = cp.spawn, removeReal = fs.rmSync;
+		let chrome = null, profile = null, killReal = null;
+		const order = [];
+		cp.spawn = (binary, args, options) => {
+			const child = spawnReal(binary, args, options);
+			const arg = args.find(a => String(a).startsWith('--user-data-dir='));
+			if (arg) {
+				chrome = child;
+				profile = String(arg).slice('--user-data-dir='.length);
+				killReal = child.kill.bind(child);
+				child.kill = (signal) => {
+					order.push('kill:' + signal);
+					// The browser under test ignores: ${ignore.join(' and ') || 'nothing'}.
+					if (${JSON.stringify(ignore)}.includes(signal)) return true;
+					return killReal(signal);
+				};
+			}
+			return child;
+		};
+		fs.rmSync = (path, options) => {
+			if (path === profile) {
+				order.push('rm:alive=' + (chrome.exitCode === null && chrome.signalCode === null));
+				if (globalThis.__blockRemoval) throw new Error('REMOVAL_BLOCKED');
+			}
+			return removeReal(path, options);
+		};
+		syncBuiltinESMExports();
+		const { launch } = await import(${JSON.stringify(RUNNER)});
+		const page = await launch();
+		if (!page) { console.log('NO-BROWSER'); process.exit(1); }
+		try {
+			${body}
+		} finally {
+			// The row's own cleanup, with the REAL primitives. It runs after every
+			// verdict above is already printed, so it cannot change one.
+			if (chrome && chrome.exitCode === null && chrome.signalCode === null) {
+				killReal('SIGKILL');
+				await new Promise(resolve => chrome.once('exit', resolve));
+			}
+			if (profile) removeReal(profile, { recursive: true, force: true });
+		}
+	`;
+
+	const escalation = runChild(
+		wedgedChildSource(
+			['SIGTERM'],
+			`
+			const started = Date.now();
+			await page.close();
+			const ms = Date.now() - started;
+			const expected = 'kill:SIGTERM,kill:SIGKILL,rm:alive=false';
+			console.log('ORDER ' + order.join(','));
+			console.log(
+				order.join(',') === expected && !fs.existsSync(profile) && ms >= 5000
+					? 'ESCALATED'
+					: 'WRONG ' + ms + 'ms exists=' + fs.existsSync(profile),
+			);
+		`,
+		),
+		60000,
+	);
+	report(
+		'BC-16',
+		'FAULT',
+		`a browser that ignores SIGTERM is force-killed and its profile removed only after confirmed exit (${escalation.elapsedMs}ms)`,
+		[
+			...faults('BC-16', escalation, { expect: EXIT.PASS, underMs: 30000 }),
+			...(escalation.stdout.includes('ESCALATED')
+				? []
+				: [`BC-16: teardown was ${escalation.stdout.split('\n').pop() || 'not observed'}`]),
+		],
+	);
+
+	const removalFailure = runChild(
+		wedgedChildSource(
+			[],
+			`
+			globalThis.__blockRemoval = true;
+			let message = null;
+			try { await page.close(); } catch (error) { message = error.message; }
+			globalThis.__blockRemoval = false;
+			console.log('MESSAGE ' + (message ?? 'none'));
+			console.log(
+				message && message.includes('teardown failed') && message.includes('REMOVAL_BLOCKED')
+					? 'SURFACED'
+					: 'WRONG',
+			);
+		`,
+		),
+		60000,
+	);
+	report(
+		'BC-17',
+		'FAULT',
+		'a profile that cannot be removed fails the teardown instead of warning',
+		[
+			...faults('BC-17', removalFailure, { expect: EXIT.PASS }),
+			...(removalFailure.stdout.includes('SURFACED')
+				? []
+				: [`BC-17: teardown reported ${removalFailure.stdout.split('\n')[0] || 'nothing'}`]),
+		],
+	);
+
+	const unconfirmed = runChild(
+		wedgedChildSource(
+			['SIGTERM', 'SIGKILL'],
+			`
+			let message = null;
+			try { await page.close(); } catch (error) { message = error.message; }
+			const removalAttempted = order.some(entry => entry.startsWith('rm:'));
+			console.log('ORDER ' + order.join(',') + ' | ' + (message ?? 'no error'));
+			console.log(
+				message
+					&& message.includes('did not exit')
+					&& message.includes('profile retained')
+					&& !removalAttempted
+					&& fs.existsSync(profile)
+					? 'RETAINED'
+					: 'WRONG',
+			);
+		`,
+		),
+		90000,
+	);
+	report(
+		'BC-18',
+		'FAULT',
+		`a browser that cannot be confirmed dead keeps its profile and fails the teardown (${unconfirmed.elapsedMs}ms)`,
+		[
+			...faults('BC-18', unconfirmed, { expect: EXIT.PASS, underMs: 45000 }),
+			...(unconfirmed.stdout.includes('RETAINED')
+				? []
+				: [`BC-18: teardown was ${unconfirmed.stdout.split('\n').pop() || 'not observed'}`]),
+		],
+	);
+
 	console.log(
 		`\n${reported.length} controls: ${reported.filter(Boolean).length} behaved as specified`,
 	);
