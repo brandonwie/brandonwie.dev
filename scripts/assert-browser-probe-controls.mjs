@@ -19,7 +19,7 @@
  * Exit 0 all rows behaved as specified, 1 otherwise, 3 skipped (no browser).
  */
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { findBrowser, EXIT } from './browser-probe.mjs';
@@ -53,7 +53,19 @@ function observe(run) {
 	const started = Date.now();
 	const result = run();
 	const elapsedMs = Date.now() - started;
-	const after = { profiles: profiles().length, servers: servers().length };
+	// The PRE-run inventory may throw freely: nothing has been spawned yet. The
+	// POST-run inventory may not. By the time it runs the child has executed and
+	// may own resources the caller still has to release, so a throw here would
+	// skip the caller's cleanup entirely. The error is carried back as data and
+	// surfaced by faults(), which keeps it non-success without losing the
+	// lifecycle boundary.
+	let after = null;
+	let inventoryError = null;
+	try {
+		after = { profiles: profiles().length, servers: servers().length };
+	} catch (error) {
+		inventoryError = error.message;
+	}
 	return {
 		code: result.status,
 		signal: result.signal ?? null,
@@ -61,8 +73,9 @@ function observe(run) {
 		stdout: (result.stdout ?? '').trim(),
 		stderr: (result.stderr ?? '').trim(),
 		elapsedMs,
-		leakedProfile: after.profiles > before.profiles,
-		leakedServer: after.servers > before.servers,
+		inventoryError,
+		leakedProfile: after ? after.profiles > before.profiles : false,
+		leakedServer: after ? after.servers > before.servers : false,
 	};
 }
 
@@ -93,6 +106,9 @@ function faults(
 	}
 	if (underMs !== null && o.elapsedMs >= underMs) {
 		out.push(`${id}: took ${o.elapsedMs}ms, expected under ${underMs}ms`);
+	}
+	if (o.inventoryError) {
+		out.push(`${id}: post-run inventory failed, leak state unknown: ${o.inventoryError}`);
 	}
 	if (o.leakedProfile) out.push(`${id}: leaked a profile directory`);
 	if (o.leakedServer) out.push(`${id}: leaked a server process`);
@@ -415,18 +431,46 @@ async function main() {
 					chrome.kill('SIGKILL');
 					await new Promise(resolve => chrome.once('exit', resolve));
 				}
-				if (profile) remove(profile, { recursive: true, force: true });
 			}
+			// The child NAMES its profile and does not delete it. Deleting here was
+			// the harness defect: the row's own cleanup ran after the recreation and
+			// erased the evidence its assertion depends on, turning an observed leak
+			// into PASS. Cleanup moves to the parent, after evidence capture.
+			if (profile) console.log('PROFILE ' + profile);
 			console.log(message === 'CDP socket failed' && !removedBeforeExit ? 'PRESERVED' : 'WRONG ' + message);
 		`,
 		15000,
 	);
-	report(
-		'BC-15',
-		'FAULT',
-		'a failed handshake waits for Chrome to exit and preserves its original error',
-		faults('BC-15', rollback, { stdoutIncludes: 'PRESERVED' }),
-	);
+	// Evidence BEFORE cleanup. The owned profile is identified by name rather
+	// than inferred from a global count, so another row's directory can neither
+	// create nor mask this verdict.
+	const owned = /^PROFILE (.+)$/m.exec(rollback.stdout ?? '')?.[1] ?? null;
+	const ownedSurvived = owned ? existsSync(owned) : null;
+	let cleanupError = null;
+	try {
+		report(
+			'BC-15',
+			'FAULT',
+			'a failed handshake waits for Chrome to exit and preserves its original error',
+			[
+				...faults('BC-15', rollback, { stdoutIncludes: 'PRESERVED' }),
+				...(owned === null ? ['BC-15: the child did not report its profile path'] : []),
+				...(ownedSurvived ? [`BC-15: the owned profile survived the rollback: ${owned}`] : []),
+			],
+		);
+	} finally {
+		// Emergency cleanup only. It runs after the verdict is recorded and can no
+		// longer change it; its own failure is reported separately rather than
+		// overwriting what was observed.
+		if (owned) {
+			try {
+				rmSync(owned, { recursive: true, force: true });
+			} catch (error) {
+				cleanupError = error.message;
+			}
+		}
+	}
+	if (cleanupError) console.log(`WARN  BC-15 emergency cleanup failed: ${cleanupError}`);
 
 	console.log(
 		`\n${reported.length} controls: ${reported.filter(Boolean).length} behaved as specified`,
