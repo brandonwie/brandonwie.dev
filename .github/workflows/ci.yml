@@ -86,6 +86,27 @@ jobs:
       # Both outputs: the suites read `build/` (Svelte) and `next/build/` (Next).
       - run: pnpm run build
 
+      # The rendered-stage suites (`migration:browser`, `migration:browser:controls`)
+      # drive an installed Chrome over the DevTools Protocol -- no browser package
+      # enters `package.json`. An absent browser makes them exit 3 (SKIPPED), and
+      # the router treats every non-zero exit as a failure, deliberately: "no
+      # browser on the runner" must never read as green. Same reasoning as the
+      # Deno install above. This step resolves the binary with the runner's OWN
+      # `findBrowser`, so the gate and the suites can never disagree about what
+      # counts as available, and a runner-image change fails here with one legible
+      # line instead of inside a probe's launch.
+      - name: Browser for the rendered-stage suites
+        run: |
+          node --input-type=module -e "
+            import { findBrowser } from './scripts/browser-probe.mjs';
+            const binary = findBrowser();
+            if (!binary) {
+              console.error('no browser found; the rendered-stage suites cannot run');
+              process.exit(1);
+            }
+            console.log(binary);
+          "
+
       - name: Router controls
         run: pnpm run migration:route:controls
 

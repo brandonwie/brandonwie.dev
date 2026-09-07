@@ -18,7 +18,7 @@
  */
 
 import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import PaletteHost from '@/components/palette/PaletteHost';
 import type { PaletteLocale, PalettePost } from '@/palette/items';
@@ -32,6 +32,14 @@ interface Props {
 export default function PaletteSpike({ posts, pathname, locale }: Props) {
 	const router = useRouter();
 	const navigate = useCallback((href: string) => router.push(href), [router]);
+
+	useEffect(() => {
+		// Fixture-owned readiness: bootstrap globals can precede client effects.
+		document.body.dataset.paletteFixtureReady = 'true';
+		return () => {
+			delete document.body.dataset.paletteFixtureReady;
+		};
+	}, []);
 
 	return <PaletteHost posts={posts} pathname={pathname} locale={locale} navigate={navigate} />;
 }

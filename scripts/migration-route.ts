@@ -172,6 +172,29 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		// TWO spawn edges, both invisible to the import closure, both declared
+		// here instead. `browser-probe.mjs` spawns `serve-build.mjs` to serve the
+		// build under test, and the controls suite below spawns the probe to
+		// observe its exit codes -- which an in-process call cannot produce. This
+		// is the PR45-I2 defect twice over, and the second one was missed on the
+		// first pass: the comment about the spawn edge was written one function
+		// below the spawn edge it did not mention.
+		command: 'migration:browser',
+		entry: 'scripts/assert-browser-palette.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		command: 'migration:browser:controls',
+		entry: 'scripts/assert-browser-probe-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-palette.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
 		command: 'migration:c13:controls',
 		entry: 'scripts/assert-c13-shell-controls.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
