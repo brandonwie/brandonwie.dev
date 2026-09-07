@@ -357,7 +357,33 @@ async function main() {
 		faults('BC-13', failedInventory, { expect: EXIT.ERROR, stderrIncludes: 'ERROR pgrep' }),
 	);
 
-	const total = ROWS.length + 6;
+	const shortcutEvents = runChild(
+		`
+			import assert from 'node:assert/strict';
+			import { chord } from ${JSON.stringify(RUNNER)};
+			for (const [options, modifiers] of [[{ meta: true }, 4], [{ ctrl: true }, 2]]) {
+				const events = [];
+				await chord({ send: async (method, params) => events.push({ method, ...params }) }, 'k', options);
+				assert.deepEqual(events.map(event => event.type), ['rawKeyDown', 'keyUp']);
+				for (const event of events) {
+					assert.equal(event.method, 'Input.dispatchKeyEvent');
+					assert.equal(event.modifiers, modifiers);
+					assert.equal(event.key, 'k');
+					assert.equal(event.text ?? '', '', 'a shortcut must not generate printable text');
+				}
+			}
+			console.log('SHORTCUTS');
+		`,
+		5000,
+	);
+	report(
+		'BC-14',
+		'CONTRACT',
+		'Meta and Ctrl shortcuts dispatch two input events without printable text',
+		faults('BC-14', shortcutEvents, { stdoutIncludes: 'SHORTCUTS' }),
+	);
+
+	const total = ROWS.length + 7;
 	console.log(
 		`\n${total} controls: ${total - new Set(failures.map((f) => f.split(':')[0])).size} behaved as specified`,
 	);

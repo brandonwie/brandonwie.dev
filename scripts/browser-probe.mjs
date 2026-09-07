@@ -398,12 +398,12 @@ export async function ready(page, hydratedWhen, opts) {
 	return until(async () => Boolean(await evaluate(page, hydratedWhen)), opts);
 }
 
-/** Dispatch a modified key chord as three real input events. */
+/** Dispatch a shortcut as rawKeyDown and keyUp; printable text input is separate. */
 export async function chord(page, key, { meta = false, ctrl = false } = {}) {
 	const modifiers = (meta ? 4 : 0) | (ctrl ? 2 : 0);
 	const base = {
 		key,
-		text: key,
+		// CDP defaults text to empty for rawKeyDown/keyUp; shortcuts insert no character.
 		unmodifiedText: key,
 		modifiers,
 		windowsVirtualKeyCode: key.toUpperCase().charCodeAt(0),
