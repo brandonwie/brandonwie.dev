@@ -70,11 +70,14 @@ const runChild = (source, timeout, cwd) =>
 	);
 
 /** Shared complaints, so no row can quietly check fewer things than its siblings. */
-function faults(id, o, { expect = EXIT.PASS, underMs = null } = {}) {
+function faults(id, o, { expect = EXIT.PASS, underMs = null, stdoutIncludes = null } = {}) {
 	const out = [];
 	if (o.timedOut) out.push(`${id}: had to be killed after ${o.elapsedMs}ms`);
 	if (o.signal) out.push(`${id}: died on ${o.signal}`);
 	if (o.code !== expect) out.push(`${id}: exit ${o.code}, expected ${expect}`);
+	if (stdoutIncludes !== null && !o.stdout.includes(stdoutIncludes)) {
+		out.push(`${id}: expected output containing ${JSON.stringify(stdoutIncludes)}`);
+	}
 	if (underMs !== null && o.elapsedMs >= underMs) {
 		out.push(`${id}: took ${o.elapsedMs}ms, expected under ${underMs}ms`);
 	}
@@ -126,6 +129,15 @@ const ROWS = [
 		what: 'a declared-browserless environment skips rather than fails',
 		env: { CHROME_BINARY: 'none' },
 		expect: EXIT.SKIPPED,
+	},
+	{
+		id: 'BC-11',
+		kind: 'DEFECT',
+		what: 'bootstrap globals without client hydration fail before dispatching the chord',
+		args: ['--block-hydration'],
+		env: {},
+		expect: EXIT.FAIL,
+		stdoutIncludes: 'the page never reached an interactive state',
 	},
 ];
 
@@ -235,7 +247,7 @@ async function main() {
 			row.id,
 			row.kind,
 			`exit ${o.code} (expected ${row.expect})  ${o.leakedProfile || o.leakedServer ? 'LEAKED' : 'no leak'}  ${row.what}`,
-			faults(row.id, o, { expect: row.expect }),
+			faults(row.id, o, { expect: row.expect, stdoutIncludes: row.stdoutIncludes }),
 		);
 	}
 

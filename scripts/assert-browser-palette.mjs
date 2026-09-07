@@ -22,11 +22,13 @@ import {
 	evaluate,
 	mutateBehavior,
 	findBrowser,
+	until,
 	EXIT,
 } from './browser-probe.mjs';
 
 const ROUTE = '/migration-fixture/palette';
 const SUPPRESS = process.argv.includes('--suppress');
+const BLOCK_HYDRATION = process.argv.includes('--block-hydration');
 
 /**
  * The behavioral mutation, for the negative control.
@@ -61,15 +63,17 @@ async function main() {
 		await page.send('Page.enable');
 		await page.send('Runtime.enable');
 		if (SUPPRESS) await mutateBehavior(page, SUPPRESS_CHORD);
+		if (BLOCK_HYDRATION) {
+			await page.send('Network.enable');
+			await page.send('Network.setBlockedURLs', { urls: ['*/_next/*.js*'] });
+			// A bootstrap global must not satisfy readiness without client effects.
+			await mutateBehavior(page, 'window.next = {};');
+		}
 
 		await page.send('Page.navigate', { url: `http://127.0.0.1:${server.port}${ROUTE}` });
 
-		// Hydration, not just load. The fixture's own heading is server-rendered,
-		// so it is not a hydration signal; React having attached is.
-		const interactive = await ready(
-			page,
-			'Boolean(document.querySelector("[data-palette-fixture]") || document.body.dataset.hydrated || window.next)',
-		);
+		// The fixture sets this marker in its client effect and removes it on unmount.
+		const interactive = await ready(page, 'document.body.dataset.paletteFixtureReady === "true"');
 		if (!interactive) {
 			console.log('FAIL  the page never reached an interactive state');
 			return EXIT.FAIL;
@@ -87,7 +91,10 @@ async function main() {
 
 		// The open is a React state update, so it lands on a later frame than the
 		// dispatch. Poll rather than read once.
-		const opened = await pollFor(page, 'Boolean(document.querySelector(".cmdk-overlay"))');
+		const opened = await until(
+			async () => Boolean(await evaluate(page, 'document.querySelector(".cmdk-overlay") !== null')),
+			{ timeoutMs: 4000 },
+		);
 		if (!opened) {
 			console.log(
 				`FAIL  BP-01  the palette did not open on the chord${SUPPRESS ? ' (expected: --suppress)' : ''}`,
@@ -126,15 +133,6 @@ async function main() {
 		} catch (error) {
 			console.warn(`WARN  server teardown: ${error.message}`);
 		}
-	}
-}
-
-async function pollFor(page, expression, timeoutMs = 4000) {
-	const deadline = Date.now() + timeoutMs;
-	for (;;) {
-		if (await evaluate(page, expression)) return true;
-		if (Date.now() > deadline) return false;
-		await new Promise((r) => setTimeout(r, 50));
 	}
 }
 
