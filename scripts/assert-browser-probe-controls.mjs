@@ -130,7 +130,7 @@ const rollbackChild = (runnerHref, { failRemoval = false } = {}) => `
 	import { syncBuiltinESMExports } from 'node:module';
 	const FAIL_REMOVAL = ${failRemoval ? 'true' : 'false'};
 	const spawn = cp.spawn, remove = fs.rmSync;
-	let chrome, profile, issued = false, removedBeforeExit = false;
+	let chrome, profile, issued = false, removedBeforeExit = false, removalFailed = false;
 	cp.spawn = (binary, args, options) => {
 		const child = spawn(binary, args, options);
 		const arg = args.find(arg => arg.startsWith('--user-data-dir='));
@@ -146,10 +146,20 @@ const rollbackChild = (runnerHref, { failRemoval = false } = {}) => `
 		issued = true;
 		if (!chrome || (chrome.exitCode === null && chrome.signalCode === null)) {
 			removedBeforeExit = true;
+			removalFailed = true;
 			throw new Error('PROFILE_STILL_IN_USE');
 		}
-		if (FAIL_REMOVAL) throw new Error('REMOVAL_FAILED_FIXTURE');
-		return remove(path, options);
+		if (FAIL_REMOVAL) { removalFailed = true; throw new Error('REMOVAL_FAILED_FIXTURE'); }
+		// The DELEGATED call's own outcome, recorded here and nowhere else. Reading
+		// the runner's \`console.warn\` instead would make RESULT an assertion about
+		// LOGGING: a runner whose removal threw while its warning was suppressed
+		// would pass. That was a real defect in the first revision of this row.
+		try {
+			return remove(path, options);
+		} catch (error) {
+			removalFailed = true;
+			throw error;
+		}
 	};
 	syncBuiltinESMExports();
 	globalThis.WebSocket = class extends EventTarget {
@@ -171,18 +181,27 @@ const rollbackChild = (runnerHref, { failRemoval = false } = {}) => `
 	if (profile) console.log('PROFILE ' + profile);
 	console.log('ISSUED ' + issued);
 	console.log('ORDER ' + !removedBeforeExit);
+	console.log('RESULT ' + !removalFailed);
 	console.log('ERROR ' + message);
 `;
 
 /** What one rollback run OBSERVED. Read from the child's markers, never inferred. */
 const rollbackObservations = (o) => {
 	const read = (key) => new RegExp('^' + key + ' (.*)$', 'm').exec(o.stdout ?? '')?.[1] ?? null;
+	const markers = {
+		ISSUED: read('ISSUED'),
+		ORDER: read('ORDER'),
+		RESULT: read('RESULT'),
+		ERROR: read('ERROR'),
+	};
 	return {
 		profile: read('PROFILE'),
-		issued: read('ISSUED') === 'true',
-		order: read('ORDER') === 'true',
-		error: read('ERROR'),
+		issued: markers.ISSUED === 'true',
+		order: markers.ORDER === 'true',
+		result: markers.RESULT === 'true',
+		error: markers.ERROR,
 		warned: (o.stderr ?? '').includes('WARN  rollback cleanup:'),
+		missing: Object.keys(markers).filter((key) => markers[key] === null),
 	};
 };
 
@@ -211,14 +230,74 @@ const rollbackContractFaults = (id, o, witness) => {
 	}
 	if (!r.issued) out.push(`${id}: ISSUED the rollback never called rmSync on its own profile`);
 	if (!r.order) out.push(`${id}: ORDER the profile was removed before Chrome's exit was confirmed`);
+	if (witness === 'W-1' && !r.result) {
+		out.push(`${id}: RESULT a removal call the runner issued did not succeed`);
+	}
 	if (witness === 'W-1' && r.warned) {
-		out.push(`${id}: RESULT the removal reported a failure (see "WARN  rollback cleanup:")`);
+		out.push(`${id}: REPORTED a clean rollback still printed "WARN  rollback cleanup:"`);
 	}
 	if (witness === 'W-2' && !r.warned) {
 		out.push(
-			`${id}: NOT-REPLACED the injected teardown failure produced no "WARN  rollback cleanup:" line, so it did not travel alongside the launch error`,
+			`${id}: REPORTED the injected teardown failure printed no "WARN  rollback cleanup:" line, so it did not travel alongside the launch error`,
 		);
 	}
+	return out;
+};
+
+/** The assertion labels a complaint can carry. Anything else is unclassified. */
+const CONTRACT_LABELS = ['ERROR', 'ISSUED', 'ORDER', 'RESULT', 'REPORTED'];
+const labelOf = (id, complaint) => {
+	const word = complaint.slice(`${id}: `.length).split(' ')[0];
+	return CONTRACT_LABELS.includes(word) ? word : 'UNCLASSIFIED';
+};
+
+/**
+ * Is this run worth judging at all?
+ *
+ * A control that judges a run which never happened proves nothing: a child that
+ * died with empty output produces missing markers, and missing markers read as
+ * false, and false trips whichever assertion the control was hoping to see. So
+ * a mutant is judged ONLY after its run is shown to be observable -- the
+ * process behaved, the inventory succeeded, and every marker arrived.
+ */
+const observable = (id, o, r) => {
+	const out = [];
+	if (o.timedOut) out.push(`${id}: had to be killed after ${o.elapsedMs}ms`);
+	if (o.signal) out.push(`${id}: died on ${o.signal}`);
+	if (o.code !== EXIT.PASS) out.push(`${id}: exit ${o.code}, expected ${EXIT.PASS}`);
+	if (o.inventoryError) out.push(`${id}: post-run inventory failed: ${o.inventoryError}`);
+	if (o.leakedServer) out.push(`${id}: leaked a server process`);
+	if (r.profile === null) out.push(`${id}: the child did not report its profile path`);
+	if (r.missing.length > 0) out.push(`${id}: the child reported no ${r.missing.join(', ')} marker`);
+	return out;
+};
+
+/**
+ * One mutant or witness, judged.
+ *
+ * `primary` is the complaint the control exists to produce; `permitted` are the
+ * consequences its mutation unavoidably drags along. Anything outside that set
+ * is a failure, because a control that quietly accepts extra complaints stops
+ * discriminating between the assertions it is supposed to separate.
+ */
+const control = (id, o, witness, { primary, permitted = [] }) => {
+	const r = rollbackObservations(o);
+	const unusable = observable(id, o, r);
+	if (unusable.length > 0) {
+		return [`${id}: the run is not observable, so it judges nothing`, ...unusable];
+	}
+	const complaints = rollbackContractFaults(id, o, witness);
+	const labels = complaints.map((c) => labelOf(id, c));
+	const allowed = new Set([primary, ...permitted]);
+	const out = [];
+	if (!labels.includes(primary)) {
+		out.push(
+			`${id}: expected the ${primary} complaint; got ${complaints.length === 0 ? 'a clean pass' : complaints.join(' | ')}`,
+		);
+	}
+	complaints.forEach((c, i) => {
+		if (!allowed.has(labels[i])) out.push(`${id}: unexpected complaint -- ${c}`);
+	});
 	return out;
 };
 
@@ -640,17 +719,86 @@ async function main() {
 	 * Launches: FP-E reuses the run above, W-2 is one run reused by FP-D, and
 	 * FP-A / FP-B / FP-C are one each. Four added, not five.
 	 */
-	const primary = (id, complaints, name) =>
-		complaints.some((c) => c.startsWith(`${id}: ${name} `))
-			? []
-			: [
-					`${id}: expected the ${name} complaint; got ${complaints.length === 0 ? 'a clean pass' : complaints.join(' | ')}`,
-				];
-	const mustHold = (id, complaints, name) =>
-		complaints.some((c) => c.startsWith(`${id}: ${name} `))
-			? [`${id}: ${name} must HOLD here -- its failure is a defect in this control, not a catch`]
-			: [];
+	// Offline judge regressions. These launch nothing: they feed the judges a
+	// synthesized observation and assert the judges themselves behave. Both cover
+	// a defect this file actually had.
+	report(
+		'JG-01',
+		'CONTROL',
+		'RESULT is observed from the removal call, not inferred from the runner printing a warning',
+		(() => {
+			const suppressed = {
+				code: EXIT.PASS,
+				signal: null,
+				timedOut: false,
+				elapsedMs: 1,
+				inventoryError: null,
+				leakedProfile: false,
+				leakedServer: false,
+				stdout: [
+					'PROFILE /tmp/browser-probe-JG01',
+					'ISSUED true',
+					'ORDER true',
+					'RESULT false',
+					'ERROR CDP socket failed',
+				].join('\n'),
+				// The warning is SUPPRESSED on purpose: the removal failed and the
+				// runner said nothing about it.
+				stderr: '',
+			};
+			const complaints = rollbackContractFaults('JG-01', suppressed, 'W-1');
+			return complaints.some((c) => labelOf('JG-01', c) === 'RESULT')
+				? []
+				: [
+						`JG-01: a failed removal with its warning suppressed was accepted; got ${complaints.length === 0 ? 'a clean pass' : complaints.join(' | ')}`,
+					];
+		})(),
+	);
 
+	const brokenChild = {
+		code: EXIT.FAIL,
+		signal: null,
+		timedOut: false,
+		elapsedMs: 1,
+		inventoryError: null,
+		leakedProfile: false,
+		leakedServer: false,
+		stdout: '',
+		stderr: '',
+	};
+	report(
+		'JG-02',
+		'CONTROL',
+		'a mutant whose child died with no output is rejected as unobservable rather than credited with its expected complaint',
+		(() => {
+			const bad = [
+				...control('FP-A', brokenChild, 'W-1', { primary: 'ISSUED' }),
+				...control('FP-C', brokenChild, 'W-2', { primary: 'ERROR', permitted: ['REPORTED'] }),
+			];
+			return bad.length > 0
+				? []
+				: ['JG-02: a dead child with empty output was accepted as a passing control'];
+		})(),
+	);
+
+	/**
+	 * The witness and mutant set for BC-15a.
+	 *
+	 * Four failing mutants would prove only that the row CAN fail; FP-E and W-2
+	 * are what prove it can PASS for the right reason. Each mutant names the ONE
+	 * complaint it exists to produce and the consequences its mutation drags
+	 * along; anything outside that set fails the control, so the assertions stay
+	 * discriminating rather than overlapping.
+	 *
+	 * The plan called FP-C's assertion NOT-REPLACED. In code it is two separate
+	 * labels -- ERROR (the caller still sees the launch error) and REPORTED (the
+	 * teardown failure travels alongside it) -- because one conjunction spanning
+	 * both would overlap ERROR and defeat the permitted-set check above. Strictly
+	 * more discriminating, same contract.
+	 *
+	 * Launches: FP-E reuses the run above, W-2 is one run reused by FP-D, and
+	 * FP-A / FP-B / FP-C are one each. Four added, not five.
+	 */
 	report(
 		'FP-E',
 		'WITNESS',
@@ -658,9 +806,9 @@ async function main() {
 		rollbackContractFaults('FP-E', rollback, 'W-1'),
 	);
 
-	// W-2. The removal fails BENEATH the recorder, so the runner still issues it
-	// and still reports the failure alongside the launch error. RESULT is not
-	// asserted here; NOT-REPLACED is.
+	// W-2. The removal fails BENEATH the recorder, so the runner still issues it,
+	// its own failure is observed directly, and the runner still reports it
+	// alongside the launch error. RESULT is not asserted here; REPORTED is.
 	const failingRemoval = runChild(rollbackChild(RUNNER, { failRemoval: true }), 15000);
 	const failingObserved = rollbackObservations(failingRemoval);
 	try {
@@ -671,25 +819,22 @@ async function main() {
 			rollbackContractFaults('W-2', failingRemoval, 'W-2'),
 		);
 		// FP-D needs no mutation at all: the SAME run, judged under W-1
-		// expectations, must produce exactly RESULT. That is what makes RESULT
-		// non-vacuous. Replacing the rmSync call site with a throw -- the obvious
-		// mutation -- would leave the recorder with zero calls, so it would trip
-		// ISSUED while claiming to discriminate RESULT.
+		// expectations, must produce RESULT. That is what makes RESULT non-vacuous.
+		// Replacing the rmSync call site with a throw -- the obvious mutation --
+		// would leave the recorder with zero calls, so it would trip ISSUED while
+		// claiming to discriminate RESULT.
 		report(
 			'FP-D',
 			'CONTROL',
 			'a removal that fails is caught by RESULT when the W-2 run is judged as W-1',
-			[
-				...primary('FP-D', rollbackContractFaults('FP-D', failingRemoval, 'W-1'), 'RESULT'),
-				...mustHold('FP-D', rollbackContractFaults('FP-D', failingRemoval, 'W-1'), 'ISSUED'),
-			],
+			control('FP-D', failingRemoval, 'W-1', { primary: 'RESULT', permitted: ['REPORTED'] }),
 		);
 	} finally {
 		discard('W-2', failingObserved.profile);
 	}
 
-	// FP-A -- the rollback stops removing anything. This is the regression the
-	// old BC-15 could not see: error and ordering both still hold.
+	// FP-A -- the rollback stops removing anything. This is the regression the old
+	// BC-15 could not see: error, ordering and result all still hold.
 	const skipRemoval = mutantRunner('FP-A', '? removeProfile()', '? null');
 	const skipped = runChild(rollbackChild(skipRemoval.href), 15000);
 	const skippedObserved = rollbackObservations(skipped);
@@ -697,18 +842,18 @@ async function main() {
 		report(
 			'FP-A',
 			'CONTROL',
-			'a rollback that never issues the removal is caught by ISSUED',
-			primary('FP-A', rollbackContractFaults('FP-A', skipped, 'W-1'), 'ISSUED'),
+			'a rollback that never issues the removal is caught by ISSUED, and by nothing else',
+			control('FP-A', skipped, 'W-1', { primary: 'ISSUED' }),
 		);
 	} finally {
 		discard('FP-A', skippedObserved.profile);
 		discard('FP-A mutant', skipRemoval.dir);
 	}
 
-	// FP-B -- the removal is issued BEFORE the exit is confirmed. ISSUED must
-	// hold: the runner did call rmSync with its profile path, and the observer
-	// records that before the ordering trap throws. RESULT and the cleanup
-	// warning follow from the caught throw and are permitted consequences.
+	// FP-B -- the removal is issued BEFORE the exit is confirmed. ISSUED must hold:
+	// the runner did call rmSync with its profile path, and the observer records
+	// that before the ordering trap throws. RESULT and REPORTED follow from the
+	// caught throw and are permitted consequences.
 	const earlyRemoval = mutantRunner(
 		'FP-B',
 		'const failure = (await waitForExit(5000))',
@@ -721,21 +866,17 @@ async function main() {
 			'FP-B',
 			'CONTROL',
 			'a removal issued before the exit is confirmed is caught by ORDER, with ISSUED still holding',
-			[
-				...primary('FP-B', rollbackContractFaults('FP-B', early, 'W-1'), 'ORDER'),
-				...mustHold('FP-B', rollbackContractFaults('FP-B', early, 'W-1'), 'ISSUED'),
-			],
+			control('FP-B', early, 'W-1', { primary: 'ORDER', permitted: ['RESULT', 'REPORTED'] }),
 		);
 	} finally {
 		discard('FP-B', earlyObserved.profile);
 		discard('FP-B mutant', earlyRemoval.dir);
 	}
 
-	// FP-C -- the teardown failure REPLACES the launch error instead of
-	// travelling alongside it. Needs W-2's fixture, because a teardown that
-	// cannot fail has nothing to replace anything with. ERROR trips too: a
-	// replaced error is no longer `CDP socket failed`, which is the same
-	// observation from the other side.
+	// FP-C -- the teardown failure REPLACES the launch error instead of travelling
+	// alongside it. Needs W-2's fixture, because a teardown that cannot fail has
+	// nothing to replace anything with. REPORTED trips too: the warning it would
+	// have printed is exactly what the mutation turned into a throw.
 	const replacingError = mutantRunner(
 		'FP-C',
 		'console.warn(`WARN  rollback cleanup: ${failure}`)',
@@ -747,8 +888,8 @@ async function main() {
 		report(
 			'FP-C',
 			'CONTROL',
-			'a teardown failure that replaces the launch error is caught by NOT-REPLACED',
-			primary('FP-C', rollbackContractFaults('FP-C', replaced, 'W-2'), 'NOT-REPLACED'),
+			'a teardown failure that replaces the launch error is caught by ERROR',
+			control('FP-C', replaced, 'W-2', { primary: 'ERROR', permitted: ['REPORTED'] }),
 		);
 	} finally {
 		discard('FP-C', replacedObserved.profile);
