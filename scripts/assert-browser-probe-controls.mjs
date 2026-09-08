@@ -19,9 +19,18 @@
  * Exit 0 all rows behaved as specified, 1 otherwise, 3 skipped (no browser).
  */
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import {
+	mkdtempSync,
+	mkdirSync,
+	rmSync,
+	writeFileSync,
+	readFileSync,
+	readdirSync,
+	existsSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { findBrowser, EXIT } from './browser-probe.mjs';
 
 const PROBE = 'scripts/assert-browser-palette.mjs';
@@ -87,6 +96,156 @@ const runChild = (source, timeout, cwd) =>
 			cwd,
 		}),
 	);
+
+/**
+ * BC-15a's fault set: faults() minus the profile-leak complaint.
+ *
+ * `leakedProfile` is an inventory COUNT DELTA over the whole temp directory
+ * (`observe` above), so it fires when ANY process creates a `browser-probe-*`
+ * root during the run -- including the Chrome helper that re-created one
+ * 3.8 ms after a removal that had already succeeded. That observation is real
+ * and is KEPT, but it belongs to BC-15b. Letting it reach BC-15a would
+ * re-import the exact helper-timing dependence the split exists to remove.
+ * Everything else still fails BC-15a, `inventoryError` included: "leak state
+ * unknown" is not a pass for either row.
+ */
+const faultsWithoutProfileLeak = (id, o, opts) => faults(id, { ...o, leakedProfile: false }, opts);
+
+/**
+ * The rollback child, parameterized by ONE dependency fault.
+ *
+ * `failRemoval` makes the real removal throw BENEATH the recording observer.
+ * The runner's logic is untouched: it still issues the removal, `removeProfile`
+ * still catches and returns its reason, and `rollback` still warns. A fault
+ * injected INTO the observer would not be a fault at all -- it would be a
+ * modified assertion, and a control built on one proves nothing about the
+ * assertion it claims to exercise.
+ *
+ * `runnerHref` is the module the child imports: the real runner, or a
+ * source-level mutant of it.
+ */
+const rollbackChild = (runnerHref, { failRemoval = false } = {}) => `
+	import cp from 'node:child_process';
+	import fs from 'node:fs';
+	import { syncBuiltinESMExports } from 'node:module';
+	const FAIL_REMOVAL = ${failRemoval ? 'true' : 'false'};
+	const spawn = cp.spawn, remove = fs.rmSync;
+	let chrome, profile, issued = false, removedBeforeExit = false;
+	cp.spawn = (binary, args, options) => {
+		const child = spawn(binary, args, options);
+		const arg = args.find(arg => arg.startsWith('--user-data-dir='));
+		if (arg) { chrome = child; profile = arg.slice('--user-data-dir='.length); }
+		return child;
+	};
+	fs.rmSync = (path, options) => {
+		if (path !== profile) return remove(path, options);
+		// RECORD FIRST, before anything below can throw. ISSUED means the runner
+		// CALLED the removal, never that the call succeeded -- that is RESULT's
+		// job. Recording after a throw would quietly redefine ISSUED as "removal
+		// completed", and a thrown call would read as a call that never happened.
+		issued = true;
+		if (!chrome || (chrome.exitCode === null && chrome.signalCode === null)) {
+			removedBeforeExit = true;
+			throw new Error('PROFILE_STILL_IN_USE');
+		}
+		if (FAIL_REMOVAL) throw new Error('REMOVAL_FAILED_FIXTURE');
+		return remove(path, options);
+	};
+	syncBuiltinESMExports();
+	globalThis.WebSocket = class extends EventTarget {
+		constructor() { super(); queueMicrotask(() => this.dispatchEvent(new Event('error'))); }
+	};
+	const { launch } = await import(${JSON.stringify(runnerHref)});
+	let message;
+	try { await launch(); } catch (error) { message = error.message; }
+	finally {
+		if (chrome && chrome.exitCode === null && chrome.signalCode === null) {
+			chrome.kill('SIGKILL');
+			await new Promise(resolve => chrome.once('exit', resolve));
+		}
+	}
+	// The child NAMES its profile and does not delete it. Deleting here was the
+	// harness defect: the row's own cleanup ran after the recreation and erased
+	// the evidence its assertion depends on, turning an observed leak into PASS.
+	// Cleanup moves to the parent, after evidence capture.
+	if (profile) console.log('PROFILE ' + profile);
+	console.log('ISSUED ' + issued);
+	console.log('ORDER ' + !removedBeforeExit);
+	console.log('ERROR ' + message);
+`;
+
+/** What one rollback run OBSERVED. Read from the child's markers, never inferred. */
+const rollbackObservations = (o) => {
+	const read = (key) => new RegExp('^' + key + ' (.*)$', 'm').exec(o.stdout ?? '')?.[1] ?? null;
+	return {
+		profile: read('PROFILE'),
+		issued: read('ISSUED') === 'true',
+		order: read('ORDER') === 'true',
+		error: read('ERROR'),
+		warned: (o.stderr ?? '').includes('WARN  rollback cleanup:'),
+	};
+};
+
+/**
+ * BC-15a's contract, judged against one witness.
+ *
+ * W-1 -- unmutated, the removal succeeds: RESULT is asserted and no cleanup
+ * warning may appear. W-2 -- the removal fails beneath the observer: RESULT is
+ * NOT asserted, because demanding that a forced failure both fail and not fail
+ * is not a contract; NOT-REPLACED is asserted instead, so the caller still sees
+ * the LAUNCH error with the teardown failure reported ALONGSIDE it.
+ *
+ * ISSUED is invocation, not completion. ORDER is the absence of a removal
+ * attempted before the exit was confirmed. A runner that never removes anything
+ * fails ISSUED and passes ORDER, which is exactly the distinction the old
+ * single row could not draw.
+ */
+const rollbackContractFaults = (id, o, witness) => {
+	const r = rollbackObservations(o);
+	const out = [...faultsWithoutProfileLeak(id, o, {})];
+	if (r.profile === null) out.push(`${id}: the child did not report its profile path`);
+	if (r.error !== 'CDP socket failed') {
+		out.push(
+			`${id}: ERROR the caller saw ${JSON.stringify(r.error)}, expected "CDP socket failed"`,
+		);
+	}
+	if (!r.issued) out.push(`${id}: ISSUED the rollback never called rmSync on its own profile`);
+	if (!r.order) out.push(`${id}: ORDER the profile was removed before Chrome's exit was confirmed`);
+	if (witness === 'W-1' && r.warned) {
+		out.push(`${id}: RESULT the removal reported a failure (see "WARN  rollback cleanup:")`);
+	}
+	if (witness === 'W-2' && !r.warned) {
+		out.push(
+			`${id}: NOT-REPLACED the injected teardown failure produced no "WARN  rollback cleanup:" line, so it did not travel alongside the launch error`,
+		);
+	}
+	return out;
+};
+
+const RUNNER_SOURCE = readFileSync(fileURLToPath(RUNNER), 'utf8');
+
+/**
+ * A source-level mutant of the runner.
+ *
+ * `rollback`, `removeProfile`, `terminate` and `waitForExit` are closures inside
+ * `launch()` and are NOT exported, so changing what the runner DOES cannot be a
+ * monkey-patch from the child -- it has to be a different module. Two guards,
+ * from the FP-02 lesson recorded in `migration-route-controls.ts`: the anchor
+ * must match EXACTLY once and must key on code rather than comment wording, and
+ * the result must differ from the original. A byte change proves the mutation
+ * was APPLIED; only the required complaint proves behavior changed.
+ */
+const mutantRunner = (id, find, replace) => {
+	const occurrences = RUNNER_SOURCE.split(find).length - 1;
+	if (occurrences !== 1) {
+		throw new Error(`${id}: mutation anchor matched ${occurrences} sites, expected exactly 1`);
+	}
+	const mutated = RUNNER_SOURCE.split(find).join(replace);
+	if (mutated === RUNNER_SOURCE) throw new Error(`${id}: mutation changed no bytes`);
+	const dir = mkdtempSync(join(tmpdir(), 'bc15-mutant-'));
+	writeFileSync(join(dir, 'browser-probe.mjs'), mutated);
+	return { href: pathToFileURL(join(dir, 'browser-probe.mjs')).href, dir };
+};
 
 /** Shared complaints, so no row can quietly check fewer things than its siblings. */
 function faults(
@@ -399,83 +558,209 @@ async function main() {
 		faults('BC-14', shortcutEvents, { stdoutIncludes: 'SHORTCUTS' }),
 	);
 
-	const rollback = runChild(
-		`
-			import cp from 'node:child_process';
-			import fs from 'node:fs';
-			import { syncBuiltinESMExports } from 'node:module';
-			const spawn = cp.spawn, remove = fs.rmSync;
-			let chrome, profile, removedBeforeExit = false;
-			cp.spawn = (binary, args, options) => {
-				const child = spawn(binary, args, options);
-				const arg = args.find(arg => arg.startsWith('--user-data-dir='));
-				if (arg) { chrome = child; profile = arg.slice('--user-data-dir='.length); }
-				return child;
-			};
-			fs.rmSync = (path, options) => {
-				if (path === profile && chrome.exitCode === null && chrome.signalCode === null) {
-					removedBeforeExit = true;
-					throw new Error('PROFILE_STILL_IN_USE');
-				}
-				return remove(path, options);
-			};
-			syncBuiltinESMExports();
-			globalThis.WebSocket = class extends EventTarget {
-				constructor() { super(); queueMicrotask(() => this.dispatchEvent(new Event('error'))); }
-			};
-			const { launch } = await import(${JSON.stringify(RUNNER)});
-			let message;
-			try { await launch(); } catch (error) { message = error.message; }
-			finally {
-				if (chrome && chrome.exitCode === null && chrome.signalCode === null) {
-					chrome.kill('SIGKILL');
-					await new Promise(resolve => chrome.once('exit', resolve));
-				}
-			}
-			// The child NAMES its profile and does not delete it. Deleting here was
-			// the harness defect: the row's own cleanup ran after the recreation and
-			// erased the evidence its assertion depends on, turning an observed leak
-			// into PASS. Cleanup moves to the parent, after evidence capture.
-			if (profile) console.log('PROFILE ' + profile);
-			console.log(message === 'CDP socket failed' && !removedBeforeExit ? 'PRESERVED' : 'WRONG ' + message);
-		`,
-		15000,
-	);
+	// ---------------------------------------------------------------------------
+	// BC-15a / BC-15b -- the split, and why it is not a narrowing.
+	//
+	// BC-15 used to bundle three unlike claims into one verdict: the launch error
+	// survives, no removal was attempted before Chrome's exit was confirmed, and
+	// no profile root exists afterwards. Only the third depends on a process
+	// whose relationship to this runner is unresolved -- a traced capture
+	// attributed one recreation to `Google Chrome Helper (Alerts)`, 3.8 ms after
+	// a removal that had itself succeeded, with ancestry and controllability
+	// unknown.
+	//
+	// The split does NOT redefine that leak into a pass. BC-15b still FAILS on a
+	// surviving root, still returns exit 1, and still blocks the push and CI. It
+	// stands until the residue is repaired or explicitly accepted.
+	//
+	// What changes is the other half. Error preservation and ordering never
+	// tested that the rollback removed ANYTHING: `removeProfile` swallows a
+	// failure into a return value and `rollback` turns that into a `console.warn`
+	// and nothing else, so a runner that skipped removal entirely still produced
+	// PRESERVED and only the absence check noticed. BC-15a now asserts ISSUED and
+	// RESULT explicitly, which is what makes the split a split rather than
+	// option 2 under a different name.
+	//
+	// ONE child run feeds both rows: the split is in the JUDGING, not a second
+	// launch, so it cannot yield two opinions about one rollback.
+	const cleanupWarnings = [];
+	const discard = (label, path) => {
+		if (!path) return;
+		try {
+			rmSync(path, { recursive: true, force: true });
+		} catch (error) {
+			cleanupWarnings.push(`${label} emergency cleanup failed: ${error.message}`);
+		}
+	};
+
+	const rollback = runChild(rollbackChild(RUNNER), 15000);
+	const observed = rollbackObservations(rollback);
 	// Evidence BEFORE cleanup. The owned profile is identified by name rather
 	// than inferred from a global count, so another row's directory can neither
 	// create nor mask this verdict.
-	const owned = /^PROFILE (.+)$/m.exec(rollback.stdout ?? '')?.[1] ?? null;
-	const ownedSurvived = owned ? existsSync(owned) : null;
-	let cleanupError = null;
+	const ownedSurvived = observed.profile ? existsSync(observed.profile) : null;
 	try {
 		report(
-			'BC-15',
+			'BC-15a',
 			'FAULT',
-			'a failed handshake waits for Chrome to exit and preserves its original error',
+			'a failed handshake waits for Chrome to exit, ISSUES the removal, and preserves its original error',
+			rollbackContractFaults('BC-15a', rollback, 'W-1'),
+		);
+		report(
+			'BC-15b',
+			'FAULT',
+			'no profile root survives the rollback -- fails until repaired or explicitly accepted',
 			[
-				...faults('BC-15', rollback, { stdoutIncludes: 'PRESERVED' }),
-				...(owned === null ? ['BC-15: the child did not report its profile path'] : []),
-				...(ownedSurvived ? [`BC-15: the owned profile survived the rollback: ${owned}`] : []),
+				...(observed.profile === null ? ['BC-15b: the child did not report its profile path'] : []),
+				...(rollback.inventoryError
+					? [`BC-15b: post-run inventory failed, leak state unknown: ${rollback.inventoryError}`]
+					: []),
+				...(rollback.leakedProfile ? ['BC-15b: leaked a profile directory'] : []),
+				...(ownedSurvived
+					? [`BC-15b: the owned profile survived the rollback: ${observed.profile}`]
+					: []),
 			],
 		);
 	} finally {
-		// Emergency cleanup only. It runs after the verdict is recorded and can no
-		// longer change it; its own failure is reported separately rather than
-		// overwriting what was observed.
-		if (owned) {
-			try {
-				rmSync(owned, { recursive: true, force: true });
-			} catch (error) {
-				cleanupError = error.message;
-			}
-		}
+		// Emergency cleanup only. It runs after both verdicts are recorded and can
+		// no longer change them; its own failure is reported separately rather than
+		// overwriting what was observed. An empty root is NOT treated as quiescent
+		// anywhere above -- BC-15b judged existence, not contents.
+		discard('BC-15', observed.profile);
 	}
-	if (cleanupError) console.log(`WARN  BC-15 emergency cleanup failed: ${cleanupError}`);
 
 	/**
-	 * BC-16 / BC-17 / BC-18 — the NORMAL close path, which BC-15 does not reach.
+	 * The witness and mutant set for BC-15a.
 	 *
-	 * BC-15 exercises rollback (a failed handshake). The reachable teardown is
+	 * Four failing mutants would prove only that the row CAN fail; FP-E and W-2
+	 * are what prove it can PASS for the right reason. Each mutant names the one
+	 * complaint it must produce: a mutant that trips only a sibling assertion
+	 * means the assertions overlap and one of them is not carrying its weight.
+	 *
+	 * Launches: FP-E reuses the run above, W-2 is one run reused by FP-D, and
+	 * FP-A / FP-B / FP-C are one each. Four added, not five.
+	 */
+	const primary = (id, complaints, name) =>
+		complaints.some((c) => c.startsWith(`${id}: ${name} `))
+			? []
+			: [
+					`${id}: expected the ${name} complaint; got ${complaints.length === 0 ? 'a clean pass' : complaints.join(' | ')}`,
+				];
+	const mustHold = (id, complaints, name) =>
+		complaints.some((c) => c.startsWith(`${id}: ${name} `))
+			? [`${id}: ${name} must HOLD here -- its failure is a defect in this control, not a catch`]
+			: [];
+
+	report(
+		'FP-E',
+		'WITNESS',
+		'W-1: the unmutated runner passes the rollback contract (same run as BC-15a)',
+		rollbackContractFaults('FP-E', rollback, 'W-1'),
+	);
+
+	// W-2. The removal fails BENEATH the recorder, so the runner still issues it
+	// and still reports the failure alongside the launch error. RESULT is not
+	// asserted here; NOT-REPLACED is.
+	const failingRemoval = runChild(rollbackChild(RUNNER, { failRemoval: true }), 15000);
+	const failingObserved = rollbackObservations(failingRemoval);
+	try {
+		report(
+			'W-2',
+			'WITNESS',
+			'W-2: a removal that fails beneath the observer still preserves the launch error and reports the teardown failure alongside it',
+			rollbackContractFaults('W-2', failingRemoval, 'W-2'),
+		);
+		// FP-D needs no mutation at all: the SAME run, judged under W-1
+		// expectations, must produce exactly RESULT. That is what makes RESULT
+		// non-vacuous. Replacing the rmSync call site with a throw -- the obvious
+		// mutation -- would leave the recorder with zero calls, so it would trip
+		// ISSUED while claiming to discriminate RESULT.
+		report(
+			'FP-D',
+			'CONTROL',
+			'a removal that fails is caught by RESULT when the W-2 run is judged as W-1',
+			[
+				...primary('FP-D', rollbackContractFaults('FP-D', failingRemoval, 'W-1'), 'RESULT'),
+				...mustHold('FP-D', rollbackContractFaults('FP-D', failingRemoval, 'W-1'), 'ISSUED'),
+			],
+		);
+	} finally {
+		discard('W-2', failingObserved.profile);
+	}
+
+	// FP-A -- the rollback stops removing anything. This is the regression the
+	// old BC-15 could not see: error and ordering both still hold.
+	const skipRemoval = mutantRunner('FP-A', '? removeProfile()', '? null');
+	const skipped = runChild(rollbackChild(skipRemoval.href), 15000);
+	const skippedObserved = rollbackObservations(skipped);
+	try {
+		report(
+			'FP-A',
+			'CONTROL',
+			'a rollback that never issues the removal is caught by ISSUED',
+			primary('FP-A', rollbackContractFaults('FP-A', skipped, 'W-1'), 'ISSUED'),
+		);
+	} finally {
+		discard('FP-A', skippedObserved.profile);
+		discard('FP-A mutant', skipRemoval.dir);
+	}
+
+	// FP-B -- the removal is issued BEFORE the exit is confirmed. ISSUED must
+	// hold: the runner did call rmSync with its profile path, and the observer
+	// records that before the ordering trap throws. RESULT and the cleanup
+	// warning follow from the caught throw and are permitted consequences.
+	const earlyRemoval = mutantRunner(
+		'FP-B',
+		'const failure = (await waitForExit(5000))',
+		'const early = removeProfile();\n\t\tif (early) console.warn(`WARN  rollback cleanup: ${early}`);\n\t\tconst failure = (await waitForExit(5000))',
+	);
+	const early = runChild(rollbackChild(earlyRemoval.href), 15000);
+	const earlyObserved = rollbackObservations(early);
+	try {
+		report(
+			'FP-B',
+			'CONTROL',
+			'a removal issued before the exit is confirmed is caught by ORDER, with ISSUED still holding',
+			[
+				...primary('FP-B', rollbackContractFaults('FP-B', early, 'W-1'), 'ORDER'),
+				...mustHold('FP-B', rollbackContractFaults('FP-B', early, 'W-1'), 'ISSUED'),
+			],
+		);
+	} finally {
+		discard('FP-B', earlyObserved.profile);
+		discard('FP-B mutant', earlyRemoval.dir);
+	}
+
+	// FP-C -- the teardown failure REPLACES the launch error instead of
+	// travelling alongside it. Needs W-2's fixture, because a teardown that
+	// cannot fail has nothing to replace anything with. ERROR trips too: a
+	// replaced error is no longer `CDP socket failed`, which is the same
+	// observation from the other side.
+	const replacingError = mutantRunner(
+		'FP-C',
+		'console.warn(`WARN  rollback cleanup: ${failure}`)',
+		'(() => { throw new Error(failure); })()',
+	);
+	const replaced = runChild(rollbackChild(replacingError.href, { failRemoval: true }), 15000);
+	const replacedObserved = rollbackObservations(replaced);
+	try {
+		report(
+			'FP-C',
+			'CONTROL',
+			'a teardown failure that replaces the launch error is caught by NOT-REPLACED',
+			primary('FP-C', rollbackContractFaults('FP-C', replaced, 'W-2'), 'NOT-REPLACED'),
+		);
+	} finally {
+		discard('FP-C', replacedObserved.profile);
+		discard('FP-C mutant', replacingError.dir);
+	}
+
+	for (const warning of cleanupWarnings) console.log(`WARN  ${warning}`);
+
+	/**
+	 * BC-16 / BC-17 / BC-18 — the NORMAL close path, which BC-15a and BC-15b do not reach.
+	 *
+	 * BC-15a and BC-15b exercise rollback (a failed handshake). The reachable teardown is
 	 * `close()`, and review found it sent SIGTERM, waited at most five seconds,
 	 * and then removed the profile whether or not Chrome had exited.
 	 *
