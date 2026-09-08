@@ -194,6 +194,11 @@ const rollbackObservations = (o) => {
 		RESULT: read('RESULT'),
 		ERROR: read('ERROR'),
 	};
+	// A boolean marker is 'true' or 'false' and NOTHING else. Coercing every
+	// other value to false would let a malformed observation impersonate the
+	// exact failure a control is waiting for -- the same shape of defect as
+	// crediting a dead child, one layer down.
+	const booleans = ['ISSUED', 'ORDER', 'RESULT'];
 	return {
 		profile: read('PROFILE'),
 		issued: markers.ISSUED === 'true',
@@ -202,6 +207,9 @@ const rollbackObservations = (o) => {
 		error: markers.ERROR,
 		warned: (o.stderr ?? '').includes('WARN  rollback cleanup:'),
 		missing: Object.keys(markers).filter((key) => markers[key] === null),
+		malformed: booleans.filter(
+			(key) => markers[key] !== null && markers[key] !== 'true' && markers[key] !== 'false',
+		),
 	};
 };
 
@@ -221,8 +229,12 @@ const rollbackObservations = (o) => {
  */
 const rollbackContractFaults = (id, o, witness) => {
 	const r = rollbackObservations(o);
+	// The gate comes FIRST, for every consumer. A judgement made on an
+	// unobservable run is not a lenient judgement, it is a meaningless one.
+	const unusable = observable(id, o, r);
+	if (unusable.length > 0)
+		return [`${id}: the run is not observable, so it judges nothing`, ...unusable];
 	const out = [...faultsWithoutProfileLeak(id, o, {})];
-	if (r.profile === null) out.push(`${id}: the child did not report its profile path`);
 	if (r.error !== 'CDP socket failed') {
 		out.push(
 			`${id}: ERROR the caller saw ${JSON.stringify(r.error)}, expected "CDP socket failed"`,
@@ -269,6 +281,9 @@ const observable = (id, o, r) => {
 	if (o.leakedServer) out.push(`${id}: leaked a server process`);
 	if (r.profile === null) out.push(`${id}: the child did not report its profile path`);
 	if (r.missing.length > 0) out.push(`${id}: the child reported no ${r.missing.join(', ')} marker`);
+	if (r.malformed.length > 0) {
+		out.push(`${id}: the child reported a non-boolean ${r.malformed.join(', ')} marker`);
+	}
 	return out;
 };
 
@@ -771,13 +786,73 @@ async function main() {
 		'CONTROL',
 		'a mutant whose child died with no output is rejected as unobservable rather than credited with its expected complaint',
 		(() => {
-			const bad = [
-				...control('FP-A', brokenChild, 'W-1', { primary: 'ISSUED' }),
-				...control('FP-C', brokenChild, 'W-2', { primary: 'ERROR', permitted: ['REPORTED'] }),
+			// EACH control is asserted on its own. Concatenating both results and
+			// checking the combined length was a defect: either control could start
+			// accepting the dead child and this row would still pass on the other
+			// one's complaints.
+			const cases = [
+				['FP-A', control('FP-A', brokenChild, 'W-1', { primary: 'ISSUED' })],
+				[
+					'FP-C',
+					control('FP-C', brokenChild, 'W-2', { primary: 'ERROR', permitted: ['REPORTED'] }),
+				],
 			];
-			return bad.length > 0
-				? []
-				: ['JG-02: a dead child with empty output was accepted as a passing control'];
+			const out = [];
+			for (const [name, complaints] of cases) {
+				if (complaints.length === 0) {
+					out.push(`JG-02: ${name} accepted a dead child with empty output as a passing control`);
+				} else if (!complaints.some((c) => c.includes('is not observable'))) {
+					out.push(
+						`JG-02: ${name} rejected the dead child, but not as unobservable -- got ${complaints.join(' | ')}`,
+					);
+				}
+			}
+			return out;
+		})(),
+	);
+
+	report(
+		'JG-03',
+		'CONTROL',
+		'a malformed boolean marker is unobservable, not a free pass for whichever complaint the control wanted',
+		(() => {
+			const withMarker = (key, value) => ({
+				code: EXIT.PASS,
+				signal: null,
+				timedOut: false,
+				elapsedMs: 1,
+				inventoryError: null,
+				leakedProfile: false,
+				leakedServer: false,
+				stdout: ['PROFILE /tmp/browser-probe-JG03', 'ISSUED true', 'ORDER true', 'RESULT true']
+					.map((line) => (line.startsWith(`${key} `) ? `${key} ${value}` : line))
+					.concat('ERROR CDP socket failed')
+					.join('\n'),
+				stderr: '',
+			});
+			// Each malformed value would otherwise coerce to false and hand the
+			// control exactly the complaint it is waiting for.
+			const cases = [
+				['FP-A', control('FP-A', withMarker('ISSUED', 'banana'), 'W-1', { primary: 'ISSUED' })],
+				[
+					'FP-D',
+					control('FP-D', withMarker('RESULT', 'banana'), 'W-1', {
+						primary: 'RESULT',
+						permitted: ['REPORTED'],
+					}),
+				],
+			];
+			const out = [];
+			for (const [name, complaints] of cases) {
+				if (complaints.length === 0) {
+					out.push(`JG-03: ${name} accepted a malformed marker as a passing control`);
+				} else if (!complaints.some((c) => c.includes('is not observable'))) {
+					out.push(
+						`JG-03: ${name} rejected the malformed marker, but not as unobservable -- got ${complaints.join(' | ')}`,
+					);
+				}
+			}
+			return out;
 		})(),
 	);
 
