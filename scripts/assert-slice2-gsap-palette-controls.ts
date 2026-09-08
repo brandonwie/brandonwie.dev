@@ -717,7 +717,8 @@ const CONTROLS: Control[] = [
 		row: 'K6',
 		what: 'Cmd+K closes a palette the user could not see was open',
 		setup: (dir) => ({
-			sourceOverrides: mutateSource(dir, 'next/src/components/palette/PaletteHost.tsx', (text) =>
+			// Follows the state owner: PR 2b moved `open` into the controller.
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
 				text.replace('setOpen(true)', 'setOpen((value) => !value)'),
 			),
 		}),
@@ -946,23 +947,144 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
-		id: 'I7-defect-page-sorts-inline',
+		id: 'I7-defect-provider-sorts-inline',
 		kind: 'defect',
 		row: 'I7',
-		what: 'the fixture page re-spells the sort instead of calling the shared contract',
+		what: 'the post provider re-spells the sort instead of calling the shared contract',
 		setup: (dir) => ({
-			// The whole reason the ordering is a module: a sort written here dies
-			// when Slice 4 deletes the route, and the Slice 3 port inherits nothing.
-			sourceOverrides: mutateSource(
-				dir,
-				'next/app/(en)/migration-fixture/palette/page.tsx',
-				(text) =>
-					text.replace(
-						'const posts: PalettePost[] = orderPostsForPalette(published)',
-						'const posts: PalettePost[] = [...published].sort((a, b) => 0)',
-					),
+			// The whole reason the ordering is a module: a sort written at one call
+			// site is a second answer that can disagree with the contract, and the
+			// fixture page that used to hold this copy is gone.
+			sourceOverrides: mutateSource(dir, 'next/src/palette/server-posts.ts', (text) =>
+				text.replace(
+					'orderPostsForPalette(listPublishedPosts(locale))',
+					'[...listPublishedPosts(locale)].sort(() => 0)',
+				),
 			),
 		}),
+	},
+	{
+		id: 'I7-defect-layout-bypasses-the-provider',
+		kind: 'defect',
+		row: 'I7',
+		what: 'a locale layout orders its own posts instead of taking the provider payload',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/app/(ko)/layout.tsx', (text) =>
+				text.replace("posts={palettePosts('ko')}", 'posts={[]}'),
+			),
+		}),
+	},
+
+	// ---- M: the shell mount
+	{
+		id: 'M1-defect-second-mount-in-one-layout',
+		kind: 'defect',
+		row: 'M1',
+		what: 'a locale layout mounts the controller twice, so the route carries two hosts and two chord listeners',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/app/(en)/layout.tsx', (text) =>
+				text.replace(
+					'<SiteShell\n\t\t\t\tlocale="en"',
+					'<ShellPalette locale="en" copy={copy} posts={palettePosts(\'en\')} />\n\t\t\t<SiteShell\n\t\t\t\tlocale="en"',
+				),
+			),
+		}),
+	},
+	{
+		id: 'M1-defect-mount-reaches-the-error-route',
+		kind: 'defect',
+		row: 'M1',
+		what: 'the palette is mounted from a route that is not an allowed locale layout',
+		setup: (dir) => ({
+			// `global-error.tsx` is the load-bearing case: it is `'use client'` and
+			// renders SiteShell, so a mount here puts the palette in that route's
+			// bundle — the exact thing the header slot exists to prevent.
+			sourceOverrides: mutateSource(dir, 'next/app/global-error.tsx', (text) =>
+				text.replace(
+					'<SiteShell locale="en">',
+					'<SiteShell locale="en" header={<ShellPalette />}>',
+				),
+			),
+		}),
+	},
+	{
+		id: 'M1-defect-second-host-inside-the-controller',
+		kind: 'defect',
+		row: 'M1',
+		what: 'the controller renders two hosts, which one overlay count cannot distinguish from one',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
+				text.replace(
+					'\t\t\t<PaletteHost',
+					'\t\t\t<PaletteHost\n\t\t\t\tposts={posts}\n\t\t\t\tpathname={pathname}\n\t\t\t\tlocale={locale}\n\t\t\t\tnavigate={navigate}\n\t\t\t\topen={open}\n\t\t\t\tonClose={handleClose}\n\t\t\t/>\n\t\t\t<PaletteHost',
+				),
+			),
+		}),
+	},
+	{
+		id: 'M2-defect-cleanup-leaves-the-marker',
+		kind: 'defect',
+		row: 'M2',
+		what: 'the readiness marker outlives the listener, so a probe can chord into a window that cannot answer',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
+				text.replace('\t\t\tdocument.body.removeAttribute(PALETTE_READY_ATTRIBUTE);\n', ''),
+			),
+		}),
+	},
+	{
+		id: 'M2-defect-cleanup-leaves-the-listener',
+		kind: 'defect',
+		row: 'M2',
+		what: 'the chord listener survives the effect that registered it',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
+				text.replace("\t\t\twindow.removeEventListener('keydown', onKeyDown);\n", ''),
+			),
+		}),
+	},
+	{
+		id: 'M3-defect-adapter-becomes-the-client-router',
+		kind: 'defect',
+		row: 'M3',
+		what: 'the palette switches the whole site to client navigation as a side effect of mounting',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
+				text.replace('window.location.assign(href);', 'router.push(href);'),
+			),
+		}),
+	},
+	{
+		id: 'M3-defect-adapter-becomes-a-no-op',
+		kind: 'defect',
+		row: 'M3',
+		what: 'the adapter navigates nowhere, which the exclusion half alone would accept',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
+				text.replace('window.location.assign(href);', 'void href;'),
+			),
+		}),
+	},
+
+	{
+		id: 'M4-defect-error-document-carries-the-palette',
+		kind: 'defect',
+		row: 'M4',
+		what: 'the document standing in for the error route eagerly loads the palette',
+		setup: () => ({
+			// Substituted, not mutated: the row reads built chunks, so a source
+			// edit would leave it reading the same build. Pointing the error half
+			// at a document that DOES mount the palette proves the row reads that
+			// document rather than assuming its answer.
+			mountPages: { locale: 'index.html', error: 'index.html' },
+		}),
+	},
+	{
+		id: 'M4-defect-sentinel-matches-nothing',
+		kind: 'defect',
+		row: 'M4',
+		what: 'the chunk sentinel is stale, which would make both halves of the row vacuous',
+		setup: () => ({ paletteSentinel: 'this-class-name-does-not-exist' }),
 	},
 
 	// ---- A: A11Y-1 preserved
@@ -1056,11 +1178,11 @@ const CONTROLS: Control[] = [
 		id: 'P1-defect-target-missing',
 		kind: 'defect',
 		row: 'P1',
-		alsoFails: ['K6', 'P2'],
+		alsoFails: ['K6', 'M1', 'P2'],
 		what: 'a ported module is gone',
 		setup: (dir) => ({
-			// Declared: K6 reads the same file, so pointing P1 at a path that does
-			// not exist takes the row that reads its contents too.
+			// Declared: K6 and M1 read the same file, so pointing P1 at a path that
+			// does not exist takes the rows that read its contents too.
 			sourceOverrides: {
 				'next/src/components/palette/PaletteHost.tsx': join(dir, 'does-not-exist.tsx'),
 			},

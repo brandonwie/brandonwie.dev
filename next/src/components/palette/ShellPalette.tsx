@@ -1,0 +1,108 @@
+'use client';
+
+/**
+ * ShellPalette — the client controller that owns the palette for a whole
+ * locale subtree, and the only place the header button and the palette host
+ * meet.
+ *
+ * WHY A CONTROLLER AND NOT A MOUNT INSIDE `SiteShell`. `global-error.tsx` is
+ * `'use client'` and renders `SiteShell`, so anything mounted unconditionally
+ * inside the shell compiles into the error route's client graph — a
+ * conditional render would not help, because the static import stays in that
+ * route's module graph either way. The shell exposes a `header` slot instead;
+ * the two locale layouts fill it with this component, and the error routes
+ * keep the plain header with no palette code at all.
+ *
+ * WHY THE CHORD LIVES HERE. One piece of state gets one owner. The header
+ * button and the Cmd/Ctrl+K chord are two ways to open the same palette, so
+ * both are handled where `open` lives, and `PaletteHost` is left
+ * presentational. The chord DECISIONS remain in `@/palette/shortcuts`, where
+ * they are asserted without a DOM.
+ *
+ * WHY `location.assign` AND NOT `useRouter().push`. The shell's recorded
+ * decision is native anchors with no speculative prefetch, and client
+ * navigation is deferred until that surface is ported (`shell/document.tsx`
+ * prefetch note, and every `field: "shell"` ledger rationale). Handing the
+ * palette the client router would switch the whole site to client navigation
+ * as a side effect of mounting a palette, ahead of the policy decision that
+ * governs it. The palette therefore navigates the way the anchors do; PR 2d
+ * changes this line together with `Link` adoption and the prefetch policy.
+ *
+ * READINESS IS ATTACHMENT, NOT RENDER. `data-palette-ready` is set in the same
+ * effect that registers the listener and cleared in that effect's cleanup, so
+ * a browser probe that waits on the marker is waiting on a palette that can
+ * actually answer a chord.
+ */
+
+import { useCallback, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+
+import PaletteHost from '@/components/palette/PaletteHost';
+import { SiteHeader } from '@/components/SiteHeader';
+import type { ShellCopy } from '@/i18n/copy';
+import type { Locale } from '@/i18n/locale';
+import type { PalettePost } from '@/palette/items';
+import { planGlobalChord } from '@/palette/shortcuts';
+
+/** The marker a browser probe waits on. Set with the listener, cleared with it. */
+export const PALETTE_READY_ATTRIBUTE = 'data-palette-ready';
+
+export default function ShellPalette({
+	locale,
+	copy,
+	posts,
+}: {
+	locale: Locale;
+	copy: ShellCopy;
+	posts: PalettePost[];
+}) {
+	const pathname = usePathname();
+	const [open, setOpen] = useState(false);
+
+	// Full-document navigation, matching the shell's native anchors. Stable, or
+	// the host's item memo rebuilds its Fuse index on every render.
+	const navigate = useCallback((href: string) => {
+		window.location.assign(href);
+	}, []);
+
+	const handleOpen = useCallback(() => setOpen(true), []);
+	const handleClose = useCallback(() => setOpen(false), []);
+
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement | null;
+			const plan = planGlobalChord(event, {
+				pathname,
+				targetTag: target?.tagName ?? '',
+				targetEditable: Boolean(target?.isContentEditable),
+			});
+
+			if (plan.kind === 'ignore') return;
+			// Cmd+P prints and Cmd+F opens the browser find bar otherwise.
+			event.preventDefault();
+			if (plan.kind === 'open-palette') setOpen(true);
+			else navigate(plan.href);
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		document.body.setAttribute(PALETTE_READY_ATTRIBUTE, 'true');
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			document.body.removeAttribute(PALETTE_READY_ATTRIBUTE);
+		};
+	}, [navigate, pathname]);
+
+	return (
+		<>
+			<SiteHeader locale={locale} copy={copy} onOpenPalette={handleOpen} />
+			<PaletteHost
+				posts={posts}
+				pathname={pathname}
+				locale={locale}
+				navigate={navigate}
+				open={open}
+				onClose={handleClose}
+			/>
+		</>
+	);
+}

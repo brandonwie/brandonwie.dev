@@ -138,8 +138,13 @@ export const PORT_ROLES = [
 	},
 	{
 		svelte: 'src/lib/stores/palette.ts',
-		next: 'next/src/components/palette/PaletteHost.tsx',
+		next: 'next/src/components/palette/ShellPalette.tsx',
 		role: 'open state + the window chord handler',
+	},
+	{
+		svelte: 'src/lib/components/palette/FuzzyFinder.svelte',
+		next: 'next/src/components/palette/PaletteHost.tsx',
+		role: 'the item registry for the current route, and the modal that renders it',
 	},
 ];
 
@@ -172,7 +177,10 @@ export const CLIENT_BOUNDARY: Record<string, boolean> = {
 	'next/src/components/deck/DeckSpike.tsx': true,
 	'next/src/components/palette/FuzzyFinder.tsx': true,
 	'next/src/components/palette/PaletteHost.tsx': true,
-	'next/src/components/palette/PaletteSpike.tsx': true,
+	'next/src/components/palette/ShellPalette.tsx': true,
+	// `server-posts.ts` reaches the filesystem; a directive here would drag
+	// `node:fs` into the client graph, which is the whole reason it exists.
+	'next/src/palette/server-posts.ts': false,
 	'next/src/deck/slide-plan.ts': false,
 	'next/src/palette/shortcuts.ts': false,
 	'next/src/palette/results.ts': false,
@@ -216,6 +224,9 @@ export const DECK_SENTINELS = ['data-flip-id', 'account-separation'];
  * in that case being the loader module. Only the internal warning string below
  * separates the library from everything that talks about it: 0 eager, 1 lazy.
  */
+/** The palette overlay's class name: present in whichever chunk carries FuzzyFinder. */
+const PALETTE_SENTINEL = 'cmdk-overlay';
+
 export const GSAP_SENTINEL = 'Missing plugin? gsap.registerPlugin()';
 
 /** A second, independent marker: GSAP writes this private property onto every
@@ -274,6 +285,14 @@ export interface Slice2GsapOptions {
 	scanRoots?: string[];
 	/** Replace the declared client-boundary map. */
 	clientBoundary?: Record<string, boolean>;
+	/**
+	 * M4's two seams. The row reads BUILT chunks, so a source override cannot
+	 * reach it — a control has to substitute what the row looks at (which
+	 * document stands in for the error route) or what it looks for (the chunk
+	 * sentinel), the same way I7 substitutes the ordering function.
+	 */
+	paletteSentinel?: string;
+	mountPages?: { locale: string; error: string };
 	/** Replace the declared dependency pins. */
 	dependencyPins?: Record<string, string>;
 	/** Replace the declared deck export counts. */
@@ -926,13 +945,23 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 	});
 
 	r.row('K6', 'the open chord is an open, never a toggle', () => {
+		// PR 2b moved open state out of the host: the header button and the chord
+		// are two ways to open one palette, so both are handled where `open`
+		// lives. The row follows the owner rather than the filename.
+		const shell = stripComments(read('next/src/components/palette/ShellPalette.tsx'));
+		must(shell.includes('setOpen(true)'), 'the controller does not open on the chord');
+		must(
+			!/setOpen\(\s*\(?\s*\w*\s*\)?\s*=>\s*!/.test(shell),
+			'the controller toggles instead of opening',
+		);
+		must(shell.includes('onClose'), 'the controller passes no close path down');
+
 		const host = stripComments(read('next/src/components/palette/PaletteHost.tsx'));
-		must(host.includes('setOpen(true)'), 'the host does not open on the chord');
-		must(!/setOpen\(\s*\(?\s*\w*\s*\)?\s*=>\s*!/.test(host), 'the host toggles instead of opening');
-		must(host.includes('onClose'), 'the host has no close path');
+		must(!host.includes('useState'), 'the host still owns open state');
+		must(!/addEventListener\(\s*'keydown'/.test(host), 'the host still owns a chord listener');
 		// Escape is the only close. A toggle would make Cmd+K ambiguous whenever
 		// the user could not see whether the palette was already up.
-		return 'setOpen(true) on the chord; closing goes through onClose';
+		return 'setOpen(true) in the controller; the host is presentational and closes through onClose';
 	});
 
 	r.row('K7', 'a bare letter belongs to the search input, not to a chord', () => {
@@ -1313,15 +1342,144 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		const sorted = ordered.map((post) => post.slug).join();
 		must(untouched !== sorted, 'the ordering changes nothing here, so it proves nothing');
 
-		// 3. The fixture page routes through the shared module rather than
-		//    re-spelling a sort that dies with the route at Slice 4.
-		const page = codeOnly(read('next/app/(en)/migration-fixture/palette/page.tsx'));
-		must(/orderPostsForPalette\(/.test(page), 'the page does not CALL the ordering contract');
-		must(!/\.sort\(/.test(page), 'the page sorts inline instead of using the contract');
+		// 3. The PROVIDER routes through the shared module rather than re-spelling
+		//    the sort. PR 2b moved the mapping off the fixture page — which now
+		//    owns no palette data at all — into one server module both locale
+		//    layouts call, so the row follows the caller instead of the file it
+		//    used to live in.
+		const provider = codeOnly(read('next/src/palette/server-posts.ts'));
+		must(
+			/orderPostsForPalette\(/.test(provider),
+			'the provider does not CALL the ordering contract',
+		);
+		must(!/\.sort\(/.test(provider), 'the provider sorts inline instead of using the contract');
+
+		//    And the consumers reach the payload through that provider, so no
+		//    layout can grow a second, differently ordered copy.
+		for (const locale of ['en', 'ko']) {
+			const layout = codeOnly(read(`next/app/(${locale})/layout.tsx`));
+			must(
+				/palettePosts\(/.test(layout),
+				`the ${locale} layout does not take its posts from the provider`,
+			);
+			must(
+				!/orderPostsForPalette\(|\.sort\(/.test(layout),
+				`the ${locale} layout re-spells the ordering instead of using the provider`,
+			);
+		}
 
 		return `${ordered.length} published EN posts ordered by effectiveDate, ${
 			sorted === untouched ? 0 : 1
 		} divergence from source order`;
+	});
+
+	// ------------------------------------------------------ M: the shell mount
+
+	// M1 scans the whole app tree for stray mounts, and owns its roots.
+	const MOUNT_SCAN_ROOTS = ['next/src', 'next/app'];
+
+	r.row('M1', 'the palette mounts once per locale layout and nowhere else', () => {
+		// Cardinality is PER SITE, not tree-wide: the design has two root layouts,
+		// one per locale group, and each mounts the controller exactly once. An
+		// import count is not an instance count, so both are checked — the import
+		// row bounds who CAN mount a host, the render rows bound how many DO.
+		const renders = (source: string, tag: string): number =>
+			(codeOnly(source).match(new RegExp(`<${tag}[\\s/>]`, 'g')) ?? []).length;
+
+		for (const locale of ['en', 'ko']) {
+			const layout = read(`next/app/(${locale})/layout.tsx`);
+			eq(renders(layout, 'ShellPalette'), 1, `${locale} layout ShellPalette renders`);
+		}
+
+		// Every other module: zero renders. `global-error.tsx` and
+		// `global-not-found.tsx` are the load-bearing members of this set — they
+		// render `SiteShell`, and the error route is `'use client'`, so a mount
+		// that reached them would pull the palette into that route's bundle.
+		const allowed = new Set(['next/app/(en)/layout.tsx', 'next/app/(ko)/layout.tsx']);
+		const strays: string[] = [];
+		let scanned = 0;
+		// Fixed roots, NOT `options.scanRoots`: that seam belongs to P3's claim
+		// about Svelte imports. Sharing it would let a P3 control decide how much
+		// of the tree this row inspects, which is how a row starts passing for a
+		// reason that has nothing to do with what it asserts.
+		for (const dir of MOUNT_SCAN_ROOTS) {
+			for (const file of walk(resolve(root, dir))) {
+				if (!/\.(ts|tsx)$/.test(file)) continue;
+				const rel = relative(root, file);
+				if (rel.includes(`${'/'}paraglide${'/'}`)) continue;
+				scanned += 1;
+				if (allowed.has(rel)) continue;
+				if (renders(read(rel), 'ShellPalette') > 0) strays.push(rel);
+			}
+		}
+		must(scanned > 0, 'the mount scan read no files, so it proves nothing');
+		must(strays.length === 0, `ShellPalette is also rendered by ${strays.join(', ')}`);
+
+		// One host inside the controller, and one importer of the host: two hosts
+		// mean two chord listeners and two overlays on the same page.
+		const shell = read('next/src/components/palette/ShellPalette.tsx');
+		eq(renders(shell, 'PaletteHost'), 1, 'PaletteHost renders inside the controller');
+
+		const importers: string[] = [];
+		for (const dir of MOUNT_SCAN_ROOTS) {
+			for (const file of walk(resolve(root, dir))) {
+				if (!/\.(ts|tsx)$/.test(file)) continue;
+				const rel = relative(root, file);
+				if (rel === 'next/src/components/palette/PaletteHost.tsx') continue;
+				if (/from '@\/components\/palette\/PaletteHost'/.test(stripComments(read(rel)))) {
+					importers.push(rel);
+				}
+			}
+		}
+		eq(importers, ['next/src/components/palette/ShellPalette.tsx'], 'PaletteHost importers');
+
+		return `2 locale mounts, 0 strays across ${scanned} modules, 1 host, 1 importer`;
+	});
+
+	r.row('M2', 'readiness is attachment: the marker is set and cleared with the listener', () => {
+		// A browser probe waits on `data-palette-ready` before it chords. If the
+		// marker outlived the listener, the probe would chord into a window that
+		// cannot answer and read the silence as a defect. Set in the same effect
+		// that registers the listener, cleared in that effect's cleanup.
+		const shell = stripComments(read('next/src/components/palette/ShellPalette.tsx'));
+		const effect = shell.slice(shell.indexOf("addEventListener('keydown'"));
+		must(effect.length > 0, 'the controller registers no chord listener');
+
+		const cleanup = effect.slice(effect.indexOf('return () => {'));
+		must(cleanup.length > 0, 'the chord effect returns no cleanup');
+		must(
+			/removeEventListener\(\s*'keydown'/.test(cleanup),
+			'the cleanup leaves the chord listener attached',
+		);
+		must(
+			/removeAttribute\(PALETTE_READY_ATTRIBUTE\)/.test(cleanup),
+			'the cleanup leaves the readiness marker set after the listener is gone',
+		);
+		must(
+			/setAttribute\(PALETTE_READY_ATTRIBUTE, 'true'\)/.test(effect),
+			'the marker is never set alongside the listener',
+		);
+		return 'marker set with the listener, removed in the same cleanup';
+	});
+
+	r.row('M3', 'the palette navigates the way the shell anchors do', () => {
+		// The recorded shell decision is native anchors with no speculative
+		// prefetch, and client navigation stays deferred until that surface is
+		// ported. Handing the palette `useRouter().push` would switch the site to
+		// client navigation as a side effect of mounting a palette, ahead of the
+		// policy that governs it. PR 2d changes this line WITH that policy.
+		//
+		// The exclusion alone is not a contract — a no-op adapter satisfies it —
+		// so the positive half is asserted here and the runtime consequence is
+		// proven by the browser probe, which reads the destination.
+		const shell = stripComments(read('next/src/components/palette/ShellPalette.tsx'));
+		must(
+			/window\.location\.assign\(href\)/.test(shell),
+			'the controller does not perform a full-document navigation',
+		);
+		must(!/useRouter\(/.test(shell), 'the controller reaches for the client router');
+		must(!/router\.push\(/.test(shell), 'the controller pushes through the client router');
+		return 'location.assign(href); no client router in the controller';
 	});
 
 	// ------------------------------------------------------ A: A11Y-1 preserved
@@ -1563,6 +1721,46 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		// The dynamic import is what keeps a 70KB animation library off every
 		// page that merely LINKS to a deck route.
 		return `${lazyHits} lazy chunk(s) carry GSAP, 0 of the ${eager.size} eager ones do`;
+	});
+
+	r.row('M4', 'the palette ships to the locale documents and not to the error document', () => {
+		// The exported artifact half of the header-slot decision. The locale
+		// layouts mount the controller, so a locale document must eagerly load a
+		// chunk carrying the palette overlay; `404.html` is rendered by
+		// `global-not-found`, which passes no header, so the same chunk must be
+		// absent from what that document loads. Source counts (M1) bound where a
+		// mount may be written; this bounds what actually shipped.
+		const eagerOf = (page: string): Set<string> => {
+			const html = readFileSync(join(buildDir, page), 'utf8');
+			const eager = new Set<string>();
+			for (const match of html.matchAll(/(?:src|href)="([^"]+\.js)"/g)) eager.add(match[1]);
+			must(eager.size > 0, `${page} references no scripts at all`);
+			return eager;
+		};
+
+		const sentinel = options.paletteSentinel ?? PALETTE_SENTINEL;
+		const pages = options.mountPages ?? { locale: 'index.html', error: '404.html' };
+
+		const carriers = new Set<string>();
+		for (const file of walk(join(buildDir, '_next'))) {
+			if (!file.endsWith('.js')) continue;
+			const url = `/_next/${relative(join(buildDir, '_next'), file).split('\\').join('/')}`;
+			if (readFileSync(file, 'utf8').includes(sentinel)) carriers.add(url);
+		}
+		// A sentinel that matches nothing would make both halves below vacuous.
+		must(carriers.size > 0, `no chunk contains ${sentinel}; the sentinel is stale`);
+
+		const localeEager = eagerOf(pages.locale);
+		const errorEager = eagerOf(pages.error);
+		const onLocale = [...carriers].filter((url) => localeEager.has(url));
+		const onError = [...carriers].filter((url) => errorEager.has(url));
+
+		must(
+			onLocale.length > 0,
+			'no locale document eagerly loads the palette; the mount did not ship',
+		);
+		must(onError.length === 0, `the error document loads the palette in ${onError.join(', ')}`);
+		return `${onLocale.length} palette chunk(s) on the locale document, 0 on the error document`;
 	});
 
 	// ------------------------------------------------------------ C: typecheck
