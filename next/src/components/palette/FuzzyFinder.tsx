@@ -10,16 +10,13 @@
  * WHY:  one Cmd/Ctrl+K surface for jumping anywhere and running quick actions.
  * HOW:  Fuse.js over PaletteItem[]; each item self-executes via item.run().
  *
- * A11Y-1 IS PRESERVED ON PURPOSE. `verification/behavior-matrix.md:122`
- * records a serious finding against the Svelte palette: after Escape, focus
- * lands on BODY rather than returning to the control that opened it (WCAG 2.1
- * AA, 2.4.3). The cause is visible below — the palette restores whatever
- * `document.activeElement` was at mount, and when the palette was opened by a
- * keyboard chord that element IS the body. The matrix assigns the fix to the
- * Slice 3 palette port, so this port must reproduce the defect rather than
- * quietly repair it: a port that silently fixed it would be an unrecorded
- * behavior change, and the baseline row would stop describing either stack.
- * `restoreFocusTarget` below is the seam the harness asserts against.
+ * A11Y-1 IS CLOSED HERE. `verification/behavior-matrix.md:122` recorded a
+ * serious finding against the Svelte palette: after Escape, focus landed on
+ * BODY rather than returning to the control that opened it (WCAG 2.1 AA,
+ * 2.4.3). `ShellPalette` captures the opener element across three paths:
+ * (1) clicking the header palette button, (2) chording from a focused control,
+ * and (3) chording from BODY with fallback to the header palette button.
+ * `restoreFocusTarget` receives that opener, falling back to activeElement.
  *
  * KEYBOARD: the precedence lives in `@/palette/shortcuts`, not here. This
  * component decides what a key MEANS for the list; that module decides which
@@ -47,6 +44,8 @@ interface Props {
 	onSelect: (item: PaletteItem) => void; // called when the user selects an item
 	onClose: () => void; // called when the user closes the palette
 	locale: PaletteLocale;
+	/** Opener element captured by ShellPalette across click and chord paths. */
+	opener?: HTMLElement | null;
 }
 
 function optionId(index: number): string {
@@ -54,16 +53,14 @@ function optionId(index: number): string {
 }
 
 /**
- * The element focus returns to when the palette closes: whatever held focus
- * when it opened. Named and exported because it is the mechanism behind
- * A11Y-1, and a row asserts the port kept it rather than substituting an
- * opener-element reference (which would fix the finding out of band).
+ * The element focus returns to when the palette closes: the captured opener,
+ * falling back to whatever held focus when it opened.
  */
-export function restoreFocusTarget(): HTMLElement | null {
-	return (document.activeElement as HTMLElement | null) ?? null;
+export function restoreFocusTarget(opener?: HTMLElement | null): HTMLElement | null {
+	return opener ?? (document.activeElement as HTMLElement | null) ?? null;
 }
 
-export default function FuzzyFinder({ items, onSelect, onClose, locale }: Props) {
+export default function FuzzyFinder({ items, onSelect, onClose, locale, opener }: Props) {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const resultsContainerRef = useRef<HTMLDivElement>(null);
 	// A11Y-2: focus-trap scope; `previouslyFocused` is restored when it closes.
@@ -96,13 +93,12 @@ export default function FuzzyFinder({ items, onSelect, onClose, locale }: Props)
 	}, [results, selectedIndex]);
 
 	useEffect(() => {
-		// A11Y-2 / A11Y-1: remember focus so it can be restored on close. See the
-		// header — restoring BODY is the recorded defect, not an oversight.
-		previouslyFocused.current = restoreFocusTarget();
+		// A11Y-2 / A11Y-1: remember focus so it can be restored on close.
+		previouslyFocused.current = restoreFocusTarget(opener);
 		inputRef.current?.focus();
 		const restore = previouslyFocused.current;
 		return () => restore?.focus?.();
-	}, []);
+	}, [opener]);
 
 	const handleInput = useCallback(
 		(next: string) => {

@@ -45,7 +45,7 @@ export function SiteHeader({
 	copy: ShellCopy;
 	sticky?: boolean;
 	/** Supplied by PR 2b's palette mount. Absent here: the button is inert. */
-	onOpenPalette?: () => void;
+	onOpenPalette?: (event?: React.MouseEvent<HTMLElement>) => void;
 }) {
 	const pathname = usePathname();
 	const active = activeKey(pathname);

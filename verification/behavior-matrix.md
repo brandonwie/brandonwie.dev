@@ -101,25 +101,25 @@ the comparator cannot see.
 Every sequence was sent as a real key event to the top-level page, after one
 forced paint.
 
-| #   | Route                            | Sequence        | Expected                                                 | Observed                                                                                                                        | Result                   |
-| --- | -------------------------------- | --------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| K1  | `/`                              | `Cmd+K`         | Command palette opens, focus moves into the search field | `[role=dialog]` present, 23 `[role=option]`, `document.activeElement` = `INPUT` with placeholder "Search posts and commands..." | PASS                     |
-| K2  | `/` palette                      | `ArrowDown` ×2  | Selection moves to the third option                      | `aria-activedescendant` = `cmdk-option-2`, option index 2, text "◫ Study /study"                                                | PASS                     |
-| K3  | `/` palette                      | type `redis`    | Results filter to matching posts                         | 23 → 9 options; "Redis and BullMQ Queue Patterns…" ranked first among posts                                                     | PASS                     |
-| K4  | `/` palette                      | `Escape`        | Palette closes, URL unchanged                            | `[role=dialog]` gone, `location.pathname` still `/`                                                                             | PASS (with A11Y-1 below) |
-| K5  | `/posts/claude-code-agent-teams` | `Backspace`     | Navigates back to the list                               | `/posts/claude-code-agent-teams` → `/posts`, title "All Posts \| Brandon Wie"                                                   | PASS                     |
-| K6  | `/talks/my-career`               | `ArrowRight` ×6 | Advances through steps and slides                        | counter `1 / 20` → `4 / 20`, `step 2/2`, URL carries `?page=&step=`, slide content animated in and legible                      | PASS                     |
-| K7  | `/talks/my-career`               | `ArrowLeft`     | Steps backwards                                          | counter returned to the previous position                                                                                       | PASS                     |
-| K8  | `/posts/claude-code-agent-teams` | scroll to 50 %  | Reading progress reflects position                       | `[role=progressbar]` `aria-valuenow="57"`, `width: 57.1194%` at `scrollY` 4529 of 9057                                          | PASS                     |
+| #   | Route                            | Sequence        | Expected                                                 | Observed                                                                                                                        | Result |
+| --- | -------------------------------- | --------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| K1  | `/`                              | `Cmd+K`         | Command palette opens, focus moves into the search field | `[role=dialog]` present, 23 `[role=option]`, `document.activeElement` = `INPUT` with placeholder "Search posts and commands..." | PASS   |
+| K2  | `/` palette                      | `ArrowDown` ×2  | Selection moves to the third option                      | `aria-activedescendant` = `cmdk-option-2`, option index 2, text "◫ Study /study"                                                | PASS   |
+| K3  | `/` palette                      | type `redis`    | Results filter to matching posts                         | 23 → 9 options; "Redis and BullMQ Queue Patterns…" ranked first among posts                                                     | PASS   |
+| K4  | `/` palette                      | `Escape`        | Palette closes, URL unchanged                            | `[role=dialog]` gone, `location.pathname` still `/`, focus restored (A11Y-1 closed)                                             | PASS   |
+| K5  | `/posts/claude-code-agent-teams` | `Backspace`     | Navigates back to the list                               | `/posts/claude-code-agent-teams` → `/posts`, title "All Posts \| Brandon Wie"                                                   | PASS   |
+| K6  | `/talks/my-career`               | `ArrowRight` ×6 | Advances through steps and slides                        | counter `1 / 20` → `4 / 20`, `step 2/2`, URL carries `?page=&step=`, slide content animated in and legible                      | PASS   |
+| K7  | `/talks/my-career`               | `ArrowLeft`     | Steps backwards                                          | counter returned to the previous position                                                                                       | PASS   |
+| K8  | `/posts/claude-code-agent-teams` | scroll to 50 %  | Reading progress reflects position                       | `[role=progressbar]` `aria-valuenow="57"`, `width: 57.1194%` at `scrollY` 4529 of 9057                                          | PASS   |
 
 ## Accessibility findings
 
 Graded against the rubric in [`./thresholds.md`](./thresholds.md) § Accessibility
 rubric.
 
-| id     | Severity | Route               | Finding                                                                                                                                     | Owner / closing slice                                                                               |
-| ------ | -------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| A11Y-1 | serious  | `/` command palette | After `Escape` closes the dialog, focus lands on `BODY` rather than returning to the control that opened it. WCAG 2.1 AA 2.4.3 Focus Order. | Carry into the Slice 3 palette port; fix there rather than patching the Svelte build being replaced |
+| id     | Severity | Route               | Finding                                                                                                                                     | Owner / closing slice                                                                                                |
+| ------ | -------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| A11Y-1 | serious  | `/` command palette | After `Escape` closes the dialog, focus lands on `BODY` rather than returning to the control that opened it. WCAG 2.1 AA 2.4.3 Focus Order. | CLOSED in PR 2c — opener captured across click, chord from control, and chord from BODY (fallback to .site-nav__cmd) |
 
 **Critical findings: 0.** No declared control was unreachable or inoperable by
 keyboard, and no interactive element lacked an accessible name.
