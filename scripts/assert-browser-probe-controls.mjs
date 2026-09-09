@@ -58,7 +58,8 @@ const servers = () => {
 
 /** One measurement of everything a row is allowed to assert on. */
 function observe(run) {
-	const before = { profiles: profiles().length, servers: servers().length };
+	const beforeProfiles = profiles();
+	const before = { profiles: beforeProfiles.length, servers: servers().length };
 	const started = Date.now();
 	const result = run();
 	const elapsedMs = Date.now() - started;
@@ -70,8 +71,11 @@ function observe(run) {
 	// lifecycle boundary.
 	let after = null;
 	let inventoryError = null;
+	let leakedProfileNames = [];
 	try {
-		after = { profiles: profiles().length, servers: servers().length };
+		const afterProfiles = profiles();
+		after = { profiles: afterProfiles.length, servers: servers().length };
+		leakedProfileNames = afterProfiles.filter((n) => !beforeProfiles.includes(n));
 	} catch (error) {
 		inventoryError = error.message;
 	}
@@ -84,6 +88,7 @@ function observe(run) {
 		elapsedMs,
 		inventoryError,
 		leakedProfile: after ? after.profiles > before.profiles : false,
+		leakedProfileNames,
 		leakedServer: after ? after.servers > before.servers : false,
 	};
 }
@@ -363,7 +368,11 @@ function faults(
 	if (o.inventoryError) {
 		out.push(`${id}: post-run inventory failed, leak state unknown: ${o.inventoryError}`);
 	}
-	if (o.leakedProfile) out.push(`${id}: leaked a profile directory`);
+	if (o.leakedProfile) {
+		const extra = o.leakedProfileNames?.length ? ` (${o.leakedProfileNames.join(', ')})` : '';
+		const err = o.stderr ? ` [stderr: ${o.stderr}]` : '';
+		out.push(`${id}: leaked a profile directory${extra}${err}`);
+	}
 	if (o.leakedServer) out.push(`${id}: leaked a server process`);
 	return out;
 }
@@ -681,7 +690,7 @@ async function main() {
 	const discard = (label, path) => {
 		if (!path) return;
 		try {
-			rmSync(path, { recursive: true, force: true });
+			rmSync(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 		} catch (error) {
 			cleanupWarnings.push(`${label} emergency cleanup failed: ${error.message}`);
 		}
@@ -1042,7 +1051,7 @@ async function main() {
 				killReal('SIGKILL');
 				await new Promise(resolve => chrome.once('exit', resolve));
 			}
-			if (profile) removeReal(profile, { recursive: true, force: true });
+			if (profile) removeReal(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 		}
 	`;
 

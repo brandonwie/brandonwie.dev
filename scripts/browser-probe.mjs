@@ -218,8 +218,11 @@ export async function launch({ headless = true } = {}) {
 	/** Returns null on success, or the reason removal failed. */
 	const removeProfile = () => {
 		try {
-			rmSync(profile, { recursive: true, force: true });
-			return null;
+			rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+			if (existsSync(profile)) {
+				rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+			}
+			return existsSync(profile) ? `profile still exists at ${profile}` : null;
 		} catch (error) {
 			return `could not remove ${profile}: ${error.message}`;
 		}
