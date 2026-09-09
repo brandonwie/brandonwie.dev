@@ -112,3 +112,62 @@ export function articleCopy(locale: Locale) {
 		commentsStatus: scaffold.commentsStatus,
 	};
 }
+
+export function homeCopy(locale: Locale) {
+	return {
+		pageTitle: m.site_title({}, { locale }),
+		pageDescription: m.site_description({}, { locale }),
+		tagline: m.blog_tagline({}, { locale }),
+		bio: m.blog_bio({}, { locale }),
+		projects: m.palette_nav_projects({}, { locale }),
+		posts: m.palette_nav_posts({}, { locale }),
+		about: m.palette_nav_about({}, { locale }),
+		heroStatsLabel: m.hero_stats_label({}, { locale }),
+		heroStatEventsLabel: m.hero_stat_events_label({}, { locale }),
+		heroStatPostsLabel: m.hero_stat_posts_label({}, { locale }),
+		heroStatServicesLabel: m.hero_stat_services_label({}, { locale }),
+		heroStatLanguagesLabel: m.hero_stat_languages_label({}, { locale }),
+		workSection: m.work_section({}, { locale }),
+		archcalendarSubtitle: m.archcalendar_subtitle({}, { locale }),
+		archcalendarDescription: m.archcalendar_description({}, { locale }),
+		system3bCardSubtitle: m.system_3b_card_subtitle({}, { locale }),
+		system3bTitle: m.system_3b_title({}, { locale }),
+		system3bCardDescription: m.system_3b_card_description({}, { locale }),
+		portfolioSubtitle: m.portfolio_subtitle({}, { locale }),
+		portfolioDescription: m.portfolio_description({}, { locale }),
+		recentPosts: m.recent_posts({}, { locale }),
+		seeAllPosts: (count: number) => m.see_all_posts({ count }, { locale }),
+		noPosts: m.no_posts({}, { locale }),
+	};
+}
+
+export type HomeCopy = ReturnType<typeof homeCopy>;
+
+export function postsListCopy(locale: Locale) {
+	return {
+		pageTitle: `${m.posts_title({}, { locale })} | Brandon Wie`,
+		pageHeading: m.posts_title({}, { locale }),
+		pageDescription: m.posts_description({}, { locale }),
+		categoryFilter: m.category_filter({}, { locale }),
+		allCategories: m.all_categories({}, { locale }),
+		noPosts: m.no_posts({}, { locale }),
+	};
+}
+
+export type PostsListCopy = ReturnType<typeof postsListCopy>;
+
+export function tagsCopy(locale: Locale) {
+	return {
+		pageTitle: `${m.tags_meta_title({}, { locale })} | Brandon Wie`,
+		pageDescription: m.tags_meta_description({}, { locale }),
+		eyebrow: m.tags_eyebrow({}, { locale }),
+		title: m.tags_title({}, { locale }),
+		intro: (tags: number, posts: number) => m.tags_intro({ tags, posts }, { locale }),
+		empty: m.tags_empty({}, { locale }),
+		cloudHeading: m.tags_cloud_heading({}, { locale }),
+		allHeading: m.tags_all_heading({}, { locale }),
+		count: (count: number) => m.tags_count({ count }, { locale }),
+	};
+}
+
+export type TagsCopy = ReturnType<typeof tagsCopy>;
