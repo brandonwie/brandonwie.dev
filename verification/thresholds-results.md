@@ -14,14 +14,14 @@ the eleven-route representative set in
 [`./behavior-matrix.md`](./behavior-matrix.md), each at 390×844, 820×1180 and
 1440×900.
 
-| Metric                                            | Bound                                         | Measured                                                                                            | Result                        |
-| ------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------- |
-| Critical findings                                 | 0 permitted                                   | **0** across all 11 routes × 3 viewports                                                            | PASS                          |
-| Interactive elements with no accessible name      | 0 permitted (critical)                        | **0** — 36 / 199 / 52 / 52 / 36 / 994 / 20 / 37 / 22 / 18 focusables per route                      | PASS                          |
-| Images with no `alt`                              | 0 permitted (critical)                        | **0** — including all 167 lazy card images on `/posts`                                              | PASS                          |
-| Declared keyboard controls reachable and operable | all                                           | **8 of 8** sequences K1–K8 passed                                                                   | PASS                          |
-| Serious findings                                  | enumerated, with an owner and a closing slice | **1** — A11Y-1, palette focus not restored after `Escape` (WCAG 2.4.3); owner: Slice 3 palette port | PASS (enumerated, not waived) |
-| Horizontal overflow                               | none at any declared viewport                 | **none** — `scrollWidth` 382 / 812 / 1432 against 390 / 820 / 1440                                  | PASS                          |
+| Metric                                            | Bound                                         | Measured                                                                              | Result |
+| ------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------- | ------ |
+| Critical findings                                 | 0 permitted                                   | **0** across all 11 routes × 3 viewports                                              | PASS   |
+| Interactive elements with no accessible name      | 0 permitted (critical)                        | **0** — 36 / 199 / 52 / 52 / 36 / 994 / 20 / 37 / 22 / 18 focusables per route        | PASS   |
+| Images with no `alt`                              | 0 permitted (critical)                        | **0** — including all 167 lazy card images on `/posts`                                | PASS   |
+| Declared keyboard controls reachable and operable | all                                           | **8 of 8** sequences K1–K8 passed                                                     | PASS   |
+| Serious findings                                  | enumerated, with an owner and a closing slice | **0** — A11Y-1 closed in PR 2c (opener-capture focus restore on Escape/click-outside) | PASS   |
+| Horizontal overflow                               | none at any declared viewport                 | **none** — `scrollWidth` 382 / 812 / 1432 against 390 / 820 / 1440                    | PASS   |
 
 ## Weight — measured, recorded not compared
 
@@ -180,11 +180,11 @@ Stated so a reader can discount them correctly.
 
 ## Slice 0 status against AC9
 
-| Half                     | Status                                                             |
-| ------------------------ | ------------------------------------------------------------------ |
-| Accessibility thresholds | MEASURED — 0 critical findings, 1 serious enumerated with an owner |
-| Weight budgets           | WRITTEN; the candidate comparison is due at Slice 2                |
-| Core Web Vitals proxies  | MEASURED — bounds frozen from the baseline, all ten routes pass    |
+| Half                     | Status                                                                      |
+| ------------------------ | --------------------------------------------------------------------------- |
+| Accessibility thresholds | MEASURED — 0 critical findings, 0 serious findings (A11Y-1 closed in PR 2c) |
+| Weight budgets           | WRITTEN; the candidate comparison is due at Slice 2                         |
+| Core Web Vitals proxies  | MEASURED — bounds frozen from the baseline, all ten routes pass             |
 
 AC9 is satisfied for Slice 0: every threshold carries a metric, a numeric bound
 and a route set; each bound was written before the result it judges; and every

@@ -479,11 +479,11 @@ const ROWS = [
 	{
 		id: 'BC-23',
 		kind: 'DEFECT',
-		what: 'ASSERTION: the destination is reached WITHOUT replacing the document, as client routing would',
-		args: ['--client-nav'],
+		what: 'ASSERTION: the destination is reached by replacing the document (full page reload)',
+		args: ['--full-reload'],
 		env: {},
 		expect: EXIT.FAIL,
-		stdoutIncludes: 'without replacing the document',
+		stdoutIncludes: 'replacing the document',
 	},
 	{
 		id: 'BC-24',

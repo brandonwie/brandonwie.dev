@@ -1462,24 +1462,26 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		return 'marker set with the listener, removed in the same cleanup';
 	});
 
-	r.row('M3', 'the palette navigates the way the shell anchors do', () => {
-		// The recorded shell decision is native anchors with no speculative
-		// prefetch, and client navigation stays deferred until that surface is
-		// ported. Handing the palette `useRouter().push` would switch the site to
-		// client navigation as a side effect of mounting a palette, ahead of the
-		// policy that governs it. PR 2d changes this line WITH that policy.
-		//
-		// The exclusion alone is not a contract — a no-op adapter satisfies it —
-		// so the positive half is asserted here and the runtime consequence is
-		// proven by the browser probe, which reads the destination.
+	r.row('M3', 'the palette navigates via the client router for intra-locale targets', () => {
+		// In PR 2d, the palette adopts the client router for intra-locale targets,
+		// matching AppLink. Cross-root navigations (crossing (en) and (ko)) cross
+		// Next.js root layout route groups and must perform a full document
+		// navigation via window.location.assign, as do external URLs.
 		const shell = stripComments(read('next/src/components/palette/ShellPalette.tsx'));
+		must(/useRouter\(/.test(shell), 'the controller does not initialize the client router');
+		must(
+			/router\.push\(href\)/.test(shell),
+			'the controller does not push intra-locale targets through the client router',
+		);
 		must(
 			/window\.location\.assign\(href\)/.test(shell),
-			'the controller does not perform a full-document navigation',
+			'the controller does not retain window.location.assign for cross-root or external targets',
 		);
-		must(!/useRouter\(/.test(shell), 'the controller reaches for the client router');
-		must(!/router\.push\(/.test(shell), 'the controller pushes through the client router');
-		return 'location.assign(href); no client router in the controller';
+		must(
+			/isKorean\(pathname\)\s*!==\s*isKorean\(href\)/.test(shell),
+			'the controller does not branch on cross-root locale mismatch',
+		);
+		return 'router.push(href) for intra-locale targets; window.location.assign(href) for cross-root/external';
 	});
 
 	// ------------------------------------------------------ A: A11Y-1 resolved

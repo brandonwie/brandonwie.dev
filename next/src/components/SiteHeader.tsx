@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 
+import { AppLink } from '@/components/AppLink';
 import { HeaderControls } from '@/components/HeaderControls';
 import { NAV_ITEMS, activeKey, homeHref, hrefFor } from '@/data/nav';
 import type { Locale } from '@/i18n/locale';
@@ -53,22 +54,22 @@ export function SiteHeader({
 	return (
 		<header className={sticky ? 'site-nav site-nav--sticky' : 'site-nav'}>
 			<div className="site-nav__in">
-				<a className="site-brand" href={homeHref(locale)}>
+				<AppLink className="site-brand" href={homeHref(locale)}>
 					<span className="site-brand__dot" aria-hidden="true" />
 					brandonwie.dev
-				</a>
+				</AppLink>
 				<nav className="site-nav__links" aria-label={copy.navigation}>
 					{NAV_ITEMS.map((item) => {
 						const isActive = item.key === active;
 						return (
-							<a
+							<AppLink
 								key={item.key}
 								href={hrefFor(item, locale)}
 								className={isActive ? 'site-nav__link is-active' : 'site-nav__link'}
 								aria-current={isActive ? 'page' : undefined}
 							>
 								~/{copy.nav[item.key]}
-							</a>
+							</AppLink>
 						);
 					})}
 					<button type="button" className="site-nav__cmd" onClick={onOpenPalette}>

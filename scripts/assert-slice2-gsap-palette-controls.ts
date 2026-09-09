@@ -1044,10 +1044,21 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
-		id: 'M3-defect-adapter-becomes-the-client-router',
+		id: 'M3-defect-adapter-drops-client-router',
 		kind: 'defect',
 		row: 'M3',
-		what: 'the palette switches the whole site to client navigation as a side effect of mounting',
+		what: 'the palette navigates only via window.location.assign, dropping the client router',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
+				text.replace('router.push(href);', 'window.location.assign(href);'),
+			),
+		}),
+	},
+	{
+		id: 'M3-defect-adapter-drops-cross-root-assign',
+		kind: 'defect',
+		row: 'M3',
+		what: 'the palette drops window.location.assign for cross-root navigation',
 		setup: (dir) => ({
 			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
 				text.replace('window.location.assign(href);', 'router.push(href);'),
@@ -1055,13 +1066,16 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
-		id: 'M3-defect-adapter-becomes-a-no-op',
+		id: 'M3-defect-cross-root-predicate-inverted',
 		kind: 'defect',
 		row: 'M3',
-		what: 'the adapter navigates nowhere, which the exclusion half alone would accept',
+		what: 'the controller inverts the cross-root check and pushes cross-root targets through the client router',
 		setup: (dir) => ({
 			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
-				text.replace('window.location.assign(href);', 'void href;'),
+				text.replace(
+					'isKorean(pathname) !== isKorean(href)',
+					'isKorean(pathname) === isKorean(href)',
+				),
 			),
 		}),
 	},
