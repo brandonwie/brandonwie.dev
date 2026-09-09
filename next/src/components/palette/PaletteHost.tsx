@@ -36,9 +36,19 @@ interface Props {
 	/** Owned by `ShellPalette`; this component never sets it. */
 	open: boolean;
 	onClose: () => void;
+	/** Opener element captured by ShellPalette for A11Y-1 focus restoration. */
+	opener?: HTMLElement | null;
 }
 
-export default function PaletteHost({ posts, pathname, locale, navigate, open, onClose }: Props) {
+export default function PaletteHost({
+	posts,
+	pathname,
+	locale,
+	navigate,
+	open,
+	onClose,
+	opener,
+}: Props) {
 	// Memoized because it is the sole dependency of the child's Fuse index. Rebuilt
 	// per render, it re-indexes 167 posts on every parent render — live in the
 	// shell mount, where `pathname` comes from `usePathname()`.
@@ -64,5 +74,13 @@ export default function PaletteHost({ posts, pathname, locale, navigate, open, o
 
 	if (!open) return null;
 
-	return <FuzzyFinder items={items} onSelect={handleSelect} onClose={onClose} locale={locale} />;
+	return (
+		<FuzzyFinder
+			items={items}
+			onSelect={handleSelect}
+			onClose={onClose}
+			locale={locale}
+			opener={opener}
+		/>
+	);
 }

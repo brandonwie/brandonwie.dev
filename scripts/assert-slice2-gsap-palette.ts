@@ -1482,33 +1482,42 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		return 'location.assign(href); no client router in the controller';
 	});
 
-	// ------------------------------------------------------ A: A11Y-1 preserved
+	// ------------------------------------------------------ A: A11Y-1 resolved
 
-	r.row('A1', 'focus returns to whatever held it, which is the recorded defect', () => {
-		const source = stripComments(read('next/src/components/palette/FuzzyFinder.tsx'));
-
-		// The BINDING, not a vocabulary of names. An earlier version of this row
-		// blacklisted `openerRef|triggerRef|openedBy`, which a fix under any
-		// fourth name walked straight past -- and its control injected one of the
-		// three literals, so it only ever proved the blacklist matched itself.
-		// What has to hold is that the restore target is bound to the element that
-		// held focus at mount and to nothing else.
+	r.row('A1', 'focus returns to the opener control or fallback, closing A11Y-1', () => {
+		const shell = stripComments(read('next/src/components/palette/ShellPalette.tsx'));
+		must(shell.includes('resolveOpener'), 'ShellPalette does not resolve an opener');
 		must(
-			/previouslyFocused\.current = restoreFocusTarget\(\);/.test(source),
-			'the restore target is no longer bound to restoreFocusTarget()',
+			/document\.querySelector<HTMLElement>\(['"]\.site-nav__cmd['"]\)/.test(shell),
+			'ShellPalette does not resolve the .site-nav__cmd fallback',
+		);
+		must(
+			/setOpener\(resolveOpener\(active\)\)/.test(shell),
+			'ShellPalette does not capture opener on chord',
+		);
+		must(
+			/<PaletteHost[^>]*opener=\{opener\}/.test(shell),
+			'ShellPalette does not pass opener to PaletteHost',
+		);
+
+		const host = stripComments(read('next/src/components/palette/PaletteHost.tsx'));
+		must(
+			/<FuzzyFinder[^>]*opener=\{opener\}/.test(host),
+			'PaletteHost does not forward opener to FuzzyFinder',
+		);
+
+		const source = stripComments(read('next/src/components/palette/FuzzyFinder.tsx'));
+		must(
+			/previouslyFocused\.current = restoreFocusTarget\(opener\);/.test(source),
+			'the restore target is not bound to restoreFocusTarget(opener)',
 		);
 		eq(count(source, 'previouslyFocused.current ='), 1, 'assignments to the restore target');
-		// NOT containment. `[^}]*document.activeElement` accepts a body that
-		// consults something else FIRST and only falls back to activeElement --
-		// which is a genuine A11Y-1 fix, and round 2 demonstrated one staying green
-		// under it. The escape the blacklist rewrite closed had simply moved one
-		// function down. Assert the body exactly, so activeElement is the SOLE
-		// source of the restore target.
-		const restoreBody = source.match(/function restoreFocusTarget\(\)[^{]*\{([\s\S]*?)\n\}/);
+
+		const restoreBody = source.match(/function restoreFocusTarget\([^)]*\)[^{]*\{([\s\S]*?)\n\}/);
 		must(restoreBody !== null, 'restoreFocusTarget is missing or no longer a function declaration');
 		eq(
 			restoreBody![1].replace(/\s+/g, ' ').trim(),
-			'return (document.activeElement as HTMLElement | null) ?? null;',
+			'return opener ?? (document.activeElement as HTMLElement | null) ?? null;',
 			'the restoreFocusTarget body',
 		);
 		must(
@@ -1520,11 +1529,10 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 			'the restored value is not the captured one',
 		);
 
-		// behavior-matrix.md:122 records focus landing on BODY after Escape and
-		// assigns the fix to the Slice 3 palette port. Reproducing it is the
-		// requirement here; fixing it early would leave the baseline row
-		// describing neither stack.
-		return 'the restore target is document.activeElement at mount, assigned once, as in the original';
+		// behavior-matrix.md:122 recorded focus landing on BODY after Escape.
+		// PR 2c closes A11Y-1 across all three paths: header button click, chord
+		// from active control, and chord from BODY with .site-nav__cmd fallback.
+		return 'opener captured across click/chord with .site-nav__cmd fallback, passed through host, restored on close';
 	});
 
 	r.row('A2', 'the combobox contract the original shipped is intact', () => {

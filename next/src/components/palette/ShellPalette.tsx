@@ -47,6 +47,21 @@ import { planGlobalChord } from '@/palette/shortcuts';
 /** The marker a browser probe waits on. Set with the listener, cleared with it. */
 export const PALETTE_READY_ATTRIBUTE = 'data-palette-ready';
 
+/** Resolves the header palette button as the fallback opener when chording from BODY. */
+export function getFallbackOpener(): HTMLElement | null {
+	return typeof document !== 'undefined'
+		? document.querySelector<HTMLElement>('.site-nav__cmd')
+		: null;
+}
+
+/** Resolves the opener: a usable focused control, or fallback to the header palette button. */
+export function resolveOpener(candidate?: HTMLElement | null): HTMLElement | null {
+	if (candidate && candidate !== document.body && candidate !== document.documentElement) {
+		return candidate;
+	}
+	return getFallbackOpener();
+}
+
 export default function ShellPalette({
 	locale,
 	copy,
@@ -58,6 +73,7 @@ export default function ShellPalette({
 }) {
 	const pathname = usePathname();
 	const [open, setOpen] = useState(false);
+	const [opener, setOpener] = useState<HTMLElement | null>(null);
 
 	// Full-document navigation, matching the shell's native anchors. Stable, or
 	// the host's item memo rebuilds its Fuse index on every render.
@@ -65,8 +81,22 @@ export default function ShellPalette({
 		window.location.assign(href);
 	}, []);
 
-	const handleOpen = useCallback(() => setOpen(true), []);
-	const handleClose = useCallback(() => setOpen(false), []);
+	const handleOpen = useCallback((event?: React.MouseEvent<HTMLElement> | HTMLElement | null) => {
+		let element: HTMLElement | null = null;
+		if (event && typeof event === 'object') {
+			if ('currentTarget' in event && event.currentTarget) {
+				element = event.currentTarget as HTMLElement;
+			} else if ('nodeType' in event) {
+				element = event as HTMLElement;
+			}
+		}
+		setOpener(resolveOpener(element ?? (document.activeElement as HTMLElement | null)));
+		setOpen(true);
+	}, []);
+
+	const handleClose = useCallback(() => {
+		setOpen(false);
+	}, []);
 
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
@@ -80,8 +110,13 @@ export default function ShellPalette({
 			if (plan.kind === 'ignore') return;
 			// Cmd+P prints and Cmd+F opens the browser find bar otherwise.
 			event.preventDefault();
-			if (plan.kind === 'open-palette') setOpen(true);
-			else navigate(plan.href);
+			if (plan.kind === 'open-palette') {
+				const active = document.activeElement as HTMLElement | null;
+				setOpener(resolveOpener(active));
+				setOpen(true);
+			} else {
+				navigate(plan.href);
+			}
 		};
 
 		window.addEventListener('keydown', onKeyDown);
@@ -102,6 +137,7 @@ export default function ShellPalette({
 				navigate={navigate}
 				open={open}
 				onClose={handleClose}
+				opener={opener}
 			/>
 		</>
 	);

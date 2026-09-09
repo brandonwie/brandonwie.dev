@@ -1087,41 +1087,29 @@ const CONTROLS: Control[] = [
 		setup: () => ({ paletteSentinel: 'this-class-name-does-not-exist' }),
 	},
 
-	// ---- A: A11Y-1 preserved
+	// ---- A: A11Y-1 resolved
 	{
-		id: 'A1-defect-fixed-under-an-unlisted-name',
+		id: 'A1-defect-reverts-to-active-element',
 		kind: 'defect',
 		row: 'A1',
-		what: 'A11Y-1 is fixed by a mechanism the row was never taught to name',
+		what: 'the restore target ignores the opener and reverts to activeElement alone',
 		setup: (dir) => ({
-			// The control that matters. The previous A1 injected the literal
-			// `openerRef`, one of three names the row blacklisted, so it only ever
-			// proved the blacklist matched itself. This fix uses a name no list
-			// contains; the row has to catch it by asserting the BINDING.
 			sourceOverrides: mutateSource(dir, 'next/src/components/palette/FuzzyFinder.tsx', (text) =>
 				text.replace(
-					'previouslyFocused.current = restoreFocusTarget();',
-					'previouslyFocused.current = (window as unknown as { __invokedFrom?: HTMLElement }).__invokedFrom ?? restoreFocusTarget();',
+					'return opener ?? (document.activeElement as HTMLElement | null) ?? null;',
+					'return (document.activeElement as HTMLElement | null) ?? null;',
 				),
 			),
 		}),
 	},
 	{
-		id: 'A1-defect-fixed-inside-restoreFocusTarget',
+		id: 'A1-defect-fallback-dropped',
 		kind: 'defect',
 		row: 'A1',
-		what: 'A11Y-1 is fixed inside restoreFocusTarget, below the assignment the row binds',
+		what: 'the fallback query to .site-nav__cmd is dropped',
 		setup: (dir) => ({
-			// Round 2's finding. A1 checked the assignment site exactly but the
-			// helper only by containment, so a real fix placed INSIDE the helper --
-			// return the opener, fall back to activeElement -- kept all 53 rows
-			// green. The blacklist escape had become a containment escape one
-			// function down.
-			sourceOverrides: mutateSource(dir, 'next/src/components/palette/FuzzyFinder.tsx', (text) =>
-				text.replace(
-					'return (document.activeElement as HTMLElement | null) ?? null;',
-					"return (\n\t\tdocument.querySelector<HTMLElement>('[data-palette-opener]') ??\n\t\t(document.activeElement as HTMLElement | null) ??\n\t\tnull\n\t);",
-				),
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
+				text.replace("document.querySelector<HTMLElement>('.site-nav__cmd')", 'null'),
 			),
 		}),
 	},
@@ -1178,10 +1166,10 @@ const CONTROLS: Control[] = [
 		id: 'P1-defect-target-missing',
 		kind: 'defect',
 		row: 'P1',
-		alsoFails: ['K6', 'M1', 'P2'],
+		alsoFails: ['A1', 'K6', 'M1', 'P2'],
 		what: 'a ported module is gone',
 		setup: (dir) => ({
-			// Declared: K6 and M1 read the same file, so pointing P1 at a path that
+			// Declared: A1, K6 and M1 read the same file, so pointing P1 at a path that
 			// does not exist takes the rows that read its contents too.
 			sourceOverrides: {
 				'next/src/components/palette/PaletteHost.tsx': join(dir, 'does-not-exist.tsx'),
