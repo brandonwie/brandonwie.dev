@@ -428,7 +428,71 @@ const ROWS = [
 		args: ['--block-hydration'],
 		env: {},
 		expect: EXIT.FAIL,
-		stdoutIncludes: 'the page never reached an interactive state',
+		stdoutIncludes: 'never reported ready',
+	},
+
+	// The PR 2b rows. Each one says what it PROVES, because every mutation below
+	// is a DOM injection: `mutateBehavior` is
+	// `Page.addScriptToEvaluateOnNewDocument`, so it can suppress an event or add
+	// a node and cannot mount a React subtree, detach a listener or swap the
+	// navigation adapter. The scenarios those would simulate — a duplicate mount,
+	// a missing locale mount, adapter identity — are reproduced at source in
+	// `migration:gsap-palette` rows M1-M4, where a mutation can really create
+	// them. A control that simulated one here and claimed to have reproduced it
+	// would be the same overstatement the teardown work spent two rounds undoing.
+	{
+		id: 'BC-19',
+		kind: 'DEFECT',
+		what: 'GATE: the readiness marker is absent, so the probe must not proceed to the chord',
+		args: ['--clear-marker'],
+		env: {},
+		expect: EXIT.FAIL,
+		stdoutIncludes: 'never reported ready',
+	},
+	{
+		id: 'BC-20',
+		kind: 'DEFECT',
+		what: 'ASSERTION: readiness holds while the chord is suppressed, so the CHORD row is what fails',
+		args: ['--stale-marker'],
+		env: {},
+		expect: EXIT.FAIL,
+		stdoutIncludes: 'did not open on the chord',
+	},
+	{
+		id: 'BC-21',
+		kind: 'DEFECT',
+		what: 'ASSERTION: a second overlay node proves the uniqueness count can fail',
+		args: ['--second-overlay'],
+		env: {},
+		expect: EXIT.FAIL,
+		stdoutIncludes: '2 overlay(s)',
+	},
+	{
+		id: 'BC-22',
+		kind: 'DEFECT',
+		what: 'ASSERTION: the selection never navigates, which a no-op adapter would also produce',
+		args: ['--block-navigation'],
+		env: {},
+		expect: EXIT.FAIL,
+		stdoutIncludes: 'did not reach',
+	},
+	{
+		id: 'BC-23',
+		kind: 'DEFECT',
+		what: 'ASSERTION: the destination is reached WITHOUT replacing the document, as client routing would',
+		args: ['--client-nav'],
+		env: {},
+		expect: EXIT.FAIL,
+		stdoutIncludes: 'without replacing the document',
+	},
+	{
+		id: 'BC-24',
+		kind: 'DEFECT',
+		what: 'ASSERTION: the selection lands on the wrong route',
+		args: ['--wrong-destination'],
+		env: {},
+		expect: EXIT.FAIL,
+		stdoutIncludes: 'it is at /',
 	},
 ];
 

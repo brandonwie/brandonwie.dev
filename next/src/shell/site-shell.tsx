@@ -20,8 +20,24 @@ import type { Locale } from './document';
  * `global-error.tsx` and `global-not-found.tsx` also render this shell. They
  * inherit the real chrome from this change and are otherwise untouched; those
  * routes belong to a later PR.
+ *
+ * THE HEADER IS A SLOT, and that is what keeps the palette off the error
+ * routes. `global-error.tsx` is `'use client'`, so anything mounted
+ * unconditionally here compiles into its client graph — a truthiness check
+ * would not help, because the static import stays in that route's module
+ * graph. The locale layouts pass `ShellPalette` (client) as `header`; the
+ * error routes pass nothing and get the plain header below, with no palette
+ * code in their bundle and no behavior to infer from a call site.
  */
-export function SiteShell({ locale, children }: { locale: Locale; children: ReactNode }) {
+export function SiteShell({
+	locale,
+	header,
+	children,
+}: {
+	locale: Locale;
+	header?: ReactNode;
+	children: ReactNode;
+}) {
 	const copy = shellCopy(locale);
 
 	return (
@@ -29,7 +45,7 @@ export function SiteShell({ locale, children }: { locale: Locale; children: Reac
 			<a className="skip-link" href="#main-content">
 				{copy.skip}
 			</a>
-			<SiteHeader locale={locale} copy={copy} />
+			{header ?? <SiteHeader locale={locale} copy={copy} />}
 			<main id="main-content" className="page-frame" tabIndex={-1}>
 				{children}
 			</main>
