@@ -56,6 +56,7 @@ export function getFallbackOpener(): HTMLElement | null {
 
 /** Resolves the opener: a usable focused control, or fallback to the header palette button. */
 export function resolveOpener(candidate?: HTMLElement | null): HTMLElement | null {
+	if (typeof document === 'undefined') return null;
 	if (candidate && candidate !== document.body && candidate !== document.documentElement) {
 		return candidate;
 	}
@@ -81,20 +82,14 @@ export default function ShellPalette({
 		window.location.assign(href);
 	}, []);
 
-	const handleOpen = useCallback((event?: React.MouseEvent<HTMLElement> | HTMLElement | null) => {
-		let element: HTMLElement | null = null;
-		if (event && typeof event === 'object') {
-			if ('currentTarget' in event && event.currentTarget) {
-				element = event.currentTarget as HTMLElement;
-			} else if ('nodeType' in event) {
-				element = event as HTMLElement;
-			}
-		}
+	const handleOpen = useCallback((event?: React.MouseEvent<HTMLElement>) => {
+		const element = (event?.currentTarget as HTMLElement | null) ?? null;
 		setOpener(resolveOpener(element ?? (document.activeElement as HTMLElement | null)));
 		setOpen(true);
 	}, []);
 
 	const handleClose = useCallback(() => {
+		setOpener(null);
 		setOpen(false);
 	}, []);
 
