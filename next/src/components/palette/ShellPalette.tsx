@@ -79,7 +79,7 @@ export default function ShellPalette({
 	// window.location.assign.
 	const navigate = useCallback(
 		(href: string) => {
-			if (/^(https?:)?\/\//.test(href) || isKorean(pathname) !== isKorean(href)) {
+			if (/^https?:/.test(href) || isKorean(pathname) !== isKorean(href)) {
 				window.location.assign(href);
 			} else {
 				router.push(href);

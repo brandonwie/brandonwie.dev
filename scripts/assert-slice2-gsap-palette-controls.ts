@@ -1065,6 +1065,20 @@ const CONTROLS: Control[] = [
 			),
 		}),
 	},
+	{
+		id: 'M3-defect-cross-root-predicate-inverted',
+		kind: 'defect',
+		row: 'M3',
+		what: 'the controller inverts the cross-root check and pushes cross-root targets through the client router',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/src/components/palette/ShellPalette.tsx', (text) =>
+				text.replace(
+					'isKorean(pathname) !== isKorean(href)',
+					'isKorean(pathname) === isKorean(href)',
+				),
+			),
+		}),
+	},
 
 	{
 		id: 'M4-defect-error-document-carries-the-palette',

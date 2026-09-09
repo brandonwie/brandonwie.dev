@@ -180,11 +180,11 @@ Stated so a reader can discount them correctly.
 
 ## Slice 0 status against AC9
 
-| Half                     | Status                                                             |
-| ------------------------ | ------------------------------------------------------------------ |
-| Accessibility thresholds | MEASURED — 0 critical findings, 1 serious enumerated with an owner |
-| Weight budgets           | WRITTEN; the candidate comparison is due at Slice 2                |
-| Core Web Vitals proxies  | MEASURED — bounds frozen from the baseline, all ten routes pass    |
+| Half                     | Status                                                                      |
+| ------------------------ | --------------------------------------------------------------------------- |
+| Accessibility thresholds | MEASURED — 0 critical findings, 0 serious findings (A11Y-1 closed in PR 2c) |
+| Weight budgets           | WRITTEN; the candidate comparison is due at Slice 2                         |
+| Core Web Vitals proxies  | MEASURED — bounds frozen from the baseline, all ten routes pass             |
 
 AC9 is satisfied for Slice 0: every threshold carries a metric, a numeric bound
 and a route set; each bound was written before the result it judges; and every

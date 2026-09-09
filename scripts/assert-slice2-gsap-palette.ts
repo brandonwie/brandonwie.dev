@@ -1477,6 +1477,10 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 			/window\.location\.assign\(href\)/.test(shell),
 			'the controller does not retain window.location.assign for cross-root or external targets',
 		);
+		must(
+			/isKorean\(pathname\)\s*!==\s*isKorean\(href\)/.test(shell),
+			'the controller does not branch on cross-root locale mismatch',
+		);
 		return 'router.push(href) for intra-locale targets; window.location.assign(href) for cross-root/external';
 	});
 
