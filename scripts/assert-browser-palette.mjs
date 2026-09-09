@@ -13,7 +13,7 @@
  *   node scripts/assert-browser-palette.mjs --stale-marker     # BP-01 control
  *   node scripts/assert-browser-palette.mjs --second-overlay   # BP-03 control
  *   node scripts/assert-browser-palette.mjs --block-navigation # BP-04 control
- *   node scripts/assert-browser-palette.mjs --client-nav       # BP-04 control
+ *   node scripts/assert-browser-palette.mjs --full-reload      # BP-04 control
  *   node scripts/assert-browser-palette.mjs --wrong-destination# BP-04 control
  *
  * WHAT THE CONTROLS PROVE, EXACTLY. Every flag above mutates the live DOM, not
@@ -56,7 +56,7 @@ const CLEAR_MARKER = flag('--clear-marker');
 const STALE_MARKER = flag('--stale-marker');
 const SECOND_OVERLAY = flag('--second-overlay');
 const BLOCK_NAVIGATION = flag('--block-navigation');
-const CLIENT_NAV = flag('--client-nav');
+const FULL_RELOAD = flag('--full-reload');
 const WRONG_DESTINATION = flag('--wrong-destination');
 
 /** The controller sets this with its listener and clears it in the cleanup. */
@@ -110,11 +110,11 @@ const STOP_SELECTION = `
 // STOP_SELECTION would never run, because stopImmediatePropagation ends the
 // dispatch — the first version of these two controls made exactly that mistake
 // and reported "did not navigate" for both.
-const FAKE_CLIENT_NAV = `
+const FAKE_FULL_RELOAD = `
 	window.addEventListener('click', (e) => {
 		if (!e.target.closest('[data-result-index]')) return;
 		e.stopImmediatePropagation();
-		history.pushState({}, '', ${JSON.stringify(DESTINATION)});
+		window.location.assign(${JSON.stringify(DESTINATION)});
 	}, true);
 `;
 const WRONG_TARGET = `
@@ -166,7 +166,7 @@ async function main() {
 		if (STALE_MARKER) await mutateBehavior(page, STALE_READY_MARKER);
 		if (SECOND_OVERLAY) await mutateBehavior(page, INJECT_SECOND_OVERLAY);
 		if (BLOCK_NAVIGATION) await mutateBehavior(page, STOP_SELECTION);
-		if (CLIENT_NAV) await mutateBehavior(page, FAKE_CLIENT_NAV);
+		if (FULL_RELOAD) await mutateBehavior(page, FAKE_FULL_RELOAD);
 		if (WRONG_DESTINATION) await mutateBehavior(page, WRONG_TARGET);
 		if (BLOCK_HYDRATION) {
 			await page.send('Network.enable');
@@ -222,12 +222,12 @@ async function main() {
 			`${overlays} overlay(s) and ${markers} readiness marker(s) after one chord`,
 		);
 
-		// --- BP-04: the palette navigates, and the document is replaced --------
+		// --- BP-04: the palette navigates via client router (document preserved)
 		// The beacon is seeded with `evaluate` on the CURRENT document. Seeding it
 		// through `mutateBehavior` would register the script for FUTURE documents
 		// too, re-seeding the destination and making "preserved" the only possible
-		// answer. Its absence afterwards is evidence the document was REPLACED —
-		// not evidence of which adapter did it; adapter identity is row M3's.
+		// answer. Its presence afterwards is evidence the document was PRESERVED
+		// (client navigation) rather than replaced by a full reload.
 		const beacon = `probe-${Date.now()}`;
 		await evaluate(page, `window.__paletteBeacon = ${JSON.stringify(beacon)};`);
 		await page.send('Input.insertText', { text: DESTINATION_QUERY });
@@ -247,11 +247,11 @@ async function main() {
 			const where = await evaluate(page, 'location.pathname');
 			report(
 				'BP-04',
-				arrived && !survived,
+				arrived && survived,
 				arrived
 					? survived
-						? 'the destination was reached without replacing the document'
-						: `the palette navigated to ${where} and the document was replaced`
+						? `the palette navigated to ${where} via client router and the document was preserved`
+						: 'the destination was reached by replacing the document (full page reload)'
 					: `the palette did not reach ${DESTINATION}; it is at ${where}`,
 			);
 		}

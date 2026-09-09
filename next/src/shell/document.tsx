@@ -85,24 +85,20 @@ const FONT_STYLESHEET =
  * Prefetch — the recorded decision for `data-sveltekit-preload-data="hover"`.
  *
  * That attribute is SvelteKit-only and has no Next attribute equivalent, so it
- * is DROPPED from `<body>`. This slice deliberately renders native anchors:
- * the locale switch must cross root layouts with a full document navigation,
- * and the small home/header/breadcrumb surface does not need speculative data.
- * The behaviour change, stated rather than absorbed:
+ * is DROPPED from `<body>`. Instead, intra-locale navigation uses `AppLink`
+ * with hover/focus-triggered prefetch (`prefetch={active ? null : false}`),
+ * matching SvelteKit's hover preload contract without link-flooding on routes
+ * with many links.
  *
- *   before  a link's data is fetched when the pointer enters it, or on touch
- *   after   a static document is requested only when its link is activated
- *
- * This is less eager than the baseline. The site-wide client-navigation and
- * prefetch policy belongs to Slice 3, when link-dense routes such as `/posts`
- * are actually present; this representative slice does not claim it early.
+ * Cross-root navigations (such as LanguageToggle crossing `(en)` and `(ko)`)
+ * retain native anchors and full page reload.
  *
  * This drops the `body:preload-data` shell key the comparator captures on all
  * 366 baseline pages. The four currently migrated route fingerprints are
  * approved in the exception ledger; every future route needs its own
  * route-specific fingerprint entry before this decision applies there.
  */
-export const PREFETCH_DECISION = 'native-anchors-no-prefetch' as const;
+export const PREFETCH_DECISION = 'hover-prefetch-app-link' as const;
 
 /**
  * The document shell. One instance per locale root layout.

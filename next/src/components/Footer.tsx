@@ -1,3 +1,4 @@
+import { AppLink } from '@/components/AppLink';
 import { NAV_ITEMS, base, hrefFor } from '@/data/nav';
 import type { NavKey } from '@/data/nav';
 import type { Locale } from '@/i18n/locale';
@@ -38,19 +39,19 @@ export function Footer({ locale, copy }: { locale: Locale; copy: ShellCopy }) {
 					<nav className="site-footer__cols" aria-label={copy.footerNavigation}>
 						<div className="site-footer__col">
 							<div className="site-footer__ch">{copy.footerColSite}</div>
-							<a href={navHref('about', locale)}>{copy.nav.about}</a>
-							<a href={navHref('posts', locale)}>{copy.nav.posts}</a>
-							<a href={navHref('study', locale)}>{copy.nav.study}</a>
+							<AppLink href={navHref('about', locale)}>{copy.nav.about}</AppLink>
+							<AppLink href={navHref('posts', locale)}>{copy.nav.posts}</AppLink>
+							<AppLink href={navHref('study', locale)}>{copy.nav.study}</AppLink>
 						</div>
 						<div className="site-footer__col">
 							<div className="site-footer__ch">{copy.footerColMore}</div>
-							<a href={navHref('system', locale)}>{copy.nav.system}</a>
-							<a href={`${prefix}/projects`}>{copy.navProjects}</a>
-							<a href={`${prefix}/tags`}>{copy.navTags}</a>
+							<AppLink href={navHref('system', locale)}>{copy.nav.system}</AppLink>
+							<AppLink href={`${prefix}/projects`}>{copy.navProjects}</AppLink>
+							<AppLink href={`${prefix}/tags`}>{copy.navTags}</AppLink>
 						</div>
 						<div className="site-footer__col">
 							<div className="site-footer__ch">{copy.footerColConnect}</div>
-							<a href={`${prefix}/contact`}>{copy.navContact}</a>
+							<AppLink href={`${prefix}/contact`}>{copy.navContact}</AppLink>
 							<a href="https://github.com/brandonwie" target="_blank" rel="noopener noreferrer">
 								GitHub ↗
 							</a>

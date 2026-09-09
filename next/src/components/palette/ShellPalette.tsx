@@ -19,14 +19,11 @@
  * presentational. The chord DECISIONS remain in `@/palette/shortcuts`, where
  * they are asserted without a DOM.
  *
- * WHY `location.assign` AND NOT `useRouter().push`. The shell's recorded
- * decision is native anchors with no speculative prefetch, and client
- * navigation is deferred until that surface is ported (`shell/document.tsx`
- * prefetch note, and every `field: "shell"` ledger rationale). Handing the
- * palette the client router would switch the whole site to client navigation
- * as a side effect of mounting a palette, ahead of the policy decision that
- * governs it. The palette therefore navigates the way the anchors do; PR 2d
- * changes this line together with `Link` adoption and the prefetch policy.
+ * WHY `useRouter().push` FOR INTRA-LOCALE AND `location.assign` FOR CROSS-ROOT.
+ * In PR 2d, the palette adopts the client router for intra-locale targets,
+ * matching AppLink. Cross-root navigations (crossing (en) and (ko)) cross Next.js
+ * root layout route groups and must perform a full document navigation via
+ * `location.assign`, as do external URLs.
  *
  * READINESS IS ATTACHMENT, NOT RENDER. `data-palette-ready` is set in the same
  * effect that registers the listener and cleared in that effect's cleanup, so
@@ -35,13 +32,13 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import PaletteHost from '@/components/palette/PaletteHost';
 import { SiteHeader } from '@/components/SiteHeader';
 import type { ShellCopy } from '@/i18n/copy';
 import type { Locale } from '@/i18n/locale';
-import type { PalettePost } from '@/palette/items';
+import { isKorean, type PalettePost } from '@/palette/items';
 import { planGlobalChord } from '@/palette/shortcuts';
 
 /** The marker a browser probe waits on. Set with the listener, cleared with it. */
@@ -73,14 +70,23 @@ export default function ShellPalette({
 	posts: PalettePost[];
 }) {
 	const pathname = usePathname();
+	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [opener, setOpener] = useState<HTMLElement | null>(null);
 
-	// Full-document navigation, matching the shell's native anchors. Stable, or
-	// the host's item memo rebuilds its Fuse index on every render.
-	const navigate = useCallback((href: string) => {
-		window.location.assign(href);
-	}, []);
+	// Client navigation via router.push for intra-locale targets, matching AppLink.
+	// Cross-root navigations (crossing (en) and (ko)) or external URLs use
+	// window.location.assign.
+	const navigate = useCallback(
+		(href: string) => {
+			if (/^(https?:)?\/\//.test(href) || isKorean(pathname) !== isKorean(href)) {
+				window.location.assign(href);
+			} else {
+				router.push(href);
+			}
+		},
+		[pathname, router],
+	);
 
 	const handleOpen = useCallback((event?: React.MouseEvent<HTMLElement>) => {
 		const element = (event?.currentTarget as HTMLElement | null) ?? null;
