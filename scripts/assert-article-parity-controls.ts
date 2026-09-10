@@ -328,7 +328,7 @@ const CONTROLS: Control[] = [
 		id: 'AP-35',
 		kind: 'DEFECT',
 		what: 'an internal link points at a directory with no exported document',
-		apply: (html) => html.replace('<a href="/">', '<a href="/system">'),
+		apply: (html) => html.replace('<a href="/">', '<a href="/migration-fixture">'),
 	},
 	{
 		id: 'AP-36',
@@ -348,7 +348,7 @@ const CONTROLS: Control[] = [
 		id: 'AP-47',
 		kind: 'DEFECT',
 		what: 'a deferral is obsolete: its destination now exists in the export',
-		createFile: { path: 'about.html', body: '<!doctype html><title>about</title>' },
+		createFile: { path: 'study.html', body: '<!doctype html><title>study</title>' },
 	},
 	{
 		/**
@@ -366,7 +366,7 @@ const CONTROLS: Control[] = [
 		apply: (html) =>
 			html.replace(
 				/(<main\b[^>]*id="main-content"[^>]*>)/,
-				'$1<a href="/about" class="site-nav__link"></a>',
+				'$1<a href="/study" class="site-nav__link"></a>',
 			),
 	},
 	{

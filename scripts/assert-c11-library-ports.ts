@@ -181,6 +181,14 @@ export const SHELL_CLAIMS: Record<string, string[]> = {
 	'/ko/tags': ['body:preload-data'],
 	'/search': ['body:preload-data'],
 	'/ko/search': ['body:preload-data'],
+	'/about': ['body:preload-data'],
+	'/ko/about': ['body:preload-data'],
+	'/projects': ['body:preload-data'],
+	'/ko/projects': ['body:preload-data'],
+	'/contact': ['body:preload-data'],
+	'/ko/contact': ['body:preload-data'],
+	'/system': ['body:preload-data'],
+	'/ko/system': ['body:preload-data'],
 };
 
 /** The Mermaid config key the Next side is ALLOWED to differ on, and why.
