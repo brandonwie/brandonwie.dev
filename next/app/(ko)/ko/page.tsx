@@ -4,9 +4,9 @@ import { BlogHome } from '@/components/BlogHome';
 import { listPostsForLocale } from '@/content/post-list';
 import { generateHomeMetadata } from '@/seo/metadata';
 
-export const metadata: Metadata = generateHomeMetadata('en');
+export const metadata: Metadata = generateHomeMetadata('ko');
 
-export default function EnglishHomePage() {
-	const posts = listPostsForLocale('en');
-	return <BlogHome posts={posts} basePath="/" />;
+export default function KoreanHomePage() {
+	const posts = listPostsForLocale('ko');
+	return <BlogHome posts={posts} basePath="/ko" />;
 }
