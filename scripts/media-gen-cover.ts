@@ -28,8 +28,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MEDIA_DIR = join(ROOT, 'resources/media');
-const OG_OUT = join(ROOT, 'static/og');
-const HERO_OUT = join(ROOT, 'static/hero');
+const OG_OUT = join(ROOT, 'public/og');
+const HERO_OUT = join(ROOT, 'public/hero');
 
 // ── Types ────────────────────────────────────────────────────────────────
 type GlyphId =
