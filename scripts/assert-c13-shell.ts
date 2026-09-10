@@ -177,17 +177,19 @@ export async function runAssertions(
 		`C13 document shell — candidate ${candidateDir} (${candCount} pages) vs baseline ${baselineFile} (${baseCount} pages)\n`,
 	);
 
+	const slice3Urls = Object.keys(basePages).filter((url) => !isDeferredRoute(url));
+	const slice3Ko = slice3Urls.filter((u) => localeOf(u) === 'ko');
+	const slice3En = slice3Urls.filter((u) => localeOf(u) === 'en');
+	const missingSlice3 = slice3Urls.filter((url) => candPages[url] === undefined);
+
 	// --- Row 1: <html lang> ------------------------------------------------
 	// The contract asks for `ko` on every KO page and `en` on the rest,
 	// enumerated. Enumerate the candidate; the baseline's own answer is
 	// reported alongside because it is not what the contract assumed.
 	{
-		const slice3Urls = Object.keys(basePages).filter((url) => !isDeferredRoute(url));
-		const slice3Ko = slice3Urls.filter((u) => localeOf(u) === 'ko');
-		const slice3En = slice3Urls.filter((u) => localeOf(u) === 'en');
-		const missingSlice3 = slice3Urls.filter((url) => candPages[url] === undefined);
-
-		const wrong = Object.keys(candPages).filter((url) => candPages[url].lang !== localeOf(url));
+		const wrong = slice3Urls.filter(
+			(url) => candPages[url] !== undefined && candPages[url].lang !== localeOf(url),
+		);
 		const baseWrong = Object.keys(basePages).filter((url) => basePages[url].lang !== localeOf(url));
 		if (wrong.length) {
 			fail(
@@ -449,7 +451,9 @@ export async function runAssertions(
 	);
 	if (failed.length || missingReason.length) return 1;
 	say(
-		"C13 is OPEN, not discharged: exit 0 means no shell regression across Slice 3's 355 routes (11 routes deferred to Slice 4).",
+		missingSlice3.length > 0
+			? `C13 is OPEN, not discharged: exit 0 means no shell regression in the ${candCount} Slice 3 routes built so far; ${missingSlice3.length} of 355 still pending (11 routes deferred to Slice 4).`
+			: "C13 is OPEN, not discharged: exit 0 means no shell regression across Slice 3's 355 routes (11 routes deferred to Slice 4).",
 	);
 	return 0;
 }
