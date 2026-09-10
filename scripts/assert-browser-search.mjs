@@ -420,7 +420,8 @@ async function main() {
 
 		// BS-04: Legitimate no-results state
 		await visit(page, server, EN_ROUTE);
-		await typeQuery(page, 'zzzzzzzzzzzzzz');
+		// Quoted phrase prevents Pagefind prefix-matching single-letter 'z' tokens (e.g. bash -z, ISO Z) across the full 334-post corpus
+		await typeQuery(page, '"zzzzzzzzzzzzzz"');
 		const noResultsSeen = await until(
 			async () =>
 				Boolean(await evaluate(page, "!!document.querySelector('[data-search-no-results]')")),

@@ -74,6 +74,9 @@ const config = {
 			precompress: true,
 			strict: true,
 		}),
+		files: {
+			assets: 'public',
+		},
 		prerender: {
 			handleHttpError: 'fail',
 		},

@@ -160,6 +160,23 @@ export const REPORTER_SENTINEL = '[System3bGraph] failed to load interactive gra
  *  so the comments are stripped before matching. */
 export const LANE_COUNTS = [16, 17, 9, 15, 8, 10];
 
+function collectPostSlugs(): string[] {
+	const postsDir = resolve(process.cwd(), 'src/content/posts/en');
+	if (!existsSync(postsDir)) return [];
+	const categories = readdirSync(postsDir, { withFileTypes: true })
+		.filter((d) => d.isDirectory())
+		.map((d) => d.name);
+	const slugs: string[] = [];
+	for (const category of categories) {
+		const catDir = join(postsDir, category);
+		const files = readdirSync(catDir).filter((f) => f.endsWith('.md'));
+		for (const file of files) {
+			slugs.push(file.replace(/\.md$/, ''));
+		}
+	}
+	return slugs.sort();
+}
+
 /** What each ledgered shell approval claims, recomputed by the N rows.
  *
  *  Keys, not counts: "the ONLY difference is preload-data" is a statement about
@@ -189,6 +206,12 @@ export const SHELL_CLAIMS: Record<string, string[]> = {
 	'/ko/contact': ['body:preload-data'],
 	'/system': ['body:preload-data'],
 	'/ko/system': ['body:preload-data'],
+	...Object.fromEntries(
+		collectPostSlugs().flatMap((slug) => [
+			[`/posts/${slug}`, ['body:preload-data']],
+			[`/ko/posts/${slug}`, ['body:preload-data']],
+		]),
+	),
 };
 
 /** The Mermaid config key the Next side is ALLOWED to differ on, and why.

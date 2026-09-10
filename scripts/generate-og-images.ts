@@ -17,8 +17,8 @@ import matter from 'gray-matter';
 // ── Config ──────────────────────────────────────────────────────────────
 const ROOT = join(import.meta.dirname, '..');
 const POSTS_DIR = join(ROOT, 'src/content/posts/en');
-const OUT_DIR = join(ROOT, 'static/og');
-const FONTS_DIR = join(ROOT, 'static/fonts');
+const OUT_DIR = join(ROOT, 'public/og');
+const FONTS_DIR = join(ROOT, 'public/fonts');
 const WIDTH = 1200;
 const HEIGHT = 630;
 const FORCE = process.argv.includes('--force');

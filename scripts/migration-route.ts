@@ -68,6 +68,7 @@ const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const SVELTE_BUILD_SOURCES = [
 	'src',
 	'static',
+	'public',
 	'messages',
 	'project.inlang',
 	'svelte.config.js',
@@ -79,6 +80,7 @@ const NEXT_BUILD_SOURCES = [
 	'next/app',
 	'next/src',
 	'next/public',
+	'public',
 	'next/next.config.ts',
 	'next/postcss.config.mjs',
 	'src/content',
@@ -480,6 +482,52 @@ export const SUITES: Suite[] = [
 		command: 'migration:c5:controls',
 		entry: 'scripts/assert-c5-glob-sites-controls.ts',
 		dataRoots: [...SVELTE_BUILD_SOURCES, ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		command: 'migration:c6',
+		entry: 'scripts/assert-c6-route-enumeration.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
+		tier: 'push',
+	},
+	{
+		command: 'migration:c6:controls',
+		entry: 'scripts/assert-c6-route-enumeration-controls.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
+		tier: 'push',
+	},
+	{
+		command: 'migration:c7',
+		entry: 'scripts/assert-c7-output-contract.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		command: 'migration:c7:controls',
+		entry: 'scripts/assert-c7-output-contract-controls.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		command: 'migration:c12',
+		entry: 'scripts/assert-c9-c12-static-assets.ts',
+		dataRoots: [
+			...NEXT_BUILD_SOURCES,
+			'public',
+			'resources/media',
+			'scripts/generate-og-images.ts',
+		],
+		tier: 'push',
+	},
+	{
+		command: 'migration:c12:controls',
+		entry: 'scripts/assert-c9-c12-static-assets-controls.ts',
+		dataRoots: [
+			...NEXT_BUILD_SOURCES,
+			'public',
+			'resources/media',
+			'scripts/generate-og-images.ts',
+		],
 		tier: 'push',
 	},
 	{

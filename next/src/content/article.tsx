@@ -10,11 +10,11 @@ import { ReadingProgress } from '@/components/ReadingProgress';
 import { TableOfContents } from '@/components/TableOfContents';
 import socialLinksData from '../../../src/lib/data/social-links.json';
 import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../../../src/lib/seo';
-import { SLICE_1_ARTICLE_SLUG, articlePath, sourceDate } from './article-contract';
+import { articlePath, sourceDate } from './article-contract';
 import { articleCopy } from '../i18n/copy';
 import { articleJsonLd } from './article-json-ld';
 import { heroBlockHtml } from './hero';
-import { findPostFile, loadPost, type Locale } from './posts';
+import { findPostFile, listPostSlugs, loadPost, type Locale } from './posts';
 
 interface SocialLink {
 	url: string;
@@ -33,7 +33,7 @@ function displayDate(value: string | Date, locale: Locale): string {
 }
 
 export function generateArticleStaticParams(): Array<{ slug: string }> {
-	return [{ slug: SLICE_1_ARTICLE_SLUG }];
+	return listPostSlugs('en').map((slug) => ({ slug }));
 }
 
 /**
