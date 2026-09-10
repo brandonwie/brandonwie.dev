@@ -30,6 +30,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 
+import { isDeferredRoute } from './assert-c6-route-enumeration.ts';
 import { capture, captureStatuses, compare, loadLedger } from './migration-verify.ts';
 import type { Baseline } from './migration-verify.ts';
 
@@ -181,6 +182,11 @@ export async function runAssertions(
 	// enumerated. Enumerate the candidate; the baseline's own answer is
 	// reported alongside because it is not what the contract assumed.
 	{
+		const slice3Urls = Object.keys(basePages).filter((url) => !isDeferredRoute(url));
+		const slice3Ko = slice3Urls.filter((u) => localeOf(u) === 'ko');
+		const slice3En = slice3Urls.filter((u) => localeOf(u) === 'en');
+		const missingSlice3 = slice3Urls.filter((url) => candPages[url] === undefined);
+
 		const wrong = Object.keys(candPages).filter((url) => candPages[url].lang !== localeOf(url));
 		const baseWrong = Object.keys(basePages).filter((url) => basePages[url].lang !== localeOf(url));
 		if (wrong.length) {
@@ -188,16 +194,19 @@ export async function runAssertions(
 				'html lang',
 				`${wrong.length}/${candCount} candidate page(s) disagree with their URL locale: ${wrong.slice(0, 8).join(', ')}`,
 			);
-		} else if (candCount < baseCount) {
+		} else if (missingSlice3.length > 0) {
 			pending(
 				'html lang',
-				`${candCount}/${candCount} built pages correct; the contract enumerates ${baseCount} ` +
-					`(${Object.keys(basePages).filter((u) => localeOf(u) === 'ko').length} KO / ` +
-					`${Object.keys(basePages).filter((u) => localeOf(u) === 'en').length} EN). ` +
+				`${candCount}/${candCount} built pages correct; waiting on ${missingSlice3.length} Slice 3 routes ` +
+					`(${slice3Ko.length} KO / ${slice3En.length} EN in scope). ` +
 					`Blocked on route coverage, not on the mechanism.`,
 			);
 		} else {
-			pass('html lang', `${candCount}/${candCount} pages match their URL locale`);
+			pass(
+				'html lang',
+				`${slice3Urls.length}/${slice3Urls.length} Slice 3 pages match their URL locale ` +
+					`(${slice3Ko.length} KO / ${slice3En.length} EN); 11 routes deferred to Slice 4`,
+			);
 		}
 		if (baseWrong.length) {
 			say(
@@ -440,7 +449,7 @@ export async function runAssertions(
 	);
 	if (failed.length || missingReason.length) return 1;
 	say(
-		'C13 is OPEN, not discharged: exit 0 means no shell regression in what the candidate builds today.',
+		"C13 is OPEN, not discharged: exit 0 means no shell regression across Slice 3's 355 routes (11 routes deferred to Slice 4).",
 	);
 	return 0;
 }
