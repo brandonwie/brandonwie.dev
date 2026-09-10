@@ -181,3 +181,23 @@ export function tagsCopy(locale: Locale) {
 }
 
 export type TagsCopy = ReturnType<typeof tagsCopy>;
+
+export function searchCopy(locale: Locale) {
+	return {
+		pageTitle: `${m.search_title({}, { locale })} | Brandon Wie`,
+		pageHeading: m.search_title({}, { locale }),
+		pageDescription: m.site_description({}, { locale }),
+		searchPlaceholder: m.search_placeholder({}, { locale }),
+		resultsCount: (count: number) => m.search_results_count({ count }, { locale }),
+		noResults: (query: string) => m.search_no_results({ query }, { locale }),
+		devNotice: m.search_dev_notice({}, { locale }),
+		loading: m.search_loading({}, { locale }),
+		resultsStatus: m.search_results_status({}, { locale }),
+		loadError:
+			locale === 'ko' ? '검색 인덱스를 불러오지 못했습니다.' : 'Failed to load search index.',
+		queryError:
+			locale === 'ko' ? '검색 중 오류가 발생했습니다.' : 'An error occurred while searching.',
+	};
+}
+
+export type SearchCopy = ReturnType<typeof searchCopy>;

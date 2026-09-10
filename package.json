@@ -84,7 +84,11 @@
 		"migration:shell": "tsx scripts/assert-shell.ts",
 		"migration:shell:controls": "tsx scripts/assert-shell-controls.ts",
 		"migration:browser": "node scripts/assert-browser-palette.mjs",
-		"migration:browser:controls": "node scripts/assert-browser-probe-controls.mjs"
+		"migration:browser:controls": "node scripts/assert-browser-probe-controls.mjs",
+		"migration:browser:search": "node scripts/assert-browser-search.mjs",
+		"migration:browser:search:controls": "node scripts/assert-browser-search-controls.mjs",
+		"migration:browser:motion": "node scripts/assert-browser-motion.mjs",
+		"migration:browser:motion:controls": "node scripts/assert-browser-motion-controls.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

@@ -195,6 +195,46 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		command: 'migration:browser:search',
+		entry: 'scripts/assert-browser-search.mjs',
+		dataRoots: [
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+			'src/lib/components/SearchPage.svelte',
+		],
+		tier: 'push',
+	},
+	{
+		command: 'migration:browser:search:controls',
+		entry: 'scripts/assert-browser-search-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-search.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
+		command: 'migration:browser:motion',
+		entry: 'scripts/assert-browser-motion.mjs',
+		dataRoots: [
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+			'next/src/motion/KeyedMotion.tsx',
+		],
+		tier: 'push',
+	},
+	{
+		command: 'migration:browser:motion:controls',
+		entry: 'scripts/assert-browser-motion-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-motion.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
 		command: 'migration:c13:controls',
 		entry: 'scripts/assert-c13-shell-controls.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],

@@ -178,3 +178,44 @@ export function generateTagsMetadata(locale: Locale): Metadata {
 		},
 	};
 }
+
+export function generateSearchMetadata(locale: Locale): Metadata {
+	const title = `${locale === 'ko' ? '검색' : 'Search'} | Brandon Wie`;
+	const description =
+		locale === 'ko'
+			? 'Brandon Wie의 개인 블로그 — 소프트웨어, 시스템, 엔지니어링.'
+			: 'Personal blog by Brandon Wie — software, systems, and engineering.';
+	const canonicalUrl = absoluteUrl(locale === 'ko' ? '/ko/search' : '/search');
+	const enUrl = absoluteUrl('/search');
+	const koUrl = absoluteUrl('/ko/search');
+
+	return {
+		title,
+		description,
+		robots: 'noindex,follow',
+		alternates: {
+			canonical: canonicalUrl,
+			languages: {
+				en: enUrl,
+				ko: koUrl,
+				'x-default': enUrl,
+			},
+		},
+		openGraph: {
+			type: 'website',
+			siteName: SITE_NAME,
+			title,
+			description,
+			url: canonicalUrl,
+			images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630 }],
+			locale: localeCode(locale),
+			alternateLocale: [localeCode(locale === 'ko' ? 'en' : 'ko')],
+		},
+		twitter: {
+			card: 'summary_large_image',
+			title,
+			description,
+			images: [DEFAULT_OG_IMAGE],
+		},
+	};
+}

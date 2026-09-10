@@ -179,6 +179,8 @@ export const SHELL_CLAIMS: Record<string, string[]> = {
 	'/ko/posts': ['body:preload-data'],
 	'/tags': ['body:preload-data'],
 	'/ko/tags': ['body:preload-data'],
+	'/search': ['body:preload-data'],
+	'/ko/search': ['body:preload-data'],
 };
 
 /** The Mermaid config key the Next side is ALLOWED to differ on, and why.
