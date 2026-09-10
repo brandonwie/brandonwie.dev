@@ -201,3 +201,54 @@ export function searchCopy(locale: Locale) {
 }
 
 export type SearchCopy = ReturnType<typeof searchCopy>;
+
+export function aboutCopy(locale: Locale) {
+	return {
+		backToHome: m.back_to_home({}, { locale }),
+		navAbout: m.nav_about({}, { locale }),
+		nowLead:
+			locale === 'ko'
+				? '현재의 일은 백엔드 기능 하나가 아니라 운영 가능한 제품 시스템 전체에 가깝습니다.'
+				: 'The current work is less about one backend feature and more about the product system that has to keep operating.',
+	};
+}
+
+export type AboutCopy = ReturnType<typeof aboutCopy>;
+
+export function projectsCopy(locale: Locale) {
+	return {
+		pageTitle: `${m.projects_meta_title({}, { locale })} | Brandon Wie`,
+		metaDescription: m.projects_meta_description({}, { locale }),
+		eyebrow: m.projects_eyebrow({}, { locale }),
+		title: m.projects_title({}, { locale }),
+		intro: m.projects_intro({}, { locale }),
+	};
+}
+
+export type ProjectsCopy = ReturnType<typeof projectsCopy>;
+
+export function contactCopy(locale: Locale) {
+	return {
+		pageTitle: `${m.contact_meta_title({}, { locale })} | Brandon Wie`,
+		metaDescription: m.contact_meta_description({}, { locale }),
+		eyebrow: m.contact_eyebrow({}, { locale }),
+		title: m.contact_title({}, { locale }),
+		intro: m.contact_intro({}, { locale }),
+		channelsHeading: m.contact_channels_heading({}, { locale }),
+	};
+}
+
+export type ContactCopy = ReturnType<typeof contactCopy>;
+
+export function systemCopy(locale: Locale) {
+	return {
+		pageTitle: `${m.system_3b_title({}, { locale })} | Brandon Wie`,
+		pageDescription: m.system_3b_meta_description({}, { locale }),
+		subtitle: m.system_3b_subtitle({}, { locale }),
+		title: m.system_3b_title({}, { locale }),
+		indexIntro: m.system_3b_index_intro({}, { locale }),
+		openHub: m.system_3b_open_hub({}, { locale }),
+	};
+}
+
+export type SystemCopy = ReturnType<typeof systemCopy>;

@@ -166,5 +166,85 @@
 		"reason": "C13 prefetch decision, applying the same approved behavior to the Korean search page (PR 5). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
 		"approved_by": "Brandon",
 		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/about",
+		"field": "shell",
+		"fingerprint": "d82674bc8ef1e51cd9cca19cd0d0af35",
+		"reason": "C13 prefetch decision, applying the same approved behavior from / and /404 to the English about page (PR 6). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/ko/about",
+		"field": "shell",
+		"fingerprint": "4ce6322f1767db00c28652e6f8e8462c",
+		"reason": "C13 prefetch decision, applying the same approved behavior to the Korean about page (PR 6). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/projects",
+		"field": "shell",
+		"fingerprint": "d0cbdb77f720f3f667548cc865cc7461",
+		"reason": "C13 prefetch decision, applying the same approved behavior from / and /404 to the English projects page (PR 6). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/ko/projects",
+		"field": "shell",
+		"fingerprint": "2aa188ced9da4636c9bf4f7ce2b7f25f",
+		"reason": "C13 prefetch decision, applying the same approved behavior to the Korean projects page (PR 6). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/ko/projects",
+		"field": "lang",
+		"fingerprint": "f10bdc36586ecbe448d79985a569c8bc",
+		"reason": "C13 finding: the SvelteKit /ko/projects page ships <html lang=\"en\"> because src/hooks.server.ts substitutes %lang% from Paraglide's url strategy and vite.config.ts urlPatterns has no /projects pattern, so the KO page falls through to the base locale (one of the seven KO pages the C13 record names). The candidate ships lang=\"ko\", which is the URL locale and what assert-c13-shell.ts row 1 requires of every candidate page. The baseline value is a defect carried by the Svelte site, not a contract. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/contact",
+		"field": "shell",
+		"fingerprint": "700af4e9caf6ac2ecaa71709792b2a15",
+		"reason": "C13 prefetch decision, applying the same approved behavior from / and /404 to the English contact page (PR 6). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/ko/contact",
+		"field": "shell",
+		"fingerprint": "e6bbd85b3e63e54c844493fa65892746",
+		"reason": "C13 prefetch decision, applying the same approved behavior to the Korean contact page (PR 6). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/ko/contact",
+		"field": "lang",
+		"fingerprint": "66356a2182a13d46104086bb9978be7c",
+		"reason": "C13 finding: the SvelteKit /ko/contact page ships <html lang=\"en\"> because src/hooks.server.ts substitutes %lang% from Paraglide's url strategy and vite.config.ts urlPatterns has no /contact pattern, so the KO page falls through to the base locale (one of the seven KO pages the C13 record names). The candidate ships lang=\"ko\", which is the URL locale and what assert-c13-shell.ts row 1 requires of every candidate page. The baseline value is a defect carried by the Svelte site, not a contract. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/system",
+		"field": "shell",
+		"fingerprint": "1b13a08984c9d47bc0fc77ebd74a88be",
+		"reason": "C13 prefetch decision, applying the same approved behavior from / and /404 to the English system index page (PR 6). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/ko/system",
+		"field": "shell",
+		"fingerprint": "4ec9aaefeb681f519eb6af4aa4811c2a",
+		"reason": "C13 prefetch decision, applying the same approved behavior to the Korean system index page (PR 6). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
 	}
 ]

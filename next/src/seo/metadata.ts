@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 
 import type { Locale } from '@/i18n/locale';
+import * as m from '../paraglide/messages.js';
+import { getAboutContent } from '../../../src/lib/data/about';
 import {
 	DEFAULT_OG_IMAGE,
 	SITE_AUTHOR,
@@ -218,4 +220,120 @@ export function generateSearchMetadata(locale: Locale): Metadata {
 			images: [DEFAULT_OG_IMAGE],
 		},
 	};
+}
+
+export function generateAboutMetadata(locale: Locale): Metadata {
+	const content = getAboutContent(locale);
+	const title = `${content.metaTitle} | Brandon Wie`;
+	const description = content.metaDescription;
+	const canonicalUrl = absoluteUrl(locale === 'ko' ? '/ko/about' : '/about');
+	const enUrl = absoluteUrl('/about');
+	const koUrl = absoluteUrl('/ko/about');
+
+	return {
+		title,
+		description,
+		alternates: {
+			canonical: canonicalUrl,
+			languages: {
+				en: enUrl,
+				ko: koUrl,
+				'x-default': enUrl,
+			},
+		},
+		openGraph: {
+			type: 'website',
+			siteName: SITE_NAME,
+			title,
+			description,
+			url: canonicalUrl,
+			images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630 }],
+			locale: localeCode(locale),
+			alternateLocale: [localeCode(locale === 'ko' ? 'en' : 'ko')],
+		},
+		twitter: {
+			card: 'summary',
+			title,
+			description,
+			images: [DEFAULT_OG_IMAGE],
+		},
+	};
+}
+
+export interface StudySeoMetadataOptions {
+	pageTitle: string;
+	description: string;
+	basePath: string;
+	locale?: Locale;
+	twitterCard?: 'summary' | 'summary_large_image';
+}
+
+export function generateStudySeoMetadata({
+	pageTitle,
+	description,
+	basePath,
+	locale = 'en',
+	twitterCard = 'summary_large_image',
+}: StudySeoMetadataOptions): Metadata {
+	const canonicalUrl = absoluteUrl(locale === 'ko' ? `/ko${basePath}` : basePath);
+	const enUrl = absoluteUrl(basePath);
+	const koUrl = absoluteUrl(`/ko${basePath}`);
+
+	return {
+		title: pageTitle,
+		description,
+		alternates: {
+			canonical: canonicalUrl,
+			languages: {
+				en: enUrl,
+				ko: koUrl,
+				'x-default': enUrl,
+			},
+		},
+		openGraph: {
+			type: 'website',
+			siteName: SITE_NAME,
+			title: pageTitle,
+			description,
+			url: canonicalUrl,
+			images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630 }],
+			locale: localeCode(locale),
+			alternateLocale: [localeCode(locale === 'ko' ? 'en' : 'ko')],
+		},
+		twitter: {
+			card: twitterCard,
+			title: pageTitle,
+			description,
+			images: [DEFAULT_OG_IMAGE],
+		},
+	};
+}
+
+export const generateStaticPageMetadata = generateStudySeoMetadata;
+
+export function generateProjectsMetadata(locale: Locale): Metadata {
+	return generateStudySeoMetadata({
+		pageTitle: `${m.projects_meta_title({}, { locale })} | Brandon Wie`,
+		description: m.projects_meta_description({}, { locale }),
+		basePath: '/projects',
+		locale,
+	});
+}
+
+export function generateContactMetadata(locale: Locale): Metadata {
+	return generateStudySeoMetadata({
+		pageTitle: `${m.contact_meta_title({}, { locale })} | Brandon Wie`,
+		description: m.contact_meta_description({}, { locale }),
+		basePath: '/contact',
+		locale,
+	});
+}
+
+export function generateSystemMetadata(locale: Locale): Metadata {
+	return generateStudySeoMetadata({
+		pageTitle: `${m.system_3b_title({}, { locale })} | Brandon Wie`,
+		description: m.system_3b_meta_description({}, { locale }),
+		basePath: '/system',
+		locale,
+	});
 }

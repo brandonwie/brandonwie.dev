@@ -269,18 +269,10 @@ interface LinkDeferral {
 }
 
 const CHROME_LINK_DEFERRALS: readonly LinkDeferral[] = [
-	{ destination: '/about', locale: 'en', container: 'header', owner: 'PR 6' },
 	{ destination: '/study', locale: 'en', container: 'header', owner: 'Slice 4' },
-	{ destination: '/about', locale: 'en', container: 'footer', owner: 'PR 6' },
 	{ destination: '/study', locale: 'en', container: 'footer', owner: 'Slice 4' },
-	{ destination: '/projects', locale: 'en', container: 'footer', owner: 'PR 6' },
-	{ destination: '/contact', locale: 'en', container: 'footer', owner: 'PR 6' },
-	{ destination: '/ko/about', locale: 'ko', container: 'header', owner: 'PR 6' },
 	{ destination: '/ko/study', locale: 'ko', container: 'header', owner: 'Slice 4' },
-	{ destination: '/ko/about', locale: 'ko', container: 'footer', owner: 'PR 6' },
 	{ destination: '/ko/study', locale: 'ko', container: 'footer', owner: 'Slice 4' },
-	{ destination: '/ko/projects', locale: 'ko', container: 'footer', owner: 'PR 6' },
-	{ destination: '/ko/contact', locale: 'ko', container: 'footer', owner: 'PR 6' },
 ];
 
 /** The byte range of the baseline header / footer element, or null if absent. */
