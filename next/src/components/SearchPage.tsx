@@ -73,6 +73,7 @@ export function SearchPage({ locale }: SearchPageProps) {
 	const [queryError, setQueryError] = useState(false);
 
 	const pagefindRef = useRef<PagefindInstance | null>(null);
+	const requestIdRef = useRef(0);
 
 	useEffect(() => {
 		let active = true;
@@ -121,6 +122,7 @@ export function SearchPage({ locale }: SearchPageProps) {
 	async function handleInput(e: ChangeEvent<HTMLInputElement>) {
 		const val = e.target.value;
 		setQuery(val);
+		const reqId = ++requestIdRef.current;
 
 		const override =
 			typeof window !== 'undefined'
@@ -143,11 +145,14 @@ export function SearchPage({ locale }: SearchPageProps) {
 		try {
 			const search = await pf.debouncedSearch(val, { filters: { lang: locale } }, 200);
 
+			if (reqId !== requestIdRef.current) return;
 			if (!search) return; // superseded by a newer search call
 
 			setResultCount(search.results.length);
 
 			const data = await Promise.all(search.results.slice(0, 20).map((r) => r.data()));
+
+			if (reqId !== requestIdRef.current) return;
 
 			const maskMalformed =
 				typeof window !== 'undefined' &&
@@ -180,6 +185,7 @@ export function SearchPage({ locale }: SearchPageProps) {
 
 			setResults(mapped);
 		} catch (err) {
+			if (reqId !== requestIdRef.current) return;
 			console.error('Search error:', err);
 			const maskQueryError =
 				typeof window !== 'undefined' &&
@@ -192,7 +198,9 @@ export function SearchPage({ locale }: SearchPageProps) {
 			setResults([]);
 			setResultCount(0);
 		} finally {
-			setIsLoading(false);
+			if (reqId === requestIdRef.current) {
+				setIsLoading(false);
+			}
 		}
 	}
 

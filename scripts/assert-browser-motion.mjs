@@ -104,6 +104,7 @@ async function main() {
 
 		const entryOk =
 			entryAnim?.duration === 160 &&
+			entryAnim?.playState !== 'paused' &&
 			entryAnim?.firstKeyframe === 'scale(0)' &&
 			entryAnim?.lastKeyframe === 'scale(1)';
 		report(
@@ -143,42 +144,61 @@ async function main() {
 			(async () => {
 				const btns = Array.from(document.querySelectorAll('.study-btn'));
 				const insertBtn = btns.find(b => b.textContent?.trim() === 'Insert');
+				const elBefore = document.querySelector('[data-motion-key="n3"]');
+				const beforeRect = elBefore ? elBefore.getBoundingClientRect() : null;
+
 				insertBtn.click();
 				await new Promise(r => setTimeout(r, 25));
 
 				// Check surviving flipping nodes (e.g. n3)
 				const el = document.querySelector('[data-motion-key="n3"]');
 				if (!el) return null;
+				const afterRect = el.getBoundingClientRect();
 				const anims = el.getAnimations();
 				if (anims.length === 0) return null;
-				const kf = anims[0].effect?.getKeyframes();
+				const anim = anims.find(a => a.effect?.getTiming()?.duration === 220) ?? anims.at(-1);
+				const kf = anim.effect?.getKeyframes();
 				const firstTransform = kf?.[0]?.transform ?? '';
 
 				// If simulated stale scroll is active, artificially contaminate with 200px delta
 				if (window.__simulateStaleScroll) {
-					return { duration: anims[0].effect?.getTiming()?.duration, firstTransform: 'translate(2px, 200px) scale(1, 1)' };
+					return {
+						duration: anim.effect?.getTiming()?.duration,
+						firstTransform: 'translate(2px, 200px) scale(1, 1)',
+						expectedDy: 0,
+					};
 				}
 
+				const expectedDy = beforeRect && afterRect ? beforeRect.top - afterRect.top : 0;
+
 				return {
-					duration: anims[0].effect?.getTiming()?.duration,
+					duration: anim.effect?.getTiming()?.duration,
 					firstTransform,
+					expectedDy,
 				};
 			})()
 		`,
 		);
 
-		// The first transform must NOT contain 200px vertical translation from the scroll
-		const has200pxContamination =
-			flipAnim?.firstTransform?.includes('200px') || flipAnim?.firstTransform?.includes(', 200');
+		// Compare measured animation translation against geometric delta
+		const translateMatch = flipAnim?.firstTransform?.match(
+			/translate\(\s*(-?[\d.]+)px?,\s*(-?[\d.]+)px?\)/,
+		);
+		const measuredDy = translateMatch ? parseFloat(translateMatch[2]) : NaN;
+		const deltaConsistent =
+			!isNaN(measuredDy) &&
+			typeof flipAnim?.expectedDy === 'number' &&
+			Math.abs(measuredDy - flipAnim.expectedDy) < 5;
+
 		const scrollImmunityOk =
-			flipAnim?.duration === 220 && Boolean(flipAnim?.firstTransform) && !has200pxContamination;
+			flipAnim?.duration === 220 && Boolean(flipAnim?.firstTransform) && deltaConsistent;
 
 		report(
 			'BM-02',
 			scrollImmunityOk,
 			scrollImmunityOk
 				? `pre-mutation measurement immune to 200px scroll (duration: ${flipAnim?.duration}ms, transform: ${flipAnim?.firstTransform})`
-				: `scroll contamination detected: ${JSON.stringify(flipAnim)}`,
+				: `scroll contamination detected: ${JSON.stringify(flipAnim)}, measuredDy=${measuredDy}`,
 		);
 
 		// BM-03: Mid-flight abort during rapid updates
@@ -239,7 +259,7 @@ async function main() {
 			(() => {
 				const allAnims = Array.from(document.querySelectorAll('[data-motion-key]'))
 					.flatMap(el => el.getAnimations())
-					.filter(a => a.playState === 'running');
+					.filter(a => ['running', 'pending', 'paused'].includes(a.playState));
 				return allAnims.length;
 			})()
 		`,

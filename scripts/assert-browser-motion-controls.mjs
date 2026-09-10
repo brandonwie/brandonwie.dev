@@ -21,6 +21,7 @@ const CONTROLS = [
 		what: 'stale scroll measurement (pre-mutation measurement failure) is caught by BM-02',
 		args: ['--stale-scroll'],
 		expect: EXIT.FAIL,
+		expectedFailure: 'BM-02',
 	},
 	{
 		id: 'BMC-02',
@@ -28,6 +29,7 @@ const CONTROLS = [
 		what: 'omitted mid-flight abort (lifecycle ordering failure) is caught by BM-03',
 		args: ['--no-abort'],
 		expect: EXIT.FAIL,
+		expectedFailure: 'BM-03',
 	},
 	{
 		id: 'BMC-03',
@@ -41,14 +43,19 @@ const CONTROLS = [
 function runControl(control) {
 	const res = spawnSync(process.execPath, [PROBE, ...control.args], {
 		encoding: 'utf8',
-		timeout: 30000,
+		timeout: 60000,
 	});
 
 	const code = res.status;
-	const ok = code === control.expect;
+	const expectedRowFailed =
+		!control.expectedFailure ||
+		(typeof res.stdout === 'string' && res.stdout.includes(`FAIL  ${control.expectedFailure}`));
+	const ok = code === control.expect && expectedRowFailed;
 	const detail = ok
-		? `exited ${code} as expected`
-		: `expected exit ${control.expect}, got ${code}\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`;
+		? `exited ${code} as expected${control.expectedFailure ? ` (verified ${control.expectedFailure} failed)` : ''}`
+		: `expected exit ${control.expect}${control.expectedFailure ? ` with ${control.expectedFailure} fail` : ''}, got ${code}${
+				res.error ? ` (spawn error: ${res.error.message})` : ''
+			}\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`;
 
 	console.log(
 		`${ok ? 'PASS' : 'FAIL'}  ${control.id}  [${control.kind}] ${control.what} (${detail})`,

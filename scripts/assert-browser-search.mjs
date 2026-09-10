@@ -443,14 +443,41 @@ async function main() {
 				: `noResults failed: seen=${noResultsSeen}, items=${resultItemsCount}, queryError=${hasQueryError}`,
 		);
 
-		// BS-05/06/07 Positive states
-		const noDefects = !(await evaluate(
+		// BS-05/06/07 Positive states, measured on a query that DOES return rows.
+		await visit(page, server, EN_ROUTE);
+		await typeQuery(page, 'giscus');
+		await until(
+			async () =>
+				(await evaluate(page, "document.querySelectorAll('.search-result-item').length")) > 0,
+			{ timeoutMs: 6000 },
+		);
+		const positiveState = await evaluate(
 			page,
-			"!!document.querySelector('[data-search-row-defect]')",
-		));
-		report('BS-05', true, 'production runtime initialized without load error or dev notice');
-		report('BS-06', noDefects, 'well-formed index rows rendered with real titles and URLs');
-		report('BS-07', !hasQueryError, 'legitimate search query succeeded without query error');
+			`
+			(() => ({
+				loadError: !!document.querySelector('[data-search-load-error]'),
+				devNotice: !!document.querySelector('[data-search-dev-notice]'),
+				defects: !!document.querySelector('[data-search-row-defect]'),
+				queryError: !!document.querySelector('[data-search-query-error]'),
+				items: document.querySelectorAll('.search-result-item').length,
+			}))()
+		`,
+		);
+		report(
+			'BS-05',
+			!positiveState.loadError && !positiveState.devNotice,
+			`production runtime initialized: loadError=${positiveState.loadError}, devNotice=${positiveState.devNotice}`,
+		);
+		report(
+			'BS-06',
+			!positiveState.defects && positiveState.items > 0,
+			`well-formed index rows rendered: items=${positiveState.items}, defects=${positiveState.defects}`,
+		);
+		report(
+			'BS-07',
+			!positiveState.queryError && positiveState.items > 0,
+			`legitimate query succeeded: items=${positiveState.items}, queryError=${positiveState.queryError}`,
+		);
 
 		const passed = results.filter(Boolean).length;
 		console.log(`\n${results.length} rows: ${passed} passed`);

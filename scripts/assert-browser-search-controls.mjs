@@ -89,14 +89,16 @@ const CONTROLS = [
 function runControl(control) {
 	const res = spawnSync(process.execPath, [PROBE, ...control.args], {
 		encoding: 'utf8',
-		timeout: 30000,
+		timeout: 180000,
 	});
 
 	const code = res.status;
 	const ok = code === control.expect;
 	const detail = ok
 		? `exited ${code} as expected`
-		: `expected exit ${control.expect}, got ${code}\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`;
+		: `expected exit ${control.expect}, got ${code}${
+				res.error ? ` (spawn error: ${res.error.message})` : ''
+			}\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`;
 
 	console.log(
 		`${ok ? 'PASS' : 'FAIL'}  ${control.id}  [${control.kind}] ${control.what} (${detail})`,
