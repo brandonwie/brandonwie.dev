@@ -150,5 +150,21 @@
 		"reason": "C13 finding: the SvelteKit /ko/tags page ships <html lang=\"en\"> because src/hooks.server.ts substitutes %lang% from Paraglide's url strategy and vite.config.ts urlPatterns has no /tags pattern, so the KO page falls through to the base locale (one of the seven KO pages the C13 record names). The candidate ships lang=\"ko\", which is the URL locale and what assert-c13-shell.ts row 1 requires of every candidate page. The baseline value is a defect carried by the Svelte site, not a contract. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
 		"approved_by": "Brandon",
 		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/search",
+		"field": "shell",
+		"fingerprint": "db31ef32b2efb4c06de74916656d1ee3",
+		"reason": "C13 prefetch decision, applying the same approved behavior from / and /404 to the English search page (PR 5). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
+	},
+	{
+		"url": "/ko/search",
+		"field": "shell",
+		"fingerprint": "27a3695c3cfb607dea41e8536d5d56bf",
+		"reason": "C13 prefetch decision, applying the same approved behavior to the Korean search page (PR 5). The candidate drops body:preload-data=\"hover\", which is SvelteKit-only and has no Next attribute equivalent. This shell uses AppLink and performs hover/focus prefetch, but drops the SvelteKit-specific body attribute. This is the ONLY difference in this route's shell after normalization; every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-10"
 	}
 ]
