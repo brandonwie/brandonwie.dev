@@ -240,6 +240,22 @@ async function runRscChild(): Promise<void> {
 				},
 			};
 		}
+		if (
+			typeof request === 'string' &&
+			(request.startsWith('@/components/') || request.includes('/components/'))
+		) {
+			return new Proxy(
+				{},
+				{
+					get(_target, prop) {
+						if (prop === '__esModule') return true;
+						return function StubClientComponent() {
+							return null;
+						};
+					},
+				},
+			);
+		}
 
 		const loaded = originalLoad.call(this, request, parent, isMain);
 		const parentFilename =

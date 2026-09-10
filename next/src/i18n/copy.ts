@@ -110,8 +110,18 @@ export function articleCopy(locale: Locale) {
 		switchLabel: scaffold.switchLabel,
 		switchText: scaffold.switchText,
 		commentsStatus: scaffold.commentsStatus,
+		backToPosts: m.back_to_posts({}, { locale }),
+		readingProgress: m.reading_progress({}, { locale }),
+		copyLink: m.copy_link({}, { locale }),
+		copied: m.copied({}, { locale }),
+		codeCopy: locale === 'ko' ? '복사' : 'Copy',
+		codeCopied: m.copied({}, { locale }),
+		readingTimeWithMinutes: (minutes: number) => m.reading_time({ minutes }, { locale }),
+		alsoPublishedOn: m.also_published_on({}, { locale }),
 	};
 }
+
+export type ArticleCopy = ReturnType<typeof articleCopy>;
 
 export function homeCopy(locale: Locale) {
 	return {

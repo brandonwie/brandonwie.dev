@@ -1,12 +1,27 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { ArticleKeyNavigation } from '@/components/ArticleKeyNavigation';
+import { BackToPosts } from '@/components/BackToPosts';
+import { CodeCopy } from '@/components/CodeCopy';
+import { Giscus } from '@/components/Giscus';
+import { PostCopyButton } from '@/components/PostCopyButton';
+import { ReadingProgress } from '@/components/ReadingProgress';
+import { TableOfContents } from '@/components/TableOfContents';
+import socialLinksData from '../../../src/lib/data/social-links.json';
 import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../../../src/lib/seo';
 import { SLICE_1_ARTICLE_SLUG, articlePath, sourceDate } from './article-contract';
 import { articleCopy } from '../i18n/copy';
 import { articleJsonLd } from './article-json-ld';
 import { heroBlockHtml } from './hero';
 import { findPostFile, loadPost, type Locale } from './posts';
+
+interface SocialLink {
+	url: string;
+	label: string;
+}
+
+const socialLinksBySlug = socialLinksData as Record<string, SocialLink[] | undefined>;
 
 function displayDate(value: string | Date, locale: Locale): string {
 	return new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-US', {
@@ -125,105 +140,127 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 	const contentLocale = contentLocaleOf(locale, isFallback);
 	const otherLocale: Locale = locale === 'ko' ? 'en' : 'ko';
 	const switchPath = articlePath(slug, otherLocale);
+	const socialLinks = socialLinksBySlug[slug] ?? [];
 
 	return (
-		<article className="article-shell" data-article-locale={locale} data-pagefind-body>
-			{/* Pagefind locale facet, as PostDetail.svelte:73,204: the facet follows the CONTENT,
-			   not the route, so a Korean URL serving the English body indexes as "en". */}
-			<span data-pagefind-filter="lang" className="hidden">
-				{contentLocale}
-			</span>
-			{isFallback && (
-				<div className="post__fallback" data-pagefind-ignore>
-					<p>{copy.translationNotice}</p>
-					<a href={articlePath(slug, 'en')}>{copy.viewInEnglish}</a>
+		<>
+			<ReadingProgress label={copy.readingProgress} />
+			<article className="article-shell" data-article-locale={locale} data-pagefind-body>
+				{/* Pagefind locale facet, as PostDetail.svelte:73,204: the facet follows the CONTENT,
+				   not the route, so a Korean URL serving the English body indexes as "en". */}
+				<span data-pagefind-filter="lang" className="hidden">
+					{contentLocale}
+				</span>
+				{isFallback && (
+					<div className="post__fallback" data-pagefind-ignore>
+						<p>{copy.translationNotice}</p>
+						<a href={articlePath(slug, 'en')}>{copy.viewInEnglish}</a>
+					</div>
+				)}
+				<script
+					type="application/ld+json"
+					dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta, contentLocale) }}
+				/>
+				<div className="post__back" data-pagefind-ignore>
+					<BackToPosts locale={locale} label={copy.backToPosts} />
 				</div>
-			)}
-			<script
-				type="application/ld+json"
-				dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta, contentLocale) }}
-			/>
-			<nav aria-label={copy.breadcrumb} data-pagefind-ignore>
-				<ol className="breadcrumb-list">
-					<li>
-						<a href="/">{copy.home}</a>
-					</li>
-					<li aria-current="page">{meta.title}</li>
-				</ol>
-			</nav>
-			<div
-				className="article-hero"
-				data-pagefind-ignore
-				dangerouslySetInnerHTML={{ __html: heroBlockHtml(slug) }}
-			/>
-			<header className="article-header">
-				<h1>{meta.title}</h1>
-				<p className="article-description">{meta.description}</p>
-				<div className="article-meta">
-					<span>
-						{copy.published}{' '}
-						<time dateTime={sourceDate(meta.date)} data-pagefind-sort="date[datetime]">
-							{displayDate(meta.date, locale)}
-						</time>
-					</span>
-					{meta.updated ? (
-						<span>
-							{copy.updated}{' '}
-							<time dateTime={sourceDate(meta.updated)}>{displayDate(meta.updated, locale)}</time>
-						</span>
-					) : null}
-					<span>
-						{post.readingTime} {copy.readingTime}
-					</span>
-					<span>
-						{copy.category}: <span data-pagefind-filter="category">{meta.category}</span>
-					</span>
-				</div>
-				<div>
-					<span>{copy.tags}: </span>
-					<ul className="article-tags" aria-label={copy.tags}>
-						{meta.tags.map((tag) => (
-							<li key={tag}>{tag}</li>
-						))}
-					</ul>
-				</div>
-				{locale === 'ko' || post.hasKoreanTranslation ? (
-					<a
-						className="locale-switch"
-						href={switchPath}
-						hrefLang={otherLocale}
-						lang={otherLocale}
-						data-locale-switch={otherLocale}
-						aria-label={copy.switchLabel}
-					>
-						{copy.switchText}
-					</a>
-				) : null}
-			</header>
-			{post.headings.length > 0 ? (
-				<nav className="article-toc" aria-labelledby="article-toc-title" data-pagefind-ignore>
-					<h2 id="article-toc-title">{copy.toc}</h2>
-					<ol className="toc-list">
-						{post.headings.map((heading) => (
-							<li className={`toc-depth-${heading.depth}`} key={heading.id}>
-								<a href={`#${heading.id}`}>{heading.text}</a>
-							</li>
-						))}
+				<nav aria-label={copy.breadcrumb} data-pagefind-ignore>
+					<ol className="breadcrumb-list">
+						<li>
+							<a href="/">{copy.home}</a>
+						</li>
+						<li aria-current="page">{meta.title}</li>
 					</ol>
 				</nav>
-			) : null}
-			<div className="prose-terminal">{post.content}</div>
-			<section className="comments-shell" aria-labelledby="comments-title" data-pagefind-ignore>
-				<h2 id="comments-title">{copy.comments}</h2>
-				<p>{copy.commentsStatus}</p>
 				<div
-					className="giscus-container"
-					id="giscus-comments"
-					data-giscus-mount="true"
-					data-giscus-term={slug}
-					data-giscus-locale={locale}
+					className="article-hero post__hero"
+					data-pagefind-ignore
+					dangerouslySetInnerHTML={{ __html: heroBlockHtml(slug) }}
 				/>
-			</section>
-		</article>
+				<header className="article-header post__head">
+					<h1>{meta.title}</h1>
+					<p className="article-description post__lede">{meta.description}</p>
+					<div className="article-meta">
+						<span>
+							{copy.published}{' '}
+							<time dateTime={sourceDate(meta.date)} data-pagefind-sort="date[datetime]">
+								{displayDate(meta.date, locale)}
+							</time>
+						</span>
+						{meta.updated && meta.updated !== meta.date ? (
+							<span>
+								<span className="post__sep">·</span> {copy.updated}{' '}
+								<time dateTime={sourceDate(meta.updated)}>{displayDate(meta.updated, locale)}</time>
+							</span>
+						) : null}
+						{post.readingTime ? (
+							<span>
+								<span className="post__sep">·</span> {copy.readingTimeWithMinutes(post.readingTime)}
+							</span>
+						) : null}
+						<span>
+							<span className="post__sep">·</span> {copy.category}:{' '}
+							<span data-pagefind-filter="category">{meta.category}</span>
+						</span>
+						<PostCopyButton copyLabel={copy.copyLink} copiedLabel={copy.copied} />
+					</div>
+					{meta.tags.length > 0 ? (
+						<div className="post__tags">
+							<span>{copy.tags}: </span>
+							<ul className="article-tags" aria-label={copy.tags}>
+								{meta.tags.map((tag) => (
+									<li key={tag} className="post__tag">
+										{tag}
+									</li>
+								))}
+							</ul>
+						</div>
+					) : null}
+					{locale === 'ko' || post.hasKoreanTranslation ? (
+						<a
+							className="locale-switch"
+							href={switchPath}
+							hrefLang={otherLocale}
+							lang={otherLocale}
+							data-locale-switch={otherLocale}
+							aria-label={copy.switchLabel}
+						>
+							{copy.switchText}
+						</a>
+					) : null}
+				</header>
+				{post.headings.length > 0 ? (
+					<TableOfContents headings={post.headings} title={copy.toc} />
+				) : null}
+				<div className="prose-terminal prose post__content">{post.content}</div>
+				{socialLinks.length > 0 ? (
+					<aside className="post__social" data-pagefind-ignore>
+						<span className="post__social-label">{copy.alsoPublishedOn}</span>
+						{socialLinks.map((link) => (
+							<a
+								key={link.url}
+								className="post__social-chip"
+								href={link.url}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								{link.label}
+							</a>
+						))}
+					</aside>
+				) : null}
+				<Giscus
+					slug={slug}
+					locale={locale}
+					title={copy.comments}
+					statusMessage={copy.commentsStatus}
+				/>
+				<div className="post__bottom" data-pagefind-ignore>
+					<BackToPosts locale={locale} label={copy.backToPosts} />
+				</div>
+			</article>
+			<ArticleKeyNavigation locale={locale} />
+			<CodeCopy copyLabel={copy.codeCopy} copiedLabel={copy.codeCopied} />
+		</>
 	);
 }
