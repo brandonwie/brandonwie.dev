@@ -178,7 +178,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 					dangerouslySetInnerHTML={{ __html: heroBlockHtml(slug) }}
 				/>
 				<header className="article-header post__head">
-					<h1 className="post__title">{meta.title}</h1>
+					<h1>{meta.title}</h1>
 					<p className="article-description post__lede">{meta.description}</p>
 					<div className="article-meta">
 						<span>

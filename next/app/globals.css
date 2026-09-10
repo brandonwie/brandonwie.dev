@@ -1862,7 +1862,9 @@
 	padding-bottom: 28px;
 	border-bottom: 1px solid var(--line);
 }
-.post__title {
+.post__title,
+.post__head h1,
+.article-header h1 {
 	margin-bottom: 16px;
 	font-family: var(--font-sans);
 	font-weight: 700;

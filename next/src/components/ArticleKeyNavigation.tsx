@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation';
 import { postsHref } from '@/data/nav';
 import type { Locale } from '@/i18n/locale';
 
+function useOptionalRouter() {
+	try {
+		return useRouter();
+	} catch {
+		return null;
+	}
+}
+
 /**
  * ArticleKeyNavigation — Backspace keyboard shortcut back to posts.
  *
@@ -12,7 +20,7 @@ import type { Locale } from '@/i18n/locale';
  * Skips navigation when user is focused inside an editable field.
  */
 export function ArticleKeyNavigation({ locale }: { locale: Locale }) {
-	const router = typeof useRouter === 'function' ? useRouter() : null;
+	const router = useOptionalRouter();
 
 	if (typeof useEffect === 'function') {
 		useEffect(() => {
@@ -24,7 +32,11 @@ export function ArticleKeyNavigation({ locale }: { locale: Locale }) {
 						target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 					if (!isEditable) {
 						event.preventDefault();
-						router?.push(postsHref(locale));
+						if (router) {
+							router.push(postsHref(locale));
+						} else {
+							window.location.assign(postsHref(locale));
+						}
 					}
 				}
 			}
