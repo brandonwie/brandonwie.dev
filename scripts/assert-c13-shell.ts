@@ -25,7 +25,7 @@
  * Exit 0 therefore means "no shell regression in what exists", never "C13 is
  * discharged". The contract's status lives in
  * `3b/projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md`
- * and is OPEN until the candidate serves all 366 routes.
+ * and is OPEN until the candidate serves all 368 routes.
  */
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -207,7 +207,7 @@ export async function runAssertions(
 			pass(
 				'html lang',
 				`${slice3Urls.length}/${slice3Urls.length} Slice 3 pages match their URL locale ` +
-					`(${slice3Ko.length} KO / ${slice3En.length} EN); 11 routes deferred to Slice 4`,
+					`(${slice3Ko.length} KO / ${slice3En.length} EN); 13 routes deferred to Slice 4`,
 			);
 		}
 		if (baseWrong.length) {
@@ -452,8 +452,8 @@ export async function runAssertions(
 	if (failed.length || missingReason.length) return 1;
 	say(
 		missingSlice3.length > 0
-			? `C13 is OPEN, not discharged: exit 0 means no shell regression in the ${candCount} Slice 3 routes built so far; ${missingSlice3.length} of 355 still pending (11 routes deferred to Slice 4).`
-			: "C13 is OPEN, not discharged: exit 0 means no shell regression across Slice 3's 355 routes (11 routes deferred to Slice 4).",
+			? `C13 is OPEN, not discharged: exit 0 means no shell regression in the ${candCount} Slice 3 routes built so far; ${missingSlice3.length} of 355 still pending (13 routes deferred to Slice 4).`
+			: "C13 is OPEN, not discharged: exit 0 means no shell regression across Slice 3's 355 routes (13 routes deferred to Slice 4).",
 	);
 	return 0;
 }

@@ -34,11 +34,13 @@ were re-synced from 3B on 2026-09-03.
 
 ## Frozen measurement source
 
-The current generation is **3**. The annotated tag
-`migration-baseline-svelte-e23e808-v1` points directly to blob
-`4c8565889edc22c5e308a865480b366eeefa7691`. Its tag message records the source
+The current generation is **4**. The annotated tag
+`migration-baseline-svelte-8d7b40f-v1` points directly to blob
+`4ffbb6b06d51b6af2234277048bee01cce3b9bfa`. Its tag message records the source
 path `verification/baseline/svelte-e23e808.json` and SHA-256
-`dc7789daaeba7843b3ba417895984c4a399ba99ba913abd953e8e5c92999f827`.
+`5176585bbadc421e873233d5eab89c834ebb99298b14c3d1cccf3d9b79ef9af3`. The file
+keeps its generation-1 name; the tag, not the filename, identifies the
+generation.
 
 Because this generation is a MEASUREMENT rather than a projection,
 `migration:projection` requires the committed file to be byte-identical to that
@@ -61,6 +63,23 @@ git fetch origin tag migration-baseline-svelte-e23e808-v1
 pushed first starts a run that cannot see the tag, and `migration:projection`
 fails with `tag-unavailable` on a change that is otherwise correct. Observed on
 the generation-2 PR.
+
+### Generation 3 (superseded, still reachable)
+
+`migration-baseline-svelte-e23e808-v1` → blob
+`4c8565889edc22c5e308a865480b366eeefa7691`, SHA-256
+`dc7789daaeba7843b3ba417895984c4a399ba99ba913abd953e8e5c92999f827`. Superseded
+by generation 4, which measured the new AWS Certified AI Practitioner study page
+(commit `8d7b40f`). Generation 4 differs from it by: two added pages
+(`/study/aws-ai-practitioner` and its `/ko` twin, both 200); the `description`,
+`og`, `twitter`, `internalLinks`, and `text` rows of `/study` and `/ko/study`
+(the index lists the new course); the `shell` stylesheet marker on 364 pages and
+their `bytes`, because the shared Tailwind stylesheet gained utilities and its
+content hash moved from `0.BN2IMr2D.css` to `0.qmNWR8Jb.css`; the `sitemap.xml`
+site artifact (two new rows, mirrored in `next/src/content/feeds.ts`); Pagefind
+344 → 346; and `bundle` `cssBytes` +2709, `htmlBytes` +240588, `jsBytes`
++59868, `fileCount` +10. The two routes join `SLICE4_DEFERRED_ROUTES` (11 → 13),
+so C6 expects 368 baseline routes with Slice 3 unchanged at 355.
 
 ### Generation 2 (superseded before merge, still reachable)
 

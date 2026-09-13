@@ -96,6 +96,7 @@ const staticPages = [
 	{ en: '/study/dsa-ii', ko: '/ko/study/dsa-ii', priority: '0.7' },
 	{ en: '/study/dsa-iii', ko: '/ko/study/dsa-iii', priority: '0.7' },
 	{ en: '/study/dsa-iv', ko: '/ko/study/dsa-iv', priority: '0.7' },
+	{ en: '/study/aws-ai-practitioner', ko: '/ko/study/aws-ai-practitioner', priority: '0.7' },
 	{ en: '/posts', ko: '/ko/posts', priority: '0.8' },
 	{ en: '/tags', ko: '/ko/tags', priority: '0.5' },
 	{ en: '/projects', ko: '/ko/projects', priority: '0.7' },

@@ -234,10 +234,10 @@ function main(): number {
 	// Generation 1's parent carried none, which is why this number changed with
 	// the generation rather than drifting.
 	const articleMetaCount = frozenPages.filter((page) => 'articleMeta' in page).length;
-	const frozenInvariantOk = frozenPageCount === 366 && articleMetaCount === 366;
+	const frozenInvariantOk = frozenPageCount === 368 && articleMetaCount === 368;
 	if (!frozenInvariantOk) {
 		failures.push(
-			`live frozen baseline: ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta; expected 366 and 366`,
+			`live frozen baseline: ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta; expected 368 and 368`,
 		);
 	}
 	console.log(
