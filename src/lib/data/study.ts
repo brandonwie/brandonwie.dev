@@ -467,11 +467,11 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 	en: {
 		metaTitle: 'Study',
 		metaDescription:
-			'Study notes and visual learning pages by Brandon Wie, covering the Georgia Tech Data Structures and Algorithms I–IV sequence.',
+			'Study notes and visual learning pages by Brandon Wie, covering the Georgia Tech Data Structures and Algorithms I–IV sequence and the AWS Certified AI Practitioner exam.',
 		eyebrow: 'Study',
 		title: 'A public study shelf for material I have actually worked through.',
 		subtitle:
-			'Each section turns my Georgia Tech DSA notes into inspectable, interactive examples — visual demos plus quick recall prompts to keep the material in long-term memory.',
+			'Each section turns notes I worked through — Georgia Tech DSA and AWS certification prep — into inspectable examples: visual demos, comparison maps, and quick recall prompts to keep the material in long-term memory.',
 		sections: {
 			courses: 'current courses',
 			approach: 'the approach',
@@ -525,6 +525,25 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 				meta: 'Modules 12-15 · 4 interactive demos',
 				updated: '2026-07-31',
 			},
+			{
+				slug: 'aws-ai-practitioner',
+				title: 'AWS Certified AI Practitioner',
+				status: 'exam passed',
+				href: '/study/aws-ai-practitioner',
+				summary:
+					'A visual AIF-C01 cram sheet: the AI → ML → GenAI hierarchy, Amazon Bedrock and SageMaker AI sub-services, Amazon Q by user, prompt vs RAG vs fine-tuning, evaluation metrics, responsible AI, and keyword-to-answer exam traps.',
+				learned: ['Service routing', 'RAG vs fine-tuning', 'Metric choice', 'Responsible AI'],
+				modules: [
+					'Mental map',
+					'AWS service families',
+					'GenAI decisions',
+					'ML core',
+					'Responsible AI + governance',
+					'Exam traps',
+				],
+				meta: '6 sections · 36 exam traps',
+				updated: '2026-09-14',
+			},
 		],
 		approach: {
 			title: 'Notes turned into things you can poke at.',
@@ -539,11 +558,11 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 	ko: {
 		metaTitle: '스터디',
 		metaDescription:
-			'Brandon Wie의 스터디 노트와 시각 학습 페이지입니다. Georgia Tech Data Structures and Algorithms I–IV 과정을 다룹니다.',
+			'Brandon Wie의 스터디 노트와 시각 학습 페이지입니다. Georgia Tech Data Structures and Algorithms I–IV 과정과 AWS Certified AI Practitioner 시험을 다룹니다.',
 		eyebrow: 'Study',
 		title: '실제로 공부한 내용만 공개 학습 페이지로 정리합니다.',
 		subtitle:
-			'각 섹션은 Georgia Tech DSA 노트를 직접 다뤄볼 수 있는 인터랙티브 예제로 바꾼 것입니다. 시각 데모와 짧은 복습 질문으로 내용을 오래 기억하도록 돕습니다.',
+			'각 섹션은 직접 공부한 Georgia Tech DSA와 AWS 자격증 준비 노트를 살펴볼 수 있는 예제로 바꾼 것입니다. 시각 데모, 비교 맵, 짧은 복습 질문으로 내용을 오래 기억하도록 돕습니다.',
 		sections: {
 			courses: '현재 과정',
 			approach: '진행 방식',
@@ -596,6 +615,25 @@ const indexContent: Record<StudyLocale, StudyIndexContent> = {
 				modules: ['Module 12', 'Module 13', 'Module 14', 'Module 15'],
 				meta: 'Module 12-15 · 인터랙티브 데모 4개',
 				updated: '2026-07-31',
+			},
+			{
+				slug: 'aws-ai-practitioner',
+				title: 'AWS Certified AI Practitioner',
+				status: 'exam passed',
+				href: '/ko/study/aws-ai-practitioner',
+				summary:
+					'AIF-C01 시각형 암기 요약입니다. AI → ML → GenAI 계층, Amazon Bedrock과 SageMaker AI의 sub-service, 사용자별 Amazon Q, prompt vs RAG vs fine-tuning, 평가 metric, Responsible AI, 키워드별 exam 함정을 다룹니다.',
+				learned: ['Service 선택', 'RAG vs fine-tuning', 'Metric 선택', 'Responsible AI'],
+				modules: [
+					'전체 구조',
+					'AWS service 계열',
+					'GenAI 선택',
+					'ML 핵심',
+					'Responsible AI + governance',
+					'Exam 함정',
+				],
+				meta: '6개 섹션 · exam 함정 36개',
+				updated: '2026-09-14',
 			},
 		],
 		approach: {

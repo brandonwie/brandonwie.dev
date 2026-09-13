@@ -245,3 +245,28 @@ export const DSA_IV_SOURCE_FILES: StudySourceFile[] = [
 		role: 'primary-note',
 	},
 ];
+
+export const AWS_AI_PRACTITIONER_SOURCE_ROOT_LABEL = 'personal/study/aws-ai-practitioner';
+
+export const AWS_AI_PRACTITIONER_SOURCE_FILES: StudySourceFile[] = [
+	{
+		path: '_index.md',
+		sha256: '14e828125f3aa4e9a64a6fd3ad56f9964dc1961338593e769acf5752b1453a02',
+		role: 'index',
+	},
+	{
+		path: 'practice-tests-1-2-summary.html',
+		sha256: '5a5cb15d066f516a1a152991c8a5e68557d7c35511d59395c5d9eda45f66b371',
+		role: 'primary-note',
+	},
+	{
+		path: 'practice-tests-1-2-summary.ko.html',
+		sha256: '1534f256e71c041e9cfdf6cd2f7459e1e076fb4ef5626ff33e5dd5a8de7fca58',
+		role: 'primary-note',
+	},
+	{
+		path: 'course-slides-v19-brief.md',
+		sha256: '0448cbc2acdd86df8edeaa37cb332fb9f7769e51dca92f2d5779577c35922d32',
+		role: 'slide-summary',
+	},
+];
