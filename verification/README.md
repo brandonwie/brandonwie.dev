@@ -56,7 +56,7 @@ checkouts receive them. An existing clone that predates a tag must fetch it
 once:
 
 ```bash
-git fetch origin tag migration-baseline-svelte-e23e808-v1
+git fetch origin tag migration-baseline-svelte-8d7b40f-v1
 ```
 
 **Push the tag before the branch.** CI checks out at push time, so a branch

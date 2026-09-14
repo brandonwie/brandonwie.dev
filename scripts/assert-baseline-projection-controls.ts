@@ -241,7 +241,7 @@ function main(): number {
 		);
 	}
 	console.log(
-		`${frozenInvariantOk ? 'PASS' : 'FAIL'}  INVARIANCE  live frozen baseline has ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta (expected 366 and 366)`,
+		`${frozenInvariantOk ? 'PASS' : 'FAIL'}  INVARIANCE  live frozen baseline has ${frozenPageCount} pages and ${articleMetaCount} page(s) with articleMeta (expected 368 and 368)`,
 	);
 
 	const clean = runProjection(SOURCE, undefined, true);
