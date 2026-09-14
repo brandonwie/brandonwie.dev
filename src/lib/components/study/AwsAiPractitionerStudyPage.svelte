@@ -194,11 +194,7 @@
 											{/each}
 										</div>
 									{:else if block.kind === 'services'}
-										<div
-											class="grid gap-2 {block.columns === 4
-												? 'sm:grid-cols-2 xl:grid-cols-4'
-												: 'sm:grid-cols-2'}"
-										>
+										<div class="grid gap-2 {columns[block.columns]}">
 											{#each block.items as service (service.name)}
 												<div class="min-w-0 border border-line bg-bg p-3">
 													<p class="text-sm font-semibold text-ink">{service.name}</p>
