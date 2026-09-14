@@ -11,15 +11,16 @@
  * discovery becomes enumeration.
  *
  * This suite diffs the Next.js exported route list against the crawl-derived
- * baseline of 366 routes (from verification/baseline/svelte-e23e808.json).
+ * baseline of 368 routes (from verification/baseline/svelte-e23e808.json).
  *
  * In Slice 3, exactly 355 routes are in scope:
  *   - 21 static / index / search / feed / tags / system / rss / sitemap routes
  *   - 334 post routes (167 English + 167 Korean)
  *
- * Exactly 11 routes remain deferred to Slice 4:
+ * Exactly 13 routes remain deferred to Slice 4:
  *   - /study (en, ko)
  *   - /study/dsa-i..iv (en, ko)
+ *   - /study/aws-ai-practitioner (en, ko)
  *   - /talks/my-career
  *
  * Exit codes:
@@ -40,11 +41,13 @@ export const SLICE4_DEFERRED_ROUTES = [
 	'/ko/study/dsa-ii',
 	'/ko/study/dsa-iii',
 	'/ko/study/dsa-iv',
+	'/ko/study/aws-ai-practitioner',
 	'/ko/study',
 	'/study/dsa-i',
 	'/study/dsa-ii',
 	'/study/dsa-iii',
 	'/study/dsa-iv',
+	'/study/aws-ai-practitioner',
 	'/study',
 	'/talks/my-career',
 ] as const;
@@ -121,8 +124,8 @@ export function runC6Assertions(
 
 	rows.push({
 		id: 'C6-01',
-		status: totalBaseline === 366 ? 'PASS' : 'FAIL',
-		detail: `baseline route total is ${totalBaseline} (expected 366)`,
+		status: totalBaseline === 368 ? 'PASS' : 'FAIL',
+		detail: `baseline route total is ${totalBaseline} (expected 368)`,
 	});
 
 	const deferredFound = baselineUrls.filter(isDeferredRoute);

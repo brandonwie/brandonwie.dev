@@ -78,7 +78,7 @@ const CONTROLS: Control[] = [
 	{
 		id: 'C6-C05',
 		kind: 'DEFECT',
-		what: 'the baseline page total is mutated away from 366',
+		what: 'the baseline page total is mutated away from 368',
 		setup: (_tempCandidate, tempBaseline) => {
 			const baseline = JSON.parse(readFileSync(tempBaseline, 'utf8'));
 			delete baseline.pages['/'];
