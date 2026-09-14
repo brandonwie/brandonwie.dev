@@ -38,6 +38,23 @@
 
 ## Session Log
 
+### 2026-09-14 (Session 29)
+
+**Study section: AWS Certified AI Practitioner (EN + KO)**
+
+- **Shipped (PR #57, squash `b1d58cc`):** `/study/aws-ai-practitioner` +
+  `/ko/study/aws-ai-practitioner`, typed framework-neutral data parsed from the
+  private cram sheets, static comparison cards, jump links, print stylesheet,
+  date-only pass note; `study:check` now 46 files / 5 courses.
+- **Migration compat:** Next sitemap mirror, deferred routes 11 → 13 (C6
+  368 / 13 / 355), generation-4 baseline tag
+  `migration-baseline-svelte-8d7b40f-v1`, gen 3 → 4 diff explained.
+- **Merge:** documented CI exception (`migration:browser:controls` flake on
+  the GitHub runner); `sync:check` W2 drift on 3 posts unchanged.
+
+**Next:** credential link when issued; browser-controls flake and the 3-post
+resync as separate tasks; Slice 4 rebases onto `main`.
+
 ### 2026-08-01 (Session 28)
 
 **Study section: DSA IV (EN + KO) — the fourth and final GT DSA course**
