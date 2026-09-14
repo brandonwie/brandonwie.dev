@@ -50,6 +50,8 @@
 		base: 'text-foam',
 		warn: 'text-gold',
 		violet: 'text-iris',
+		// NOTE: 'teal' uses text-foam (not text-pine) because text-pine fails WCAG AA
+		// contrast on dark bg. Un-toned cards use text-ink, so text-foam still distinguishes teal cards.
 		teal: 'text-foam',
 	};
 	const tagTone: Record<AwsTone | 'base', string> = {
