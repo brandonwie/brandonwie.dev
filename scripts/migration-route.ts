@@ -237,6 +237,22 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		command: 'migration:browser:study',
+		entry: 'scripts/assert-browser-study.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		command: 'migration:browser:study:controls',
+		entry: 'scripts/assert-browser-study-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-study.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
 		command: 'migration:c13:controls',
 		entry: 'scripts/assert-c13-shell-controls.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
