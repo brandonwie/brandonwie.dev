@@ -150,6 +150,9 @@ importers:
       '@xyflow/react':
         specifier: 12.11.6
         version: 12.11.6(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      d3-shape:
+        specifier: ^3.2.0
+        version: 3.2.0
       fuse.js:
         specifier: 7.4.2
         version: 7.4.2
@@ -217,6 +220,9 @@ importers:
       '@tailwindcss/typography':
         specifier: ^0.5.20
         version: 0.5.20(tailwindcss@4.3.1)
+      '@types/d3-shape':
+        specifier: ^3.1.8
+        version: 3.1.8
       '@types/hast':
         specifier: ^3.0.5
         version: 3.0.5
