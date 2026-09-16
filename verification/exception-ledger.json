@@ -2982,5 +2982,21 @@
 		"reason": "C13 shell packaging + prefetch decision for the Slice 4 study cohort, applied to the Korean DSA IV page. Three named differences, following the /404 precedent of naming each: (1) body:preload-data=\"hover\" is dropped — SvelteKit-only with no Next attribute equivalent, the same approved posture as every other candidate route. (2) stylesheets repackaged: the baseline lists three SvelteKit asset files (global, Mermaid, StudyRoadmap scoped CSS) where the candidate serves the same rules from its single global stylesheet (src/app.css import plus the verbatim roadmap port in next/app/globals.css); the study copy carries zero mermaid references, so no rendered rule is lost. (3) link:<bundle> marker present on the candidate per the /404 precedent. Every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
 		"approved_by": "Brandon",
 		"approved_on": "2026-09-17"
+	},
+	{
+		"url": "/ko/study/aws-ai-practitioner",
+		"field": "shell",
+		"fingerprint": "fd3615e8d62e441fc9f6c9c01b8e356b",
+		"reason": "C13 shell packaging + prefetch decision for the Slice 4 AWS pair, applied to the Korean AWS AI Practitioner page. Three named differences, following the /404 precedent of naming each: (1) body:preload-data=\"hover\" is dropped — SvelteKit-only with no Next attribute equivalent, the same approved posture as every other candidate route. (2) stylesheets repackaged: the baseline lists three SvelteKit asset files (global, Mermaid, page-scoped print CSS) where the candidate serves the same rules from its single global stylesheet (src/app.css import plus the verbatim print-stylesheet port in next/app/globals.css); the AWS copy carries zero mermaid references, so no rendered rule is lost. (3) link:<bundle> marker present on the candidate per the /404 precedent. Every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-17"
+	},
+	{
+		"url": "/study/aws-ai-practitioner",
+		"field": "shell",
+		"fingerprint": "21c0a1bf278c4bd5ab10815f38cd0866",
+		"reason": "C13 shell packaging + prefetch decision for the Slice 4 AWS pair, applied to the English AWS AI Practitioner page. Three named differences, following the /404 precedent of naming each: (1) body:preload-data=\"hover\" is dropped — SvelteKit-only with no Next attribute equivalent, the same approved posture as every other candidate route. (2) stylesheets repackaged: the baseline lists three SvelteKit asset files (global, Mermaid, page-scoped print CSS) where the candidate serves the same rules from its single global stylesheet (src/app.css import plus the verbatim print-stylesheet port in next/app/globals.css); the AWS copy carries zero mermaid references, so no rendered rule is lost. (3) link:<bundle> marker present on the candidate per the /404 precedent. Every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-17"
 	}
 ]

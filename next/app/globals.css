@@ -2073,3 +2073,34 @@ pre:hover .code-copy-btn,
 		height: 1px;
 	}
 }
+
+/* AWS study print stylesheet. Ported from the scoped `<style>` block of
+   `src/lib/components/study/AwsAiPractitionerStudyPage.svelte` (minus the
+   `:global()` wrappers): light, ink-friendly tokens with site chrome and the
+   jump/print aside hidden. `.site-nav` / `.site-footer` are the Next header
+   and footer class names, identical to Svelte's. */
+@media print {
+	html:has([data-aws-study]) {
+		--bg: #ffffff !important;
+		--surface: #ffffff !important;
+		--ink: #111111 !important;
+		--muted: #333333 !important;
+		--faint: #555555 !important;
+		--line: #cccccc !important;
+		--line2: #cccccc !important;
+		--foam: #286983 !important;
+		--pine: #286983 !important;
+		--gold: #8a5300 !important;
+		--iris: #5f4b82 !important;
+		color-scheme: light;
+	}
+	body:has([data-aws-study]) .site-nav,
+	body:has([data-aws-study]) .site-footer,
+	[data-aws-study] [data-print-hide] {
+		display: none !important;
+	}
+	[data-aws-study] article,
+	[data-aws-study] dl > div {
+		break-inside: avoid;
+	}
+}
