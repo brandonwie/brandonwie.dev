@@ -1826,3 +1826,21 @@ on 5 knowledge entries.
 
 **Next:** Weekly rollup w22 still pending; monitor Cloudflare Pages deploy after
 push.
+
+### Session 15 — 2026-09-17: OpenCode native skill invocation fix
+
+**What:** `/{skill_name}` didn't resolve in the OpenCode TUI. Pinned the
+designated folders via ctx7 CLI + official docs (project
+`.opencode/.claude/.agents/skills` walk-up; global `~/.config/opencode`,
+`~/.claude`, `~/.agents`; `skills.paths`), confirmed skills auto-register as
+bare `/<name>`. Root cause was usage-level: `/3b:wrap` (Claude syntax) vs
+`/wrap`, plus v2.0.5 background-service caching (restart needed).
+`disableExternalSkills` verified unset.
+
+**Changed (3B, committed via /wrap):** `3b/.agents/skills/3b-setup/SKILL.md`
+and `3b/.agent-ssot/global-claude-setup/commands/init-3b.md` each gained an
+"OpenCode native skills" section — prior versions had zero opencode mentions.
+Knowledge: `3b/knowledge/devops/opencode-native-skill-discovery-folders.md`.
+
+**Next:** Restart OpenCode TUI, confirm `/wrap` resolves; `skills.paths`
+fallback if not.
