@@ -17,7 +17,7 @@
  * 3 SKIPPED because no browser is available. 3 is not a pass — callers must
  * distinguish it, or "no browser in CI" silently becomes a green suite.
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -215,11 +215,44 @@ export async function launch({ headless = true } = {}) {
 		if (await waitForExit(forceMs)) return null;
 		return `chrome (pid ${child.pid}) did not exit within ${graceMs + forceMs}ms of SIGTERM then SIGKILL`;
 	};
+	/**
+	 * Signal lingering descendant processes that name this exact profile path.
+	 *
+	 * Chrome forks helpers (Alerts, GPU, ...) that can outlive the direct
+	 * child's confirmed exit and recreate profile entries after removal --
+	 * the BC-15b residue. The SCOPE note on `terminate` rejects process-GROUP
+	 * signalling because a group is not exclusively owned; this is narrower.
+	 * The profile directory carries a random suffix, so a command line naming
+	 * it can only belong to this launch. Best effort: a kill that cannot run
+	 * must never fail the removal it exists to help.
+	 */
+	const killProfileStragglers = () => {
+		try {
+			spawnSync('pkill', ['-f', profile], { stdio: 'ignore' });
+		} catch {
+			/* pkill unavailable -- removal below still runs */
+		}
+	};
+	/** Dependency-free synchronous sleep; Node allows Atomics.wait on the main thread. */
+	const sleepSync = (ms) => {
+		try {
+			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+		} catch {
+			/* sleep unavailable -- the retry below runs immediately */
+		}
+	};
 	/** Returns null on success, or the reason removal failed. */
 	const removeProfile = () => {
+		killProfileStragglers();
 		try {
 			rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 			if (existsSync(profile)) {
+				// A dying helper may recreate entries between removal and the
+				// check. One quiescence beat later the writer is gone: signal
+				// stragglers again and remove once more. A root that survives
+				// that is a real fault, reported exactly as before.
+				sleepSync(1000);
+				killProfileStragglers();
 				rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 			}
 			return existsSync(profile) ? `profile still exists at ${profile}` : null;
