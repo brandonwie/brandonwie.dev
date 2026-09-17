@@ -212,6 +212,7 @@ export const SHELL_CLAIMS: Record<string, string[]> = {
 	'/study/dsa-iii': ['body:preload-data'],
 	'/study/dsa-iv': ['body:preload-data'],
 	'/study/aws-ai-practitioner': ['body:preload-data'],
+	'/talks/my-career': ['body:preload-data'],
 	'/ko/study': ['body:preload-data'],
 	'/ko/study/dsa-i': ['body:preload-data'],
 	'/ko/study/dsa-ii': ['body:preload-data'],
