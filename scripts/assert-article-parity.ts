@@ -268,12 +268,7 @@ interface LinkDeferral {
 	owner: string;
 }
 
-const CHROME_LINK_DEFERRALS: readonly LinkDeferral[] = [
-	{ destination: '/study', locale: 'en', container: 'header', owner: 'Slice 4' },
-	{ destination: '/study', locale: 'en', container: 'footer', owner: 'Slice 4' },
-	{ destination: '/ko/study', locale: 'ko', container: 'header', owner: 'Slice 4' },
-	{ destination: '/ko/study', locale: 'ko', container: 'footer', owner: 'Slice 4' },
-];
+const CHROME_LINK_DEFERRALS: readonly LinkDeferral[] = [];
 
 /** The byte range of the baseline header / footer element, or null if absent. */
 function chromeRange(html: string, container: ChromeContainer): [number, number] | null {

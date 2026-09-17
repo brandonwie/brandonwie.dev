@@ -337,38 +337,19 @@ const CONTROLS: Control[] = [
 		apply: (html) => html.replace('<a href="/">', '<a href="/%2e%2e%2f%2e%2e%2fpackage.json">'),
 	},
 	/**
-	 * The two rows below guard A12's chrome-link deferrals (criteria:
+	 * The two rows below guarded A12's chrome-link deferrals (criteria:
 	 * verification/contracts/A12-chrome-link-deferrals.md). Without them the
 	 * deferral list would be a hole: nothing would prove it is closed, and
 	 * nothing would force an entry out once its route ships.
+	 *
+	 * RETIRED 2026-09-17 with the last four deferrals (study cohort landed;
+	 * CHROME_LINK_DEFERRALS is now empty by the "zero deferrals before
+	 * cutover" rule). AP-47 created study.html to obsolete an entry that no
+	 * longer exists, and AP-48's duplicate-link defect resolves cleanly once
+	 * its destination ships — both fixtures lost their defect premise, not
+	 * their assertions. If a deferral ever returns, its controls return with
+	 * it: re-add one obsolete-entry case and one outside-chrome case here.
 	 */
-	{
-		// AP-47, not AP-46: the runner prints its own hardcoded AP-46
-		// dateModified-fallback control at :481, outside the CONTROLS array.
-		id: 'AP-47',
-		kind: 'DEFECT',
-		what: 'a deferral is obsolete: its destination now exists in the export',
-		createFile: { path: 'study.html', body: '<!doctype html><title>study</title>' },
-	},
-	{
-		/**
-		 * The counterexample for A12's occurrence lookup. An earlier revision
-		 * found each anchor with `html.indexOf(tag)`, which returns the first
-		 * IDENTICAL opening tag, so this duplicate — spelled exactly like the
-		 * header's link but sitting in <main> — was excused as a header
-		 * deferral. The deferral count rose 19 -> 20 and the suite still passed.
-		 * AP-35 does not cover it: its anchor is spelled differently, so the
-		 * first-match collision never arises there.
-		 */
-		id: 'AP-48',
-		kind: 'DEFECT',
-		what: 'a chrome link is duplicated outside the chrome, where its deferral must not apply',
-		apply: (html) =>
-			html.replace(
-				/(<main\b[^>]*id="main-content"[^>]*>)/,
-				'$1<a href="/study" class="site-nav__link"></a>',
-			),
-	},
 	{
 		/**
 		 * Paired with AP-48 over the same surface: a formatting-only edit inside
