@@ -10,10 +10,4 @@
  * That is why its lines are excluded from the Slice 2 calibration: counting
  * them would flatter the rate with work nobody has to do.
  */
-export type {
-	BstTraversalCopy,
-	HashMapVisualizerCopy,
-	StepperCopy,
-	StudyLocale,
-} from '../../../src/lib/data/study';
-export { getDsaIIContent } from '../../../src/lib/data/study';
+export * from '../../../src/lib/data/study';

@@ -159,12 +159,15 @@ export const CLIENT_BOUNDARY: Record<string, boolean> = {
  * the row. Neither is an answer to `animate:flip`: both are dependencies the
  * SVELTE side already carries for the same two surfaces (`gsap` for the talk
  * deck, `fuse.js` for the command palette), so they are ported cost, not new
- * cost. The row still fails the moment a THIRD library appears, which is the
- * property it exists for.
+ * cost. `d3-shape` joined by the same rule in Slice 4: the Svelte side carries
+ * it for `BigOExplorer`, and the Next port draws the same monotone curves with
+ * the same library rather than a second implementation. The row still fails
+ * the moment a FOURTH library appears, which is the property it exists for.
  */
 export const NEXT_RUNTIME_DEPENDENCIES = [
 	'@shikijs/rehype',
 	'@xyflow/react',
+	'd3-shape',
 	'fuse.js',
 	'github-slugger',
 	'gray-matter',

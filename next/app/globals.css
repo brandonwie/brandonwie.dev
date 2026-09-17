@@ -1994,3 +1994,113 @@ pre:hover .code-copy-btn,
 	color: var(--foam);
 	border-color: var(--foam);
 }
+
+/* Study roadmap: module sequence. Ported from the scoped `<style>` block of
+   `src/lib/components/study/StudyRoadmap.svelte`; vertical on mobile,
+   horizontal from lg. Lives here (not `src/app.css`) per the file's header
+   rule: Next-owned component CSS, following the `.code-copy-btn` precedent. */
+.roadmap {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.roadmap .node {
+	position: relative;
+	padding-left: 2.5rem;
+	padding-bottom: 1.75rem;
+}
+
+.roadmap .node:last-child {
+	padding-bottom: 0;
+}
+
+.roadmap .badge {
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	border: 1px solid var(--accent);
+	border-radius: 9999px;
+	background-color: var(--bg);
+	color: var(--accent);
+	font-size: 0.7rem;
+}
+
+/* Connector between consecutive nodes (vertical on mobile). */
+.roadmap .node:not(:last-child)::before {
+	content: '';
+	position: absolute;
+	left: calc(0.875rem - 0.5px);
+	top: 1.75rem;
+	bottom: 0;
+	width: 1px;
+	background-color: var(--line);
+}
+
+@media (min-width: 1024px) {
+	.roadmap {
+		flex-direction: row;
+		align-items: flex-start;
+	}
+
+	.roadmap .node {
+		flex: 1 1 0;
+		padding-left: 0;
+		padding-top: 2.5rem;
+		padding-right: 1.25rem;
+		padding-bottom: 0;
+	}
+
+	.roadmap .node:last-child {
+		padding-right: 0;
+	}
+
+	/* Connector turns horizontal on desktop. */
+	.roadmap .node:not(:last-child)::before {
+		left: 1.75rem;
+		right: 0;
+		top: calc(0.875rem - 0.5px);
+		bottom: auto;
+		width: auto;
+		height: 1px;
+	}
+}
+
+/* AWS study print stylesheet. Ported from the scoped `<style>` block of
+   `src/lib/components/study/AwsAiPractitionerStudyPage.svelte` (minus the
+   `:global()` wrappers): light, ink-friendly tokens with site chrome and the
+   jump/print aside hidden. `.site-nav` / `.site-footer` are the Next header
+   and footer class names, identical to Svelte's. */
+@media print {
+	html:has([data-aws-study]) {
+		--bg: #ffffff !important;
+		--surface: #ffffff !important;
+		--ink: #111111 !important;
+		--muted: #333333 !important;
+		--faint: #555555 !important;
+		--line: #cccccc !important;
+		--line2: #cccccc !important;
+		--foam: #286983 !important;
+		--pine: #286983 !important;
+		--gold: #8a5300 !important;
+		--iris: #5f4b82 !important;
+		color-scheme: light;
+	}
+	body:has([data-aws-study]) .site-nav,
+	body:has([data-aws-study]) .site-footer,
+	[data-aws-study] [data-print-hide] {
+		display: none !important;
+	}
+	[data-aws-study] article,
+	[data-aws-study] dl > div {
+		break-inside: avoid;
+	}
+}
