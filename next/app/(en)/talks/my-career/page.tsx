@@ -1,14 +1,19 @@
 import type { Metadata } from 'next';
 
 import AccountSeparationSlide from '@/components/deck/AccountSeparationSlide';
+import AiNativeLoopSlide from '@/components/deck/AiNativeLoopSlide';
 import ArcSlide from '@/components/deck/ArcSlide';
+import DataPipelineSlide from '@/components/deck/DataPipelineSlide';
 import EventDrivenSlide from '@/components/deck/EventDrivenSlide';
+import InfrastructureSlide from '@/components/deck/InfrastructureSlide';
 import MobaSetupSlide from '@/components/deck/MobaSetupSlide';
 import ModulabsSlide from '@/components/deck/ModulabsSlide';
 import MoviationSlide from '@/components/deck/MoviationSlide';
+import ParallelSyncSlide from '@/components/deck/ParallelSyncSlide';
 import PlaytagAdminSlide from '@/components/deck/PlaytagAdminSlide';
 import PlaytagBackendSlide from '@/components/deck/PlaytagBackendSlide';
 import PushSlide from '@/components/deck/PushSlide';
+import RetrievalRebuildSlide from '@/components/deck/RetrievalRebuildSlide';
 import TitleSlide from '@/components/deck/TitleSlide';
 import Deck from '@/components/deck/Deck';
 import type { DeckSlide } from '@/deck/types';
@@ -39,9 +44,9 @@ export function generateMetadata(): Metadata {
 	};
 }
 
-// Partial PR-B registry: batches 1–2 land storyboard pages 1–10 in exact
-// storyboard order. Pages 11+ are still unported, so the registry stops at
-// `push`; the remaining slides append here as later batches land.
+// Partial PR-B registry: batches 1–3 land storyboard pages 1–15 in exact
+// storyboard order. Pages 16–20 are still unported, so the registry stops at
+// `retrieval-rebuild`; the remaining slides append here as later batches land.
 const slides: DeckSlide[] = [
 	{ id: 'title', label: 'Title', steps: 1, component: TitleSlide },
 	{ id: 'arc', label: 'The arc', steps: 2, component: ArcSlide },
@@ -68,6 +73,36 @@ const slides: DeckSlide[] = [
 		component: EventDrivenSlide,
 	},
 	{ id: 'push', label: 'Sync — polling to push', steps: 2, component: PushSlide },
+	{
+		id: 'parallel',
+		label: 'Sync — linear to parallel',
+		steps: 2,
+		component: ParallelSyncSlide,
+	},
+	{
+		id: 'infrastructure',
+		label: 'Infrastructure',
+		steps: 2,
+		component: InfrastructureSlide,
+	},
+	{
+		id: 'data-pipeline',
+		label: 'Data pipeline',
+		steps: 2,
+		component: DataPipelineSlide,
+	},
+	{
+		id: 'ai-native-loop',
+		label: '3B — the AI-native loop',
+		steps: 2,
+		component: AiNativeLoopSlide,
+	},
+	{
+		id: 'retrieval-rebuild',
+		label: '3B — kill, diagnose, rebuild',
+		steps: 2,
+		component: RetrievalRebuildSlide,
+	},
 ];
 
 export default function TalksMyCareerPage() {
