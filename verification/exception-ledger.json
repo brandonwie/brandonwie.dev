@@ -2998,5 +2998,13 @@
 		"reason": "C13 shell packaging + prefetch decision for the Slice 4 AWS pair, applied to the English AWS AI Practitioner page. Three named differences, following the /404 precedent of naming each: (1) body:preload-data=\"hover\" is dropped — SvelteKit-only with no Next attribute equivalent, the same approved posture as every other candidate route. (2) stylesheets repackaged: the baseline lists three SvelteKit asset files (global, Mermaid, page-scoped print CSS) where the candidate serves the same rules from its single global stylesheet (src/app.css import plus the verbatim print-stylesheet port in next/app/globals.css); the AWS copy carries zero mermaid references, so no rendered rule is lost. (3) link:<bundle> marker present on the candidate per the /404 precedent. Every other shell element matches the baseline exactly. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
 		"approved_by": "Brandon",
 		"approved_on": "2026-09-17"
+	},
+	{
+		"url": "/talks/my-career",
+		"field": "shell",
+		"fingerprint": "b52bcc8fbd36cbe24aa707df30f336b1",
+		"reason": "C13 shell packaging + prefetch decision for the Slice 4 talks route shell (PR-A), applied to /talks/my-career. Two fingerprinted differences, following the /404 precedent of naming each: (1) body:preload-data=\"hover\" is dropped — SvelteKit-only with no Next attribute equivalent, the same approved posture as every other candidate route. (2) stylesheets repackaged: the baseline lists three SvelteKit asset files (global, Mermaid, page-scoped CSS) where the candidate serves the same rules from its single global stylesheet (src/app.css import plus the verbatim deck port in next/app/globals.css); the PR-A shell hosts one slide with zero mermaid references, so no rendered rule is lost. Route-relative icon/manifest hrefs and the fonts &/&amp; serialization delta normalize away in the comparator (hrefs resolved against the page base, entities decoded). Every other shell element matches the baseline exactly, including meta:robots noindex,nofollow and lang=en. This approval covers the PR-A single-slide shell only; any PR-B stylesheet change re-hashes the chunk filename and re-fingerprints. Recorded in 3b projects/brandonwie.dev/actives/nextjs-migration/verification/contracts/C13-document-shell.md.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-17"
 	}
 ]
