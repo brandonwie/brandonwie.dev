@@ -515,13 +515,17 @@ const CONTROLS: Control[] = [
 			// The defect this whole PR is about: a capture that runs after the
 			// browser has already moved the node produces a zero-distance
 			// animation that neither throws nor warns.
+			//
+			// Anchor tracks the Phase 2 shape: since the targets fix, Phase 2
+			// re-queries [data-flip-id] post-commit, so the anchor names the
+			// loaded+element guard rather than the pre-fix two-line form.
 			sourceOverrides: mutateSource(
 				dir,
 				'next/src/components/deck/AccountSeparationSlide.tsx',
 				(text) =>
 					text.replace(
-						'const loaded = bundle.current;\n\t\tif (loaded && pending.state) {',
-						'const loaded = bundle.current;\n\t\tvoid loaded?.Flip.getState(document.body);\n\t\tif (loaded && pending.state) {',
+						'const loaded = bundle.current;\n\t\tconst element = root.current;\n\t\tif (loaded && element && pending.state) {',
+						'const loaded = bundle.current;\n\t\tconst element = root.current;\n\t\tvoid loaded?.Flip.getState(document.body);\n\t\tif (loaded && element && pending.state) {',
 					),
 			),
 		}),
