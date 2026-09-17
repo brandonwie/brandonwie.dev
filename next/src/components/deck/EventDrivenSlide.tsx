@@ -279,7 +279,7 @@ export default function EventDrivenSlide({ step = 0, animate = true }: Props) {
 				);
 			});
 		},
-		[inContext, killRunning, track],
+		[inContext, track],
 	);
 
 	useEffect(() => {

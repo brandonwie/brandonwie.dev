@@ -2403,7 +2403,10 @@ pre:hover .code-copy-btn,
 }
 
 /* --- from TitleSlide.svelte (PR-B batch 1) --- */
-.title {
+/* Scoped to `.slide.title`: a bare `.title` is a global selector and would
+   leak this layout into other components' `.title` elements (System3bFlow's
+   toolbar is the known collision). */
+.slide.title {
 	width: 100%;
 	max-width: 82rem;
 	display: flex;
@@ -2413,24 +2416,24 @@ pre:hover .code-copy-btn,
 /* Resting state in CSS, not only in JS: the mount effect runs after first
    paint, so a JS-only resting state flashes the finished title. Same reason
    as the notes on the sync and data-pipeline slides. */
-.title .reveal {
+.slide.title .reveal {
 	visibility: hidden;
 	opacity: 0;
 }
-.title .who {
+.slide.title .who {
 	margin: 0;
 	font-size: var(--deck-meta);
 	letter-spacing: 0.14em;
 	text-transform: uppercase;
 	opacity: 0.5;
 }
-.title h1 {
+.slide.title h1 {
 	font-size: var(--deck-title);
 	font-weight: 600;
 	letter-spacing: -0.02em;
 	margin: 0;
 }
-.title .thesis {
+.slide.title .thesis {
 	margin: 0.5rem 0 0;
 	font-size: var(--deck-subtitle);
 	opacity: 0.7;
