@@ -41,7 +41,7 @@ function Layer({ layers, index }: { layers: AwsTerm[]; index: number }) {
 	return (
 		<div className="border border-line2 bg-bg p-3">
 			<p className="text-sm leading-6">
-				<span className="font-mono font-bold text-foam">{layers[index].term}</span>
+				<span className="font-mono font-bold text-foam">{layers[index].term}</span>{' '}
 				<span className="text-xs text-muted">{layers[index].detail}</span>
 			</p>
 			{index + 1 < layers.length && (
@@ -97,9 +97,9 @@ const tagTone: Record<AwsTone | 'base', string> = {
  * three Svelte snippets become local components (`SecHead`, `Term`, and the
  * recursive `Layer`); the scoped print `<style>` block moves verbatim to
  * `next/app/globals.css` (minus the `:global()` wrappers, following the
- * roadmap-style precedent). The whole page is a client component for the
- * print button's `window.print()` handler; everything else renders
- * statically.
+ * roadmap-style precedent). The page itself is a server component; only the
+ * print button is client (`StudyPrintButton`), since `window.print()` cannot
+ * render server-side. Everything else renders statically.
  */
 export default function AwsAiPractitionerStudyPage({ locale = 'en' }: { locale?: StudyLocale }) {
 	const content = getAwsAiPractitionerContent(locale);
