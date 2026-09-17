@@ -3,15 +3,20 @@ import type { Metadata } from 'next';
 import AccountSeparationSlide from '@/components/deck/AccountSeparationSlide';
 import AiNativeLoopSlide from '@/components/deck/AiNativeLoopSlide';
 import ArcSlide from '@/components/deck/ArcSlide';
+import CloseSlide from '@/components/deck/CloseSlide';
+import CommunicationSlide from '@/components/deck/CommunicationSlide';
 import DataPipelineSlide from '@/components/deck/DataPipelineSlide';
+import EndSlide from '@/components/deck/EndSlide';
 import EventDrivenSlide from '@/components/deck/EventDrivenSlide';
 import InfrastructureSlide from '@/components/deck/InfrastructureSlide';
+import LearningSlide from '@/components/deck/LearningSlide';
 import MobaSetupSlide from '@/components/deck/MobaSetupSlide';
 import ModulabsSlide from '@/components/deck/ModulabsSlide';
 import MoviationSlide from '@/components/deck/MoviationSlide';
 import ParallelSyncSlide from '@/components/deck/ParallelSyncSlide';
 import PlaytagAdminSlide from '@/components/deck/PlaytagAdminSlide';
 import PlaytagBackendSlide from '@/components/deck/PlaytagBackendSlide';
+import PrivacyMatrixSlide from '@/components/deck/PrivacyMatrixSlide';
 import PushSlide from '@/components/deck/PushSlide';
 import RetrievalRebuildSlide from '@/components/deck/RetrievalRebuildSlide';
 import TitleSlide from '@/components/deck/TitleSlide';
@@ -21,10 +26,10 @@ import type { DeckSlide } from '@/deck/types';
 /**
  * `/talks/my-career` — presentation deck route shell (PR-A).
  *
- * PR-B lands the remaining beats in storyboard-ordered batches around the
- * two previously ported slides. Until the full set lands, the registry comment
- * below identifies its temporary construction order. EventDriven and
- * ParallelSync carry the binding S60 Flip prescriptions at port time.
+ * PR-B landed the remaining 18 beats in four storyboard-ordered batches
+ * around the two previously ported slides. The registry below is final.
+ * EventDriven and ParallelSync carried the binding S60 Flip prescriptions
+ * at port time.
  *
  * Publish surface, settled 2026-07-29 (Brandon): unlisted, not hidden —
  * reachable by link, out of every discovery surface (no nav entry, no
@@ -44,9 +49,8 @@ export function generateMetadata(): Metadata {
 	};
 }
 
-// Partial PR-B registry: batches 1–3 land storyboard pages 1–15 in exact
-// storyboard order. Pages 16–20 are still unported, so the registry stops at
-// `retrieval-rebuild`; the remaining slides append here as later batches land.
+// Final PR-B registry: all 20 beats are in exact storyboard order. The
+// storyboard's Page column maps one-based onto this array's index.
 const slides: DeckSlide[] = [
 	{ id: 'title', label: 'Title', steps: 1, component: TitleSlide },
 	{ id: 'arc', label: 'The arc', steps: 2, component: ArcSlide },
@@ -103,6 +107,26 @@ const slides: DeckSlide[] = [
 		steps: 2,
 		component: RetrievalRebuildSlide,
 	},
+	{
+		id: 'privacy-matrix',
+		label: 'Privacy governance',
+		steps: 2,
+		component: PrivacyMatrixSlide,
+	},
+	{ id: 'close', label: 'Close', steps: 1, component: CloseSlide },
+	{
+		id: 'communication',
+		label: 'How I work',
+		steps: 2,
+		component: CommunicationSlide,
+	},
+	{
+		id: 'learning',
+		label: 'Never stopped learning',
+		steps: 1,
+		component: LearningSlide,
+	},
+	{ id: 'end', label: 'FINE', steps: 1, component: EndSlide },
 ];
 
 export default function TalksMyCareerPage() {

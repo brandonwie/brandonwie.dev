@@ -4103,3 +4103,495 @@ pre:hover .code-copy-btn,
 		gap: 0.9rem;
 	}
 }
+
+/* ==== PrivacyMatrixSlide.svelte (page 16) ==================================
+   Scoped port of the slide's <style> block. The token overlay is placed, not
+   travelled — a static pill needs no ?print exemption, and position carries
+   what the travel used to: left of the gate means the content never reached a
+   consumer.
+   =========================================================================== */
+.privacy-matrix {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1rem, 2.5vh, 1.6rem);
+}
+.privacy-matrix .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.privacy-matrix h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+/* Narrates the diagram rather than adding a claim. Same slot the other slides
+   give their before/after line, which this beat has no use for — nothing here
+   is a before. */
+.privacy-matrix .lead {
+	margin: 0.4rem 0 0;
+	font-size: var(--deck-subtitle);
+	opacity: 0.6;
+	max-width: 72ch;
+}
+.privacy-matrix .flow {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr);
+	align-items: center;
+	gap: clamp(1.5rem, 4vw, 3.5rem);
+	/* Reserved lane for the token overlay, so revealing it changes nothing. */
+	padding-bottom: 3rem;
+}
+.privacy-matrix .matrix,
+.privacy-matrix .consumers {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+.privacy-matrix .row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+	font-size: var(--deck-body);
+	border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+	padding-bottom: 0.3rem;
+	visibility: hidden;
+	opacity: 0;
+}
+.privacy-matrix .verdict {
+	font-size: var(--deck-meta);
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	opacity: 0.55;
+}
+.privacy-matrix .verdict.private {
+	opacity: 0.9;
+	font-weight: 600;
+}
+.privacy-matrix .gate {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.6rem;
+	visibility: hidden;
+	opacity: 0;
+}
+.privacy-matrix .gate-bar {
+	display: block;
+	width: 3px;
+	height: clamp(5rem, 14vh, 8rem);
+	background: currentColor;
+	opacity: 0.75;
+}
+.privacy-matrix .gate-label {
+	font-size: var(--deck-meta);
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	opacity: 0.55;
+	white-space: nowrap;
+}
+/* The rule, named, so "one rule decides" reads as a file that exists rather
+   than as a claim about architecture. Monospaced ON PURPOSE, and this is the
+   one place in the deck where that is right: the glob rows were removed for
+   rendering as raw code the room had to PARSE, whereas a path is a citation
+   the room only has to RECOGNISE. It lives in the lead rather than on the
+   gate, where it belongs semantically — the gate column is `auto`-width, and
+   a 33-character nowrap string there would have roughly doubled it and
+   squeezed the matrix and the consumer list either side. */
+.privacy-matrix .rule-path {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.85em;
+	opacity: 0.75;
+}
+.privacy-matrix .consumer {
+	font-size: var(--deck-body);
+	opacity: 0.8;
+	visibility: hidden;
+}
+.privacy-matrix .track {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0.25rem;
+	height: 2.25rem;
+	pointer-events: none;
+}
+/* Placed, not animated. Each sits on its own side of the gate, which is the
+   whole claim — left of it means the content never reached a consumer. */
+.privacy-matrix .token {
+	position: absolute;
+	top: 0;
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.5rem;
+	border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+	border-radius: 999px;
+	padding: 0.2rem 0.7rem;
+	font-size: var(--deck-meta);
+	white-space: nowrap;
+	visibility: hidden;
+	opacity: 0;
+}
+.privacy-matrix .token.deny {
+	left: 2%;
+}
+/* Clear of the gate column, over the consumer list. That position is the only
+   thing this pill's placement has to communicate. */
+.privacy-matrix .token.pass {
+	left: 60%;
+}
+.privacy-matrix .badge {
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	opacity: 0.6;
+}
+.privacy-matrix .footnote {
+	margin: 0;
+	font-size: var(--deck-body);
+	opacity: 0.6;
+}
+.privacy-matrix .tie {
+	margin: 0;
+	font-size: var(--deck-subtitle);
+	font-weight: 600;
+	max-width: 68ch;
+	min-height: 1.6em;
+	visibility: hidden;
+}
+/* Narrow: a three-column flow with a travelling token stops being readable.
+   Stack the columns and drop the animation lane entirely — the table and the
+   consumer list still carry the claim. */
+@media (max-width: 900px) {
+	.privacy-matrix .flow {
+		grid-template-columns: 1fr;
+		gap: 1.25rem;
+		padding-bottom: 0;
+	}
+	.privacy-matrix .gate {
+		flex-direction: row;
+		align-self: flex-start;
+	}
+	.privacy-matrix .gate-bar {
+		width: clamp(4rem, 30vw, 8rem);
+		height: 3px;
+	}
+	.privacy-matrix .track {
+		display: none;
+	}
+}
+
+/* ==== CloseSlide.svelte (page 17) ==========================================
+   Scoped port. One-step: the rail draws, then the five nodes stagger in and
+   the fifth arriving last IS the callback landing. The fifth dot is outlined,
+   not filled — the open slot is the statement.
+   =========================================================================== */
+.close-slide {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1.5rem, 4vh, 2.5rem);
+}
+.close-slide h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+.close-slide .rail {
+	position: relative;
+	padding-top: 1.5rem;
+}
+.close-slide .rail-line {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.35;
+}
+.close-slide .dot {
+	position: absolute;
+	top: calc(-1.5rem - 3px);
+	left: 0;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: currentColor;
+}
+/* The next one has not happened yet, so its node is outlined rather than
+   filled. */
+.close-slide .stop.next .dot {
+	background: transparent;
+	border: 1px solid currentColor;
+}
+.close-slide .stops {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 1rem;
+}
+.close-slide .stop {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+.close-slide .company {
+	font-size: var(--deck-heading);
+	font-weight: 600;
+}
+.close-slide .years {
+	font-size: var(--deck-meta);
+	opacity: 0.55;
+	font-variant-numeric: tabular-nums;
+}
+/* Empty on the fifth node, and the reserved height is what makes that read as
+   an open slot rather than a missing one — five columns, one baseline, the
+   last one waiting. */
+.close-slide .gained {
+	margin-top: 0.5rem;
+	min-height: 1.5em;
+	font-size: var(--deck-body);
+	border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+	padding-top: 0.5rem;
+}
+@media (max-width: 900px) {
+	.close-slide .rail {
+		padding-top: 0;
+	}
+	.close-slide .rail-line,
+	.close-slide .dot {
+		display: none;
+	}
+	.close-slide .stops {
+		grid-template-columns: repeat(3, 1fr);
+		gap: 1.25rem;
+	}
+}
+
+/* ==== CommunicationSlide.svelte (page 18) ==================================
+   Scoped port. The anchor is hidden with `visibility`, never `display: none`
+   — revealing it must not re-space the principles above it.
+   =========================================================================== */
+.communication {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1.35rem, 3.5vh, 2.25rem);
+}
+.communication .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.communication h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+.communication .rules {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(0.9rem, 2.2vh, 1.4rem);
+}
+/* Column layout, and both spans exist from the first paint. The anchor is
+   hidden with `visibility`, never `display: none` — revealing it must not
+   re-space the principles above it, and onMount runs after first paint. */
+.communication .rule {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	padding-left: 1rem;
+	position: relative;
+}
+.communication .rule::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.68em;
+	width: 0.4rem;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.5;
+}
+.communication .name {
+	font-size: var(--deck-heading);
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	visibility: hidden;
+	opacity: 0;
+}
+.communication .gloss {
+	font-size: var(--deck-body);
+	opacity: 0;
+	visibility: hidden;
+}
+/* Dimmer than the rule it backs, so the three principles still scan as three
+   and the anchors read as evidence rather than as three more assertions. */
+.communication .anchor {
+	font-size: var(--deck-body);
+	opacity: 0;
+	visibility: hidden;
+}
+.communication .point {
+	margin: 0;
+	font-size: var(--deck-subtitle);
+	opacity: 0.7;
+	visibility: hidden;
+}
+
+/* ==== LearningSlide.svelte (page 19) =======================================
+   Scoped port. Every row carries a date — the dates are what places each row
+   inside the MOBA period and makes the headline falsifiable.
+   =========================================================================== */
+.learning {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1rem, 2.5vh, 1.6rem);
+}
+.learning .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.learning h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+/* Two unequal columns: four rows on the right against two on the left, so the
+   coursework side gets the width its longer names need. */
+.learning .groups {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+	gap: clamp(1.5rem, 4vw, 3.5rem);
+	align-items: start;
+}
+.learning .group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	min-width: 0;
+}
+.learning .group-label {
+	margin: 0;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	opacity: 0.45;
+}
+.learning .items {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+.learning .item {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+	font-size: var(--deck-body);
+	border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+	padding-bottom: 0.3rem;
+	visibility: hidden;
+	opacity: 0;
+}
+/* The date is the evidence, not a footnote — it is what puts the row inside
+   the MOBA period. Quieter than the name, but not dismissed. */
+.learning .when {
+	font-size: var(--deck-meta);
+	opacity: 0.65;
+	white-space: nowrap;
+}
+.learning .point {
+	margin: 0;
+	font-size: var(--deck-subtitle);
+	font-weight: 600;
+	visibility: hidden;
+}
+.learning .detail {
+	margin: 0;
+	font-size: var(--deck-body);
+	opacity: 0.7;
+	max-width: 72ch;
+	visibility: hidden;
+}
+@media (max-width: 900px) {
+	.learning .groups {
+		grid-template-columns: 1fr;
+		gap: 1.1rem;
+	}
+}
+
+/* ==== EndSlide.svelte (page 20) ============================================
+   Scoped port. Centred rather than left-aligned like every other slide —
+   that break is deliberate: it signals the talk is over before a word is
+   said.
+   =========================================================================== */
+.end-slide {
+	width: 100%;
+	max-width: 82rem;
+	min-height: 60vh;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	gap: 0.6rem;
+}
+.end-slide .fine {
+	margin: 0 0 0.8rem;
+	font-size: var(--deck-title);
+	font-weight: 600;
+	/* Wide tracking is what makes three letters read as a title card rather
+	   than as a word someone forgot to finish. */
+	letter-spacing: 0.4em;
+	/* The tracking adds space after the final letter too, which visually
+	   pushes the word off-centre; half of it back corrects that. */
+	text-indent: 0.4em;
+	visibility: hidden;
+}
+.end-slide .line {
+	margin: 0;
+	font-size: var(--deck-subtitle);
+	visibility: hidden;
+}
+.end-slide .ask {
+	opacity: 0.7;
+}
+.end-slide .who {
+	margin-top: 1.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
