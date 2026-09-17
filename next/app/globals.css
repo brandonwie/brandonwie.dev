@@ -3004,3 +3004,452 @@ pre:hover .code-copy-btn,
 		display: none;
 	}
 }
+
+/* --- from PlaytagBackendSlide.svelte (PR-B batch 2) --- */
+.playtag-backend {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1.35rem, 3.5vh, 2.25rem);
+}
+.playtag-backend .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.playtag-backend h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+.playtag-backend .state {
+	margin: 0.4rem 0 0;
+	font-size: var(--deck-subtitle);
+	opacity: 0.6;
+}
+/* Fixed row heights so the seat boxes are identical in both states and the
+   slide cannot grow when the vacancy is filled. */
+.playtag-backend .seats {
+	display: grid;
+	grid-template-columns: auto minmax(0, 28rem);
+	grid-template-rows: repeat(2, clamp(4rem, 8vh, 5.5rem));
+	justify-content: start;
+	align-items: stretch;
+	column-gap: clamp(0.75rem, 2.5vw, 2rem);
+	row-gap: 0.6rem;
+}
+.playtag-backend .role {
+	grid-column: 1;
+	display: flex;
+	align-items: center;
+	font-size: var(--deck-heading);
+	font-weight: 600;
+}
+.playtag-backend .seat {
+	grid-column: 2;
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 6px;
+	padding: clamp(0.6rem, 1.5vw, 1rem) clamp(0.75rem, 2vw, 1.25rem);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.25rem;
+	background: color-mix(in srgb, currentColor 4%, transparent);
+}
+/* The vacancy reads as absence: dashed, dimmed, no substance. */
+.playtag-backend .vacant {
+	border-style: dashed;
+	background: none;
+	opacity: 0.5;
+}
+.playtag-backend .filled {
+	grid-row: 1 / 3;
+	background: color-mix(in srgb, currentColor 9%, transparent);
+}
+.playtag-backend .seat-title {
+	font-size: var(--deck-heading);
+	font-weight: 600;
+}
+.playtag-backend .seat-note {
+	font-size: var(--deck-meta);
+	opacity: 0.55;
+}
+.playtag-backend .notes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	font-size: var(--deck-body);
+	opacity: 0.85;
+}
+.playtag-backend .note {
+	padding-left: 1rem;
+	position: relative;
+	visibility: hidden;
+	opacity: 0;
+}
+.playtag-backend .note::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.62em;
+	width: 0.4rem;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.5;
+}
+@media (max-width: 760px) {
+	.playtag-backend .seats {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto;
+		row-gap: 0.4rem;
+	}
+	/* Role labels sit above their seat rather than beside it; the span that
+	   carries the idea on a wide screen has no room to work here. */
+	.playtag-backend .role,
+	.playtag-backend .seat,
+	.playtag-backend .filled {
+		grid-column: 1;
+		grid-row: auto;
+	}
+}
+
+/* --- from MobaSetupSlide.svelte (PR-B batch 2) --- */
+.moba-setup {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1.35rem, 3.5vh, 2.25rem);
+}
+.moba-setup .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.moba-setup h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+.moba-setup .state {
+	margin: 0.4rem 0 0;
+	font-size: var(--deck-subtitle);
+	opacity: 0.6;
+}
+.moba-setup .metrics {
+	display: grid;
+	grid-template-columns: auto 7ch minmax(0, 1fr) auto;
+	align-items: center;
+	column-gap: clamp(0.9rem, 2.5vw, 1.75rem);
+	row-gap: clamp(0.9rem, 2.4vh, 1.5rem);
+}
+.moba-setup .metric-label {
+	font-size: var(--deck-meta);
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.moba-setup .count {
+	font-size: var(--deck-heading);
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	/* Tabular figures plus a fixed column, or the track start shifts sideways
+	   for the whole length of the count-up. */
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+}
+.moba-setup .track {
+	height: clamp(0.7rem, 1.6vh, 1rem);
+	border-radius: 999px;
+	background: color-mix(in srgb, currentColor 10%, transparent);
+	overflow: hidden;
+}
+/* Starting widths are the real ratios — 2% for users, 7.1% for events — so
+   the two bars begin at visibly different places and grow by different
+   amounts. Equalising them would flatten the one honest thing the bars say. */
+.moba-setup .fill {
+	height: 100%;
+	border-radius: 999px;
+	background: color-mix(in srgb, currentColor 55%, transparent);
+}
+/* `visibility: hidden` rather than `display: none`, so the column keeps its
+   width at step 1 and the tracks do not shorten when the multiples appear. */
+.moba-setup .multiple {
+	font-size: var(--deck-meta);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	opacity: 0;
+	visibility: hidden;
+}
+.moba-setup .notes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	font-size: var(--deck-body);
+	opacity: 0.85;
+}
+.moba-setup .note {
+	padding-left: 1rem;
+	position: relative;
+	visibility: hidden;
+	opacity: 0;
+}
+.moba-setup .note::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.62em;
+	width: 0.4rem;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.5;
+}
+@media (max-width: 760px) {
+	.moba-setup .metrics {
+		grid-template-columns: auto 7ch minmax(0, 1fr);
+	}
+	/* The bar drops to its own full-width row; at this size a third column
+	   leaves it too short to read as a ratio. */
+	.moba-setup .track {
+		grid-column: 1 / -1;
+	}
+}
+
+/* --- from EventDrivenSlide.svelte (PR-B batch 2) --- */
+/* Tighter than the deck default. This slide gained a fourth block when Sync
+   moved below the request path, and at the original 3.5vh the last note sat
+   under the progress bar on a 900px-tall viewport. Six gaps at ~10px less
+   each is the cheapest 60px on the slide. */
+.event-driven {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(0.9rem, 2.2vh, 1.5rem);
+}
+/* Company eyebrow above the title: the audience always knows which chapter
+   they are in without the title having to carry the company name. */
+.event-driven .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.event-driven h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+.event-driven .state {
+	margin: 0.4rem 0 0;
+	font-size: var(--deck-subtitle);
+	opacity: 0.6;
+	/* Only the wording changes here; no motion, so attention stays on the boxes. */
+}
+.event-driven .diagram {
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	align-items: center;
+	gap: clamp(0.75rem, 2vw, 1.5rem);
+	/* Reserved so the row does not jump height when the queue leaves it, but no
+	   larger than that job needs — the surplus was padding the diagram against
+	   a slide that no longer has room to spare. */
+	min-height: clamp(120px, 18vh, 180px);
+}
+.event-driven .column {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.event-driven .box {
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 6px;
+	padding: clamp(0.75rem, 2vw, 1.25rem);
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	background: color-mix(in srgb, currentColor 4%, transparent);
+}
+.event-driven .block {
+	min-width: min(20rem, 100%);
+	gap: 0.75rem;
+}
+.event-driven .queue {
+	border-style: dashed;
+	background: color-mix(in srgb, currentColor 8%, transparent);
+}
+/* Sits inside whatever module contains it, so nesting carries the claim: the
+   call lived in two places and had to be removed from both. Filled rather
+   than outlined, because this is the thing that costs something. */
+.event-driven .sync-call {
+	align-self: flex-start;
+	padding: 0.2rem 0.55rem;
+	font-size: var(--deck-meta);
+	background: color-mix(in srgb, currentColor 16%, transparent);
+	border-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+/* The cause. Reads as part of the block module rather than as a callout,
+   because that is where it lives and where it was fixed. */
+.event-driven .optimistic {
+	align-self: flex-start;
+	display: flex;
+	/* Explicit: `.box` sets column, and inheriting it stacked the label above
+	   its own state instead of reading as one line. */
+	flex-direction: row;
+	align-items: baseline;
+	gap: 0.45rem;
+	padding: 0.2rem 0.55rem;
+	font-size: var(--deck-meta);
+	border-style: dashed;
+}
+/* Solid once it is correct: the border style is the claim, so it does not
+   need a word beside it. */
+.event-driven .optimistic.is-correct {
+	border-style: solid;
+	background: color-mix(in srgb, currentColor 8%, transparent);
+}
+/* Below the request path, not on it, and centred: left-aligned it hung off
+   one end of a row whose weight sits at both edges. It still gets no arrow —
+   being below with its own trigger IS the after-state, and an inbound
+   connector would put it straight back on the path it just left. */
+.event-driven .sync-module {
+	align-self: center;
+	max-width: 28rem;
+	opacity: 0;
+}
+.event-driven .box-title {
+	font-size: var(--deck-heading);
+	font-weight: 600;
+}
+.event-driven .box-note {
+	font-size: var(--deck-meta);
+	opacity: 0.55;
+}
+/* The line is centred on the boxes; the label hangs below it rather than
+   sharing a flex column, which previously pushed the line above centre. */
+.event-driven .channel {
+	position: relative;
+	min-width: 7rem;
+}
+.event-driven .channel svg {
+	width: 100%;
+	height: 24px;
+	overflow: visible;
+}
+/* No stroke-dasharray here: DrawSVG animates by rewriting dasharray and
+   dashoffset, so a dashed style would be overwritten mid-tween. */
+.event-driven .channel-line {
+	stroke: currentColor;
+	stroke-width: 2;
+	opacity: 0.65;
+}
+.event-driven .channel-head {
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	opacity: 0.65;
+}
+.event-driven .channel-label {
+	position: absolute;
+	top: calc(50% + 0.75rem);
+	left: 0;
+	right: 0;
+	text-align: center;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+/* Both states occupy the same cell so the swap is a crossfade in place with
+   no reflow, and the row's height is the taller of the two in both steps. */
+.event-driven .synccall {
+	display: grid;
+}
+.event-driven .sync-state {
+	grid-area: 1 / 1;
+	font-size: var(--deck-body);
+	max-width: 62rem;
+}
+.event-driven .sync-before {
+	opacity: 0.75;
+}
+/* Hidden in CSS as well as by the onMount set: onMount runs after the first
+   paint, so without this the after-state flashes on entry. */
+.event-driven .sync-after {
+	font-weight: 600;
+	opacity: 0;
+}
+.event-driven .response {
+	margin: 0;
+	font-size: var(--deck-body);
+	opacity: 0.85;
+}
+.event-driven .notes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	font-size: var(--deck-body);
+	opacity: 0.85;
+}
+/* Hidden in CSS, not just via GSAP: onMount runs after first paint, so a
+   JS-only resting state still flashes the final text for a frame. GSAP's
+   autoAlpha writes inline styles that override this when the step arrives. */
+.event-driven .note {
+	padding-left: 1rem;
+	position: relative;
+	visibility: hidden;
+	opacity: 0;
+}
+.event-driven .note::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.62em;
+	width: 0.4rem;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.5;
+}
+/* Narrow screens: the three columns stack, and the horizontal event channel
+   would read as a stray line, so it is hidden and the label carries it. */
+@media (max-width: 760px) {
+	.event-driven .diagram {
+		grid-template-columns: 1fr;
+		gap: 0.75rem;
+	}
+	.event-driven .channel {
+		min-width: 0;
+		flex-direction: row;
+		gap: 0.5rem;
+	}
+	.event-driven .channel svg {
+		display: none;
+	}
+	.event-driven .block {
+		min-width: 0;
+		width: 100%;
+	}
+	.event-driven .queue {
+		width: 100%;
+	}
+}

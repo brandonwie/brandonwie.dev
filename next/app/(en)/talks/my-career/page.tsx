@@ -2,9 +2,12 @@ import type { Metadata } from 'next';
 
 import AccountSeparationSlide from '@/components/deck/AccountSeparationSlide';
 import ArcSlide from '@/components/deck/ArcSlide';
+import EventDrivenSlide from '@/components/deck/EventDrivenSlide';
+import MobaSetupSlide from '@/components/deck/MobaSetupSlide';
 import ModulabsSlide from '@/components/deck/ModulabsSlide';
 import MoviationSlide from '@/components/deck/MoviationSlide';
 import PlaytagAdminSlide from '@/components/deck/PlaytagAdminSlide';
+import PlaytagBackendSlide from '@/components/deck/PlaytagBackendSlide';
 import PushSlide from '@/components/deck/PushSlide';
 import TitleSlide from '@/components/deck/TitleSlide';
 import Deck from '@/components/deck/Deck';
@@ -36,10 +39,9 @@ export function generateMetadata(): Metadata {
 	};
 }
 
-// Partial PR-B registry: batch 1 lands storyboard pages 1–5 in order, ahead of
-// the two already-ported MOBA beats. Pages 6–7 and 9+ are still unported, so
-// `account-separation` and `push` ride appended, NOT in storyboard position;
-// deep-link page numbers are construction-order until the full PR-B landing.
+// Partial PR-B registry: batches 1–2 land storyboard pages 1–10 in exact
+// storyboard order. Pages 11+ are still unported, so the registry stops at
+// `push`; the remaining slides append here as later batches land.
 const slides: DeckSlide[] = [
 	{ id: 'title', label: 'Title', steps: 1, component: TitleSlide },
 	{ id: 'arc', label: 'The arc', steps: 2, component: ArcSlide },
@@ -47,10 +49,23 @@ const slides: DeckSlide[] = [
 	{ id: 'moviation', label: 'Moviation', steps: 2, component: MoviationSlide },
 	{ id: 'playtag-admin', label: 'Playtag — admin tool', steps: 2, component: PlaytagAdminSlide },
 	{
+		id: 'playtag-backend',
+		label: 'Playtag — backend',
+		steps: 2,
+		component: PlaytagBackendSlide,
+	},
+	{ id: 'moba-setup', label: 'MOBA — the setup', steps: 2, component: MobaSetupSlide },
+	{
 		id: 'account-separation',
 		label: 'Sync — account separation',
 		steps: 2,
 		component: AccountSeparationSlide,
+	},
+	{
+		id: 'event-driven',
+		label: 'Decoupling the sync queue',
+		steps: 2,
+		component: EventDrivenSlide,
 	},
 	{ id: 'push', label: 'Sync — polling to push', steps: 2, component: PushSlide },
 ];
