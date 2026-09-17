@@ -268,9 +268,33 @@ export async function runAssertions(
 	}
 
 	// --- S4  body marker scope -------------------------------------------------
-	const outside = fragments.map((f) => f.url).filter((url) => !/^(\/ko)?\/posts\//.test(url));
+	// Posts plus the Slice 4 study cohort. The Svelte index carries study
+	// fragments (its StudyPageShell marks data-pagefind-body, same as the
+	// port), so a candidate that indexes them is parity, not leakage. Listed
+	// per-URL like SHELL_CLAIMS: a prefix would silently approve the next
+	// surface (e.g. /talks) without its own deliberate decision.
+	const INDEXED_NON_POST_URLS = [
+		'/study.html',
+		'/study/dsa-i.html',
+		'/study/dsa-ii.html',
+		'/study/dsa-iii.html',
+		'/study/dsa-iv.html',
+		'/study/aws-ai-practitioner.html',
+		'/ko/study.html',
+		'/ko/study/dsa-i.html',
+		'/ko/study/dsa-ii.html',
+		'/ko/study/dsa-iii.html',
+		'/ko/study/dsa-iv.html',
+		'/ko/study/aws-ai-practitioner.html',
+	];
+	const outside = fragments
+		.map((f) => f.url)
+		.filter((url) => !/^(\/ko)?\/posts\//.test(url) && !INDEXED_NON_POST_URLS.includes(url));
 	if (fragments.length > 0 && outside.length === 0)
-		pass('S4 body marker scope', `all ${fragments.length} fragment(s) are post pages`);
+		pass(
+			'S4 body marker scope',
+			`all ${fragments.length} fragment(s) are post or approved study pages`,
+		);
 	else if (fragments.length > 0)
 		fail('S4 body marker scope', `non-post page(s) indexed: ${outside.join(', ')}`);
 	else fail('S4 body marker scope', 'no fragments to scope');
