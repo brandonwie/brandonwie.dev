@@ -206,6 +206,18 @@ export const SHELL_CLAIMS: Record<string, string[]> = {
 	'/ko/contact': ['body:preload-data'],
 	'/system': ['body:preload-data'],
 	'/ko/system': ['body:preload-data'],
+	'/study': ['body:preload-data'],
+	'/study/dsa-i': ['body:preload-data'],
+	'/study/dsa-ii': ['body:preload-data'],
+	'/study/dsa-iii': ['body:preload-data'],
+	'/study/dsa-iv': ['body:preload-data'],
+	'/study/aws-ai-practitioner': ['body:preload-data'],
+	'/ko/study': ['body:preload-data'],
+	'/ko/study/dsa-i': ['body:preload-data'],
+	'/ko/study/dsa-ii': ['body:preload-data'],
+	'/ko/study/dsa-iii': ['body:preload-data'],
+	'/ko/study/dsa-iv': ['body:preload-data'],
+	'/ko/study/aws-ai-practitioner': ['body:preload-data'],
 	...Object.fromEntries(
 		collectPostSlugs().flatMap((slug) => [
 			[`/posts/${slug}`, ['body:preload-data']],
