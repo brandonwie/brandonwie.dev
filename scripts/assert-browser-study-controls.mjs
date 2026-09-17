@@ -5,6 +5,7 @@
  *   - BSC-01: Defect control — an injected console error fails S-01 (exit 1)
  *   - BSC-02: Defect control — a no-op stepper fails S-02 (exit 1)
  *   - BSC-03: Invariance control — unmutated probe passes all 12 rows (exit 0)
+ *   - BSC-04: Defect control — dropped status observations fail S-01 (exit 1)
  *
  * Exit 0 all controls behave as specified, 1 otherwise, 3 skipped (no browser).
  */
@@ -36,6 +37,14 @@ const CONTROLS = [
 		what: 'unmutated study probe runs and passes all 12 rows',
 		args: [],
 		expect: EXIT.PASS,
+	},
+	{
+		id: 'BSC-04',
+		kind: 'DEFECT',
+		what: 'dropped status observations are caught by S-01',
+		args: ['--drop-status-responses'],
+		expect: EXIT.FAIL,
+		expectedFailure: 'S-01',
 	},
 ];
 

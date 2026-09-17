@@ -1,7 +1,6 @@
-'use client';
-
 import { AppLink } from '@/components/AppLink';
 import StudyPageShell from './StudyPageShell';
+import StudyPrintButton from './StudyPrintButton';
 import type { StudyLocale } from '../../data/study';
 import {
 	getAwsAiPractitionerContent,
@@ -158,13 +157,7 @@ export default function AwsAiPractitionerStudyPage({ locale = 'en' }: { locale?:
 								</li>
 							))}
 						</ul>
-						<button
-							type="button"
-							className="study-btn focus-terminal mt-5 w-full font-mono"
-							onClick={() => window.print()}
-						>
-							{content.labels.print}
-						</button>
+						<StudyPrintButton label={content.labels.print} />
 					</aside>
 				</section>
 

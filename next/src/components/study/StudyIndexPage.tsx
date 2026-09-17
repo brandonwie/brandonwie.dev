@@ -1,5 +1,3 @@
-'use client';
-
 import { AppLink } from '@/components/AppLink';
 import StudyPageShell from './StudyPageShell';
 import { getStudyIndexContent, type StudyLocale } from '../../data/study';

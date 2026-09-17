@@ -18,6 +18,7 @@
  * Negative control flags (consumed by `assert-browser-study-controls.mjs`):
  *   node scripts/assert-browser-study.mjs --inject-console-error
  *   node scripts/assert-browser-study.mjs --skip-step-click
+ *   node scripts/assert-browser-study.mjs --drop-status-responses
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import {
@@ -49,6 +50,7 @@ const flag = (name) => process.argv.includes(name);
 const SCREENSHOTS = flag('--screenshots');
 const INJECT_CONSOLE_ERROR = flag('--inject-console-error');
 const SKIP_STEP_CLICK = flag('--skip-step-click');
+const DROP_STATUS = flag('--drop-status-responses');
 
 const COLLECTOR = `
 window.__errs = [];
@@ -122,6 +124,16 @@ async function main() {
 		await page.send('Page.enable');
 		await page.send('Runtime.enable');
 		await page.send('Page.addScriptToEvaluateOnNewDocument', { source: COLLECTOR });
+		// N5: Page.navigate's return is discarded, so HTTP status is observed
+		// out-of-band. Document-type responses keyed by URL; each row asserts
+		// its own 200 below.
+		await page.send('Network.enable');
+		const statusByUrl = new Map();
+		page.on('Network.responseReceived', (params) => {
+			if (params?.type === 'Document' && params?.response?.url) {
+				statusByUrl.set(params.response.url, params.response.status);
+			}
+		});
 		if (SKIP_STEP_CLICK) await mutateBehavior(page, 'window.__skipStepClick = true;');
 		if (SCREENSHOTS) mkdirSync('verification/screenshots/slice4-study', { recursive: true });
 
@@ -149,6 +161,11 @@ async function main() {
 
 			const problems = [];
 			if (!snap.h1) problems.push('no h1');
+			// Defect simulation for BSC-04: drop the observed statuses so the
+			// HTTP gate must fire on every row.
+			if (DROP_STATUS) statusByUrl.clear();
+			const status = statusByUrl.get(`http://127.0.0.1:${server.port}${route.url}`);
+			if (status !== 200) problems.push(`HTTP status ${status ?? 'unobserved'}, want 200`);
 			if (snap.lang !== route.locale) problems.push(`lang=${snap.lang}, want ${route.locale}`);
 			if (snap.errs.length > 0) problems.push(`${snap.errs.length} console error(s)`);
 			if (route.stepper) {

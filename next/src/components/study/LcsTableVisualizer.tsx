@@ -315,7 +315,7 @@ export default function LcsTableVisualizer({ copy }: { copy: LcsTableCopy }) {
 									y={cell.y + 1.5}
 									width={COL_W - 3}
 									height={ROW_H - 3}
-									stroke-width={cell.walking ? 2.5 : 1.5}
+									strokeWidth={cell.walking ? 2.5 : 1.5}
 									className={`transition-all duration-200 motion-reduce:transition-none ${cellClass(role)}`}
 								/>
 								{cell.arrow && (

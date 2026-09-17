@@ -291,8 +291,8 @@ export default function PatternMatchVisualizer({ copy }: { copy: PatternMatchCop
 									width={CELL}
 									height={CELL}
 									rx="3"
-									stroke-width="1.5"
-									stroke-dasharray={role === 'skip' ? '3 3' : undefined}
+									strokeWidth="1.5"
+									strokeDasharray={role === 'skip' ? '3 3' : undefined}
 									className={`transition-colors duration-200 motion-reduce:transition-none ${cellClass(role)}`}
 								/>
 								<text
@@ -330,7 +330,7 @@ export default function PatternMatchVisualizer({ copy }: { copy: PatternMatchCop
 									width={CELL}
 									height={CELL}
 									rx="3"
-									stroke-width="1.5"
+									strokeWidth="1.5"
 									className={`transition-colors duration-200 motion-reduce:transition-none ${cellClass(role)}`}
 								/>
 								<text

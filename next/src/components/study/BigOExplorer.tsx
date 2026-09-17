@@ -194,7 +194,7 @@ export default function BigOExplorer({ copy }: { copy: BigOVisualizerCopy }) {
 						x2={cursorX}
 						y2={pad.top + plotHeight}
 						stroke="var(--color-accent)"
-						stroke-width="2"
+						strokeWidth="2"
 					/>
 					{series.map((row) => (
 						<g key={row.label}>
@@ -202,8 +202,8 @@ export default function BigOExplorer({ copy }: { copy: BigOVisualizerCopy }) {
 								d={linePath(row)}
 								fill="none"
 								stroke={row.tone}
-								stroke-width="3"
-								stroke-dasharray={row.dash}
+								strokeWidth="3"
+								strokeDasharray={row.dash}
 								stroke-linecap="round"
 								stroke-linejoin="round"
 								className="transition-all duration-300 ease-out motion-reduce:transition-none"
