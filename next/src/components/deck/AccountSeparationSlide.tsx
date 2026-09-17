@@ -167,16 +167,22 @@ export default function AccountSeparationSlide({ step = 0, animate = true }: Pro
 	}, [animate, ready, runReveals, separated, step]);
 
 	// PHASE 2 — post-mutation, pre-paint. The `{#if}` equivalent below has just
-	// destroyed and recreated the node; `data-flip-id` is what matches the old
-	// position to the new element.
+	// destroyed and recreated the node, so the captured state references a
+	// detached element — and `Flip.from` re-measures its input for the end
+	// state. Without explicit `targets` it measures the dead node, classifies
+	// the pair as leaving, and returns an empty timeline that touches neither
+	// node. Re-query post-commit so the end state measures the live
+	// replacement; `data-flip-id` is what pairs the old position to it.
 	useIsomorphicLayoutEffect(() => {
 		const pending = handoff.current;
 		if (!pending) return;
 		handoff.current = null;
 
 		const loaded = bundle.current;
-		if (loaded && pending.state) {
-			inContext(() => loaded.Flip.from(pending.state as FlipState, FLIP_OPTIONS));
+		const element = root.current;
+		if (loaded && element && pending.state) {
+			const targets = element.querySelectorAll('[data-flip-id]');
+			inContext(() => loaded.Flip.from(pending.state as FlipState, { ...FLIP_OPTIONS, targets }));
 		}
 
 		runReveals(pending.want, pending.still);
