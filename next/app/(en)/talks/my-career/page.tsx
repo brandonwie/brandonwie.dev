@@ -109,23 +109,43 @@ const slides: DeckSlide[] = [
 	},
 	{
 		id: 'privacy-matrix',
+		// Renders live in the progress rail, so this label is on screen the whole
+		// time the slide is up. It named the company until 2026-07-29; the slide
+		// body had already been generalized and the rail had been missed.
 		label: 'Privacy governance',
 		steps: 2,
 		component: PrivacyMatrixSlide,
 	},
 	{ id: 'close', label: 'Close', steps: 1, component: CloseSlide },
+	// Page 18, inserted immediately before the credentials at Brandon's
+	// instruction (2026-07-29). Position matters both ways round: the three
+	// anchors on this slide are callbacks to pages 3, 12 and 15, so it has to
+	// come after all of them, and putting it directly before the credentials
+	// pairs how-he-works with what-he-learned as one character section rather
+	// than leaving either stranded on its own after the close.
 	{
 		id: 'communication',
 		label: 'How I work',
 		steps: 2,
 		component: CommunicationSlide,
 	},
+	// Page 19, appended after the close at Brandon's instruction (2026-07-29).
+	// Worth knowing it sits after the close rather than before it: the close
+	// answers the role's three scope items and ends on "in that order", which
+	// is a deliberate last word, and this beat lands after that. Moving it to
+	// page 17 is a one-line swap with the entry above, and there is a real
+	// argument for it — the close's third row is "devops, later; Terraform and
+	// AWS already", which the two AWS certifications directly back, so putting
+	// the evidence immediately before the summary lets the close land on top
+	// of it. Left at 18 as asked; the decision is Brandon's.
 	{
 		id: 'learning',
 		label: 'Never stopped learning',
 		steps: 1,
 		component: LearningSlide,
 	},
+	// The end card, and the slide that is actually on screen longest: Session 1
+	// is presentation plus Q&A, so this one holds while the questions run.
 	{ id: 'end', label: 'FINE', steps: 1, component: EndSlide },
 ];
 
