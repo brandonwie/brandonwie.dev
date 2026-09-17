@@ -1082,6 +1082,135 @@
 	}
 }
 
+/* --- from PushSlide.svelte (PR-B sample) --- */
+.push {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1.35rem, 3.5vh, 2.25rem);
+}
+.push .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.push h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+/* This is the sentence that states what actually changed, and it was dimmer
+   than the supporting notes underneath it (0.6 against 0.85). Same inversion
+   as the connectors, so it moves with them. */
+.push .state {
+	margin: 0.4rem 0 0;
+	font-size: var(--deck-subtitle);
+	opacity: 0.8;
+}
+.push .chain {
+	display: grid;
+	/* Five columns: node, connector, node, connector, node. */
+	grid-template-columns: minmax(0, 14rem) auto minmax(0, 14rem) auto minmax(0, 14rem);
+	justify-content: start;
+	align-items: stretch;
+	gap: 0;
+}
+.push .node {
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 6px;
+	background: color-mix(in srgb, currentColor 6%, transparent);
+	padding: clamp(0.7rem, 1.8vw, 1.1rem);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	min-height: clamp(4rem, 9vh, 5.5rem);
+}
+.push .node-title {
+	font-size: var(--deck-heading);
+	font-weight: 600;
+}
+/* Reserved width sized for the longest label in either state, so the nodes
+   sit at identical x positions before and after the flip. */
+.push .link {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.2rem;
+	width: clamp(8rem, 15vw, 12rem);
+	padding: 0 0.5rem;
+}
+/* The connectors carry the whole argument of this slide, so they are the one
+   thing that must not be quiet. They used to sit at 0.5/0.55 against nodes
+   drawn at full opacity with a border and a fill — the unchanging scaffolding
+   rendered stronger than the only thing that changes. A text arrow is a thin
+   stroke to begin with, so it gets weight as well as opacity. */
+.push .glyph {
+	font-size: var(--deck-heading);
+	font-weight: 700;
+	opacity: 0.9;
+	line-height: 1;
+}
+/* Off --deck-meta, which is the deck's smallest step and is meant for the
+   eyebrow. These four words ARE the claim: webhook vs fetched on request,
+   WebSocket push vs polled on a timer. They wrap to two lines at the narrow
+   end of the reserved width, which is fine — the link column is centered and
+   stretched, so a taller label cannot move the nodes. */
+.push .link-label {
+	font-size: var(--deck-body);
+	opacity: 0.85;
+	text-align: center;
+	/* Reserves two lines at the narrowest width the deck supports, so a label
+	   that wraps in one state and not the other cannot change the row height
+	   mid-advance. The nodes holding still is the premise of the slide. */
+	min-height: 2.8em;
+}
+.push .notes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	font-size: var(--deck-body);
+	opacity: 0.85;
+}
+.push .note {
+	padding-left: 1rem;
+	position: relative;
+	visibility: hidden;
+	opacity: 0;
+}
+.push .note::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.62em;
+	width: 0.4rem;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.5;
+}
+@media (max-width: 900px) {
+	.push .chain {
+		grid-template-columns: minmax(0, 1fr);
+		row-gap: 0.4rem;
+	}
+	.push .link {
+		width: auto;
+	}
+	/* The arrows point down the column at this size; sideways glyphs in a
+	   vertical stack read as the wrong direction. */
+	.push .glyph {
+		transform: rotate(90deg);
+	}
+}
+
 /* --- from SlideVideo.svelte --- */
 .slide-video {
 	display: block;
