@@ -967,6 +967,16 @@
 	}
 }
 
+/* --- from SlideVideo.svelte --- */
+.slide-video {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 8px;
+	border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+	background: color-mix(in srgb, currentColor 4%, transparent);
+}
+
 /* --- from FuzzyFinder.svelte --- */
 .cmdk-overlay {
 	position: fixed;
