@@ -98,6 +98,13 @@ export default function PushSlide({ step = 0, animate = true }: Props) {
 
 			const d = still ? 0 : 1;
 			inContext(() => {
+				// PORT NOTE (divergence, Claude R1 + Devin): the Svelte
+				// original issues this tween unconditionally, so a rapid
+				// 0→1→0 reversal leaves the delayed reveal pending and it
+				// fires after the hide — notes visible in the Before state
+				// (reproduced live). Kill first: standard practice, no effect
+				// at presentation speed, and the template for ordinary slides.
+				loaded.gsap.killTweensOf(element.querySelectorAll('.note'));
 				loaded.gsap.to(element.querySelectorAll('.note'), {
 					autoAlpha: want ? 1 : 0,
 					y: want ? 0 : 6,
