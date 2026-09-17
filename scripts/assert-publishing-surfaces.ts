@@ -4,6 +4,10 @@
  *   pnpm migration:publishing                   # next/build against build/
  *   pnpm migration:publishing <candidate-dir> <baseline-dir>
  *
+ * Requires a full `pnpm build:next`, not the bare workspace build: the
+ * filter build skips the Pagefind step, leaving a pagefind-less tree the
+ * S-rows fail against (observed 2026-09-17).
+ *
  * The whole-site comparator (`migration-verify.ts`) already hashes the three
  * feeds by semantic shape and counts Pagefind fragments, but at Slice 1 that
  * comparator is red for 360+ unrelated reasons (every unported page), so a
@@ -28,7 +32,8 @@
  *              forbids "non-empty" assertions, since `SearchPage.svelte:73-76`
  *              substitutes '' / 'Untitled'); the fragment body contains a
  *              known sentence of the prose and none of the `data-pagefind-ignore`
- *              regions' text; and no page outside `/posts` was indexed, which
+ *              regions' text; and no page outside `/posts` and the allowlisted
+ *              study routes (`INDEXED_NON_POST_URLS`) was indexed, which
  *              is what proves the body marker is scoped rather than absent.
  *
  * Fragments are read directly: a `.pf_fragment` is gzip whose payload is the
