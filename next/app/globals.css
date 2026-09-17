@@ -2358,3 +2358,649 @@ pre:hover .code-copy-btn,
 		break-inside: avoid;
 	}
 }
+
+/* --- from TitleSlide.svelte (PR-B batch 1) --- */
+.title {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(0.75rem, 2vh, 1.25rem);
+}
+/* Resting state in CSS, not only in JS: the mount effect runs after first
+   paint, so a JS-only resting state flashes the finished title. Same reason
+   as the notes on the sync and data-pipeline slides. */
+.title .reveal {
+	visibility: hidden;
+	opacity: 0;
+}
+.title .who {
+	margin: 0;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.title h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+.title .thesis {
+	margin: 0.5rem 0 0;
+	font-size: var(--deck-subtitle);
+	opacity: 0.7;
+	max-width: 46ch;
+}
+
+/* --- from ArcSlide.svelte (PR-B batch 1) --- */
+.arc {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(2rem, 5vh, 3.5rem);
+}
+.arc h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+.arc .rail {
+	position: relative;
+	padding-top: 1.5rem;
+}
+.arc .rail-line {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.35;
+}
+.arc .dot {
+	position: absolute;
+	top: calc(-1.5rem - 3px);
+	left: 0;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: currentColor;
+}
+.arc .stops {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 1rem;
+}
+.arc .stop {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+.arc .company {
+	font-size: var(--deck-heading);
+	font-weight: 600;
+}
+.arc .years {
+	font-size: var(--deck-meta);
+	opacity: 0.55;
+	font-variant-numeric: tabular-nums;
+}
+/* Same reason as the notes on the sync slide: the mount effect runs after
+   first paint, so a JS-only resting state flashes step 2's text during
+   step 1. */
+.arc .gained {
+	margin-top: 0.5rem;
+	font-size: var(--deck-body);
+	border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+	padding-top: 0.5rem;
+	visibility: hidden;
+	opacity: 0;
+}
+/* Narrow screens: the rail stops being a timeline and becomes a list. Dropping
+   the line and dots is deliberate — a 4-stop horizontal axis wrapped onto two
+   rows reads as broken, and readability outranks the visual. */
+@media (max-width: 640px) {
+	.arc .rail {
+		padding-top: 0;
+	}
+	.arc .rail-line,
+	.arc .dot {
+		display: none;
+	}
+	.arc .stops {
+		grid-template-columns: 1fr 1fr;
+		gap: 1.25rem;
+	}
+}
+
+/* --- from ModulabsSlide.svelte (PR-B batch 1) --- */
+.modulabs {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1.1rem, 3vh, 1.9rem);
+}
+/* Company eyebrow above the title: the audience always knows which chapter
+   they are in without the title having to carry the company name. */
+.modulabs .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.modulabs h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+/* Explanation left, evidence right. The recording is deliberately the
+   smaller element — it supports the claims, it is not the point. */
+.modulabs .body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) clamp(11rem, 18vw, 16rem);
+	gap: clamp(1.25rem, 3vw, 2.5rem);
+	align-items: start;
+}
+.modulabs .changes {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(0.9rem, 2.4vh, 1.6rem);
+	min-width: 0;
+}
+.modulabs .change {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	min-width: 0;
+}
+.modulabs .change-label {
+	margin: 0;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	opacity: 0.45;
+}
+/* Fixed-height stage per row, so a caption changing length can never move the
+   visual and the three rows stay put across the advance. */
+.modulabs .stage {
+	min-height: 3.4rem;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.3rem;
+}
+.modulabs .change-caption {
+	margin: 0;
+	font-size: var(--deck-body);
+	opacity: 0.7;
+	/* Reserves two lines at the narrowest width the deck supports. */
+	min-height: 1.5em;
+}
+/* --- 1. Control ------------------------------------------------------- */
+.modulabs .markets,
+.modulabs .bars {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.4rem;
+	max-width: 34rem;
+}
+.modulabs .market {
+	font-size: var(--deck-meta);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	opacity: 0.75;
+}
+.modulabs .bar {
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 5px;
+	background: color-mix(in srgb, currentColor 4%, transparent);
+	padding: 0.4rem 0.6rem;
+	font-size: var(--deck-meta);
+	opacity: 0.85;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	/* Both states occupy the same grid cell so the swap is a crossfade in
+	   place, with no reflow between them. */
+	grid-row: 1;
+}
+.modulabs .bar-own {
+	border-style: dashed;
+}
+/* Hidden in CSS as well as by the mount-effect set: that runs after the first
+   paint, so without this the after-state flashes before step 0 is applied.
+   Same convention every two-step slide in this deck follows. */
+.modulabs .bar-span {
+	grid-column: 1 / -1;
+	background: color-mix(in srgb, currentColor 9%, transparent);
+	font-weight: 600;
+	opacity: 0;
+}
+/* --- 2. Codebase ------------------------------------------------------ */
+.modulabs .chips {
+	display: flex;
+	gap: 0.4rem;
+}
+.modulabs .chip {
+	position: relative;
+	width: 3.1rem;
+	height: 1.9rem;
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 5px;
+	background: color-mix(in srgb, currentColor 4%, transparent);
+}
+/* Stacked, not swapped: both labels exist from first paint, which is what
+   lets the crossfade run without a DOM change mid-advance. */
+.modulabs .lang {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	font-size: var(--deck-meta);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+}
+.modulabs .lang-after {
+	opacity: 0;
+}
+/* --- 3. Components ---------------------------------------------------- */
+.modulabs .system {
+	position: relative;
+	width: fit-content;
+	padding: 0.55rem 0.7rem;
+}
+.modulabs .frame {
+	position: absolute;
+	inset: 0;
+	border: 1px solid color-mix(in srgb, currentColor 32%, transparent);
+	border-radius: 7px;
+	background: color-mix(in srgb, currentColor 6%, transparent);
+	opacity: 0;
+}
+/* The units are visible in BOTH states, so they cannot be hidden the way the
+   after-state elements are — but they must not paint aligned before the mount
+   effect scatters them, or the first frame shows the answer. Hidden here,
+   revealed by the mount effect once the offsets are on. */
+.modulabs .units {
+	position: relative;
+	display: flex;
+	gap: 0.45rem;
+	opacity: 0;
+}
+.modulabs .unit {
+	width: 1.5rem;
+	height: 1.5rem;
+	border: 1px solid color-mix(in srgb, currentColor 34%, transparent);
+	border-radius: 4px;
+	background: color-mix(in srgb, currentColor 7%, transparent);
+}
+.modulabs .media {
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.45rem;
+}
+.modulabs .media figcaption {
+	font-size: var(--deck-meta);
+	opacity: 0.5;
+}
+@media (max-width: 760px) {
+	.modulabs .body {
+		grid-template-columns: 1fr;
+	}
+	.modulabs .media {
+		order: 2;
+		max-width: 15rem;
+	}
+	/* Three products stop being readable as three columns well before the
+	   deck's minimum width; the bar text is the part that carries the row.
+	   Two of the three identical per-product bars go with them — three copies
+	   of one string stacked in a single cell reads as one bar anyway, so show
+	   one and keep the crossfade honest. */
+	.modulabs .markets {
+		display: none;
+	}
+	.modulabs .bars {
+		grid-template-columns: 1fr;
+	}
+	.modulabs .bars > :nth-child(2),
+	.modulabs .bars > :nth-child(3) {
+		display: none;
+	}
+}
+
+/* --- from MoviationSlide.svelte (PR-B batch 1) --- */
+.moviation {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1rem, 2.8vh, 1.75rem);
+}
+/* Company eyebrow above the title: the audience always knows which chapter
+   they are in without the title having to carry the company name. */
+.moviation .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.moviation h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+/* Recording left, explanation right. The phone is 1:2, so it costs little
+   width and reads instantly as mobile. */
+.moviation .body {
+	display: grid;
+	grid-template-columns: clamp(8rem, 13vw, 11rem) minmax(0, 1fr);
+	gap: clamp(1.25rem, 3vw, 2.5rem);
+	align-items: start;
+}
+.moviation .media {
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.45rem;
+}
+.moviation .media figcaption {
+	font-size: var(--deck-meta);
+	opacity: 0.5;
+}
+.moviation .detail {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(0.85rem, 2.2vh, 1.4rem);
+	min-width: 0;
+}
+/* Compact on purpose: this is context for the three rows below, not a beat.
+   The earlier version spent five vertical rems on it. */
+.moviation .shell {
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 8px;
+	padding: 0.6rem 0.85rem;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.4rem 0.7rem;
+	background: color-mix(in srgb, currentColor 4%, transparent);
+	max-width: 46rem;
+}
+.moviation .shell-label {
+	font-size: var(--deck-meta);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	opacity: 0.55;
+}
+.moviation .inner {
+	border: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 5px;
+	padding: 0.2rem 0.55rem;
+	background: color-mix(in srgb, currentColor 8%, transparent);
+	font-size: var(--deck-body);
+	font-weight: 600;
+}
+.moviation .bridge {
+	font-size: var(--deck-meta);
+	opacity: 0.65;
+}
+.moviation .changes {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(0.75rem, 2vh, 1.25rem);
+	min-width: 0;
+}
+.moviation .change {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	min-width: 0;
+}
+.moviation .change-label {
+	margin: 0;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	opacity: 0.45;
+}
+/* Fixed-height stage per row, so a caption changing length can never move the
+   picture and the three rows stay put across the advance. */
+.moviation .stage {
+	min-height: 2.4rem;
+	display: flex;
+	align-items: center;
+}
+.moviation .change-caption {
+	margin: 0;
+	font-size: var(--deck-body);
+	opacity: 0.7;
+	min-height: 1.5em;
+}
+/* Both states share one grid cell and crossfade in place. This is only legal
+   because every cell is explicitly placed: grid auto-placement refuses to
+   overlap and pushes the second state into implicit columns instead. */
+.moviation .row {
+	display: grid;
+	gap: 0.4rem;
+	width: 100%;
+	max-width: 40rem;
+}
+.moviation .row-color {
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.moviation .row-strings {
+	grid-template-columns: minmax(0, 1fr);
+}
+/* The color and forms rows set this inline per item; this row has a single
+   before-cell and would otherwise be auto-placed, which means grid pushes it
+   into an implicit second column rather than letting it share the cell with
+   the after-state. Same trap that broke the equivalent row on ModulabsSlide. */
+.moviation .row-strings > .before {
+	grid-column: 1;
+}
+.moviation .row-forms {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.moviation .cell {
+	grid-row: 1;
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 5px;
+	padding: 0.4rem 0.6rem;
+	font-size: var(--deck-meta);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.moviation .dashed {
+	border-style: dashed;
+	background: color-mix(in srgb, currentColor 4%, transparent);
+}
+/* No label: five bars carrying one value between them, drifting apart. Words
+   here would be five copies of the same word. */
+.moviation .swatch {
+	border-style: dashed;
+}
+.moviation .small {
+	font-size: var(--deck-meta);
+	opacity: 0.75;
+}
+/* Hidden in CSS as well as by the mount-effect set: that runs after the first
+   paint, so without this the after-state flashes on entry. */
+.moviation .after {
+	grid-column: 1 / -1;
+	background: color-mix(in srgb, currentColor 9%, transparent);
+	font-weight: 600;
+	font-size: var(--deck-body);
+	opacity: 0;
+}
+.moviation .notes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	font-size: var(--deck-body);
+	opacity: 0.85;
+}
+.moviation .note {
+	padding-left: 1rem;
+	position: relative;
+	visibility: hidden;
+	opacity: 0;
+}
+.moviation .note::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.62em;
+	width: 0.4rem;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.5;
+}
+@media (max-width: 760px) {
+	.moviation .body {
+		grid-template-columns: 1fr;
+	}
+	/* The recording drops below the explanation on a phone — the words matter
+	   more than the proof when there is only one column to spend. */
+	.moviation .media {
+		order: 2;
+		max-width: 11rem;
+	}
+	/* Five bars and four form names stop being readable well before the deck's
+	   minimum width. Keep one of each: the before-state is carried by the
+	   caption at that size, and the crossfade stays honest. */
+	.moviation .row-color,
+	.moviation .row-forms {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.moviation .row-color > .before:not(:first-child),
+	.moviation .row-forms > .before:not(:first-child) {
+		display: none;
+	}
+}
+
+/* --- from PlaytagAdminSlide.svelte (PR-B batch 1) --- */
+.playtag-admin {
+	width: 100%;
+	max-width: 82rem;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(1.35rem, 3.5vh, 2.25rem);
+}
+.playtag-admin .company {
+	margin: 0 0 0.4rem;
+	font-size: var(--deck-meta);
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	opacity: 0.5;
+}
+.playtag-admin h1 {
+	font-size: var(--deck-title);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	margin: 0;
+}
+/* One grid for both flows. `display: contents` on each row lets the two
+   pipelines share a single column template, so the middle stages and the
+   output stages line up vertically instead of each row sizing itself. */
+.playtag-admin .flows {
+	display: grid;
+	grid-template-columns: auto auto auto auto auto;
+	justify-content: start;
+	align-items: stretch;
+	column-gap: clamp(0.6rem, 1.8vw, 1.5rem);
+	row-gap: clamp(0.6rem, 1.6vh, 1rem);
+}
+.playtag-admin .pipeline {
+	display: contents;
+}
+.playtag-admin .stage {
+	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+	border-radius: 6px;
+	padding: clamp(0.6rem, 1.5vw, 1rem) clamp(0.75rem, 2vw, 1.25rem);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.25rem;
+	background: color-mix(in srgb, currentColor 4%, transparent);
+	/* Both middle states occupy the same box, so the row does not resize
+	   when the work moves from the operator to the model. */
+	min-width: clamp(10rem, 18vw, 15rem);
+}
+/* Fixed width AND a reserved height. Without the width the box grows when its
+   label changes and shoves "Published to parents" sideways; without the
+   height the longer label wraps to an extra line, the row grows, and a
+   vertically-centred slide pushes the title up. Both are the same rule: a
+   stage that did not change has no business moving. */
+.playtag-admin .stage-swap {
+	width: clamp(14rem, 26vw, 25rem);
+	min-height: clamp(6.5rem, 13vh, 8rem);
+}
+.playtag-admin .is-auto {
+	background: color-mix(in srgb, currentColor 9%, transparent);
+}
+.playtag-admin .stage-title {
+	font-size: var(--deck-heading);
+	font-weight: 600;
+}
+.playtag-admin .stage-note {
+	font-size: var(--deck-meta);
+	opacity: 0.55;
+}
+.playtag-admin .arrow {
+	align-self: center;
+	font-size: var(--deck-body);
+	opacity: 0.45;
+}
+.playtag-admin .notes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	font-size: var(--deck-body);
+	opacity: 0.85;
+}
+.playtag-admin .note {
+	padding-left: 1rem;
+	position: relative;
+	visibility: hidden;
+	opacity: 0;
+}
+.playtag-admin .note::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.62em;
+	width: 0.4rem;
+	height: 1px;
+	background: currentColor;
+	opacity: 0.5;
+}
+@media (max-width: 760px) {
+	.playtag-admin .pipeline {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	.playtag-admin .arrow {
+		display: none;
+	}
+}
