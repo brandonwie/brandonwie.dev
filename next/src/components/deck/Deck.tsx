@@ -22,10 +22,13 @@
  * - `onMount` restore → isomorphic layout effect (layout on the client so
  *   the restore lands before first paint, passive during the static export
  *   so React does not warn about `useLayoutEffect` in SSR).
- * - `page.url.searchParams` → `useSearchParams()`. The hook must sit behind
- *   a `<Suspense>` boundary or the static export throws, so the default
- *   export is a thin Suspense shell around the inner runner. The hook value
- *   is read once at restore; afterwards the deck owns its own state.
+ * - `page.url.searchParams` → a one-shot `window.location.search` read in
+ *   that same mount effect. Deliberately NOT `useSearchParams()`: the hook
+ *   suspends at prerender, which would leave the deck body out of the
+ *   exported HTML (the Svelte baseline prerenders the live slide content —
+ *   only the URL restore is mount-deferred there too). Until the mount
+ *   effect runs, `printMode` is false and the live deck renders, exactly
+ *   like the baseline's prerender-then-mount sequence.
  * - SvelteKit `replaceState` → `window.history.replaceState` with the same
  *   href guard (replace, never push: Back mid-talk must leave the deck, not
  *   walk back one step at a time). `useRouter().replace` would route-navigate
@@ -37,8 +40,7 @@
  *   slide remounts, a step advance does not.
  */
 
-import { Suspense, useEffect, useLayoutEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useLayoutEffect, useState } from 'react';
 
 import type { DeckSlide } from '@/deck/types';
 
@@ -54,8 +56,7 @@ function clamp(value: number, max: number): number {
 	return Math.min(Math.max(value, 0), Math.max(max, 0));
 }
 
-function DeckInner({ slides, title = 'Presentation' }: Props) {
-	const searchParams = useSearchParams();
+export default function Deck({ slides, title = 'Presentation' }: Props) {
 	const [index, setIndex] = useState(0);
 	const [step, setStep] = useState(0);
 
@@ -63,11 +64,17 @@ function DeckInner({ slides, title = 'Presentation' }: Props) {
 	// a person counts. A reload lands where you were; any slide links directly.
 	const [restored, setRestored] = useState(false);
 
+	// The live query, once the page is live in a browser. Null during the
+	// static prerender — and that null is load-bearing: it renders the live
+	// deck (slide content included) into the exported HTML, the way the
+	// Svelte baseline prerenders before onMount restores position.
+	const [query, setQuery] = useState<URLSearchParams | null>(null);
+
 	// Reading searchParams during prerender throws — the whole route is
 	// statically generated, so the print view only resolves once live.
-	// useSearchParams behind Suspense renders the fallback at prerender time,
-	// so reaching here means a browser.
-	const printMode = searchParams.has('print');
+	// Until the mount effect below runs, this is false and the live deck
+	// renders (its slide content lands in the exported HTML).
+	const printMode = query !== null && query.has('print');
 	const current = slides[index];
 	const stepCount = current?.steps ?? 1;
 	const progress = (index + 1) / slides.length;
@@ -105,8 +112,11 @@ function DeckInner({ slides, title = 'Presentation' }: Props) {
 	// Restore before the first paint the user sees. Runs on mount rather than
 	// at init because searchParams cannot be read while prerendering.
 	useIsomorphicLayoutEffect(() => {
-		const wantedPage = Number(searchParams.get('page'));
-		const wantedStep = Number(searchParams.get('step'));
+		const params = new URLSearchParams(window.location.search);
+		setQuery(params);
+
+		const wantedPage = Number(params.get('page'));
+		const wantedStep = Number(params.get('step'));
 
 		if (Number.isFinite(wantedPage) && wantedPage > 0) {
 			const nextIndex = clamp(Math.trunc(wantedPage) - 1, slides.length - 1);
@@ -231,13 +241,5 @@ function DeckInner({ slides, title = 'Presentation' }: Props) {
 				</div>
 			</nav>
 		</div>
-	);
-}
-
-export default function Deck(props: Props) {
-	return (
-		<Suspense fallback={null}>
-			<DeckInner {...props} />
-		</Suspense>
 	);
 }
