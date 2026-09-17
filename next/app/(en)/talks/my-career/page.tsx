@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import AccountSeparationSlide from '@/components/deck/AccountSeparationSlide';
+import PushSlide from '@/components/deck/PushSlide';
 import Deck from '@/components/deck/Deck';
 import type { DeckSlide } from '@/deck/types';
 
@@ -32,12 +33,22 @@ export function generateMetadata(): Metadata {
 }
 
 // PR-A registry: one beat. PR-B appends the remaining 19 in storyboard order.
+// SAMPLE (PR-B sizing): `push` rides appended, NOT in storyboard position
+// (storyboard page 10 — its neighbors are unported). It moves into position
+// with the full PR-B landing; deep-link page numbers are construction-order
+// until then.
 const slides: DeckSlide[] = [
 	{
 		id: 'account-separation',
 		label: 'Sync — account separation',
 		steps: 2,
 		component: AccountSeparationSlide,
+	},
+	{
+		id: 'push',
+		label: 'Sync — polling to push',
+		steps: 2,
+		component: PushSlide,
 	},
 ];
 
