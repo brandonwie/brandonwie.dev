@@ -50,6 +50,8 @@
  *   node scripts/assert-browser-ac7.mjs --inject-overflow
  *   node scripts/assert-browser-ac7.mjs --suppress-deck-keys
  *   node scripts/assert-browser-ac7.mjs --suppress-video-pause
+ *   node scripts/assert-browser-ac7.mjs --suppress-print
+ *   node scripts/assert-browser-ac7.mjs --corrupt-restore-label
  *   node scripts/assert-browser-ac7.mjs --drop-status-responses
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -70,6 +72,8 @@ const INJECT_CONSOLE_ERROR = flag('--inject-console-error');
 const INJECT_OVERFLOW = flag('--inject-overflow');
 const SUPPRESS_KEYS = flag('--suppress-deck-keys');
 const SUPPRESS_VIDEO_PAUSE = flag('--suppress-video-pause');
+const SUPPRESS_PRINT = flag('--suppress-print');
+const CORRUPT_LABEL = flag('--corrupt-restore-label');
 const DROP_STATUS = flag('--drop-status-responses');
 
 const SHOTS_DIR = 'verification/screenshots/slice4-ac7';
@@ -302,6 +306,36 @@ async function main() {
 			// The ported defect this suite guards: pause() during a step
 			// animation doing nothing leaves the video playing.
 			await mutateBehavior(page, `HTMLMediaElement.prototype.pause = function () {};`);
+		if (SUPPRESS_PRINT)
+			// Defect simulation: print mode mounts but emits no slides — the
+			// count predicate (20) is what must catch it. A MutationObserver
+			// strips slides as React renders them so the failure holds
+			// regardless of hydration timing.
+			await mutateBehavior(
+				page,
+				`if (location.pathname.endsWith('/talks/my-career') && location.search.includes('print')) {
+	new MutationObserver(() => {
+		document.querySelectorAll('.print-slide').forEach((s) => s.remove());
+	}).observe(document, { childList: true, subtree: true });
+}`,
+			);
+		if (CORRUPT_LABEL)
+			// Defect simulation: the rendered slide label disagrees with the
+			// registry — D-RESTORE's label parity is what must catch it. The
+			// observer rewrites .deck-label only after React has claimed the
+			// node (a `__react*` key = hydration done): rewriting server HTML
+			// earlier throws a hydration-mismatch console error, which would
+			// fail K-NEXT collaterally instead of isolating D-RESTORE.
+			await mutateBehavior(
+				page,
+				`if (location.pathname.endsWith('/talks/my-career') && !location.search.includes('print')) {
+	new MutationObserver(() => {
+		const el = document.querySelector('.deck-label');
+		const claimed = el && Object.keys(el).some((k) => k.startsWith('__react'));
+		if (claimed && el.textContent !== 'Corrupted slide') el.textContent = 'Corrupted slide';
+	}).observe(document, { childList: true, subtree: true });
+}`,
+			);
 		if (SCREENSHOTS) mkdirSync(SHOTS_DIR, { recursive: true });
 
 		// Interactive deck rows run BEFORE the viewport sweep: real input
@@ -411,7 +445,10 @@ async function main() {
 			if (!playing) problems.push('autoplay never engaged (paused stayed true)');
 			if (!pausedDuring) problems.push('never paused during the step animation');
 			if (!resumed) problems.push('never resumed after the animation window');
-			const errs = v0.errs ?? [];
+			// Snapshot errs after the full press/animate/resume window — v0 was
+			// taken before any interaction and would miss errors thrown mid-cycle.
+			const vFinal = await evaluate(page, VIDEO_SNAPSHOT);
+			const errs = vFinal.errs ?? [];
 			if (errs.length > 0) problems.push(`${errs.length} console error(s)`);
 			report(
 				id,

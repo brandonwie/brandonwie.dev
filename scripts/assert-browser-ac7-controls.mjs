@@ -8,6 +8,8 @@
  *   - BAC-04: Defect control — a no-op'd video.pause() fails D-VID-3 (exit 1)
  *   - BAC-05: Defect control — dropped status observations fail V-01 (exit 1)
  *   - BAC-06: Invariance control — unmutated probe passes all 19 rows (exit 0)
+ *   - BAC-07: Defect control — an empty print deck fails D-PRINT (exit 1)
+ *   - BAC-08: Defect control — a corrupted slide label fails D-RESTORE (exit 1)
  *
  * Exit 0 all controls behave as specified, 1 otherwise, 3 skipped (no browser).
  */
@@ -64,6 +66,22 @@ const CONTROLS = [
 		args: [],
 		expect: EXIT.PASS,
 		expectStdout: '19 rows: 19 passed',
+	},
+	{
+		id: 'BAC-07',
+		kind: 'DEFECT',
+		what: 'a print deck emitting no slides is caught by D-PRINT',
+		args: ['--suppress-print'],
+		expect: EXIT.FAIL,
+		expectedFailure: 'D-PRINT',
+	},
+	{
+		id: 'BAC-08',
+		kind: 'DEFECT',
+		what: 'a rendered label disagreeing with the registry is caught by D-RESTORE',
+		args: ['--corrupt-restore-label'],
+		expect: EXIT.FAIL,
+		expectedFailure: 'D-RESTORE',
 	},
 ];
 
