@@ -141,12 +141,12 @@ instantiates nine of them; the remaining seventeen are inventoried here.
 
 | Surface                                                                                                                    | Route that exercises it           | Closing slice                                 |
 | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | --------------------------------------------- |
-| `ArrayListVisualizer`, `BigOExplorer`, `BinarySearchVisualizer`, `RecursionTrace`, `StackQueueVisualizer`, `DsaIStudyPage` | `/study/dsa-i`                    | Slice 4                                       |
-| `AvlTreeVisualizer`, `TwoFourTreeVisualizer`, `IterativeSortVisualizer`, `DivideConquerSortVisualizer`, `DsaIIIStudyPage`  | `/study/dsa-iii`                  | Slice 4                                       |
-| `PatternMatchVisualizer`, `GraphTraversalVisualizer`, `MstVisualizer`, `LcsTableVisualizer`, `DsaIVStudyPage`              | `/study/dsa-iv`                   | Slice 4                                       |
-| `StudyIndexPage`                                                                                                           | `/study`                          | Slice 4                                       |
-| KO study routes                                                                                                            | `/ko/study`, `/ko/study/dsa-i…iv` | Slice 4                                       |
-| The other 19 deck slides and the video behavior                                                                            | `/talks/my-career`                | Slice 4                                       |
+| `ArrayListVisualizer`, `BigOExplorer`, `BinarySearchVisualizer`, `RecursionTrace`, `StackQueueVisualizer`, `DsaIStudyPage` | `/study/dsa-i`                    | Slice 4 — captured, see PR-D note below       |
+| `AvlTreeVisualizer`, `TwoFourTreeVisualizer`, `IterativeSortVisualizer`, `DivideConquerSortVisualizer`, `DsaIIIStudyPage`  | `/study/dsa-iii`                  | Slice 4 — captured, see PR-D note below       |
+| `PatternMatchVisualizer`, `GraphTraversalVisualizer`, `MstVisualizer`, `LcsTableVisualizer`, `DsaIVStudyPage`              | `/study/dsa-iv`                   | Slice 4 — captured, see PR-D note below       |
+| `StudyIndexPage`                                                                                                           | `/study`                          | Slice 4 — captured, see PR-D note below       |
+| KO study routes                                                                                                            | `/ko/study`, `/ko/study/dsa-i…iv` | Slice 4 — captured, see PR-D note below       |
+| The other 19 deck slides and the video behavior                                                                            | `/talks/my-career`                | Slice 4 — captured, see PR-D note below       |
 | `/system` index, `/ko/system`                                                                                              | those routes                      | Slice 4 — captured, see PR-C note below       |
 | `/ko/system/3b` in a browser: graph mount, controls, screenshots                                                           | `/ko/system/3b`                   | Slice 4 — captured, see PR-C note below       |
 | `/about`, `/contact`, `/projects`, `/feed`, `/404` and their KO twins                                                      | those routes                      | Slice 3                                       |
@@ -183,3 +183,30 @@ Viewport screenshots at 390 / 820 / 1440 live in
 baseline note was a lazy-chunk timing artifact — neither stack uses an
 IntersectionObserver — so the asserted contract is mount-after-hydration,
 which the probe proves.
+
+**Slice 4 PR-D capture (Next candidate):** the AC7 methodology rows above are
+now closed by `scripts/assert-browser-ac7.mjs` (`pnpm migration:browser:ac7`),
+with negative controls in `scripts/assert-browser-ac7-controls.mjs`. Against
+the `next/build` static export the probe observed, on each of the 12 study
+routes and `/talks/my-career`: HTTP 200, the URL locale on `<html lang>`, an
+`h1` inside `#main-content`, and — at 390x844 / 820x1180 / 1440x900 via
+`Emulation.setDeviceMetricsOverride` — the expected breakpoint map, no
+horizontal overflow, 0 images missing `alt`, and 0 unnamed controls under the
+frame-probe heuristic that consults `element.labels`; zero console errors
+across the sweep. The viewport primitive differs from the baseline's
+`/__viewport` iframe (its automation could not resize) but evaluates the same
+property — media queries against a real box — and `mobile` stays false
+because the iframe never emulated touch and mobile-emulation toggles wedge
+CDP input dispatch. Study-card counts observed: `/study` 7, `dsa-i` 19,
+`dsa-ii` 18, `dsa-iii` 20, `dsa-iv` 20, `aws-ai-practitioner` 71 (KO twins
+identical); focusables ranged 23–39. On the deck: six real ArrowRight presses
+walked steps and slides to `4 / 20` `step 2/2` with the URL mirroring
+`?page=4&step=2` (baseline K6), ArrowLeft stepped back to `step 1/2`
+(baseline K7); both SlideVideo instances (modulabs page 3, moviation page 4)
+played muted/loop/inline/labelled, paused while the step animation ran (the
+1250 ms `videoPaused` window), and resumed; `?print` rendered all 20 slides
+at final step with no rail; and `?page=N` restore-navigation mounted every
+slide at its registry label. Screenshots at all three viewports live in
+`./screenshots/slice4-ac7/` (`<slug>@<W>x<H>.jpg`, 39 captures). The
+functional smoke for these routes stays `migration:browser:study`; this
+suite is the AC7-methodology capture that pending rows named.
