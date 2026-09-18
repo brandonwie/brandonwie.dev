@@ -147,8 +147,8 @@ instantiates nine of them; the remaining seventeen are inventoried here.
 | `StudyIndexPage`                                                                                                           | `/study`                          | Slice 4                                       |
 | KO study routes                                                                                                            | `/ko/study`, `/ko/study/dsa-i…iv` | Slice 4                                       |
 | The other 19 deck slides and the video behavior                                                                            | `/talks/my-career`                | Slice 4                                       |
-| `/system` index, `/ko/system`                                                                                              | those routes                      | Slice 4                                       |
-| `/ko/system/3b` in a browser: graph mount, controls, screenshots                                                           | `/ko/system/3b`                   | Slice 4 — its data is closed, see note below  |
+| `/system` index, `/ko/system`                                                                                              | those routes                      | Slice 4 — captured, see PR-C note below       |
+| `/ko/system/3b` in a browser: graph mount, controls, screenshots                                                           | `/ko/system/3b`                   | Slice 4 — captured, see PR-C note below       |
 | `/about`, `/contact`, `/projects`, `/feed`, `/404` and their KO twins                                                      | those routes                      | Slice 3                                       |
 | The other 166 EN posts and 166 KO posts                                                                                    | post detail routes                | Slice 3                                       |
 | Giscus thread rendering against the live GitHub backend                                                                    | any post detail                   | Slice 3 — needs network and a real discussion |
@@ -162,6 +162,24 @@ titles merged from the Korean corpus over the English snapshot -- is asserted
 per commit by `pnpm migration:c5` (rows `site 16` through `site 16d` against the
 built page, plus fixture rows `F7` and `F7b` for the untranslated and drafted
 branches the live corpus cannot show, since all ten slugs are translated and it
-holds no drafts). What stays pending is the browser behavior this table captures:
-the graph's scroll-triggered mount, its controls, and the viewport screenshots.
-The row above records that remainder rather than dropping the surface.
+holds no drafts).
+
+**Slice 4 PR-C capture (Next candidate):** the browser remainder above is now
+closed by `scripts/assert-browser-xyflow.mjs` (`pnpm migration:browser:xyflow`),
+with negative controls in `scripts/assert-browser-xyflow-controls.mjs`. Against
+the `next/build` static export on both `/system/3b` and `/ko/system/3b` the
+probe observed: zero `react-flow__` elements in the exported HTML with
+`s3b-fallback` present (the hydration boundary `migration:c11` row H asserts
+statically), then after hydration a mounted graph with 17 `.react-flow__node`
+(11 chips + 6 bands), 42 edge paths (21 visible + 21 interaction — the same
+counting method as the baseline's 42), 3 control buttons, MiniMap and
+Background present; zoom-in scaling `0.48072 → 0.576864` and fit-view
+restoring; hover dimming 15/21 non-incident edges and restoring on leave;
+chip click drilling `11 → 8` chips with crumb + back control and restoring;
+non-draggable nodes; Korean graph copy on the KO route; zero console errors.
+Viewport screenshots at 390 / 820 / 1440 live in
+`./screenshots/slice4-3b/` (`system-3b@*.jpg`, `ko-system-3b@*.jpg`), plus
+`/system` and `/ko/system` index-route status rows. The "scroll" in the
+baseline note was a lazy-chunk timing artifact — neither stack uses an
+IntersectionObserver — so the asserted contract is mount-after-hydration,
+which the probe proves.
