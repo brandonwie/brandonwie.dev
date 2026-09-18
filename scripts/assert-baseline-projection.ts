@@ -31,7 +31,20 @@
  * generation 1 could not absorb by projection. Generation 2 measured that
  * resync; a review then asked for a missing citation, and one line of published
  * prose is enough to invalidate a measurement — so generation 3 measures the
- * corrected tree. Both earlier tags are untouched and still hold their blobs.
+ * corrected tree. Generation 4 measured the AWS study-page addition at content
+ * commit `8d7b40f`.
+ *
+ * Generation 5 re-measures because Slice 5 changed the EXTRACTOR, not just the
+ * input: `decodeEntities`, quote-aware tag matching, comment stripping and the
+ * Paraglide anchor strip (controls 44-52) rewrite stored fields, and the
+ * baseline stores extracted fields, not HTML — a projection cannot express a
+ * recomputed field, so a measurement is the only honest generation. Its source
+ * delta since generation 4 is small but real: `AwsAiPractitionerStudyPage.svelte`
+ * +3/-5 (a WCAG comment, and the services grid class now reads
+ * `columns[block.columns]` — the compiled-CSS change behind the +36 cssBytes),
+ * `package.json` +7/-1 (slice-4 probe scripts) and `pnpm-lock.yaml` +6.
+ *
+ * All earlier tags are untouched and still hold their blobs.
  * The ordering rule that follows from it: capture LAST, after the final content
  * edit, and push the tag before the branch.
  *
@@ -49,20 +62,20 @@ import { readFileSync } from 'node:fs';
  * cannot make the evidence unreachable. It must never be retargeted: a future
  * measurement gets a new versioned tag.
  */
-export const FROZEN_TAG_NAME = 'migration-baseline-svelte-8d7b40f-v1';
+export const FROZEN_TAG_NAME = 'migration-baseline-svelte-547a840-v1';
 export const FROZEN_TAG = `refs/tags/${FROZEN_TAG_NAME}`;
-export const FROZEN_OBJECT_ID = '4ffbb6b06d51b6af2234277048bee01cce3b9bfa';
-export const FROZEN_SHA256 = '5176585bbadc421e873233d5eab89c834ebb99298b14c3d1cccf3d9b79ef9af3';
+export const FROZEN_OBJECT_ID = '51722fe4cc6176ac8676a73e048a21cc7a68851d';
+export const FROZEN_SHA256 = 'b9d93a5b6f35aa4ff2313d50c1a98905bdde1018a66e727ae6a275f7601a5f09';
 const BASELINE_PATH = 'verification/baseline/svelte-e23e808.json';
 
 /**
  * Per-page fields the current generation is allowed to introduce or rewrite.
  *
- * Both empty: generation 2 is a MEASUREMENT, so nothing may differ from the
- * frozen blob at all. Generation 1 declared `articleMeta` as added and `images`
- * as widened; a future schema change repopulates these lists and the projection
- * mode below takes over again, with the same meaning it had then — a widened
- * field's parent value must survive verbatim as the leading segment.
+ * Both empty: the current generation is a MEASUREMENT, so nothing may differ
+ * from the frozen blob at all. Generation 1 declared `articleMeta` as added and
+ * `images` as widened; a future schema change repopulates these lists and the
+ * projection mode below takes over again, with the same meaning it had then —
+ * a widened field's parent value must survive verbatim as the leading segment.
  */
 const ADDED_FIELDS: readonly string[] = [];
 const WIDENED_FIELDS: readonly string[] = [];
