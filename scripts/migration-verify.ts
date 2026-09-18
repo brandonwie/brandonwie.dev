@@ -141,14 +141,59 @@ export interface Baseline {
 	pagefindEntries: number | null;
 }
 
-const VOID_TEXT = /<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi;
+const VOID_TEXT = /<(script|style|noscript)\b(?:[^>"']|"[^"]*"|'[^']*')*>[\s\S]*?<\/\1>/gi;
 
-/** Collapse whitespace so a reflow is not a content change. See control 6. */
-export function normalizeText(html: string): string {
-	return html
-		.replace(VOID_TEXT, ' ')
-		.replace(/<[^>]+>/g, ' ')
+/**
+ * Tag matcher that skips over quoted attribute values. Bare `[^>]*` stops at
+ * the first `>` even when it sits inside a quoted attribute, and the baseline
+ * emits literal `>` inside meta content (the `>>` operator posts), which
+ * truncated those tags and read their fields as empty. Quoted sections match
+ * whole so an attribute's `>` never ends the tag. Bounded by control 47,
+ * which mutates text after such a `>` and must still diff.
+ */
+const TAG_CONTENTS = String.raw`(?:[^>"']|"[^"]*"|'[^']*')*`;
+
+/**
+ * The entities a serialized document can legally carry where a browser decodes
+ * one value for both spellings. SvelteKit copies raw characters through; React
+ * escapes them (`'` -> `&#x27;`, `&` -> `&amp;`, `"` -> `&quot;`, `<`/`>` ->
+ * `&lt;`/`&gt;`). Both parse to the same value, and the contract is about the
+ * document, not its serialization. `&amp;` decodes LAST so a double-escaped
+ * `&amp;lt;` resolves to `&lt;` once, matching the browser's single decoding
+ * pass. Each surface it touches is bounded by a control pair: text/title/h1 by
+ * 41/42, meta content and image alt by 43/44.
+ */
+function decodeEntities(value: string): string {
+	return value
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#x27;/gi, "'")
+		.replace(/&#0*39;/g, "'")
 		.replace(/&nbsp;/g, ' ')
+		.replace(/&amp;/g, '&');
+}
+
+/**
+ * Collapse whitespace so a reflow is not a content change. See control 6.
+ * Entities decode AFTER tags are stripped: decoding first would turn the text
+ * `&lt;textarea&gt;` into a literal `<textarea>` that the tag stripper would
+ * then eat.
+ *
+ * Comments are removed BEFORE the tag->space pass and to nothing, not a space.
+ * React emits `<!-- -->` between adjacent text nodes (`~/<!-- -->About`,
+ * `0<!-- -->1`) as hydration boundaries; a comment node renders no text and no
+ * break, so treating it like an element would inject a space the Svelte
+ * baseline does not have. Real text around a comment still counts -- controls
+ * 51/52 bound both directions.
+ */
+export function normalizeText(html: string): string {
+	return decodeEntities(
+		html
+			.replace(VOID_TEXT, ' ')
+			.replace(/<!--[\s\S]*?-->/g, '')
+			.replace(/<[^>]+>/g, ' '),
+	)
 		.replace(/\s+/g, ' ')
 		.trim();
 }
@@ -169,7 +214,25 @@ function attr(tag: string, name: string): string | null {
 }
 
 function metaTags(html: string): string[] {
-	return html.match(/<meta\b[^>]*>/gi) ?? [];
+	return html.match(new RegExp(`<meta\\b${TAG_CONTENTS}>`, 'gi')) ?? [];
+}
+
+/**
+ * Paraglide's SvelteKit adapter injects a `<div style="display:none">` holding
+ * exactly two anchors -- `<a>en</a>` and `<a>ko</a>` -- as its client-side
+ * locale-switch interception surface. Every baseline page carries one; the
+ * Next port switches locale through the visible toggle and emits none. The
+ * block is a framework mechanism, not page content: it is invisible to
+ * readers, and the locale-discovery contract is carried by the `alternates`
+ * head links, which are compared on their own field. The strip is surgical --
+ * only a display:none block whose entire content is the en/ko anchor pair is
+ * removed; any other hidden markup still counts. Bounded by controls 45/46.
+ */
+function stripParaglideAnchors(html: string): string {
+	return html.replace(/<div\b[^>]*display:\s*none[^>]*>([\s\S]*?)<\/div>/gi, (block, inner) => {
+		const bare = inner.replace(/<!--[\s\S]*?-->/g, '').trim();
+		return /^<a\b[^>]*>en<\/a><a\b[^>]*>ko<\/a>$/.test(bare) ? '' : block;
+	});
 }
 
 export function extractFields(html: string): PageFields {
@@ -182,27 +245,31 @@ export function extractFields(html: string): PageFields {
 	for (const tag of metaTags(head)) {
 		const property = attr(tag, 'property');
 		const name = attr(tag, 'name');
-		const content = attr(tag, 'content') ?? '';
+		const content = decodeEntities(attr(tag, 'content') ?? '');
 		if (property?.startsWith('og:')) og[property] = content;
 		else if (property?.startsWith('article:')) articleMeta.push(`${property} ${content}`);
 		else if (name?.startsWith('twitter:')) twitter[name] = content;
 		else if (name === 'description') description = content;
 	}
 
-	const links = head.match(/<link\b[^>]*>/gi) ?? [];
+	const links = head.match(new RegExp(`<link\\b${TAG_CONTENTS}>`, 'gi')) ?? [];
 	let canonical: string | null = null;
 	const alternates: string[] = [];
 	for (const tag of links) {
 		const rel = attr(tag, 'rel');
-		if (rel === 'canonical') canonical = attr(tag, 'href');
+		const href = attr(tag, 'href');
+		if (rel === 'canonical') canonical = href === null ? null : decodeEntities(href);
 		if (rel === 'alternate' && attr(tag, 'hreflang')) {
-			alternates.push(`${attr(tag, 'hreflang')} ${attr(tag, 'href')}`);
+			alternates.push(`${attr(tag, 'hreflang')} ${decodeEntities(href ?? '')}`);
 		}
 	}
 	alternates.sort();
 
 	const jsonLd: unknown[] = [];
-	const ldRe = /<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+	const ldRe = new RegExp(
+		`<script\\b${TAG_CONTENTS}type\\s*=\\s*["']application\\/ld\\+json["']${TAG_CONTENTS}>([\\s\\S]*?)<\\/script>`,
+		'gi',
+	);
 	for (const m of html.matchAll(ldRe)) {
 		try {
 			jsonLd.push(JSON.parse(m[1].trim()));
@@ -211,10 +278,12 @@ export function extractFields(html: string): PageFields {
 		}
 	}
 
-	const h1 = [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map((m) => normalizeText(m[1]));
-	const titleMatch = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+	const h1 = [...html.matchAll(new RegExp(`<h1\\b${TAG_CONTENTS}>([\\s\\S]*?)</h1>`, 'gi'))].map(
+		(m) => normalizeText(m[1]),
+	);
+	const titleMatch = html.match(new RegExp(`<title\\b${TAG_CONTENTS}>([\\s\\S]*?)</title>`, 'i'));
 	const bodyStart = html.search(/<body\b[^>]*>/i);
-	const body = bodyStart === -1 ? html : html.slice(bodyStart);
+	const body = stripParaglideAnchors(bodyStart === -1 ? html : html.slice(bodyStart));
 	const text = normalizeText(body);
 
 	const htmlTag = html.match(/<html\b[^>]*>/i)?.[0] ?? '';
@@ -222,12 +291,14 @@ export function extractFields(html: string): PageFields {
 	// link and broke one occurrence of it, and the set erased the difference. They
 	// are OCCURRENCE LISTS in document order now -- a repeated target is a fact
 	// about the page, and losing it loses the regression.
-	const internalLinks = [...body.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["']/gi)]
-		.map((m) => m[1])
+	const internalLinks = [
+		...body.matchAll(new RegExp(`<a\\b${TAG_CONTENTS}href\\s*=\\s*["']([^"']+)["']`, 'gi')),
+	]
+		.map((m) => decodeEntities(m[1]))
 		.filter((href) => href.startsWith('/') || href.startsWith('https://brandonwie.dev'));
 	// `alt` was omitted, so an image losing its alt text read as parity. It is
 	// user-visible (assistive technology) and part of the C9/C12 obligation.
-	const images = [...body.matchAll(/<img\b[^>]*>/gi)]
+	const images = [...body.matchAll(new RegExp(`<img\\b${TAG_CONTENTS}>`, 'gi'))]
 		.map((m) => m[0])
 		.filter((tag) => {
 			const src = attr(tag, 'src');
@@ -249,8 +320,9 @@ export function extractFields(html: string): PageFields {
 			// bounded the same way, by a defect control over the same surface.
 			const dims = `${attr(tag, 'width')}x${attr(tag, 'height')}`;
 			const onerror = attr(tag, 'onerror') === null ? 'absent' : 'present';
+			const alt = attr(tag, 'alt');
 			return [
-				`${attr(tag, 'src')} alt=${JSON.stringify(attr(tag, 'alt'))}`,
+				`${decodeEntities(attr(tag, 'src') ?? '')} alt=${JSON.stringify(alt === null ? null : decodeEntities(alt))}`,
 				`size=${dims}`,
 				`fetchpriority=${attr(tag, 'fetchpriority')}`,
 				`decoding=${attr(tag, 'decoding')}`,
@@ -561,14 +633,10 @@ const BUNDLE_PREFIXES = ['/_app/', '/_next/'];
  * spelled `&` on one side and `&amp;` on the other reads as two different
  * shell keys. SvelteKit copied `app.html`'s raw `&` through; React escapes it.
  * A browser parses both to the same URL, and the shell contract is about the
- * document, not its serialization. */
+ * document, not its serialization. Now shares `decodeEntities()` with the
+ * text/meta extractions, which adds `&#x27;` and `&nbsp;` to the same effect. */
 function decodeAttrEntities(value: string): string {
-	return value
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>')
-		.replace(/&quot;/g, '"')
-		.replace(/&#0*39;/g, "'")
-		.replace(/&amp;/g, '&');
+	return decodeEntities(value);
 }
 
 /**

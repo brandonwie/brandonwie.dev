@@ -33,6 +33,13 @@
  *              36 one article:tag removed  37 hero intrinsic size dropped
  *              38 hero priority and decoding hints dropped
  *              40 hero fallback handler deleted
+ *              41 unapproved candidate-only route
+ *              43 a LOST route cannot be ledgered away
+ *              45 visible body text reworded
+ *              47 description content semantically reworded
+ *              49 display:none block with a non-locale link added
+ *              50 meta content with a raw > has its tail changed
+ *              52 visible text past an injected comment changes
  *   invariance  6 Prettier reflow ignored   8 feed timestamp ignored
  *              15 ledger approves the EXACT difference
  *              19 directory-index file shape is equivalent
@@ -42,6 +49,11 @@
  *              28 two head links swapped in document order
  *              34 og and twitter tags reordered in the document
  *              39 hero onerror body rewritten, handler still present
+ *              42 APPROVED candidate-only route
+ *              44 ' entity-encoded as &#x27; in title, h1 and text
+ *              46 ' entity-encoded inside meta content values
+ *              48 paraglide hidden-anchor hrefs retargeted
+ *              51 a comment injected inside a visible word
  *
  * Controls 21-31 pin `normalizeShell()`. Each of its three loosenings -- href
  * resolution against the page URL, bundle assets collapsed to one presence key,
@@ -898,6 +910,175 @@ const CONTROLS: Control[] = [
 					2,
 				)}\n`,
 			);
+		},
+	},
+
+	// --- entity decoding + framework-artifact strip (controls 44-50) ----------
+	//
+	// Slice 5's full comparison surfaced three serialization classes the
+	// extractor treated as content: React entity-escapes characters SvelteKit
+	// copies raw (`'` -> `&#x27;`), attribute values can legally carry a raw `>`
+	// that bare `[^>]*` read as a tag end, and Paraglide's SvelteKit adapter
+	// injects a display:none locale-anchor block the Next port never emits.
+	// Each loosening is paired with a defect control over the same surface.
+	{
+		id: 44,
+		name: 'apostrophe entity-encoded as &#x27; in title, h1 and text',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// React serializes ' as &#x27;; a browser decodes both to the same
+			// DOM value. `I'd` sits in this page's h1 and text, so the mutation
+			// exercises the decode inside normalizeText on every text-bearing
+			// field at once. Paired with 45 (and 4 on the title surface).
+			const file = join(dir, 'talks', 'my-career.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes("I'd")) {
+				console.error('FATAL: control 44 found no apostrophe to entity-encode');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace(/I'd/g, 'I&#x27;d'));
+		},
+	},
+	{
+		id: 45,
+		name: 'visible body text reworded',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// The decode must not soften real text changes: a reworded sentence
+			// still moves the text field.
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('I came from film')) {
+				console.error('FATAL: control 45 found no body sentence to reword');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace('I came from film', 'I came from cinema'));
+		},
+	},
+	{
+		id: 46,
+		name: 'apostrophe entity-encoded inside meta content values',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// `Wie's` sits in this page's description, og:description and
+			// twitter:description, exercising the attribute-value decode on all
+			// three maps at once. Image `alt` shares the same decode call; no
+			// built alt carries an apostrophe today, so meta content stands in
+			// for the shared path. Paired with 47.
+			const file = join(dir, 'tags.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes("Wie's")) {
+				console.error('FATAL: control 46 found no meta apostrophe to entity-encode');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace(/Wie's/g, 'Wie&#x27;s'));
+		},
+	},
+	{
+		id: 47,
+		name: 'description content semantically reworded',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			const file = join(dir, 'tags.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('Browse every topic')) {
+				console.error('FATAL: control 47 found no description to reword');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace('Browse every topic', 'Browse some topics'));
+		},
+	},
+	{
+		id: 48,
+		name: 'paraglide hidden-anchor hrefs retargeted',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// The block is a framework mechanism, not page content: even a wrong
+			// target inside it must be invisible. `>ko</a>` matches only the
+			// paraglide anchor -- the visible toggle carries EN/KR text.
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('href="/ko/about">ko<')) {
+				console.error('FATAL: control 48 found no paraglide anchor to retarget');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace('href="/ko/about">ko<', 'href="/ko/elsewhere">ko<'));
+		},
+	},
+	{
+		id: 49,
+		name: 'a display:none block carrying a non-locale link is added',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// The strip is surgical: hidden markup that is NOT the paraglide
+			// en/ko pair still counts. An empty anchor text keeps the mutation
+			// on the internalLinks surface alone.
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			writeFileSync(
+				file,
+				html.replace('</body>', '<div style="display:none"><a href="/posts"></a></div></body>'),
+			);
+		},
+	},
+	{
+		id: 50,
+		name: 'meta content carrying a raw > has its tail changed',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// The baseline emits literal `>` inside attribute values (the `>>`
+			// operator posts); bare `[^>]*` ended those tags early and everything
+			// after the `>` was invisible to the comparator. The quote-aware tag
+			// matcher reads the whole tag, so a change after the `>` must diff.
+			const file = join(dir, 'posts', 'airflow-task-dependency-syntax.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('sets task dependencies')) {
+				console.error('FATAL: control 50 found no post-`>` content to change');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace('sets task dependencies', 'sets task DEPENDENCIES'));
+		},
+	},
+	{
+		id: 51,
+		name: 'a comment injected inside a visible word',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// React text-boundary markers (`~/<!-- -->About`) render identically
+			// to `~/About`; a comment node contributes no text. Injecting one
+			// inside a nav label must not move the text field. Paired with 52.
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('>~/About<')) {
+				console.error('FATAL: control 51 found no nav label to split');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace('>~/About<', '>~/<!-- -->About<'));
+		},
+	},
+	{
+		id: 52,
+		name: 'visible text past an injected comment changes',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// The comment strip must not swallow real changes: text on the far
+			// side of a comment still diffs.
+			const file = join(dir, 'about.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('>~/About<')) {
+				console.error('FATAL: control 52 found no nav label to mutate');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace('>~/About<', '>~/<!-- -->Elsewhere<'));
 		},
 	},
 ];
