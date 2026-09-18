@@ -96,7 +96,9 @@
 		"migration:browser:motion": "node scripts/assert-browser-motion.mjs",
 		"migration:browser:motion:controls": "node scripts/assert-browser-motion-controls.mjs",
 		"migration:browser:study": "node scripts/assert-browser-study.mjs",
-		"migration:browser:study:controls": "node scripts/assert-browser-study-controls.mjs"
+		"migration:browser:study:controls": "node scripts/assert-browser-study-controls.mjs",
+		"migration:browser:xyflow": "node scripts/assert-browser-xyflow.mjs",
+		"migration:browser:xyflow:controls": "node scripts/assert-browser-xyflow-controls.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
