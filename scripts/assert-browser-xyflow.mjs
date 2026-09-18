@@ -17,8 +17,9 @@
  *   drill     clicking an expandable chip drills into its subsystem —
  *             node count changes, the toolbar gains crumb + back control —
  *             and back restores the overview.
- *   nodrag    a synthetic mouse drag leaves the chip transform unchanged
- *             (`nodesDraggable={false}` parity).
+ *   nodrag    a real CDP mouse drag (hit-tested `Input.dispatchMouseEvent`
+ *             with held-button state) pans the viewport while leaving the
+ *             chip transform unchanged (`nodesDraggable={false}` parity).
  *   shots     opt-in screenshots at 390 / 820 / 1440 (`--screenshots`,
  *             archived under `verification/screenshots/slice4-3b/`,
  *             branch-lifetime per `verification/README.md`).
@@ -156,22 +157,34 @@ const HOVER_DIM = `
 
 // Real-input drag: CDP Input.dispatchMouseEvent walks the trusted pipeline
 // (hit test, pointer events), unlike synthetic dispatchEvent which can miss
-// listener paths. nodesDraggable=false means the viewport pans while the
-// node's own world-coordinate transform must not change.
+// listener paths. `buttons: 1` carries the held-button state on every move —
+// drag implementations gate on it. panOnDrag (default true) makes the
+// viewport pan, which doubles as proof the input engaged; the node's own
+// world-coordinate transform must not change (nodesDraggable=false).
 const DRAG_TARGET = `
 (() => {
 	document.querySelector('.react-flow')?.scrollIntoView({ block: 'center' });
 	const node = document.querySelector('.react-flow__node-subsystem, .react-flow__node-leaf');
 	if (!node) return { ok: false, reason: 'no chip node' };
 	const r = node.getBoundingClientRect();
-	return { ok: true, before: node.style.transform, x: r.left + r.width / 2, y: r.top + r.height / 2 };
+	const vp = document.querySelector('.react-flow__viewport');
+	return {
+		ok: true,
+		before: node.style.transform,
+		vBefore: vp ? vp.style.transform : null,
+		x: r.left + r.width / 2,
+		y: r.top + r.height / 2,
+	};
 })()
 `;
 
 const DRAG_RESULT = `
 (() => {
 	const node = document.querySelector('.react-flow__node-subsystem, .react-flow__node-leaf');
-	return node ? { ok: true, after: node.style.transform } : { ok: false, reason: 'node vanished' };
+	const vp = document.querySelector('.react-flow__viewport');
+	return node
+		? { ok: true, after: node.style.transform, vAfter: vp ? vp.style.transform : null }
+		: { ok: false, reason: 'node vanished' };
 })()
 `;
 
@@ -192,6 +205,7 @@ const dragTest = async (page) => {
 			x: target.x + i * 15,
 			y: target.y + i * 10,
 			button: 'left',
+			buttons: 1,
 		});
 	}
 	await page.send('Input.dispatchMouseEvent', {
@@ -208,6 +222,7 @@ const dragTest = async (page) => {
 		before: target.before,
 		after: result.after,
 		moved: !!result.ok && target.before !== result.after,
+		panned: !!result.ok && target.vBefore !== result.vAfter,
 	};
 };
 
@@ -398,8 +413,8 @@ async function main() {
 			const drag = await dragTest(page);
 			report(
 				`${route.id}-nodrag`,
-				drag.ok && !drag.moved,
-				`drag attempt: moved=${drag.moved} ("${drag.before}" -> "${drag.after}")`,
+				drag.ok && !drag.moved && drag.panned,
+				`real-input drag: node moved=${drag.moved} ("${drag.before}" -> "${drag.after}"), viewport panned=${drag.panned} (engagement proof)`,
 			);
 
 			if (SCREENSHOTS) {
