@@ -325,7 +325,7 @@ async function main() {
 		let first = true;
 		for (const route of ROUTES) {
 			await page.send('Page.navigate', { url: `http://127.0.0.1:${server.port}${route.url}` });
-			const isReady = await ready(page, MOUNTED, { timeout: 15000 });
+			const isReady = await ready(page, MOUNTED, { timeoutMs: 15000 });
 			if (INJECT_CONSOLE_ERROR && first) {
 				await evaluate(page, `console.error('synthetic defect for BXC-01')`);
 			}
