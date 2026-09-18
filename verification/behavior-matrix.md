@@ -168,9 +168,9 @@ holds no drafts).
 closed by `scripts/assert-browser-xyflow.mjs` (`pnpm migration:browser:xyflow`),
 with negative controls in `scripts/assert-browser-xyflow-controls.mjs`. Against
 the `next/build` static export on both `/system/3b` and `/ko/system/3b` the
-probe observed: zero `react-flow__` elements in the exported HTML with
-`s3b-fallback` present (the hydration boundary `migration:c11` row H asserts
-statically), then after hydration a mounted graph with 17 `.react-flow__node`
+probe observed — with the pre-hydration half (zero `react-flow__` elements in
+the exported HTML, `s3b-fallback` present) asserted separately by
+`migration:c11` row H — after hydration a mounted graph with 17 `.react-flow__node`
 (11 chips + 6 bands), 42 edge paths (21 visible + 21 interaction — the same
 counting method as the baseline's 42), 3 control buttons, MiniMap and
 Background present; zoom-in scaling `0.48072 → 0.576864` and fit-view

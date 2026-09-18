@@ -37,6 +37,7 @@ const CONTROLS = [
 		what: 'unmutated xyflow probe runs and passes all 12 rows',
 		args: [],
 		expect: EXIT.PASS,
+		expectStdout: '12 rows: 12 passed',
 	},
 	{
 		id: 'BXC-04',
@@ -58,11 +59,15 @@ function runControl(control) {
 	const expectedRowFailed =
 		!control.expectedFailure ||
 		(typeof res.stdout === 'string' && res.stdout.includes(`FAIL  ${control.expectedFailure}`));
+	const summarySeen =
+		!control.expectStdout ||
+		(typeof res.stdout === 'string' && res.stdout.includes(control.expectStdout));
 
-	const ok = code === control.expect && expectedRowFailed;
+	const ok = code === control.expect && expectedRowFailed && summarySeen;
 	const detail =
 		`exit ${code ?? res.error?.message} (want ${control.expect})` +
-		(control.expectedFailure ? `, FAIL ${control.expectedFailure} seen=${expectedRowFailed}` : '');
+		(control.expectedFailure ? `, FAIL ${control.expectedFailure} seen=${expectedRowFailed}` : '') +
+		(control.expectStdout ? `, summary seen=${summarySeen}` : '');
 	return { ok, detail, stdout: res.stdout };
 }
 
@@ -86,4 +91,9 @@ async function main() {
 	return passed === CONTROLS.length ? EXIT.PASS : EXIT.FAIL;
 }
 
-process.exitCode = await main();
+main()
+	.then((code) => process.exit(code))
+	.catch((error) => {
+		console.error(`ERROR ${error.message}`);
+		process.exit(EXIT.ERROR);
+	});

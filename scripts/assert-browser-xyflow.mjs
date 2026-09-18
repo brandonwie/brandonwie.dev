@@ -154,20 +154,62 @@ const HOVER_DIM = `
 })()
 `;
 
-const DRAG_TEST = `
-(async () => {
+// Real-input drag: CDP Input.dispatchMouseEvent walks the trusted pipeline
+// (hit test, pointer events), unlike synthetic dispatchEvent which can miss
+// listener paths. nodesDraggable=false means the viewport pans while the
+// node's own world-coordinate transform must not change.
+const DRAG_TARGET = `
+(() => {
+	document.querySelector('.react-flow')?.scrollIntoView({ block: 'center' });
 	const node = document.querySelector('.react-flow__node-subsystem, .react-flow__node-leaf');
 	if (!node) return { ok: false, reason: 'no chip node' };
-	const before = node.style.transform;
 	const r = node.getBoundingClientRect();
-	const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-	node.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: cx, clientY: cy }));
-	document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: cx + 60, clientY: cy + 40 }));
-	document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-	await new Promise((r2) => setTimeout(r2, 200));
-	return { ok: true, before, after: node.style.transform, moved: before !== node.style.transform };
+	return { ok: true, before: node.style.transform, x: r.left + r.width / 2, y: r.top + r.height / 2 };
 })()
 `;
+
+const DRAG_RESULT = `
+(() => {
+	const node = document.querySelector('.react-flow__node-subsystem, .react-flow__node-leaf');
+	return node ? { ok: true, after: node.style.transform } : { ok: false, reason: 'node vanished' };
+})()
+`;
+
+/** Drag a chip by real CDP mouse input; the node transform must not change. */
+const dragTest = async (page) => {
+	const target = await evaluate(page, DRAG_TARGET);
+	if (!target.ok) return { ok: false, reason: target.reason || 'no chip node' };
+	await page.send('Input.dispatchMouseEvent', {
+		type: 'mousePressed',
+		x: target.x,
+		y: target.y,
+		button: 'left',
+		clickCount: 1,
+	});
+	for (let i = 1; i <= 4; i++) {
+		await page.send('Input.dispatchMouseEvent', {
+			type: 'mouseMoved',
+			x: target.x + i * 15,
+			y: target.y + i * 10,
+			button: 'left',
+		});
+	}
+	await page.send('Input.dispatchMouseEvent', {
+		type: 'mouseReleased',
+		x: target.x + 60,
+		y: target.y + 40,
+		button: 'left',
+		clickCount: 1,
+	});
+	await new Promise((r) => setTimeout(r, 300));
+	const result = await evaluate(page, DRAG_RESULT);
+	return {
+		ok: !!result.ok,
+		before: target.before,
+		after: result.after,
+		moved: !!result.ok && target.before !== result.after,
+	};
+};
 
 const DRILL_TEST = `
 (async () => {
@@ -211,6 +253,11 @@ const settledScale = async (page) => {
 		prev = s;
 		await new Promise((r) => setTimeout(r, 200));
 	}
+	console.warn(
+		prev === null
+			? 'WARN  scale never appeared on .react-flow__viewport'
+			: `WARN  scale never settled; last=${prev}`,
+	);
 	return prev;
 };
 
@@ -246,11 +293,11 @@ async function main() {
 		if (HIDE_MINIMAP)
 			await mutateBehavior(
 				page,
-				`document.addEventListener('DOMContentLoaded', () => {
+				`{
 					const s = document.createElement('style');
 					s.textContent = '.react-flow__minimap{display:none!important}';
-					document.head.appendChild(s);
-				});`,
+					(document.head || document.documentElement).appendChild(s);
+				}`,
 			);
 		if (SCREENSHOTS) mkdirSync('verification/screenshots/slice4-3b', { recursive: true });
 
@@ -297,7 +344,7 @@ async function main() {
 			if (!snap.background) problems.push('no background');
 			if (!snap.h1) problems.push('no h1');
 			const copy = `${snap.hint ?? ''} ${snap.titleText ?? ''}`;
-			const hasHangul = /[가-힯]/.test(copy);
+			const hasHangul = /[가-힣]/.test(copy);
 			if (route.hangul && !hasHangul)
 				problems.push(`no hangul in graph copy (hint="${snap.hint}", title="${snap.titleText}")`);
 			if (!route.hangul && hasHangul) problems.push('hangul on EN route');
@@ -348,7 +395,7 @@ async function main() {
 				`expand ${drill.before}->${drill.drilled} chips (crumb=${drill.hasCrumb} back=${drill.hasBack}); restored=${drill.restored} hint=${drill.hintBack}${drill.ok ? '' : ' — ' + (drill.reason || '')}`,
 			);
 
-			const drag = await evaluate(page, DRAG_TEST);
+			const drag = await dragTest(page);
 			report(
 				`${route.id}-nodrag`,
 				drag.ok && !drag.moved,
@@ -400,4 +447,9 @@ async function main() {
 	}
 }
 
-process.exitCode = await main();
+main()
+	.then((code) => process.exit(code))
+	.catch((error) => {
+		console.error(`ERROR ${error.message}`);
+		process.exit(EXIT.ERROR);
+	});
