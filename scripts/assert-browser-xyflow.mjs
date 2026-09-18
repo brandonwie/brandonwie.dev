@@ -81,6 +81,16 @@ const SCALE = `
 })()
 `;
 
+// Edges paint a tick after nodes under load; wait for the whole mounted
+// contract rather than the first node (CI flake: edgePaths=0 mid-paint).
+// Minimap is DOM-presence only so --hide-minimap still reaches the row assert.
+const MOUNTED =
+	"document.querySelectorAll('.react-flow__node').length === 17 " +
+	"&& document.querySelectorAll('.react-flow__edges path, .react-flow__edge path').length === 42 " +
+	"&& document.querySelectorAll('.react-flow__controls button').length === 3 " +
+	"&& !!document.querySelector('.react-flow__minimap') " +
+	"&& !!document.querySelector('.react-flow__background')";
+
 const GRAPH_SNAPSHOT = `
 (async () => {
 	const rf = document.querySelector('.react-flow');
@@ -124,14 +134,19 @@ const HOVER_DIM = `
 	const read = () => [...document.querySelectorAll('.react-flow__edge-path')].map(
 		(p) => p.style.opacity || getComputedStyle(p).opacity,
 	);
+	const until = async (fn, ms = 3000) => {
+		const t0 = Date.now();
+		while (!fn() && Date.now() - t0 < ms)
+			await new Promise((r) => setTimeout(r, 100));
+	};
 	const before = read();
 	const chip = document.querySelector('.react-flow__node-subsystem .s3b-node, .react-flow__node-leaf .s3b-node');
 	if (!chip) return { ok: false, reason: 'no chip' };
 	chip.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-	await new Promise((r) => setTimeout(r, 400));
+	await until(() => read().some((a, i) => a !== before[i]));
 	const during = read();
 	chip.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
-	await new Promise((r) => setTimeout(r, 300));
+	await until(() => read().every((a, i) => a === before[i]));
 	const after = read();
 	const dimmed = during.filter((a, i) => a !== before[i]).length;
 	const restored = after.filter((a, i) => a === before[i]).length;
@@ -159,16 +174,21 @@ const DRILL_TEST = `
 	const chip = document.querySelector('.react-flow__node-subsystem .s3b-node.expandable');
 	if (!chip) return { ok: false, reason: 'no expandable chip' };
 	const nodesNow = () => document.querySelectorAll('.react-flow__node-subsystem, .react-flow__node-leaf').length;
+	const until = async (fn, ms = 3000) => {
+		const t0 = Date.now();
+		while (!fn() && Date.now() - t0 < ms)
+			await new Promise((r) => setTimeout(r, 100));
+	};
 	const before = nodesNow();
 	chip.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-	await new Promise((r) => setTimeout(r, 700));
+	await until(() => nodesNow() !== before);
 	const drilled = nodesNow();
 	const back = document.querySelector('.s3b-flow .toolbar .btn');
 	const crumb = document.querySelector('.s3b-flow .toolbar .crumb');
 	const drillState = { drilled, hasBack: !!back, hasCrumb: !!crumb };
 	if (back) {
 		back.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-		await new Promise((r) => setTimeout(r, 700));
+		await until(() => nodesNow() === before);
 	}
 	const restored = nodesNow();
 	const hintBack = !!document.querySelector('.s3b-flow .hint');
@@ -258,9 +278,7 @@ async function main() {
 		let first = true;
 		for (const route of ROUTES) {
 			await page.send('Page.navigate', { url: `http://127.0.0.1:${server.port}${route.url}` });
-			const isReady = await ready(page, "!!document.querySelector('.react-flow__node')", {
-				timeout: 15000,
-			});
+			const isReady = await ready(page, MOUNTED, { timeout: 15000 });
 			if (INJECT_CONSOLE_ERROR && first) {
 				await evaluate(page, `console.error('synthetic defect for BXC-01')`);
 			}
