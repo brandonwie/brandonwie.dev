@@ -425,6 +425,10 @@ async function main(): Promise<number> {
 	// Identity is keyed to the content inputs, not git HEAD: committing the
 	// manifest moves HEAD, so a HEAD-keyed --check could never match its own
 	// commit. The three inputs below are what actually determines the rows.
+	// The candidate digest covers ONLY what compare() consumes: hashing the
+	// raw capture was proven non-deterministic — rebuilds churn hashed chunk
+	// URLs inside HTML, which moves pages[*].bytes and bundle weights that
+	// the comparator records but never diffs.
 	const canon = (v: unknown): string =>
 		JSON.stringify(v, (_, x) =>
 			x !== null && typeof x === 'object' && !Array.isArray(x)
@@ -432,6 +436,17 @@ async function main(): Promise<number> {
 				: x,
 		);
 	const sha = (s: string) => createHash('sha256').update(s).digest('hex');
+	const comparedCandidate = {
+		pages: Object.fromEntries(
+			Object.entries(candidate.pages).map(([u, p]) => {
+				const fields = { ...(p as Record<string, unknown>) };
+				delete fields.bytes;
+				return [u, fields];
+			}),
+		),
+		site: candidate.site,
+		pagefindEntries: candidate.pagefindEntries,
+	};
 
 	const manifest = {
 		inputs: {
@@ -440,7 +455,7 @@ async function main(): Promise<number> {
 				sha256: sha(readFileSync(join(ROOT, BASELINE_FILE), 'utf8')),
 			},
 			ledger: { file: LEDGER_FILE, sha256: sha(readFileSync(join(ROOT, LEDGER_FILE), 'utf8')) },
-			candidate: { dir: CANDIDATE_DIR, sha256: sha(canon(candidate)) },
+			candidate: { dir: CANDIDATE_DIR, sha256: sha(canon(comparedCandidate)) },
 		},
 		totals: {
 			diffRows: scoped.length,
