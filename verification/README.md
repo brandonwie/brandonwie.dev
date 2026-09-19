@@ -34,13 +34,21 @@ were re-synced from 3B on 2026-09-03.
 
 ## Frozen measurement source
 
-The current generation is **4**. The annotated tag
-`migration-baseline-svelte-8d7b40f-v1` points directly to blob
-`4ffbb6b06d51b6af2234277048bee01cce3b9bfa`. Its tag message records the source
+The current generation on `main` is **7**. The annotated tag
+`migration-baseline-svelte-93a5dd8-v1` points directly to blob
+`4195b63fdbb1f6c31ed3a2fc4477cf1490ee8131`. Its tag message records the source
 path `verification/baseline/svelte-e23e808.json` and SHA-256
-`5176585bbadc421e873233d5eab89c834ebb99298b14c3d1cccf3d9b79ef9af3`. The file
+`d7b527d2b2eb22a57a590e1b6960e027f696fb8e40a0eb5ba5c280f967059959`. The file
 keeps its generation-1 name; the tag, not the filename, identifies the
 generation.
+
+Generation numbers are allocated across branches, not per branch. Generations 5
+and 6 (`migration-baseline-svelte-547a840-v1`, `-v2`) were measured on
+`feat/slice5-comparison` under extractor v2 and are not ancestors of
+generation 7, which `main` measured under extractor v1. When that branch lands
+it must carry this generation's content and take its own final measurement as a
+later generation. Check `git ls-remote --tags origin 'migration-baseline-*'`
+before allocating a number; a number is not reserved until its tag is pushed.
 
 Because this generation is a MEASUREMENT rather than a projection,
 `migration:projection` requires the committed file to be byte-identical to that
@@ -56,13 +64,39 @@ checkouts receive them. An existing clone that predates a tag must fetch it
 once:
 
 ```bash
-git fetch origin tag migration-baseline-svelte-8d7b40f-v1
+git fetch origin tag migration-baseline-svelte-93a5dd8-v1
 ```
 
 **Push the tag before the branch.** CI checks out at push time, so a branch
 pushed first starts a run that cannot see the tag, and `migration:projection`
 fails with `tag-unavailable` on a change that is otherwise correct. Observed on
 the generation-2 PR.
+
+### Generation 4 (superseded, still reachable)
+
+`migration-baseline-svelte-8d7b40f-v1` → blob
+`4ffbb6b06d51b6af2234277048bee01cce3b9bfa`, SHA-256
+`5176585bbadc421e873233d5eab89c834ebb99298b14c3d1cccf3d9b79ef9af3`. Superseded
+by generation 7, which measured a resync of seven EN/KO post pairs (content
+commit `93a5dd8`). Generation 7 differs from it by: the `shell` stylesheet
+marker on 367 pages, `0.qmNWR8Jb.css` to `0.UbsLkhoc.css`; 14 post pages (`articleMeta`, `jsonLd`, `textHash`, `textLength` on seven EN/KO pairs,
+plus `description`, `og`, `twitter` on three pairs and `title`, `h1` on one);
+6 listing pages (`/`, `/posts`, `/tags` and their `/ko` twins) reordered because
+`updated` moved; and the `rss.xml` and `ko/rss.xml` site artifacts. The page set
+(368), served statuses, Pagefind count (346), `sitemap.xml` and `_redirects` are
+unchanged. `bundle` moved `htmlBytes` +30196, `jsBytes` +29110, `cssBytes` +36,
+`totalBytes` +79410, with `fileCount` and `imageBytes` identical.
+
+**The stylesheet move is an environment fix, not a style change.** `docs` is a
+tracked symlink whose target exists only on the author's machine, and Tailwind's
+automatic source detection followed it, so a locally captured baseline carried
+utilities generated from private notes and its `shell` hash moved whenever a
+note changed. `src/app.css` now declares `@source not "../docs"`. A same-commit
+experiment varying only the symlink target showed the exclusion yields a
+stylesheet byte-identical to the deployed one. **A baseline captured on a
+machine where a symlinked or untracked directory feeds the scanner is not a
+measurement of the site** — confirm the local stylesheet digest matches the
+deployed one before capturing.
 
 ### Generation 3 (superseded, still reachable)
 

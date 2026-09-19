@@ -2,7 +2,7 @@
 title: Claude Code Agent Teams
 description: Experimental feature for orchestrating multiple Claude Code instances as a coordinated team with shared task lists and inter-agent messaging
 date: 2026-02-09T00:00:00.000Z
-updated: "2026-08-12"
+updated: "2026-09-20"
 tags:
   - ai-ml
   - claude-code
@@ -12,7 +12,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 00a26cb8057630c978fefb9e2708894439ba7658bae32b043f3547b9931fa467
+source_content_hash: 2d864bda3c9080a02d1b4e1b87440cfb22f631396e92eeabc728b676116a3538
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
@@ -160,6 +160,21 @@ That workflow is now history, not advice. The official docs state that both `Tea
 **Teammate summary-field trap (silent deliverable loss).** When a teammate sends a message back, its reply has both a `summary` field (5-10 words for the UI preview) and a `message` field (the full content). Some teammates put _only_ a meta-summary like "X complete, ready to paste" in the summary field and leave the message body empty or just restate the meta. The actual deliverable never arrives. I hit this on a 3-agent prep team in early April: 2 of 3 teammates returned summary-only messages, and an idle notification arrived without any prior content message. The lead session interpreted "idle" as task completion and moved on. Root cause: the teammate prompts didn't explicitly tell them where the deliverable belongs; they treated the summary as the report. The fix: every teammate brief must explicitly say "put the full deliverable in the message body; the summary field is metadata only, max 10 words." Equally important: treat an idle notification _without a prior content message_ as a silent failure, not task completion. Recovery is unreliable: `SendMessage`-ing an idle teammate to ask for the report inline does not deliver in time reliably, and the late payload may arrive a turn or more later, or not before you need it. The durable fix is structural. For any fan-out then collect step, use a _synchronous_ `Agent` call with no `name` or `team_name`, so its final message returns directly as the tool result and the deliverable cannot be stranded in an invisible summary field. Reserve named or background teammates for work whose output you do not need to read back inline.
 
 **Restricted-tool worker types cannot message at all.** The summary-field trap has a harder variant. Worker agent types whose tool list excludes `SendMessage` and `Write` entirely (read-only workers with only Read, Glob, Grep, and Bash) are structurally unable to deliver a background report. The orchestrator receives idle notifications and nothing else, and no amount of re-instruction fixes it because the delivery tool does not exist in the worker's toolbox. I hit this on 2026-07-10 with four background diagnostic workers: four-plus wasted nudges before diagnosing the cause. The fix: when fanning out to restricted-tool agent types in the background, specify a file-drop delivery contract up front ("write your full report via Bash heredoc to `<agreed-path>`") and have the orchestrator read the files on each idle ping. Workers with Bash can always `cat > file <<'EOF'` even without the Write tool. A synchronous unnamed `Agent` call remains the simpler fix when the result must return inline.
+
+**A named teammate's return has no delivery deadline.** The trap above is about
+_where_ a deliverable goes. This one is about when it shows up. Teammate output
+never arrives as a tool result; only lifecycle `idle` signals do. So an idle
+teammate that has not delivered has not necessarily failed, and its report can
+still land long after you stopped waiting for it. On 2026-09-11 I dispatched a
+teammate for a security read. It answered nothing to two explicit `SendMessage`
+requests, so I moved on. The full report arrived after the session had already
+wrapped, committed, and pushed, and it contradicted the conclusion I had shipped
+in the interval. So treat "it went idle without a report" as UNRESOLVED rather
+than failed. If a read gates a commit, use a synchronous unnamed `Agent` so the
+answer comes back before you decide. If a named teammate is already out and you
+cannot wait for it, say in the commit that the review is still outstanding
+instead of reporting a verdict from whatever partial evidence you happen to
+hold.
 
 ## Current limitations to design around
 

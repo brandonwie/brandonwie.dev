@@ -4,7 +4,7 @@ description: >-
   한 저장소에 커밋하는 두 세션, 느린 pre-commit hook, 그리고 `fatal: cannot lock ref HEAD`.
   시끄러운 실패는 쉬운 쪽이에요 — 조용한 실패는 내 staged 파일을 다른 세션의 커밋에 그쪽 메시지로 넘겨버려요.
 date: 2026-05-14T00:00:00.000Z
-updated: "2026-09-03"
+updated: "2026-09-20"
 tags:
   - devops
   - transferable
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: git-pre-commit-parallel-session-head-race
-source_updated: "2026-09-03"
-translation_date: "2026-09-03"
+source_updated: "2026-09-20"
+translation_date: "2026-09-20"
 ---
 
 같은 저장소에서 두 agent 세션이 동시에 작업하고 있었고, 둘 다 거의 같은 순간에 커밋을 시도했어요. 그중 하나가 커밋 도중에 이렇게 죽었어요:
@@ -50,6 +50,8 @@ fatal: cannot lock ref 'HEAD': is at <new-sha> but expected <prev-sha>
 
 헷갈리는 지점은 중단 메시지가 마치 내 변경에 문제가 있는 것처럼 보인다는 거예요. 실제로는 아니고요. 다른 세션이 조용해진 다음에 다시 시도하는 게 해결책의 전부예요.
 
+중단 경로에는 제가 처음에 잘못 짚은 구석이 하나 있어요. stash/복원 사이클이 포기하고 나면 lint-staged가 `On main: lint-staged automatic backup`이라는 이름으로 stash를 하나 남겨두는데, 저는 이걸 그냥 임시 찌꺼기로 보고 지워버리려 했어요. 찌꺼기가 아니에요. 이 스냅샷은 체크아웃 안에서 수정된 모든 path를 담고 있고, 공유 체크아웃이라면 다른 세션의 unstaged 작업까지 들어 있다는 뜻이에요. 제 경우엔 열일곱 개 path였는데 그중 제 것은 하나도 없었어요. 그 작업의 주인들이 지워도 된다고 할 때까지, 아니면 blob 단위로 비교해서 복구할 게 남아 있지 않다는 걸 확인할 때까지는 그대로 두세요.
+
 ## fix는 "hook을 더 빠르게"가 아니라 구조적
 
 이걸 성능 문제로 보고 hook을 깎고 싶은 유혹이 들어요. 그런다고 race가 일어나는 틈이 줄긴 해도 완전히 닫히진 않아요 — HEAD를 공유하는 한, hook이 도는 동안 다른 커밋이 언제든 그 HEAD를 옮길 수 있거든요. 진짜 해법은 HEAD를 아예 공유하지 않는 거예요. 오래 도는 병렬 세션마다 자기만의 **git worktree**를 하나씩 주면 돼요.
@@ -68,6 +70,14 @@ git -C <main> worktree add <main>/.worktrees/<branch-slug> \
 그러면 두 세션이 독립적으로 커밋하고, worktree 브랜치가 다시 merge되면 모두가 결과를 봐요 — 하지만 커밋 자체는 절대 race하지 않아요.
 
 worktree를 쓰기 어려운 상황도 있어요. 이미 세팅해 둔 체크아웃에서 뭐 하나 빠르게 고쳐야 할 때 같은 경우요. 그럴 땐 공유 index를 그대로 둔 채로 쓰는 더 가벼운 선택지도 있어요. `git commit -m ... -- <paths>`는 이름을 적은 path만 커밋하고 나머지 index는 건드리지 않아요. 그래서 공유 index 하나를 놓고도 두 세션이 각자의 커밋을 따로 남길 수 있어요. 대신 pathspec 커밋은 디스크에 있는 index가 아니라 임시 index로 만들어져서, pre-commit hook이 보는 게 평범한 커밋 때와 똑같지는 않아요. 여기에 기대기 전에 자기 hook 기준으로 한 번 확인해 보는 게 좋아요.
+
+push에도 커밋과 똑같은 모양의 문제가 있는데, 명령이 무해해 보여서 놓치기 쉬워요. 공유 체크아웃에서는 로컬 `main`의 제 커밋 위로 다른 세션의 아직 push되지 않은 커밋이 쌓여 있을 수 있어요. 그래서 `git push origin main`은 그쪽이 고르지도 않은 순간에 그쪽 작업까지 같이 공개해 버려요. 커밋을 콕 집어서 push하면 제 것만 나가요:
+
+```bash
+git push origin <sha>:refs/heads/main
+```
+
+먼저 그 커밋의 부모가 `origin/main`인지 확인하세요. `origin/main`이 이미 앞서 나가 있다면 그 push는 더 이상 제 커밋만으로 fast-forward가 되지 않아요. 그럴 땐 브랜치 push로 물러설 게 아니라 멈추고 baseline을 새로 떠야 해요.
 
 ## 열려 있는 틈은 hook 시간만이 아니에요
 
@@ -104,7 +114,7 @@ history를 "고치"려 들기 전에 알아둘 만한 것들:
   marker를 확인하세요. 내 세션에서 그 conflict를 대신 풀면 상대 세션의 작업을
   덮어쓸 수 있어요.
 - **Force-push랑 `--amend`는 여기서 복구 수단이 아니에요.** 커밋은 실제로 일어났어요 — 그냥 잘못된 메시지로요. 병렬 세션의 커밋을 amend하면 _그쪽_ history를 다시 써요. 하지 마세요.
-- **파일이 실제로 어디로 갔는지 확인**하려면 `git ls-files <expected-path>`랑 `git log -- <expected-path>`를 쓰세요. 뒤쪽 명령이 그 파일이 어느 커밋에 들어갔는지 보여줘요.
+- **파일이 실제로 어디로 갔는지 확인**하려면 `git ls-files <expected-path>`랑 `git log -- <expected-path>`를 쓰세요. 뒤쪽 명령이 그 파일이 어느 커밋에 들어갔는지 보여주고, `git show <sha> --name-only`는 그 커밋이 파일과 함께 쓸어 담은 나머지 전부를 보여줘요. 뭘 다시 커밋하기 전에 먼저 해 보세요. 다른 세션의 평범한 `git commit` 하나면 이렇게 되기에 충분하거든요. 공유 체크아웃이라면 처음부터 pathspec 커밋 형태를 쓰라는 근거가 여기 있어요. 그러면 index에 느슨하게 놓인 채 딸려 갈 내 파일이 애초에 없어요.
 - **깔끔한 재커밋은 없어요.** 파일이 이미 다른 커밋에 tracked돼 있으면, 다시 stage하는 건 no-op이에요(`nothing to commit, working tree clean`). 메시지 비대칭은 이제 history에 영구적이에요. attribution이 중요하면, 가장 깔끔한 보정은 의도한 메시지랑 scope를 달고 파일 변경은 없는 후속 커밋 — 본질적으로 로그에 남기는 메모예요.
 
 ## worktree가 답일 때(그리고 아닐 때)

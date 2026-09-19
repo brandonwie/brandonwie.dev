@@ -6,7 +6,7 @@ description: >-
   class. With detection signals and the empirical tiebreaker that resolves
   factual disagreements.
 date: 2026-04-08T00:00:00.000Z
-updated: "2026-08-02"
+updated: "2026-09-20"
 tags:
   - ai-ml
   - code-review
@@ -19,16 +19,19 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: f75da1cbffe4bd2b9c14344b729aae106af0efa7907266174f8c6169ec312537
+source_content_hash: 9dad5704009e81b4bbcde612e67977a8c659a62f755400a10551582c434a6be2
 references:
   - url: 'https://github.com/encode/starlette/blob/master/starlette/applications.py'
     title: 'Starlette add_middleware source — authoritative reference'
     type: authoritative
+  - url: 'https://nextjs.org/docs/app/getting-started/server-and-client-components'
+    title: 'Next.js — Server and Client Components'
+    type: official
 ---
 
 Recently I started running a `/pr-review-rectify` workflow that takes every inline comment Claude, Copilot, and Codex leave on a diff and classifies each as valid, invalid, controversial, or good-to-have. The point is to catch real bugs from the signal side while filtering out false positives with structure.
 
-Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR surfaced something different: a *productive* behavior worth amplifying. May added three more failure modes — including the first analyst-side error class — and one PR-body-vs-source-conflation pattern. Mid-May added two more: a cross-reviewer convergence on a phantom formatting bug, and a second productive behavior where the reviewer audits siblings the analyst missed. I can now point at ten failure modes, two productive behaviors, and one analyst-side class, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one to three samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
+Two back-to-back PRs in early April produced enough classification material to start naming the failure modes. Two more PRs later in the month added a second class of failure — temporal, not semantic. By late April, a multi-round PR surfaced something different: a *productive* behavior worth amplifying. May added three more failure modes — including the first analyst-side error class — and one PR-body-vs-source-conflation pattern. Mid-May added two more: a cross-reviewer convergence on a phantom formatting bug, and a second productive behavior where the reviewer audits siblings the analyst missed. A September PR on my own site repo added no new modes, just two more samples for the two oldest ones. I can now point at ten failure modes, two productive behaviors, and one analyst-side class, each with a concrete example, a detection signal, and a prevention or amplification technique. These patterns are still small (one to four samples each), and I expect the catalog to grow as I validate more PRs. What I want to share today is the shape of the observation, because naming the failure mode made the next triage dramatically faster.
 
 ## The setup
 
@@ -36,8 +39,8 @@ The validation workflow looks at every AI reviewer comment on a PR and, for each
 
 | Pattern                                  | Type     | First seen      | Trigger                                                                 |
 | ---------------------------------------- | -------- | --------------- | ----------------------------------------------------------------------- |
-| Cross-File Blindness                     | failure  | NestJS PR       | NestJS decorator vs. Express typing; entity NOT-NULL/default invariant  |
-| Intentional Design                       | failure  | NestJS PR       | Documented trade-off with an inline NOTE                                |
+| Cross-File Blindness                     | failure  | NestJS PR       | NestJS decorator vs. Express typing; entity NOT-NULL/default invariant; transitive client-module boundaries |
+| Intentional Design                       | failure  | NestJS PR       | Documented trade-off with an inline NOTE; baseline state tokens kept through a migration |
 | Disagreeing Claim                        | failure  | Starlette PR    | Two reviewers give opposite claims; tiebreaker is an experiment         |
 | Confidently Wrong on Library Internals   | failure  | Starlette PR    | Articulate reassurance about framework behavior that contradicts source |
 | Stale Snapshot Review                    | failure  | Python PR       | Review indexed against an earlier revision that no longer is HEAD       |
@@ -60,6 +63,8 @@ On a NestJS PR, Copilot flagged a controller parameter bound to a custom request
 
 The same pattern showed up again in a different shape on a later NestJS PR. Claude traced a mapper into the constructor it delegates to and argued that a request without the optional detail payload could throw 400, because the mapper's field-presence check would come out false. The two-file trace was internally consistent, but it missed the entity-level invariant: the field-presence helper also counted a NOT-NULL enum column with a truthy default. An entity loaded from the database always carries that column, the object spread preserves it, and the detail branch is therefore always taken. The missing context was not another function call; it was a `@Column({ default })` declaration that made the guard's input shape stronger than the local DTO trace suggested.
 
+The third shape showed up in September, on [PR #45](https://github.com/brandonwie/brandonwie.dev/pull/45) of this site's own repo, and it is the clearest version of the pattern I have. Copilot filed two findings, one on [`HeaderControls`](https://github.com/brandonwie/brandonwie.dev/pull/45#discussion_r3944433854) and one on [`LanguageToggle`](https://github.com/brandonwie/brandonwie.dev/pull/45#discussion_r3944433865), each claiming the component needed its own `'use client'` directive. Both are imported by `SiteHeader`, which already carries the directive. Neither touches a server-only API, and both receive their resolved copy through props. In the Next.js App Router, a `'use client'` directive marks a boundary, and everything imported below that boundary enters the client module graph transitively, so the children do not need to re-declare it. The missing context was one line in the parent module, which the reviewer never opened. I dismissed both findings against the verified import chain and the [Next.js client-boundary documentation](https://nextjs.org/docs/app/getting-started/server-and-client-components), then left a short explanatory comment at each flagged component instead of adding any runtime directive.
+
 **Why it happens.** Most AI reviewers work with a single-file or single-diff context window. They can see the types flowing through the current file but cannot trace a decorator call into its implementation in a dependency package. So "what does this decorator actually return at runtime?" becomes a question they cannot answer, and the type signature at the nearest reachable point (often a raw framework type) becomes the default assumption.
 
 **Detection signal.** Any flag that cites "the framework type says X" for a parameter that is actually produced by a framework decorator, or any two-file trace that ignores a NOT-NULL/defaulted entity column. Ask yourself: *did the reviewer look up the decorator, or did it stop at the declared type? Did it check the entity invariant, or only the mapper and DTO?*
@@ -73,6 +78,10 @@ I wrote the technical deep-dive for this specific case in a separate post — se
 > **One-line definition:** The reviewer flags a known, already-documented trade-off as a problem.
 
 On the same NestJS PR, Claude flagged a client-type shortcut in an auth guard as a security issue. Two lines above the flagged code, an inline NOTE already recorded the same risk as a pre-existing, accepted trade-off — written in plain English, in the same file, immediately adjacent.
+
+The same PR #45 on this site's repo produced a second instance with a different flavor. CodeRabbit, another reviewer bot I run there, [suggested renaming](https://github.com/brandonwie/brandonwie.dev/pull/45#pullrequestreview-5125835297) the `is-active` and `is-current` state classes to BEM modifiers. The suggestion is defensible as naming advice and wrong as a change to make here: the migration this PR is part of deliberately preserves the baseline's state tokens, because the structural assertions that check the migration inspect those exact class names. Renaming them means touching the CSS, the components, and the test harness in one coordinated sweep, a larger change that fixes no defect and removes the very thing the assertions compare against. I kept the names and recorded the preservation rationale in a comment beside the CSS selector, then closed the [compatibility discussion](https://github.com/brandonwie/brandonwie.dev/pull/45#discussion_r3944507764) with that reasoning.
+
+This second example sharpens the pattern's definition. The first instance was a documented risk the reviewer re-flagged; this one is a documented *constraint* the reviewer could not see, because the constraint lives in a test harness that was never in the diff. Both resolve the same way: the intent is already decided, and the flag is re-litigating it.
 
 **Why it happens.** AI reviewers do not reliably process inline documentation that acknowledges risk. They will read the NOTE and flag the risk anyway, as though the NOTE were not there. This is a philosophical failure more than a technical one — the reviewer weights "is this risky?" over "has this risk already been acknowledged in the codebase?"
 

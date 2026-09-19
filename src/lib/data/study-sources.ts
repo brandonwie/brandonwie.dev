@@ -266,7 +266,7 @@ export const AWS_AI_PRACTITIONER_SOURCE_FILES: StudySourceFile[] = [
 	},
 	{
 		path: 'course-slides-v19-brief.md',
-		sha256: '0448cbc2acdd86df8edeaa37cb332fb9f7769e51dca92f2d5779577c35922d32',
+		sha256: '35dcb9cc8b895e0a08dede7a3509c4766162284e7ad732fdf317d0c30c84762b',
 		role: 'slide-summary',
 	},
 ];

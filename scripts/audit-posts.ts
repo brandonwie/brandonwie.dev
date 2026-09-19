@@ -16,8 +16,8 @@
  *                              Self-owned links are context, never the anchor.
  *
  * The deny list that names the employer lives in the PRIVATE 3B repo, never
- * here — this repo is public. Missing config degrades to structural checks
- * only, and says so.
+ * here — this repo is public. Missing config fails the run; pass
+ * --allow-missing-terms to degrade to structural checks only.
  *
  * Usage:
  *   pnpm audit:posts                     # whole EN corpus, both gates
@@ -25,6 +25,7 @@
  *   pnpm audit:posts -- --g1             # skip network (G1 only)
  *   pnpm audit:posts -- --include-drafts # audit retired posts too
  *   pnpm audit:posts -- --json           # machine-readable report
+ *   pnpm audit:posts -- --allow-missing-terms # structural checks only
  *
  * Exit code 1 when any non-draft post in scope fails a gate.
  */
@@ -33,6 +34,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
+import { fileURLToPath } from 'url';
 import matter from 'gray-matter';
 
 const EN_DIR = './src/content/posts/en';
@@ -49,7 +51,7 @@ const INTERNAL_ONLY_TAGS = new Set(['work', 'company', 'internal', 'private', 'c
 
 const TERMS_PATH =
 	process.env.BLOG_AUDIT_TERMS ??
-	join(homedir(), 'dev/personal/3b/.agents/config/blog-audit-terms.json');
+	join(homedir(), 'dev/3b/.agent-ssot/config/blog-audit-terms.json');
 
 const CREDIBLE_TYPES = new Set(['official', 'authoritative']);
 const CONCURRENCY = 12;
@@ -80,6 +82,7 @@ interface Terms {
 	selfDomains: { domains: string[] };
 	personalFraming: { terms: string[] };
 	namedHumans: { terms: string[] };
+	benignWords: { terms: string[] };
 }
 
 const EMPTY_TERMS: Terms = {
@@ -90,6 +93,7 @@ const EMPTY_TERMS: Terms = {
 	selfDomains: { domains: ['brandonwie.dev'] },
 	personalFraming: { terms: [] },
 	namedHumans: { terms: [] },
+	benignWords: { terms: [] },
 };
 
 /**
@@ -132,8 +136,31 @@ function escapeRe(s: string): string {
 	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Matching boundary for a Hangul term: ANY occurrence is a hit, except inside
+ * a word named in the private list's `benignWords`.
+ *
+ * Korean is agglutinative — a name takes an open-ended set of endings
+ * (particles, copulas, conversational forms), so an accept-list of suffixes
+ * always misses one, and a miss is a leak. Detection is therefore the default
+ * and clearing is the exception. The cost is a review prompt when a term sits
+ * inside an unlisted unrelated word; the fix is one entry in the private list.
+ * Benign words live there, never here: a public exclusion would point at the
+ * term it exists to protect.
+ */
+function hangulHit(haystack: string, term: string, benign: string[]): boolean {
+	const needle = term.toLowerCase();
+	let text = haystack.toLowerCase();
+	for (const word of benign) {
+		const w = word.toLowerCase();
+		if (w.includes(needle)) text = text.split(w).join(' ');
+	}
+	return text.includes(needle);
+}
+
 /** Whole-word-ish match that still catches `moba-works` and `moba_production`. */
-function wordHit(haystack: string, term: string): boolean {
+export function wordHit(haystack: string, term: string, benign: string[] = []): boolean {
+	if (/[가-힣]/.test(term)) return hangulHit(haystack, term, benign);
 	return new RegExp(`(^|[^a-z0-9])${escapeRe(term.toLowerCase())}([^a-z0-9]|$)`, 'i').test(
 		haystack,
 	);
@@ -160,9 +187,10 @@ function auditG1(fm: Record<string, unknown>, body: string, terms: Terms): Findi
 	const frame = `${title}\n${description}\n${body.split('\n').slice(0, 12).join('\n')}`;
 	const whole = `${title}\n${description}\n${body}`;
 	const lower = whole.toLowerCase();
+	const benign = terms.benignWords.terms;
 
 	for (const term of terms.employer.terms) {
-		if (wordHit(lower, term)) {
+		if (wordHit(lower, term, benign)) {
 			findings.push({
 				gate: 'G1',
 				rule: 'employer-name',
@@ -182,7 +210,7 @@ function auditG1(fm: Record<string, unknown>, body: string, terms: Terms): Findi
 	}
 
 	for (const name of terms.namedHumans.terms) {
-		if (wordHit(whole, name)) {
+		if (wordHit(whole, name, benign)) {
 			findings.push({
 				gate: 'G1',
 				rule: 'named-human',
@@ -192,7 +220,7 @@ function auditG1(fm: Record<string, unknown>, body: string, terms: Terms): Findi
 	}
 
 	for (const term of terms.personalFraming.terms) {
-		if (wordHit(frame.toLowerCase(), term)) {
+		if (wordHit(frame.toLowerCase(), term, benign)) {
 			findings.push({
 				gate: 'G1',
 				rule: 'personal-framing',
@@ -412,6 +440,18 @@ async function main() {
 
 	const { terms, loaded } = loadTerms();
 
+	// Fail closed. A missing deny list silently disables employer detection, and
+	// a moved path did exactly that for weeks. Structural-only runs are opt-in.
+	if (!loaded && !args.includes('--allow-missing-terms')) {
+		console.error(
+			`❌ Deny list not found at ${TERMS_PATH}.\n` +
+				`   Employer/personal-framing detection would be OFF, so the audit refuses to run.\n` +
+				`   Set BLOG_AUDIT_TERMS to the private list, or pass --allow-missing-terms\n` +
+				`   for a structural-only run.`,
+		);
+		process.exit(1);
+	}
+
 	// Both locales. A leak in a Korean post is just as public as one in English,
 	// and KO carries content its EN twin does not — a KO-only internal project ID
 	// survived an EN-only audit on 2026-08-02.
@@ -488,7 +528,9 @@ async function main() {
 	process.exit(failing.length > 0 ? 1 : 0);
 }
 
-main().catch((err) => {
-	console.error(err);
-	process.exit(1);
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+	main().catch((err) => {
+		console.error(err);
+		process.exit(1);
+	});
+}

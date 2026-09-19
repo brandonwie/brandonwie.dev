@@ -5,7 +5,7 @@ description: >-
   behavior + 한 가지 analyst-side error class. 탐지 신호와 사실관계 충돌을 해결하는 empirical
   tiebreaker까지 정리했어요.
 date: 2026-04-08T00:00:00.000Z
-updated: "2026-08-02"
+updated: "2026-09-20"
 tags:
   - ai-ml
   - code-review
@@ -19,13 +19,13 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-code-review-confusion-patterns
-source_updated: "2026-08-02"
-translation_date: "2026-06-14"
+source_updated: "2026-09-20"
+translation_date: "2026-09-20"
 ---
 
 최근에 `/pr-review-rectify`라는 workflow를 돌리기 시작했어요. Claude, Copilot, Codex가 diff에 남긴 inline 코멘트를 전부 가져와서 valid / invalid / controversial / good-to-have로 분류하는 흐름이에요. 진짜 bug는 놓치지 않으면서 false positive는 구조적으로 걸러내는 게 목적이에요.
 
-4월 초에 연달아 올라간 PR 두 개에서 failure mode의 이름을 붙일 수 있을 만큼의 분류 자료가 쌓였어요. 같은 달 뒤쪽에 올라간 PR 두 개가 또 다른 class의 실패를 보여줬어요 — semantic이 아니라 temporal이에요. 4월 말에는 multi-round PR 하나가 또 다른 종류의 관찰을 줬어요: amplify할 가치가 있는 *productive* 행동이요. 5월에 세 가지 failure mode가 더 추가됐어요 — 첫 analyst-side error class 포함 — 그리고 PR-body-vs-source-conflation 패턴 하나도. 5월 중순에는 두 개가 더 붙었어요: phantom formatting bug에 두 reviewer가 cross-converge하는 케이스 하나, 그리고 reviewer가 analyst가 놓친 sibling을 audit해 주는 두 번째 productive behavior 하나예요. 이제는 열 가지 실패 유형, 두 가지 productive behavior, 한 가지 analyst-side class를 가리킬 수 있어요. 각 패턴마다 구체적인 예시, 탐지 신호, 예방(또는 amplify) 기법이 있어요. 아직 샘플은 패턴당 하나에서 셋 정도예요. 앞으로 더 많은 PR을 validate하면서 catalog도 늘어날 거라고 봐요. 오늘 공유하고 싶은 건 이 관찰의 모양이에요. 실패 유형에 이름을 붙이고 나니 다음 triage가 훨씬 빨라졌거든요.
+4월 초에 연달아 올라간 PR 두 개에서 failure mode의 이름을 붙일 수 있을 만큼의 분류 자료가 쌓였어요. 같은 달 뒤쪽에 올라간 PR 두 개가 또 다른 class의 실패를 보여줬어요 — semantic이 아니라 temporal이에요. 4월 말에는 multi-round PR 하나가 또 다른 종류의 관찰을 줬어요: amplify할 가치가 있는 *productive* 행동이요. 5월에 세 가지 failure mode가 더 추가됐어요 — 첫 analyst-side error class 포함 — 그리고 PR-body-vs-source-conflation 패턴 하나도. 5월 중순에는 두 개가 더 붙었어요: phantom formatting bug에 두 reviewer가 cross-converge하는 케이스 하나, 그리고 reviewer가 analyst가 놓친 sibling을 audit해 주는 두 번째 productive behavior 하나예요. 9월에는 제 사이트 repo의 PR 하나가 새로운 유형은 추가하지 않고 가장 오래된 두 패턴에 샘플만 둘 더 보탰어요. 이제는 열 가지 실패 유형, 두 가지 productive behavior, 한 가지 analyst-side class를 가리킬 수 있어요. 각 패턴마다 구체적인 예시, 탐지 신호, 예방(또는 amplify) 기법이 있어요. 아직 샘플은 패턴당 하나에서 넷 정도예요. 앞으로 더 많은 PR을 validate하면서 catalog도 늘어날 거라고 봐요. 오늘 공유하고 싶은 건 이 관찰의 모양이에요. 실패 유형에 이름을 붙이고 나니 다음 triage가 훨씬 빨라졌거든요.
 
 ## 설정
 
@@ -33,8 +33,8 @@ validation workflow는 AI reviewer가 PR에 남긴 모든 comment를 살펴봐�
 
 | 패턴                                     | 유형     | 처음 본 곳        | 트리거                                                              |
 | ---------------------------------------- | -------- | ----------------- | ------------------------------------------------------------------- |
-| Cross-File Blindness                     | failure  | NestJS PR         | NestJS decorator vs Express typing; entity NOT-NULL/default invariant |
-| Intentional Design                       | failure  | NestJS PR         | 이미 inline NOTE로 기록된 trade-off                                 |
+| Cross-File Blindness                     | failure  | NestJS PR         | NestJS decorator vs Express typing; entity NOT-NULL/default invariant; transitive하게 전파되는 client-module 경계 |
+| Intentional Design                       | failure  | NestJS PR         | 이미 inline NOTE로 기록된 trade-off; migration 내내 유지해야 하는 baseline state token |
 | Disagreeing Claim                        | failure  | Starlette PR      | 두 reviewer가 정반대 주장을 함. tiebreaker는 실험                   |
 | Confidently Wrong on Library Internals   | failure  | Starlette PR      | source에 반하는 framework 동작을 자신 있게 재보증                  |
 | Stale Snapshot Review                    | failure  | Python PR         | 더 이상 HEAD가 아닌 이전 리비전을 기준으로 리뷰가 indexing됐어요    |
@@ -57,6 +57,8 @@ NestJS PR에서 Copilot이 `@Headers()`로 custom request header에 바인딩된
 
 같은 패턴은 이후 다른 NestJS PR에서 또 다른 모양으로 나왔어요. Claude는 mapper에서 그 mapper가 위임하는 생성자로 이어지는 trace를 따라가며, optional detail payload가 없는 요청이 400을 던질 수 있다고 봤어요. mapper의 field-presence 체크가 false가 된다는 reasoning이었죠. 두 파일만 놓고 보면 trace는 그럴듯했지만, entity-level invariant를 놓쳤어요. 그 field-presence helper는 default 값이 truthy인 NOT-NULL enum column도 함께 세고 있었거든요. DB에서 로드된 entity에는 그 column이 항상 있고, object spread도 그 값을 보존하니까 detail 분기는 언제나 타요. 빠진 context는 다른 함수 호출이 아니라, guard 입력 shape를 더 강하게 만드는 `@Column({ default })` 선언이었어요.
 
+세 번째 모양은 9월에 이 사이트 repo의 [PR #45](https://github.com/brandonwie/brandonwie.dev/pull/45)에서 나왔어요. 지금까지 모은 것 중 이 패턴을 가장 선명하게 보여 주는 케이스예요. Copilot이 finding 두 개를 올렸어요. 하나는 [`HeaderControls`](https://github.com/brandonwie/brandonwie.dev/pull/45#discussion_r3944433854)에, 하나는 [`LanguageToggle`](https://github.com/brandonwie/brandonwie.dev/pull/45#discussion_r3944433865)에 걸렸고, 둘 다 그 component에 자체 `'use client'` directive가 필요하다는 주장이었어요. 두 component 모두 `SiteHeader`가 import하고 있고, `SiteHeader`에는 이미 그 directive가 붙어 있어요. 둘 다 server 전용 API를 건드리지 않고, 화면에 들어갈 문구도 이미 확정된 상태에서 props로 받아요. Next.js App Router에서 `'use client'` directive는 경계를 표시하고, 그 경계 아래로 import되는 건 전부 transitive하게 client module graph에 들어와요. 그래서 자식 쪽에서 다시 선언할 필요가 없어요. 빠진 context는 부모 모듈의 한 줄이었고, reviewer는 그 파일을 한 번도 열어 보지 않았어요. 확인된 import chain과 [Next.js client boundary 문서](https://nextjs.org/docs/app/getting-started/server-and-client-components)를 근거로 두 finding을 모두 기각했어요. runtime directive를 추가하는 대신 flag된 component마다 짧은 설명 comment를 남겼고요.
+
 **왜 이런 일이 생길까요.** 대부분의 AI reviewer는 single-file 또는 single-diff context window로 동작해요. 현재 파일을 흐르는 타입은 볼 수 있지만, decorator 호출을 따라 dependency 패키지 내부 구현까지 들어가진 못해요. 그래서 "이 decorator가 runtime에서 실제로 뭘 리턴하지?" 하는 질문은 답할 수 없는 질문이 되고, 가장 가까운 도달 가능한 지점의 type signature(보통 raw framework type)가 기본 가정이 돼 버려요.
 
 **탐지 신호.** "framework type이 X라고 말해요"라고 인용하면서, 실제로는 framework decorator가 만들어낸 parameter를 지적하는 모든 flag. 또는 NOT-NULL/defaulted entity column을 무시한 two-file trace. 스스로에게 이렇게 물어보세요. *reviewer가 decorator를 찾아봤나, 아니면 parameter에 적힌 타입만 봤나? entity invariant를 확인했나, mapper와 DTO만 봤나?*
@@ -70,6 +72,10 @@ NestJS PR에서 Copilot이 `@Headers()`로 custom request header에 바인딩된
 > **한 줄 정의:** 이미 문서화된 trade-off를 reviewer가 문제로 flag해요.
 
 같은 NestJS PR에서, Claude가 auth guard의 client-type shortcut을 security 이슈로 flag했어요. flag된 코드의 두 줄 위에는 이미 inline NOTE가 있었고, 같은 리스크를 "기존부터 존재하는, 이미 수용된 trade-off"로 기록해 두고 있었어요. 같은 파일 안에, 바로 붙어서, 평범한 문장으로요.
+
+같은 사이트 repo의 PR #45에서 결이 조금 다른 두 번째 사례가 나왔어요. 거기서 같이 돌리는 또 다른 reviewer bot인 CodeRabbit이 `is-active`와 `is-current` state class를 BEM modifier로 [바꾸자고 제안했어요](https://github.com/brandonwie/brandonwie.dev/pull/45#pullrequestreview-5125835297). 네이밍 조언으로는 충분히 할 만한 이야기지만, 여기서 실제로 적용할 변경으로는 틀렸어요. 이 PR이 속한 migration은 baseline의 state token을 의도적으로 그대로 두고 있거든요. migration을 검증하는 구조 assertion이 바로 그 class 이름을 확인하기 때문이에요. 이름을 바꾸려면 CSS, component, test harness를 한 번에 맞춰서 손대야 해요. 고치는 결함은 하나도 없으면서 assertion이 비교하는 기준 자체를 없애 버리는 훨씬 큰 변경이죠. 그래서 이름은 그대로 두고 보존 이유를 CSS selector 옆 comment에 기록한 뒤, 그 근거로 [호환성 논의](https://github.com/brandonwie/brandonwie.dev/pull/45#discussion_r3944507764)를 닫았어요.
+
+이 두 번째 사례가 패턴의 정의를 더 뾰족하게 만들어 줘요. 첫 사례는 reviewer가 이미 문서화된 리스크를 다시 flag한 경우였어요. 이번 건 reviewer가 볼 수 없었던 문서화된 *제약*이에요. 그 제약이 diff에 한 번도 들어온 적 없는 test harness 안에 있었거든요. 해결 방식은 둘 다 같아요. 의도는 이미 정해져 있고, flag는 그걸 다시 문제 삼고 있을 뿐이에요.
 
 **왜 이런 일이 생길까요.** AI reviewer는 리스크를 인정하는 inline 문서를 안정적으로 처리하지 못해요. NOTE를 읽고도 마치 없던 것처럼 리스크를 flag해요. 기술적 실패라기보다 철학적 실패예요. reviewer는 "이건 위험해?"를 "이 리스크가 코드베이스에서 이미 인정된 적 있나?"보다 더 가중치 있게 다뤄요.
 
