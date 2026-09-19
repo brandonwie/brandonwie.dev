@@ -11,6 +11,7 @@ import { TableOfContents } from '@/components/TableOfContents';
 import socialLinksData from '../../../src/lib/data/social-links.json';
 import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../../../src/lib/seo';
 import { articlePath, sourceDate } from './article-contract';
+import { homeHref } from '../data/nav';
 import { formatDateLong } from './date';
 import { articleCopy } from '../i18n/copy';
 import { articleJsonLd } from './article-json-ld';
@@ -163,7 +164,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 				<nav aria-label={copy.breadcrumb} data-pagefind-ignore>
 					<ol className="breadcrumb-list">
 						<li>
-							<a href="/">{copy.home}</a>
+							<a href={homeHref(locale)}>{copy.home}</a>
 						</li>
 						<li aria-current="page">{meta.title}</li>
 					</ol>
