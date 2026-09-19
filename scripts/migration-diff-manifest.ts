@@ -30,7 +30,7 @@
  */
 
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { compare, capture, loadLedger, normalizeText } from './migration-verify.ts';
 
@@ -331,6 +331,51 @@ async function main(): Promise<number> {
 		);
 	}
 
+	// internalLinks uniformity assertion: every post row must show exactly one
+	// delta shape — baseline's list-crumb removed (/posts or /ko/posts),
+	// candidate's Home crumb + locale-twin link added. Any deviation is an
+	// anomaly and fails the run rather than being silently classed.
+	const linkRows = unapproved.filter(
+		(x) => x.field === 'internalLinks' && x.url.includes('/posts/'),
+	);
+	const linkAnomalies: { url: string; removed: string[]; added: string[] }[] = [];
+	for (const d of linkRows) {
+		const isKo = d.url.startsWith('/ko/');
+		const slug = d.url.split('/').pop()!;
+		const rem = new Map<string, number>();
+		const add = new Map<string, number>();
+		const cb = new Map<string, number>();
+		const cc = new Map<string, number>();
+		for (const l of baseline.pages[d.url].internalLinks as string[])
+			cb.set(l, (cb.get(l) ?? 0) + 1);
+		for (const l of candidate.pages[d.url].internalLinks as string[])
+			cc.set(l, (cc.get(l) ?? 0) + 1);
+		for (const [l, n] of cb)
+			for (let i = n - (cc.get(l) ?? 0); i > 0; i--) rem.set(l, (rem.get(l) ?? 0) + 1);
+		for (const [l, n] of cc)
+			for (let i = n - (cb.get(l) ?? 0); i > 0; i--) add.set(l, (add.get(l) ?? 0) + 1);
+		const expected =
+			rem.size === 1 &&
+			rem.get(isKo ? '/ko/posts' : '/posts') === 1 &&
+			add.size === 2 &&
+			add.get(isKo ? '/ko' : '/') === 1 &&
+			add.get(isKo ? `/posts/${slug}` : `/ko/posts/${slug}`) === 1;
+		if (!expected)
+			linkAnomalies.push({
+				url: d.url,
+				removed: [...rem.entries()].flatMap(([l, n]) => Array(n).fill(l)),
+				added: [...add.entries()].flatMap(([l, n]) => Array(n).fill(l)),
+			});
+	}
+	if (linkAnomalies.length > 0) {
+		console.error(`internalLinks uniformity violated on ${linkAnomalies.length} route(s):`);
+		for (const a of linkAnomalies.slice(0, 10))
+			console.error(
+				`  ${a.url} removed=${JSON.stringify(a.removed)} added=${JSON.stringify(a.added)}`,
+			);
+		return 1;
+	}
+
 	const rows: { url: string; field: string; fingerprint: string | null; class: string }[] = [];
 	for (const d of unapproved) {
 		let cls: string;
@@ -364,25 +409,32 @@ async function main(): Promise<number> {
 	}
 	const unclassified = rows.filter((r) => r.class === 'unclassified').length;
 
-	let head = 'unknown';
-	try {
-		head = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-	} catch {
-		// non-git context — fingerprint set still fully identifies the rows
-	}
+	// Identity is keyed to the content inputs, not git HEAD: committing the
+	// manifest moves HEAD, so a HEAD-keyed --check could never match its own
+	// commit. The three inputs below are what actually determines the rows.
+	const canon = (v: unknown): string =>
+		JSON.stringify(v, (_, x) =>
+			x !== null && typeof x === 'object' && !Array.isArray(x)
+				? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b)))
+				: x,
+		);
+	const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 
 	const manifest = {
-		generated: {
-			head,
-			baseline: BASELINE_FILE,
-			candidate: CANDIDATE_DIR,
-			ledger: LEDGER_FILE,
+		inputs: {
+			baseline: {
+				file: BASELINE_FILE,
+				sha256: sha(readFileSync(join(ROOT, BASELINE_FILE), 'utf8')),
+			},
+			ledger: { file: LEDGER_FILE, sha256: sha(readFileSync(join(ROOT, LEDGER_FILE), 'utf8')) },
+			candidate: { dir: CANDIDATE_DIR, sha256: sha(canon(candidate)) },
 		},
 		totals: {
 			diffRows: unapproved.length,
 			classified: unapproved.length - unclassified,
 			unclassified,
 			staleLedgerEntries: stale.length,
+			internalLinksUniform: linkRows.length,
 		},
 		classes: Object.values(classes)
 			.map((c) => ({ id: c.id, rationale: c.rationale, count: c.rows.length }))

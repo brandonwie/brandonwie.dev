@@ -1,15 +1,24 @@
 {
-	"generated": {
-		"head": "61829550168006b081755b6a62779b9b97a5559c",
-		"baseline": "verification/baseline/svelte-e23e808.json",
-		"candidate": "next/build",
-		"ledger": "verification/exception-ledger.json"
+	"inputs": {
+		"baseline": {
+			"file": "verification/baseline/svelte-e23e808.json",
+			"sha256": "9dff3373a88e3d61e10cb4de55e7680aa8014b0f44388181bd2202a77fb91b87"
+		},
+		"ledger": {
+			"file": "verification/exception-ledger.json",
+			"sha256": "cb606cccf28426d23c6ba5c0b3c0fb9e6868f0f5e2eb3b81d786e46209a099fe"
+		},
+		"candidate": {
+			"dir": "next/build",
+			"sha256": "48a04d6edca81433a31a32e476604aca960aaca50f621e7dc7c68d28f66a1bf5"
+		}
 	},
 	"totals": {
-		"diffRows": 699,
-		"classified": 699,
+		"diffRows": 695,
+		"classified": 695,
 		"unclassified": 0,
-		"staleLedgerEntries": 0
+		"staleLedgerEntries": 0,
+		"internalLinksUniform": 334
 	},
 	"classes": [
 		{
@@ -65,11 +74,6 @@
 		{
 			"id": "shell-404-prerender",
 			"rationale": "The baseline /404 is a client-rendered +error.svelte shell whose captured title, h1, body text and link list are the empty pre-hydration frame. The candidate statically renders the 404 document (proper title, h1, copy, links) — strictly more content at the same URL. Approved as a candidate-localized improvement class.",
-			"count": 4
-		},
-		{
-			"id": "system-3b-partial-port",
-			"rationale": "The candidate /system/3b page is a documented partial port: it lacks the ~ breadcrumb link, hero prose, stats grid, layer cards, subsystems grid, ADR/evolution section and snapshot footer that the baseline renders. GOVERNANCE NOTE: next/src/content/system-3b.tsx records the missing sections as Slice 3 work deliberately NOT ledgered — classifying them here surfaces the conflict; writing ledger rows requires an explicit ruling that resolves the file-level contract.",
 			"count": 4
 		}
 	],
@@ -149,7 +153,7 @@
 		{
 			"url": "/ko/posts/a-harness-that-fixes-itself",
 			"field": "internalLinks",
-			"fingerprint": "8ee65f4b0e8fbe7816d8020755005a2c",
+			"fingerprint": "1c1f3d19a1927bec5d104f6faa99b41a",
 			"class": "post-links-redesign"
 		},
 		{
@@ -161,7 +165,7 @@
 		{
 			"url": "/ko/posts/ai-code-review-confusion-patterns",
 			"field": "internalLinks",
-			"fingerprint": "1858de15fe6d7de668e18a0c285eda7b",
+			"fingerprint": "1cf6dedf43ba8b869757c9ec3801adef",
 			"class": "post-links-redesign"
 		},
 		{
@@ -173,7 +177,7 @@
 		{
 			"url": "/ko/posts/ai-code-review-patterns",
 			"field": "internalLinks",
-			"fingerprint": "dc3356db24386ab53723668b03bc0550",
+			"fingerprint": "171fbda4b9d4b5d0bf5f0641add6b078",
 			"class": "post-links-redesign"
 		},
 		{
@@ -185,7 +189,7 @@
 		{
 			"url": "/ko/posts/ai-pr-review-validation-patterns",
 			"field": "internalLinks",
-			"fingerprint": "dc0dd94a1879c04263b43e5188b3bd6e",
+			"fingerprint": "49fd47808b67e3a62ce4212f43b874fd",
 			"class": "post-links-redesign"
 		},
 		{
@@ -197,7 +201,7 @@
 		{
 			"url": "/ko/posts/airflow-celery-worker-log-server",
 			"field": "internalLinks",
-			"fingerprint": "02ac787b3ea68c5c07131f92172d7292",
+			"fingerprint": "6807226a89c4bb645319916b81c2fe96",
 			"class": "post-links-redesign"
 		},
 		{
@@ -209,7 +213,7 @@
 		{
 			"url": "/ko/posts/airflow-cicd-concepts",
 			"field": "internalLinks",
-			"fingerprint": "829917bd90098d206241839e4fabf638",
+			"fingerprint": "bf8ced3405da1c6318de376861b1cfc2",
 			"class": "post-links-redesign"
 		},
 		{
@@ -221,7 +225,7 @@
 		{
 			"url": "/ko/posts/airflow-dag-level-callbacks",
 			"field": "internalLinks",
-			"fingerprint": "c04e00da0af32d66966ee35c9451ace6",
+			"fingerprint": "d9cfbb98b574e9ffb19842ae979f90ec",
 			"class": "post-links-redesign"
 		},
 		{
@@ -233,7 +237,7 @@
 		{
 			"url": "/ko/posts/airflow-dag-start-date",
 			"field": "internalLinks",
-			"fingerprint": "ab2b4a420f6df457e4fb939c555304a2",
+			"fingerprint": "220a6db11567874cc826ae5f8a5c982f",
 			"class": "post-links-redesign"
 		},
 		{
@@ -245,7 +249,7 @@
 		{
 			"url": "/ko/posts/airflow-manual-dag-config",
 			"field": "internalLinks",
-			"fingerprint": "684a02afd39d760054d37a6c5579fa4b",
+			"fingerprint": "31325d7e9993d5326ba85f848280dcf9",
 			"class": "post-links-redesign"
 		},
 		{
@@ -257,7 +261,7 @@
 		{
 			"url": "/ko/posts/airflow-task-dependency-syntax",
 			"field": "internalLinks",
-			"fingerprint": "7085b931f208b29958bc614b976b7395",
+			"fingerprint": "5ebb13414bad21f2f177ddef2054f8c1",
 			"class": "post-links-redesign"
 		},
 		{
@@ -269,7 +273,7 @@
 		{
 			"url": "/ko/posts/alembic-async-sqlalchemy",
 			"field": "internalLinks",
-			"fingerprint": "fbc5e940e68637d989927ecbb567e430",
+			"fingerprint": "7f4b2285da8cb69e886db266d9b07b52",
 			"class": "post-links-redesign"
 		},
 		{
@@ -281,7 +285,7 @@
 		{
 			"url": "/ko/posts/amplitude-etl-partitioning",
 			"field": "internalLinks",
-			"fingerprint": "c23160bf04aed7e35d342395c1146079",
+			"fingerprint": "f4442395a58fcaf799fa549b481207bc",
 			"class": "post-links-redesign"
 		},
 		{
@@ -293,7 +297,7 @@
 		{
 			"url": "/ko/posts/amplitude-export-api-format",
 			"field": "internalLinks",
-			"fingerprint": "0692ac0bec768af8247862f0dad7fc02",
+			"fingerprint": "858e917a75b443717f609bf1f57e64f2",
 			"class": "post-links-redesign"
 		},
 		{
@@ -305,7 +309,7 @@
 		{
 			"url": "/ko/posts/amplitude-export-api-timezone",
 			"field": "internalLinks",
-			"fingerprint": "cf36ff6ecd660cdb8daead8603350cfd",
+			"fingerprint": "d28f71ff2e834cd7202f9163bfe978a3",
 			"class": "post-links-redesign"
 		},
 		{
@@ -317,7 +321,7 @@
 		{
 			"url": "/ko/posts/anthropic-mcp-context-budget-optimization",
 			"field": "internalLinks",
-			"fingerprint": "99eef99de9fa2da72febd0e91d17e76f",
+			"fingerprint": "42b51cc93ec8995b333f8f8c6c63e2c3",
 			"class": "post-links-redesign"
 		},
 		{
@@ -329,7 +333,7 @@
 		{
 			"url": "/ko/posts/anthropic-prompt-cache-ttl",
 			"field": "internalLinks",
-			"fingerprint": "9593906e234ce6d8f0751b4ca4ba9648",
+			"fingerprint": "26cafa5814fc90aad3b6d17bad79707e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -341,7 +345,7 @@
 		{
 			"url": "/ko/posts/backfill-stats-manifest-early-exit",
 			"field": "internalLinks",
-			"fingerprint": "4d63cd540cf9bde78f7b1535b03bd4f6",
+			"fingerprint": "707a1836bc3c8bc9587105b55ae30a97",
 			"class": "post-links-redesign"
 		},
 		{
@@ -353,7 +357,7 @@
 		{
 			"url": "/ko/posts/bash-set-e-command-substitution",
 			"field": "internalLinks",
-			"fingerprint": "9a1d366c97d493042f303432108c81ac",
+			"fingerprint": "6957538d22c40e37de747557827bbf29",
 			"class": "post-links-redesign"
 		},
 		{
@@ -365,7 +369,7 @@
 		{
 			"url": "/ko/posts/batch-processing-trade-offs",
 			"field": "internalLinks",
-			"fingerprint": "d8a7f20492c9b92609e5c21dd7cd3169",
+			"fingerprint": "143d2fc4a35ba099d9ccf2486aaa075e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -377,7 +381,7 @@
 		{
 			"url": "/ko/posts/beautifulsoup-streaming-response-cap",
 			"field": "internalLinks",
-			"fingerprint": "e662dcce4fe27f2ee7d618cd586bd529",
+			"fingerprint": "59559dff3410368ced0235f2317e3fef",
 			"class": "post-links-redesign"
 		},
 		{
@@ -389,7 +393,7 @@
 		{
 			"url": "/ko/posts/binary-checksum-verification",
 			"field": "internalLinks",
-			"fingerprint": "2636e0431f6f8b13c9880d54157ea9bc",
+			"fingerprint": "3ea12d73535955a50124e97af9a1eeec",
 			"class": "post-links-redesign"
 		},
 		{
@@ -401,7 +405,7 @@
 		{
 			"url": "/ko/posts/boto3-s3-encoding",
 			"field": "internalLinks",
-			"fingerprint": "e82c8d9c2ceaf990d36c0b7a7691fc06",
+			"fingerprint": "e9a933d5c380845af9b153f732e64a59",
 			"class": "post-links-redesign"
 		},
 		{
@@ -413,7 +417,7 @@
 		{
 			"url": "/ko/posts/calendar-exdate-behavior",
 			"field": "internalLinks",
-			"fingerprint": "b8cdd33f80b4d20f320fa0ce347fad01",
+			"fingerprint": "41b9761488364d345de63b8e2dd432b3",
 			"class": "post-links-redesign"
 		},
 		{
@@ -425,7 +429,7 @@
 		{
 			"url": "/ko/posts/celery-api-side-dispatch",
 			"field": "internalLinks",
-			"fingerprint": "65511ad5cadebe5775c448b60300ddcc",
+			"fingerprint": "db710a235a6c76b95eeeb965f47ac585",
 			"class": "post-links-redesign"
 		},
 		{
@@ -437,7 +441,7 @@
 		{
 			"url": "/ko/posts/class-transformer-undefined-fields",
 			"field": "internalLinks",
-			"fingerprint": "ccd89c2134439c38b0223b66f785007b",
+			"fingerprint": "630564c90be4dc5f083f9c95f3b37f71",
 			"class": "post-links-redesign"
 		},
 		{
@@ -449,7 +453,7 @@
 		{
 			"url": "/ko/posts/class-validator-ishexcolor-alpha-forms",
 			"field": "internalLinks",
-			"fingerprint": "dbe694fb8072ff91cd03d12af16b934f",
+			"fingerprint": "c57a881177a3a2084db0df566244d39e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -461,7 +465,7 @@
 		{
 			"url": "/ko/posts/claude-code-action-workflow-setup-gotchas",
 			"field": "internalLinks",
-			"fingerprint": "7a87d8642875aad8bf38fa66b5e1e439",
+			"fingerprint": "04e4f0589b814da67f76f78bcd2549e8",
 			"class": "post-links-redesign"
 		},
 		{
@@ -473,7 +477,7 @@
 		{
 			"url": "/ko/posts/claude-code-agent-teams",
 			"field": "internalLinks",
-			"fingerprint": "0b0992214fe33633bc45a1a58307e7db",
+			"fingerprint": "0ed1d9d29d19e53539d0ca2d9f00cb4e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -485,7 +489,7 @@
 		{
 			"url": "/ko/posts/claude-code-expert-workflows",
 			"field": "internalLinks",
-			"fingerprint": "0447aa9b162b33bf6efc4fce2d478b62",
+			"fingerprint": "fc744c79a8d34b9b5793c28133e07a43",
 			"class": "post-links-redesign"
 		},
 		{
@@ -497,7 +501,7 @@
 		{
 			"url": "/ko/posts/claude-code-multi-profile-hud",
 			"field": "internalLinks",
-			"fingerprint": "ffeb4ed393e39eaaa1f73bb1daeffb22",
+			"fingerprint": "2028e5a0daaca28a08c80061691aab06",
 			"class": "post-links-redesign"
 		},
 		{
@@ -509,7 +513,7 @@
 		{
 			"url": "/ko/posts/claude-code-posttooluse-hooks",
 			"field": "internalLinks",
-			"fingerprint": "bca342fcbb47541a912d6e5746ebed3b",
+			"fingerprint": "890e4b4a9443d98ee238f7ce58ecafc4",
 			"class": "post-links-redesign"
 		},
 		{
@@ -521,7 +525,7 @@
 		{
 			"url": "/ko/posts/claude-code-shared-personal-config",
 			"field": "internalLinks",
-			"fingerprint": "265bfa63022185d04e70025f356812fc",
+			"fingerprint": "aeed72c34c9ea2586d428ecd934afc85",
 			"class": "post-links-redesign"
 		},
 		{
@@ -533,7 +537,7 @@
 		{
 			"url": "/ko/posts/claude-code-turn-latency-measurement",
 			"field": "internalLinks",
-			"fingerprint": "9aa093307655c49cf48dc2291b11e4b7",
+			"fingerprint": "bbad7c8da4ec6425e98e3029585ebd38",
 			"class": "post-links-redesign"
 		},
 		{
@@ -545,7 +549,7 @@
 		{
 			"url": "/ko/posts/claude-md-byte-budget-generator-gate",
 			"field": "internalLinks",
-			"fingerprint": "4e68f9f9bd27bae1032b4629a2d31afe",
+			"fingerprint": "830c82e5b675f459cd727c70eb445b24",
 			"class": "post-links-redesign"
 		},
 		{
@@ -557,7 +561,7 @@
 		{
 			"url": "/ko/posts/claude-plugin-update-reenables-disabled",
 			"field": "internalLinks",
-			"fingerprint": "736d213e2b0b4fe27a0c5476d8a93246",
+			"fingerprint": "9833717f04aceaba58f6ab91f490eb8f",
 			"class": "post-links-redesign"
 		},
 		{
@@ -569,7 +573,7 @@
 		{
 			"url": "/ko/posts/codex-apply-patch-shell-mediated-tool",
 			"field": "internalLinks",
-			"fingerprint": "e88039de8b0e9ea0d03ed19f4f2c44d1",
+			"fingerprint": "c032ed1da9276515c1690d29e7c81168",
 			"class": "post-links-redesign"
 		},
 		{
@@ -581,7 +585,7 @@
 		{
 			"url": "/ko/posts/codex-skill-mirror-pattern",
 			"field": "internalLinks",
-			"fingerprint": "741da8a47c4d0b285926d787e1e786f1",
+			"fingerprint": "f571d20274fe39ae3d2a73029d3b6aac",
 			"class": "post-links-redesign"
 		},
 		{
@@ -593,7 +597,7 @@
 		{
 			"url": "/ko/posts/computed-backlinks-zettelkasten",
 			"field": "internalLinks",
-			"fingerprint": "ea39a0ed7d146a6a2eedbc770d662c02",
+			"fingerprint": "15b68630f1999ecd176e48e95f5338ac",
 			"class": "post-links-redesign"
 		},
 		{
@@ -605,7 +609,7 @@
 		{
 			"url": "/ko/posts/cpu-cache-locality-batch-iteration",
 			"field": "internalLinks",
-			"fingerprint": "395a5a8293c12b9a502ebc9ef3b6487e",
+			"fingerprint": "a95e8ae78a0df27ed5215a3186207be6",
 			"class": "post-links-redesign"
 		},
 		{
@@ -617,7 +621,7 @@
 		{
 			"url": "/ko/posts/cross-agent-skill-alias-generalization",
 			"field": "internalLinks",
-			"fingerprint": "2e7204a381b6c64b689640cda0eefcba",
+			"fingerprint": "459cf8f7801aa77d9242a06016b84030",
 			"class": "post-links-redesign"
 		},
 		{
@@ -629,7 +633,7 @@
 		{
 			"url": "/ko/posts/cross-language-cli-startup-benchmark",
 			"field": "internalLinks",
-			"fingerprint": "15e6659a2fd359b53ea51321d084d344",
+			"fingerprint": "141fd2933ba0341ed4075ee7b5dde44c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -641,7 +645,7 @@
 		{
 			"url": "/ko/posts/crucio-ship-two-phase-merge-gate",
 			"field": "internalLinks",
-			"fingerprint": "710332d88c1847930ef87680f21ae573",
+			"fingerprint": "0f4849bb33b4ea6c577958bfa7bd7cdd",
 			"class": "post-links-redesign"
 		},
 		{
@@ -653,7 +657,7 @@
 		{
 			"url": "/ko/posts/css-inline-replaced-element-gap",
 			"field": "internalLinks",
-			"fingerprint": "b65c816e7ae9f3c4a2c60ad56dec5ba7",
+			"fingerprint": "2f33862ffc72e19f2ea69c6f1921757f",
 			"class": "post-links-redesign"
 		},
 		{
@@ -665,7 +669,7 @@
 		{
 			"url": "/ko/posts/dag-deployment-strategies",
 			"field": "internalLinks",
-			"fingerprint": "7eec418d7bee7b789c95fdba7c2b5832",
+			"fingerprint": "f297118b0003f52c36ff38e795b610a3",
 			"class": "post-links-redesign"
 		},
 		{
@@ -677,7 +681,7 @@
 		{
 			"url": "/ko/posts/datasource-vs-repository-pattern",
 			"field": "internalLinks",
-			"fingerprint": "89a20e11f621abab486191ca6d372665",
+			"fingerprint": "662b5b14abf9d3e135d28fef6ad8198d",
 			"class": "post-links-redesign"
 		},
 		{
@@ -689,7 +693,7 @@
 		{
 			"url": "/ko/posts/distilbert-vs-bart-intent-classification",
 			"field": "internalLinks",
-			"fingerprint": "2f62f408db01571d84f18768bd33be72",
+			"fingerprint": "4b3094d59eccd67d483bd45d70f9ba32",
 			"class": "post-links-redesign"
 		},
 		{
@@ -701,7 +705,7 @@
 		{
 			"url": "/ko/posts/docker-compose-cicd-patterns",
 			"field": "internalLinks",
-			"fingerprint": "eafbe138af841faa0c80ca2cbc22181c",
+			"fingerprint": "3efdfb53005e4ed8594a3a5f21aa9b23",
 			"class": "post-links-redesign"
 		},
 		{
@@ -713,7 +717,7 @@
 		{
 			"url": "/ko/posts/docker-exec-credential-leak-vectors",
 			"field": "internalLinks",
-			"fingerprint": "dbf14aac19118fc9a7d04eaa7acc9505",
+			"fingerprint": "d32f9c6ab28a38a1d81707dd1f2ef7ea",
 			"class": "post-links-redesign"
 		},
 		{
@@ -725,7 +729,7 @@
 		{
 			"url": "/ko/posts/docker-subnet-collision-static-ip-services",
 			"field": "internalLinks",
-			"fingerprint": "d4f8595165f2f4adaf4eac956946b2e9",
+			"fingerprint": "b9519f7b5fcd7b10903e3910cb6f48de",
 			"class": "post-links-redesign"
 		},
 		{
@@ -737,7 +741,7 @@
 		{
 			"url": "/ko/posts/documentation-patterns",
 			"field": "internalLinks",
-			"fingerprint": "f68a03eac4a7e1534eb1613e10969e13",
+			"fingerprint": "98f7f00ae2ba0c9ba4e59eb61af499e3",
 			"class": "post-links-redesign"
 		},
 		{
@@ -749,7 +753,7 @@
 		{
 			"url": "/ko/posts/docx-pdf-export-pages-vs-libreoffice",
 			"field": "internalLinks",
-			"fingerprint": "e1c4ef1f9528fbde816416c08173e9bc",
+			"fingerprint": "fce36efefc97f704fac8b880f2b9d96a",
 			"class": "post-links-redesign"
 		},
 		{
@@ -761,7 +765,7 @@
 		{
 			"url": "/ko/posts/dont-retry-retrieval-diagnose-it",
 			"field": "internalLinks",
-			"fingerprint": "84e4db89c9a13743f9b19cf656ad4b3d",
+			"fingerprint": "76d56ae2ab73f7699ed4dd02278458cc",
 			"class": "post-links-redesign"
 		},
 		{
@@ -773,7 +777,7 @@
 		{
 			"url": "/ko/posts/ebs-vs-efs-storage",
 			"field": "internalLinks",
-			"fingerprint": "8f5de57d82576a0061b93815d0ecf1fa",
+			"fingerprint": "d7682439ab6b428601ddcfc6a2d08f59",
 			"class": "post-links-redesign"
 		},
 		{
@@ -785,7 +789,7 @@
 		{
 			"url": "/ko/posts/ecr-credential-helper",
 			"field": "internalLinks",
-			"fingerprint": "f1728dcec38db558b15b70b87464d636",
+			"fingerprint": "a278b420559e2f0ed50d13177664c6a5",
 			"class": "post-links-redesign"
 		},
 		{
@@ -797,7 +801,7 @@
 		{
 			"url": "/ko/posts/ecr-ecs-deployment-workflow",
 			"field": "internalLinks",
-			"fingerprint": "385df0910fe38443081583edc0a789fa",
+			"fingerprint": "2dbe1d0fc84cdff43941f75448a4e6f0",
 			"class": "post-links-redesign"
 		},
 		{
@@ -809,7 +813,7 @@
 		{
 			"url": "/ko/posts/ecr-token-refresh-cron",
 			"field": "internalLinks",
-			"fingerprint": "b5ff260b4b987b95fab16c4525580d4b",
+			"fingerprint": "d9b3f79947838d0d99caa29bfc5cae6e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -821,7 +825,7 @@
 		{
 			"url": "/ko/posts/ecs-autoscaling-deep-dive",
 			"field": "internalLinks",
-			"fingerprint": "02edb856f7ebca878d2bd0aa12aa7a93",
+			"fingerprint": "8304afc3f5eea86ffef68a10217a1e4c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -833,7 +837,7 @@
 		{
 			"url": "/ko/posts/ecs-autoscaling-patterns",
 			"field": "internalLinks",
-			"fingerprint": "6440facc04aa9ac02a619ca0468ad05d",
+			"fingerprint": "ceb18fc62eef0f9a13086e8726dfef9e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -845,7 +849,7 @@
 		{
 			"url": "/ko/posts/emitasync-stamp-gating",
 			"field": "internalLinks",
-			"fingerprint": "73ca4c343df87578692639e189866e75",
+			"fingerprint": "36ce2cf90040a303b13c8ef0a61095f0",
 			"class": "post-links-redesign"
 		},
 		{
@@ -857,7 +861,7 @@
 		{
 			"url": "/ko/posts/empirical-close-pattern",
 			"field": "internalLinks",
-			"fingerprint": "2e3c1bf07c3d854b76e136d488403004",
+			"fingerprint": "ced0652c6d54a2672f42245e07e4685f",
 			"class": "post-links-redesign"
 		},
 		{
@@ -869,7 +873,7 @@
 		{
 			"url": "/ko/posts/etl-data-separation",
 			"field": "internalLinks",
-			"fingerprint": "e1d7c1deb634373dc304c1f594301740",
+			"fingerprint": "15d1be6f35f7a11e61f8286d98e9c49d",
 			"class": "post-links-redesign"
 		},
 		{
@@ -881,7 +885,7 @@
 		{
 			"url": "/ko/posts/etl-schedule-timing",
 			"field": "internalLinks",
-			"fingerprint": "061a7d30ae8a9aa3f6e5872a69b09e9a",
+			"fingerprint": "45109fe7c00c083ee2a5a0a98e8d2bc6",
 			"class": "post-links-redesign"
 		},
 		{
@@ -893,7 +897,7 @@
 		{
 			"url": "/ko/posts/external-calendar-normalization",
 			"field": "internalLinks",
-			"fingerprint": "c5fa083fea3309875374aea946a1998e",
+			"fingerprint": "5b6340c64ba57f7937b1691f23f647a5",
 			"class": "post-links-redesign"
 		},
 		{
@@ -905,7 +909,7 @@
 		{
 			"url": "/ko/posts/fallback-branch-test-coverage-gap",
 			"field": "internalLinks",
-			"fingerprint": "01ea8046a339b16c2a487b0782c775bc",
+			"fingerprint": "e4010cc035c4191f37f1202f13b38978",
 			"class": "post-links-redesign"
 		},
 		{
@@ -917,7 +921,7 @@
 		{
 			"url": "/ko/posts/fastapi-dependency-injection-patterns",
 			"field": "internalLinks",
-			"fingerprint": "a2fedca01c7eb9b64d2f103f06d40424",
+			"fingerprint": "d5ee7fc9bfe31a1dc9139feb46c46f82",
 			"class": "post-links-redesign"
 		},
 		{
@@ -929,7 +933,7 @@
 		{
 			"url": "/ko/posts/fastapi-domain-exception-handler",
 			"field": "internalLinks",
-			"fingerprint": "50db1cb3abaa4ee720161013ae4bea93",
+			"fingerprint": "cd597309e1434abd1a84020f69f2852f",
 			"class": "post-links-redesign"
 		},
 		{
@@ -941,7 +945,7 @@
 		{
 			"url": "/ko/posts/fastapi-nonblocking-startup-dependencies",
 			"field": "internalLinks",
-			"fingerprint": "c2c8650814b68e525d13e43f62c6e94b",
+			"fingerprint": "c4811a69a8d47f1d00f41f7337d1500e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -953,7 +957,7 @@
 		{
 			"url": "/ko/posts/folder-is-destiny",
 			"field": "internalLinks",
-			"fingerprint": "5f4df7c83c2a4dad841d465aa4144286",
+			"fingerprint": "0093448182e61c83b7d8b583ee72f195",
 			"class": "post-links-redesign"
 		},
 		{
@@ -965,7 +969,7 @@
 		{
 			"url": "/ko/posts/gcloud-logging-freshness-flag-semantics",
 			"field": "internalLinks",
-			"fingerprint": "de563bcb1865d12c4cf753e0280175d6",
+			"fingerprint": "f8a48d48221e6020d1706244b82ac1fc",
 			"class": "post-links-redesign"
 		},
 		{
@@ -977,7 +981,7 @@
 		{
 			"url": "/ko/posts/gemini-asymmetric-embeddings",
 			"field": "internalLinks",
-			"fingerprint": "691d71a88d23c097d83308c4a411aaa3",
+			"fingerprint": "e2e0def06970e517faba17ff57da6658",
 			"class": "post-links-redesign"
 		},
 		{
@@ -989,7 +993,7 @@
 		{
 			"url": "/ko/posts/gh-pr-view-head-branch-ambiguity",
 			"field": "internalLinks",
-			"fingerprint": "ae7b6f396d956a860a38287822935593",
+			"fingerprint": "519f41a8ca30f9db4c5dcce069fd41e0",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1001,7 +1005,7 @@
 		{
 			"url": "/ko/posts/giscus-sveltekit-integration",
 			"field": "internalLinks",
-			"fingerprint": "c39ed77176eb6e146fa4881336ab3f3e",
+			"fingerprint": "d216b9a35b144c0f239ac54b6515db0b",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1013,7 +1017,7 @@
 		{
 			"url": "/ko/posts/git-pre-commit-parallel-session-head-race",
 			"field": "internalLinks",
-			"fingerprint": "429224b56f89cf989f8e07a1b722b0de",
+			"fingerprint": "05a7cad0205e520e3d3016975f823dc0",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1025,7 +1029,7 @@
 		{
 			"url": "/ko/posts/git-rev-parse-vs-log-hook-interception",
 			"field": "internalLinks",
-			"fingerprint": "b58d0f444c5ae2c1accd608b767da3cc",
+			"fingerprint": "7fcd5d0761c1c30527c98ab0e5afb541",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1037,7 +1041,7 @@
 		{
 			"url": "/ko/posts/github-pr-review-api-inline-comments",
 			"field": "internalLinks",
-			"fingerprint": "d832e489512087019fa5610a99d08034",
+			"fingerprint": "b2e0501d668efe81fb9f1008d474f3ab",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1049,7 +1053,7 @@
 		{
 			"url": "/ko/posts/google-calendar-recurring-events",
 			"field": "internalLinks",
-			"fingerprint": "b925b24748f6172bafe52b123895daea",
+			"fingerprint": "e1ee209ec9353b65107ffdf82f0ea57c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1061,7 +1065,7 @@
 		{
 			"url": "/ko/posts/google-calendar-sync-strategies",
 			"field": "internalLinks",
-			"fingerprint": "48a5de89336cb580e88fc0e626b4981b",
+			"fingerprint": "3a0efd20b2e620e7cd7061c3c17baf4b",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1073,7 +1077,7 @@
 		{
 			"url": "/ko/posts/google-meet-link-creation",
 			"field": "internalLinks",
-			"fingerprint": "3d1bc3b2cb36133aab0f3d8d81a46775",
+			"fingerprint": "727b3e5c20f7d0f243b14f38e5345927",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1085,7 +1089,7 @@
 		{
 			"url": "/ko/posts/hybrid-ci-jenkins-github-actions",
 			"field": "internalLinks",
-			"fingerprint": "abc4bcc05d32c6c2340e21a2cdab91d5",
+			"fingerprint": "8a3c99973ef4b165f08c812c64b2b963",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1097,7 +1101,7 @@
 		{
 			"url": "/ko/posts/idor-prevention-type-level",
 			"field": "internalLinks",
-			"fingerprint": "9e535eedd10161b04e6a65f3593b5531",
+			"fingerprint": "f29ef755f3c1a7c4690d3008923dd2bb",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1109,7 +1113,7 @@
 		{
 			"url": "/ko/posts/infrastructure-hardening-checklist",
 			"field": "internalLinks",
-			"fingerprint": "5ff7ec51c92262232ee30ff79012b9f3",
+			"fingerprint": "f09e717170ca8cbca72d1112f4b3f2f6",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1121,7 +1125,7 @@
 		{
 			"url": "/ko/posts/karpathy-llm-knowledge-bases",
 			"field": "internalLinks",
-			"fingerprint": "61ee0d473c7ba9f6d06decf1b0c5718f",
+			"fingerprint": "68b1f5b92324c48033e675290fbe3a57",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1133,7 +1137,7 @@
 		{
 			"url": "/ko/posts/lemon-squeezy-subscriptions",
 			"field": "internalLinks",
-			"fingerprint": "be7ff1b1115f5a9a27686cd077c066ea",
+			"fingerprint": "c74f7a9fb87e4ae0626144c0cac5664b",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1145,7 +1149,7 @@
 		{
 			"url": "/ko/posts/linux",
 			"field": "internalLinks",
-			"fingerprint": "ecee81e1626eb193061e7dcee8eb404a",
+			"fingerprint": "ab4dd5b7251fe0442a4d2212d54338d5",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1157,7 +1161,7 @@
 		{
 			"url": "/ko/posts/llm-fine-tuning-strategies",
 			"field": "internalLinks",
-			"fingerprint": "94e835159ed41f14ecd178a2ef3b9948",
+			"fingerprint": "c97e69ac8dbc363412b17d286484cfc2",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1169,7 +1173,7 @@
 		{
 			"url": "/ko/posts/local-s3-minio",
 			"field": "internalLinks",
-			"fingerprint": "fb34116fd74c21c2aff6733aa5493c23",
+			"fingerprint": "9df36749f56407513a72a6093b8279ca",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1181,7 +1185,7 @@
 		{
 			"url": "/ko/posts/macos-keychain-multi-account",
 			"field": "internalLinks",
-			"fingerprint": "20630e3281d16bdc4917bfd12da1991f",
+			"fingerprint": "5d3b86ae6662b5234df0d691b28ccb62",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1193,7 +1197,7 @@
 		{
 			"url": "/ko/posts/macos-vscode-terminal-locale-fallback",
 			"field": "internalLinks",
-			"fingerprint": "0548fe3cafe439e2f2709a084305af4f",
+			"fingerprint": "173c07b43b464811c1cc790efbbfa0b4",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1205,7 +1209,7 @@
 		{
 			"url": "/ko/posts/markdownlint-conventions",
 			"field": "internalLinks",
-			"fingerprint": "0c5f892e7d3773122d929330072006a0",
+			"fingerprint": "09c28c66f6eed0b569acc59a7d34fe7c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1217,7 +1221,7 @@
 		{
 			"url": "/ko/posts/markdownlint-pre-commit-heading-rules",
 			"field": "internalLinks",
-			"fingerprint": "ab7cc4ef6642bfe49c8d8d96082c5f26",
+			"fingerprint": "9594368899265690fe7232e8f3334e88",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1229,7 +1233,7 @@
 		{
 			"url": "/ko/posts/mobile-input-ux",
 			"field": "internalLinks",
-			"fingerprint": "277cd7ecd9b676754de530098603985b",
+			"fingerprint": "2b0f2b7c88b7dcd0966c78ec9b43f650",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1241,7 +1245,7 @@
 		{
 			"url": "/ko/posts/multi-agent-message-race-hold-discipline",
 			"field": "internalLinks",
-			"fingerprint": "76e686b7b60c15b79cba2c398af910ef",
+			"fingerprint": "8ecc692aa20a96188535a57a784f0151",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1253,7 +1257,7 @@
 		{
 			"url": "/ko/posts/nat-gateway-architecture",
 			"field": "internalLinks",
-			"fingerprint": "ccb7d7f88c8c210595598c7b2b68d25a",
+			"fingerprint": "49634c6664f7a2be71c0eb7e1a31795a",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1265,7 +1269,7 @@
 		{
 			"url": "/ko/posts/nestjs-headers-decorator-typing",
 			"field": "internalLinks",
-			"fingerprint": "28b3454476b102eb26bb94c047b390c0",
+			"fingerprint": "1a09e8aec4680795632d31b413ce491d",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1277,7 +1281,7 @@
 		{
 			"url": "/ko/posts/nestjs-swagger-type-vs-content",
 			"field": "internalLinks",
-			"fingerprint": "87e6cced3f4aaa2734d1a76c43bf867d",
+			"fingerprint": "19032a8211e2980b9fe175bc1c7ae468",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1289,7 +1293,7 @@
 		{
 			"url": "/ko/posts/nestjs-websockets",
 			"field": "internalLinks",
-			"fingerprint": "6f131c0f3010022b4f2a6e7cf45993f0",
+			"fingerprint": "d5e8204e4fc3c2776e2e4d78d7f7aada",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1301,7 +1305,7 @@
 		{
 			"url": "/ko/posts/next-intelligence-explosion-social",
 			"field": "internalLinks",
-			"fingerprint": "6e4b15f8c8a9c5c08672e2f79b80ca21",
+			"fingerprint": "d053baed7380368ea7b356af9ee04bf1",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1313,7 +1317,7 @@
 		{
 			"url": "/ko/posts/oauth2-implementation-patterns",
 			"field": "internalLinks",
-			"fingerprint": "8f7b650a93acbac0bcc414eb08b99e7e",
+			"fingerprint": "548e7684e803c632b08c4ad7294b7235",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1325,7 +1329,7 @@
 		{
 			"url": "/ko/posts/one-folder-three-agents",
 			"field": "internalLinks",
-			"fingerprint": "5a4488b6e08a5b60739d870b504083f5",
+			"fingerprint": "3974f931bd6955c3fb97f2ed76cd06d6",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1337,7 +1341,7 @@
 		{
 			"url": "/ko/posts/pandas-itertuples-vs-iterrows",
 			"field": "internalLinks",
-			"fingerprint": "925a5d6c9f2eee0edac86eb28a2ea3eb",
+			"fingerprint": "e917336da48f45b490d9ba43314e447d",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1349,7 +1353,7 @@
 		{
 			"url": "/ko/posts/paraglide-i18n",
 			"field": "internalLinks",
-			"fingerprint": "a17c050ba129e585b53000dc68806dcc",
+			"fingerprint": "65dbfc118339a79b92ef17ad900359b8",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1361,7 +1365,7 @@
 		{
 			"url": "/ko/posts/parallel-agents-no-collisions",
 			"field": "internalLinks",
-			"fingerprint": "31197b8f76f5d4472b24d0813b945e6d",
+			"fingerprint": "3744cc7040f11bb0fd465da2affb900c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1373,7 +1377,7 @@
 		{
 			"url": "/ko/posts/partial-access-recurring-events",
 			"field": "internalLinks",
-			"fingerprint": "2ec5e28ec95480e956117ef9017a2dc4",
+			"fingerprint": "9b843c3a3bcdde710292dd0c6656090e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1385,7 +1389,7 @@
 		{
 			"url": "/ko/posts/per-user-transactional-backfill-atomicity",
 			"field": "internalLinks",
-			"fingerprint": "a5b465b744c02ce1bfe294aaa1bc18cf",
+			"fingerprint": "4cacb2f4333e4d35e5974666e57739f2",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1397,7 +1401,7 @@
 		{
 			"url": "/ko/posts/pessimistic-locking-race-conditions",
 			"field": "internalLinks",
-			"fingerprint": "7a6fa7d543e346a73ee988716503ad38",
+			"fingerprint": "f3b6f526caa0b1eab386cb1479d41766",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1409,7 +1413,7 @@
 		{
 			"url": "/ko/posts/pgvector-hnsw-postgresql",
 			"field": "internalLinks",
-			"fingerprint": "f546d6b870f963243700b6a31bb910d7",
+			"fingerprint": "6692fa63e124e8e858913a2a5d2f8bb0",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1421,7 +1425,7 @@
 		{
 			"url": "/ko/posts/plan-vs-shipped-divergence",
 			"field": "internalLinks",
-			"fingerprint": "59ef0beec5ca7997b05667cf0f375108",
+			"fingerprint": "e5da55b61cd0557d7be1f6850684009a",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1433,7 +1437,7 @@
 		{
 			"url": "/ko/posts/portaudio-stale-usb-audio-handle",
 			"field": "internalLinks",
-			"fingerprint": "b7f329f940c6bf10f2d51a2fb4d70160",
+			"fingerprint": "66dd11a502ee8f1238dd6b19ba428652",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1445,7 +1449,7 @@
 		{
 			"url": "/ko/posts/postgresql-advisory-locks",
 			"field": "internalLinks",
-			"fingerprint": "7e63d8d8cf824b7feadaaf69dfa59779",
+			"fingerprint": "5737009d84f20f9b2808bfa52fa573ee",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1457,7 +1461,7 @@
 		{
 			"url": "/ko/posts/postgresql-in-clause-limits",
 			"field": "internalLinks",
-			"fingerprint": "15b6d00d15ede40422057eea64c2f4f9",
+			"fingerprint": "36adeae7116e6bf0f752e5c387ba46ea",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1469,7 +1473,7 @@
 		{
 			"url": "/ko/posts/prometheus-tsdb-memory-sizing",
 			"field": "internalLinks",
-			"fingerprint": "9a49bda18a947ca208b31aebb8551605",
+			"fingerprint": "a0e1213aa9affd2aee74d176bff0c3cd",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1481,7 +1485,7 @@
 		{
 			"url": "/ko/posts/psi-model-drift-detection",
 			"field": "internalLinks",
-			"fingerprint": "8e918324bc62f9ffe6a6dc73ee70b482",
+			"fingerprint": "85f623c9f1bf07b7526b3bf1408ea061",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1493,7 +1497,7 @@
 		{
 			"url": "/ko/posts/python-function-dedup-keyword-params",
 			"field": "internalLinks",
-			"fingerprint": "c5005fc0d5858e4625ef7ae79aa88d97",
+			"fingerprint": "5624d24a150c0282521eb2ce549a151a",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1505,7 +1509,7 @@
 		{
 			"url": "/ko/posts/python-tooling-stack",
 			"field": "internalLinks",
-			"fingerprint": "59c57bfe200948804fa7a88ed220388b",
+			"fingerprint": "789808079b4b6f3528ca0846b60908ee",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1517,7 +1521,7 @@
 		{
 			"url": "/ko/posts/rag-hybrid-search-architecture",
 			"field": "internalLinks",
-			"fingerprint": "0b812bd6b34ebaeedce33f5f1caac154",
+			"fingerprint": "c79f8382cb86ea86e44ea5b6c94c6de7",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1529,7 +1533,7 @@
 		{
 			"url": "/ko/posts/react-demo-pipeline-pattern",
 			"field": "internalLinks",
-			"fingerprint": "82ae9b673f33873fc2236800f8cabe6a",
+			"fingerprint": "4bb3a45a85382f643a338d35a11f6a12",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1541,7 +1545,7 @@
 		{
 			"url": "/ko/posts/recharts-dark-theme-customization",
 			"field": "internalLinks",
-			"fingerprint": "cb96c370dbdfa88b22003304ae811789",
+			"fingerprint": "abfe1914e30be659f28b1d7082f7d513",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1553,7 +1557,7 @@
 		{
 			"url": "/ko/posts/recurring-event-operations",
 			"field": "internalLinks",
-			"fingerprint": "60b088f821a47d43cea03e7b74bfc1d9",
+			"fingerprint": "f2248648d62430433b5b1c2719f9e74c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1565,7 +1569,7 @@
 		{
 			"url": "/ko/posts/redis-queue-patterns",
 			"field": "internalLinks",
-			"fingerprint": "322980085d36520f7b52cd80b90acf81",
+			"fingerprint": "f69bb901bcb2560852bebd28d7d2f1bc",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1577,7 +1581,7 @@
 		{
 			"url": "/ko/posts/rrule-byday-timezone-correction",
 			"field": "internalLinks",
-			"fingerprint": "d6d9070ff337c63e80088180967b7962",
+			"fingerprint": "2df805591991788be5bdb7b37b8231fa",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1589,7 +1593,7 @@
 		{
 			"url": "/ko/posts/rrule-exdate-parsing",
 			"field": "internalLinks",
-			"fingerprint": "e0e0ec10447cc51647af2fd5e7cae1e5",
+			"fingerprint": "182a5b6c51332c0dfe2bb260433a59d8",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1601,7 +1605,7 @@
 		{
 			"url": "/ko/posts/ruff-three-gate-preflight",
 			"field": "internalLinks",
-			"fingerprint": "d01c2ed99e5594299b8a72a4933f91c8",
+			"fingerprint": "2df08643e6ad629f4f4935683c82b5e4",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1613,7 +1617,7 @@
 		{
 			"url": "/ko/posts/rules-that-route-themselves",
 			"field": "internalLinks",
-			"fingerprint": "7281c92c0a1987dd046226ca43281b8d",
+			"fingerprint": "a06c8ef88b8e9eb5f2ea9e7002404aba",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1625,7 +1629,7 @@
 		{
 			"url": "/ko/posts/rust-async-channels",
 			"field": "internalLinks",
-			"fingerprint": "94333bb99df6583651ad318dbf2c252a",
+			"fingerprint": "984537336d43bf225bf40bd6ccea550c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1637,7 +1641,7 @@
 		{
 			"url": "/ko/posts/s3-path-handling",
 			"field": "internalLinks",
-			"fingerprint": "4dd44edf8dae591113533d7c59a9f2d3",
+			"fingerprint": "4b73b83b4948d042a601d5c827ae391d",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1649,7 +1653,7 @@
 		{
 			"url": "/ko/posts/schema-versioned-helper-json-envelope",
 			"field": "internalLinks",
-			"fingerprint": "f94a4e5021a43f41fa4be2f5ad3f1148",
+			"fingerprint": "eae185eed50c59280b53a036a774cae3",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1661,7 +1665,7 @@
 		{
 			"url": "/ko/posts/security-groups-fundamentals",
 			"field": "internalLinks",
-			"fingerprint": "064392c0c372dc5ee6487fffcaf820d7",
+			"fingerprint": "7a6aeb2d4cb51834069e8ec20d1ba426",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1673,7 +1677,7 @@
 		{
 			"url": "/ko/posts/sentry-n-plus-one-detection",
 			"field": "internalLinks",
-			"fingerprint": "b02b49e1043e64f91fb4eab11591e527",
+			"fingerprint": "152f74624471538266ed0f3368925b74",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1685,7 +1689,7 @@
 		{
 			"url": "/ko/posts/serena-claude-code-multi-profile-setup",
 			"field": "internalLinks",
-			"fingerprint": "0ca2a879260c9440e534735d215d398d",
+			"fingerprint": "f567fa42424645c478f762d60c6fe1fd",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1697,7 +1701,7 @@
 		{
 			"url": "/ko/posts/session-state-merge-vs-overwrite-pattern",
 			"field": "internalLinks",
-			"fingerprint": "3cb764b3aec3d22585c8727fae2d7798",
+			"fingerprint": "8b90bde6e4b8a5db329388103e8045e5",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1709,7 +1713,7 @@
 		{
 			"url": "/ko/posts/shadcn-ui-vite-tailwind-setup",
 			"field": "internalLinks",
-			"fingerprint": "5390a2b3d0f21b8e72d427fcd4b60ec0",
+			"fingerprint": "f295ca133cdf011e82c2209c5ebcb238",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1721,7 +1725,7 @@
 		{
 			"url": "/ko/posts/six-papers-zero-applied",
 			"field": "internalLinks",
-			"fingerprint": "c6134e261361f7c1605b0f228bad3baa",
+			"fingerprint": "0364f01be72a68104aef0ef910b4011a",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1733,7 +1737,7 @@
 		{
 			"url": "/ko/posts/skill-instruction-checklist-pattern",
 			"field": "internalLinks",
-			"fingerprint": "c8670e2f9571cfee112410d2777802b8",
+			"fingerprint": "ba6b931e9e2a9c32677a001d3d669079",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1745,7 +1749,7 @@
 		{
 			"url": "/ko/posts/skills-three-transports",
 			"field": "internalLinks",
-			"fingerprint": "4e2326e72664e95142f807737212b278",
+			"fingerprint": "a6902b4efa5d918731326770fef51c40",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1757,7 +1761,7 @@
 		{
 			"url": "/ko/posts/stale-vs-orphan-blocks",
 			"field": "internalLinks",
-			"fingerprint": "acdcf5cfce14e750d2500496e36b66d5",
+			"fingerprint": "917e0e874ee53de793fdce94c2c93957",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1769,7 +1773,7 @@
 		{
 			"url": "/ko/posts/state-invariant-flag-drift-recovery",
 			"field": "internalLinks",
-			"fingerprint": "9439e1b057829c9d699222be80098148",
+			"fingerprint": "f16da0ae9ec5846238a65e169617b9fc",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1781,7 +1785,7 @@
 		{
 			"url": "/ko/posts/stateless-auth-db-column-drift",
 			"field": "internalLinks",
-			"fingerprint": "d6cc8cef833d6b7893b2479821995c51",
+			"fingerprint": "af0c75a7daafdfcc13f7e231cf28bbda",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1793,7 +1797,7 @@
 		{
 			"url": "/ko/posts/stdlib-only-helper-portability",
 			"field": "internalLinks",
-			"fingerprint": "6560f3366c3d5fca03d7e283a0a279b3",
+			"fingerprint": "1feee178e7e26b1aad3a7272b7bdc26f",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1805,7 +1809,7 @@
 		{
 			"url": "/ko/posts/stow-symlink-health-checking",
 			"field": "internalLinks",
-			"fingerprint": "6ae75f9f5ffaa08f2d6ece3dbd932a80",
+			"fingerprint": "4d42f2854890ff359700b304ce00bb0b",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1817,7 +1821,7 @@
 		{
 			"url": "/ko/posts/svelte-effect-rune",
 			"field": "internalLinks",
-			"fingerprint": "8787a09302d013087c303c07179a1da0",
+			"fingerprint": "a93b1e8a899c981f3f0aac4da233521c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1829,7 +1833,7 @@
 		{
 			"url": "/ko/posts/svelte-onmount-async-cleanup",
 			"field": "internalLinks",
-			"fingerprint": "d1ce2d7f71776ad0f317881dd2cb46f6",
+			"fingerprint": "393a67567b73b42442aab496cd14044e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1841,7 +1845,7 @@
 		{
 			"url": "/ko/posts/sveltekit-global-store-hydration",
 			"field": "internalLinks",
-			"fingerprint": "bb64707b146d5d0c37ee66fa2396b230",
+			"fingerprint": "8eea587dc60191247c6527f8cd80117b",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1853,7 +1857,7 @@
 		{
 			"url": "/ko/posts/symmetric-redis-kafka-bridge-pair",
 			"field": "internalLinks",
-			"fingerprint": "538c70ed27ff66ff5b32ff0008d545b8",
+			"fingerprint": "8cb009d9b993ce74eb3a34aac3daec33",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1865,7 +1869,7 @@
 		{
 			"url": "/ko/posts/sync-token-invalidation-recovery",
 			"field": "internalLinks",
-			"fingerprint": "32516bd28bf402bf735e448427d6297c",
+			"fingerprint": "29df0390c9cd71a4cab5efb58963c026",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1877,7 +1881,7 @@
 		{
 			"url": "/ko/posts/terraform-fundamentals",
 			"field": "internalLinks",
-			"fingerprint": "2938893269bd83c9137d9c23e89d6247",
+			"fingerprint": "7d5addb3065f772cc4f7794e12bf894b",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1889,7 +1893,7 @@
 		{
 			"url": "/ko/posts/terraform-rds-credentials",
 			"field": "internalLinks",
-			"fingerprint": "c410d4794788ccfd58a5cbc46316759e",
+			"fingerprint": "a3d8c0739b64f0cd7db733d5a7e0956c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1901,7 +1905,7 @@
 		{
 			"url": "/ko/posts/terraform-state-recovery",
 			"field": "internalLinks",
-			"fingerprint": "12b472d1fca251f32a57d0bc47d4149d",
+			"fingerprint": "908115f434085b2937d2ceb804aca5c2",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1913,7 +1917,7 @@
 		{
 			"url": "/ko/posts/test-L-vs-realpath-symlink-detection",
 			"field": "internalLinks",
-			"fingerprint": "bed0692587cd79a20035024d08197466",
+			"fingerprint": "1971ba1d97571e59da5a7e12005c4ae3",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1925,7 +1929,7 @@
 		{
 			"url": "/ko/posts/the-token-stack",
 			"field": "internalLinks",
-			"fingerprint": "e1dd68b3ac0a38b20757b19b61dac244",
+			"fingerprint": "b678b6fa735523ff42df118c5919031e",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1937,7 +1941,7 @@
 		{
 			"url": "/ko/posts/three-gates-and-an-audit-log",
 			"field": "internalLinks",
-			"fingerprint": "4761af5d8e4639a9ec3de8524dcdcef0",
+			"fingerprint": "39c5ff8eafd04c9d3860ac25ef7698f6",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1949,7 +1953,7 @@
 		{
 			"url": "/ko/posts/tmux-smart-session-auto-start",
 			"field": "internalLinks",
-			"fingerprint": "644a493febb7ba9dea51139ecc307b10",
+			"fingerprint": "49343602853324487c7ad56112fad57f",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1961,7 +1965,7 @@
 		{
 			"url": "/ko/posts/traefik-keycloak-forwardauth",
 			"field": "internalLinks",
-			"fingerprint": "619636e564b6ddb4d14a56adfcc7b1a6",
+			"fingerprint": "a076bcd3f358872c52945a89dc104a7a",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1973,7 +1977,7 @@
 		{
 			"url": "/ko/posts/two-phase-deletion-pattern",
 			"field": "internalLinks",
-			"fingerprint": "4e279d807f066222cfa4f163b7cdb039",
+			"fingerprint": "1f795da80882da85982d88b340b7dbb7",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1985,7 +1989,7 @@
 		{
 			"url": "/ko/posts/typeorm-cli-nestjs-datasource",
 			"field": "internalLinks",
-			"fingerprint": "f9538bf7e6a4b22f9ac89ee509b01d0f",
+			"fingerprint": "fae17fc46ff58a75ae3a3e4625033976",
 			"class": "post-links-redesign"
 		},
 		{
@@ -1997,7 +2001,7 @@
 		{
 			"url": "/ko/posts/typeorm-migration-drift-scope",
 			"field": "internalLinks",
-			"fingerprint": "2e2ae3f3d2f6743267eca43b2cb88e59",
+			"fingerprint": "5722d4373a5435f8e6560f41a1b472d9",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2009,7 +2013,7 @@
 		{
 			"url": "/ko/posts/typescript-type-narrowing",
 			"field": "internalLinks",
-			"fingerprint": "efd3ca190a54017e46b216b0e1a56f44",
+			"fingerprint": "06c315141e3e732c3f576adcb32b4acf",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2021,7 +2025,7 @@
 		{
 			"url": "/ko/posts/typesense-import-byte-aware-chunking",
 			"field": "internalLinks",
-			"fingerprint": "efded66ed8a73461536044db5d7da265",
+			"fingerprint": "7525b96fd7a4e58617c6d2a7ed53bcff",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2033,7 +2037,7 @@
 		{
 			"url": "/ko/posts/updatedAt-staleness-guard",
 			"field": "internalLinks",
-			"fingerprint": "e58716ee94e8922556ab5a61c77659b4",
+			"fingerprint": "74e304c85a158dc2b47f17e62d0249b3",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2045,7 +2049,7 @@
 		{
 			"url": "/ko/posts/uv-lock-best-practice",
 			"field": "internalLinks",
-			"fingerprint": "bda4296ce770bdc179fe6fbb8f5ca1b7",
+			"fingerprint": "5afbb50f00aeab4dd7bf811982a42d9a",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2057,7 +2061,7 @@
 		{
 			"url": "/ko/posts/vpc-networking-fundamentals",
 			"field": "internalLinks",
-			"fingerprint": "2cbeafb79f2d5e2572df6d2a1f8582bf",
+			"fingerprint": "affd62e5fbcb28d6bf4378d1be4b0d9c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2069,7 +2073,7 @@
 		{
 			"url": "/ko/posts/waf-allowlist-patterns",
 			"field": "internalLinks",
-			"fingerprint": "5c78595a24ac9461e4039775b1bd16ac",
+			"fingerprint": "124bef05f3218180aa6f4d93ee6346c9",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2081,7 +2085,7 @@
 		{
 			"url": "/ko/posts/waf-implementation",
 			"field": "internalLinks",
-			"fingerprint": "38a0f53f10165716deb32400b7e4ab57",
+			"fingerprint": "daf10e08e9172eacfda2b519dd05514c",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2093,7 +2097,7 @@
 		{
 			"url": "/ko/posts/webhook-vs-user-activity",
 			"field": "internalLinks",
-			"fingerprint": "e2ae9a1a0cb0c22486b24b1d33f09bd1",
+			"fingerprint": "9dd4dc44ab5b7e19f0bda9dea3493515",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2105,7 +2109,7 @@
 		{
 			"url": "/ko/posts/websocket-architecture",
 			"field": "internalLinks",
-			"fingerprint": "8bb7bbe5ee5d22f551188129ea6a3056",
+			"fingerprint": "91f6173dbaa40cd846bf444fb0b42577",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2117,7 +2121,7 @@
 		{
 			"url": "/ko/posts/wrap-and-rollup",
 			"field": "internalLinks",
-			"fingerprint": "dad3445a62769d78034838d672534cf4",
+			"fingerprint": "130050a2d83a37977e16e43e62022bae",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2129,7 +2133,7 @@
 		{
 			"url": "/ko/posts/wrap-followup-persistence-architecture",
 			"field": "internalLinks",
-			"fingerprint": "1d3a00602a0f9e603d055df6ad3ff6e3",
+			"fingerprint": "d5682863ef72f8e4db9caa5ddbdbb6c4",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2141,7 +2145,7 @@
 		{
 			"url": "/ko/posts/zsh-backtick-eval-in-skills",
 			"field": "internalLinks",
-			"fingerprint": "056c6306f9bcea293f2c02c91363ac51",
+			"fingerprint": "d15b3019efa2390218612557fa872749",
 			"class": "post-links-redesign"
 		},
 		{
@@ -2203,18 +2207,6 @@
 			"field": "lang",
 			"fingerprint": "52c39188434b2b7c792cf14f504fc407",
 			"class": "ko-loc-c13"
-		},
-		{
-			"url": "/ko/system/3b",
-			"field": "text",
-			"fingerprint": "edd6bd8c9dd707f02d716a7652b9dde5",
-			"class": "system-3b-partial-port"
-		},
-		{
-			"url": "/ko/system/3b",
-			"field": "internalLinks",
-			"fingerprint": "93a4bb7eb98cb87c0b134e3efe33dd34",
-			"class": "system-3b-partial-port"
 		},
 		{
 			"url": "/ko/tags",
@@ -4255,18 +4247,6 @@
 			"field": "internalLinks",
 			"fingerprint": "3abcc3c8f7bee71bfb5e03ed1b475d73",
 			"class": "post-links-redesign"
-		},
-		{
-			"url": "/system/3b",
-			"field": "text",
-			"fingerprint": "820e1be50688f51a63b8c742c3b89931",
-			"class": "system-3b-partial-port"
-		},
-		{
-			"url": "/system/3b",
-			"field": "internalLinks",
-			"fingerprint": "baa4f6f3f4a35e8ba93e0a43ef98781d",
-			"class": "system-3b-partial-port"
 		}
 	]
 }
