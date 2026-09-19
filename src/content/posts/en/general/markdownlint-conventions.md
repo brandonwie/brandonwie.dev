@@ -1,8 +1,8 @@
 ---
 title: Markdownlint Conventions
-description: 7,500 markdownlint errors across 200 markdown files. The rules that mattered, the configuration that stuck, two pre-commit traps that surface only in nested scopes, and the strict-preset migration that collapsed an 18-rule custom config into one extends + five carve-outs.
+description: 7,500 markdownlint errors across 200 markdown files. The rules that mattered, the configuration that stuck, two pre-commit traps that surface only in nested scopes, a wrapped issue reference that turns into a heading, and the strict-preset migration that collapsed an 18-rule custom config into one extends + five carve-outs.
 date: 2026-01-23T00:00:00.000Z
-updated: "2026-08-12"
+updated: "2026-09-20"
 tags:
   - general
   - documentation
@@ -32,12 +32,12 @@ references:
   - url: 'https://github.com/github/markdownlint-github'
     title: 'GitHub''s markdownlint preset (accessibility-focused)'
     type: official
-source_content_hash: 021c629baf09b54772ac7bf818ef89eed4bc4660ec6943bd9d6d6a71cb04e4ac
+source_content_hash: 925a7e0fe6ee7a07b09a07131ce83ac5ec5cad82af9970fcdb68981a5e5bb276
 ---
 
 I ran markdownlint on a knowledge base with about 200 markdown files and got back 7,500 errors. Seven thousand five hundred. The repository had accumulated formatting debt over months: missing blank lines around lists, code blocks without language specifiers, duplicate headings, inconsistent table spacing. Every contributor applied their own conventions, and the result was a codebase where diffs were noisy, GitHub rendering was unpredictable, and no one could tell "correct" formatting from "works on my machine" formatting.
 
-This post covers the rules that matter most, the configuration decisions I made, two non-obvious traps that show up later in nested config scopes, and a follow-up migration that replaced an 18-rule custom config with a one-line `extends:` plus five documented carve-outs.
+This post covers the rules that matter most, the configuration decisions I made, two non-obvious traps that show up later in nested config scopes, a third where a wrapped issue reference becomes a heading, and a follow-up migration that replaced an 18-rule custom config with a one-line `extends:` plus five documented carve-outs.
 
 ## Why Consistent Markdown Formatting Matters
 
@@ -314,6 +314,28 @@ node ~/.config/ainc/anc-hook.js suggest "<내용>"
 `node ~/.config/ainc/anc-hook.js suggest "<내용>"`
 ```
 
+The same rule reaches into table cells, and escaping your way out does not work. Escaping the backticks so the reader sees them literally turns the cell back into prose, which means the bracketed token is an element again:
+
+**Wrong:**
+
+```markdown
+| Token       | Meaning              |
+| ----------- | -------------------- |
+| \`<type>\`  | the commit type      |
+| \`<sev>\`   | the severity level   |
+```
+
+**Correct:**
+
+```markdown
+| Token  | Meaning            |
+| ------ | ------------------ |
+| `type` | the commit type    |
+| `sev`  | the severity level |
+```
+
+You have two cheap ways out. Drop the brackets and name the token (`type`, `sev`), or keep a real code span instead of escaped backticks. Escaped backticks leave the brackets live, so that combination still fails.
+
 Why this surprises:
 
 - Korean (or any non-Latin script) sentences feel "obviously prose" to the reader, so the angle bracket placeholder visually looks safe.
@@ -349,6 +371,28 @@ Why this surprises:
 - The folder rename intuitively feels like a "no-content-change" operation; lint shouldn't have an opinion. lint-staged disagrees, and lints whatever is staged, including renamed paths.
 - The `.me.md` extension already signals "do not modify" semantically, but markdownlint has no notion of that convention.
 - A standalone `notion-requirements.me.md` file would have been blocked on initial commit too. The rename just exposed the latent miss.
+
+## A Wrapped Issue Reference Turns Into an H1
+
+This one has nothing to do with nested scopes, but it belongs with the traps for the same reason: the offending character came from the formatter rather than from anything I typed.
+
+Prettier wraps markdown prose at 80 columns. Most of the time you never think about where the break lands. But when a sentence mentions an issue by number and the wrap puts that reference at the start of the continuation line, markdownlint reads the leading hash as an ATX heading marker. Three rules fire on the same line at once: MD025 (multiple top-level headings), MD022 (blank lines around headings), and MD026 (trailing punctuation in heading).
+
+**Wrong:**
+
+```markdown
+The guard exists because the rules were never injected automatically, which
+#396 fixed by loading them at session start.
+```
+
+**Correct:**
+
+```markdown
+The guard exists because the rules were never injected automatically, which
+issue 396 fixed by loading them at session start.
+```
+
+The reliable fix is to write "issue 396" in prose and keep the hash out of the sentence entirely. Keeping the hash off the line start also works, but that leans on a wrap position any later edit will move, so the error comes back the next time the sentence grows a word.
 
 ## VS Code Integration
 

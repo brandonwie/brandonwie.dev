@@ -4,7 +4,7 @@ description: >-
   Agent Teams의 현재 동작과 version별 pane 문제, 작업 소유권, 결과 전달
   실패를 구분해서 정리한 사용 기록이에요.
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-08-12'
+updated: '2026-09-20'
 tags:
   - ai-ml
   - claude-code
@@ -15,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: '2026-08-12'
-translation_date: '2026-08-12'
+source_updated: '2026-09-20'
+translation_date: '2026-09-20'
 references:
   - url: 'https://code.claude.com/docs/en/agent-teams'
     title: Claude Code Agent Teams 공식 문서
@@ -196,6 +196,22 @@ fan-out 결과를 바로 읽어야 할 때는 이름 없는 synchronous worker�
 더 강한 실패도 있었어요. `SendMessage`와 `Write`가 없는 read-only worker는
 background report를 보낼 방법 자체가 없었어요. 이런 worker를 background로
 띄운다면 Bash로 약속한 경로에 report를 쓰는 file-drop 계약이 필요해요.
+
+### 이름 있는 teammate의 응답에는 도착 기한이 없어요
+
+앞의 함정이 deliverable이 _어디로_ 가느냐의 문제라면, 이건 _언제_ 오느냐의
+문제예요. teammate의 출력은 tool result로 돌아오지 않고 lifecycle `idle` 신호만
+와요. 그래서 결과를 주지 않고 idle이 된 teammate가 반드시 실패한 건 아니고,
+기다리기를 그만둔 한참 뒤에 report가 도착하기도 해요.
+
+2026-09-11에 보안 검토를 teammate에게 맡겼어요. `SendMessage`로 두 번 물어도
+답이 없어서 그냥 넘어갔어요. 전체 report는 session을 정리하고 commit과 push까지
+끝낸 뒤에야 도착했고, 그 사이에 제가 내보낸 결론과 어긋났어요.
+
+그러니 "report 없이 idle이 됐다"를 실패로 보지 말고 UNRESOLVED로 남겨 둬요.
+검토 결과가 commit의 전제라면 이름 없는 synchronous `Agent`로 답을 먼저 받고
+판단해요. 이미 이름 있는 teammate를 띄워 둔 상태에서 기다릴 수 없다면, 손에 있는
+부분 증거로 결론을 적는 대신 review가 아직 남아 있다고 commit에 밝혀요.
 
 ## 현재도 전제로 둘 제한
 

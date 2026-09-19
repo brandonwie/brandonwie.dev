@@ -5,7 +5,7 @@ description: >-
   새 개발자는 즉시 AI 지시사항을 사용하고 기존 개발자는 개인 확장을
   유지하는 패턴입니다.
 date: 2026-02-04T00:00:00.000Z
-updated: "2026-08-12"
+updated: "2026-09-20"
 tags:
   - devops
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-shared-personal-config
-source_updated: "2026-08-12"
-translation_date: "2026-08-12"
+source_updated: "2026-09-20"
+translation_date: "2026-09-20"
 references:
   - url: "https://code.claude.com/docs/en/memory"
     title: "Claude Code 공식 문서 — CLAUDE.md 로드 순서"
@@ -29,6 +29,15 @@ references:
     title: "Claude Code 공식 문서 — settings 파일과 우선순위"
     type: official
 ---
+
+> **업데이트 (2026-09-20):** 이제 Claude Code 프로필을 두 개 쓰지 않아요. 업무용
+> 두 번째 프로필과 그 settings file은 2026-09-11에 없앴고, 지금은 그냥 `claude`로
+> 띄우는 게 유일한 진입점이에요. 나머지 내용은 손대지 않았어요. 여기서 설명하는
+> 메커니즘(`CLAUDE_CONFIG_DIR`로 범위를 나눈 프로필, 프로필별 keychain 항목,
+> symlink냐 복사냐를 가르는 소유권 규칙)은 지금도 Claude Code가 동작하는 방식
+> 그대로고, 두 번째 프로필이 다시 필요해지면 또 꺼내 쓸 방법이기 때문이에요. 두
+> 프로필이 나오는 예시는 말 그대로 예시로 읽어주세요. 지금 제 머신 상태를
+> 설명하는 게 아니에요.
 
 몇 주에 걸쳐 프로젝트에 맞는 Claude Code 지시사항을 튜닝했어요. 커스텀
 명령, 도메인별 프롬프트, 코딩 컨벤션까지. 그런데 새 개발자가 팀에 합류해서
@@ -213,13 +222,14 @@ Claude Code의 로딩 계층 구조가 `~/.claude/CLAUDE.md`를 모든 세션에
 - best-practices audit에서 나온 rules 파일 총 4개(+ Tier 1의 tag-taxonomy)
 - 이제 모든 세션이 같은 원칙을 적용하면서 로딩하는 줄 수는 줄었어요
 
-## 현재 profile settings 구조 (2026년 7월)
+## Profile settings 구조 (2026년 7월)
 
 위의 공유 지시사항 패턴은 지금도 저장소 file과 생성해 둔 사본을 그대로 써요.
 그런데 비공개 runtime 설정에는 다른 방식이 필요했어요. symlink가 몇 번 깨지고
 나서 프로필 `settings.json`을 서로 이어 붙이는 방식을 그만뒀어요.
 
-현재는 비공개 authority 두 개와 서로 독립된 runtime file 두 개를 사용해요.
+그렇게 해서 나온 구조가 비공개 authority 두 개와 서로 독립된 runtime file 두
+개였어요.
 
 ```text
 private authority                 runtime
@@ -227,6 +237,10 @@ private authority                 runtime
 settings.personal.json  ─deploy→  ~/.claude/settings.json
 settings.work.json      ─deploy→  ~/.claude-work/settings.json
 ```
+
+그 두 runtime 중 지금 남아 있는 건 하나예요. 업무용 runtime과 그 authority
+file은 2026년 9월에 지웠어요. 그런데 거기서 세운 규칙은 그대로 이어졌고, 그
+규칙을 보여주기엔 두 프로필이 나오는 버전이 더 분명해요.
 
 각 runtime은 mode `0600`인 일반 file이에요. 프로필마다 직접 가져오고 직접
 적용해요. background로 도는 동기화도 없고, 양방향 동기화도 없어요. 뭔가를 쓰기
@@ -532,15 +546,17 @@ reconcile-and-relink 시퀀스 전체가 로컬 작업 트리 안에만 살아�
 
 ## 선택적 session 프로필 확장 (claude-swap)
 
-독립된 개인 profile과 업무 profile은 각각 한 벌의 credential을 가리켜요.
+독립된 개인 프로필과 업무 프로필은 각각 credential 한 벌을 가리켰어요.
 이후 단계에서 주 runtime file을 건드리지 않는 선택적 multi-account session
 layer를 추가했어요. 별도 runtime을 설치하지 않으면 아무 동작도 하지 않아요.
 
 ### Runtime 라이프사이클
 
-wrapper 스크립트 `scripts/cswap-3b.sh <pers|work> [--force-session]`는 지식
-베이스에 tracking되지만 runtime이 설치돼 있지 않으면 아무것도 안 해요. 같은
-계정 요청은 곧장 source 프로필로 들어가는 fast path를 타요. `--force-session`을
+wrapper 스크립트 `scripts/cswap-3b.sh pers [--force-session]`는 지식
+베이스에 tracking되지만 runtime이 설치돼 있지 않으면 아무것도 안 해요. 예전에는
+업무용 프로필을 가리키는 두 번째 mode가 있었는데, 그 mode는 프로필과 함께
+없어졌고 지금은 exit code 1로 종료해요. 같은 계정 요청은 곧장 source 프로필로
+들어가는 fast path를 타요. `--force-session`을
 넘기거나 계정을 넘나드는 요청을 하면 upstream claude-swap의 `setup_session()`을
 거쳐 격리된 session 프로필을 bootstrap해요. bootstrap과 launch를 나눈 방식이고,
 `cswap run`은 절대 쓰지 않아요.
@@ -594,8 +610,9 @@ runtime만 되돌리는 rollback 드릴로 전부 제거했어요(session들, �
 항목, claude-swap backup keychain 서비스, `~/.claude-swap-backup/`, uv tool까지).
 그리고 개인 프로필과 업무 프로필이 전후로 byte 단위까지 동일한지 확인했어요.
 다시 켜려면 pin된 commit으로 uv tool을 재설치하고 setup-token으로 계정을 다시
-등록하면 돼요. wrapper와 doctor 체크만 실어 보내는 이유는, 주된 두 프로필 체인이
-session 레이어의 존재에 절대 의존하지 않게 하려는 거예요.
+등록하면 돼요. wrapper와 doctor 체크만 실어 보내는 이유는, 주된 프로필 체인이
+session 레이어의 존재에 절대 의존하지 않게 하려는 거였어요. 나중에 프로필
+하나로 줄일 때 치를 비용이 없었던 것도 그 덕분이에요.
 
 ## 교차 검증 규율
 

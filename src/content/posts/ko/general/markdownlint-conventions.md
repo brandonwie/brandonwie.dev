@@ -2,10 +2,10 @@
 title: Markdownlint 컨벤션 가이드
 description: >-
   200개 markdown 파일에서 쏟아진 markdownlint 에러 7,500개. 어떤 룰이 중요했는지, 어떤 설정이 끝까지 남았는지,
-  nested scope에서만 드러나는 pre-commit 함정 두 가지, 그리고 18개짜리 custom config를 extends 한 줄과
-  carve-out 다섯 개로 줄인 strict-preset 마이그레이션 이야기예요.
+  nested scope에서만 드러나는 pre-commit 함정 두 가지, 줄바꿈된 issue 참조가 헤딩이 돼버리는 사례,
+  그리고 18개짜리 custom config를 extends 한 줄과 carve-out 다섯 개로 줄인 strict-preset 마이그레이션 이야기예요.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-08-12'
+updated: '2026-09-20'
 tags:
   - general
   - documentation
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: markdownlint-conventions
-source_updated: '2026-08-12'
-translation_date: '2026-08-12'
+source_updated: '2026-09-20'
+translation_date: '2026-09-20'
 references:
   - url: 'https://github.com/DavidAnson/markdownlint'
     title: markdownlint
@@ -50,6 +50,8 @@ references:
 이긴다는 게 문제였어요. 파일을 건드릴 때마다 조금씩 다른 포맷이
 쌓이고, 시간이 지나면 코드베이스 전체가 충돌하는 컨벤션의 짜깁기가 돼서
 지저분한 diff를 만들고 GitHub 렌더링을 혼란스럽게 만들어요.
+
+줄바꿈된 issue 참조가 헤딩이 돼버리는 함정은 뒤에서 따로 다뤄요.
 
 ## Markdownlint가 중요한 이유
 
@@ -379,6 +381,32 @@ node ~/.config/ainc/anc-hook.js suggest "<내용>"
 `node ~/.config/ainc/anc-hook.js suggest "<내용>"`
 ```
 
+같은 룰이 테이블 셀 안까지 들어오는데, escape로 빠져나가려는 시도는 통하지
+않아요. 읽는 사람에게 backtick을 그대로 보여주려고 escape하면 그 셀은 다시
+산문이 되고, bracket으로 감싼 토큰은 또 element로 잡히거든요.
+
+**Wrong:**
+
+```markdown
+| Token       | Meaning              |
+| ----------- | -------------------- |
+| \`<type>\`  | the commit type      |
+| \`<sev>\`   | the severity level   |
+```
+
+**Correct:**
+
+```markdown
+| Token  | Meaning            |
+| ------ | ------------------ |
+| `type` | the commit type    |
+| `sev`  | the severity level |
+```
+
+빠져나갈 방법은 두 가지고, 둘 다 손이 별로 안 가요. bracket을 빼고 토큰 이름만
+적거나(`type`, `sev`), escape한 backtick 대신 진짜 code span을 쓰면 돼요.
+escape한 backtick은 bracket을 그대로 살려두니까 그 조합으로는 여전히 실패해요.
+
 왜 놀라운가:
 
 - 한국어처럼 라틴 문자가 아닌 문장은 읽는 사람에게 "딱 봐도 산문"으로
@@ -431,6 +459,36 @@ git commit
   그런 컨벤션을 알 리가 없어요.
 - 원래 자리에 있던 `notion-requirements.me.md`도 처음 commit할 때 똑같이
   막혔을 거예요. 이름 변경이 그동안 숨어 있던 구멍을 드러낸 것뿐이에요.
+
+## 줄바꿈된 issue 참조가 H1이 되는 함정
+
+이건 nested scope와는 아무 상관이 없어요. 그래도 앞의 함정들과 같은 이유로 여기
+묶어뒀어요. 문제를 일으킨 문자가 제가 친 게 아니라 formatter에서 나왔거든요.
+
+Prettier는 markdown 산문을 80칸에서 줄바꿈해요. 평소에는 줄이 어디서 끊기는지
+신경 쓸 일이 없죠. 그런데 issue를 번호로 언급한 문장에서 줄바꿈이 그 참조를
+다음 줄 맨 앞으로 밀어버리면, markdownlint는 줄 앞의 hash를 ATX 헤딩 마커로
+읽어요. 그러면 한 줄에서 룰 세 개가 한꺼번에 터져요. MD025(최상위 헤딩 중복),
+MD022(헤딩 앞뒤 빈 줄), MD026(헤딩 끝 구두점)이요.
+
+**Wrong:**
+
+```markdown
+The guard exists because the rules were never injected automatically, which
+#396 fixed by loading them at session start.
+```
+
+**Correct:**
+
+```markdown
+The guard exists because the rules were never injected automatically, which
+issue 396 fixed by loading them at session start.
+```
+
+확실한 해결책은 산문에서 "issue 396"처럼 풀어 쓰고 hash를 문장에서 아예 빼는
+거예요. hash가 줄 맨 앞에만 안 오게 해도 되긴 하는데, 그건 나중에 한 번만 고쳐도
+움직이는 줄바꿈 위치에 기대는 셈이에요. 문장에 단어 하나만 더 붙어도 에러가 다시
+돌아와요.
 
 ## VS Code 통합
 

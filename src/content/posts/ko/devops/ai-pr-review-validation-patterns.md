@@ -1,10 +1,10 @@
 ---
 title: AI PR 리뷰 검증 패턴
 description: >-
-  AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 14가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크
+  AI 코드 리뷰어(Claude, Copilot, Codex)가 오탐을 만드는 15가지 패턴과, triage를 빠르게 유지하는 분류 프레임워크
   + 보강 주석 템플릿.
 date: 2026-01-23T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-09-20'
 tags:
   - devops
   - ai
@@ -14,8 +14,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: ai-pr-review-validation-patterns
-source_updated: '2026-08-02'
-translation_date: '2026-07-31'
+source_updated: '2026-09-20'
+translation_date: '2026-09-20'
 references:
   - url: 'https://docs.github.com/en/rest/pulls/reviews'
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -313,6 +313,25 @@ git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
 
 그다음 실제 file을 다시 읽으세요. in-memory model은 절대 믿지 말고요. CI는 `--limit 1`이 아니라 여러 run을 나열해서 확인하세요. 병렬 lane이 같은 file에서 앞서가고 있다면 작업을 중복하지 말고 물러서세요. 한창 구현 중인 세션이 그 변경의 주인이니까요.
 
+### 15. Spec-Authority Confusion (일반론으로는 맞지만 protocol 기준으로는 틀림)
+
+**어떻게 보이나:** Reviewer가 변경을 일반적인 언어 semantics 기준으로 검증하고, 추상적으로는 기술적으로 맞지만 그 코드가 따르기로 채택한 protocol과는 어긋나는 fix를 제안해요. 더 나쁜 건, 그 뒤로 review loop가 퇴행한 상태를 놓고 완전히 깨끗하다고 판정할 수 있다는 점이에요. reviewer가 spec이 아니라 일반적인 정확성만 계속 따지고 있으니까요.
+
+**왜 이런 일이 생기나:** AI reviewer는 diff와 그 주변 코드를 읽어요. 그 코드가 왜 언어가 허용하는 것보다 일부러 더 엄격한지를 결정한 spec 문서까지 자동으로 읽지는 않아요. spec이 의도적으로 동작을 좁혀둔 자리에서는 "여기서 언어가 하는 일"과 "여기서 이 코드가 해야 하는 일"이 갈라지는데, reviewer 손에는 앞쪽밖에 없어요.
+
+**예시 (제 knowledge-base repo에서 받은 review, 9월):** 이 코드는 shell 명령을 분류하고 double-quote wrapper를 엄격하게 decode해요. 기록되는 형태가 실제로 실행된 것과 byte 단위로 같아야 하거든요. 채택된 spec은 escape된 backslash 쌍을 정확히 한 번, 재귀 없이 decode하는 것만 허용해요. 나머지 backslash 시퀀스는 전부 decode 불가로 보고 해당 명령을 `untested`로 표시해야 해요. Round 2에서 Claude는 대신 POSIX double-quote 규칙을 따르라고 권했어요. `n` 앞의 단독 `\`는 literal로 남으니 `"printf '%s\n' …"`는 decode돼야 한다는 거였죠. zsh 기준으로는 맞는 말이에요. spec 기준으로는 틀렸고, 느슨해진 버전이 깨끗하게 돌아온 review round를 통과해서 그대로 나갔어요. 나중에 독립적인 spec-check가 이걸 잡아냈고, 결국 revert해야 했어요.
+
+**탐지:**
+
+- fix가 채택된 spec이나 protocol을 구현한 코드를 건드린다면, 그 제안을 언어 semantics만이 아니라 spec 본문과도 대조하세요.
+- "reviewer가 승인했다"는 건 conformance 결과가 아니에요. reviewer는 그럴듯함을 검증하고, 정확성은 spec이 정의해요.
+- 유난히 엄격한 부분 옆에 spec 인용을 주석으로 남겨두세요. 나중에 다른 reviewer가 느슨한 형태를 다시 제안하지 않도록요.
+
+```typescript
+// NOTE: Decode exactly one escaped-backslash pair, per the adopted spec —
+// even though POSIX would also accept a single backslash here.
+```
+
 ## Agent 간 convergence를 severity 신호로 읽기
 
 위 패턴들은 대부분 PR에 코멘트를 다는 bot 하나에서 나왔어요. proactive review는 결이 좀 달라요. 독립적인 slice agent 여러 개가 같은 diff를 다른 누구보다 먼저 읽어요. 이때는 *agent들의 의견이 어디서 모이고 어디서 갈리는지* 자체가 개별 finding에 없는 정보를 담고 있어요.
@@ -440,3 +459,13 @@ Cross-Branch 혼동(#9)이 처음 나타난 PR이에요. Claude가 PR target(`de
 **핵심 INVALID count: 0.** 이 PR에서는 3개 이상 agent의 convergence가 valid finding의 완전한 positive predictor였어요. 이유는 범위가 좁아 agent들이 end-to-end로 추론할 수 있었고, script가 destructive operation을 수행해 reviewer들이 보수적으로 판단했으며, 4개의 독립 reviewer가 개별 false positive를 줄였기 때문으로 보여요.
 
 **프로세스 학습:** CONTROVERSIAL 결정은 VALID와 GOOD-TO-HAVE 사이에 gate로 둬야 해요. VALID fix는 먼저 진행하고, CONTROVERSIAL은 사용자에게 깔끔한 결정 지점을 제공하고, low-risk improvement는 그 뒤에 batch 처리하는 흐름이 맞았어요. 세 tier를 하나의 confirm step으로 묶으면 각 decision type에 필요한 latency가 어긋나요.
+
+### 사례 7: 제 knowledge-base repo의 shell 분류 PR (Claude, Round 1~4 + 독립 spec-check)
+
+**통계:** Round 1: 유효한 지적 3개, 전부 수정. Round 2: 유효한 지적 2개, 전부 수정. Round 3: 깨끗함. 그다음 독립적인 spec-check는 Round 2의 fix 자체가 채택된 spec의 "쌍 단위로만 decode" 규칙을 어겼다는 걸 찾아냈어요. trailer 정규화 rewrite가 남긴 stale commit 참조도 같이 나왔고요. 둘 다 수정했고 Round 4는 깨끗하게 돌아왔어요.
+
+Spec-Authority Confusion(#15)이 드러난 자리가 여기예요. reviewer가 틀리는 건 흔한 일이에요. 여기서 눈여겨볼 부분은 누가 잡아내기 전에 review loop가 이미 퇴행한 상태를 깨끗하다고 선언했다는 점이에요.
+
+**핵심 신호:** PR review loop와 spec-check는 서로 다른 gate고, 검증하는 대상도 달라요. Claude는 diff를 놓고 그럴듯함을 검증해요. spec-check는 기준 문서를 놓고 conformance를 검증해요. 둘 다 자기 축에서는 통과했고, 위반을 잡아낼 자격이 있는 건 두 번째뿐이었어요. 코드가 문서로 적힌 protocol을 구현한다면, 깨끗한 review round는 conformance의 증거가 아니에요. 두 번째 gate를 별도 단계로 둬야 해요.
+
+reviewer가 스스로 주장을 거둬들이는 것도 그 자체로 신호예요. spec 본문을 보여주자 Claude는 앞서 내놓은 제안을 방어하지 않고 철회했고, 기준 문서를 손에 쥐자 정답을 다시 도출해냈어요. 새 증거 앞에서 입장을 뒤집는 reviewer는 제대로 동작하고 있는 거예요. 문제는 애초에 아무도 그 증거를 건네주지 않았다는 점이었어요.

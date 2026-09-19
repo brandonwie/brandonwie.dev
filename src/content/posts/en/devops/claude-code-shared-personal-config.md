@@ -2,7 +2,7 @@
 title: "Claude Code: Shared + Personal AI Config Pattern"
 description: Split AI instructions into committed (shared) and gitignored (personal) layers
 date: 2026-02-04T00:00:00.000Z
-updated: "2026-08-12"
+updated: "2026-09-20"
 tags:
   - devops
   - claude-code
@@ -12,7 +12,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 4f58ab7976db64ec810943af0ebc8c1383e39fd21824a63610546d5343b3e714
+source_content_hash: 349bba6ae83db1dca6f6c1c5845b025ca53f11de3e3b04824e75d4160c4b1bb4
 references:
   - url: "https://code.claude.com/docs/en/memory"
     title: "Claude Code docs — How Claude remembers your project (CLAUDE.md load order)"
@@ -24,6 +24,16 @@ references:
     title: "Claude Code docs — Settings files and settings precedence"
     type: official
 ---
+
+> **Update (2026-09-20):** I no longer run two Claude Code profiles. The second,
+> work-scoped profile and its settings files were removed on 2026-09-11, and a
+> plain `claude` launch is now the only entry point. The rest of this post is
+> unchanged, because the mechanism it documents (`CLAUDE_CONFIG_DIR`-scoped
+> profiles, per-profile keychain entries, and the symlink-versus-copy ownership
+> rules) is still how Claude Code behaves, and it is still what I would reach
+> for if I needed a second profile again. Read
+> the two-profile examples as examples, not as a description of my current
+> machine.
 
 I spent weeks tuning Claude Code instructions for my project: custom commands,
 domain-specific prompts, coding conventions. Then a new developer joined the
@@ -220,15 +230,15 @@ global rules without restating them.
 - 4 rules files total from the best-practices audit (+ tag-taxonomy from Tier 1)
 - Every session now enforces the same principles while loading fewer lines
 
-## Current profile settings architecture (July 2026)
+## Profile settings architecture (July 2026)
 
 The shared instruction pattern above still runs on repository files and
 generated copies. Private runtime settings turned out to need something else.
 After a run of symlink failures I stopped chaining profile `settings.json` files
 together.
 
-The current layout uses two gitignored authorities and two independent runtime
-files:
+The layout that came out of that used two gitignored authorities and two
+independent runtime files:
 
 ```text
 private authority                 runtime
@@ -236,6 +246,10 @@ private authority                 runtime
 settings.personal.json  ─deploy→  ~/.claude/settings.json
 settings.work.json      ─deploy→  ~/.claude-work/settings.json
 ```
+
+Only one of those two runtimes is left today. The work-scoped one and its
+authority file were deleted in September 2026, but the rule they established is
+what carried forward, so the two-profile version is the clearer way to show it.
 
 Each runtime is a regular mode-`0600` file. I capture and deploy each profile
 explicitly. Nothing syncs in the background, and nothing syncs both ways. Before
@@ -558,15 +572,17 @@ permissions into the repo, which is worse.
 
 ## Optional session-profile extension (claude-swap)
 
-The independent personal and work profiles each point at one credential set. A
+The independent personal and work profiles each pointed at one credential set. A
 later stage added an optional multi-account session layer without changing
 those primary runtime files. The session layer is inert unless its separate
 runtime is installed.
 
 ### Runtime lifecycle
 
-A wrapper script, `scripts/cswap-3b.sh <pers|work> [--force-session]`, is tracked
-in the knowledge base but does nothing without the runtime installed. A
+A wrapper script, `scripts/cswap-3b.sh pers [--force-session]`, is tracked
+in the knowledge base but does nothing without the runtime installed. It used to
+take a second mode for the work-scoped profile; that mode was retired with the
+profile itself and now exits 1. A
 same-account request takes a direct fast path straight into the source profile.
 Passing `--force-session` (or making a cross-account request) bootstraps an
 isolated session profile through upstream claude-swap's `setup_session()`, a
@@ -623,8 +639,9 @@ entries, the `claude-swap` backup keychain service, `~/.claude-swap-backup/`, an
 the uv tool) and verified the personal and work profiles were byte-identical
 before and after. Reactivating means reinstalling the uv tool at the pinned commit
 and re-registering accounts via setup-token. The point of shipping only the
-wrapper and the doctor check is that the primary two-profile chain never depends on
-the session layer being present.
+wrapper and the doctor check is that the primary profile chain never depended on
+the session layer being present. That is also why collapsing to a single profile
+later cost nothing here.
 
 ## Cross-check discipline
 

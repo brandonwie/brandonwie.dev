@@ -2,7 +2,7 @@
 title: 'The pre-commit hook race that put my files in someone else''s commit'
 description: 'Two sessions committing to one repo, a slow pre-commit hook, and `fatal: cannot lock ref HEAD`. The loud failure is the easy one — the quiet failure hands your staged files to the other session''s commit under its message.'
 date: 2026-05-14T00:00:00.000Z
-updated: "2026-09-03"
+updated: "2026-09-20"
 tags:
   - devops
   - transferable
@@ -14,7 +14,7 @@ references:
   - url: 'https://git-scm.com/docs/git-worktree'
     title: git-worktree — Manage multiple working trees
     type: official
-source_content_hash: 2eb00ade778b2f1fa547ef2ff9cbeb1f138ab90dd9c3c772cac43046f79dfe4b
+source_content_hash: 033669ee0d5d4503b9afccde92bd4c4f372641c3bc6c17dd85938538924ce4a8
 ---
 
 I had two agent sessions working in the same repository at once, and both tried
@@ -79,6 +79,15 @@ and the commit aborts.
 The misleading part is that the abort looks like a problem with my change, and
 it isn't. Retrying once the other session goes quiet is the whole fix.
 
+The abort path has a wrinkle I got wrong on the first pass. When the
+stash/restore cycle gives up, lint-staged leaves a stash behind named
+`On main: lint-staged automatic backup`, and my instinct was to treat it as
+scratch and drop it. It isn't scratch. That snapshot covers every modified path
+in the checkout, which on a shared checkout means it also holds the other
+sessions' unstaged work. In my case that was seventeen paths, none of them mine.
+Leave it in place until the people whose work it represents agree it can go, or
+until a blob-by-blob comparison shows there's nothing in it left to recover.
+
 ## The fix is structural, not "make the hook faster"
 
 It's tempting to treat this as a performance problem and shave the hook down.
@@ -110,6 +119,21 @@ shared index. The trade-off is that a pathspec commit is built from a temporary
 index rather than the one on disk, so the pre-commit hook doesn't see quite what
 it would in an ordinary commit. Worth checking against your own hook before
 leaning on it.
+
+Pushing has the same shape of problem as committing, and it's easy to miss
+because the command looks harmless. In a shared checkout, local `main` can be
+carrying another session's unpushed commits stacked on top of mine, so
+`git push origin main` publishes their work too, at a moment they didn't choose.
+Pushing the exact commit keeps it to my own:
+
+```bash
+git push origin <sha>:refs/heads/main
+```
+
+Check first that the commit's parent is `origin/main`. If `origin/main` has
+moved on, that push is no longer a fast-forward from my commit alone, and that
+is the point to stop and take a fresh baseline, not to fall back to pushing the
+branch.
 
 ## The hook window isn't the only window
 
@@ -163,7 +187,12 @@ A few things that are worth knowing before you try to "fix" the history:
   happen — just under the wrong message. Amending the parallel session's commit
   rewrites _their_ history. Don't.
 - **Verify where the files actually went** with `git ls-files <expected-path>`
-  and `git log -- <expected-path>`; the latter shows which commit they landed in.
+  and `git log -- <expected-path>`; the latter shows which commit they landed in,
+  and `git show <sha> --name-only` shows everything else that commit swept up
+  along with them. Do that before re-committing anything. A bare `git commit` in
+  the other session is all it takes, which is the argument for using the pathspec
+  commit form on a shared checkout from the start. Then there is nothing of
+  yours sitting loose in the index for it to pick up.
 - **There's no clean re-commit.** If your files are already tracked in the other
   commit, re-staging is a no-op (`nothing to commit, working tree clean`). The
   message asymmetry is now permanent in history. If attribution matters, the

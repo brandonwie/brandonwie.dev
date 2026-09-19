@@ -1,8 +1,8 @@
 ---
 title: AI PR Review Validation Patterns
-description: Fourteen patterns where AI code reviewers (Claude, Copilot, Codex) produce false positives, plus the classification framework and reinforcing-comment templates that keep triage fast.
+description: Fifteen patterns where AI code reviewers (Claude, Copilot, Codex) produce false positives, plus the classification framework and reinforcing-comment templates that keep triage fast.
 date: 2026-01-23T00:00:00.000Z
-updated: "2026-08-02"
+updated: "2026-09-20"
 tags:
   - devops
   - ai
@@ -11,7 +11,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 9656a0e783c206b852fc3f0fcfe0632c088c89093274aeed44bdb754cf31ff1c
+source_content_hash: 8e485125172bffa726d00efff6aba8b4b934a20c5c6220cc30479c7b6853d6f2
 references:
   - url: "https://docs.github.com/en/rest/pulls/reviews"
     title: REST API endpoints for pull request reviews — GitHub Docs
@@ -310,6 +310,25 @@ git show origin/<branch>:<file>   # the bytes the reviewer actually saw
 
 Then read the actual file again, and don't trust the in-memory model. For CI, list several runs, not `--limit 1`. And when a parallel lane is out-pacing you on the same files, stand down rather than duplicate the work; the session actively implementing owns those changes.
 
+### 15. Spec-Authority Confusion (correct in general, wrong per protocol)
+
+**What it looks like:** The reviewer validates a change against general language semantics and proposes a fix that is technically correct in the abstract, but contradicts the adopted protocol that governs the code. Worse, the review loop can then go fully clean on the regressed state, because the reviewer keeps reasoning about general correctness rather than about the spec.
+
+**Why it happens:** An AI reviewer reads the diff and the surrounding code. It does not automatically read the specification document that decided why the code is deliberately stricter than the language allows. Where the spec narrows behavior on purpose, "what the language does here" and "what this code must do here" diverge, and the reviewer only has the first one.
+
+**Example (a review on my own knowledge-base repo, September):** the code classifies shell commands and decodes double-quoted wrappers strictly, so that the recorded form is byte-equal to what was issued. The adopted spec permits exactly one non-recursive decode of an escaped-backslash pair; every other backslash sequence must be treated as undecodable and the command marked `untested`. In round 2, Claude recommended following POSIX double-quote rules instead: a lone `\` before `n` stays literal, so `"printf '%s\n' …"` ought to decode. That is true for zsh. It is false for the spec, and the relaxed version shipped through a review round that came back clean. An independent spec-check caught it afterwards and forced the revert.
+
+**Detection:**
+
+- When a fix touches code that implements an adopted spec or protocol, diff the suggestion against the spec text, not only against language semantics.
+- "The reviewer approved it" is not a conformance result. Reviewers validate plausibility; the spec defines correctness.
+- Keep the spec citation in a comment next to the surprising strictness, so a later reviewer does not re-propose the relaxed form:
+
+```typescript
+// NOTE: Decode exactly one escaped-backslash pair, per the adopted spec —
+// even though POSIX would also accept a single backslash here.
+```
+
 ## Cross-Agent Convergence as a Severity Signal
 
 Most of the patterns above come from a single bot commenting on a PR. Proactive review behaves differently, with several independent slice agents reading the same diff before anyone else sees it. There the *agreement pattern between agents* carries information none of the individual findings do.
@@ -437,3 +456,13 @@ This is where Cross-Branch Confusion (#9) first showed up. Claude analyzed `main
 **Key INVALID count: 0.** Convergence across three or more agents was a perfect positive predictor on this PR. The likely reason: the scope was narrow enough for agents to reason end-to-end, the scripts performed destructive operations that biased reviewers toward caution, and four independent reviewers reduced individual false positives.
 
 **Process learning:** Gate CONTROVERSIAL decisions between VALID and GOOD-TO-HAVE work. VALID fixes can move first, CONTROVERSIAL items deserve a clean user decision point, and low-risk improvements can batch after that. Bundling all three tiers into one confirmation step creates the wrong latency for each decision type.
+
+### Example 7: A shell-classification PR on my own knowledge-base repo (Claude, 4 rounds plus an independent spec-check)
+
+**Stats:** Round 1: 3 valid issues, all fixed. Round 2: 2 valid issues, all fixed. Round 3: clean. Then an independent spec-check found that the round-2 fix itself violated the adopted spec's pair-only decode rule, along with stale commit references left behind by a trailer-normalization rewrite. Both fixed, and round 4 came back clean.
+
+This is where Spec-Authority Confusion (#15) showed up. Reviewers get things wrong; that much is ordinary. The notable part here is that the review loop had already declared the regressed state clean before anything caught it.
+
+**Key signal:** the PR-review loop and the spec-check are different gates, and they verify different things. Claude verifies plausibility against the diff. The spec-check verifies conformance against the governing document. Both passed on their own axis; only the second one was competent to catch the violation. If your code implements a written protocol, a clean review round is not evidence of conformance, and you need the second gate as a separate step.
+
+Reviewer self-withdrawal is a signal in its own right. Shown the spec text, Claude withdrew its own earlier suggestion instead of defending it, and once it had the governing document it re-derived the correct answer. A reviewer that reverses itself on new evidence is behaving well; the failure was that nobody had handed it the evidence in the first place.
