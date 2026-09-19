@@ -16,8 +16,8 @@
  *                              Self-owned links are context, never the anchor.
  *
  * The deny list that names the employer lives in the PRIVATE 3B repo, never
- * here — this repo is public. Missing config degrades to structural checks
- * only, and says so.
+ * here — this repo is public. Missing config fails the run; pass
+ * --allow-missing-terms to degrade to structural checks only.
  *
  * Usage:
  *   pnpm audit:posts                     # whole EN corpus, both gates
@@ -25,6 +25,7 @@
  *   pnpm audit:posts -- --g1             # skip network (G1 only)
  *   pnpm audit:posts -- --include-drafts # audit retired posts too
  *   pnpm audit:posts -- --json           # machine-readable report
+ *   pnpm audit:posts -- --allow-missing-terms # structural checks only
  *
  * Exit code 1 when any non-draft post in scope fails a gate.
  */
@@ -33,6 +34,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
+import { fileURLToPath } from 'url';
 import matter from 'gray-matter';
 
 const EN_DIR = './src/content/posts/en';
@@ -49,7 +51,7 @@ const INTERNAL_ONLY_TAGS = new Set(['work', 'company', 'internal', 'private', 'c
 
 const TERMS_PATH =
 	process.env.BLOG_AUDIT_TERMS ??
-	join(homedir(), 'dev/personal/3b/.agents/config/blog-audit-terms.json');
+	join(homedir(), 'dev/3b/.agent-ssot/config/blog-audit-terms.json');
 
 const CREDIBLE_TYPES = new Set(['official', 'authoritative']);
 const CONCURRENCY = 12;
@@ -132,8 +134,24 @@ function escapeRe(s: string): string {
 	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const KO_PARTICLES = '에서|에게|으로|까지|부터|처럼|보다|은|는|이|가|을|를|의|에|와|과|로|도|만';
+
+/**
+ * Hangul has no ASCII word boundary, so `[^a-z0-9]` lets a short term match
+ * inside a longer, unrelated word and flags clean posts. A Hangul term counts
+ * only when it stands alone or carries a particle, which is how a name appears
+ * in Korean prose.
+ */
+function hangulHit(haystack: string, term: string): boolean {
+	return new RegExp(
+		`(^|[^가-힣])${escapeRe(term.toLowerCase())}((${KO_PARTICLES})?([^가-힣]|$))`,
+		'i',
+	).test(haystack);
+}
+
 /** Whole-word-ish match that still catches `moba-works` and `moba_production`. */
-function wordHit(haystack: string, term: string): boolean {
+export function wordHit(haystack: string, term: string): boolean {
+	if (/[가-힣]/.test(term)) return hangulHit(haystack, term);
 	return new RegExp(`(^|[^a-z0-9])${escapeRe(term.toLowerCase())}([^a-z0-9]|$)`, 'i').test(
 		haystack,
 	);
@@ -412,6 +430,18 @@ async function main() {
 
 	const { terms, loaded } = loadTerms();
 
+	// Fail closed. A missing deny list silently disables employer detection, and
+	// a moved path did exactly that for weeks. Structural-only runs are opt-in.
+	if (!loaded && !args.includes('--allow-missing-terms')) {
+		console.error(
+			`❌ Deny list not found at ${TERMS_PATH}.\n` +
+				`   Employer/personal-framing detection would be OFF, so the audit refuses to run.\n` +
+				`   Set BLOG_AUDIT_TERMS to the private list, or pass --allow-missing-terms\n` +
+				`   for a structural-only run.`,
+		);
+		process.exit(1);
+	}
+
 	// Both locales. A leak in a Korean post is just as public as one in English,
 	// and KO carries content its EN twin does not — a KO-only internal project ID
 	// survived an EN-only audit on 2026-08-02.
@@ -488,7 +518,9 @@ async function main() {
 	process.exit(failing.length > 0 ? 1 : 0);
 }
 
-main().catch((err) => {
-	console.error(err);
-	process.exit(1);
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+	main().catch((err) => {
+		console.error(err);
+		process.exit(1);
+	});
+}
