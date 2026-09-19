@@ -11,6 +11,7 @@ import { TableOfContents } from '@/components/TableOfContents';
 import socialLinksData from '../../../src/lib/data/social-links.json';
 import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../../../src/lib/seo';
 import { articlePath, sourceDate } from './article-contract';
+import { formatDateLong } from './date';
 import { articleCopy } from '../i18n/copy';
 import { articleJsonLd } from './article-json-ld';
 import { heroBlockHtml } from './hero';
@@ -24,12 +25,7 @@ interface SocialLink {
 const socialLinksBySlug = socialLinksData as Record<string, SocialLink[] | undefined>;
 
 function displayDate(value: string | Date, locale: Locale): string {
-	return new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-US', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-		timeZone: 'UTC',
-	}).format(value instanceof Date ? value : new Date(value));
+	return formatDateLong(value instanceof Date ? value.toISOString() : value, locale);
 }
 
 export function generateArticleStaticParams(): Array<{ slug: string }> {
@@ -249,12 +245,7 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 						))}
 					</aside>
 				) : null}
-				<Giscus
-					slug={slug}
-					locale={locale}
-					title={copy.comments}
-					statusMessage={copy.commentsStatus}
-				/>
+				<Giscus slug={slug} locale={locale} title={copy.comments} />
 				<div className="post__bottom" data-pagefind-ignore>
 					<BackToPosts locale={locale} label={copy.backToPosts} />
 				</div>
