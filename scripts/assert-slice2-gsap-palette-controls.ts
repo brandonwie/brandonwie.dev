@@ -1004,10 +1004,7 @@ const CONTROLS: Control[] = [
 			// renders SiteShell, so a mount here puts the palette in that route's
 			// bundle — the exact thing the header slot exists to prevent.
 			sourceOverrides: mutateSource(dir, 'next/app/global-error.tsx', (text) =>
-				text.replace(
-					'<SiteShell locale="en">',
-					'<SiteShell locale="en" header={<ShellPalette />}>',
-				),
+				text.replace('<SiteShell ', '<SiteShell header={<ShellPalette />} '),
 			),
 		}),
 	},

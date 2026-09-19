@@ -100,7 +100,9 @@
 		"migration:browser:xyflow": "node scripts/assert-browser-xyflow.mjs",
 		"migration:browser:xyflow:controls": "node scripts/assert-browser-xyflow-controls.mjs",
 		"migration:browser:ac7": "node scripts/assert-browser-ac7.mjs",
-		"migration:browser:ac7:controls": "node scripts/assert-browser-ac7-controls.mjs"
+		"migration:browser:ac7:controls": "node scripts/assert-browser-ac7-controls.mjs",
+		"migration:browser:notfound": "node scripts/assert-browser-notfound.mjs",
+		"migration:browser:notfound:controls": "node scripts/assert-browser-notfound-controls.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

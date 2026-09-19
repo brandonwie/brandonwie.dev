@@ -80,23 +80,29 @@ screenshots (paired, 27 routes × 2 viewports × 2 builds):
   KO), xyflow (17/42 identical), deck, document-shell routes, 404.
 - All divergences trace to approved ledger classes (`ko/tags` lang correction,
   −2 locale-pair consolidation, post-header focusables).
-- **Two Brandon-owned flags:** F1 — React hydration error #418 on every
-  candidate 404 (self-recovers, cosmetic, telemetry noise; accept or fix);
-  F2 — Giscus live-thread render is cross-origin and needs one human look, or
-  accept iframe+src parity (C10 already asserted `data-term`+locale).
+- **F1 resolved pre-cutover (Brandon's call: fix, not accept):** the 404's
+  server render (`/_not-found`) and client render (real unmatched URL)
+  disagreed on the language toggle → hydration error #418. Fixed by threading
+  `suppressLocaleToggle` through `SiteShell` → `SiteHeader` →
+  `HeaderControls` → `LanguageToggle`; permanently guarded by
+  `migration:browser:notfound` (0 errors + 0 toggles on `/404`,
+  `/does-not-exist-xyz`, `/ko/does-not-exist`) plus defect controls NFC-01..03.
+- **F2 open:** Giscus live-thread render is cross-origin — needs one human
+  look on the local candidate, or accept iframe+src parity (C10 already
+  asserted `data-term`+locale).
 
 ## Known accepted decisions and residual risks
 
-| #   | Item                                                 | Status                                                          |
-| --- | ---------------------------------------------------- | --------------------------------------------------------------- |
-| D1  | HTML + total-weight budget overruns                  | accepted 2026-09-19; mitigation tracked in #65                  |
-| D2  | Candidate-localized 404 copy                         | approved ledger class                                           |
-| D3  | Post-header redesign (+3..+5 focusables)             | approved ledger class                                           |
-| D4  | KO localization corrections (`ko/tags` `lang`, etc.) | approved ledger class — baseline bugs corrected                 |
-| F1  | 404 hydration error #418                             | **open — Brandon decision**                                     |
-| F2  | Giscus live thread                                   | **open — one human look or accept iframe parity**               |
-| R1  | Fresh `pages.dev` hash subdomain needs ~60 s for TLS | noted in rehearsal doc; relevant to Slice 6 verification timing |
-| R2  | C3 resync lane will re-key baseline to generation 7  | separate lane; do not carry this evidence verbatim              |
+| #   | Item                                                 | Status                                                                     |
+| --- | ---------------------------------------------------- | -------------------------------------------------------------------------- |
+| D1  | HTML + total-weight budget overruns                  | accepted 2026-09-19; mitigation tracked in #65                             |
+| D2  | Candidate-localized 404 copy                         | approved ledger class                                                      |
+| D3  | Post-header redesign (+3..+5 focusables)             | approved ledger class                                                      |
+| D4  | KO localization corrections (`ko/tags` `lang`, etc.) | approved ledger class — baseline bugs corrected                            |
+| F1  | 404 hydration error #418                             | resolved — `suppressLocaleToggle` fix + `migration:browser:notfound` guard |
+| F2  | Giscus live thread                                   | **open — one human look or accept iframe parity**                          |
+| R1  | Fresh `pages.dev` hash subdomain needs ~60 s for TLS | noted in rehearsal doc; relevant to Slice 6 verification timing            |
+| R2  | C3 resync lane will re-key baseline to generation 7  | separate lane; do not carry this evidence verbatim                         |
 
 ## Gate
 

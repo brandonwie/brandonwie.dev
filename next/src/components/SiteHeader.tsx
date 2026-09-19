@@ -41,12 +41,15 @@ export function SiteHeader({
 	copy,
 	sticky = true,
 	onOpenPalette,
+	suppressLocaleToggle = false,
 }: {
 	locale: Locale;
 	copy: ShellCopy;
 	sticky?: boolean;
 	/** Supplied by PR 2b's palette mount. Absent here: the button is inert. */
 	onOpenPalette?: (event?: React.MouseEvent<HTMLElement>) => void;
+	/** Error routes pin this: their server render sees `/_not-found` while the client sees the real URL. */
+	suppressLocaleToggle?: boolean;
 }) {
 	const pathname = usePathname();
 	const active = activeKey(pathname);
@@ -80,6 +83,7 @@ export function SiteHeader({
 						locale={locale}
 						pathname={pathname}
 						copy={{ switchToEnglish: copy.switchToEnglish, switchToKorean: copy.switchToKorean }}
+						suppressLocaleToggle={suppressLocaleToggle}
 					/>
 				</nav>
 			</div>

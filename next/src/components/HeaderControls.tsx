@@ -18,14 +18,21 @@ export function HeaderControls({
 	locale,
 	pathname,
 	copy,
+	suppressLocaleToggle = false,
 }: {
 	locale: Locale;
 	pathname: string;
 	copy: { switchToEnglish: string; switchToKorean: string };
+	suppressLocaleToggle?: boolean;
 }) {
 	return (
 		<div className="header-controls">
-			<LanguageToggle locale={locale} pathname={pathname} copy={copy} />
+			<LanguageToggle
+				locale={locale}
+				pathname={pathname}
+				copy={copy}
+				suppress={suppressLocaleToggle}
+			/>
 		</div>
 	);
 }

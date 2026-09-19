@@ -26,7 +26,7 @@ backed by the JSON, not the screenshots.
 | `@xyflow` graph EN/KO        | `/system`, `/system/3b`, `/ko/system/3b`                                  | PASS   | **17 nodes / 42 edges on both stacks** after hydration mount — matches the PR-C probe                                                                                                                                    |
 | Deck                         | `/talks/my-career`                                                        | PASS   | slide chrome + counter `1 / 20` render; key walks covered by `migration:browser:ac7` K-rows                                                                                                                              |
 | Document-shell surfaces      | `/about`, `/ko/about`, `/contact`, `/projects`, `/feed`                   | PASS   | all render; shell diffs are the approved C13 prefetch/`lang` classes                                                                                                                                                     |
-| 404                          | `/404` (+ runtime `/does-not-exist-xyz`, `/ko/does-not-exist`)            | PASS²  | copy diff is ledger-approved (baseline capture was the empty pre-hydration frame); ²new finding F1 below                                                                                                                 |
+| 404                          | `/404` (+ runtime `/does-not-exist-xyz`, `/ko/does-not-exist`)            | PASS   | copy diff is ledger-approved (baseline capture was the empty pre-hydration frame); F1 fixed — `migration:browser:notfound` asserts 0 errors + 0 toggles on all three paths                                               |
 
 ## Cross-cutting observations
 
@@ -39,20 +39,21 @@ backed by the JSON, not the screenshots.
   not just observed.
 - **Post pages are net +3 to +5 focusables** — the approved post-header
   redesign adds share/back controls.
-- **Zero candidate console errors on 26/27 routes.** The baseline itself emits
-  two errors the candidate does not (`deck`: Svelte `$set` unhandled rejection;
-  `/404`: `Not found: /404` log) — the candidate is quieter, not noisier,
-  except F1.
+- **Zero candidate console errors on 27/27 routes post-F1-fix** (26/27 at
+  capture; the 27th was F1, now fixed). The baseline itself emits two errors
+  the candidate does not (`deck`: Svelte `$set` unhandled rejection; `/404`:
+  `Not found: /404` log) — the candidate is quieter, not noisier.
 
 ## Findings flagged for Brandon
 
-| #   | Finding                                               | Detail                                                                                                                                                                                                                                                                                           | Asks                                                                                                                 |
-| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| F1  | **React hydration error #418 on every candidate 404** | Fires `window.onerror` twice per render on `/404`, `/does-not-exist-xyz`, and `/ko/does-not-exist` — all candidate 404 paths, EN+KO. Self-recovers (React falls back to client render, page displays correctly) but will pollute error telemetry. Baseline shows none.                           | Accept as cosmetic wart, or fix before cutover — likely a small `not-found` markup mismatch worth ~1 follow-up issue |
-| F2  | **Giscus live-thread render is cross-origin**         | iframe mounts on both builds with identical `src` (`term=<slug>`, `lang` per locale, `repo`, `theme=dark_dimmed`, `inputPosition=top`). The DOM probe cannot assert the thread's rendered content inside the frame. C10 already asserted `data-term`=slug + one-thread-per-locale at build time. | One human look at a post's comments in a real browser, or accept iframe+src parity as sufficient                     |
+| #   | Finding                                                                | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Asks                                                                                             |
+| --- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| F1  | ~~**React hydration error #418 on every candidate 404**~~ **RESOLVED** | Root cause: `404.html` renders with pathname `/_not-found` (in `ENGLISH_ONLY_PREFIXES` → no toggle), while the client hydrates with the real unmatched URL (`hasLocaleVariant` → true → toggle mounts → DOM mismatch). Fixed by threading `suppressLocaleToggle` from `global-not-found.tsx`/`global-error.tsx` through `SiteShell` → `SiteHeader` → `HeaderControls` → `LanguageToggle`; both renders now agree on the no-toggle output. Guarded by `migration:browser:notfound` (NF-01..03: 0 errors + 0 toggles on `/404`, `/does-not-exist-xyz`, `/ko/does-not-exist`) and its controls (NFC-01..03). `manual-comparison.json` retains the pre-fix capture. | Brandon chose fix-before-cutover; done                                                           |
+| F2  | **Giscus live-thread render is cross-origin**                          | iframe mounts on both builds with identical `src` (`term=<slug>`, `lang` per locale, `repo`, `theme=dark_dimmed`, `inputPosition=top`). The DOM probe cannot assert the thread's rendered content inside the frame. C10 already asserted `data-term`=slug + one-thread-per-locale at build time.                                                                                                                                                                                                                                                                                                                                                                | One human look at a post's comments in a real browser, or accept iframe+src parity as sufficient |
 
 ## Verdict
 
-Manual layer: **PASS with two flags (F1, F2)** — both are Brandon-owned
-decisions, neither blocks the automated evidence. Everything else matches the
-baseline or sits inside an already-approved ledger class.
+Manual layer: **PASS** — F1 resolved pre-cutover with a permanent regression
+guard (`migration:browser:notfound`); F2 awaits one human look at the local
+candidate. Everything else matches the baseline or sits inside an
+already-approved ledger class.

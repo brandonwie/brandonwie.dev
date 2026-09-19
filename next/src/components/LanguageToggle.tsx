@@ -33,12 +33,21 @@ export function LanguageToggle({
 	locale,
 	pathname,
 	copy,
+	suppress = false,
 }: {
 	locale: Locale;
 	pathname: string;
 	copy: { switchToEnglish: string; switchToKorean: string };
+	/**
+	 * Error routes pin the toggle off. Their static HTML is rendered with
+	 * `/_not-found` (excluded by `hasLocaleVariant`), but the client hydrates
+	 * with the real unmatched URL, which passes the check — the server says no
+	 * toggle and the client says toggle, which is hydration error #418. The
+	 * flag makes both renders agree on the no-toggle output.
+	 */
+	suppress?: boolean;
 }) {
-	if (!hasLocaleVariant(pathname)) return null;
+	if (suppress || !hasLocaleVariant(pathname)) return null;
 
 	const isKorean = locale === 'ko';
 	const toggleUrl = pathForLocale(pathname, isKorean ? 'en' : 'ko');
