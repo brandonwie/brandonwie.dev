@@ -108,7 +108,11 @@ export async function renderMarkdown(
 	const processor = unified()
 		.use(remarkParse)
 		.use(remarkMermaidNode)
-		.use(remarkGfm)
+		// `singleTilde` defaults to true and turns a lone `~` between two inline
+		// code spans into <del> — mdsvex never parsed it, so Korean prose like
+		// `T00`~`T24` rendered struck-through on the candidate. GFM only needs
+		// the standard `~~` form for real strikethrough.
+		.use(remarkGfm, { singleTilde: false })
 		.use(remarkReadingTime)
 		.use(remarkTocExtract)
 		.use(remarkRehype, {
