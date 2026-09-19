@@ -279,11 +279,16 @@ weight past the envelope: without them the build is ~100 MB, still over 86, but
 the dominant single bucket is the flight payload set, which the client router
 needs for instant navigations. This is inherent to the App Router export
 architecture, not a defect — per `thresholds.md`, exceeding a budget is a
-decision recorded with its reason, and this is the reason. **Brandon decides**
-whether to accept the duplication, drop route-prefetch payloads (slower client
-nav), or mitigate at the edge. The per-chunk and per-resource budgets that
-could not be architecture-inflated — JS total, largest chunk, CSS, images — all
-pass with headroom.
+decision recorded with its reason, and this is the reason. The per-chunk and
+per-resource budgets that could not be architecture-inflated — JS total,
+largest chunk, CSS, images — all pass with headroom.
+
+**Decision (Brandon, 2026-09-19): accepted, with follow-up.** The duplication
+is accepted for the cutover and tracked by issue
+[#65](https://github.com/brandonwie/brandonwie.dev/issues/65) —
+investigate trimming the per-route `.txt` variants and the inline `__next_f`
+payload. The per-page reader cost is ~150 KB of HTML against Svelte's ~59 KB,
+while every frozen UX bound (LCP, CLS, interaction) passes with headroom.
 
 ## Performance — candidate
 
@@ -360,8 +365,8 @@ n = 5, lab not field):
 
 ## Slice 5 status against AC9
 
-| Half                     | Status                                                                                             |
-| ------------------------ | -------------------------------------------------------------------------------------------------- |
-| Accessibility thresholds | MEASURED on the full candidate — 0 critical, 0 serious, 8/8 keyboard flows, no overflow            |
-| Weight budgets           | MEASURED on the full candidate — 4 PASS, **2 exceed (HTML, total): decision recorded for Brandon** |
-| CWV proxies              | MEASURED on the full candidate — all 10 routes inside frozen bound and advisory guard              |
+| Half                     | Status                                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Accessibility thresholds | MEASURED on the full candidate — 0 critical, 0 serious, 8/8 keyboard flows, no overflow                             |
+| Weight budgets           | MEASURED on the full candidate — 4 PASS, 2 exceed (HTML, total) — **accepted by Brandon 2026-09-19, follow-up #65** |
+| CWV proxies              | MEASURED on the full candidate — all 10 routes inside frozen bound and advisory guard                               |
