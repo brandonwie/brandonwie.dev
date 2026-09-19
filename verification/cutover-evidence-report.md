@@ -31,15 +31,18 @@ does not carry over verbatim.
   404, post-header redesign, nested Mermaid, CommonMark escaping, reading-time.
 - Contracts C1–C13 closed under `verification/contracts/`; defect-control
   fixtures report expected `exit 1` and are green as controls.
-- `pnpm migration:all` exit 0 at `d2827b4` and again at `3f3e4c0`.
+- `pnpm migration:all` exit 0 at `d2827b4`, `3f3e4c0`, and `82748d5` (54
+  suites incl. `migration:browser:notfound`).
 
 ### AC7 — behavior matrix
 
-- `verification/behavior-matrix.md`: every pending row closed by the Slice 4
-  captures — PR-C (`migration:browser:xyflow`: 17 nodes / 42 edges, hover dim,
+- `verification/behavior-matrix.md`: every pending row closed — by the Slice 4
+  captures PR-C (`migration:browser:xyflow`: 17 nodes / 42 edges, hover dim,
   drill-down, KO copy) and PR-D (`migration:browser:ac7`: 12 study routes +
   deck, 3-viewport sweeps, K6/K7 deck keys, SlideVideo pause window, `?print`,
-  `?page=N` restore, 39 screenshots).
+  `?page=N` restore, 39 screenshots), and by the Slice 5 closures for the
+  document-shell routes, the remaining post details (parity + manual
+  samples), and the Giscus live-backend row (F2 human look).
 - Keyboard flows K1–K8 green (palette open/filter/escape-restore, backspace
   nav, deck walk, reading-progress).
 
