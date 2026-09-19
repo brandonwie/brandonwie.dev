@@ -82,6 +82,7 @@ interface Terms {
 	selfDomains: { domains: string[] };
 	personalFraming: { terms: string[] };
 	namedHumans: { terms: string[] };
+	benignWords: { terms: string[] };
 }
 
 const EMPTY_TERMS: Terms = {
@@ -92,6 +93,7 @@ const EMPTY_TERMS: Terms = {
 	selfDomains: { domains: ['brandonwie.dev'] },
 	personalFraming: { terms: [] },
 	namedHumans: { terms: [] },
+	benignWords: { terms: [] },
 };
 
 /**
@@ -135,64 +137,30 @@ function escapeRe(s: string): string {
 }
 
 /**
- * Suffixes a noun carries in Korean prose: particles, plus the copula and
- * quotative forms a name takes ("X입니다", "X라는 회사"). Longest first, so the
- * alternation never settles for a prefix of a longer suffix.
+ * Matching boundary for a Hangul term: ANY occurrence is a hit, except inside
+ * a word named in the private list's `benignWords`.
+ *
+ * Korean is agglutinative — a name takes an open-ended set of endings
+ * (particles, copulas, conversational forms), so an accept-list of suffixes
+ * always misses one, and a miss is a leak. Detection is therefore the default
+ * and clearing is the exception. The cost is a review prompt when a term sits
+ * inside an unlisted unrelated word; the fix is one entry in the private list.
+ * Benign words live there, never here: a public exclusion would point at the
+ * term it exists to protect.
  */
-const KO_SUFFIXES = [
-	'이었습니다',
-	'였습니다',
-	'입니다',
-	'이라는',
-	'이라고',
-	'이었다',
-	'에서',
-	'에게',
-	'으로',
-	'까지',
-	'부터',
-	'처럼',
-	'보다',
-	'라는',
-	'라고',
-	'였다',
-	'이다',
-	'이며',
-	'이고',
-	'이라',
-	'은',
-	'는',
-	'이',
-	'가',
-	'을',
-	'를',
-	'의',
-	'에',
-	'와',
-	'과',
-	'로',
-	'도',
-	'만',
-	'인',
-].join('|');
-
-/**
- * Hangul has no ASCII word boundary, so `[^a-z0-9]` lets a short term match
- * inside a longer, unrelated word and flags clean posts. A Hangul term counts
- * when it stands alone or carries any chain of noun suffixes ("X에서는",
- * "X라는", "X입니다"). The chain repeats because particles stack; a miss here
- * is a leak, so the list errs toward matching.
- */
-function hangulHit(haystack: string, term: string): boolean {
-	return new RegExp(
-		`(^|[^가-힣])${escapeRe(term.toLowerCase())}(?:${KO_SUFFIXES})*([^가-힣]|$)`,
-		'i',
-	).test(haystack);
+function hangulHit(haystack: string, term: string, benign: string[]): boolean {
+	const needle = term.toLowerCase();
+	let text = haystack.toLowerCase();
+	for (const word of benign) {
+		const w = word.toLowerCase();
+		if (w.includes(needle)) text = text.split(w).join(' ');
+	}
+	return text.includes(needle);
 }
 
 /** Whole-word-ish match that still catches `moba-works` and `moba_production`. */
-export function wordHit(haystack: string, term: string): boolean {
-	if (/[가-힣]/.test(term)) return hangulHit(haystack, term);
+export function wordHit(haystack: string, term: string, benign: string[] = []): boolean {
+	if (/[가-힣]/.test(term)) return hangulHit(haystack, term, benign);
 	return new RegExp(`(^|[^a-z0-9])${escapeRe(term.toLowerCase())}([^a-z0-9]|$)`, 'i').test(
 		haystack,
 	);
@@ -219,9 +187,10 @@ function auditG1(fm: Record<string, unknown>, body: string, terms: Terms): Findi
 	const frame = `${title}\n${description}\n${body.split('\n').slice(0, 12).join('\n')}`;
 	const whole = `${title}\n${description}\n${body}`;
 	const lower = whole.toLowerCase();
+	const benign = terms.benignWords.terms;
 
 	for (const term of terms.employer.terms) {
-		if (wordHit(lower, term)) {
+		if (wordHit(lower, term, benign)) {
 			findings.push({
 				gate: 'G1',
 				rule: 'employer-name',
@@ -241,7 +210,7 @@ function auditG1(fm: Record<string, unknown>, body: string, terms: Terms): Findi
 	}
 
 	for (const name of terms.namedHumans.terms) {
-		if (wordHit(whole, name)) {
+		if (wordHit(whole, name, benign)) {
 			findings.push({
 				gate: 'G1',
 				rule: 'named-human',
@@ -251,7 +220,7 @@ function auditG1(fm: Record<string, unknown>, body: string, terms: Terms): Findi
 	}
 
 	for (const term of terms.personalFraming.terms) {
-		if (wordHit(frame.toLowerCase(), term)) {
+		if (wordHit(frame.toLowerCase(), term, benign)) {
 			findings.push({
 				gate: 'G1',
 				rule: 'personal-framing',
