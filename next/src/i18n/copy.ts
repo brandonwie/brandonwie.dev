@@ -21,10 +21,10 @@ import type { Locale } from './locale';
  *
  * SLICE_1_SCAFFOLDING is copy that exists only in this temporary shell and has
  * no message key on the Svelte side, because the Svelte site does not render
- * it: a placeholder comments panel, a breadcrumb label, a reading-time suffix.
- * Adding permanent catalogue keys for strings that Slice 3 deletes when it
- * ports the real shell would leave dead keys behind, so they stay here, named,
- * until the surface that owns them arrives.
+ * it: a breadcrumb label, a reading-time suffix. Adding permanent catalogue
+ * keys for strings that Slice 3 deletes when it ports the real shell would
+ * leave dead keys behind, so they stay here, named, until the surface that
+ * owns them arrives.
  *
  * FOUR OF THOSE KEYS ARE NOW GONE. Slice 3 PR 2a ported the real header and
  * footer, so `brandLabel`, `article`, `footer` and `footerText` were deleted
@@ -32,9 +32,11 @@ import type { Locale } from './locale';
  * the placeholder footer they described no longer exist. The chrome resolves
  * from the catalogue instead — every message the Svelte header, footer,
  * language toggle and nav reference already resolves in both `messages/en.json`
- * and `messages/ko.json`, so this cost no catalogue expansion. The remaining
- * scaffolding keys belong to the article and comments surfaces, which are still
- * ported by later PRs.
+ * and `messages/ko.json`, so this cost no catalogue expansion. `commentsStatus`
+ * was deleted in Slice 5: it told no-JS readers the Giscus runtime was still
+ * unmigrated, which was no longer true once `Giscus.tsx` shipped — and the
+ * baseline renders no status text at all. The remaining scaffolding keys
+ * belong to the article surface.
  */
 const SLICE_1_SCAFFOLDING = {
 	en: {
@@ -43,7 +45,6 @@ const SLICE_1_SCAFFOLDING = {
 		category: 'Category',
 		switchLabel: 'Read this article in Korean',
 		switchText: '한국어',
-		commentsStatus: 'Comments will load here when the Giscus runtime is migrated.',
 	},
 	ko: {
 		breadcrumb: '현재 위치',
@@ -51,7 +52,6 @@ const SLICE_1_SCAFFOLDING = {
 		category: '카테고리',
 		switchLabel: '이 글을 영어로 읽기',
 		switchText: 'English',
-		commentsStatus: 'Giscus 런타임을 마이그레이션하면 이곳에 댓글이 표시됩니다.',
 	},
 } as const;
 
@@ -109,7 +109,6 @@ export function articleCopy(locale: Locale) {
 		category: scaffold.category,
 		switchLabel: scaffold.switchLabel,
 		switchText: scaffold.switchText,
-		commentsStatus: scaffold.commentsStatus,
 		backToPosts: m.back_to_posts({}, { locale }),
 		readingProgress: m.reading_progress({}, { locale }),
 		copyLink: m.copy_link({}, { locale }),

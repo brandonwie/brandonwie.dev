@@ -7,7 +7,6 @@ interface GiscusProps {
 	slug: string;
 	locale: Locale;
 	title: string;
-	statusMessage?: string;
 }
 
 /**
@@ -27,7 +26,7 @@ interface GiscusProps {
  *
  * REFERENCE: https://giscus.app
  */
-export function Giscus({ slug, locale, title, statusMessage }: GiscusProps) {
+export function Giscus({ slug, locale, title }: GiscusProps) {
 	const containerRef =
 		typeof useRef === 'function' ? useRef<HTMLDivElement>(null) : { current: null };
 
@@ -74,7 +73,6 @@ export function Giscus({ slug, locale, title, statusMessage }: GiscusProps) {
 			<h2 id="comments-title" className="mb-8 text-xl font-semibold text-terminal-text-primary">
 				{title}
 			</h2>
-			{statusMessage ? <p className="sr-only">{statusMessage}</p> : null}
 			<div
 				ref={containerRef}
 				className="giscus-container"
