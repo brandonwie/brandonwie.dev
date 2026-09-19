@@ -1,0 +1,4272 @@
+{
+	"generated": {
+		"head": "61829550168006b081755b6a62779b9b97a5559c",
+		"baseline": "verification/baseline/svelte-e23e808.json",
+		"candidate": "next/build",
+		"ledger": "verification/exception-ledger.json"
+	},
+	"totals": {
+		"diffRows": 699,
+		"classified": 699,
+		"unclassified": 0,
+		"staleLedgerEntries": 0
+	},
+	"classes": [
+		{
+			"id": "ko-loc-c13",
+			"rationale": "Baseline C13 bug class: the Svelte build emitted English metadata (title, description, og, twitter, h1, lang) at /ko/ URLs. The candidate emits correct Korean metadata. Approved as a localization correction — the baseline value is a defect, not a contract.",
+			"count": 22
+		},
+		{
+			"id": "post-links-redesign",
+			"rationale": "Approved post-header redesign, link-list half. Uniform across all 334 post routes: the baseline breadcrumb ends in the posts-list anchor (/posts or /ko/posts); the candidate ends in the Home anchor (/ or /ko) and additionally exposes the locale-twin link (/ko/posts/{slug} or /posts/{slug}) for the language switcher. Verified uniform: exactly two delta shapes across all 334 rows, zero anomalies.",
+			"count": 334
+		},
+		{
+			"id": "post-text-chrome",
+			"rationale": "Approved post-header redesign, text half — no additional content cause detected. Delta is the redesigned article chrome (Home/홈 crumb with localized title, Published/발행일 meta row, Category:/Tags: labels, locale-twin and back links, post__lede description paragraph, search/검색 affordance) plus paraglide en/ko anchor residue the display:none strip leaves behind. No mermaid, escape, or reading-time payload detected.",
+			"count": 207
+		},
+		{
+			"id": "post-text-chrome+inline-parity",
+			"rationale": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
+			"count": 82
+		},
+		{
+			"id": "post-text-chrome+inline-parity+reading-time",
+			"rationale": "Post-header redesign plus inline-parity divergence and a ±1-minute reading-time residual (same bounds and provenance as the dedicated classes).",
+			"count": 12
+		},
+		{
+			"id": "post-text-chrome+mermaid",
+			"rationale": "Post-header redesign plus mermaid class: the route’s own-locale source has a ```mermaid fence; the baseline replaced it with a <Mermaid> component (Loading diagram... fallback), while the candidate emits the diagram source as text for client rendering. Documented approved class covering all 28 mermaid routes.",
+			"count": 25
+		},
+		{
+			"id": "post-text-chrome+mermaid+inline-parity",
+			"rationale": "Post-header redesign plus both mermaid-source-as-text and an inline-parity divergence (escape/underscore/bracket evidence outside the diagram payload).",
+			"count": 1
+		},
+		{
+			"id": "post-text-chrome+mermaid+reading-time",
+			"rationale": "Post-header redesign plus mermaid-source-as-text and a ±1-minute reading-time residual (same bounds and provenance as the dedicated classes).",
+			"count": 2
+		},
+		{
+			"id": "post-text-chrome+reading-time",
+			"rationale": "Post-header redesign plus a reading-time residual: rendered header shows candidate exactly 1 minute lower than baseline. All remaining reading-time deltas are within the approved ±1-minute bound after the remark-reading-time parity shim (frontmatter words + mermaid literal word count restored); residual is parser/smartypants tokenization granularity on a 19-route subset.",
+			"count": 5
+		},
+		{
+			"id": "route-candidate-only",
+			"rationale": "Presence diff: the route exists only in the candidate. /_not-found is the Next.js app-router internal not-found document, prerendered by the framework itself; the Svelte baseline serves 404s through the /404 CSR shell and has no such route. The fingerprint is a presence fingerprint, not a lost-route null, so it is approvable by construction.",
+			"count": 1
+		},
+		{
+			"id": "shell-404-prerender",
+			"rationale": "The baseline /404 is a client-rendered +error.svelte shell whose captured title, h1, body text and link list are the empty pre-hydration frame. The candidate statically renders the 404 document (proper title, h1, copy, links) — strictly more content at the same URL. Approved as a candidate-localized improvement class.",
+			"count": 4
+		},
+		{
+			"id": "system-3b-partial-port",
+			"rationale": "The candidate /system/3b page is a documented partial port: it lacks the ~ breadcrumb link, hero prose, stats grid, layer cards, subsystems grid, ADR/evolution section and snapshot footer that the baseline renders. GOVERNANCE NOTE: next/src/content/system-3b.tsx records the missing sections as Slice 3 work deliberately NOT ledgered — classifying them here surfaces the conflict; writing ledger rows requires an explicit ruling that resolves the file-level contract.",
+			"count": 4
+		}
+	],
+	"rows": [
+		{
+			"url": "/_not-found",
+			"field": "page",
+			"fingerprint": "3d940441addcb386b974159c6d1ae710",
+			"class": "route-candidate-only"
+		},
+		{
+			"url": "/404",
+			"field": "title",
+			"fingerprint": "58577b44ee6664c94fcfdb8d0331771b",
+			"class": "shell-404-prerender"
+		},
+		{
+			"url": "/404",
+			"field": "h1",
+			"fingerprint": "97fb000dfccdbc88076b7c24440cb30d",
+			"class": "shell-404-prerender"
+		},
+		{
+			"url": "/404",
+			"field": "text",
+			"fingerprint": "71b20b361be3c8b312ff4238442367ff",
+			"class": "shell-404-prerender"
+		},
+		{
+			"url": "/404",
+			"field": "internalLinks",
+			"fingerprint": "80ece2745f3e7a94c5ae19a31711f6fe",
+			"class": "shell-404-prerender"
+		},
+		{
+			"url": "/ko/contact",
+			"field": "title",
+			"fingerprint": "16cae157bb202943919c2cc0caac6cb4",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/contact",
+			"field": "description",
+			"fingerprint": "e31446024890b0f3763277b262a9ba61",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/contact",
+			"field": "og",
+			"fingerprint": "2417b79ad2aa58a9c19fab5828569aad",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/contact",
+			"field": "twitter",
+			"fingerprint": "ecf4f5c338d0468b889596af0577c57d",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/contact",
+			"field": "h1",
+			"fingerprint": "2f88fb2a9eebe8212f11da07333517d2",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/contact",
+			"field": "text",
+			"fingerprint": "a77158691be879453b6f29138c0604d7",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/posts/a-harness-that-fixes-itself",
+			"field": "text",
+			"fingerprint": "c5210330b01d6e2258d73966f850f127",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/a-harness-that-fixes-itself",
+			"field": "internalLinks",
+			"fingerprint": "8ee65f4b0e8fbe7816d8020755005a2c",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ai-code-review-confusion-patterns",
+			"field": "text",
+			"fingerprint": "7e506619f03063913c978e62f5f2d9e5",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/ai-code-review-confusion-patterns",
+			"field": "internalLinks",
+			"fingerprint": "1858de15fe6d7de668e18a0c285eda7b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ai-code-review-patterns",
+			"field": "text",
+			"fingerprint": "88698ead3a46bcedab92e598c5adb4ae",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/ai-code-review-patterns",
+			"field": "internalLinks",
+			"fingerprint": "dc3356db24386ab53723668b03bc0550",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ai-pr-review-validation-patterns",
+			"field": "text",
+			"fingerprint": "c8558e7183ff66f792b9e5f4717e7c8b",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/ai-pr-review-validation-patterns",
+			"field": "internalLinks",
+			"fingerprint": "dc0dd94a1879c04263b43e5188b3bd6e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/airflow-celery-worker-log-server",
+			"field": "text",
+			"fingerprint": "84625a1283501bbeb9a807e611faf362",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/airflow-celery-worker-log-server",
+			"field": "internalLinks",
+			"fingerprint": "02ac787b3ea68c5c07131f92172d7292",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/airflow-cicd-concepts",
+			"field": "text",
+			"fingerprint": "04ae83189b70b12aff3a84ede6bb6c97",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/airflow-cicd-concepts",
+			"field": "internalLinks",
+			"fingerprint": "829917bd90098d206241839e4fabf638",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/airflow-dag-level-callbacks",
+			"field": "text",
+			"fingerprint": "324ccfc23d6b8e8e6290123341053530",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/airflow-dag-level-callbacks",
+			"field": "internalLinks",
+			"fingerprint": "c04e00da0af32d66966ee35c9451ace6",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/airflow-dag-start-date",
+			"field": "text",
+			"fingerprint": "37f7df591fd2e35b32b8b0ef0c9aed70",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/airflow-dag-start-date",
+			"field": "internalLinks",
+			"fingerprint": "ab2b4a420f6df457e4fb939c555304a2",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/airflow-manual-dag-config",
+			"field": "text",
+			"fingerprint": "6e2bf07e5b62e018fcb57595026f6424",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/airflow-manual-dag-config",
+			"field": "internalLinks",
+			"fingerprint": "684a02afd39d760054d37a6c5579fa4b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/airflow-task-dependency-syntax",
+			"field": "text",
+			"fingerprint": "1a1eb740e1dd04a81af814c28f6dfd0d",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/airflow-task-dependency-syntax",
+			"field": "internalLinks",
+			"fingerprint": "7085b931f208b29958bc614b976b7395",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/alembic-async-sqlalchemy",
+			"field": "text",
+			"fingerprint": "5472a96e8d341411292cbc90c39df6f8",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/alembic-async-sqlalchemy",
+			"field": "internalLinks",
+			"fingerprint": "fbc5e940e68637d989927ecbb567e430",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/amplitude-etl-partitioning",
+			"field": "text",
+			"fingerprint": "31a7eddb3d3882b038952ceab50ffda5",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/amplitude-etl-partitioning",
+			"field": "internalLinks",
+			"fingerprint": "c23160bf04aed7e35d342395c1146079",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/amplitude-export-api-format",
+			"field": "text",
+			"fingerprint": "2b15f367380817dffb8f5456d8b13f4a",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/amplitude-export-api-format",
+			"field": "internalLinks",
+			"fingerprint": "0692ac0bec768af8247862f0dad7fc02",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/amplitude-export-api-timezone",
+			"field": "text",
+			"fingerprint": "c393e20f67420d9148020d2a40ea40ae",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/amplitude-export-api-timezone",
+			"field": "internalLinks",
+			"fingerprint": "cf36ff6ecd660cdb8daead8603350cfd",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/anthropic-mcp-context-budget-optimization",
+			"field": "text",
+			"fingerprint": "f49b6cd81d57018555001981a882a920",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/anthropic-mcp-context-budget-optimization",
+			"field": "internalLinks",
+			"fingerprint": "99eef99de9fa2da72febd0e91d17e76f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/anthropic-prompt-cache-ttl",
+			"field": "text",
+			"fingerprint": "8d1b93a5215eed5b7b5ce8ba13df6882",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/anthropic-prompt-cache-ttl",
+			"field": "internalLinks",
+			"fingerprint": "9593906e234ce6d8f0751b4ca4ba9648",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/backfill-stats-manifest-early-exit",
+			"field": "text",
+			"fingerprint": "fdd4805ec173581851a8993e4a4b6cdc",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/backfill-stats-manifest-early-exit",
+			"field": "internalLinks",
+			"fingerprint": "4d63cd540cf9bde78f7b1535b03bd4f6",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/bash-set-e-command-substitution",
+			"field": "text",
+			"fingerprint": "f344560f68e1d78d804db76bb438b930",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/bash-set-e-command-substitution",
+			"field": "internalLinks",
+			"fingerprint": "9a1d366c97d493042f303432108c81ac",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/batch-processing-trade-offs",
+			"field": "text",
+			"fingerprint": "ceedbe85d539e194c03c2c887a0c9726",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/batch-processing-trade-offs",
+			"field": "internalLinks",
+			"fingerprint": "d8a7f20492c9b92609e5c21dd7cd3169",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/beautifulsoup-streaming-response-cap",
+			"field": "text",
+			"fingerprint": "1ae1a03aa71274a7200a8d46fd46d7bb",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/beautifulsoup-streaming-response-cap",
+			"field": "internalLinks",
+			"fingerprint": "e662dcce4fe27f2ee7d618cd586bd529",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/binary-checksum-verification",
+			"field": "text",
+			"fingerprint": "09559d7cc11cbed032b1257a48806407",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/binary-checksum-verification",
+			"field": "internalLinks",
+			"fingerprint": "2636e0431f6f8b13c9880d54157ea9bc",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/boto3-s3-encoding",
+			"field": "text",
+			"fingerprint": "a20933cd8e7cef9a274efa6c59e18596",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/boto3-s3-encoding",
+			"field": "internalLinks",
+			"fingerprint": "e82c8d9c2ceaf990d36c0b7a7691fc06",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/calendar-exdate-behavior",
+			"field": "text",
+			"fingerprint": "4d703a291b6fd7a6cb71cfd01dc8f9f4",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/calendar-exdate-behavior",
+			"field": "internalLinks",
+			"fingerprint": "b8cdd33f80b4d20f320fa0ce347fad01",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/celery-api-side-dispatch",
+			"field": "text",
+			"fingerprint": "4732c7c3aaa724fa9d8b2816e3e17b53",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/celery-api-side-dispatch",
+			"field": "internalLinks",
+			"fingerprint": "65511ad5cadebe5775c448b60300ddcc",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/class-transformer-undefined-fields",
+			"field": "text",
+			"fingerprint": "ffbedfe764e021ead83df2ba120e4da7",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/class-transformer-undefined-fields",
+			"field": "internalLinks",
+			"fingerprint": "ccd89c2134439c38b0223b66f785007b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/class-validator-ishexcolor-alpha-forms",
+			"field": "text",
+			"fingerprint": "45c9dd79315572a0ef383f5f3ff0057e",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/class-validator-ishexcolor-alpha-forms",
+			"field": "internalLinks",
+			"fingerprint": "dbe694fb8072ff91cd03d12af16b934f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/claude-code-action-workflow-setup-gotchas",
+			"field": "text",
+			"fingerprint": "1a59c65f6b967c1edafe6ccb621c58ab",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/claude-code-action-workflow-setup-gotchas",
+			"field": "internalLinks",
+			"fingerprint": "7a87d8642875aad8bf38fa66b5e1e439",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/claude-code-agent-teams",
+			"field": "text",
+			"fingerprint": "c3160d9143a3269c052232527fc1f084",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/claude-code-agent-teams",
+			"field": "internalLinks",
+			"fingerprint": "0b0992214fe33633bc45a1a58307e7db",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/claude-code-expert-workflows",
+			"field": "text",
+			"fingerprint": "5247c5233f319b1bd0125eacdd37a28e",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/claude-code-expert-workflows",
+			"field": "internalLinks",
+			"fingerprint": "0447aa9b162b33bf6efc4fce2d478b62",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/claude-code-multi-profile-hud",
+			"field": "text",
+			"fingerprint": "2efc78dddac126b1f293d9263ff2e026",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/claude-code-multi-profile-hud",
+			"field": "internalLinks",
+			"fingerprint": "ffeb4ed393e39eaaa1f73bb1daeffb22",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/claude-code-posttooluse-hooks",
+			"field": "text",
+			"fingerprint": "de568f341ad574a8be339a6c67dbf5dc",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/claude-code-posttooluse-hooks",
+			"field": "internalLinks",
+			"fingerprint": "bca342fcbb47541a912d6e5746ebed3b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/claude-code-shared-personal-config",
+			"field": "text",
+			"fingerprint": "f1f728c436cdf5c8e66beb8ba853c885",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/claude-code-shared-personal-config",
+			"field": "internalLinks",
+			"fingerprint": "265bfa63022185d04e70025f356812fc",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/claude-code-turn-latency-measurement",
+			"field": "text",
+			"fingerprint": "0fea0b2dbfc66664bc9fdad1a8b23696",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/claude-code-turn-latency-measurement",
+			"field": "internalLinks",
+			"fingerprint": "9aa093307655c49cf48dc2291b11e4b7",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/claude-md-byte-budget-generator-gate",
+			"field": "text",
+			"fingerprint": "add90a61f517ddecce024d082ba0edb3",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/claude-md-byte-budget-generator-gate",
+			"field": "internalLinks",
+			"fingerprint": "4e68f9f9bd27bae1032b4629a2d31afe",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/claude-plugin-update-reenables-disabled",
+			"field": "text",
+			"fingerprint": "47c808dab5c509f90832249282c266a7",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/claude-plugin-update-reenables-disabled",
+			"field": "internalLinks",
+			"fingerprint": "736d213e2b0b4fe27a0c5476d8a93246",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/codex-apply-patch-shell-mediated-tool",
+			"field": "text",
+			"fingerprint": "1e28bc9f66ea93681bf675bf608f6be7",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/codex-apply-patch-shell-mediated-tool",
+			"field": "internalLinks",
+			"fingerprint": "e88039de8b0e9ea0d03ed19f4f2c44d1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/codex-skill-mirror-pattern",
+			"field": "text",
+			"fingerprint": "bfeebb29c078360bd97382baca849e77",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/codex-skill-mirror-pattern",
+			"field": "internalLinks",
+			"fingerprint": "741da8a47c4d0b285926d787e1e786f1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/computed-backlinks-zettelkasten",
+			"field": "text",
+			"fingerprint": "d5fa8ae6fcaa6adee1e5f7c3379eeb29",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/computed-backlinks-zettelkasten",
+			"field": "internalLinks",
+			"fingerprint": "ea39a0ed7d146a6a2eedbc770d662c02",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/cpu-cache-locality-batch-iteration",
+			"field": "text",
+			"fingerprint": "3a1052f07cc5fe40567444bf34daf46d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/cpu-cache-locality-batch-iteration",
+			"field": "internalLinks",
+			"fingerprint": "395a5a8293c12b9a502ebc9ef3b6487e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/cross-agent-skill-alias-generalization",
+			"field": "text",
+			"fingerprint": "064c705edf5c78f8a9416ad25f1bfdaf",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/ko/posts/cross-agent-skill-alias-generalization",
+			"field": "internalLinks",
+			"fingerprint": "2e7204a381b6c64b689640cda0eefcba",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/cross-language-cli-startup-benchmark",
+			"field": "text",
+			"fingerprint": "025ab29222d476fd985688063b62f4d4",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/cross-language-cli-startup-benchmark",
+			"field": "internalLinks",
+			"fingerprint": "15e6659a2fd359b53ea51321d084d344",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/crucio-ship-two-phase-merge-gate",
+			"field": "text",
+			"fingerprint": "c741e7afe45809c5717bd2c6188af1aa",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/crucio-ship-two-phase-merge-gate",
+			"field": "internalLinks",
+			"fingerprint": "710332d88c1847930ef87680f21ae573",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/css-inline-replaced-element-gap",
+			"field": "text",
+			"fingerprint": "513ef8ed9f9c785edad1638f8ec4b9f2",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/css-inline-replaced-element-gap",
+			"field": "internalLinks",
+			"fingerprint": "b65c816e7ae9f3c4a2c60ad56dec5ba7",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/dag-deployment-strategies",
+			"field": "text",
+			"fingerprint": "9ffdc26b31dd0aa69e64bd06871a8641",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/dag-deployment-strategies",
+			"field": "internalLinks",
+			"fingerprint": "7eec418d7bee7b789c95fdba7c2b5832",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/datasource-vs-repository-pattern",
+			"field": "text",
+			"fingerprint": "2127f7e3e7a60d4397baabea7367ac49",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/datasource-vs-repository-pattern",
+			"field": "internalLinks",
+			"fingerprint": "89a20e11f621abab486191ca6d372665",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/distilbert-vs-bart-intent-classification",
+			"field": "text",
+			"fingerprint": "f1abb2f6d0c632da9a6d73f7b99762ec",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/distilbert-vs-bart-intent-classification",
+			"field": "internalLinks",
+			"fingerprint": "2f62f408db01571d84f18768bd33be72",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/docker-compose-cicd-patterns",
+			"field": "text",
+			"fingerprint": "48c24904c876e58c0c4ed2001efa354f",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/docker-compose-cicd-patterns",
+			"field": "internalLinks",
+			"fingerprint": "eafbe138af841faa0c80ca2cbc22181c",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/docker-exec-credential-leak-vectors",
+			"field": "text",
+			"fingerprint": "93fb7fe96d1e883496177c0459a804ad",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/docker-exec-credential-leak-vectors",
+			"field": "internalLinks",
+			"fingerprint": "dbf14aac19118fc9a7d04eaa7acc9505",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/docker-subnet-collision-static-ip-services",
+			"field": "text",
+			"fingerprint": "303c27e9e7a2a00a46cd24f437a25067",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/docker-subnet-collision-static-ip-services",
+			"field": "internalLinks",
+			"fingerprint": "d4f8595165f2f4adaf4eac956946b2e9",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/documentation-patterns",
+			"field": "text",
+			"fingerprint": "c946a135446079431dd683e36c5f5261",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/documentation-patterns",
+			"field": "internalLinks",
+			"fingerprint": "f68a03eac4a7e1534eb1613e10969e13",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/docx-pdf-export-pages-vs-libreoffice",
+			"field": "text",
+			"fingerprint": "60366a9ccb9f442a18172b6c9163e52a",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/docx-pdf-export-pages-vs-libreoffice",
+			"field": "internalLinks",
+			"fingerprint": "e1c4ef1f9528fbde816416c08173e9bc",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/dont-retry-retrieval-diagnose-it",
+			"field": "text",
+			"fingerprint": "e18316562e010a0aa9a0856aa3450e72",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/dont-retry-retrieval-diagnose-it",
+			"field": "internalLinks",
+			"fingerprint": "84e4db89c9a13743f9b19cf656ad4b3d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ebs-vs-efs-storage",
+			"field": "text",
+			"fingerprint": "141c1bfb9a446c2941716f4695ba29bb",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/ebs-vs-efs-storage",
+			"field": "internalLinks",
+			"fingerprint": "8f5de57d82576a0061b93815d0ecf1fa",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ecr-credential-helper",
+			"field": "text",
+			"fingerprint": "0058112ebbbd16b003bbf18ccaba20e7",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/ecr-credential-helper",
+			"field": "internalLinks",
+			"fingerprint": "f1728dcec38db558b15b70b87464d636",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ecr-ecs-deployment-workflow",
+			"field": "text",
+			"fingerprint": "c914ba6ebbf246df7f41e9881d2508f9",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/ecr-ecs-deployment-workflow",
+			"field": "internalLinks",
+			"fingerprint": "385df0910fe38443081583edc0a789fa",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ecr-token-refresh-cron",
+			"field": "text",
+			"fingerprint": "f50d51a3308e35f23bbbf1bbb0790ad3",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/ecr-token-refresh-cron",
+			"field": "internalLinks",
+			"fingerprint": "b5ff260b4b987b95fab16c4525580d4b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ecs-autoscaling-deep-dive",
+			"field": "text",
+			"fingerprint": "36035288917383ccc09cf482d45352e1",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/ecs-autoscaling-deep-dive",
+			"field": "internalLinks",
+			"fingerprint": "02edb856f7ebca878d2bd0aa12aa7a93",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ecs-autoscaling-patterns",
+			"field": "text",
+			"fingerprint": "f26423b9b490b65a4bcab61737fc8254",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/ecs-autoscaling-patterns",
+			"field": "internalLinks",
+			"fingerprint": "6440facc04aa9ac02a619ca0468ad05d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/emitasync-stamp-gating",
+			"field": "text",
+			"fingerprint": "9a1962e33897ed1bde88ca5ee27603b4",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/emitasync-stamp-gating",
+			"field": "internalLinks",
+			"fingerprint": "73ca4c343df87578692639e189866e75",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/empirical-close-pattern",
+			"field": "text",
+			"fingerprint": "953b610e0128439ad00a8bc7e130afec",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/empirical-close-pattern",
+			"field": "internalLinks",
+			"fingerprint": "2e3c1bf07c3d854b76e136d488403004",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/etl-data-separation",
+			"field": "text",
+			"fingerprint": "18c0d674752a8a59cc81c851d20fbee9",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/etl-data-separation",
+			"field": "internalLinks",
+			"fingerprint": "e1d7c1deb634373dc304c1f594301740",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/etl-schedule-timing",
+			"field": "text",
+			"fingerprint": "d2f556720099f29032a49c9e7d21abdb",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/etl-schedule-timing",
+			"field": "internalLinks",
+			"fingerprint": "061a7d30ae8a9aa3f6e5872a69b09e9a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/external-calendar-normalization",
+			"field": "text",
+			"fingerprint": "7fa0c4f1498010b9a8c6596e7ba353bb",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/external-calendar-normalization",
+			"field": "internalLinks",
+			"fingerprint": "c5fa083fea3309875374aea946a1998e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/fallback-branch-test-coverage-gap",
+			"field": "text",
+			"fingerprint": "5e6a390a0d41981ad30c8169ff5a2f1d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/fallback-branch-test-coverage-gap",
+			"field": "internalLinks",
+			"fingerprint": "01ea8046a339b16c2a487b0782c775bc",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/fastapi-dependency-injection-patterns",
+			"field": "text",
+			"fingerprint": "21e84c9d6352eb76995b4910f6548676",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/fastapi-dependency-injection-patterns",
+			"field": "internalLinks",
+			"fingerprint": "a2fedca01c7eb9b64d2f103f06d40424",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/fastapi-domain-exception-handler",
+			"field": "text",
+			"fingerprint": "9cd5a561b09f89f52a4343429e86fec8",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/fastapi-domain-exception-handler",
+			"field": "internalLinks",
+			"fingerprint": "50db1cb3abaa4ee720161013ae4bea93",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/fastapi-nonblocking-startup-dependencies",
+			"field": "text",
+			"fingerprint": "975420fd6a0bbcf7381582e057319393",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/fastapi-nonblocking-startup-dependencies",
+			"field": "internalLinks",
+			"fingerprint": "c2c8650814b68e525d13e43f62c6e94b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/folder-is-destiny",
+			"field": "text",
+			"fingerprint": "57e7dad44743e571f6b80c50b01f0492",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/folder-is-destiny",
+			"field": "internalLinks",
+			"fingerprint": "5f4df7c83c2a4dad841d465aa4144286",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/gcloud-logging-freshness-flag-semantics",
+			"field": "text",
+			"fingerprint": "4d27da03819f06d82ce8d1ee53d1489f",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/gcloud-logging-freshness-flag-semantics",
+			"field": "internalLinks",
+			"fingerprint": "de563bcb1865d12c4cf753e0280175d6",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/gemini-asymmetric-embeddings",
+			"field": "text",
+			"fingerprint": "ff8191b0ae77339a112ae0db9b42bb1c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/gemini-asymmetric-embeddings",
+			"field": "internalLinks",
+			"fingerprint": "691d71a88d23c097d83308c4a411aaa3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/gh-pr-view-head-branch-ambiguity",
+			"field": "text",
+			"fingerprint": "d16e34615e54dfec05036a18363155ba",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/gh-pr-view-head-branch-ambiguity",
+			"field": "internalLinks",
+			"fingerprint": "ae7b6f396d956a860a38287822935593",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/giscus-sveltekit-integration",
+			"field": "text",
+			"fingerprint": "5a55e7b6b52615e5da9c9b1fa1560efa",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/giscus-sveltekit-integration",
+			"field": "internalLinks",
+			"fingerprint": "c39ed77176eb6e146fa4881336ab3f3e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/git-pre-commit-parallel-session-head-race",
+			"field": "text",
+			"fingerprint": "9ce8d3d848ae8238f44d6510e5030180",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/git-pre-commit-parallel-session-head-race",
+			"field": "internalLinks",
+			"fingerprint": "429224b56f89cf989f8e07a1b722b0de",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/git-rev-parse-vs-log-hook-interception",
+			"field": "text",
+			"fingerprint": "869279700e92a67257f5e5c96153f71c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/git-rev-parse-vs-log-hook-interception",
+			"field": "internalLinks",
+			"fingerprint": "b58d0f444c5ae2c1accd608b767da3cc",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/github-pr-review-api-inline-comments",
+			"field": "text",
+			"fingerprint": "ffec2e8f062061af8bb67eb8e89fc9ed",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/ko/posts/github-pr-review-api-inline-comments",
+			"field": "internalLinks",
+			"fingerprint": "d832e489512087019fa5610a99d08034",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/google-calendar-recurring-events",
+			"field": "text",
+			"fingerprint": "892ffb1fab0949f6c91b33d0d3ccf0ca",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/google-calendar-recurring-events",
+			"field": "internalLinks",
+			"fingerprint": "b925b24748f6172bafe52b123895daea",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/google-calendar-sync-strategies",
+			"field": "text",
+			"fingerprint": "ad5bed797f64b9336812f874e99a97ba",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/google-calendar-sync-strategies",
+			"field": "internalLinks",
+			"fingerprint": "48a5de89336cb580e88fc0e626b4981b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/google-meet-link-creation",
+			"field": "text",
+			"fingerprint": "a04170240bf1c71a6793b25d72d53ea4",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/google-meet-link-creation",
+			"field": "internalLinks",
+			"fingerprint": "3d1bc3b2cb36133aab0f3d8d81a46775",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/hybrid-ci-jenkins-github-actions",
+			"field": "text",
+			"fingerprint": "710b5921485b08b60c14808be6763fc8",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/ko/posts/hybrid-ci-jenkins-github-actions",
+			"field": "internalLinks",
+			"fingerprint": "abc4bcc05d32c6c2340e21a2cdab91d5",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/idor-prevention-type-level",
+			"field": "text",
+			"fingerprint": "0ed2d1472e59390cfeca7e355023127b",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/idor-prevention-type-level",
+			"field": "internalLinks",
+			"fingerprint": "9e535eedd10161b04e6a65f3593b5531",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/infrastructure-hardening-checklist",
+			"field": "text",
+			"fingerprint": "2ba1da38719f17ce104e8290b595c93c",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/infrastructure-hardening-checklist",
+			"field": "internalLinks",
+			"fingerprint": "5ff7ec51c92262232ee30ff79012b9f3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/karpathy-llm-knowledge-bases",
+			"field": "text",
+			"fingerprint": "4aa6bd31a1bb8904cf49f41f235c7f9e",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/karpathy-llm-knowledge-bases",
+			"field": "internalLinks",
+			"fingerprint": "61ee0d473c7ba9f6d06decf1b0c5718f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/lemon-squeezy-subscriptions",
+			"field": "text",
+			"fingerprint": "af749df4f681377659a03b7fa4dc6ab3",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/lemon-squeezy-subscriptions",
+			"field": "internalLinks",
+			"fingerprint": "be7ff1b1115f5a9a27686cd077c066ea",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/linux",
+			"field": "text",
+			"fingerprint": "bb1bf6d990da107254960f653263e77a",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/linux",
+			"field": "internalLinks",
+			"fingerprint": "ecee81e1626eb193061e7dcee8eb404a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/llm-fine-tuning-strategies",
+			"field": "text",
+			"fingerprint": "4c0aa3b62eb29efc0f4dc61c0fa044ec",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/llm-fine-tuning-strategies",
+			"field": "internalLinks",
+			"fingerprint": "94e835159ed41f14ecd178a2ef3b9948",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/local-s3-minio",
+			"field": "text",
+			"fingerprint": "9d2f6052642c2f188d68ea0f09e51550",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/local-s3-minio",
+			"field": "internalLinks",
+			"fingerprint": "fb34116fd74c21c2aff6733aa5493c23",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/macos-keychain-multi-account",
+			"field": "text",
+			"fingerprint": "80202225737d4898dc5689a34113c1ec",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/macos-keychain-multi-account",
+			"field": "internalLinks",
+			"fingerprint": "20630e3281d16bdc4917bfd12da1991f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/macos-vscode-terminal-locale-fallback",
+			"field": "text",
+			"fingerprint": "14f26c06459a9bc0681ca1bccd2e9119",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/macos-vscode-terminal-locale-fallback",
+			"field": "internalLinks",
+			"fingerprint": "0548fe3cafe439e2f2709a084305af4f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/markdownlint-conventions",
+			"field": "text",
+			"fingerprint": "3fae31d46f22afd513a2f5d4f87e7e1b",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/markdownlint-conventions",
+			"field": "internalLinks",
+			"fingerprint": "0c5f892e7d3773122d929330072006a0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/markdownlint-pre-commit-heading-rules",
+			"field": "text",
+			"fingerprint": "6f4803c62a73227606a4461c01edfbc1",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/markdownlint-pre-commit-heading-rules",
+			"field": "internalLinks",
+			"fingerprint": "ab7cc4ef6642bfe49c8d8d96082c5f26",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/mobile-input-ux",
+			"field": "text",
+			"fingerprint": "2e7b4b1f7231c87773b328099e81460f",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/mobile-input-ux",
+			"field": "internalLinks",
+			"fingerprint": "277cd7ecd9b676754de530098603985b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/multi-agent-message-race-hold-discipline",
+			"field": "text",
+			"fingerprint": "076d9542ebd58ed48a4dac380abb11db",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/multi-agent-message-race-hold-discipline",
+			"field": "internalLinks",
+			"fingerprint": "76e686b7b60c15b79cba2c398af910ef",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/nat-gateway-architecture",
+			"field": "text",
+			"fingerprint": "c28d9ffa90ce049a1195ceeccb16cbd4",
+			"class": "post-text-chrome+mermaid+reading-time"
+		},
+		{
+			"url": "/ko/posts/nat-gateway-architecture",
+			"field": "internalLinks",
+			"fingerprint": "ccb7d7f88c8c210595598c7b2b68d25a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/nestjs-headers-decorator-typing",
+			"field": "text",
+			"fingerprint": "4f0ae36799f941cf7d4f0b59b5bd3a8b",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/nestjs-headers-decorator-typing",
+			"field": "internalLinks",
+			"fingerprint": "28b3454476b102eb26bb94c047b390c0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/nestjs-swagger-type-vs-content",
+			"field": "text",
+			"fingerprint": "96214ef4db9e746239d6c56aeef10bfb",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/nestjs-swagger-type-vs-content",
+			"field": "internalLinks",
+			"fingerprint": "87e6cced3f4aaa2734d1a76c43bf867d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/nestjs-websockets",
+			"field": "text",
+			"fingerprint": "0b2a298a44120d86e9dc49e04b1dd4fe",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/nestjs-websockets",
+			"field": "internalLinks",
+			"fingerprint": "6f131c0f3010022b4f2a6e7cf45993f0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/next-intelligence-explosion-social",
+			"field": "text",
+			"fingerprint": "597a0438d68814f829e83481c428f8f6",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/next-intelligence-explosion-social",
+			"field": "internalLinks",
+			"fingerprint": "6e4b15f8c8a9c5c08672e2f79b80ca21",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/oauth2-implementation-patterns",
+			"field": "text",
+			"fingerprint": "e9c3e9493df7e0a85092477caef16b2d",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/oauth2-implementation-patterns",
+			"field": "internalLinks",
+			"fingerprint": "8f7b650a93acbac0bcc414eb08b99e7e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/one-folder-three-agents",
+			"field": "text",
+			"fingerprint": "8fdb16c15dd05c1815665a8c98fa6645",
+			"class": "post-text-chrome+mermaid+inline-parity"
+		},
+		{
+			"url": "/ko/posts/one-folder-three-agents",
+			"field": "internalLinks",
+			"fingerprint": "5a4488b6e08a5b60739d870b504083f5",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/pandas-itertuples-vs-iterrows",
+			"field": "text",
+			"fingerprint": "aeb5c9b4136165bc75be712358fe926e",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/pandas-itertuples-vs-iterrows",
+			"field": "internalLinks",
+			"fingerprint": "925a5d6c9f2eee0edac86eb28a2ea3eb",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/paraglide-i18n",
+			"field": "text",
+			"fingerprint": "696e21957dc3b9692aab3d8343820b7e",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/paraglide-i18n",
+			"field": "internalLinks",
+			"fingerprint": "a17c050ba129e585b53000dc68806dcc",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/parallel-agents-no-collisions",
+			"field": "text",
+			"fingerprint": "80eddbe6bc786670f046d7020c78bb52",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/parallel-agents-no-collisions",
+			"field": "internalLinks",
+			"fingerprint": "31197b8f76f5d4472b24d0813b945e6d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/partial-access-recurring-events",
+			"field": "text",
+			"fingerprint": "da0dc604b43027d8295d9617697d7e03",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/partial-access-recurring-events",
+			"field": "internalLinks",
+			"fingerprint": "2ec5e28ec95480e956117ef9017a2dc4",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/per-user-transactional-backfill-atomicity",
+			"field": "text",
+			"fingerprint": "a687a619200498fc5ec25024d01055d2",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/per-user-transactional-backfill-atomicity",
+			"field": "internalLinks",
+			"fingerprint": "a5b465b744c02ce1bfe294aaa1bc18cf",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/pessimistic-locking-race-conditions",
+			"field": "text",
+			"fingerprint": "546cac00325dab79f8a15f04158b3e6d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/pessimistic-locking-race-conditions",
+			"field": "internalLinks",
+			"fingerprint": "7a6fa7d543e346a73ee988716503ad38",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/pgvector-hnsw-postgresql",
+			"field": "text",
+			"fingerprint": "3b62b7db3758fe8f73420bad0e32269b",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/pgvector-hnsw-postgresql",
+			"field": "internalLinks",
+			"fingerprint": "f546d6b870f963243700b6a31bb910d7",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/plan-vs-shipped-divergence",
+			"field": "text",
+			"fingerprint": "0218d0a983398b3011a46d27f01b26d4",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/plan-vs-shipped-divergence",
+			"field": "internalLinks",
+			"fingerprint": "59ef0beec5ca7997b05667cf0f375108",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/portaudio-stale-usb-audio-handle",
+			"field": "text",
+			"fingerprint": "360cd727bf081ba7ca42cf937acf30bb",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/portaudio-stale-usb-audio-handle",
+			"field": "internalLinks",
+			"fingerprint": "b7f329f940c6bf10f2d51a2fb4d70160",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/postgresql-advisory-locks",
+			"field": "text",
+			"fingerprint": "af4b2dc85c5a9495b353aa11a44d4728",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/postgresql-advisory-locks",
+			"field": "internalLinks",
+			"fingerprint": "7e63d8d8cf824b7feadaaf69dfa59779",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/postgresql-in-clause-limits",
+			"field": "text",
+			"fingerprint": "c93785968d37a128e06a8e2f0cb78294",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/postgresql-in-clause-limits",
+			"field": "internalLinks",
+			"fingerprint": "15b6d00d15ede40422057eea64c2f4f9",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/prometheus-tsdb-memory-sizing",
+			"field": "text",
+			"fingerprint": "6e95a0fb76e8defcd61124d63d603229",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/ko/posts/prometheus-tsdb-memory-sizing",
+			"field": "internalLinks",
+			"fingerprint": "9a49bda18a947ca208b31aebb8551605",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/psi-model-drift-detection",
+			"field": "text",
+			"fingerprint": "7daa02f0f2c574b77f187b20b002a69c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/psi-model-drift-detection",
+			"field": "internalLinks",
+			"fingerprint": "8e918324bc62f9ffe6a6dc73ee70b482",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/python-function-dedup-keyword-params",
+			"field": "text",
+			"fingerprint": "d866c406a0ac7fe54def752f40685ea9",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/python-function-dedup-keyword-params",
+			"field": "internalLinks",
+			"fingerprint": "c5005fc0d5858e4625ef7ae79aa88d97",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/python-tooling-stack",
+			"field": "text",
+			"fingerprint": "012bcea0bf04c8c9ab4cc3a2bb014dbe",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/ko/posts/python-tooling-stack",
+			"field": "internalLinks",
+			"fingerprint": "59c57bfe200948804fa7a88ed220388b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/rag-hybrid-search-architecture",
+			"field": "text",
+			"fingerprint": "57dc11513e7639a5efabbeec308bbdd7",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/rag-hybrid-search-architecture",
+			"field": "internalLinks",
+			"fingerprint": "0b812bd6b34ebaeedce33f5f1caac154",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/react-demo-pipeline-pattern",
+			"field": "text",
+			"fingerprint": "a36cb80d8b8242a1e9c415bfbad9c5fe",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/react-demo-pipeline-pattern",
+			"field": "internalLinks",
+			"fingerprint": "82ae9b673f33873fc2236800f8cabe6a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/recharts-dark-theme-customization",
+			"field": "text",
+			"fingerprint": "4123d390195e884b5950ee9f4887391d",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/recharts-dark-theme-customization",
+			"field": "internalLinks",
+			"fingerprint": "cb96c370dbdfa88b22003304ae811789",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/recurring-event-operations",
+			"field": "text",
+			"fingerprint": "0a4de957d2215934d971c6d249c15e2c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/recurring-event-operations",
+			"field": "internalLinks",
+			"fingerprint": "60b088f821a47d43cea03e7b74bfc1d9",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/redis-queue-patterns",
+			"field": "text",
+			"fingerprint": "58f0eb60a3d19792c984000396f88b07",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/redis-queue-patterns",
+			"field": "internalLinks",
+			"fingerprint": "322980085d36520f7b52cd80b90acf81",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/rrule-byday-timezone-correction",
+			"field": "text",
+			"fingerprint": "40e0cbecaa872c60458621fafe62c1bd",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/rrule-byday-timezone-correction",
+			"field": "internalLinks",
+			"fingerprint": "d6d9070ff337c63e80088180967b7962",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/rrule-exdate-parsing",
+			"field": "text",
+			"fingerprint": "44a7af664ce8cf08ceabc18722714dd6",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/rrule-exdate-parsing",
+			"field": "internalLinks",
+			"fingerprint": "e0e0ec10447cc51647af2fd5e7cae1e5",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/ruff-three-gate-preflight",
+			"field": "text",
+			"fingerprint": "4544fd9a386294887821aad4615cfc36",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/ruff-three-gate-preflight",
+			"field": "internalLinks",
+			"fingerprint": "d01c2ed99e5594299b8a72a4933f91c8",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/rules-that-route-themselves",
+			"field": "text",
+			"fingerprint": "39691f797314ae6142d991fe14d933e7",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/rules-that-route-themselves",
+			"field": "internalLinks",
+			"fingerprint": "7281c92c0a1987dd046226ca43281b8d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/rust-async-channels",
+			"field": "text",
+			"fingerprint": "6def95fce13d5f59dadacf2bb2c729d9",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/rust-async-channels",
+			"field": "internalLinks",
+			"fingerprint": "94333bb99df6583651ad318dbf2c252a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/s3-path-handling",
+			"field": "text",
+			"fingerprint": "f4f80d22dbd94d353c8bd03f63d99fb7",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/s3-path-handling",
+			"field": "internalLinks",
+			"fingerprint": "4dd44edf8dae591113533d7c59a9f2d3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/schema-versioned-helper-json-envelope",
+			"field": "text",
+			"fingerprint": "bff1dd3b42b1cd425cfacba308c535ef",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/schema-versioned-helper-json-envelope",
+			"field": "internalLinks",
+			"fingerprint": "f94a4e5021a43f41fa4be2f5ad3f1148",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/security-groups-fundamentals",
+			"field": "text",
+			"fingerprint": "004d7a410204e8d78c83e8bd9b0d263a",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/security-groups-fundamentals",
+			"field": "internalLinks",
+			"fingerprint": "064392c0c372dc5ee6487fffcaf820d7",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/sentry-n-plus-one-detection",
+			"field": "text",
+			"fingerprint": "1f2bb84d910cc8dc17643827530b5c1d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/sentry-n-plus-one-detection",
+			"field": "internalLinks",
+			"fingerprint": "b02b49e1043e64f91fb4eab11591e527",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/serena-claude-code-multi-profile-setup",
+			"field": "text",
+			"fingerprint": "0ca24a93b711fe579f2c0c34ea186eec",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/serena-claude-code-multi-profile-setup",
+			"field": "internalLinks",
+			"fingerprint": "0ca2a879260c9440e534735d215d398d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/session-state-merge-vs-overwrite-pattern",
+			"field": "text",
+			"fingerprint": "7606e0e1ccf0173ebc4204a69bd8b652",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/session-state-merge-vs-overwrite-pattern",
+			"field": "internalLinks",
+			"fingerprint": "3cb764b3aec3d22585c8727fae2d7798",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/shadcn-ui-vite-tailwind-setup",
+			"field": "text",
+			"fingerprint": "40835c3c5c7e1f90df2d790c60cab7be",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/shadcn-ui-vite-tailwind-setup",
+			"field": "internalLinks",
+			"fingerprint": "5390a2b3d0f21b8e72d427fcd4b60ec0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/six-papers-zero-applied",
+			"field": "text",
+			"fingerprint": "b047dc5f9361aaae51fecb46af72cc22",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/six-papers-zero-applied",
+			"field": "internalLinks",
+			"fingerprint": "c6134e261361f7c1605b0f228bad3baa",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/skill-instruction-checklist-pattern",
+			"field": "text",
+			"fingerprint": "2fe914b67cd666bcc88bff521306f936",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/skill-instruction-checklist-pattern",
+			"field": "internalLinks",
+			"fingerprint": "c8670e2f9571cfee112410d2777802b8",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/skills-three-transports",
+			"field": "text",
+			"fingerprint": "d773b8b5e8845a3687c9ae104833acaa",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/skills-three-transports",
+			"field": "internalLinks",
+			"fingerprint": "4e2326e72664e95142f807737212b278",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/stale-vs-orphan-blocks",
+			"field": "text",
+			"fingerprint": "bd23ed21f9c1a8f3a3d29b905f14a1ad",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/stale-vs-orphan-blocks",
+			"field": "internalLinks",
+			"fingerprint": "acdcf5cfce14e750d2500496e36b66d5",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/state-invariant-flag-drift-recovery",
+			"field": "text",
+			"fingerprint": "2c5dfb9b01630325df54bbb4cce7c293",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/state-invariant-flag-drift-recovery",
+			"field": "internalLinks",
+			"fingerprint": "9439e1b057829c9d699222be80098148",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/stateless-auth-db-column-drift",
+			"field": "text",
+			"fingerprint": "5304ee7be0f9ce9968519a3da4a45008",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/stateless-auth-db-column-drift",
+			"field": "internalLinks",
+			"fingerprint": "d6cc8cef833d6b7893b2479821995c51",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/stdlib-only-helper-portability",
+			"field": "text",
+			"fingerprint": "2a41ab654e4711b8e92fd6eac7c644b3",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/stdlib-only-helper-portability",
+			"field": "internalLinks",
+			"fingerprint": "6560f3366c3d5fca03d7e283a0a279b3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/stow-symlink-health-checking",
+			"field": "text",
+			"fingerprint": "14323cfb8091aa0e9c03184978a3656c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/stow-symlink-health-checking",
+			"field": "internalLinks",
+			"fingerprint": "6ae75f9f5ffaa08f2d6ece3dbd932a80",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/svelte-effect-rune",
+			"field": "text",
+			"fingerprint": "9f214cc44f38394f669a1d12d93426a0",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/svelte-effect-rune",
+			"field": "internalLinks",
+			"fingerprint": "8787a09302d013087c303c07179a1da0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/svelte-onmount-async-cleanup",
+			"field": "text",
+			"fingerprint": "7d5b9ce62ea98fdcb33c5d32ff08889c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/svelte-onmount-async-cleanup",
+			"field": "internalLinks",
+			"fingerprint": "d1ce2d7f71776ad0f317881dd2cb46f6",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/sveltekit-global-store-hydration",
+			"field": "text",
+			"fingerprint": "86841bb4cbdbf37cac320d0e3f0c2995",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/sveltekit-global-store-hydration",
+			"field": "internalLinks",
+			"fingerprint": "bb64707b146d5d0c37ee66fa2396b230",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/symmetric-redis-kafka-bridge-pair",
+			"field": "text",
+			"fingerprint": "8ac81f513796e99eba8a4e08806dc8d3",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/symmetric-redis-kafka-bridge-pair",
+			"field": "internalLinks",
+			"fingerprint": "538c70ed27ff66ff5b32ff0008d545b8",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/sync-token-invalidation-recovery",
+			"field": "text",
+			"fingerprint": "64497a2c5fd27fba71094f3ea68cbea0",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/sync-token-invalidation-recovery",
+			"field": "internalLinks",
+			"fingerprint": "32516bd28bf402bf735e448427d6297c",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/terraform-fundamentals",
+			"field": "text",
+			"fingerprint": "9c8da57fab5d7b399c697520bb80867e",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/terraform-fundamentals",
+			"field": "internalLinks",
+			"fingerprint": "2938893269bd83c9137d9c23e89d6247",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/terraform-rds-credentials",
+			"field": "text",
+			"fingerprint": "038e455321f066cedc74330fc92de514",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/terraform-rds-credentials",
+			"field": "internalLinks",
+			"fingerprint": "c410d4794788ccfd58a5cbc46316759e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/terraform-state-recovery",
+			"field": "text",
+			"fingerprint": "d3f9fa778ba1d6b7784fba8fa65632bb",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/terraform-state-recovery",
+			"field": "internalLinks",
+			"fingerprint": "12b472d1fca251f32a57d0bc47d4149d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/test-L-vs-realpath-symlink-detection",
+			"field": "text",
+			"fingerprint": "e487773f95d2a30472a4aa38fce2af62",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/test-L-vs-realpath-symlink-detection",
+			"field": "internalLinks",
+			"fingerprint": "bed0692587cd79a20035024d08197466",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/the-token-stack",
+			"field": "text",
+			"fingerprint": "deed83fe95c8d68f4fba694bc06b6dd6",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/the-token-stack",
+			"field": "internalLinks",
+			"fingerprint": "e1dd68b3ac0a38b20757b19b61dac244",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/three-gates-and-an-audit-log",
+			"field": "text",
+			"fingerprint": "aecd9a5a462cc6591ef9c31f9cea3f1e",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/three-gates-and-an-audit-log",
+			"field": "internalLinks",
+			"fingerprint": "4761af5d8e4639a9ec3de8524dcdcef0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/tmux-smart-session-auto-start",
+			"field": "text",
+			"fingerprint": "e025b70e699c08da25943148da9307ed",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/tmux-smart-session-auto-start",
+			"field": "internalLinks",
+			"fingerprint": "644a493febb7ba9dea51139ecc307b10",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/traefik-keycloak-forwardauth",
+			"field": "text",
+			"fingerprint": "fedd7137a35ff694c100410d0d3d5cdc",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/traefik-keycloak-forwardauth",
+			"field": "internalLinks",
+			"fingerprint": "619636e564b6ddb4d14a56adfcc7b1a6",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/two-phase-deletion-pattern",
+			"field": "text",
+			"fingerprint": "94bd420067b8d21bc0d77e55cbea73a7",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/two-phase-deletion-pattern",
+			"field": "internalLinks",
+			"fingerprint": "4e279d807f066222cfa4f163b7cdb039",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/typeorm-cli-nestjs-datasource",
+			"field": "text",
+			"fingerprint": "9b231fab7443a3bd168f28a1da7577db",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/typeorm-cli-nestjs-datasource",
+			"field": "internalLinks",
+			"fingerprint": "f9538bf7e6a4b22f9ac89ee509b01d0f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/typeorm-migration-drift-scope",
+			"field": "text",
+			"fingerprint": "0ca94a8920b6e576810204d2bca0d273",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/typeorm-migration-drift-scope",
+			"field": "internalLinks",
+			"fingerprint": "2e2ae3f3d2f6743267eca43b2cb88e59",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/typescript-type-narrowing",
+			"field": "text",
+			"fingerprint": "2835119dc82f12b47c00ac6662f5ad7d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/typescript-type-narrowing",
+			"field": "internalLinks",
+			"fingerprint": "efd3ca190a54017e46b216b0e1a56f44",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/typesense-import-byte-aware-chunking",
+			"field": "text",
+			"fingerprint": "d4048e712e28d7edd869b8d764d31e32",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/typesense-import-byte-aware-chunking",
+			"field": "internalLinks",
+			"fingerprint": "efded66ed8a73461536044db5d7da265",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/updatedAt-staleness-guard",
+			"field": "text",
+			"fingerprint": "fbd2f3c36ce44d2cd456f6762101141f",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/updatedAt-staleness-guard",
+			"field": "internalLinks",
+			"fingerprint": "e58716ee94e8922556ab5a61c77659b4",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/uv-lock-best-practice",
+			"field": "text",
+			"fingerprint": "0447c33fc185d9d9d478a9a8083ad5ed",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/ko/posts/uv-lock-best-practice",
+			"field": "internalLinks",
+			"fingerprint": "bda4296ce770bdc179fe6fbb8f5ca1b7",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/vpc-networking-fundamentals",
+			"field": "text",
+			"fingerprint": "5c2e78a310e115b646c9517b4f184788",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/vpc-networking-fundamentals",
+			"field": "internalLinks",
+			"fingerprint": "2cbeafb79f2d5e2572df6d2a1f8582bf",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/waf-allowlist-patterns",
+			"field": "text",
+			"fingerprint": "dac2b6dfffb53add72603c54adaae243",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/waf-allowlist-patterns",
+			"field": "internalLinks",
+			"fingerprint": "5c78595a24ac9461e4039775b1bd16ac",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/waf-implementation",
+			"field": "text",
+			"fingerprint": "8edcc1fb398124ef1a31b7407542e811",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/ko/posts/waf-implementation",
+			"field": "internalLinks",
+			"fingerprint": "38a0f53f10165716deb32400b7e4ab57",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/webhook-vs-user-activity",
+			"field": "text",
+			"fingerprint": "60fd83a7bb51c6ffe0a1e376ae334095",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/webhook-vs-user-activity",
+			"field": "internalLinks",
+			"fingerprint": "e2ae9a1a0cb0c22486b24b1d33f09bd1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/websocket-architecture",
+			"field": "text",
+			"fingerprint": "f1e552b43b7596cde2166aa9b862eeb2",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/ko/posts/websocket-architecture",
+			"field": "internalLinks",
+			"fingerprint": "8bb7bbe5ee5d22f551188129ea6a3056",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/wrap-and-rollup",
+			"field": "text",
+			"fingerprint": "30d0a0b9426315a2b4395d9bb9452e69",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/ko/posts/wrap-and-rollup",
+			"field": "internalLinks",
+			"fingerprint": "dad3445a62769d78034838d672534cf4",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/wrap-followup-persistence-architecture",
+			"field": "text",
+			"fingerprint": "d699cd7b238e8db66051fd78bd647053",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/wrap-followup-persistence-architecture",
+			"field": "internalLinks",
+			"fingerprint": "1d3a00602a0f9e603d055df6ad3ff6e3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/posts/zsh-backtick-eval-in-skills",
+			"field": "text",
+			"fingerprint": "9503063c9a6b2d4d66096d25bdbdbadc",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/ko/posts/zsh-backtick-eval-in-skills",
+			"field": "internalLinks",
+			"fingerprint": "056c6306f9bcea293f2c02c91363ac51",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/ko/projects",
+			"field": "title",
+			"fingerprint": "052eb38d7771c2d53e8a39ce3b3e533e",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/projects",
+			"field": "description",
+			"fingerprint": "17efc12a2eef7b024c1637592af42b78",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/projects",
+			"field": "og",
+			"fingerprint": "afad88c9c92c01fa9b5402ea46bde5a7",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/projects",
+			"field": "twitter",
+			"fingerprint": "2fea2c13f9cb22be27cf5e03ecf8597e",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/projects",
+			"field": "h1",
+			"fingerprint": "14164a7f3706b97bfa062ab98231c9c6",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/projects",
+			"field": "text",
+			"fingerprint": "b103d5e7cff3895f7f54aecc6d262abd",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/study/aws-ai-practitioner",
+			"field": "lang",
+			"fingerprint": "fe9abed6e583adfb27c928621721a0e7",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/study/dsa-ii",
+			"field": "lang",
+			"fingerprint": "561c048a15b03828256268853060a1ec",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/study/dsa-iii",
+			"field": "lang",
+			"fingerprint": "892b4857c4c746edfda533623773f914",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/study/dsa-iv",
+			"field": "lang",
+			"fingerprint": "52c39188434b2b7c792cf14f504fc407",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/system/3b",
+			"field": "text",
+			"fingerprint": "edd6bd8c9dd707f02d716a7652b9dde5",
+			"class": "system-3b-partial-port"
+		},
+		{
+			"url": "/ko/system/3b",
+			"field": "internalLinks",
+			"fingerprint": "93a4bb7eb98cb87c0b134e3efe33dd34",
+			"class": "system-3b-partial-port"
+		},
+		{
+			"url": "/ko/tags",
+			"field": "title",
+			"fingerprint": "e77ba17f0c4635bdab2e9857359665fa",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/tags",
+			"field": "description",
+			"fingerprint": "6eb649fd8e435f39ded12b57866c235d",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/tags",
+			"field": "og",
+			"fingerprint": "342f96ca200091b0059d816b181cb608",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/tags",
+			"field": "twitter",
+			"fingerprint": "9a0739b4eb4a63aaa8323584753061bc",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/tags",
+			"field": "h1",
+			"fingerprint": "7e49926ea9dd033a2fb673679487023d",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/ko/tags",
+			"field": "text",
+			"fingerprint": "2323a400f480a712c22c5f238d7bf08f",
+			"class": "ko-loc-c13"
+		},
+		{
+			"url": "/posts/a-harness-that-fixes-itself",
+			"field": "text",
+			"fingerprint": "c3b44e5dbb76f04947b8e5884de4e819",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/a-harness-that-fixes-itself",
+			"field": "internalLinks",
+			"fingerprint": "3f94d3f8b015e8cde57d315c27d9c18d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ai-code-review-confusion-patterns",
+			"field": "text",
+			"fingerprint": "823bde362412d1a7b47c0943ffcf6973",
+			"class": "post-text-chrome+reading-time"
+		},
+		{
+			"url": "/posts/ai-code-review-confusion-patterns",
+			"field": "internalLinks",
+			"fingerprint": "6fe8dbef212c05be2f545c55c832588a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ai-code-review-patterns",
+			"field": "text",
+			"fingerprint": "3beefe60d1aaedbdbf55d39c13c66306",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/ai-code-review-patterns",
+			"field": "internalLinks",
+			"fingerprint": "9d69c4e2c35977bdf7e09fb6c7e737b6",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ai-pr-review-validation-patterns",
+			"field": "text",
+			"fingerprint": "4dba98418469a73bc2ed29d82ab35588",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/ai-pr-review-validation-patterns",
+			"field": "internalLinks",
+			"fingerprint": "58d204fcf5eadca186b91b92ca6a25f1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/airflow-celery-worker-log-server",
+			"field": "text",
+			"fingerprint": "6a4e210c6564ce121529933cd005329d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/airflow-celery-worker-log-server",
+			"field": "internalLinks",
+			"fingerprint": "ab88d8264cdfb5faf788c05ef5b184cb",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/airflow-cicd-concepts",
+			"field": "text",
+			"fingerprint": "f39023feb2195d5f8d8905757c6cdde1",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/airflow-cicd-concepts",
+			"field": "internalLinks",
+			"fingerprint": "e1316a23099df73a2e7b4e0a8b122f43",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/airflow-dag-level-callbacks",
+			"field": "text",
+			"fingerprint": "f3e87155c931f5d9c9d0bfa0bec29754",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/airflow-dag-level-callbacks",
+			"field": "internalLinks",
+			"fingerprint": "3a10f0347e73da615a1b66dca3c311e7",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/airflow-dag-start-date",
+			"field": "text",
+			"fingerprint": "c58aa83953c5152094d644d36a8a5cff",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/airflow-dag-start-date",
+			"field": "internalLinks",
+			"fingerprint": "1a4d739f13458aa22b9e420f012cd43e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/airflow-manual-dag-config",
+			"field": "text",
+			"fingerprint": "8fe82022c2444365973074e2b5955227",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/airflow-manual-dag-config",
+			"field": "internalLinks",
+			"fingerprint": "096d0f231fc9b71e8fd166ebcee4da5c",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/airflow-task-dependency-syntax",
+			"field": "text",
+			"fingerprint": "5e6c9f2bec4a65c52edfa7d85895589a",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/airflow-task-dependency-syntax",
+			"field": "internalLinks",
+			"fingerprint": "a10748297a6687ff554c4e74b5ed4e76",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/alembic-async-sqlalchemy",
+			"field": "text",
+			"fingerprint": "31ab51a3d45395e04b024047aaba3cb0",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/alembic-async-sqlalchemy",
+			"field": "internalLinks",
+			"fingerprint": "61d0ab89d83f3e4677ff557885d1869d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/amplitude-etl-partitioning",
+			"field": "text",
+			"fingerprint": "474e5d1c7887589f2b7ed3346863b404",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/amplitude-etl-partitioning",
+			"field": "internalLinks",
+			"fingerprint": "f0fe3a5a9d40e91b1172452cb962841d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/amplitude-export-api-format",
+			"field": "text",
+			"fingerprint": "6e8ee2cf5742f54145674166801dc3bd",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/amplitude-export-api-format",
+			"field": "internalLinks",
+			"fingerprint": "2fb16c5e7e5007bd0255fe729940752d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/amplitude-export-api-timezone",
+			"field": "text",
+			"fingerprint": "986277673c7b6789b69acc56cc74de02",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/amplitude-export-api-timezone",
+			"field": "internalLinks",
+			"fingerprint": "c1a2a03486b01b4ce6f5f15731b6f61d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/anthropic-mcp-context-budget-optimization",
+			"field": "text",
+			"fingerprint": "5bd71b9f3cdfa7532716c01408ffdbcf",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/anthropic-mcp-context-budget-optimization",
+			"field": "internalLinks",
+			"fingerprint": "3e90a4d02f78ae8093a012eebc71a2d2",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/anthropic-prompt-cache-ttl",
+			"field": "text",
+			"fingerprint": "c76d72ab9d39d371a13eb1a2a7e35eff",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/anthropic-prompt-cache-ttl",
+			"field": "internalLinks",
+			"fingerprint": "d3c065d0d11464bccbb6dfac52abd5ac",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/backfill-stats-manifest-early-exit",
+			"field": "text",
+			"fingerprint": "1bf222ce19f7664ce53ff8fc023d44e3",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/backfill-stats-manifest-early-exit",
+			"field": "internalLinks",
+			"fingerprint": "b6dd0140dc45c53913db5d8eb0c31e7a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/bash-set-e-command-substitution",
+			"field": "text",
+			"fingerprint": "3cc4767a8daf06521ddebf636618d605",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/bash-set-e-command-substitution",
+			"field": "internalLinks",
+			"fingerprint": "7b61e08a9f73c05160565567df0498b5",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/batch-processing-trade-offs",
+			"field": "text",
+			"fingerprint": "8fd62d61ad92cc98c8f7d5d3bb635ab9",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/batch-processing-trade-offs",
+			"field": "internalLinks",
+			"fingerprint": "0ace8ec96fe5a523aa83047af210f64d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/beautifulsoup-streaming-response-cap",
+			"field": "text",
+			"fingerprint": "715b55bc855f14a673aad798b1814712",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/beautifulsoup-streaming-response-cap",
+			"field": "internalLinks",
+			"fingerprint": "4cd054343a5a7e07ff2b98efb3b35593",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/binary-checksum-verification",
+			"field": "text",
+			"fingerprint": "15900d40203714f983e9de332b69646f",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/binary-checksum-verification",
+			"field": "internalLinks",
+			"fingerprint": "d3ae3ccd253e50ba37a3ca56df6fc166",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/boto3-s3-encoding",
+			"field": "text",
+			"fingerprint": "f2ad9dbf03dd0637c974c775ee269660",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/boto3-s3-encoding",
+			"field": "internalLinks",
+			"fingerprint": "5360c87d96d40be6fd13df317c8b5584",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/calendar-exdate-behavior",
+			"field": "text",
+			"fingerprint": "1c718812e1f1061be06777f84faec4c2",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/calendar-exdate-behavior",
+			"field": "internalLinks",
+			"fingerprint": "e79eb18e051067eaaf1b03f5ec73e1fa",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/celery-api-side-dispatch",
+			"field": "text",
+			"fingerprint": "21a227751e01fb3e84e8fca9519f4129",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/celery-api-side-dispatch",
+			"field": "internalLinks",
+			"fingerprint": "0e3b33bb14d9300d721c6f8b591c99de",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/class-transformer-undefined-fields",
+			"field": "text",
+			"fingerprint": "70382fbd1002ac521153382001bec5ee",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/class-transformer-undefined-fields",
+			"field": "internalLinks",
+			"fingerprint": "b98eecb244e4937448ad536473863ed0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/class-validator-ishexcolor-alpha-forms",
+			"field": "text",
+			"fingerprint": "475a64368912fccc715cbb7e9fce83e0",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/class-validator-ishexcolor-alpha-forms",
+			"field": "internalLinks",
+			"fingerprint": "09ac23af3b1b0de9dff4d32fc31feb6b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/claude-code-action-workflow-setup-gotchas",
+			"field": "text",
+			"fingerprint": "741768a10f9657b25c0cafef046b1c9a",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/claude-code-action-workflow-setup-gotchas",
+			"field": "internalLinks",
+			"fingerprint": "38df3418d93cf94680ebdd3a59cc17fd",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/claude-code-agent-teams",
+			"field": "text",
+			"fingerprint": "39232be41044dc124ab13ddb831c0f6f",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/claude-code-agent-teams",
+			"field": "internalLinks",
+			"fingerprint": "0ca2f148eeb8a6be0f4bfd451199d407",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/claude-code-expert-workflows",
+			"field": "text",
+			"fingerprint": "571ce941bc2e9c33e75b7f57df7e87c8",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/claude-code-expert-workflows",
+			"field": "internalLinks",
+			"fingerprint": "afef51dbfa0ced16ca9ed333442bcbee",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/claude-code-multi-profile-hud",
+			"field": "text",
+			"fingerprint": "f6cecd7f959ae44e9843c2b2ce4f664a",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/claude-code-multi-profile-hud",
+			"field": "internalLinks",
+			"fingerprint": "909590e86471f3d65dc7bfad37630232",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/claude-code-posttooluse-hooks",
+			"field": "text",
+			"fingerprint": "fff83708ae052b314d9188182c6291b2",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/claude-code-posttooluse-hooks",
+			"field": "internalLinks",
+			"fingerprint": "d14dca861487b8ba6d5e46a53e7b81cd",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/claude-code-shared-personal-config",
+			"field": "text",
+			"fingerprint": "c005e29c9d43f8838b37086e8503e0be",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/claude-code-shared-personal-config",
+			"field": "internalLinks",
+			"fingerprint": "1bbbdbaea3474f84b87b77f920c6fb55",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/claude-code-turn-latency-measurement",
+			"field": "text",
+			"fingerprint": "73eb9573da719e8d79a1b317662c0ca4",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/claude-code-turn-latency-measurement",
+			"field": "internalLinks",
+			"fingerprint": "dbd881c5cd328662573cbe322d3335a5",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/claude-md-byte-budget-generator-gate",
+			"field": "text",
+			"fingerprint": "19859bd89ad9797b59e4524603d8f868",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/posts/claude-md-byte-budget-generator-gate",
+			"field": "internalLinks",
+			"fingerprint": "8f291887b57a121c292a4859d5a16229",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/claude-plugin-update-reenables-disabled",
+			"field": "text",
+			"fingerprint": "75a32c001b90f9cb3df170a42ddc5c82",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/claude-plugin-update-reenables-disabled",
+			"field": "internalLinks",
+			"fingerprint": "89700f5a516baaadc479ae544b7a876c",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/codex-apply-patch-shell-mediated-tool",
+			"field": "text",
+			"fingerprint": "906f5eddd99e70057630bf1de121be02",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/codex-apply-patch-shell-mediated-tool",
+			"field": "internalLinks",
+			"fingerprint": "407d5d3b1049d8d35d7074d4936b1171",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/codex-skill-mirror-pattern",
+			"field": "text",
+			"fingerprint": "85a39d8e86f193504c1f9484c54648d5",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/codex-skill-mirror-pattern",
+			"field": "internalLinks",
+			"fingerprint": "d1b8b4616901935d5fdc82052d9ec479",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/computed-backlinks-zettelkasten",
+			"field": "text",
+			"fingerprint": "4186b4d17b22afa4ffe95e9a732040ee",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/computed-backlinks-zettelkasten",
+			"field": "internalLinks",
+			"fingerprint": "ba0f8e046a37a5155e2c42b18de0c990",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/cpu-cache-locality-batch-iteration",
+			"field": "text",
+			"fingerprint": "a81d5704a8683ae4d10b0e890ed73408",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/cpu-cache-locality-batch-iteration",
+			"field": "internalLinks",
+			"fingerprint": "32039620ef54739b63f1390a256212c8",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/cross-agent-skill-alias-generalization",
+			"field": "text",
+			"fingerprint": "6f42b2c9a82aa63cd8b1e180a0021f12",
+			"class": "post-text-chrome+reading-time"
+		},
+		{
+			"url": "/posts/cross-agent-skill-alias-generalization",
+			"field": "internalLinks",
+			"fingerprint": "1fa06685400f1d930b350d3c7e44b7ed",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/cross-language-cli-startup-benchmark",
+			"field": "text",
+			"fingerprint": "e4799fb9d9314fc457f717712aa01514",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/cross-language-cli-startup-benchmark",
+			"field": "internalLinks",
+			"fingerprint": "eb091a7477f7b9740f97770f8abd3e4c",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/crucio-ship-two-phase-merge-gate",
+			"field": "text",
+			"fingerprint": "60b28c6fe961283817f3de9d8d7388e7",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/crucio-ship-two-phase-merge-gate",
+			"field": "internalLinks",
+			"fingerprint": "b59ef3cb343d38a1ae8d6cce3cd79914",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/css-inline-replaced-element-gap",
+			"field": "text",
+			"fingerprint": "cefabc2a5ace861bbe173264164abc4d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/css-inline-replaced-element-gap",
+			"field": "internalLinks",
+			"fingerprint": "aa2d7bd2642e1dd119cbf52514c5b5cc",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/dag-deployment-strategies",
+			"field": "text",
+			"fingerprint": "5643118a7eddada3d2b85bd6afd58cbf",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/dag-deployment-strategies",
+			"field": "internalLinks",
+			"fingerprint": "5fc9c4e1c1019d4f4ba08073d8586462",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/datasource-vs-repository-pattern",
+			"field": "text",
+			"fingerprint": "12e1a0a1ae5adccc223480d6db3b7d6d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/datasource-vs-repository-pattern",
+			"field": "internalLinks",
+			"fingerprint": "41b87c1c1cd8e1b15ab654d8e6461e5b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/distilbert-vs-bart-intent-classification",
+			"field": "text",
+			"fingerprint": "8d2b67b58a2c0fe1f55d276e72710383",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/distilbert-vs-bart-intent-classification",
+			"field": "internalLinks",
+			"fingerprint": "e811ad38ec7c8de31f5073beb7e15e51",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/docker-compose-cicd-patterns",
+			"field": "text",
+			"fingerprint": "4a3a0b59dd3938c06b6ca422f211e069",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/docker-compose-cicd-patterns",
+			"field": "internalLinks",
+			"fingerprint": "5cbf29917c9617b0996308ef881609e2",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/docker-exec-credential-leak-vectors",
+			"field": "text",
+			"fingerprint": "21114bee25a36bfc008e0975ba0b9371",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/docker-exec-credential-leak-vectors",
+			"field": "internalLinks",
+			"fingerprint": "dfcaa2b01a35b5fe60d79c9c33ad2716",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/docker-subnet-collision-static-ip-services",
+			"field": "text",
+			"fingerprint": "487311311cb35016f9cdb50567de9c1b",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/docker-subnet-collision-static-ip-services",
+			"field": "internalLinks",
+			"fingerprint": "df2a35f4929c2b371f8a882c55f372be",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/documentation-patterns",
+			"field": "text",
+			"fingerprint": "907b0b1a142f4ed0d72d594131648235",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/documentation-patterns",
+			"field": "internalLinks",
+			"fingerprint": "1126df09fc493bf107771048031dacff",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/docx-pdf-export-pages-vs-libreoffice",
+			"field": "text",
+			"fingerprint": "82ce6dbb50226195e32b2a9fe8220bb5",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/docx-pdf-export-pages-vs-libreoffice",
+			"field": "internalLinks",
+			"fingerprint": "cc6e6801f49d6a8c2d89c597f8766347",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/dont-retry-retrieval-diagnose-it",
+			"field": "text",
+			"fingerprint": "2966e49a7fcb0e9933de28e4a25e843c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/dont-retry-retrieval-diagnose-it",
+			"field": "internalLinks",
+			"fingerprint": "ef30d309b137c1a41f98fdd5def1ca0b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ebs-vs-efs-storage",
+			"field": "text",
+			"fingerprint": "9866b4ea041a6a5dce67f505e303d2f0",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/ebs-vs-efs-storage",
+			"field": "internalLinks",
+			"fingerprint": "41da9176a788db75c211528e93e42679",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ecr-credential-helper",
+			"field": "text",
+			"fingerprint": "68cbeef596dd026698ade9afbe07b5b1",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/ecr-credential-helper",
+			"field": "internalLinks",
+			"fingerprint": "f255abd464e5bf453c8b72760cd0b90e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ecr-ecs-deployment-workflow",
+			"field": "text",
+			"fingerprint": "ec7a24f68ee307715ba456c9d120fc3a",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/ecr-ecs-deployment-workflow",
+			"field": "internalLinks",
+			"fingerprint": "6d4c32b2cba28d48b8f4a3021fb63b66",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ecr-token-refresh-cron",
+			"field": "text",
+			"fingerprint": "d6612837ae8e173c0a1039c3e91db07d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/ecr-token-refresh-cron",
+			"field": "internalLinks",
+			"fingerprint": "0d4e2aba3307d11f60523b25196fd81c",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ecs-autoscaling-deep-dive",
+			"field": "text",
+			"fingerprint": "3edafd1f2f78e2fd2f3dc760b25199fe",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/ecs-autoscaling-deep-dive",
+			"field": "internalLinks",
+			"fingerprint": "0a652cc877c9acda5c4eef2d3fddeed8",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ecs-autoscaling-patterns",
+			"field": "text",
+			"fingerprint": "d9b4e45150732681a593ab2127f4a91b",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/ecs-autoscaling-patterns",
+			"field": "internalLinks",
+			"fingerprint": "3e803d0c649f4b616e4f2ecd6e6dfbed",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/emitasync-stamp-gating",
+			"field": "text",
+			"fingerprint": "71dc53655eb1028ef66b75c3e28c9ef4",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/emitasync-stamp-gating",
+			"field": "internalLinks",
+			"fingerprint": "15a2469bf3bbd4fe06fd3e1aa58a4c9a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/empirical-close-pattern",
+			"field": "text",
+			"fingerprint": "75493b95b05210a73648ad761961cd87",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/empirical-close-pattern",
+			"field": "internalLinks",
+			"fingerprint": "be90c621cef15f968c14d93b05d568d1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/etl-data-separation",
+			"field": "text",
+			"fingerprint": "761a55ee7386d63b84cb924b631ef9bf",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/etl-data-separation",
+			"field": "internalLinks",
+			"fingerprint": "ed32e3314c7c4f1613dc59743ff888b4",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/etl-schedule-timing",
+			"field": "text",
+			"fingerprint": "77a65e0b92aa2e000ce09fbc97cee4f0",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/etl-schedule-timing",
+			"field": "internalLinks",
+			"fingerprint": "b541653d839e3cb1bdbf92539700f911",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/external-calendar-normalization",
+			"field": "text",
+			"fingerprint": "d3a2ee3e4295fc950f8befc08bc88fc5",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/external-calendar-normalization",
+			"field": "internalLinks",
+			"fingerprint": "4e97a88e6eec075031ec6ec2cda2562b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/fallback-branch-test-coverage-gap",
+			"field": "text",
+			"fingerprint": "70f64d712fba14b6d45f51f9257fe4be",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/fallback-branch-test-coverage-gap",
+			"field": "internalLinks",
+			"fingerprint": "0f75ac15d96ca0cf7020272144e273d0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/fastapi-dependency-injection-patterns",
+			"field": "text",
+			"fingerprint": "cf7f38bcb6b4ccd625a88384cedb44a9",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/fastapi-dependency-injection-patterns",
+			"field": "internalLinks",
+			"fingerprint": "1ddd0899c1f252121ea31d3c5127a26e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/fastapi-domain-exception-handler",
+			"field": "text",
+			"fingerprint": "4dc058025b1b2832877406a949ef2c87",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/fastapi-domain-exception-handler",
+			"field": "internalLinks",
+			"fingerprint": "f147c58b78648b7af94b5b30f417e3e8",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/fastapi-nonblocking-startup-dependencies",
+			"field": "text",
+			"fingerprint": "5cfa667fba14aaab509528bf6b6e813a",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/fastapi-nonblocking-startup-dependencies",
+			"field": "internalLinks",
+			"fingerprint": "da2eaf6b1d3b1fa9c5803db3308a3e1a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/folder-is-destiny",
+			"field": "text",
+			"fingerprint": "76bd6a2090b2c498e2924ea2d1dc0c0e",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/folder-is-destiny",
+			"field": "internalLinks",
+			"fingerprint": "9cc8948f63187ca946dbe4a6c6e78121",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/gcloud-logging-freshness-flag-semantics",
+			"field": "text",
+			"fingerprint": "f0bb3571c0cb497c9a1ca71a7daca548",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/gcloud-logging-freshness-flag-semantics",
+			"field": "internalLinks",
+			"fingerprint": "dbc93dd75170298266bbeb26ecf0ae79",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/gemini-asymmetric-embeddings",
+			"field": "text",
+			"fingerprint": "6c7de6de5616067905a9106f9fd9a7ba",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/gemini-asymmetric-embeddings",
+			"field": "internalLinks",
+			"fingerprint": "87f7a5f012951290422f3a96d6984901",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/gh-pr-view-head-branch-ambiguity",
+			"field": "text",
+			"fingerprint": "274843763ec81db5a0aa389435145385",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/gh-pr-view-head-branch-ambiguity",
+			"field": "internalLinks",
+			"fingerprint": "eda590f244a6717fe2821d1b1f343ec1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/giscus-sveltekit-integration",
+			"field": "text",
+			"fingerprint": "bcdfb7e836d0383de0cc01fe1e808f32",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/giscus-sveltekit-integration",
+			"field": "internalLinks",
+			"fingerprint": "a81219d16a725aa42f5b637760bcb45e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/git-pre-commit-parallel-session-head-race",
+			"field": "text",
+			"fingerprint": "de01275eb8e367e25fbabdefee1958f0",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/git-pre-commit-parallel-session-head-race",
+			"field": "internalLinks",
+			"fingerprint": "3b6a786f8ff36dcbb5c3cd5bc1ae2cd2",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/git-rev-parse-vs-log-hook-interception",
+			"field": "text",
+			"fingerprint": "5608a4b45afad93aea7aba9edb23b28c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/git-rev-parse-vs-log-hook-interception",
+			"field": "internalLinks",
+			"fingerprint": "240041ecb1ecb88107dab72565212922",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/github-pr-review-api-inline-comments",
+			"field": "text",
+			"fingerprint": "5bc3f5d059dec701f899325655b857ae",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/github-pr-review-api-inline-comments",
+			"field": "internalLinks",
+			"fingerprint": "b874adeae9abf4497a81f13fab73f049",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/google-calendar-recurring-events",
+			"field": "text",
+			"fingerprint": "bd0a593ba610670e07c0e2b7ded5b096",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/google-calendar-recurring-events",
+			"field": "internalLinks",
+			"fingerprint": "88d00840fc284714729221a47224f83b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/google-calendar-sync-strategies",
+			"field": "text",
+			"fingerprint": "dda6cf1b20fb9e582562e1929945944c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/google-calendar-sync-strategies",
+			"field": "internalLinks",
+			"fingerprint": "2ffcb6e77955211bf9871c75db364f3a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/google-meet-link-creation",
+			"field": "text",
+			"fingerprint": "29a72839f0067563bb83024c35ccd022",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/google-meet-link-creation",
+			"field": "internalLinks",
+			"fingerprint": "03badb60a1b0d25e975781b4ed32469c",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/hybrid-ci-jenkins-github-actions",
+			"field": "text",
+			"fingerprint": "21d10822b95e7beac9a47227c53f2f23",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/hybrid-ci-jenkins-github-actions",
+			"field": "internalLinks",
+			"fingerprint": "b381e4087384c7d91758657fab34f88d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/idor-prevention-type-level",
+			"field": "text",
+			"fingerprint": "9c0102937bc26ce294de0b63a3ecdd88",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/idor-prevention-type-level",
+			"field": "internalLinks",
+			"fingerprint": "b5097fdff381258461c5f1d006f1d86f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/infrastructure-hardening-checklist",
+			"field": "text",
+			"fingerprint": "97d00276c50d9b7aab6188f08ac5c0ba",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/infrastructure-hardening-checklist",
+			"field": "internalLinks",
+			"fingerprint": "d109a54f088640b93d38f52074fccb1a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/karpathy-llm-knowledge-bases",
+			"field": "text",
+			"fingerprint": "1e9ff492c9f2945b135c95f18efa3178",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/karpathy-llm-knowledge-bases",
+			"field": "internalLinks",
+			"fingerprint": "a8d1ef548c085d1da3de27d7ffb799db",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/lemon-squeezy-subscriptions",
+			"field": "text",
+			"fingerprint": "7907b14807fceabb839fc8c184df9342",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/lemon-squeezy-subscriptions",
+			"field": "internalLinks",
+			"fingerprint": "8a7c670c79d6180b2d08d008b807f9f3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/linux",
+			"field": "text",
+			"fingerprint": "4c7b9b4aa1de3e3d640e632687237e45",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/linux",
+			"field": "internalLinks",
+			"fingerprint": "e64c014b7fbf18f2a43d97f588625ae5",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/llm-fine-tuning-strategies",
+			"field": "text",
+			"fingerprint": "e46890bc0397755cb7dce7a4640664a6",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/llm-fine-tuning-strategies",
+			"field": "internalLinks",
+			"fingerprint": "3e2c9331fce4a1078edeb4c83590f1d3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/local-s3-minio",
+			"field": "text",
+			"fingerprint": "04bf2fc77cd7c7583c3e06a14bb2d8b4",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/local-s3-minio",
+			"field": "internalLinks",
+			"fingerprint": "3e313ba43193d77617e3c9ae716f501f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/macos-keychain-multi-account",
+			"field": "text",
+			"fingerprint": "166bdc1cf92868189121afc6e43350ff",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/macos-keychain-multi-account",
+			"field": "internalLinks",
+			"fingerprint": "f55b312272e1ceec682a806ab8904097",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/macos-vscode-terminal-locale-fallback",
+			"field": "text",
+			"fingerprint": "dcb96b724d986854ff3ecc3d13459315",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/macos-vscode-terminal-locale-fallback",
+			"field": "internalLinks",
+			"fingerprint": "d8a9a7f01dcbfd0d074b6882963f5147",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/markdownlint-conventions",
+			"field": "text",
+			"fingerprint": "84066d31457f1d43a686cc7938b28af8",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/markdownlint-conventions",
+			"field": "internalLinks",
+			"fingerprint": "0e821cbe9ec582a660644496f5b55db0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/markdownlint-pre-commit-heading-rules",
+			"field": "text",
+			"fingerprint": "33fff9eb4c874b32aeabf7db1731bc6a",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/markdownlint-pre-commit-heading-rules",
+			"field": "internalLinks",
+			"fingerprint": "0aed81a3ae31074f834984af6bdcdff7",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/mobile-input-ux",
+			"field": "text",
+			"fingerprint": "a0c61b4209de21448129af69c878a889",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/mobile-input-ux",
+			"field": "internalLinks",
+			"fingerprint": "c16e3688a7756137993d0782d9080787",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/multi-agent-message-race-hold-discipline",
+			"field": "text",
+			"fingerprint": "ded557de43e12694a6fd9492b51433b8",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/multi-agent-message-race-hold-discipline",
+			"field": "internalLinks",
+			"fingerprint": "33348c51dd632485470d49afd08a7c19",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/nat-gateway-architecture",
+			"field": "text",
+			"fingerprint": "6d7482017891b8e0e8a96924029f861f",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/nat-gateway-architecture",
+			"field": "internalLinks",
+			"fingerprint": "e387b41f4a4afabb88c6585469ed57dc",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/nestjs-headers-decorator-typing",
+			"field": "text",
+			"fingerprint": "e197d7d983d5b527c8c4f11045632390",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/nestjs-headers-decorator-typing",
+			"field": "internalLinks",
+			"fingerprint": "2765e2444143c126ab8324ce2d88d67f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/nestjs-swagger-type-vs-content",
+			"field": "text",
+			"fingerprint": "38def58ebd7d8e78f7780d38c5319564",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/nestjs-swagger-type-vs-content",
+			"field": "internalLinks",
+			"fingerprint": "2ee6556e4562e94085fc730bba521d67",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/nestjs-websockets",
+			"field": "text",
+			"fingerprint": "aad3c886580fb46c87db1a9f106d177b",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/nestjs-websockets",
+			"field": "internalLinks",
+			"fingerprint": "ef2c87289471b573646838c7e72fd1db",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/next-intelligence-explosion-social",
+			"field": "text",
+			"fingerprint": "d667029217dcb2662d8578d4fa9b0da3",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/next-intelligence-explosion-social",
+			"field": "internalLinks",
+			"fingerprint": "f336db8ade41a27618f06ab1b9ebb591",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/oauth2-implementation-patterns",
+			"field": "text",
+			"fingerprint": "9cb9a926873a0efa5af639e7c2441f25",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/oauth2-implementation-patterns",
+			"field": "internalLinks",
+			"fingerprint": "a328f8db2bde0b1d10b7273843adf1da",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/one-folder-three-agents",
+			"field": "text",
+			"fingerprint": "ec57b9bfad018e2d4e0112fa5060b91a",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/one-folder-three-agents",
+			"field": "internalLinks",
+			"fingerprint": "444f74c7f5806d40129e9ded8cf1b567",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/pandas-itertuples-vs-iterrows",
+			"field": "text",
+			"fingerprint": "96c2b592e4658dbdab03add707963fe7",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/pandas-itertuples-vs-iterrows",
+			"field": "internalLinks",
+			"fingerprint": "439165c54c8f67726fd25c92efbf1b8d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/paraglide-i18n",
+			"field": "text",
+			"fingerprint": "ff62411b12582c300ed649fae4fab747",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/posts/paraglide-i18n",
+			"field": "internalLinks",
+			"fingerprint": "90ca4c67b7c5f89ab0f5c784627f70a7",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/parallel-agents-no-collisions",
+			"field": "text",
+			"fingerprint": "c509a260f4bd505aa29e40d3803f711a",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/parallel-agents-no-collisions",
+			"field": "internalLinks",
+			"fingerprint": "1ae1ea6069d048545a8955212da61793",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/partial-access-recurring-events",
+			"field": "text",
+			"fingerprint": "00e56dd69374d2cbe05b6f9df76b7ed8",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/partial-access-recurring-events",
+			"field": "internalLinks",
+			"fingerprint": "0dcd246d981eb2dad527abd6614c7f6e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/per-user-transactional-backfill-atomicity",
+			"field": "text",
+			"fingerprint": "cc9ae9b0c4493b9b2187decc2d94a906",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/per-user-transactional-backfill-atomicity",
+			"field": "internalLinks",
+			"fingerprint": "e17631f12f95e2b2930cc9d97009ff58",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/pessimistic-locking-race-conditions",
+			"field": "text",
+			"fingerprint": "d23fa9ebd424353faa6be8b80d9937c9",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/pessimistic-locking-race-conditions",
+			"field": "internalLinks",
+			"fingerprint": "3ed2c051625fdf7a6248f7eb9a55ae2d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/pgvector-hnsw-postgresql",
+			"field": "text",
+			"fingerprint": "02b689dfa2f55ea2db00e519c27d7599",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/pgvector-hnsw-postgresql",
+			"field": "internalLinks",
+			"fingerprint": "56366ef9309782e2ab1b1333c9e8df27",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/plan-vs-shipped-divergence",
+			"field": "text",
+			"fingerprint": "935a08900318e8af862d411903a77675",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/plan-vs-shipped-divergence",
+			"field": "internalLinks",
+			"fingerprint": "e670c2066ebfaa4068f42c7217997914",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/portaudio-stale-usb-audio-handle",
+			"field": "text",
+			"fingerprint": "33fd82182f6f60a047e05dbbf6d43591",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/portaudio-stale-usb-audio-handle",
+			"field": "internalLinks",
+			"fingerprint": "72acbdd558962ed4981e3407a9c6140b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/postgresql-advisory-locks",
+			"field": "text",
+			"fingerprint": "63c4309bc6bc9a2afbe01b342fd51b29",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/postgresql-advisory-locks",
+			"field": "internalLinks",
+			"fingerprint": "96e13f00aef2edce5253759d229868b1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/postgresql-in-clause-limits",
+			"field": "text",
+			"fingerprint": "6fae063b0b031cb734c82081308807b9",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/postgresql-in-clause-limits",
+			"field": "internalLinks",
+			"fingerprint": "419a1118462a1df325f847407529b827",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/prometheus-tsdb-memory-sizing",
+			"field": "text",
+			"fingerprint": "30d78796bc499f09691f45aed858ec8e",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/prometheus-tsdb-memory-sizing",
+			"field": "internalLinks",
+			"fingerprint": "972b4a54c19c00f1132db5c2c0a66555",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/psi-model-drift-detection",
+			"field": "text",
+			"fingerprint": "1324fa8be0ff1f9e979ee3203f52a91f",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/psi-model-drift-detection",
+			"field": "internalLinks",
+			"fingerprint": "bb44dd39f22e17dfbe516346b7b9b406",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/python-function-dedup-keyword-params",
+			"field": "text",
+			"fingerprint": "0ff008d3392cd4f8550f27d9a4c60878",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/python-function-dedup-keyword-params",
+			"field": "internalLinks",
+			"fingerprint": "04d68cd928fc9d797ad6334ede746e56",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/python-tooling-stack",
+			"field": "text",
+			"fingerprint": "579b6c1249908e6f272b01e5c68fff30",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/python-tooling-stack",
+			"field": "internalLinks",
+			"fingerprint": "b6d5e38c5da401a0a653acb9f8a80959",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/rag-hybrid-search-architecture",
+			"field": "text",
+			"fingerprint": "c29fb04b0e63a25162280a7d9224f8a0",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/rag-hybrid-search-architecture",
+			"field": "internalLinks",
+			"fingerprint": "3680c6d0fea2b66fbfa80659f95b1cf3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/react-demo-pipeline-pattern",
+			"field": "text",
+			"fingerprint": "2263ad4a25e45a4ad02a919846b3827a",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/react-demo-pipeline-pattern",
+			"field": "internalLinks",
+			"fingerprint": "1188584441cdf1678d9e80b69655fd20",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/recharts-dark-theme-customization",
+			"field": "text",
+			"fingerprint": "08f65cc67bf811e6b77a5b4db3f44542",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/recharts-dark-theme-customization",
+			"field": "internalLinks",
+			"fingerprint": "e2663535d1cea1e8e1e083178ea76f82",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/recurring-event-operations",
+			"field": "text",
+			"fingerprint": "677a57e9708e7b247f923f55626f1909",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/recurring-event-operations",
+			"field": "internalLinks",
+			"fingerprint": "8df9cc375193bb371357b56e1ae6b1c7",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/redis-queue-patterns",
+			"field": "text",
+			"fingerprint": "137ffec2d91d13886a50d264fb696883",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/redis-queue-patterns",
+			"field": "internalLinks",
+			"fingerprint": "87e57878b163461bd68fe08ed06c12f4",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/rrule-byday-timezone-correction",
+			"field": "text",
+			"fingerprint": "154c83c6ab0085bd09557f55e7d1365a",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/rrule-byday-timezone-correction",
+			"field": "internalLinks",
+			"fingerprint": "b4381e08ffe71f73d20630aed01f82fa",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/rrule-exdate-parsing",
+			"field": "text",
+			"fingerprint": "9b6038a8115be0168c094634abf16472",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/rrule-exdate-parsing",
+			"field": "internalLinks",
+			"fingerprint": "ef4aef1bce071bf1d04f22bc8e74ecf2",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/ruff-three-gate-preflight",
+			"field": "text",
+			"fingerprint": "dcb9ee152f18041f32d8d1f14d98f6e5",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/ruff-three-gate-preflight",
+			"field": "internalLinks",
+			"fingerprint": "faeb3fe7a7dc3c0c131385255cbfa6c0",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/rules-that-route-themselves",
+			"field": "text",
+			"fingerprint": "b23028fc5dceb9eb9db20063554707d0",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/rules-that-route-themselves",
+			"field": "internalLinks",
+			"fingerprint": "e473e1929206878e17475695e2282c43",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/rust-async-channels",
+			"field": "text",
+			"fingerprint": "8d3d115ca0c7f452188d5d8abb27e3f5",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/rust-async-channels",
+			"field": "internalLinks",
+			"fingerprint": "28f3642b79cfb223a3f5e15679be913e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/s3-path-handling",
+			"field": "text",
+			"fingerprint": "5ce3f3249751ab516d220ac405c2388a",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/s3-path-handling",
+			"field": "internalLinks",
+			"fingerprint": "15e48bd758844a179456efffb7373f5e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/schema-versioned-helper-json-envelope",
+			"field": "text",
+			"fingerprint": "8ce493b87383d8ebffa8a2f2cbdfec27",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/schema-versioned-helper-json-envelope",
+			"field": "internalLinks",
+			"fingerprint": "1e7543afa2d7293ab5a178a5f683dd60",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/security-groups-fundamentals",
+			"field": "text",
+			"fingerprint": "91723c11840b78008a56395204d84dbf",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/security-groups-fundamentals",
+			"field": "internalLinks",
+			"fingerprint": "beb2eaacbba821bdee617c0acb45f9fa",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/sentry-n-plus-one-detection",
+			"field": "text",
+			"fingerprint": "a6e0141336ce8df4aa63a62f26092956",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/sentry-n-plus-one-detection",
+			"field": "internalLinks",
+			"fingerprint": "0e92a7396b40e14552cbe27c3017485f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/serena-claude-code-multi-profile-setup",
+			"field": "text",
+			"fingerprint": "fca43c09f5f0f0e5fac601e9f962a4f4",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/posts/serena-claude-code-multi-profile-setup",
+			"field": "internalLinks",
+			"fingerprint": "f3b8c16a09e60bc6536d9347a483a009",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/session-state-merge-vs-overwrite-pattern",
+			"field": "text",
+			"fingerprint": "5f4d51387c92149986e8f31908bde6b7",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/session-state-merge-vs-overwrite-pattern",
+			"field": "internalLinks",
+			"fingerprint": "1b2409215d0b9f09b95a785e50c75b59",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/shadcn-ui-vite-tailwind-setup",
+			"field": "text",
+			"fingerprint": "1f080c6232631ccc0031c082f3a63eef",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/shadcn-ui-vite-tailwind-setup",
+			"field": "internalLinks",
+			"fingerprint": "a603ecec9aec60f38f527f90e2e9f37d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/six-papers-zero-applied",
+			"field": "text",
+			"fingerprint": "340030802d6852b1088b0d76399427d8",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/six-papers-zero-applied",
+			"field": "internalLinks",
+			"fingerprint": "7b63f6cc64fcf162e81654fed8be86d5",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/skill-instruction-checklist-pattern",
+			"field": "text",
+			"fingerprint": "717c84884a5ca85aa8780dab842d7b13",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/skill-instruction-checklist-pattern",
+			"field": "internalLinks",
+			"fingerprint": "655d3e26918f0d0cec511c79355c1458",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/skills-three-transports",
+			"field": "text",
+			"fingerprint": "aa337d4cbd3dfa421937304ce303560c",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/skills-three-transports",
+			"field": "internalLinks",
+			"fingerprint": "35f4bb0d2b4de618044b3eb5a2c11dec",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/stale-vs-orphan-blocks",
+			"field": "text",
+			"fingerprint": "2f138fe7246a1afa3afe0d2452c0df76",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/stale-vs-orphan-blocks",
+			"field": "internalLinks",
+			"fingerprint": "beaca29948379925dd0c718476cff711",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/state-invariant-flag-drift-recovery",
+			"field": "text",
+			"fingerprint": "a88bc1122baaa120924778eeebb0211c",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/state-invariant-flag-drift-recovery",
+			"field": "internalLinks",
+			"fingerprint": "cae9104bf4d84e505df8e3257fda98e8",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/stateless-auth-db-column-drift",
+			"field": "text",
+			"fingerprint": "691addb662f9017e307c9ab4829cf5e6",
+			"class": "post-text-chrome+reading-time"
+		},
+		{
+			"url": "/posts/stateless-auth-db-column-drift",
+			"field": "internalLinks",
+			"fingerprint": "116c75d56e7de8352f058bfbb9b100d1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/stdlib-only-helper-portability",
+			"field": "text",
+			"fingerprint": "509a557c49efe109ef82fe91fb50c31e",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/stdlib-only-helper-portability",
+			"field": "internalLinks",
+			"fingerprint": "feb6b2b87b20523ef31bf57e9144f3d6",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/stow-symlink-health-checking",
+			"field": "text",
+			"fingerprint": "3e93378a83dcf8d559da908be8fec6df",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/stow-symlink-health-checking",
+			"field": "internalLinks",
+			"fingerprint": "28d7f2a179f9aad0bae1aa2a73097695",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/svelte-effect-rune",
+			"field": "text",
+			"fingerprint": "df4ac0ff2714b7c298ecb4a1df53e648",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/svelte-effect-rune",
+			"field": "internalLinks",
+			"fingerprint": "dd2e2d01fe39a9ffe1e8ff8b8f2f719d",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/svelte-onmount-async-cleanup",
+			"field": "text",
+			"fingerprint": "744c34b17c91350bec93d1c31ab05269",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/svelte-onmount-async-cleanup",
+			"field": "internalLinks",
+			"fingerprint": "001022bd09cf276c33cd3c6f62729716",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/sveltekit-global-store-hydration",
+			"field": "text",
+			"fingerprint": "ff8db29135140d28f790169efbd2f89b",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/sveltekit-global-store-hydration",
+			"field": "internalLinks",
+			"fingerprint": "b4b105053851325109fab782f109a8be",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/symmetric-redis-kafka-bridge-pair",
+			"field": "text",
+			"fingerprint": "61bb68e9d64f96467749afa6c328e1c5",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/symmetric-redis-kafka-bridge-pair",
+			"field": "internalLinks",
+			"fingerprint": "b788b14aeeed72a9ae8939c105dd1c17",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/sync-token-invalidation-recovery",
+			"field": "text",
+			"fingerprint": "263b1eac9b34cce63e93785396ca9227",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/sync-token-invalidation-recovery",
+			"field": "internalLinks",
+			"fingerprint": "92b9310c968253c33efa9fd57eec7a60",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/terraform-fundamentals",
+			"field": "text",
+			"fingerprint": "d0e7d32da28daf0b0cfa6881feccd33f",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/terraform-fundamentals",
+			"field": "internalLinks",
+			"fingerprint": "cc5b141e35294764a38a425801bcb92b",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/terraform-rds-credentials",
+			"field": "text",
+			"fingerprint": "8c3290bd4f1868ff960e9e1dfb1e1cbf",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/terraform-rds-credentials",
+			"field": "internalLinks",
+			"fingerprint": "be4b300b4a62a70d9395888775a3ff6f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/terraform-state-recovery",
+			"field": "text",
+			"fingerprint": "004092dbc1b3b28c716adf875ea9017d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/terraform-state-recovery",
+			"field": "internalLinks",
+			"fingerprint": "6baf0473c7b134b0b72de418be5bbbdd",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/test-L-vs-realpath-symlink-detection",
+			"field": "text",
+			"fingerprint": "71843ed48fdfdf709f4a2586010de99d",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/test-L-vs-realpath-symlink-detection",
+			"field": "internalLinks",
+			"fingerprint": "1db1fb2d550f563d7c0de7d45926b532",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/the-token-stack",
+			"field": "text",
+			"fingerprint": "526c4d81e8265753c807fd4a331f074c",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/the-token-stack",
+			"field": "internalLinks",
+			"fingerprint": "41a3b5caeedc2c5d0a76fe05dc63ef0a",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/three-gates-and-an-audit-log",
+			"field": "text",
+			"fingerprint": "558e9ef6ec0f8585337b321394a67c4b",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/three-gates-and-an-audit-log",
+			"field": "internalLinks",
+			"fingerprint": "33863d841db167d3f2a37929873d6c5c",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/tmux-smart-session-auto-start",
+			"field": "text",
+			"fingerprint": "ef0ddee9b235a96e925ca77f495a960d",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/tmux-smart-session-auto-start",
+			"field": "internalLinks",
+			"fingerprint": "3a21f8626798d78f65a8e9ab3d0f28bf",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/traefik-keycloak-forwardauth",
+			"field": "text",
+			"fingerprint": "f6503546b4bcefd93b2b13897da7be2a",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/traefik-keycloak-forwardauth",
+			"field": "internalLinks",
+			"fingerprint": "34bc71b20bfe0017518c9ea43ff8fc25",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/two-phase-deletion-pattern",
+			"field": "text",
+			"fingerprint": "029512630dc11fc84b15d72bf4958e73",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/two-phase-deletion-pattern",
+			"field": "internalLinks",
+			"fingerprint": "22dace0a6d0f5891f04a81530287b4e9",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/typeorm-cli-nestjs-datasource",
+			"field": "text",
+			"fingerprint": "b439a1fd9f07b4b1f6f56f3134b2daf4",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/typeorm-cli-nestjs-datasource",
+			"field": "internalLinks",
+			"fingerprint": "1636f396b33cb94361ee8c15c1eda39f",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/typeorm-migration-drift-scope",
+			"field": "text",
+			"fingerprint": "ffd353a15be98c9b1f6436b4836b7006",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/typeorm-migration-drift-scope",
+			"field": "internalLinks",
+			"fingerprint": "ec0a058f8a8b7a09541abe415687ca26",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/typescript-type-narrowing",
+			"field": "text",
+			"fingerprint": "1fb305c81c84c8809ffe83dbcd7996e6",
+			"class": "post-text-chrome+reading-time"
+		},
+		{
+			"url": "/posts/typescript-type-narrowing",
+			"field": "internalLinks",
+			"fingerprint": "b3978b0a88608913c465c16b19c055f3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/typesense-import-byte-aware-chunking",
+			"field": "text",
+			"fingerprint": "aedd36d4948e29356fe0c585d4a6e5ae",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/typesense-import-byte-aware-chunking",
+			"field": "internalLinks",
+			"fingerprint": "f1bde37c097875181fe03e6e65571186",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/updatedAt-staleness-guard",
+			"field": "text",
+			"fingerprint": "0bfc981e271cc9cdc09de133e4bf058a",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/updatedAt-staleness-guard",
+			"field": "internalLinks",
+			"fingerprint": "8bc8690030cc870bf55da5845c8cc0b1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/uv-lock-best-practice",
+			"field": "text",
+			"fingerprint": "bfa72518d06d7179ab67228ff155986f",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/uv-lock-best-practice",
+			"field": "internalLinks",
+			"fingerprint": "0cea8332426405b7f59e719cb7d444d3",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/vpc-networking-fundamentals",
+			"field": "text",
+			"fingerprint": "49a679d5af6ea988e5f1b4784265eb78",
+			"class": "post-text-chrome+mermaid"
+		},
+		{
+			"url": "/posts/vpc-networking-fundamentals",
+			"field": "internalLinks",
+			"fingerprint": "475e303db91626977a76cfde92a5bd70",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/waf-allowlist-patterns",
+			"field": "text",
+			"fingerprint": "24c9b08c60ac9bf53b026d2ad3b46d35",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/posts/waf-allowlist-patterns",
+			"field": "internalLinks",
+			"fingerprint": "9f0ad47e50e6ae20cb1f8f12fde73bf1",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/waf-implementation",
+			"field": "text",
+			"fingerprint": "545cf1e05873fbdccd5b87a088da20a1",
+			"class": "post-text-chrome+inline-parity+reading-time"
+		},
+		{
+			"url": "/posts/waf-implementation",
+			"field": "internalLinks",
+			"fingerprint": "25d1f0de555f15da67f87bdfd73327ce",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/webhook-vs-user-activity",
+			"field": "text",
+			"fingerprint": "1145ad7f11c1aaf5630a74de304db285",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/webhook-vs-user-activity",
+			"field": "internalLinks",
+			"fingerprint": "48950edf0348f83538ab751cdd908b10",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/websocket-architecture",
+			"field": "text",
+			"fingerprint": "dea44f5a24ec4e33ebe6664a5927f4f8",
+			"class": "post-text-chrome+mermaid+reading-time"
+		},
+		{
+			"url": "/posts/websocket-architecture",
+			"field": "internalLinks",
+			"fingerprint": "66aca7cf737a7c5693d40f7e0f77df27",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/wrap-and-rollup",
+			"field": "text",
+			"fingerprint": "3093f052ebbc8ff4f010319c87cc8b5b",
+			"class": "post-text-chrome+inline-parity"
+		},
+		{
+			"url": "/posts/wrap-and-rollup",
+			"field": "internalLinks",
+			"fingerprint": "cd1c884824e436fabda73239289dd818",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/wrap-followup-persistence-architecture",
+			"field": "text",
+			"fingerprint": "6cf78803c0e1bd3c7ccfcd9a409835ef",
+			"class": "post-text-chrome+reading-time"
+		},
+		{
+			"url": "/posts/wrap-followup-persistence-architecture",
+			"field": "internalLinks",
+			"fingerprint": "2a0db61ab28b4a4115aeb80d9b50fc3e",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/posts/zsh-backtick-eval-in-skills",
+			"field": "text",
+			"fingerprint": "99ad50f45e5c8ff3db4cf74a6b586e7f",
+			"class": "post-text-chrome"
+		},
+		{
+			"url": "/posts/zsh-backtick-eval-in-skills",
+			"field": "internalLinks",
+			"fingerprint": "3abcc3c8f7bee71bfb5e03ed1b475d73",
+			"class": "post-links-redesign"
+		},
+		{
+			"url": "/system/3b",
+			"field": "text",
+			"fingerprint": "820e1be50688f51a63b8c742c3b89931",
+			"class": "system-3b-partial-port"
+		},
+		{
+			"url": "/system/3b",
+			"field": "internalLinks",
+			"fingerprint": "baa4f6f3f4a35e8ba93e0a43ef98781d",
+			"class": "system-3b-partial-port"
+		}
+	]
+}
