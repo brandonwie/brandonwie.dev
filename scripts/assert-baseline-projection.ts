@@ -62,10 +62,10 @@ import { readFileSync } from 'node:fs';
  * cannot make the evidence unreachable. It must never be retargeted: a future
  * measurement gets a new versioned tag.
  */
-export const FROZEN_TAG_NAME = 'migration-baseline-svelte-547a840-v1';
+export const FROZEN_TAG_NAME = 'migration-baseline-svelte-547a840-v2';
 export const FROZEN_TAG = `refs/tags/${FROZEN_TAG_NAME}`;
-export const FROZEN_OBJECT_ID = '51722fe4cc6176ac8676a73e048a21cc7a68851d';
-export const FROZEN_SHA256 = 'b9d93a5b6f35aa4ff2313d50c1a98905bdde1018a66e727ae6a275f7601a5f09';
+export const FROZEN_OBJECT_ID = 'dfea6e1157e2b090bcf3b1e37a916ce85c197874';
+export const FROZEN_SHA256 = '9dff3373a88e3d61e10cb4de55e7680aa8014b0f44388181bd2202a77fb91b87';
 const BASELINE_PATH = 'verification/baseline/svelte-e23e808.json';
 
 /**
