@@ -1,4 +1,12 @@
 @import 'tailwindcss';
+/*
+  `docs` is a tracked symlink whose target lives outside this repo and exists
+  only on the author's machine. Tailwind's automatic source detection follows
+  it, so words in those notes became utilities: a local build's stylesheet
+  differed from the deployed one, and its content hash moved whenever a note
+  changed. Nothing under `docs` is rendered by the site.
+*/
+@source not "../docs";
 @plugin "@tailwindcss/typography";
 
 @theme {
