@@ -2,8 +2,8 @@
 
 The single document Brandon reviews for the G4 cutover gate. Every claim links
 to its artifact; nothing here is narrative-only. Candidate under test:
-`next/build` @ `64b6d19` (`feat/slice5-comparison`), compared against the
-Svelte generation-6 baseline.
+`next/build` @ `c62df40` (`feat/slice5-comparison`, post-F1-fix), compared
+against the Svelte generation-6 baseline.
 
 ## Baseline identity (generation 6)
 
@@ -87,9 +87,10 @@ screenshots (paired, 27 routes × 2 viewports × 2 builds):
   `HeaderControls` → `LanguageToggle`; permanently guarded by
   `migration:browser:notfound` (0 errors + 0 toggles on `/404`,
   `/does-not-exist-xyz`, `/ko/does-not-exist`) plus defect controls NFC-01..03.
-- **F2 open:** Giscus live-thread render is cross-origin — needs one human
-  look on the local candidate, or accept iframe+src parity (C10 already
-  asserted `data-term`+locale).
+- **F2 resolved:** Brandon confirmed 2026-09-20 that the Giscus thread visibly
+  loads on both the EN and KO `giscus-sveltekit-integration` posts on the
+  locally served candidate — on top of identical iframe `src` parity and the
+  C10 build-time `data-term`+locale assertion.
 
 ## Known accepted decisions and residual risks
 
@@ -100,7 +101,7 @@ screenshots (paired, 27 routes × 2 viewports × 2 builds):
 | D3  | Post-header redesign (+3..+5 focusables)             | approved ledger class                                                      |
 | D4  | KO localization corrections (`ko/tags` `lang`, etc.) | approved ledger class — baseline bugs corrected                            |
 | F1  | 404 hydration error #418                             | resolved — `suppressLocaleToggle` fix + `migration:browser:notfound` guard |
-| F2  | Giscus live thread                                   | **open — one human look or accept iframe parity**                          |
+| F2  | Giscus live thread                                   | resolved — Brandon's human look 2026-09-20, EN + KO                        |
 | R1  | Fresh `pages.dev` hash subdomain needs ~60 s for TLS | noted in rehearsal doc; relevant to Slice 6 verification timing            |
 | R2  | C3 resync lane will re-key baseline to generation 7  | separate lane; do not carry this evidence verbatim                         |
 
