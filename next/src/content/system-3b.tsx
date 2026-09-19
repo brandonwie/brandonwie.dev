@@ -4,7 +4,7 @@ import System3bGraph from '../components/System3bGraph';
 import snapshot from '../data/system-snapshot';
 import * as m from '../paraglide/messages.js';
 import type { Locale } from '../i18n/locale';
-import { absoluteUrl } from '../../../src/lib/seo';
+import { generateStudySeoMetadata } from '../seo/metadata';
 import koOverlay from '../../../src/lib/data/system-snapshot.ko.json';
 import { localizeSnapshot, type SnapshotOverlay } from './localize-snapshot';
 import { koreanTitleBySlug } from './post-list';
@@ -39,12 +39,12 @@ function snapshotFor(locale: Locale) {
 }
 
 export function generateSystem3bMetadata(locale: Locale): Metadata {
-	const path = locale === 'ko' ? '/ko/system/3b' : '/system/3b';
-	return {
-		title: m.system_3b_title({}, { locale }),
+	return generateStudySeoMetadata({
+		pageTitle: `${m.system_3b_title({}, { locale })} | Brandon Wie`,
 		description: m.system_3b_meta_description({}, { locale }),
-		alternates: { canonical: absoluteUrl(path) },
-	};
+		basePath: '/system/3b',
+		locale,
+	});
 }
 
 export function System3bPage({ locale }: { locale: Locale }) {
