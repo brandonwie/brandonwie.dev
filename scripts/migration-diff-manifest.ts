@@ -303,6 +303,21 @@ async function main(): Promise<number> {
 	}
 	const stale = ledger.filter((_, i) => !used.has(i));
 
+	// Manifest scope: every diff still pending classification, PLUS diffs
+	// already approved under THIS manifest's classes — identified by the
+	// ledger entry's reason matching a class rationale verbatim. Prior-slice
+	// approvals carry different reason text and stay out of scope, so the row
+	// set is stable across the wave's own ledger write (pre-wave: the 695
+	// have no entries; post-wave: they match by reason).
+	const classReasons = new Set(Object.values(CLASS_DEFS).map((c) => c.rationale));
+	const scoped = diffs.filter((d) => {
+		if (d.fingerprint === null) return true;
+		const entry = ledger.find(
+			(e) => e.url === d.url && e.field === d.field && e.fingerprint === d.fingerprint,
+		);
+		return entry === undefined || classReasons.has(entry.reason);
+	});
+
 	const postUrls = Object.keys(baseline.pages).filter((u) => u.includes('/posts/'));
 	const mer = mermaidRoutes();
 	const rt = readingTimeRoutes(postUrls);
@@ -335,9 +350,7 @@ async function main(): Promise<number> {
 	// delta shape — baseline's list-crumb removed (/posts or /ko/posts),
 	// candidate's Home crumb + locale-twin link added. Any deviation is an
 	// anomaly and fails the run rather than being silently classed.
-	const linkRows = unapproved.filter(
-		(x) => x.field === 'internalLinks' && x.url.includes('/posts/'),
-	);
+	const linkRows = scoped.filter((x) => x.field === 'internalLinks' && x.url.includes('/posts/'));
 	const linkAnomalies: { url: string; removed: string[]; added: string[] }[] = [];
 	for (const d of linkRows) {
 		const isKo = d.url.startsWith('/ko/');
@@ -377,7 +390,7 @@ async function main(): Promise<number> {
 	}
 
 	const rows: { url: string; field: string; fingerprint: string | null; class: string }[] = [];
-	for (const d of unapproved) {
+	for (const d of scoped) {
 		let cls: string;
 		if (d.url.includes('/posts/')) {
 			cls =
@@ -430,9 +443,10 @@ async function main(): Promise<number> {
 			candidate: { dir: CANDIDATE_DIR, sha256: sha(canon(candidate)) },
 		},
 		totals: {
-			diffRows: unapproved.length,
-			classified: unapproved.length - unclassified,
+			diffRows: scoped.length,
+			classified: scoped.length - unclassified,
 			unclassified,
+			unapproved: unapproved.length,
 			staleLedgerEntries: stale.length,
 			internalLinksUniform: linkRows.length,
 		},
@@ -454,7 +468,7 @@ async function main(): Promise<number> {
 	}
 	writeFileSync(join(ROOT, out), text);
 	console.log(
-		`manifest: ${unapproved.length} rows, ${unclassified} unclassified, ${Object.keys(classes).length} classes → ${out}`,
+		`manifest: ${scoped.length} rows, ${unclassified} unclassified, ${Object.keys(classes).length} classes → ${out}`,
 	);
 	return unclassified === 0 ? 0 : 1;
 }

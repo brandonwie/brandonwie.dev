@@ -6,17 +6,18 @@
 		},
 		"ledger": {
 			"file": "verification/exception-ledger.json",
-			"sha256": "cb606cccf28426d23c6ba5c0b3c0fb9e6868f0f5e2eb3b81d786e46209a099fe"
+			"sha256": "32a0d1776630aa9a1c5a00493196220c8bc7037baec51e5244d312811845f707"
 		},
 		"candidate": {
 			"dir": "next/build",
-			"sha256": "b8679a785ce089ddda6b0a3c81efa8de4c68fc0ba54b23ca34f448cc739083dc"
+			"sha256": "5b95c7d170f26dbd41e67e1ae63b2a5c8a72705bd8a7f5ce60554ee50b167894"
 		}
 	},
 	"totals": {
 		"diffRows": 695,
 		"classified": 695,
 		"unclassified": 0,
+		"unapproved": 0,
 		"staleLedgerEntries": 0,
 		"internalLinksUniform": 334
 	},
