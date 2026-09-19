@@ -73,7 +73,7 @@ export function pathForLocale(pathname: string, locale: Locale): string {
  * no crawler, so nothing here fails a build — but `LanguageToggle` still reads
  * this to avoid offering a switch to a page that does not exist.
  */
-const ENGLISH_ONLY_PREFIXES = ['/talks'] as const;
+const ENGLISH_ONLY_PREFIXES = ['/talks', '/_not-found'] as const;
 
 /** Whether a pathname has a counterpart in every locale. */
 export function hasLocaleVariant(pathname: string): boolean {
