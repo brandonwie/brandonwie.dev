@@ -44,6 +44,14 @@
  * `columns[block.columns]` — the compiled-CSS change behind the +36 cssBytes),
  * `package.json` +7/-1 (slice-4 probe scripts) and `pnpm-lock.yaml` +6.
  *
+ * Generation 8 re-measures `93a5dd8` under extractor v2. Main's generation 7
+ * (`migration-baseline-svelte-93a5dd8-v1`, blob `4195b63f`) measured the same
+ * source under extractor v1 and is NOT an ancestor of this measurement — its
+ * field-level diff against generation 6 is dominated by the v1/v2 extractor
+ * difference, not content. The real source delta generations 6→8 is the seven
+ * reconciled EN/KO post pairs plus the shell stylesheet filename. Generation 7
+ * stays superseded on this lineage; both tags remain untouched.
+ *
  * All earlier tags are untouched and still hold their blobs.
  * The ordering rule that follows from it: capture LAST, after the final content
  * edit, and push the tag before the branch.
@@ -62,10 +70,10 @@ import { readFileSync } from 'node:fs';
  * cannot make the evidence unreachable. It must never be retargeted: a future
  * measurement gets a new versioned tag.
  */
-export const FROZEN_TAG_NAME = 'migration-baseline-svelte-547a840-v2';
+export const FROZEN_TAG_NAME = 'migration-baseline-svelte-93a5dd8-v2';
 export const FROZEN_TAG = `refs/tags/${FROZEN_TAG_NAME}`;
-export const FROZEN_OBJECT_ID = 'dfea6e1157e2b090bcf3b1e37a916ce85c197874';
-export const FROZEN_SHA256 = '9dff3373a88e3d61e10cb4de55e7680aa8014b0f44388181bd2202a77fb91b87';
+export const FROZEN_OBJECT_ID = '531142650bfd22750be2e86052abe42ff034daa3';
+export const FROZEN_SHA256 = 'd43e970b08e35ad6bf363882a1a0c809daffc4e9dab25afdd58688094777db2b';
 const BASELINE_PATH = 'verification/baseline/svelte-e23e808.json';
 
 /**
