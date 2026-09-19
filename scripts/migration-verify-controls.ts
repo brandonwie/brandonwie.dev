@@ -40,6 +40,8 @@
  *              49 display:none block with a non-locale link added
  *              50 meta content with a raw > has its tail changed
  *              52 visible text past an injected comment changes
+ *              54 numeric entity decoded character changed
+ *              55 numeric entity double-escaped as &amp;#x3C;
  *   invariance  6 Prettier reflow ignored   8 feed timestamp ignored
  *              15 ledger approves the EXACT difference
  *              19 directory-index file shape is equivalent
@@ -54,6 +56,7 @@
  *              46 ' entity-encoded inside meta content values
  *              48 paraglide hidden-anchor hrefs retargeted
  *              51 a comment injected inside a visible word
+ *              53 numeric entity re-encoded as its named equivalent
  *
  * Controls 21-31 pin `normalizeShell()`. Each of its three loosenings -- href
  * resolution against the page URL, bundle assets collapsed to one presence key,
@@ -1079,6 +1082,68 @@ const CONTROLS: Control[] = [
 				process.exit(2);
 			}
 			writeFileSync(file, html.replace('>~/About<', '>~/<!-- -->Elsewhere<'));
+		},
+	},
+	// Controls 53-55 bound the numeric-entity decode added with them. Baseline
+	// Shiki serializes code-span characters as `&#x3C;`, `&#96;`, `&#36;` and
+	// `&#x26;`; the candidate emits named entities or literals. A browser
+	// decodes all spellings to the same DOM text, so the comparator must too --
+	// the same argument that admitted `&#x27;` under controls 44/46. Controls 53
+	// and 55 require the DECODED baseline generation: 53's re-encoded literal
+	// and 55's double-escaped form only compare equal/different once the stored
+	// field itself holds the decoded character.
+	{
+		id: 53,
+		name: 'numeric entity re-encoded as its named equivalent',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// `&#x3C;` and `&lt;` are the same character to a reader. Re-spelling
+			// every `&#x3C;` on this page must not move the text field. Paired
+			// with 54.
+			const file = join(dir, 'posts', 'a-harness-that-fixes-itself.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('&#x3C;')) {
+				console.error('FATAL: control 53 found no numeric entity to re-encode');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace(/&#x3C;/g, '&lt;'));
+		},
+	},
+	{
+		id: 54,
+		name: 'numeric entity decoded character changed',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// The decode must map DIFFERENT codepoints to different characters:
+			// `&#x3E;` is `>`, not `<`, and the swap must diff.
+			const file = join(dir, 'posts', 'a-harness-that-fixes-itself.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('&#x3C;')) {
+				console.error('FATAL: control 54 found no numeric entity to mutate');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace(/&#x3C;/g, '&#x3E;'));
+		},
+	},
+	{
+		id: 55,
+		name: 'numeric entity double-escaped as &amp;#x3C;',
+		kind: 'defect',
+		expect: 1,
+		apply: (dir) => {
+			// The decode is single-pass by design: `&amp;#x3C;` renders the
+			// literal text `&#x3C;`, never `<`. An iterative decoder would wrongly
+			// produce `<` here and miss the change; the stored baseline holds the
+			// decoded `<`, so the literal must diff.
+			const file = join(dir, 'posts', 'a-harness-that-fixes-itself.html');
+			const html = readFileSync(file, 'utf8');
+			if (!html.includes('&#x3C;')) {
+				console.error('FATAL: control 55 found no numeric entity to double-escape');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace(/&#x3C;/g, '&amp;#x3C;'));
 		},
 	},
 ];

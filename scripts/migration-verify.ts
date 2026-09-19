@@ -157,21 +157,46 @@ const TAG_CONTENTS = String.raw`(?:[^>"']|"[^"]*"|'[^']*')*`;
  * The entities a serialized document can legally carry where a browser decodes
  * one value for both spellings. SvelteKit copies raw characters through; React
  * escapes them (`'` -> `&#x27;`, `&` -> `&amp;`, `"` -> `&quot;`, `<`/`>` ->
- * `&lt;`/`&gt;`). Both parse to the same value, and the contract is about the
- * document, not its serialization. `&amp;` decodes LAST so a double-escaped
- * `&amp;lt;` resolves to `&lt;` once, matching the browser's single decoding
- * pass. Each surface it touches is bounded by a control pair: text/title/h1 by
- * 41/42, meta content and image alt by 43/44.
+ * `&lt;`/`&gt;`), and Shiki on the Svelte side escapes differently again
+ * (`<` -> `&#x3C;`, `` ` `` -> `&#96;`, `$` -> `&#36;`, `&` -> `&#x26;`). All
+ * three spellings parse to the same value, and the contract is about the
+ * document, not its serialization.
+ *
+ * ONE regex pass decodes each entity exactly once, which is what a browser's
+ * tokenizer does: `&amp;#x3C;` resolves to the literal text `&#x3C;` (the
+ * `&amp;` is consumed before `#x3C;` can start a new reference), never to
+ * `<`. Ordering named-first/amp-last could not express that without the
+ * single pass. Each surface this touches is bounded by a control pair:
+ * text/title/h1 by 41/42, meta content and image alt by 43/44, and numeric
+ * forms by 53/54.
  */
 function decodeEntities(value: string): string {
-	return value
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>')
-		.replace(/&quot;/g, '"')
-		.replace(/&#x27;/gi, "'")
-		.replace(/&#0*39;/g, "'")
-		.replace(/&nbsp;/g, ' ')
-		.replace(/&amp;/g, '&');
+	return value.replace(
+		/&(#[xX][0-9a-fA-F]+|#\d+|lt|gt|quot|amp|nbsp|apos);/g,
+		(match, body: string) => {
+			if (body[0] === '#') {
+				const code =
+					body[1] === 'x' || body[1] === 'X'
+						? parseInt(body.slice(2), 16)
+						: parseInt(body.slice(1), 10);
+				return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+			}
+			switch (body) {
+				case 'lt':
+					return '<';
+				case 'gt':
+					return '>';
+				case 'quot':
+					return '"';
+				case 'apos':
+					return "'";
+				case 'nbsp':
+					return ' ';
+				default:
+					return '&';
+			}
+		},
+	);
 }
 
 /**
