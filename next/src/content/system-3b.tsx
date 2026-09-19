@@ -207,36 +207,25 @@ export function System3bPage({ locale }: { locale: Locale }) {
 						{ locale },
 					)}
 				</p>
-				<ol className="grid gap-3 lg:grid-cols-2">
+				<ol className="series-list">
 					{series.map((post) => (
-						<li
-							key={post.slug}
-							className="rounded-lg border border-line2 bg-surface p-4 transition-colors hover:border-foam"
-						>
-							<div className="flex items-start justify-between gap-3">
-								<div className="min-w-0">
-									<span className="font-mono tabular-nums text-faint">{post.order}.</span>{' '}
-									{post.status === 'published' ? (
-										<a
-											href={`${basePath}/posts/${post.slug}`}
-											className="font-sans text-sm font-medium text-foam hover:underline"
-										>
-											{post.title}
-										</a>
-									) : (
-										<span className="font-sans text-sm font-medium text-muted">{post.title}</span>
-									)}
-								</div>
-								{post.status === 'published' ? (
-									<span className="shrink-0 rounded border border-line2 px-2 py-0.5 font-mono text-xs text-foam">
-										{m.system_3b_published({}, { locale })}
-									</span>
-								) : (
-									<span className="shrink-0 rounded border border-line2 px-2 py-0.5 font-mono text-xs text-faint">
-										{m.system_3b_planned({}, { locale })}
-									</span>
-								)}
-							</div>
+						<li key={post.slug} className="series-item">
+							<span className="font-mono tabular-nums text-faint">{post.order}.</span>{' '}
+							{post.status === 'published' ? (
+								<a
+									href={`${basePath}/posts/${post.slug}`}
+									className="font-sans text-sm font-medium"
+								>
+									{post.title}
+								</a>
+							) : (
+								<span className="name">{post.title}</span>
+							)}
+							<span className="series-status">
+								{post.status === 'published'
+									? m.system_3b_published({}, { locale })
+									: m.system_3b_planned({}, { locale })}
+							</span>
 						</li>
 					))}
 				</ol>
