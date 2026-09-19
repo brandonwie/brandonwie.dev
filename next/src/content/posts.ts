@@ -124,7 +124,13 @@ function readParsedPost(file: string): ParsedMarkdownSource {
 	const cached = postSourceCache.get(file);
 	if (cached?.mtimeMs === mtimeMs && cached.size === size) return cached.parsed;
 
-	const parsed = matter(readFileSync(file, 'utf8'));
+	const source = readFileSync(file, 'utf8');
+	const m = matter(source);
+	const parsed: ParsedMarkdownSource = {
+		data: m.data,
+		content: m.content,
+		fmRaw: source.match(/^---[\s\S]*?---\r?\n/)?.[0] ?? '',
+	};
 	postSourceCache.set(file, { mtimeMs, size, parsed });
 	return parsed;
 }
