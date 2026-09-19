@@ -134,17 +134,58 @@ function escapeRe(s: string): string {
 	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-const KO_PARTICLES = '에서|에게|으로|까지|부터|처럼|보다|은|는|이|가|을|를|의|에|와|과|로|도|만';
+/**
+ * Suffixes a noun carries in Korean prose: particles, plus the copula and
+ * quotative forms a name takes ("X입니다", "X라는 회사"). Longest first, so the
+ * alternation never settles for a prefix of a longer suffix.
+ */
+const KO_SUFFIXES = [
+	'이었습니다',
+	'였습니다',
+	'입니다',
+	'이라는',
+	'이라고',
+	'이었다',
+	'에서',
+	'에게',
+	'으로',
+	'까지',
+	'부터',
+	'처럼',
+	'보다',
+	'라는',
+	'라고',
+	'였다',
+	'이다',
+	'이며',
+	'이고',
+	'이라',
+	'은',
+	'는',
+	'이',
+	'가',
+	'을',
+	'를',
+	'의',
+	'에',
+	'와',
+	'과',
+	'로',
+	'도',
+	'만',
+	'인',
+].join('|');
 
 /**
  * Hangul has no ASCII word boundary, so `[^a-z0-9]` lets a short term match
  * inside a longer, unrelated word and flags clean posts. A Hangul term counts
- * only when it stands alone or carries a particle, which is how a name appears
- * in Korean prose.
+ * when it stands alone or carries any chain of noun suffixes ("X에서는",
+ * "X라는", "X입니다"). The chain repeats because particles stack; a miss here
+ * is a leak, so the list errs toward matching.
  */
 function hangulHit(haystack: string, term: string): boolean {
 	return new RegExp(
-		`(^|[^가-힣])${escapeRe(term.toLowerCase())}((${KO_PARTICLES})?([^가-힣]|$))`,
+		`(^|[^가-힣])${escapeRe(term.toLowerCase())}(?:${KO_SUFFIXES})*([^가-힣]|$)`,
 		'i',
 	).test(haystack);
 }
