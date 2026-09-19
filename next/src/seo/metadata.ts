@@ -144,49 +144,17 @@ export function generatePostsListMetadata(locale: Locale): Metadata {
 }
 
 export function generateTagsMetadata(locale: Locale): Metadata {
-	const title = 'Tags | Brandon Wie';
-	const description =
-		"Browse every topic on the blog — all tags across Brandon Wie's posts, with post counts and links.";
-	const canonicalUrl = absoluteUrl(locale === 'ko' ? '/ko/tags' : '/tags');
-	const enUrl = absoluteUrl('/tags');
-	const koUrl = absoluteUrl('/ko/tags');
-
-	return {
-		title,
-		description,
-		alternates: {
-			canonical: canonicalUrl,
-			languages: {
-				en: enUrl,
-				ko: koUrl,
-				'x-default': enUrl,
-			},
-		},
-		openGraph: {
-			type: 'website',
-			siteName: SITE_NAME,
-			title,
-			description,
-			url: canonicalUrl,
-			images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630 }],
-			locale: localeCode(locale),
-			alternateLocale: [localeCode(locale === 'ko' ? 'en' : 'ko')],
-		},
-		twitter: {
-			card: 'summary_large_image',
-			title,
-			description,
-			images: [DEFAULT_OG_IMAGE],
-		},
-	};
+	return generateStudySeoMetadata({
+		pageTitle: `${m.tags_meta_title({}, { locale })} | Brandon Wie`,
+		description: m.tags_meta_description({}, { locale }),
+		basePath: '/tags',
+		locale,
+	});
 }
 
 export function generateSearchMetadata(locale: Locale): Metadata {
 	const title = `${locale === 'ko' ? '검색' : 'Search'} | Brandon Wie`;
-	const description =
-		locale === 'ko'
-			? 'Brandon Wie의 개인 블로그 — 소프트웨어, 시스템, 엔지니어링.'
-			: 'Personal blog by Brandon Wie — software, systems, and engineering.';
+	const description = m.site_description({}, { locale });
 	const canonicalUrl = absoluteUrl(locale === 'ko' ? '/ko/search' : '/search');
 	const enUrl = absoluteUrl('/search');
 	const koUrl = absoluteUrl('/ko/search');
