@@ -2,15 +2,15 @@
 	"inputs": {
 		"baseline": {
 			"file": "verification/baseline/svelte-e23e808.json",
-			"sha256": "9dff3373a88e3d61e10cb4de55e7680aa8014b0f44388181bd2202a77fb91b87"
+			"sha256": "d43e970b08e35ad6bf363882a1a0c809daffc4e9dab25afdd58688094777db2b"
 		},
 		"ledger": {
 			"file": "verification/exception-ledger.json",
-			"sha256": "32a0d1776630aa9a1c5a00493196220c8bc7037baec51e5244d312811845f707"
+			"sha256": "b657ec2609ebcc111574780de64d725aca213934ff3ed65d721ae501ea4ccf1d"
 		},
 		"candidate": {
 			"dir": "next/build",
-			"sha256": "c51345937ff895cd7c74edd2712b6a7e58f83eed10ce6142d5a6ea99a32b401e"
+			"sha256": "afbc58d727a86adb9842729ca09c4f93ab138d5071b653b9cd13d099b24aeb0a"
 		}
 	},
 	"totals": {
@@ -35,17 +35,17 @@
 		{
 			"id": "post-text-chrome",
 			"rationale": "Approved post-header redesign, text half — no additional content cause detected. Delta is the redesigned article chrome (Home/홈 crumb with localized title, Published/발행일 meta row, Category:/Tags: labels, locale-twin and back links, post__lede description paragraph, search/검색 affordance) plus paraglide en/ko anchor residue the display:none strip leaves behind. No mermaid, escape, or reading-time payload detected.",
-			"count": 207
+			"count": 208
 		},
 		{
 			"id": "post-text-chrome+inline-parity",
 			"rationale": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
-			"count": 82
+			"count": 79
 		},
 		{
 			"id": "post-text-chrome+inline-parity+reading-time",
 			"rationale": "Post-header redesign plus inline-parity divergence and a ±1-minute reading-time residual (same bounds and provenance as the dedicated classes).",
-			"count": 12
+			"count": 15
 		},
 		{
 			"id": "post-text-chrome+mermaid",
@@ -65,7 +65,7 @@
 		{
 			"id": "post-text-chrome+reading-time",
 			"rationale": "Post-header redesign plus a reading-time residual: rendered header shows candidate exactly 1 minute lower than baseline. All remaining reading-time deltas are within the approved ±1-minute bound after the remark-reading-time parity shim (frontmatter words + mermaid literal word count restored); residual is parser/smartypants tokenization granularity on a 19-route subset.",
-			"count": 5
+			"count": 4
 		},
 		{
 			"id": "route-candidate-only",
@@ -160,7 +160,7 @@
 		{
 			"url": "/ko/posts/ai-code-review-confusion-patterns",
 			"field": "text",
-			"fingerprint": "7e506619f03063913c978e62f5f2d9e5",
+			"fingerprint": "ff6b47fe7664d153ac70b2986ef8e129",
 			"class": "post-text-chrome"
 		},
 		{
@@ -184,7 +184,7 @@
 		{
 			"url": "/ko/posts/ai-pr-review-validation-patterns",
 			"field": "text",
-			"fingerprint": "c8558e7183ff66f792b9e5f4717e7c8b",
+			"fingerprint": "4fb84837fdc56ca58256a6e5babedf68",
 			"class": "post-text-chrome+inline-parity"
 		},
 		{
@@ -472,7 +472,7 @@
 		{
 			"url": "/ko/posts/claude-code-agent-teams",
 			"field": "text",
-			"fingerprint": "c3160d9143a3269c052232527fc1f084",
+			"fingerprint": "1460ca464ae2c26870eac5e4a4c6f81e",
 			"class": "post-text-chrome"
 		},
 		{
@@ -520,7 +520,7 @@
 		{
 			"url": "/ko/posts/claude-code-shared-personal-config",
 			"field": "text",
-			"fingerprint": "f1f728c436cdf5c8e66beb8ba853c885",
+			"fingerprint": "6f4909c7d7aae39a3f4d14a8ce6e1fb4",
 			"class": "post-text-chrome"
 		},
 		{
@@ -568,8 +568,8 @@
 		{
 			"url": "/ko/posts/codex-apply-patch-shell-mediated-tool",
 			"field": "text",
-			"fingerprint": "1e28bc9f66ea93681bf675bf608f6be7",
-			"class": "post-text-chrome+inline-parity"
+			"fingerprint": "ca04315af903338925165774aabbad46",
+			"class": "post-text-chrome+inline-parity+reading-time"
 		},
 		{
 			"url": "/ko/posts/codex-apply-patch-shell-mediated-tool",
@@ -1012,8 +1012,8 @@
 		{
 			"url": "/ko/posts/git-pre-commit-parallel-session-head-race",
 			"field": "text",
-			"fingerprint": "9ce8d3d848ae8238f44d6510e5030180",
-			"class": "post-text-chrome+inline-parity"
+			"fingerprint": "2ed0348b7ce0f73d3d1e87502cb2a8c6",
+			"class": "post-text-chrome+inline-parity+reading-time"
 		},
 		{
 			"url": "/ko/posts/git-pre-commit-parallel-session-head-race",
@@ -1204,7 +1204,7 @@
 		{
 			"url": "/ko/posts/markdownlint-conventions",
 			"field": "text",
-			"fingerprint": "3fae31d46f22afd513a2f5d4f87e7e1b",
+			"fingerprint": "93df6656d427d62c4bb311bd6264cb8e",
 			"class": "post-text-chrome+inline-parity"
 		},
 		{
@@ -2242,7 +2242,7 @@
 		{
 			"url": "/ko/tags",
 			"field": "text",
-			"fingerprint": "2323a400f480a712c22c5f238d7bf08f",
+			"fingerprint": "d5cc544f01c182e956cc620294cf7719",
 			"class": "ko-loc-c13"
 		},
 		{
@@ -2260,8 +2260,8 @@
 		{
 			"url": "/posts/ai-code-review-confusion-patterns",
 			"field": "text",
-			"fingerprint": "823bde362412d1a7b47c0943ffcf6973",
-			"class": "post-text-chrome+reading-time"
+			"fingerprint": "c2d5b55919bf600e4f5bbc752349b3aa",
+			"class": "post-text-chrome"
 		},
 		{
 			"url": "/posts/ai-code-review-confusion-patterns",
@@ -2284,7 +2284,7 @@
 		{
 			"url": "/posts/ai-pr-review-validation-patterns",
 			"field": "text",
-			"fingerprint": "4dba98418469a73bc2ed29d82ab35588",
+			"fingerprint": "ee6f0e7780364fb6b438bdfe4258de35",
 			"class": "post-text-chrome+inline-parity"
 		},
 		{
@@ -2572,7 +2572,7 @@
 		{
 			"url": "/posts/claude-code-agent-teams",
 			"field": "text",
-			"fingerprint": "39232be41044dc124ab13ddb831c0f6f",
+			"fingerprint": "3efe759e7acb885a05a488d8bb3d9356",
 			"class": "post-text-chrome"
 		},
 		{
@@ -2620,7 +2620,7 @@
 		{
 			"url": "/posts/claude-code-shared-personal-config",
 			"field": "text",
-			"fingerprint": "c005e29c9d43f8838b37086e8503e0be",
+			"fingerprint": "fd16a7655151038a0617fe486ad97e34",
 			"class": "post-text-chrome"
 		},
 		{
@@ -2668,8 +2668,8 @@
 		{
 			"url": "/posts/codex-apply-patch-shell-mediated-tool",
 			"field": "text",
-			"fingerprint": "906f5eddd99e70057630bf1de121be02",
-			"class": "post-text-chrome+inline-parity"
+			"fingerprint": "e296647486db38ffda568f79d9bc3ecb",
+			"class": "post-text-chrome+inline-parity+reading-time"
 		},
 		{
 			"url": "/posts/codex-apply-patch-shell-mediated-tool",
@@ -3112,7 +3112,7 @@
 		{
 			"url": "/posts/git-pre-commit-parallel-session-head-race",
 			"field": "text",
-			"fingerprint": "de01275eb8e367e25fbabdefee1958f0",
+			"fingerprint": "4486301c907a6ee751135abd39a6a567",
 			"class": "post-text-chrome+inline-parity"
 		},
 		{
@@ -3304,7 +3304,7 @@
 		{
 			"url": "/posts/markdownlint-conventions",
 			"field": "text",
-			"fingerprint": "84066d31457f1d43a686cc7938b28af8",
+			"fingerprint": "9733773d70f697cc49f6b42aea23564d",
 			"class": "post-text-chrome+inline-parity"
 		},
 		{

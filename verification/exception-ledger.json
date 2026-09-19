@@ -3114,10 +3114,10 @@
 	{
 		"url": "/ko/posts/ai-code-review-confusion-patterns",
 		"field": "text",
-		"fingerprint": "7e506619f03063913c978e62f5f2d9e5",
+		"fingerprint": "ff6b47fe7664d153ac70b2986ef8e129",
 		"reason": "Approved post-header redesign, text half — no additional content cause detected. Delta is the redesigned article chrome (Home/홈 crumb with localized title, Published/발행일 meta row, Category:/Tags: labels, locale-twin and back links, post__lede description paragraph, search/검색 affordance) plus paraglide en/ko anchor residue the display:none strip leaves behind. No mermaid, escape, or reading-time payload detected.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/ko/posts/ai-code-review-confusion-patterns",
@@ -3146,10 +3146,10 @@
 	{
 		"url": "/ko/posts/ai-pr-review-validation-patterns",
 		"field": "text",
-		"fingerprint": "c8558e7183ff66f792b9e5f4717e7c8b",
+		"fingerprint": "4fb84837fdc56ca58256a6e5babedf68",
 		"reason": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/ko/posts/ai-pr-review-validation-patterns",
@@ -3530,10 +3530,10 @@
 	{
 		"url": "/ko/posts/claude-code-agent-teams",
 		"field": "text",
-		"fingerprint": "c3160d9143a3269c052232527fc1f084",
+		"fingerprint": "1460ca464ae2c26870eac5e4a4c6f81e",
 		"reason": "Approved post-header redesign, text half — no additional content cause detected. Delta is the redesigned article chrome (Home/홈 crumb with localized title, Published/발행일 meta row, Category:/Tags: labels, locale-twin and back links, post__lede description paragraph, search/검색 affordance) plus paraglide en/ko anchor residue the display:none strip leaves behind. No mermaid, escape, or reading-time payload detected.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/ko/posts/claude-code-agent-teams",
@@ -3594,10 +3594,10 @@
 	{
 		"url": "/ko/posts/claude-code-shared-personal-config",
 		"field": "text",
-		"fingerprint": "f1f728c436cdf5c8e66beb8ba853c885",
+		"fingerprint": "6f4909c7d7aae39a3f4d14a8ce6e1fb4",
 		"reason": "Approved post-header redesign, text half — no additional content cause detected. Delta is the redesigned article chrome (Home/홈 crumb with localized title, Published/발행일 meta row, Category:/Tags: labels, locale-twin and back links, post__lede description paragraph, search/검색 affordance) plus paraglide en/ko anchor residue the display:none strip leaves behind. No mermaid, escape, or reading-time payload detected.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/ko/posts/claude-code-shared-personal-config",
@@ -3658,10 +3658,10 @@
 	{
 		"url": "/ko/posts/codex-apply-patch-shell-mediated-tool",
 		"field": "text",
-		"fingerprint": "1e28bc9f66ea93681bf675bf608f6be7",
-		"reason": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
+		"fingerprint": "ca04315af903338925165774aabbad46",
+		"reason": "Post-header redesign plus inline-parity divergence and a ±1-minute reading-time residual (same bounds and provenance as the dedicated classes).",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/ko/posts/codex-apply-patch-shell-mediated-tool",
@@ -4250,10 +4250,10 @@
 	{
 		"url": "/ko/posts/git-pre-commit-parallel-session-head-race",
 		"field": "text",
-		"fingerprint": "9ce8d3d848ae8238f44d6510e5030180",
-		"reason": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
+		"fingerprint": "2ed0348b7ce0f73d3d1e87502cb2a8c6",
+		"reason": "Post-header redesign plus inline-parity divergence and a ±1-minute reading-time residual (same bounds and provenance as the dedicated classes).",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/ko/posts/git-pre-commit-parallel-session-head-race",
@@ -4506,10 +4506,10 @@
 	{
 		"url": "/ko/posts/markdownlint-conventions",
 		"field": "text",
-		"fingerprint": "3fae31d46f22afd513a2f5d4f87e7e1b",
+		"fingerprint": "93df6656d427d62c4bb311bd6264cb8e",
 		"reason": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/ko/posts/markdownlint-conventions",
@@ -5890,10 +5890,10 @@
 	{
 		"url": "/ko/tags",
 		"field": "text",
-		"fingerprint": "2323a400f480a712c22c5f238d7bf08f",
+		"fingerprint": "d5cc544f01c182e956cc620294cf7719",
 		"reason": "Baseline C13 bug class: the Svelte build emitted English metadata (title, description, og, twitter, h1, lang) at /ko/ URLs. The candidate emits correct Korean metadata. Approved as a localization correction — the baseline value is a defect, not a contract.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/posts/a-harness-that-fixes-itself",
@@ -5914,10 +5914,10 @@
 	{
 		"url": "/posts/ai-code-review-confusion-patterns",
 		"field": "text",
-		"fingerprint": "823bde362412d1a7b47c0943ffcf6973",
-		"reason": "Post-header redesign plus a reading-time residual: rendered header shows candidate exactly 1 minute lower than baseline. All remaining reading-time deltas are within the approved ±1-minute bound after the remark-reading-time parity shim (frontmatter words + mermaid literal word count restored); residual is parser/smartypants tokenization granularity on a 19-route subset.",
+		"fingerprint": "c2d5b55919bf600e4f5bbc752349b3aa",
+		"reason": "Approved post-header redesign, text half — no additional content cause detected. Delta is the redesigned article chrome (Home/홈 crumb with localized title, Published/발행일 meta row, Category:/Tags: labels, locale-twin and back links, post__lede description paragraph, search/검색 affordance) plus paraglide en/ko anchor residue the display:none strip leaves behind. No mermaid, escape, or reading-time payload detected.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/posts/ai-code-review-confusion-patterns",
@@ -5946,10 +5946,10 @@
 	{
 		"url": "/posts/ai-pr-review-validation-patterns",
 		"field": "text",
-		"fingerprint": "4dba98418469a73bc2ed29d82ab35588",
+		"fingerprint": "ee6f0e7780364fb6b438bdfe4258de35",
 		"reason": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/posts/ai-pr-review-validation-patterns",
@@ -6330,10 +6330,10 @@
 	{
 		"url": "/posts/claude-code-agent-teams",
 		"field": "text",
-		"fingerprint": "39232be41044dc124ab13ddb831c0f6f",
+		"fingerprint": "3efe759e7acb885a05a488d8bb3d9356",
 		"reason": "Approved post-header redesign, text half — no additional content cause detected. Delta is the redesigned article chrome (Home/홈 crumb with localized title, Published/발행일 meta row, Category:/Tags: labels, locale-twin and back links, post__lede description paragraph, search/검색 affordance) plus paraglide en/ko anchor residue the display:none strip leaves behind. No mermaid, escape, or reading-time payload detected.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/posts/claude-code-agent-teams",
@@ -6394,10 +6394,10 @@
 	{
 		"url": "/posts/claude-code-shared-personal-config",
 		"field": "text",
-		"fingerprint": "c005e29c9d43f8838b37086e8503e0be",
+		"fingerprint": "fd16a7655151038a0617fe486ad97e34",
 		"reason": "Approved post-header redesign, text half — no additional content cause detected. Delta is the redesigned article chrome (Home/홈 crumb with localized title, Published/발행일 meta row, Category:/Tags: labels, locale-twin and back links, post__lede description paragraph, search/검색 affordance) plus paraglide en/ko anchor residue the display:none strip leaves behind. No mermaid, escape, or reading-time payload detected.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/posts/claude-code-shared-personal-config",
@@ -6458,10 +6458,10 @@
 	{
 		"url": "/posts/codex-apply-patch-shell-mediated-tool",
 		"field": "text",
-		"fingerprint": "906f5eddd99e70057630bf1de121be02",
-		"reason": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
+		"fingerprint": "e296647486db38ffda568f79d9bc3ecb",
+		"reason": "Post-header redesign plus inline-parity divergence and a ±1-minute reading-time residual (same bounds and provenance as the dedicated classes).",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/posts/codex-apply-patch-shell-mediated-tool",
@@ -7050,10 +7050,10 @@
 	{
 		"url": "/posts/git-pre-commit-parallel-session-head-race",
 		"field": "text",
-		"fingerprint": "de01275eb8e367e25fbabdefee1958f0",
+		"fingerprint": "4486301c907a6ee751135abd39a6a567",
 		"reason": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/posts/git-pre-commit-parallel-session-head-race",
@@ -7306,10 +7306,10 @@
 	{
 		"url": "/posts/markdownlint-conventions",
 		"field": "text",
-		"fingerprint": "84066d31457f1d43a686cc7938b28af8",
+		"fingerprint": "9733773d70f697cc49f6b42aea23564d",
 		"reason": "Post-header redesign plus CommonMark-vs-mdsvex inline divergence: residual tokens show backslash-escape handling differences (\\$, \\d, \\|, \\\\), reference-link bracket consumption (claude[bot] → claudebot), and intraword-underscore emphasis (수정된_출력). Candidate follows CommonMark; baseline’s mdsvex parser resolved constructs differently.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-19"
+		"approved_on": "2026-09-20"
 	},
 	{
 		"url": "/posts/markdownlint-conventions",
