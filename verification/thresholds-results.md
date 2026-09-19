@@ -191,3 +191,177 @@ and a route set; each bound was written before the result it judges; and every
 result names the bound it was measured against. What remains open is coverage,
 not method — one viewport rather than three, stated in § Threats to these
 numbers.
+
+---
+
+# Slice 5 candidate — measured
+
+Captured 2026-09-19 against the **Next.js candidate build of `d2827b4`**
+(`feat/slice5-comparison`, generation-6 baseline comparison HEAD) —
+HeadlessChrome 153 (`--headless=new`) on macOS, Node v24.21.0, pnpm 10.32.1,
+`serve-build.mjs` loopback, no throttling. Driver:
+`scripts/capture/ac9-candidate.mjs`, which reuses the same `frame-probe.js` /
+`perf-probe.js` and the same fixed capture profile the baseline used.
+
+**Environment delta, stated not hidden.** The baseline ran through a headed,
+foreground Chrome because its automation surface could not paint an occluded
+tab. This run is `--headless=new`, where the page paints and rAF fires by
+construction. The metric contract is unchanged: a gate probe required
+`visibilityState === "visible"`, a firing `requestAnimationFrame`, and a
+credible paint entry (FCP 308 ms) before any run was recorded, and every
+recorded sample carries `visible: true`. These remain **lab proxies**, not
+field Core Web Vitals — same caveat as the baseline half.
+
+## Accessibility — candidate
+
+Rubric: [`./thresholds.md`](./thresholds.md) § Accessibility rubric. Route set:
+the same representative set, each at 390×844, 820×1180 and 1440×900 inside
+`/__viewport`.
+
+| Metric                                            | Bound                                         | Measured                                                                                 | Result |
+| ------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------- | ------ |
+| Critical findings                                 | 0 permitted                                   | **0** across all 10 routes × 3 viewports                                                 | PASS   |
+| Interactive elements with no accessible name      | 0 permitted (critical)                        | **0** — 34 / 197 / 55 / 55 / 34 / 992 / 18 / 35 / 20 / 18 focusables per route           | PASS   |
+| Images with no `alt`                              | 0 permitted (critical)                        | **0** — including all 167 lazy card images on `/posts` (5 loaded at 390px, rest lazy)    | PASS   |
+| Declared keyboard controls reachable and operable | all                                           | **8 of 8** sequences K1–K8 passed (table below)                                          | PASS   |
+| Serious findings                                  | enumerated, with an owner and a closing slice | **0** — Escape-close returns focus to the opener (`BUTTON`), the A11Y-1 fix carries over | PASS   |
+| Horizontal overflow                               | none at any declared viewport                 | **none** — `scrollWidth` ≤ `innerWidth` at 390 / 820 / 1440 on every route               | PASS   |
+| `lang` contract                                   | `ko` on KO routes, `en` elsewhere             | `ko` on `/ko` + `/ko/posts/…`, `en` on the other eight                                   | PASS   |
+| Breakpoint correctness                            | frame's own `matchMedia` agrees with its size | all four queries correct at all 30 route×viewport cells                                  | PASS   |
+
+Focusable counts sit within 0–3 of the Svelte baseline's
+36 / 199 / 52 / 52 / 36 / 994 / 20 / 37 / 22 / 18 — the small deltas are the
+already-ledgered post-header / shell redesign classes, not new unnamed or
+inoperable controls (the count is 0 either way).
+
+### Keyboard flows — candidate
+
+Same sequences as the baseline matrix, sent as real CDP key events.
+
+| #   | Route                            | Sequence        | Observed on candidate                                                                                       | Result |
+| --- | -------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------- | ------ |
+| K1  | `/`                              | `Cmd+K`         | `[role=dialog]` present, 23 `[role=option]`, `activeElement` = `INPUT` "Search posts and commands…"         | PASS   |
+| K2  | `/` palette                      | `ArrowDown` ×2  | `aria-activedescendant` = `cmdk-option-2`, option "◫ Study /study"                                          | PASS   |
+| K3  | `/` palette                      | type `redis`    | 23 → 9 options; "Redis and BullMQ Queue Patterns…" first among post results (option 2, after a command row) | PASS   |
+| K4  | `/` palette                      | `Escape`        | dialog gone, `pathname` still `/`, focus restored to the `BUTTON` opener                                    | PASS   |
+| K5  | `/posts/claude-code-agent-teams` | `Backspace`     | navigated to `/posts`, title "All Posts \| Brandon Wie"                                                     | PASS   |
+| K6  | `/talks/my-career`               | `ArrowRight` ×6 | URL walked `?page=2&step=1` → `?page=4&step=2` — same step/slide advance shape as baseline                  | PASS   |
+| K7  | `/talks/my-career`               | `ArrowLeft`     | stepped back to `?page=1&step=1`                                                                            | PASS   |
+| K8  | `/posts/claude-code-agent-teams` | scroll to 50 %  | `[role=progressbar]` `aria-valuenow="56"` at `scrollY` 4,743 of 9,486                                       | PASS   |
+
+## Weight — candidate, full build
+
+Budgets: [`./thresholds.md`](./thresholds.md) § Budgets for the Next.js
+candidate. The earlier "partial port" caveat no longer applies — this column is
+the complete candidate at `d2827b4`, all 373 exported pages. Same
+`bundleWeights()` basis as both prior columns: real file sizes, `.br`/`.gz`
+excluded.
+
+| Measure                       | Svelte baseline | Candidate budget | Candidate `d2827b4` (full) | Result                       |
+| ----------------------------- | --------------- | ---------------- | -------------------------- | ---------------------------- |
+| Files (excluding `.br`/`.gz`) | 1,638           | —                | 3,095                      | recorded                     |
+| Total build weight            | 72.1 MB         | ≤ 86 MB          | **216.8 MB**               | **EXCEEDS — decision below** |
+| HTML                          | 21,633 KB       | ≤ 25,900 KB      | **56,321 KB**              | **EXCEEDS — decision below** |
+| JavaScript                    | 10,701 KB       | ≤ 13,900 KB      | 5,375 KB                   | PASS                         |
+| CSS                           | 194 KB          | ≤ 250 KB         | 194 KB                     | PASS                         |
+| Images                        | 35.7 MB         | ≤ 35.7 MB        | 35.7 MB — identical        | PASS                         |
+| Largest JS chunk              | 662,650 B       | ≤ 860 KB         | 655,681 B                  | PASS                         |
+| Pagefind largest shard        | 723,406 B       | — (recorded)     | 698,198 B                  | recorded                     |
+
+**Why HTML and total exceed.** Both rows are the same cause, not two problems.
+Next's static export ships the React Server Component flight payload twice:
+once inline in each HTML page (`self.__next_f.push` scripts, ~150 KB/page vs
+Svelte's ~59 KB/page — that alone is the 2.6× HTML figure) and again as
+standalone per-route prefetch payloads — **1,860 `.txt` files totalling
+116 MB**, roughly five variants per route (`<route>.txt`, `__next._full.txt`,
+`__PAGE__.txt`, localized twins). Those `.txt` files are what carry total
+weight past the envelope: without them the build is ~100 MB, still over 86, but
+the dominant single bucket is the flight payload set, which the client router
+needs for instant navigations. This is inherent to the App Router export
+architecture, not a defect — per `thresholds.md`, exceeding a budget is a
+decision recorded with its reason, and this is the reason. **Brandon decides**
+whether to accept the duplication, drop route-prefetch payloads (slower client
+nav), or mitigate at the edge. The per-chunk and per-resource budgets that
+could not be architecture-inflated — JS total, largest chunk, CSS, images — all
+pass with headroom.
+
+## Performance — candidate
+
+Lab proxies, not field Core Web Vitals. Top-level navigations at 1680×1072
+(dpr 2), 5 warm runs per route after a discarded priming load, median reported
+with min and max. `--headless=new`; the visibility/paint gate probe passed
+before capture (see header).
+
+### LCP proxy — candidate
+
+Bound: **2,500 ms** (frozen). Advisory guard: the route's own baseline median ×
+1.20.
+
+| Route                                    | Median | min | max | Bound    | Advisory guard | Result |
+| ---------------------------------------- | ------ | --- | --- | -------- | -------------- | ------ |
+| `/`                                      | 40 ms  | 32  | 44  | 2,500 ms | 576 ms         | PASS   |
+| `/posts`                                 | 72 ms  | 72  | 92  | 2,500 ms | 1,282 ms       | PASS   |
+| `/posts/giscus-sveltekit-integration`    | 44 ms  | 36  | 52  | 2,500 ms | 1,037 ms       | PASS   |
+| `/ko/posts/giscus-sveltekit-integration` | 40 ms  | 36  | 52  | 2,500 ms | 984 ms         | PASS   |
+| `/ko`                                    | 44 ms  | 36  | 48  | 2,500 ms | 355 ms         | PASS   |
+| `/tags`                                  | 72 ms  | 52  | 76  | 2,500 ms | 523 ms         | PASS   |
+| `/search`                                | 36 ms  | 24  | 48  | 2,500 ms | 293 ms         | PASS   |
+| `/study/dsa-ii`                          | 48 ms  | 40  | 52  | 2,500 ms | 365 ms         | PASS   |
+| `/system/3b`                             | 44 ms  | 32  | 48  | 2,500 ms | 437 ms         | PASS   |
+| `/talks/my-career`                       | 176 ms | 164 | 192 | 2,500 ms | 1,037 ms       | PASS   |
+
+Every route is inside both the frozen bound and its advisory guard. The
+candidate's medians are uniformly lower than the Svelte baseline's (baseline
+`/posts` 1,068 ms vs candidate 72 ms); the same probe, profile and loopback
+server produced both sets, and the gap is recorded rather than explained —
+loopback lab proxies measure the build's paint path, not the network, and
+hydration timing is not part of this metric.
+
+### CLS proxy — candidate
+
+Bound: **0.10** (frozen).
+
+| Route set      | Median    | Bound | Result |
+| -------------- | --------- | ----- | ------ |
+| All ten routes | **0.000** | 0.10  | PASS   |
+
+Every run of every route measured zero layout shift (60/60 samples).
+
+### Interaction latency proxy — candidate
+
+Bound: **200 ms** (frozen). Source: `event` entries, `durationThreshold: 16`,
+recorded live by a collector installed before navigation (not the post-hoc
+buffer).
+
+| Flow                                               | Presses  | Durations                                             | Worst   | Bound  | Result |
+| -------------------------------------------------- | -------- | ----------------------------------------------------- | ------- | ------ | ------ |
+| `/` — `Cmd+K` open, `Escape` close, ×5             | discrete | **all below the 16 ms floor** — zero entries recorded | < 16 ms | 200 ms | PASS   |
+| `/talks/my-career` — `ArrowRight` ×5 with 3 s gaps | discrete | 24–32 ms                                              | 32 ms   | 200 ms | PASS   |
+
+Zero recorded events on the palette row means every keydown/keyup pair
+completed under the 16 ms reporting floor — the collector was verified live by
+the deck row's 10 entries (keydown + keyup per press), so an empty set is a
+fast measurement, not a broken probe. The baseline's key-repeat caveat applies
+unchanged: back-to-back arrow presses queue behind the GSAP transition and are
+not counted, per the same rule.
+
+## Threats to these numbers — candidate half
+
+In addition to the baseline's threats (one viewport, loopback, warm cache,
+n = 5, lab not field):
+
+- **`--headless=new` vs headed Chrome 152.** Candidate ran HeadlessChrome 153.
+  The visibility gate plus identical probes keep the metric contract, but the
+  two builds were produced by different Chrome major versions — treat exact
+  numbers as comparable-in-method, not identical-in-environment.
+- **Interaction floor.** Candidate palette interactions fall below the 16 ms
+  `event` threshold entirely; PASS is inferred from "no entry ≥ 16 ms", which
+  is the same reading the baseline's at-floor row produced.
+
+## Slice 5 status against AC9
+
+| Half                     | Status                                                                                             |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| Accessibility thresholds | MEASURED on the full candidate — 0 critical, 0 serious, 8/8 keyboard flows, no overflow            |
+| Weight budgets           | MEASURED on the full candidate — 4 PASS, **2 exceed (HTML, total): decision recorded for Brandon** |
+| CWV proxies              | MEASURED on the full candidate — all 10 routes inside frozen bound and advisory guard              |
