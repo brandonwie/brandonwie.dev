@@ -28,7 +28,7 @@ Production served Svelte continuously throughout — the rehearsal wrote only to
 Scoped API token `249ae685…` (Cloudflare Pages Edit, this account only),
 delivered out-of-band at `~/.config/cloudflare/rehearsal-token`, read into
 `CLOUDFLARE_API_TOKEN` per-command and never printed or committed.
-`CLOUDFLARE_ACCOUNT_ID=a56da885a29191e912b0ea06eb789809` was set inline so
+`CLOUDFLARE_ACCOUNT_ID=a56da885…` was set inline so
 wrangler skipped the memberships lookup (a scoped token lacks
 `User → Memberships → Read`). **Token should be revoked now that the rehearsal
 is complete.**
@@ -77,6 +77,10 @@ any fresh `pages.dev` subdomain during Slice 6.
 | after R2       | `https://ebe1e65a.brandonwie-dev-next.pages.dev/`       | —                                                        | —              | 200    |
 | after rollback | `https://brandonwie-dev-next.pages.dev/__rehearsal.txt` | `R1 …`                                                   | `noindex`      | 200    |
 | after rollback | canonical deployment via GET project                    | `6efab272-511b-40e9-a106-9bccb069c85b`, env `production` | —              | —      |
+
+`—` = not asserted at that stage/URL. R2's hash subdomain was probed for
+reachability only; R2 marker + `noindex` were asserted on the project URL row
+above it. `_headers` shipped in both R1 and R2 deploys.
 
 Marker sequence **R1 → R2 → R1** on the project URL proves the rollback
 restored the R1 deployment rather than a no-op — the two deploys carried

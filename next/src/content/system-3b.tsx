@@ -70,7 +70,7 @@ export function System3bPage({ locale }: { locale: Locale }) {
 	const evolution = [...localized.evolution].sort((a, b) => b.date.localeCompare(a.date));
 
 	return (
-		<main id="main-content" className="mx-auto max-w-6xl px-6 py-12 lg:py-16">
+		<div className="mx-auto max-w-6xl px-6 py-12 lg:py-16">
 			{/* Header */}
 			<section className="max-w-3xl">
 				<div className="mb-5 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-faint">
@@ -256,6 +256,6 @@ export function System3bPage({ locale }: { locale: Locale }) {
 					</p>
 				</div>
 			</section>
-		</main>
+		</div>
 	);
 }
