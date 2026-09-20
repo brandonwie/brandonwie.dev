@@ -47,6 +47,17 @@ export type ParsedMarkdownSource = Pick<matter.GrayMatterFile<string>, 'data' | 
 };
 
 /**
+ * The raw frontmatter block: an opening `---` at offset 0 through a closing
+ * `---` on its own line (optionally at EOF). Anchoring the close to a line
+ * start keeps a `key: ---` block scalar from terminating the block early,
+ * and the `$` alternative keeps a delimiter at EOF without a trailing
+ * newline in the match.
+ */
+export function frontmatterRaw(source: string): string {
+	return source.match(/^---\r?\n[\s\S]*?\n---(?:\r?\n|$)/)?.[0] ?? '';
+}
+
+/**
  * Languages the SvelteKit build highlights (`svelte.config.js` getHighlighter).
  * Kept identical so a code block that highlighted before still highlights, and
  * one that fell back to plain text still falls back.
@@ -117,9 +128,7 @@ export async function renderMarkdown(
 	// The parity plugin counts them from this seed -- see
 	// `plugins/remark-reading-time.ts` for the reproduction notes.
 	const fmRaw = educateSource(
-		typeof source === 'string'
-			? (source.match(/^---[\s\S]*?---\r?\n/)?.[0] ?? '')
-			: (source.fmRaw ?? ''),
+		typeof source === 'string' ? frontmatterRaw(source) : (source.fmRaw ?? ''),
 	);
 
 	const processor = unified()

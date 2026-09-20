@@ -10,13 +10,14 @@ Chrome 152 on macOS 15.7.9, devicePixelRatio 2, loopback server, no throttling.
 ## Accessibility — measured
 
 Rubric: [`./thresholds.md`](./thresholds.md) § Accessibility rubric. Route set:
-the eleven-route representative set in
+the ten-route viewport representative set in
 [`./behavior-matrix.md`](./behavior-matrix.md), each at 390×844, 820×1180 and
-1440×900.
+1440×900. (The matrix's eleventh a11y row is the keyboard-only `Cmd+K` palette
+row — no viewport measurement; the measured set is 10 routes.)
 
 | Metric                                            | Bound                                         | Measured                                                                              | Result |
 | ------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------- | ------ |
-| Critical findings                                 | 0 permitted                                   | **0** across all 11 routes × 3 viewports                                              | PASS   |
+| Critical findings                                 | 0 permitted                                   | **0** across all 10 routes × 3 viewports                                              | PASS   |
 | Interactive elements with no accessible name      | 0 permitted (critical)                        | **0** — 36 / 199 / 52 / 52 / 36 / 994 / 20 / 37 / 22 / 18 focusables per route        | PASS   |
 | Images with no `alt`                              | 0 permitted (critical)                        | **0** — including all 167 lazy card images on `/posts`                                | PASS   |
 | Declared keyboard controls reachable and operable | all                                           | **8 of 8** sequences K1–K8 passed                                                     | PASS   |

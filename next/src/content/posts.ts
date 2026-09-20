@@ -5,7 +5,12 @@ import matter from 'gray-matter';
 import { cache } from 'react';
 
 import type { Locale } from '../i18n/locale';
-import { renderMarkdown, type Heading, type ParsedMarkdownSource } from '../markdown/pipeline';
+import {
+	frontmatterRaw,
+	renderMarkdown,
+	type Heading,
+	type ParsedMarkdownSource,
+} from '../markdown/pipeline';
 
 /**
  * Post loading for the Next candidate.
@@ -129,7 +134,7 @@ function readParsedPost(file: string): ParsedMarkdownSource {
 	const parsed: ParsedMarkdownSource = {
 		data: m.data,
 		content: m.content,
-		fmRaw: source.match(/^---[\s\S]*?---\r?\n/)?.[0] ?? '',
+		fmRaw: frontmatterRaw(source),
 	};
 	postSourceCache.set(file, { mtimeMs, size, parsed });
 	return parsed;

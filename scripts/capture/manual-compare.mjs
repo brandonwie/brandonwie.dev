@@ -53,8 +53,11 @@ const ROUTES = [
 	{ path: '/about', slug: 'about' },
 	{ path: '/ko/about', slug: 'ko-about' },
 	{ path: '/contact', slug: 'contact' },
+	{ path: '/ko/contact', slug: 'ko-contact' },
 	{ path: '/projects', slug: 'projects' },
+	{ path: '/ko/projects', slug: 'ko-projects' },
 	{ path: '/feed', slug: 'feed' },
+	{ path: '/ko/feed', slug: 'ko-feed' },
 	{ path: '/404', slug: 'not-found' },
 ];
 
@@ -127,9 +130,7 @@ async function probeRoute(page, base, route) {
 				return n > 0;
 			},
 			{ timeoutMs: 6000, everyMs: 150 },
-		)
-			.then(() => true)
-			.catch(() => false);
+		).catch(() => false);
 		if (!mounted) {
 			await evaluate(page, 'scrollTo(0, 3000); window.dispatchEvent(new Event("scroll"))');
 			await until(
@@ -182,12 +183,12 @@ const main = async () => {
 	mkdirSync(SHOTS, { recursive: true });
 	const out = { captured: new Date().toISOString(), routes: {} };
 	try {
+		await page_setup(browser);
 		for (const side of SIDES) {
 			const server = await serve(side.dir);
 			servers.push(server);
 			const base = `http://127.0.0.1:${server.port}`;
 			mkdirSync(`${SHOTS}/${side.name}`, { recursive: true });
-			await page_setup(browser);
 			for (const route of ROUTES) {
 				const r = { ...route, side: side.name };
 				out.routes[`${side.name}:${route.slug}`] = await probeRoute(browser, base, r).catch(

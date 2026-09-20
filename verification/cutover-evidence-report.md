@@ -2,10 +2,31 @@
 
 The single document Brandon reviews for the G4 cutover gate. Every claim links
 to its artifact; nothing here is narrative-only. Candidate under test:
-`next/build` @ `c62df40` (`feat/slice5-comparison`, post-F1-fix), compared
-against the Svelte generation-6 baseline.
+`next/build` @ `c62df40` (`feat/slice5-comparison`, post-F1-fix), originally
+compared against the Svelte generation-6 baseline.
 
-## Baseline identity (generation 6)
+## Baseline identity — generation 8 (current)
+
+| Field         | Value                                                          |
+| ------------- | -------------------------------------------------------------- |
+| Source commit | `93a5dd8` (production `main` at re-key)                        |
+| Baseline file | `verification/baseline/svelte-e23e808.json` (blob `531142650`) |
+| Annotated tag | `migration-baseline-svelte-93a5dd8-v2` (tag object `171dfe39`) |
+| Extractor     | v2 (numeric-entity decode)                                     |
+
+**Re-key note (2026-09-20, `f01ea06`).** `main` landed the C3 resync as
+generation 7 (extractor v1, tag `migration-baseline-svelte-93a5dd8-v1`) while
+this branch was gen-6-keyed. The branch merged `main` (`b90846f`), re-measured
+`93a5dd8` under extractor v2 as generation 8 (`629617d`), and re-keyed 15
+exception-ledger rows to gen-8 fingerprints — all inside the existing 11
+approved classes; the four class-signature shifts carry their new class
+rationale. `migration:verify:next` re-confirmed 373 pages, 1071 approved, 0
+unapproved at `f01ea06`, and `pnpm migration:all` exited 0. The generation-6
+measurements below are the original capture — valid history, superseded by
+gen-8 for live checks. Main's gen 7 is extractor v1 and not an ancestor of
+this chain.
+
+## Baseline identity — generation 6 (historical)
 
 | Field         | Value                                                           |
 | ------------- | --------------------------------------------------------------- |
@@ -13,20 +34,18 @@ against the Svelte generation-6 baseline.
 | Baseline file | `verification/baseline/svelte-e23e808.json` (blob `dfea6e11`)   |
 | Annotated tag | `migration-baseline-svelte-547a840-v2` (tag object `a13465850`) |
 
-Note: the separate C3 resynchronization lane will re-key the baseline to
-generation 7 when it resolves; this report's evidence is generation-6 keyed and
-does not carry over verbatim.
-
 ## Evidence lanes
 
 ### AC2–AC6, C1–C13 — automated parity + exception ledger
 
 - `pnpm migration:verify` (verify:next): **373 pages + 4 site artifacts, 0
-  unapproved differences** against the generation-6 baseline.
+  unapproved differences** — re-confirmed against the generation-8 baseline at
+  `f01ea06` (originally measured under generation 6).
 - `verification/diff-classification-manifest.json`: 695 classified
   differences, 11 classes, 0 unclassified, rebuild-stable (`--check`).
 - `verification/exception-ledger.json`: **1,071 approved rows** — all approved
-  by Brandon 2026-09-19 (commit `72d4e4f` added the 695 permanent rows).
+  by Brandon (gen-6 rows 2026-09-19 via `72d4e4f`; 15 rows re-keyed to gen-8
+  fingerprints 2026-09-20 via `f01ea06`).
 - Approved classes include KO-localization corrections, candidate-localized
   404, post-header redesign, nested Mermaid, CommonMark escaping, reading-time.
 - Contracts C1–C13 closed under `verification/contracts/`; defect-control

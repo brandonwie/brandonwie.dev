@@ -74,7 +74,11 @@ export function System3bPage({ locale }: { locale: Locale }) {
 			{/* Header */}
 			<section className="max-w-3xl">
 				<div className="mb-5 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-faint">
-					<a href={homeHref(locale)} className="transition-colors hover:text-foam">
+					<a
+						href={homeHref(locale)}
+						className="transition-colors hover:text-foam"
+						aria-label={m.palette_nav_home({}, { locale })}
+					>
 						~
 					</a>
 					<span className="text-line2">/</span>

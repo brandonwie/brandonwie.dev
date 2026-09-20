@@ -1,5 +1,5 @@
 {
-	"captured": "2026-09-19T15:29:35.145Z",
+	"captured": "2026-09-20T08:45:24.239Z",
 	"routes": {
 		"baseline:home": {
 			"title": "Brandon Wie | Software Engineer",
@@ -91,7 +91,7 @@
 			"preBlocks": 4,
 			"flowNodes": 0,
 			"flowEdges": 0,
-			"giscus": "https://giscus.app/en/widget?origin=http%3A%2F%2F127.0.0.1%3A63123%2Fposts%2Fgiscus-sveltekit-integration&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie",
+			"giscus": "https://giscus.app/en/widget?origin=http%3A%2F%2F127.0.0.1%3A50663%2Fposts%2Fgiscus-sveltekit-integration&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie",
 			"deckCounter": null,
 			"pagefind": false,
 			"consoleErrors": []
@@ -110,7 +110,7 @@
 			"preBlocks": 4,
 			"flowNodes": 0,
 			"flowEdges": 0,
-			"giscus": "https://giscus.app/ko/widget?origin=http%3A%2F%2F127.0.0.1%3A63123%2Fko%2Fposts%2Fgiscus-sveltekit-integration&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brand",
+			"giscus": "https://giscus.app/ko/widget?origin=http%3A%2F%2F127.0.0.1%3A50663%2Fko%2Fposts%2Fgiscus-sveltekit-integration&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brand",
 			"deckCounter": null,
 			"pagefind": false,
 			"consoleErrors": []
@@ -129,7 +129,7 @@
 			"preBlocks": 6,
 			"flowNodes": 0,
 			"flowEdges": 0,
-			"giscus": "https://giscus.app/en/widget?origin=http%3A%2F%2F127.0.0.1%3A63123%2Fposts%2Fai-code-review-patterns&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie%2Fbr",
+			"giscus": "https://giscus.app/en/widget?origin=http%3A%2F%2F127.0.0.1%3A50663%2Fposts%2Fai-code-review-patterns&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie%2Fbr",
 			"deckCounter": null,
 			"pagefind": false,
 			"consoleErrors": []
@@ -148,7 +148,7 @@
 			"preBlocks": 6,
 			"flowNodes": 0,
 			"flowEdges": 0,
-			"giscus": "https://giscus.app/ko/widget?origin=http%3A%2F%2F127.0.0.1%3A63123%2Fko%2Fposts%2Fai-code-review-patterns&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie",
+			"giscus": "https://giscus.app/ko/widget?origin=http%3A%2F%2F127.0.0.1%3A50663%2Fko%2Fposts%2Fai-code-review-patterns&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie",
 			"deckCounter": null,
 			"pagefind": false,
 			"consoleErrors": []
@@ -459,7 +459,45 @@
 			"pagefind": false,
 			"consoleErrors": []
 		},
+		"baseline:ko-contact": {
+			"title": "Contact | Brandon Wie",
+			"lang": "en",
+			"h1": "Contact",
+			"overflowX": false,
+			"scrollW": 1432,
+			"imgTotal": 0,
+			"imgNoAlt": 0,
+			"focusables": 23,
+			"mermaidSvgs": 0,
+			"mermaidBlocks": 0,
+			"preBlocks": 0,
+			"flowNodes": 0,
+			"flowEdges": 0,
+			"giscus": null,
+			"deckCounter": null,
+			"pagefind": false,
+			"consoleErrors": []
+		},
 		"baseline:projects": {
+			"title": "Projects | Brandon Wie",
+			"lang": "en",
+			"h1": "Projects",
+			"overflowX": false,
+			"scrollW": 1432,
+			"imgTotal": 3,
+			"imgNoAlt": 0,
+			"focusables": 23,
+			"mermaidSvgs": 0,
+			"mermaidBlocks": 0,
+			"preBlocks": 0,
+			"flowNodes": 0,
+			"flowEdges": 0,
+			"giscus": null,
+			"deckCounter": null,
+			"pagefind": false,
+			"consoleErrors": []
+		},
+		"baseline:ko-projects": {
 			"title": "Projects | Brandon Wie",
 			"lang": "en",
 			"h1": "Projects",
@@ -482,6 +520,25 @@
 			"title": "Social feed | Brandon Wie",
 			"lang": "en",
 			"h1": "Social feed",
+			"overflowX": false,
+			"scrollW": 1440,
+			"imgTotal": 0,
+			"imgNoAlt": 0,
+			"focusables": 22,
+			"mermaidSvgs": 0,
+			"mermaidBlocks": 0,
+			"preBlocks": 0,
+			"flowNodes": 0,
+			"flowEdges": 0,
+			"giscus": null,
+			"deckCounter": null,
+			"pagefind": false,
+			"consoleErrors": []
+		},
+		"baseline:ko-feed": {
+			"title": "소셜 피드 | Brandon Wie",
+			"lang": "en",
+			"h1": "소셜 피드",
 			"overflowX": false,
 			"scrollW": 1440,
 			"imgTotal": 0,
@@ -606,7 +663,7 @@
 			"preBlocks": 4,
 			"flowNodes": 0,
 			"flowEdges": 0,
-			"giscus": "https://giscus.app/en/widget?origin=http%3A%2F%2F127.0.0.1%3A63173%2Fposts%2Fgiscus-sveltekit-integration&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie",
+			"giscus": "https://giscus.app/en/widget?origin=http%3A%2F%2F127.0.0.1%3A50730%2Fposts%2Fgiscus-sveltekit-integration&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie",
 			"deckCounter": null,
 			"pagefind": false,
 			"consoleErrors": []
@@ -625,7 +682,7 @@
 			"preBlocks": 4,
 			"flowNodes": 0,
 			"flowEdges": 0,
-			"giscus": "https://giscus.app/ko/widget?origin=http%3A%2F%2F127.0.0.1%3A63173%2Fko%2Fposts%2Fgiscus-sveltekit-integration&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brand",
+			"giscus": "https://giscus.app/ko/widget?origin=http%3A%2F%2F127.0.0.1%3A50730%2Fko%2Fposts%2Fgiscus-sveltekit-integration&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brand",
 			"deckCounter": null,
 			"pagefind": false,
 			"consoleErrors": []
@@ -644,7 +701,7 @@
 			"preBlocks": 6,
 			"flowNodes": 0,
 			"flowEdges": 0,
-			"giscus": "https://giscus.app/en/widget?origin=http%3A%2F%2F127.0.0.1%3A63173%2Fposts%2Fai-code-review-patterns&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie%2Fbr",
+			"giscus": "https://giscus.app/en/widget?origin=http%3A%2F%2F127.0.0.1%3A50730%2Fposts%2Fai-code-review-patterns&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie%2Fbr",
 			"deckCounter": null,
 			"pagefind": false,
 			"consoleErrors": []
@@ -663,7 +720,7 @@
 			"preBlocks": 6,
 			"flowNodes": 0,
 			"flowEdges": 0,
-			"giscus": "https://giscus.app/ko/widget?origin=http%3A%2F%2F127.0.0.1%3A63173%2Fko%2Fposts%2Fai-code-review-patterns&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie",
+			"giscus": "https://giscus.app/ko/widget?origin=http%3A%2F%2F127.0.0.1%3A50730%2Fko%2Fposts%2Fai-code-review-patterns&session=&theme=dark_dimmed&reactionsEnabled=1&emitMetadata=0&inputPosition=top&repo=brandonwie",
 			"deckCounter": null,
 			"pagefind": false,
 			"consoleErrors": []
@@ -972,10 +1029,48 @@
 			"pagefind": false,
 			"consoleErrors": []
 		},
+		"candidate:ko-contact": {
+			"title": "연락 | Brandon Wie",
+			"lang": "ko",
+			"h1": "연락",
+			"overflowX": false,
+			"scrollW": 1432,
+			"imgTotal": 0,
+			"imgNoAlt": 0,
+			"focusables": 21,
+			"mermaidSvgs": 0,
+			"mermaidBlocks": 0,
+			"preBlocks": 0,
+			"flowNodes": 0,
+			"flowEdges": 0,
+			"giscus": null,
+			"deckCounter": null,
+			"pagefind": false,
+			"consoleErrors": []
+		},
 		"candidate:projects": {
 			"title": "Projects | Brandon Wie",
 			"lang": "en",
 			"h1": "Projects",
+			"overflowX": false,
+			"scrollW": 1432,
+			"imgTotal": 3,
+			"imgNoAlt": 0,
+			"focusables": 21,
+			"mermaidSvgs": 0,
+			"mermaidBlocks": 0,
+			"preBlocks": 0,
+			"flowNodes": 0,
+			"flowEdges": 0,
+			"giscus": null,
+			"deckCounter": null,
+			"pagefind": false,
+			"consoleErrors": []
+		},
+		"candidate:ko-projects": {
+			"title": "프로젝트 | Brandon Wie",
+			"lang": "ko",
+			"h1": "프로젝트",
 			"overflowX": false,
 			"scrollW": 1432,
 			"imgTotal": 3,
@@ -1010,15 +1105,15 @@
 			"pagefind": false,
 			"consoleErrors": []
 		},
-		"candidate:not-found": {
-			"title": "Page not found | Brandon Wie",
-			"lang": "en",
-			"h1": "Page not found",
+		"candidate:ko-feed": {
+			"title": "소셜 피드 | Brandon Wie",
+			"lang": "ko",
+			"h1": "소셜 피드",
 			"overflowX": false,
 			"scrollW": 1440,
 			"imgTotal": 0,
 			"imgNoAlt": 0,
-			"focusables": 18,
+			"focusables": 20,
 			"mermaidSvgs": 0,
 			"mermaidBlocks": 0,
 			"preBlocks": 0,
@@ -1027,10 +1122,26 @@
 			"giscus": null,
 			"deckCounter": null,
 			"pagefind": false,
-			"consoleErrors": [
-				"window.onerror: Uncaught Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
-				"window.onerror: Uncaught Error: Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
-			]
+			"consoleErrors": []
+		},
+		"candidate:not-found": {
+			"title": "Page not found | Brandon Wie",
+			"lang": "en",
+			"h1": "Page not found",
+			"overflowX": false,
+			"scrollW": 1440,
+			"imgTotal": 0,
+			"imgNoAlt": 0,
+			"focusables": 17,
+			"mermaidSvgs": 0,
+			"mermaidBlocks": 0,
+			"preBlocks": 0,
+			"flowNodes": 0,
+			"flowEdges": 0,
+			"giscus": null,
+			"deckCounter": null,
+			"pagefind": false,
+			"consoleErrors": []
 		}
 	}
 }

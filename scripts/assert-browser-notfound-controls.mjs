@@ -29,6 +29,7 @@ const CONTROLS = [
 		args: ['--render-toggle'],
 		expect: EXIT.FAIL,
 		expectedFailure: 'NF-01',
+		requiredDetail: 'language-toggle node(s)',
 	},
 	{
 		id: 'NFC-03',
@@ -50,14 +51,18 @@ function runControl(control) {
 	const expectedRowFailed =
 		!control.expectedFailure ||
 		(typeof res.stdout === 'string' && res.stdout.includes(`FAIL  ${control.expectedFailure}`));
+	const detailSeen =
+		!control.requiredDetail ||
+		(typeof res.stdout === 'string' && res.stdout.includes(control.requiredDetail));
 	const summarySeen =
 		!control.expectStdout ||
 		(typeof res.stdout === 'string' && res.stdout.includes(control.expectStdout));
 
-	const ok = code === control.expect && expectedRowFailed && summarySeen;
+	const ok = code === control.expect && expectedRowFailed && detailSeen && summarySeen;
 	const detail =
 		`exit ${code ?? res.error?.message} (want ${control.expect})` +
 		(control.expectedFailure ? `, FAIL ${control.expectedFailure} seen=${expectedRowFailed}` : '') +
+		(control.requiredDetail ? `, detail seen=${detailSeen}` : '') +
 		(control.expectStdout ? `, summary seen=${summarySeen}` : '');
 	return { ok, detail };
 }

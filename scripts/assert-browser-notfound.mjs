@@ -122,7 +122,7 @@ async function main() {
 		a.setAttribute('aria-label', 'injected toggle');
 		hc.appendChild(a);
 	}
-}).observe(document.documentElement, { childList: true, subtree: true });`,
+}).observe(document, { childList: true, subtree: true });`,
 			);
 
 		for (const route of ROUTES) {
