@@ -95,9 +95,11 @@ On threshold breach or probe failure:
 
 1. **Assets first.** Dashboard "Roll back" (or REST
    `POST …/pages/projects/brandonwie-dev/deployments/<id>/rollback`) to the
-   recorded pre-flip deployment (`5ec46cc7…` @ `0d80b01`, or the G4 target
-   `a385230f…` @ `1a83ebd` if so decided). This restores Svelte assets
-   immediately.
+   deployment ID recorded under **Pre-flip deployment ID** in the execution
+   record below — read live and written there at step 1 of the cutover, never
+   copied from this paragraph. Fallback if that entry is empty or
+   unreachable: the G4-era target `a385230f-f57e-432e-b743-6f51ea1f9e44` @
+   `1a83ebd`. This restores Svelte assets immediately.
 2. **Config second.** `destination_dir` back to `build`. Without this, the
    next push to `main` re-deploys Next — the flip alone survives an asset
    rollback.
