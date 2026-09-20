@@ -281,6 +281,24 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		// Same invisible spawn edge as migration:browser — browser-probe.mjs
+		// spawns serve-build.mjs to put next/build under test.
+		command: 'migration:browser:notfound',
+		entry: 'scripts/assert-browser-notfound.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		command: 'migration:browser:notfound:controls',
+		entry: 'scripts/assert-browser-notfound-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-notfound.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
 		command: 'migration:c13:controls',
 		entry: 'scripts/assert-c13-shell-controls.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],

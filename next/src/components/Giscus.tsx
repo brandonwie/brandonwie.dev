@@ -7,7 +7,6 @@ interface GiscusProps {
 	slug: string;
 	locale: Locale;
 	title: string;
-	statusMessage?: string;
 }
 
 /**
@@ -27,43 +26,40 @@ interface GiscusProps {
  *
  * REFERENCE: https://giscus.app
  */
-export function Giscus({ slug, locale, title, statusMessage }: GiscusProps) {
-	const containerRef =
-		typeof useRef === 'function' ? useRef<HTMLDivElement>(null) : { current: null };
+export function Giscus({ slug, locale, title }: GiscusProps) {
+	const containerRef = useRef<HTMLDivElement>(null);
 
-	if (typeof useEffect === 'function') {
-		useEffect(() => {
-			const container = containerRef.current;
-			if (!container) return;
+	useEffect(() => {
+		const container = containerRef.current;
+		if (!container) return;
 
-			// Prevent duplicate script injection
-			if (container.querySelector('script[src="https://giscus.app/client.js"]')) {
-				return;
-			}
+		// Prevent duplicate script injection
+		if (container.querySelector('script[src="https://giscus.app/client.js"]')) {
+			return;
+		}
 
-			const script = document.createElement('script');
-			script.src = 'https://giscus.app/client.js';
-			script.async = true;
-			script.crossOrigin = 'anonymous';
+		const script = document.createElement('script');
+		script.src = 'https://giscus.app/client.js';
+		script.async = true;
+		script.crossOrigin = 'anonymous';
 
-			// Configuration from giscus.app (matches src/lib/components/Giscus.svelte)
-			script.dataset.repo = 'brandonwie/brandonwie.dev';
-			script.dataset.repoId = 'R_kgDORBkERA';
-			script.dataset.category = 'Blog Comments';
-			script.dataset.categoryId = 'DIC_kwDORBkERM4C1gHN';
-			script.dataset.mapping = 'specific';
-			script.dataset.term = slug; // Shared between EN/KO versions
-			script.dataset.strict = '0';
-			script.dataset.reactionsEnabled = '1';
-			script.dataset.emitMetadata = '0';
-			script.dataset.inputPosition = 'top';
-			script.dataset.theme = 'dark_dimmed';
-			script.dataset.lang = locale;
-			script.dataset.loading = 'lazy';
+		// Configuration from giscus.app (matches src/lib/components/Giscus.svelte)
+		script.dataset.repo = 'brandonwie/brandonwie.dev';
+		script.dataset.repoId = 'R_kgDORBkERA';
+		script.dataset.category = 'Blog Comments';
+		script.dataset.categoryId = 'DIC_kwDORBkERM4C1gHN';
+		script.dataset.mapping = 'specific';
+		script.dataset.term = slug; // Shared between EN/KO versions
+		script.dataset.strict = '0';
+		script.dataset.reactionsEnabled = '1';
+		script.dataset.emitMetadata = '0';
+		script.dataset.inputPosition = 'top';
+		script.dataset.theme = 'dark_dimmed';
+		script.dataset.lang = locale;
+		script.dataset.loading = 'lazy';
 
-			container.appendChild(script);
-		}, [slug, locale]);
-	}
+		container.appendChild(script);
+	}, [slug, locale]);
 
 	return (
 		<section
@@ -74,7 +70,6 @@ export function Giscus({ slug, locale, title, statusMessage }: GiscusProps) {
 			<h2 id="comments-title" className="mb-8 text-xl font-semibold text-terminal-text-primary">
 				{title}
 			</h2>
-			{statusMessage ? <p className="sr-only">{statusMessage}</p> : null}
 			<div
 				ref={containerRef}
 				className="giscus-container"

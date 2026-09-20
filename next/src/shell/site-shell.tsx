@@ -32,10 +32,13 @@ import type { Locale } from './document';
 export function SiteShell({
 	locale,
 	header,
+	suppressLocaleToggle = false,
 	children,
 }: {
 	locale: Locale;
 	header?: ReactNode;
+	/** Error routes set this so the client render matches the server's no-toggle HTML. */
+	suppressLocaleToggle?: boolean;
 	children: ReactNode;
 }) {
 	const copy = shellCopy(locale);
@@ -45,7 +48,9 @@ export function SiteShell({
 			<a className="skip-link" href="#main-content">
 				{copy.skip}
 			</a>
-			{header ?? <SiteHeader locale={locale} copy={copy} />}
+			{header ?? (
+				<SiteHeader locale={locale} copy={copy} suppressLocaleToggle={suppressLocaleToggle} />
+			)}
 			<main id="main-content" className="page-frame" tabIndex={-1}>
 				{children}
 			</main>

@@ -206,8 +206,7 @@ export default function AvlTreeVisualizer({ copy }: { copy: AvlVisualizerCopy })
 									textAnchor="middle"
 									className={`font-mono text-[8px] uppercase tracking-wider ${bfClass(node.bf, role)}`}
 								>
-									{copy.balanceFactorLabel}
-									{formatBf(node.bf)}
+									{copy.balanceFactorLabel} {formatBf(node.bf)}
 								</text>
 								{role ? (
 									<text

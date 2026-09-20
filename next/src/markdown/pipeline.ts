@@ -17,7 +17,10 @@ import { educateSource } from './plugins/remark-smart-typography';
 // Framework-neutral and shared with the SvelteKit app rather than copied, so
 // the two stacks cannot drift while both exist. They move into this package
 // when SvelteKit is removed and `next/` collapses into the repository root.
-import { remarkReadingTime } from '../../../src/lib/plugins/remark-reading-time.js';
+// remarkReadingTime is the exception: the Svelte-side plugin's word count
+// depends on remarkMermaidComponent's html-literal output, which this pipeline
+// does not produce -- see plugins/remark-reading-time.ts for the parity shim.
+import { remarkReadingTime } from './plugins/remark-reading-time';
 import { remarkTocExtract } from '../../../src/lib/plugins/remark-toc-extract.js';
 import Mermaid from '../components/Mermaid';
 
@@ -36,7 +39,23 @@ export interface RenderedMarkdown {
 	headings: Heading[];
 }
 
-export type ParsedMarkdownSource = Pick<matter.GrayMatterFile<string>, 'data' | 'content'>;
+export type ParsedMarkdownSource = Pick<matter.GrayMatterFile<string>, 'data' | 'content'> & {
+	/** The raw `---...---` frontmatter block, when the source had one. The
+	 * baseline's reading-time count included its words (mdsvex never stripped
+	 * fm before the remark chain); the parity plugin counts it from here. */
+	fmRaw?: string;
+};
+
+/**
+ * The raw frontmatter block: an opening `---` at offset 0 through a closing
+ * `---` on its own line (optionally at EOF). Anchoring the close to a line
+ * start keeps a `key: ---` block scalar from terminating the block early,
+ * and the `$` alternative keeps a delimiter at EOF without a trailing
+ * newline in the match.
+ */
+export function frontmatterRaw(source: string): string {
+	return source.match(/^---\r?\n[\s\S]*?\n---(?:\r?\n|$)/)?.[0] ?? '';
+}
 
 /**
  * Languages the SvelteKit build highlights (`svelte.config.js` getHighlighter).
@@ -104,11 +123,22 @@ export async function renderMarkdown(
 	// list included, therefore sees the typeset text, which is the order mdsvex
 	// used when it ran smartypants before the user's remark plugins.
 	const content = educateSource(raw);
+	// mdsvex passed the `---` frontmatter block through the same remark chain,
+	// so the baseline's reading time counted title/description/tags words too.
+	// The parity plugin counts them from this seed -- see
+	// `plugins/remark-reading-time.ts` for the reproduction notes.
+	const fmRaw = educateSource(
+		typeof source === 'string' ? frontmatterRaw(source) : (source.fmRaw ?? ''),
+	);
 
 	const processor = unified()
 		.use(remarkParse)
 		.use(remarkMermaidNode)
-		.use(remarkGfm)
+		// `singleTilde` defaults to true and turns a lone `~` between two inline
+		// code spans into <del> — mdsvex never parsed it, so Korean prose like
+		// `T00`~`T24` rendered struck-through on the candidate. GFM only needs
+		// the standard `~~` form for real strikethrough.
+		.use(remarkGfm, { singleTilde: false })
 		.use(remarkReadingTime)
 		.use(remarkTocExtract)
 		.use(remarkRehype, {
@@ -127,6 +157,7 @@ export async function renderMarkdown(
 	// remark-reading-time and remark-toc-extract read `data.fm` and extend it.
 	const vfile = new VFile({ value: content });
 	vfile.data.fm = { ...frontmatter };
+	vfile.data.fmRaw = fmRaw;
 
 	const hast = await processor.run(processor.parse(vfile), vfile);
 	const data = (vfile.data.fm ?? {}) as Record<string, unknown>;

@@ -139,19 +139,19 @@ is only ever checked when it reports nothing is not checked at all.
 The 26 study components live at `src/lib/components/study/`. Route 9 above
 instantiates nine of them; the remaining seventeen are inventoried here.
 
-| Surface                                                                                                                    | Route that exercises it           | Closing slice                                 |
-| -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | --------------------------------------------- |
-| `ArrayListVisualizer`, `BigOExplorer`, `BinarySearchVisualizer`, `RecursionTrace`, `StackQueueVisualizer`, `DsaIStudyPage` | `/study/dsa-i`                    | Slice 4 — captured, see PR-D note below       |
-| `AvlTreeVisualizer`, `TwoFourTreeVisualizer`, `IterativeSortVisualizer`, `DivideConquerSortVisualizer`, `DsaIIIStudyPage`  | `/study/dsa-iii`                  | Slice 4 — captured, see PR-D note below       |
-| `PatternMatchVisualizer`, `GraphTraversalVisualizer`, `MstVisualizer`, `LcsTableVisualizer`, `DsaIVStudyPage`              | `/study/dsa-iv`                   | Slice 4 — captured, see PR-D note below       |
-| `StudyIndexPage`                                                                                                           | `/study`                          | Slice 4 — captured, see PR-D note below       |
-| KO study routes                                                                                                            | `/ko/study`, `/ko/study/dsa-i…iv` | Slice 4 — captured, see PR-D note below       |
-| The other 19 deck slides and the video behavior                                                                            | `/talks/my-career`                | Slice 4 — captured, see PR-D note below       |
-| `/system` index, `/ko/system`                                                                                              | those routes                      | Slice 4 — captured, see PR-C note below       |
-| `/ko/system/3b` in a browser: graph mount, controls, screenshots                                                           | `/ko/system/3b`                   | Slice 4 — captured, see PR-C note below       |
-| `/about`, `/contact`, `/projects`, `/feed`, `/404` and their KO twins                                                      | those routes                      | Slice 3                                       |
-| The other 166 EN posts and 166 KO posts                                                                                    | post detail routes                | Slice 3                                       |
-| Giscus thread rendering against the live GitHub backend                                                                    | any post detail                   | Slice 3 — needs network and a real discussion |
+| Surface                                                                                                                    | Route that exercises it           | Closing slice                              |
+| -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------ |
+| `ArrayListVisualizer`, `BigOExplorer`, `BinarySearchVisualizer`, `RecursionTrace`, `StackQueueVisualizer`, `DsaIStudyPage` | `/study/dsa-i`                    | Slice 4 — captured, see PR-D note below    |
+| `AvlTreeVisualizer`, `TwoFourTreeVisualizer`, `IterativeSortVisualizer`, `DivideConquerSortVisualizer`, `DsaIIIStudyPage`  | `/study/dsa-iii`                  | Slice 4 — captured, see PR-D note below    |
+| `PatternMatchVisualizer`, `GraphTraversalVisualizer`, `MstVisualizer`, `LcsTableVisualizer`, `DsaIVStudyPage`              | `/study/dsa-iv`                   | Slice 4 — captured, see PR-D note below    |
+| `StudyIndexPage`                                                                                                           | `/study`                          | Slice 4 — captured, see PR-D note below    |
+| KO study routes                                                                                                            | `/ko/study`, `/ko/study/dsa-i…iv` | Slice 4 — captured, see PR-D note below    |
+| The other 19 deck slides and the video behavior                                                                            | `/talks/my-career`                | Slice 4 — captured, see PR-D note below    |
+| `/system` index, `/ko/system`                                                                                              | those routes                      | Slice 4 — captured, see PR-C note below    |
+| `/ko/system/3b` in a browser: graph mount, controls, screenshots                                                           | `/ko/system/3b`                   | Slice 4 — captured, see PR-C note below    |
+| `/about`, `/contact`, `/projects`, `/feed`, `/404` and their KO twins                                                      | those routes                      | Slice 5 — captured, see Slice 5 note below |
+| The other 166 EN posts and 166 KO posts                                                                                    | post detail routes                | Slice 5 — captured, see Slice 5 note below |
+| Giscus thread rendering against the live GitHub backend                                                                    | any post detail                   | Slice 5 — captured, see Slice 5 note below |
 
 A pending row is closed by adding a captured row for its surface, not by
 deleting it.
@@ -210,3 +210,23 @@ slide at its registry label. Screenshots at all three viewports live in
 `./screenshots/slice4-ac7/` (`<slug>@<W>x<H>.jpg`, 39 captures). The
 functional smoke for these routes stays `migration:browser:study`; this
 suite is the AC7-methodology capture that pending rows named.
+
+**Slice 5 capture (Next candidate):** the last three rows are closed by the
+paired manual comparison and the parity suite. For `/about`, `/contact`,
+`/projects`, `/feed`, `/404` and their KO twins: `manual-comparison.md`
+"Document-shell surfaces" and "404" rows both PASS — `/about`, `/ko/about`,
+`/contact`, `/projects`, `/feed` render with only approved-ledger shell
+diffs, and `/404` plus runtime misses `/does-not-exist-xyz` and
+`/ko/does-not-exist` hydrate with zero window errors under
+`migration:browser:notfound` (the F1 fix; the KO 404 renders the English
+global-not-found, the approved candidate-localized-404 class). For the other
+166 EN and 166 KO post details: `pnpm migration:verify` reports PARITY over
+all 373 pages with 0 unapproved differences at `82748d5`, every residual diff
+sitting in an approved ledger class, and the manual comparison sampled the
+post-detail surface directly (Giscus post EN/KO, Mermaid post EN/KO — PASS).
+For Giscus thread rendering against the live GitHub backend: Brandon
+confirmed 2026-09-20 on the locally served `next/build` (`serve-build`
+:4173) that the GitHub Discussions thread visibly loads on both
+`/posts/giscus-sveltekit-integration` and `/ko/posts/…` — the F2 PASS row in
+`manual-comparison.md`, on top of identical iframe `src` parity and the C10
+build-time `data-term` + locale assertion. No pending rows remain.

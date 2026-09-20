@@ -976,7 +976,13 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 		() => {
 			must(pageHtml.includes(FALLBACK_SENTINEL), `${FALLBACK_SENTINEL} is absent from the export`);
 			const stripped = stripReactComments(pageHtml);
-			const counts = [...stripped.matchAll(/(\d+)\s*nodes/g)].map((m) => Number(m[1]));
+			// The page now legitimately prints "N nodes" OUTSIDE the fallback too
+			// (the ported layer cards carry the same per-lane counts), so the match
+			// must be scoped to the fallback element or it double-counts.
+			const fbStart = stripped.indexOf(FALLBACK_SENTINEL);
+			const fbEnd = stripped.indexOf('</ol>', fbStart);
+			const fallbackHtml = stripped.slice(fbStart, fbEnd === -1 ? stripped.length : fbEnd);
+			const counts = [...fallbackHtml.matchAll(/(\d+)\s*nodes/g)].map((m) => Number(m[1]));
 			eq(counts, laneCounts, 'lane counts in the prerendered fallback');
 			return `${FALLBACK_SENTINEL} present, lanes ${counts.join(',')}`;
 		},

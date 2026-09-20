@@ -31,3 +31,17 @@ export function formatDateShort(dateStr: string, locale: Locale): string {
 		timeZone: 'UTC',
 	});
 }
+
+/**
+ * Format date for the post detail header (long month: "September 3, 2026" /
+ * "2026.09.03"), matching SvelteKit's formatDateLong. UTC for determinism.
+ */
+export function formatDateLong(dateStr: string, locale: Locale): string {
+	if (locale === 'ko') return formatKoreanDate(dateStr);
+	return new Date(dateStr).toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric',
+		timeZone: 'UTC',
+	});
+}

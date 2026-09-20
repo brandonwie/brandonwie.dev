@@ -22,10 +22,36 @@ export interface SnapBlogSeries {
 	status: 'published' | 'planned';
 }
 
+/** One overview stat card (metric label + rendered value). */
+export interface SnapStat {
+	metric: string;
+	value: string;
+}
+
+/** One subsystem card — `public_safe:false` earns the reads-private badge. */
+export interface SnapSubsystem {
+	key: string;
+	name: string;
+	display_one_liner: string;
+	public_safe: boolean;
+}
+
+/** One decision-history (ADR) row. */
+export interface SnapEvolution {
+	id: string;
+	title: string;
+	date: string;
+}
+
 export interface SystemSnapshot {
+	model_generated: string;
+	snapshot_built_at: string;
 	nodes: SnapNode[];
 	edges: SnapEdge[];
 	layers: SnapLayer[];
+	subsystems: SnapSubsystem[];
+	evolution: SnapEvolution[];
+	stats: SnapStat[];
 	blog_series: SnapBlogSeries[];
 }
 

@@ -5,7 +5,12 @@ import matter from 'gray-matter';
 import { cache } from 'react';
 
 import type { Locale } from '../i18n/locale';
-import { renderMarkdown, type Heading, type ParsedMarkdownSource } from '../markdown/pipeline';
+import {
+	frontmatterRaw,
+	renderMarkdown,
+	type Heading,
+	type ParsedMarkdownSource,
+} from '../markdown/pipeline';
 
 /**
  * Post loading for the Next candidate.
@@ -124,7 +129,13 @@ function readParsedPost(file: string): ParsedMarkdownSource {
 	const cached = postSourceCache.get(file);
 	if (cached?.mtimeMs === mtimeMs && cached.size === size) return cached.parsed;
 
-	const parsed = matter(readFileSync(file, 'utf8'));
+	const source = readFileSync(file, 'utf8');
+	const m = matter(source);
+	const parsed: ParsedMarkdownSource = {
+		data: m.data,
+		content: m.content,
+		fmRaw: frontmatterRaw(source),
+	};
 	postSourceCache.set(file, { mtimeMs, size, parsed });
 	return parsed;
 }
