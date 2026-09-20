@@ -179,7 +179,7 @@ function decodeEntities(value: string): string {
 					body[1] === 'x' || body[1] === 'X'
 						? parseInt(body.slice(2), 16)
 						: parseInt(body.slice(1), 10);
-				return code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff)
+				return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff)
 					? String.fromCodePoint(code)
 					: '�';
 			}
