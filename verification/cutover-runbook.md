@@ -34,10 +34,15 @@ drift — the flip itself is a dashboard change git cannot see.
 | G4 rollback target | `a385230f-f57e-432e-b743-6f51ea1f9e44` @ `1a83ebd`                 |
 
 Pre-flip production state at authoring: canonical deployment
-`5ec46cc7-55c2-484d-8f0b-0c3749476d87` @ `0d80b01` (post-merge build, still
-serving the Svelte `build/` tree). This is a fresher Svelte rollback candidate
-than the G4-recorded `a385230f`; whichever deployment is canonical at flip time
-becomes the recorded rollback target below.
+`1b8e71f3-e8af-4984-965c-6025d6a409a8` @ `8f176dc` — the runbook commit itself
+redeployed production (docs-only, still serving the Svelte `build/` tree),
+displacing `5ec46cc7-55c2-484d-8f0b-0c3749476d87` @ `0d80b01` within a minute of
+it being recorded here. That is the operational fact: **this project redeploys
+production on every push to `main`, docs-only included.** After the flip, any
+later `main` push serves Next — treat the flip as _arming_, not a one-shot
+event, and keep `main` quiet until the post-deploy probe passes. Whichever
+deployment is canonical at flip time becomes the recorded rollback target
+below.
 
 ## Preconditions — re-verify at flip time, not from memory
 
