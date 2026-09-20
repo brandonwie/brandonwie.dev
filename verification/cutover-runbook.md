@@ -83,8 +83,9 @@ Assert on the live domain immediately after the new deployment:
       No `_headers`/`_routes` file is tracked in the repo, so the rehearsal's
       noindex marker cannot leak — assert that absence on live anyway, on the
       root domain AND `brandonwie-dev.pages.dev` alias.
-- [ ] Feeds valid (`/feed.xml`, `/ko/feed.xml`), `robots.txt` intact,
-      Pagefind search functional on `/search`.
+- [ ] Feeds valid (`/rss.xml`, `/ko/rss.xml` — the site's only feed paths;
+      `/feed.xml` 404s on both stacks), `robots.txt` intact, Pagefind entry
+      JSON serves on `/pagefind/pagefind-entry.json`.
 - [ ] Fresh `*.pages.dev` hash subdomains may serve ~60 s of TLS lag after
       first deploy (rehearsal observation) — not an error; retry before
       flagging.
@@ -116,17 +117,21 @@ user-reported breakage, feed/search regression).
 
 ## Execution record (fill at execution time)
 
-| Field                     | Value                  |
-| ------------------------- | ---------------------- |
-| Flip executed by / at     | _pending_              |
-| Pre-flip deployment ID    | _pending_ (read live)  |
-| Pre-flip commit           | _pending_              |
-| Post-flip deployment ID   | _pending_              |
-| Post-flip commit          | _pending_              |
-| destination_dir old → new | `build` → `next/build` |
-| Probe result              | _pending_              |
-| Token `249ae685…` revoked | _pending_              |
-| Monitoring window opened  | _pending_              |
+| Field                     | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Flip executed by / at     | Brandon (dashboard) / 2026-09-20 ~23:1x UTC                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Pre-flip deployment ID    | `93a3f41a-b21a-46a6-88a8-f9f6cec48468` (canonical at flip time, read live)                                                                                                                                                                                                                                                                                                                                                                                             |
+| Pre-flip commit           | `37887e2`                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Post-flip deployment ID   | `b8593022-8477-4813-bbce-b64b27ebc1e8` — completed 2026-09-20T23:22:40Z                                                                                                                                                                                                                                                                                                                                                                                                |
+| Post-flip commit          | `37887e2`                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| destination_dir old → new | `build` → `next/build`                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Probe result              | **PASS** (live 2026-09-20 ~23:25 UTC): 15 routes 200, unmatched path → real 404; `lang` en/ko correct; canonicals → `brandonwie.dev`; `noindex` only on `/talks/my-career` (meta robots), absent on `/`, `/ko`, `/posts` and the `pages.dev` alias; `/rss.xml` + `/ko/rss.xml` `application/xml` 200, `robots.txt`/`sitemap.xml` 200, `/pagefind/pagefind-entry.json` 200; `giscus.app` + canonical on post pages; live root shows `_next` markers (cutover confirmed) |
+| Token `249ae685…` revoked | yes — Brandon, 2026-09-20                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Monitoring window opened  | 2026-09-20T23:25Z — Search Console / analytics / errors / feeds / CWV                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+Note: committing this record pushes to `main`, which post-flip redeploys
+production as Next (the arming warning, operational). Expected and harmless —
+content is the same reviewed tree.
 
 ## Discipline
 
