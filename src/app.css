@@ -40,6 +40,10 @@
 	--color-highlight-low: var(--highlight-low);
 	--color-highlight-med: var(--highlight-med);
 	--color-highlight-high: var(--highlight-high);
+	--color-crt-glass: var(--crt-glass);
+	--color-crt-amber: var(--crt-amber);
+	--color-crt-green: var(--crt-green);
+	--color-crt-scanline: var(--crt-scanline);
 
 	/*
 	  Legacy terminal-* tokens kept as ALIASES over the semantic/role vars so
@@ -137,6 +141,10 @@
 		--ok: var(--foam);
 		--warn: var(--gold);
 		--crit: var(--love);
+		--crt-glass: #0d0b13;
+		--crt-amber: #e0a35c;
+		--crt-green: #9fd6a7;
+		--crt-scanline: #05040acc;
 
 		color-scheme: dark;
 
@@ -284,6 +292,56 @@
 		0 0 8px var(--accent-strong),
 		0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
 	animation: blink 1s step-end infinite;
+}
+
+/* Phosphor Fade: the approved reference uses a soft bezel bloom. */
+@utility crt-panel {
+	position: relative;
+	border: 1px solid var(--line2);
+	border-radius: 14px;
+	background-color: var(--crt-glass);
+	padding: 2px;
+	box-shadow:
+		0 0 12px #e0a35c33,
+		0 0 40px #e0a35c1a;
+
+	@media (width < 64rem) {
+		border-radius: 10px;
+	}
+}
+
+@utility crt-glass-inner {
+	position: relative;
+	isolation: isolate;
+	border-radius: 12px;
+	overflow: hidden;
+	padding: 22px 26px 30px;
+
+	@media (width < 64rem) {
+		border-radius: 8px;
+		padding: 16px;
+	}
+}
+
+/* Text lives in a separate z-10 wrapper above both decorative textures. */
+@utility crt-film {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background-image:
+		repeating-linear-gradient(
+			0deg,
+			color-mix(in srgb, var(--crt-scanline) 50%, transparent) 0 1px,
+			transparent 1px 3px
+		),
+		radial-gradient(120% 90% at 50% 45%, transparent 55%, var(--crt-scanline) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cursor-block,
+	.animate-blink {
+		animation: none;
+	}
 }
 
 /* Fuzzy finder styling */

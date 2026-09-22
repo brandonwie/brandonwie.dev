@@ -205,10 +205,9 @@ export function aboutCopy(locale: Locale) {
 	return {
 		backToHome: m.back_to_home({}, { locale }),
 		navAbout: m.nav_about({}, { locale }),
-		nowLead:
-			locale === 'ko'
-				? '현재의 일은 백엔드 기능 하나가 아니라 운영 가능한 제품 시스템 전체에 가깝습니다.'
-				: 'The current work is less about one backend feature and more about the product system that has to keep operating.',
+		terminalSignal: m.about_terminal_signal({}, { locale }),
+		terminalLoading: m.about_terminal_loading({}, { locale }),
+		portraitCaption: m.about_portrait_caption({}, { locale }),
 	};
 }
 
