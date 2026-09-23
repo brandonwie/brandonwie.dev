@@ -12,6 +12,7 @@
  *   - BSC-07: Gate control — search readiness marker suppressed fails (exit 1)
  *   - BSC-08: Assertion control — search input event suppressed fails (exit 1)
  *   - BSC-09: Invariance control — unmutated search probe passes all rows (exit 0)
+ *   - BSC-10: B1 defect — a /ko page initialising Pagefind as English fails BS-08 (exit 1)
  *
  * Exit 0 all controls behave as specified, 1 otherwise, 3 skipped (no browser).
  */
@@ -80,9 +81,17 @@ const CONTROLS = [
 	{
 		id: 'BSC-09',
 		kind: 'INVARIANCE',
-		what: 'unmutated probe runs and passes all 9 rows',
+		what: 'unmutated probe runs and passes all 10 rows',
 		args: [],
 		expect: EXIT.PASS,
+	},
+	{
+		id: 'BSC-10',
+		kind: 'DEFECT',
+		what: 'B1 defect: /ko/search loading the English index fails the Hangul row',
+		args: ['--english-index-on-ko'],
+		expect: EXIT.FAIL,
+		expectedFailure: 'BS-08',
 	},
 ];
 
@@ -93,10 +102,14 @@ function runControl(control) {
 	});
 
 	const code = res.status;
-	const ok = code === control.expect;
+	// A control may also name the row that must be the one failing.
+	const rowFailed =
+		!control.expectedFailure ||
+		(typeof res.stdout === 'string' && res.stdout.includes(`FAIL  ${control.expectedFailure}`));
+	const ok = code === control.expect && rowFailed;
 	const detail = ok
-		? `exited ${code} as expected`
-		: `expected exit ${control.expect}, got ${code}${
+		? `exited ${code} as expected${control.expectedFailure ? `, ${control.expectedFailure} failed` : ''}`
+		: `expected exit ${control.expect}${control.expectedFailure ? ` with ${control.expectedFailure} failing` : ''}, got ${code}${
 				res.error ? ` (spawn error: ${res.error.message})` : ''
 			}\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`;
 
