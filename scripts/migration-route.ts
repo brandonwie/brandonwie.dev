@@ -733,7 +733,9 @@ export const SUITES: Suite[] = [
 	{
 		command: 'migration:verify:svelte',
 		entry: 'scripts/migration-verify.ts',
-		dataRoots: [...SVELTE_BUILD_SOURCES, ...BASELINE],
+		// package.json passes this ledger via --ledger; once migration:controls
+		// named it, a ledger edit stopped going broad and would have skipped this.
+		dataRoots: [...SVELTE_BUILD_SOURCES, ...BASELINE, 'verification/svelte-d9-ledger.json'],
 		tier: 'push',
 	},
 	{
@@ -750,7 +752,9 @@ export const SUITES: Suite[] = [
 		// controls re-captures the whole 366-page build. CI only, in its own job.
 		command: 'migration:controls',
 		entry: 'scripts/migration-verify-controls.ts',
-		dataRoots: [...SVELTE_BUILD_SOURCES, ...BASELINE],
+		// The seed ledger is a runtime input: package.json passes it via --ledger
+		// and every control starts from it, so an edit to it must select this suite.
+		dataRoots: [...SVELTE_BUILD_SOURCES, ...BASELINE, 'verification/svelte-d9-ledger.json'],
 		tier: 'ci',
 	},
 	{

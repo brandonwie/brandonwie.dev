@@ -70,7 +70,9 @@
  * they introduce -- `onerror` recorded as presence rather than value -- is
  * control 39, bounded by 40.
  *
- * USAGE  tsx scripts/migration-verify-controls.ts <build-dir> <baseline.json>
+ * USAGE  tsx scripts/migration-verify-controls.ts <build-dir> <baseline.json> [--ledger <path>]
+ *        --ledger seeds every control's ledger with the approvals the real suite
+ *        uses (see SEED_LEDGER); without it every control starts from `[]`.
  * EXIT   0 = every control produced the exit code it must; 1 = one did not
  */
 
@@ -91,9 +93,16 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const [buildDir, baselineFile] = process.argv.slice(2);
-if (!buildDir || !baselineFile) {
-	console.error('usage: migration-verify-controls <build-dir> <baseline.json>');
+const [buildDir, baselineFile, ...flags] = process.argv.slice(2);
+const ledgerFlag = flags.indexOf('--ledger');
+const seedLedgerPath = ledgerFlag === -1 ? null : flags[ledgerFlag + 1];
+if (
+	!buildDir ||
+	!baselineFile ||
+	(ledgerFlag !== -1 && !seedLedgerPath) ||
+	flags.length !== (ledgerFlag === -1 ? 0 : 2)
+) {
+	console.error('usage: migration-verify-controls <build-dir> <baseline.json> [--ledger <path>]');
 	process.exit(2);
 }
 
@@ -131,6 +140,30 @@ interface Control {
 }
 
 const EMPTY_LEDGER = '[]\n';
+
+/**
+ * REDESIGN: every control starts from the approvals the real Svelte suite runs
+ * under, not from `[]`. D9 (9759b77) changed the footer theme line that the
+ * legacy Svelte footer renders on every route, and e6febda approved those 367
+ * `[text]` differences in verification/svelte-d9-ledger.json for
+ * `migration:verify:svelte`. Seeded empty, each control's starting state
+ * already carried 367 unapproved differences: every INVARIANCE control exited 1
+ * and every DEFECT control exited 1 on the footer, not on its own mutation. A
+ * control must differ from the passing real suite by exactly its injection.
+ */
+const SEED_LEDGER: string = seedLedgerPath ? readFileSync(seedLedgerPath, 'utf8') : EMPTY_LEDGER;
+if (!Array.isArray(JSON.parse(SEED_LEDGER))) {
+	console.error(`FATAL: seed ledger ${seedLedgerPath} is not a JSON array`);
+	process.exit(2);
+}
+
+/** Adds a control's own entries AFTER the seeded approvals. Replacing the file
+ *  would drop the seed and fail the control on the seeded differences instead
+ *  of on the entries it exists to test. */
+function appendLedger(ledgerPath: string, entries: Record<string, string>[]): void {
+	const current = JSON.parse(readFileSync(ledgerPath, 'utf8')) as unknown[];
+	writeFileSync(ledgerPath, `${JSON.stringify([...current, ...entries], null, 2)}\n`);
+}
 
 /** A page the baseline has never seen -- the shape a Slice 2 spike route or the
  *  S9 mermaid fixture takes. */
@@ -216,23 +249,16 @@ const CONTROLS: Control[] = [
 		kind: 'defect',
 		expect: 1,
 		apply: (_dir, ledgerPath) => {
-			writeFileSync(
-				ledgerPath,
-				`${JSON.stringify(
-					[
-						{
-							url: '/about',
-							field: 'title',
-							fingerprint: '0'.repeat(32),
-							reason: 'approves a difference that does not exist',
-							approved_by: 'control-5',
-							approved_on: '2026-08-25',
-						},
-					],
-					null,
-					2,
-				)}\n`,
-			);
+			appendLedger(ledgerPath, [
+				{
+					url: '/about',
+					field: 'title',
+					fingerprint: '0'.repeat(32),
+					reason: 'approves a difference that does not exist',
+					approved_by: 'control-5',
+					approved_on: '2026-08-25',
+				},
+			]);
 		},
 	},
 	{
@@ -254,24 +280,17 @@ const CONTROLS: Control[] = [
 		kind: 'defect',
 		expect: 1,
 		apply: (_dir, ledgerPath) => {
-			writeFileSync(
-				ledgerPath,
-				`${JSON.stringify(
-					[
-						{
-							url: '/about',
-							field: 'title',
-							fingerprint: '0'.repeat(32),
-							reason: 'carries a key the closed format does not allow',
-							approved_by: 'control-7',
-							approved_on: '2026-08-25',
-							severity: 'minor',
-						},
-					],
-					null,
-					2,
-				)}\n`,
-			);
+			appendLedger(ledgerPath, [
+				{
+					url: '/about',
+					field: 'title',
+					fingerprint: '0'.repeat(32),
+					reason: 'carries a key the closed format does not allow',
+					approved_by: 'control-7',
+					approved_on: '2026-08-25',
+					severity: 'minor',
+				},
+			]);
 		},
 	},
 	{
@@ -351,23 +370,16 @@ const CONTROLS: Control[] = [
 				file,
 				html.replace(/<title>([\s\S]*?)<\/title>/i, '<title>Something Else Entirely</title>'),
 			);
-			writeFileSync(
-				ledgerPath,
-				`${JSON.stringify(
-					[
-						{
-							url: '/about',
-							field: 'title',
-							fingerprint: approvedRenameFingerprint(),
-							reason: 'approves one specific title change, not the title field',
-							approved_by: 'control-14',
-							approved_on: '2026-08-25',
-						},
-					],
-					null,
-					2,
-				)}\n`,
-			);
+			appendLedger(ledgerPath, [
+				{
+					url: '/about',
+					field: 'title',
+					fingerprint: approvedRenameFingerprint(),
+					reason: 'approves one specific title change, not the title field',
+					approved_by: 'control-14',
+					approved_on: '2026-08-25',
+				},
+			]);
 		},
 	},
 	{
@@ -382,23 +394,16 @@ const CONTROLS: Control[] = [
 				file,
 				html.replace(/<title>([\s\S]*?)<\/title>/i, '<title>An Approved Rename</title>'),
 			);
-			writeFileSync(
-				ledgerPath,
-				`${JSON.stringify(
-					[
-						{
-							url: '/about',
-							field: 'title',
-							fingerprint: approvedRenameFingerprint(),
-							reason: 'the one difference this entry exists to approve',
-							approved_by: 'control-15',
-							approved_on: '2026-08-25',
-						},
-					],
-					null,
-					2,
-				)}\n`,
-			);
+			appendLedger(ledgerPath, [
+				{
+					url: '/about',
+					field: 'title',
+					fingerprint: approvedRenameFingerprint(),
+					reason: 'the one difference this entry exists to approve',
+					approved_by: 'control-15',
+					approved_on: '2026-08-25',
+				},
+			]);
 		},
 	},
 	{
@@ -501,23 +506,16 @@ const CONTROLS: Control[] = [
 			const html = readFileSync(file, 'utf8');
 			const filler = Array.from({ length: 40 }, (_, i) => `<a href="/pad-${i}">p</a>`).join('');
 			writeFileSync(file, html.replace('</body>', `${filler}<a href="/tail-b">t</a></body>`));
-			writeFileSync(
-				ledgerPath,
-				`${JSON.stringify(
-					[
-						{
-							url: '/about',
-							field: 'internalLinks',
-							fingerprint: 'f'.repeat(32),
-							reason: 'approves a different long difference sharing the printed prefix',
-							approved_by: 'control-20',
-							approved_on: '2026-08-25',
-						},
-					],
-					null,
-					2,
-				)}\n`,
-			);
+			appendLedger(ledgerPath, [
+				{
+					url: '/about',
+					field: 'internalLinks',
+					fingerprint: 'f'.repeat(32),
+					reason: 'approves a different long difference sharing the printed prefix',
+					approved_by: 'control-20',
+					approved_on: '2026-08-25',
+				},
+			]);
 		},
 	},
 	{
@@ -860,27 +858,20 @@ const CONTROLS: Control[] = [
 		expect: 0,
 		apply: (dir, ledgerPath) => {
 			writeFileSync(join(dir, CANDIDATE_ONLY_FILE), candidateOnlyPage());
-			writeFileSync(
-				ledgerPath,
-				`${JSON.stringify(
-					[
-						{
-							url: CANDIDATE_ONLY_URL,
-							field: 'page',
-							// Computed here from the documented key rather than by calling
-							// the comparator's own helper: a control that derives its
-							// expectation from the function under test agrees with that
-							// function by construction, including when both are wrong.
-							fingerprint: presenceKey(CANDIDATE_ONLY_URL, false, true),
-							reason: 'deliberate candidate-only route, the shape a spike route takes',
-							approved_by: 'control-42',
-							approved_on: '2026-09-03',
-						},
-					],
-					null,
-					2,
-				)}\n`,
-			);
+			appendLedger(ledgerPath, [
+				{
+					url: CANDIDATE_ONLY_URL,
+					field: 'page',
+					// Computed here from the documented key rather than by calling
+					// the comparator's own helper: a control that derives its
+					// expectation from the function under test agrees with that
+					// function by construction, including when both are wrong.
+					fingerprint: presenceKey(CANDIDATE_ONLY_URL, false, true),
+					reason: 'deliberate candidate-only route, the shape a spike route takes',
+					approved_by: 'control-42',
+					approved_on: '2026-09-03',
+				},
+			]);
 		},
 	},
 	{
@@ -890,29 +881,22 @@ const CONTROLS: Control[] = [
 		expect: 1,
 		apply: (dir, ledgerPath) => {
 			unlinkSync(join(dir, 'about.html'));
-			writeFileSync(
-				ledgerPath,
-				`${JSON.stringify(
-					[
-						{
-							url: '/about',
-							field: 'page',
-							// The key the presence hash WOULD produce for this row if the
-							// loss direction were fingerprinted at all. Knowing exactly how
-							// the hash is computed still does not buy an approval: compare()
-							// gives a MISSING row a null fingerprint and the matcher refuses
-							// null before it compares anything. Approving away a route the
-							// baseline has is the failure plan.md names as high impact.
-							fingerprint: presenceKey('/about', true, false),
-							reason: 'attempts to approve a route the candidate no longer builds',
-							approved_by: 'control-43',
-							approved_on: '2026-09-03',
-						},
-					],
-					null,
-					2,
-				)}\n`,
-			);
+			appendLedger(ledgerPath, [
+				{
+					url: '/about',
+					field: 'page',
+					// The key the presence hash WOULD produce for this row if the
+					// loss direction were fingerprinted at all. Knowing exactly how
+					// the hash is computed still does not buy an approval: compare()
+					// gives a MISSING row a null fingerprint and the matcher refuses
+					// null before it compares anything. Approving away a route the
+					// baseline has is the failure plan.md names as high impact.
+					fingerprint: presenceKey('/about', true, false),
+					reason: 'attempts to approve a route the candidate no longer builds',
+					approved_by: 'control-43',
+					approved_on: '2026-09-03',
+				},
+			]);
 		},
 	},
 
@@ -1367,13 +1351,16 @@ function treeFingerprint(dir: string): string {
 }
 
 let failures = 0;
-console.log(`negative controls against ${buildDir}, baseline ${baselineFile}\n`);
+console.log(
+	`negative controls against ${buildDir}, baseline ${baselineFile}, ` +
+		`seed ledger ${seedLedgerPath ?? '(empty)'} with ${JSON.parse(SEED_LEDGER).length} entries\n`,
+);
 for (const control of CONTROLS) {
 	const work = mkdtempSync(join(tmpdir(), `migration-verify-c${control.id}-`));
 	const candidate = join(work, 'build');
 	const ledger = join(work, 'ledger.json');
 	cpSync(buildDir, candidate, { recursive: true });
-	writeFileSync(ledger, EMPTY_LEDGER);
+	writeFileSync(ledger, SEED_LEDGER);
 	const before = treeFingerprint(candidate) + readFileSync(ledger, 'utf8');
 	control.apply(candidate, ledger);
 	const after = treeFingerprint(candidate) + readFileSync(ledger, 'utf8');
