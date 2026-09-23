@@ -218,6 +218,71 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		// Spawns its probe, an edge the import closure cannot see.
+		command: 'migration:browser:post-code:controls',
+		entry: 'scripts/assert-browser-post-code-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-post-code.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
+		// Reviewer round 1 gap 3b: Mermaid diagrams paint only the shell inks.
+		command: 'migration:browser:mermaid',
+		entry: 'scripts/assert-browser-mermaid.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// Spawns its probe, an edge the import closure cannot see.
+		command: 'migration:browser:mermaid:controls',
+		entry: 'scripts/assert-browser-mermaid-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-mermaid.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
+		// Reviewer round 1 gaps 1-2: deck opens presenting (D8), keys stay in the deck.
+		command: 'migration:browser:deck',
+		entry: 'scripts/assert-browser-deck.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// Spawns its probe, an edge the import closure cannot see.
+		command: 'migration:browser:deck:controls',
+		entry: 'scripts/assert-browser-deck-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-deck.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
+		// Reviewer round 1 gap 3c: visualizer state inks (reverse video current/new).
+		command: 'migration:browser:study-states',
+		entry: 'scripts/assert-browser-study-states.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// Spawns its probe, an edge the import closure cannot see.
+		command: 'migration:browser:study-states:controls',
+		entry: 'scripts/assert-browser-study-states-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-study-states.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
 		// B3: ⌘K / Ctrl+K open the palette on the 404.
 		command: 'migration:browser:notfound-palette',
 		entry: 'scripts/assert-browser-notfound-palette.mjs',
