@@ -1,2 +1,310 @@
-/* Phosphor Fade page styles: about. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+/* Phosphor Fade page styles: about (/about, /ko/about — the approved v2
+   design). Owned by that page's port; see next/app/globals.css (terminal
+   shell) for the shared term-* primitives. The page no longer draws its own
+   enclosure: the crt-panel / crt-glass-inner / crt-film utilities in
+   src/app.css stay for the legacy build and are simply not used here. */
+
+@layer components {
+	.pg-about {
+		display: block;
+		min-width: 0;
+	}
+
+	/* whoami output: the loading line and the signal readout. */
+	.pg-about .ab-status {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 0 16px;
+		margin-top: 6px;
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-about .ab-out {
+		color: var(--crt-faint);
+	}
+	.pg-about .ab-signal {
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-amber);
+	}
+	:lang(ko) .pg-about .ab-signal {
+		letter-spacing: 0.04em;
+	}
+
+	/* Hero: ASCII portrait left, title block right (stacks below lg). */
+	.pg-about .ab-hero {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 22px;
+		margin-top: 18px;
+	}
+	.pg-about .ab-portrait {
+		min-width: 0;
+		margin: 0;
+	}
+	/* ASCII art, not a code block: none of the global `pre` chrome. */
+	.pg-about .ab-portrait pre {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+		background: none;
+		box-shadow: none;
+		overflow: hidden;
+		font-family: var(--font-term);
+		font-size: 10px;
+		line-height: 10px;
+		color: var(--crt-amber);
+	}
+	.pg-about .ab-portrait figcaption {
+		margin-top: 10px;
+		font-size: 10px;
+		line-height: 16px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	.pg-about .ab-lede {
+		margin-top: 12px;
+		color: var(--crt-worn);
+	}
+	.pg-about .ab-kv {
+		margin: 14px 0 0;
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-about .ab-kv > div {
+		display: grid;
+		grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+		gap: 12px;
+	}
+	.pg-about .ab-kv dt {
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	.pg-about .ab-kv dd {
+		margin: 0;
+		color: var(--crt-green);
+	}
+
+	.pg-about .ab-intro {
+		display: grid;
+		gap: 10px;
+		margin-top: 22px;
+		color: var(--crt-worn);
+	}
+	.pg-about .ab-sec {
+		margin-top: 22px;
+	}
+	.pg-about h3 {
+		margin: 0;
+		font-size: 13px;
+		line-height: 22px;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+
+	/* career.log: [years] + title/body rows. */
+	.pg-about .ab-log {
+		display: grid;
+		gap: 12px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-about .ab-log li {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0 16px;
+	}
+	.pg-about .ab-log__yr {
+		color: var(--crt-amber);
+		white-space: nowrap;
+	}
+	.pg-about .ab-log p {
+		color: var(--crt-worn);
+	}
+
+	/* ls ~/now: three frames. */
+	.pg-about .ab-now {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0 14px;
+	}
+	.pg-about .ab-now .term-frame {
+		min-width: 0;
+		padding-top: 12px;
+	}
+	.pg-about .ab-now h3 {
+		color: var(--crt-amber);
+	}
+	.pg-about .ab-now p {
+		margin-top: 4px;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-worn);
+	}
+
+	/* top --operating-surface: name, block meter, percent. */
+	.pg-about .ab-top {
+		display: grid;
+		gap: 2px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-about .ab-top li {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 44px;
+		column-gap: 12px;
+	}
+	.pg-about .ab-top__name {
+		grid-column: 1 / -1;
+		color: var(--crt-faint);
+	}
+	.pg-about .ab-meter {
+		min-width: 0;
+		overflow: hidden;
+		white-space: nowrap;
+	}
+	.pg-about .ab-meter__wide {
+		display: none;
+	}
+	.pg-about .ab-top__pct {
+		text-align: right;
+		color: var(--crt-amber);
+	}
+
+	/* ls ~/systems: numbered link cards. */
+	.pg-about .ab-sys {
+		display: grid;
+		gap: 12px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-about .ab-sys li + li {
+		padding-top: 12px;
+		border-top: 1px dashed var(--crt-line);
+	}
+	.pg-about .ab-sys__card {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 12px;
+		color: var(--crt-worn);
+		text-decoration: none;
+	}
+	.pg-about .ab-sys__card img {
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		border: 1px solid var(--crt-line);
+	}
+	.pg-about .ab-sys__card > span > span {
+		display: block;
+	}
+	.pg-about .ab-sys__kick {
+		font-size: 11px;
+		line-height: 16px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	.pg-about .ab-n {
+		margin-right: 6px;
+		letter-spacing: 0;
+	}
+	.pg-about .ab-sys__card h3 {
+		margin-top: 2px;
+		color: var(--crt-green);
+	}
+	.pg-about .ab-sys__card:hover h3 {
+		text-decoration: underline;
+	}
+	.pg-about .ab-sys__body {
+		font-size: 12px;
+		line-height: 20px;
+	}
+
+	/* principles / learning. */
+	.pg-about .ab-list {
+		display: grid;
+		gap: 10px;
+	}
+	.pg-about .ab-list p,
+	.pg-about .ab-learn__body {
+		color: var(--crt-worn);
+	}
+	.pg-about .ab-kick {
+		font-size: 11px;
+		line-height: 16px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-amber);
+	}
+	.pg-about .ab-learn__h {
+		margin-top: 2px;
+	}
+	.pg-about .ab-learn__items {
+		margin: 8px 0 0;
+		padding: 0;
+		list-style: none;
+		color: var(--crt-worn);
+	}
+	.pg-about .ab-learn__items li {
+		padding-left: 2ch;
+		text-indent: -2ch;
+	}
+	.pg-about .ab-learn__items li::before {
+		content: '- ';
+		color: var(--crt-amber);
+	}
+
+	/* links: lynx-numbered. */
+	.pg-about .ab-links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 20px;
+		margin: 4px 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	@media (width >= 40rem) {
+		.pg-about .ab-log li {
+			grid-template-columns: 110px minmax(0, 1fr);
+		}
+		.pg-about .ab-top li {
+			grid-template-columns: 170px minmax(0, 1fr) 44px;
+		}
+		.pg-about .ab-top__name {
+			grid-column: auto;
+		}
+		.pg-about .ab-sys__card {
+			grid-template-columns: 144px minmax(0, 1fr);
+		}
+	}
+	/* 50 cells need ~390px beside the name column: from md. */
+	@media (width >= 48rem) {
+		.pg-about .ab-meter__wide {
+			display: inline;
+		}
+		.pg-about .ab-meter__narrow {
+			display: none;
+		}
+		.pg-about .ab-now {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+	@media (width >= 64rem) {
+		.pg-about .ab-hero {
+			grid-template-columns: 340px minmax(0, 1fr);
+			gap: 28px;
+			align-items: start;
+		}
+	}
+}
