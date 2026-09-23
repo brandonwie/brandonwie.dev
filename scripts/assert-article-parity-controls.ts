@@ -270,9 +270,10 @@ const CONTROLS: Control[] = [
 		kind: 'DEFECT',
 		what: 'a header link points at a route the export does not contain, and is not a declared deferral',
 		apply: (html) =>
+			// REDESIGN: the header's home link is now the title bar's `~` (`aria-label="Home"`), not `a.site-brand`.
 			html.replace(
-				'<a class="site-brand" href="/"',
-				'<a class="site-brand" href="/missing-export"',
+				'<a aria-label="Home" href="/">',
+				'<a aria-label="Home" href="/missing-export">',
 			),
 	},
 	{
@@ -405,19 +406,26 @@ const CONTROLS: Control[] = [
 		id: 'AP-42',
 		kind: 'DEFECT',
 		what: 'the site header identity is removed while the article header remains',
-		apply: (html) => html.replace('class="site-nav site-nav--sticky"', 'class="shell-header"'),
+		// REDESIGN: the site header is now the terminal title bar `header.term-bar`.
+		apply: (html) => html.replace('<header class="term-bar"', '<header class="shell-header"'),
 	},
 	{
 		id: 'AP-43',
 		kind: 'DEFECT',
 		what: 'the site navigation identity is removed while article navigation remains',
-		apply: (html) => html.replace('class="site-nav__links"', 'class="shell-nav"'),
+		// REDESIGN: the site navigation is now the tmux status line `nav.term-status`.
+		apply: (html) => html.replace('<nav class="term-status"', '<nav class="shell-nav"'),
 	},
 	{
 		id: 'AP-44',
 		kind: 'DEFECT',
 		what: 'the site footer identity is removed while its landmark remains',
-		apply: (html) => html.replace('class="site-footer"', 'class="shell-footer"'),
+		// REDESIGN: the site footer is now `footer.term-plan`.
+		apply: (html) =>
+			html.replace(
+				'<footer class="term-frame term-plan"',
+				'<footer class="term-frame shell-footer"',
+			),
 	},
 	{
 		id: 'AP-45',

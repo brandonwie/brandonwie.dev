@@ -219,6 +219,9 @@ const PAGE_MUTATIONS: PageMutation[] = [
 	 * instead, so those patterns stopped matching and both mutations silently
 	 * became no-ops. The runner caught it -- an invariance row whose mutation
 	 * changes nothing proves nothing, and it fails rather than passing vacuously.
+	 * REDESIGN: re-anchored again when the terminal shell replaced that chrome
+	 * (footer copy in `footer.term-plan` > `.term-plan__copy`, primary nav in
+	 * `nav.term-status`).
 	 * Re-anchoring keeps the assertion these rows exist to make: the feed
 	 * contract is page-owned, so shell edits must not move it.
 	 */
@@ -227,7 +230,8 @@ const PAGE_MUTATIONS: PageMutation[] = [
 		what: (p) => `the site footer copy on ${p} changes -- shell-owned, not page-owned`,
 		apply: (html) =>
 			html.replace(
-				/(<div class="site-footer__copy"><span>)[^<]*(<\/span>)/,
+				// REDESIGN: the footer copy moved from `.site-footer__copy` to `footer.term-plan` > `.term-plan__copy`.
+				/(<div class="term-plan__copy"><span>)[^<]*(<\/span>)/,
 				'$1Different footer.$2',
 			),
 	},
@@ -236,8 +240,9 @@ const PAGE_MUTATIONS: PageMutation[] = [
 		what: (p) => `a nav link is added to the site shell on ${p} -- shell-owned, not page-owned`,
 		apply: (html) =>
 			html.replace(
-				/(<nav class="site-nav__links"[^>]*>)/,
-				'$1<a class="site-nav__link" href="/posts">~/Posts</a>',
+				// REDESIGN: the primary nav is now the tmux status line `nav.term-status`; the added link is a window.
+				/(<nav class="term-status"[^>]*>)/,
+				'$1<a href="/posts">9:posts</a>',
 			),
 	},
 ];

@@ -22,7 +22,7 @@
 		"migration:capture": "tsx scripts/migration-verify.ts capture build verification/baseline/svelte-e23e808.json",
 		"migration:controls": "tsx scripts/migration-verify-controls.ts build verification/baseline/svelte-e23e808.json",
 		"migration:verify:next": "tsx scripts/migration-verify.ts compare verification/baseline/svelte-e23e808.json next/build",
-		"migration:verify:svelte": "tsx scripts/migration-verify.ts compare verification/baseline/svelte-e23e808.json build --ledger verification/empty-ledger.json",
+		"migration:verify:svelte": "tsx scripts/migration-verify.ts compare verification/baseline/svelte-e23e808.json build --ledger verification/svelte-d9-ledger.json",
 		"migration:c13": "tsx scripts/assert-c13-shell.ts",
 		"migration:c13:controls": "tsx scripts/assert-c13-shell-controls.ts",
 		"migration:c11": "tsx --tsconfig next/tsconfig.json scripts/assert-c11-library-ports.ts",

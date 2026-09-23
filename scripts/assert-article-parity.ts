@@ -248,7 +248,8 @@ function exportedRouteExists(candidateDir: string, href: string): boolean {
  * destination, which is exactly what this scoping prevents — and it is why the
  * AP-35 control, which mutates a bare `<a href="/">` in the article body, still
  * fails: the chrome's home link carries `class="site-brand"` and is a different
- * occurrence.
+ * occurrence. (REDESIGN: that home link is now the title bar's `~`, which
+ * carries `aria-label="Home"` inside `header.term-bar`.)
  *
  * A deferral asserts its destination is STILL ABSENT. When the owning port lands
  * and the route appears, the stale entry fails until it is removed, so the list
@@ -259,7 +260,9 @@ function exportedRouteExists(candidateDir: string, href: string): boolean {
  * A12-chrome-link-deferrals.md. Retire with PR 3 (posts, tags, /ko), PR 6 (the
  * static pages) and Slice 4 (study); zero deferrals before cutover.
  */
-type ChromeContainer = 'header' | 'footer';
+// REDESIGN: the terminal shell's primary nav (`nav.term-status`) sits outside
+// the title bar, so it is a chrome container of its own.
+type ChromeContainer = 'header' | 'status' | 'footer';
 
 interface LinkDeferral {
 	destination: string;
@@ -270,22 +273,32 @@ interface LinkDeferral {
 
 const CHROME_LINK_DEFERRALS: readonly LinkDeferral[] = [];
 
-/** The byte range of the baseline header / footer element, or null if absent. */
+// REDESIGN: chrome containers are the terminal shell's title bar, status line
+// and footer (`header.term-bar`, `nav.term-status`, `footer.term-plan`), which
+// replaced `header.site-nav` / `footer.site-footer`.
+const CHROME_OPEN: Record<ChromeContainer, RegExp> = {
+	header: /<header\b[^>]*class="[^"]*\bterm-bar\b/i,
+	status: /<nav\b[^>]*class="[^"]*\bterm-status\b/i,
+	footer: /<footer\b[^>]*class="[^"]*\bterm-plan\b/i,
+};
+const CHROME_CLOSE: Record<ChromeContainer, string> = {
+	header: '</header>',
+	status: '</nav>',
+	footer: '</footer>',
+};
+
+/** The byte range of a candidate chrome container, or null if absent. */
 function chromeRange(html: string, container: ChromeContainer): [number, number] | null {
-	const open =
-		container === 'header'
-			? /<header\b[^>]*class="[^"]*\bsite-nav\b/i
-			: /<footer\b[^>]*class="[^"]*\bsite-footer\b/i;
-	const match = open.exec(html);
+	const match = CHROME_OPEN[container].exec(html);
 	if (!match) return null;
-	const closeTag = container === 'header' ? '</header>' : '</footer>';
+	const closeTag = CHROME_CLOSE[container];
 	const end = html.indexOf(closeTag, match.index);
 	if (end === -1) return null;
 	return [match.index, end + closeTag.length];
 }
 
 function containerAt(html: string, index: number): ChromeContainer | null {
-	for (const container of ['header', 'footer'] as const) {
+	for (const container of ['header', 'status', 'footer'] as const) {
 		const range = chromeRange(html, container);
 		if (range && index >= range[0] && index < range[1]) return container;
 	}
@@ -358,10 +371,17 @@ function shellProblems(html: string, locale: 'en' | 'ko'): string[] {
 	 * wrapping `<nav class="site-nav__links">`). So the rows asserted that the
 	 * candidate looked like the scaffolding rather than like the thing it must
 	 * match, and Slice 3 PR 2a's real chrome port is what exposed it.
+	 *
+	 * The Phosphor Fade terminal shell then replaced that chrome by design, so
+	 * the tokens now name the shell's own landmarks. Each still requires a
+	 * distinct element, so a missing title bar, status line or footer fails.
 	 */
-	if (!classToken(html, 'header', 'site-nav')) problems.push('site header missing');
-	if (!classToken(html, 'nav', 'site-nav__links')) problems.push('site navigation missing');
-	if (!classToken(html, 'footer', 'site-footer')) problems.push('site footer missing');
+	// REDESIGN: site header is the terminal title bar `header.term-bar` (was `header.site-nav`).
+	if (!classToken(html, 'header', 'term-bar')) problems.push('site header missing');
+	// REDESIGN: site navigation is the tmux status line `nav.term-status` (was `nav.site-nav__links`).
+	if (!classToken(html, 'nav', 'term-status')) problems.push('site navigation missing');
+	// REDESIGN: site footer is `footer.term-plan` (was `footer.site-footer`).
+	if (!classToken(html, 'footer', 'term-plan')) problems.push('site footer missing');
 	if (tagsOf(html, 'article').length !== 1 || !classToken(html, 'article', 'article-shell')) {
 		problems.push('expected exactly one article-shell landmark');
 	}
