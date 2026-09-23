@@ -265,6 +265,24 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		// User instruction 2026-09-23: full-bleed enclosure, all nav links in the header.
+		command: 'migration:browser:shell-layout',
+		entry: 'scripts/assert-browser-shell-layout.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// Spawns its probe, an edge the import closure cannot see.
+		command: 'migration:browser:shell-layout:controls',
+		entry: 'scripts/assert-browser-shell-layout-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-shell-layout.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
 		// Reviewer round 1 gap 3c: visualizer state inks (reverse video current/new).
 		command: 'migration:browser:study-states',
 		entry: 'scripts/assert-browser-study-states.mjs',

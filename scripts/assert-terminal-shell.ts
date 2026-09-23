@@ -15,19 +15,36 @@
  *     and the error route marks nothing. A rule can be right while the shell
  *     that should call it is wired wrong; only the export shows that.
  *
+ * HEADER NAV (user instruction 2026-09-23: all nav links in the header). The
+ * title bar carries the primary navigation: all eight internal destinations in
+ * `HEADER_LINKS` order with locale-aware hrefs, exactly one link marked
+ * `is-on` + `aria-current="page"` on section routes and none on search, feed
+ * and the 404, and it is the ONLY nav landmark named `primary_navigation` —
+ * the status line is `role="none"` with no aria-label.
+ *
  * POSITIVE CONTROLS run first. The rule table is replayed against deliberately
  * broken implementations (a cwd that drops `/ko`, a status map that never
- * appends the temporary window); if the table accepts either, the table cannot
- * catch the regression it exists for and the suite fails.
+ * appends the temporary window, a header map that forgets projects/tags/
+ * contact); if the table accepts any, the table cannot catch the regression it
+ * exists for and the suite fails. The header export check is replayed against
+ * mutated copies of real exports (unmarked link, un-prefixed Korean hrefs, a
+ * dropped link, a marked search page, the status line named as a landmark
+ * again), each of which must fail.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
+import { activeKey, stripLocale } from '../next/src/data/nav.ts';
 import {
+	HEADER_LINKS,
 	STATUS_WINDOWS,
 	cwdFor,
+	headerHref,
+	headerLinkFor,
+	normalizePathname,
 	statusWindowFor,
 	windowHref,
+	type HeaderLinkKey,
 	type StatusState,
 } from '../next/src/shell/terminal-path.ts';
 
@@ -112,6 +129,62 @@ record(
 	'window hrefs are locale-aware and 3:3b targets /system/3b',
 );
 
+// --- header nav rules ----------------------------------------------------
+const HEADER_CASES: readonly { path: string; key: HeaderLinkKey | null }[] = [
+	{ path: '/', key: 'home' },
+	{ path: '/ko', key: 'home' },
+	{ path: '/ko/', key: 'home' },
+	{ path: '/posts/some-slug', key: 'posts' },
+	{ path: '/ko/study/dsa-ii', key: 'study' },
+	{ path: '/system', key: 'system' },
+	{ path: '/ko/system/3b', key: 'system' },
+	{ path: '/about', key: 'about' },
+	{ path: '/projects', key: 'projects' },
+	{ path: '/ko/tags/react', key: 'tags' },
+	{ path: '/contact', key: 'contact' },
+	{ path: '/search', key: null },
+	{ path: '/ko/feed', key: null },
+	{ path: '/talks/my-career', key: null },
+	{ path: '/projectsx', key: null },
+	{ path: '/koala', key: null },
+];
+
+function headerRuleFailures(mark: (path: string) => HeaderLinkKey | null): string[] {
+	return HEADER_CASES.filter((c) => mark(c.path) !== c.key).map(
+		(c) => `header ${c.path}: ${mark(c.path)} != ${c.key}`,
+	);
+}
+
+// Positive control: a header map that only knows the status-line sections.
+const brokenHeader = (path: string): HeaderLinkKey | null => {
+	const p = stripLocale(normalizePathname(path));
+	return p === '/' ? 'home' : activeKey(p);
+};
+record(
+	headerRuleFailures(brokenHeader).length > 0,
+	'control:header-no-extras',
+	'header table rejects a map that never marks projects/tags/contact',
+);
+const headerErrors = headerRuleFailures(headerLinkFor);
+record(
+	headerErrors.length === 0,
+	'rules:header-table',
+	headerErrors.join('; ') || `${HEADER_CASES.length} routes`,
+);
+record(
+	HEADER_LINKS.join(' ') === 'home posts study system about projects tags contact',
+	'rules:header-order',
+	'header links are home posts study 3b about projects tags contact',
+);
+record(
+	HEADER_LINKS.map((k) => headerHref(k, 'ko')).join(' ') ===
+		'/ko /ko/posts /ko/study /ko/system/3b /ko/about /ko/projects /ko/tags /ko/contact' &&
+		HEADER_LINKS.map((k) => headerHref(k, 'en')).join(' ') ===
+			'/ /posts /study /system/3b /about /projects /tags /contact',
+	'rules:header-hrefs',
+	'header hrefs are locale-aware',
+);
+
 // --- export --------------------------------------------------------------
 const buildDir = resolve(process.argv[2] ?? 'next/build');
 
@@ -121,22 +194,101 @@ interface ExportCase {
 	cwd: string;
 	/** Visible text of the marked window, or null for none. */
 	marked: string | null;
+	/** Header nav link marked current, or null for none. */
+	header: HeaderLinkKey | null;
 }
 
 const EXPORTS: readonly ExportCase[] = [
-	{ file: 'index.html', locale: 'en', cwd: '~', marked: '0:home' },
-	{ file: 'ko.html', locale: 'ko', cwd: '~/ko', marked: '0:home' },
-	{ file: 'posts.html', locale: 'en', cwd: '~/posts', marked: '1:posts' },
-	{ file: 'ko/posts.html', locale: 'ko', cwd: '~/ko/posts', marked: '1:posts' },
-	{ file: 'study/dsa-i.html', locale: 'en', cwd: '~/study/dsa-i', marked: '2:study' },
-	{ file: 'system.html', locale: 'en', cwd: '~/system', marked: '3:3b' },
-	{ file: 'ko/system/3b.html', locale: 'ko', cwd: '~/ko/system/3b', marked: '3:3b' },
-	{ file: 'about.html', locale: 'en', cwd: '~/about', marked: '4:about' },
-	{ file: 'ko/projects.html', locale: 'ko', cwd: '~/ko/projects', marked: '5:projects' },
-	{ file: 'tags.html', locale: 'en', cwd: '~/tags', marked: '5:tags' },
-	{ file: 'talks/my-career.html', locale: 'en', cwd: '~/talks/my-career', marked: '5:talks' },
-	{ file: '404.html', locale: 'en', cwd: '~', marked: null },
+	{ file: 'index.html', locale: 'en', cwd: '~', marked: '0:home', header: 'home' },
+	{ file: 'ko.html', locale: 'ko', cwd: '~/ko', marked: '0:home', header: 'home' },
+	{ file: 'posts.html', locale: 'en', cwd: '~/posts', marked: '1:posts', header: 'posts' },
+	{ file: 'ko/posts.html', locale: 'ko', cwd: '~/ko/posts', marked: '1:posts', header: 'posts' },
+	{
+		file: 'study/dsa-i.html',
+		locale: 'en',
+		cwd: '~/study/dsa-i',
+		marked: '2:study',
+		header: 'study',
+	},
+	{ file: 'system.html', locale: 'en', cwd: '~/system', marked: '3:3b', header: 'system' },
+	{
+		file: 'ko/system/3b.html',
+		locale: 'ko',
+		cwd: '~/ko/system/3b',
+		marked: '3:3b',
+		header: 'system',
+	},
+	{ file: 'about.html', locale: 'en', cwd: '~/about', marked: '4:about', header: 'about' },
+	{
+		file: 'ko/projects.html',
+		locale: 'ko',
+		cwd: '~/ko/projects',
+		marked: '5:projects',
+		header: 'projects',
+	},
+	{ file: 'tags.html', locale: 'en', cwd: '~/tags', marked: '5:tags', header: 'tags' },
+	{ file: 'ko/tags.html', locale: 'ko', cwd: '~/ko/tags', marked: '5:tags', header: 'tags' },
+	{ file: 'contact.html', locale: 'en', cwd: '~/contact', marked: '5:contact', header: 'contact' },
+	{ file: 'search.html', locale: 'en', cwd: '~/search', marked: '5:search', header: null },
+	{ file: 'feed.html', locale: 'en', cwd: '~/feed', marked: '5:feed', header: null },
+	{
+		file: 'talks/my-career.html',
+		locale: 'en',
+		cwd: '~/talks/my-career',
+		marked: '5:talks',
+		header: null,
+	},
+	{ file: '404.html', locale: 'en', cwd: '~', marked: null, header: null },
 ];
+
+/** `primary_navigation` per locale, read from the message catalogues. */
+const PRIMARY: Record<'en' | 'ko', string> = {
+	en: JSON.parse(readFileSync('messages/en.json', 'utf8')).primary_navigation,
+	ko: JSON.parse(readFileSync('messages/ko.json', 'utf8')).primary_navigation,
+};
+
+/**
+ * Header-nav failures for one exported page: order and locale of the eight
+ * hrefs, the current-section mark (is-on and aria-current together, on the
+ * expected link only), and the landmark rule (exactly one nav named
+ * primary_navigation, inside the title bar; the status line is role="none"
+ * with no aria-label).
+ */
+function headerFailures(html: string, c: ExportCase): string[] {
+	const out: string[] = [];
+	const bar = region(html, /<header class="term-bar"/, '</header>');
+	const nav = bar ? region(bar, /<nav class="term-bar__nav"/, '</nav>') : null;
+	if (!nav) return ['header nav missing'];
+
+	const links = [...nav.matchAll(/<a\b([^>]*)>/g)].map((m) => ({
+		href: /\bhref="([^"]*)"/.exec(m[1])?.[1] ?? '',
+		on: /\bclass="[^"]*\bis-on\b/.test(m[1]),
+		current: /\baria-current="page"/.test(m[1]),
+	}));
+	const want = HEADER_LINKS.map((k) => headerHref(k, c.locale));
+	const got = links.map((l) => l.href);
+	if (got.join(' ') !== want.join(' ')) out.push(`hrefs ${got.join(' ')}`);
+
+	const split = links.filter((l) => l.on !== l.current);
+	if (split.length) out.push(`is-on/aria-current split on ${split.map((l) => l.href).join(' ')}`);
+	const marked = links.filter((l) => l.on || l.current).map((l) => l.href);
+	const wantMarked = c.header ? [headerHref(c.header, c.locale)] : [];
+	if (marked.join(' ') !== wantMarked.join(' '))
+		out.push(`marked [${marked.join(' ')}], want [${wantMarked.join(' ')}]`);
+
+	const named = [...html.matchAll(/<nav\b[^>]*>/g)].filter(
+		(m) => /\baria-label="([^"]*)"/.exec(m[0])?.[1] === PRIMARY[c.locale],
+	);
+	const barAt = html.search(/<header class="term-bar"/);
+	const barEnd = html.indexOf('</header>', barAt);
+	if (named.length !== 1) out.push(`${named.length} nav landmarks named ${PRIMARY[c.locale]}`);
+	else if (!(named[0].index! > barAt && named[0].index! < barEnd))
+		out.push('the primary nav landmark is not inside the title bar');
+	const status = /<nav class="term-status"[^>]*>/.exec(html)?.[0] ?? '';
+	if (!/\brole="none"/.test(status) || /\baria-label=/.test(status))
+		out.push(`status line is a landmark: ${status || '(missing)'}`);
+	return out;
+}
 
 function text(html: string): string {
 	return html
@@ -194,6 +346,77 @@ if (!existsSync(buildDir)) {
 			JSON.stringify(hrefs) === JSON.stringify(wanted),
 			`export:${c.file}:hrefs`,
 			hrefs.join(' '),
+		);
+
+		const header = headerFailures(html, c);
+		record(
+			header.length === 0,
+			`export:${c.file}:header-nav`,
+			header.join('; ') || `8 links, marked ${c.header ?? 'nothing'}, one primary landmark`,
+		);
+	}
+
+	// Positive controls for the header check: each mutation of a real export
+	// must be rejected, or the rows above cannot see the regression.
+	const byFile = (file: string) => EXPORTS.find((c) => c.file === file)!;
+	const page = (file: string) => readFileSync(join(buildDir, file), 'utf8');
+	const HEADER_CONTROLS: {
+		id: string;
+		file: string;
+		what: string;
+		mutate: (h: string) => string;
+	}[] = [
+		{
+			id: 'control:header-unmarked',
+			file: 'posts.html',
+			what: 'the current section loses its mark',
+			mutate: (h) =>
+				h.replace(' class="is-on" aria-current="page" href="/posts"', ' href="/posts"'),
+		},
+		{
+			id: 'control:header-drops-ko',
+			file: 'ko/posts.html',
+			what: 'Korean header hrefs lose /ko',
+			mutate: (h) =>
+				h.replace(/(<nav class="term-bar__nav"[\s\S]*?<\/nav>)/, (nav) =>
+					nav.replace(/href="\/ko\//g, 'href="/'),
+				),
+		},
+		{
+			id: 'control:header-drops-link',
+			file: 'index.html',
+			what: 'a destination disappears',
+			mutate: (h) =>
+				h.replace(/<a href="\/contact">[^<]*<\/a><\/nav><\/header>/, '</nav></header>'),
+		},
+		{
+			id: 'control:header-marks-search',
+			file: 'search.html',
+			what: 'an off-nav route marks a section',
+			mutate: (h) =>
+				h.replace(
+					/(<nav class="term-bar__nav"[^>]*>(?:<a[^>]*>[^<]*<\/a>)?)<a href="\/posts"/,
+					'$1<a class="is-on" aria-current="page" href="/posts"',
+				),
+		},
+		{
+			id: 'control:status-landmark',
+			file: 'about.html',
+			what: 'the status line is a second primary nav landmark',
+			mutate: (h) =>
+				h.replace(
+					'<nav class="term-status" role="none"',
+					`<nav class="term-status" aria-label="${PRIMARY.en}"`,
+				),
+		},
+	];
+	for (const ctl of HEADER_CONTROLS) {
+		const original = page(ctl.file);
+		const mutated = ctl.mutate(original);
+		record(
+			mutated !== original && headerFailures(mutated, byFile(ctl.file)).length > 0,
+			ctl.id,
+			`header check rejects: ${ctl.what}${mutated === original ? ' (MUTATION DID NOT APPLY)' : ''}`,
 		);
 	}
 	const en = readFileSync(join(buildDir, 'index.html'), 'utf8');

@@ -91,3 +91,48 @@ export function statusWindowFor(pathname: string): StatusState {
 	const first = path.split('/')[1] ?? '';
 	return { active: null, extra: first ? decodeForDisplay(first) : null };
 }
+
+/** Every internal destination the title-bar nav lists, in bar order. */
+export type HeaderLinkKey = WindowKey | 'projects' | 'tags' | 'contact';
+
+export const HEADER_LINKS: readonly HeaderLinkKey[] = [
+	'home',
+	'posts',
+	'study',
+	'system',
+	'about',
+	'projects',
+	'tags',
+	'contact',
+];
+
+/** Sections outside `NAV_ITEMS`, matched on full path segments like `activeKey()`. */
+const EXTRA_SECTIONS = {
+	projects: /^\/projects(?:\/|$)/,
+	tags: /^\/tags(?:\/|$)/,
+	contact: /^\/contact(?:\/|$)/,
+} as const;
+
+/** Locale-aware href for a title-bar nav link. */
+export function headerHref(key: HeaderLinkKey, locale: Locale): string {
+	if (key === 'projects' || key === 'tags' || key === 'contact') return `${base(locale)}/${key}`;
+	return windowHref(key, locale);
+}
+
+/**
+ * Which title-bar nav link a pathname marks: home on `/` and `/ko`, the four
+ * nav sections via `activeKey()`, projects/tags/contact by path, else null.
+ *
+ * @example headerLinkFor('/ko/tags/react') === 'tags'
+ * @example headerLinkFor('/search') === null
+ */
+export function headerLinkFor(pathname: string): HeaderLinkKey | null {
+	const path = stripLocale(normalizePathname(pathname));
+	if (path === '/') return 'home';
+	const key = activeKey(path);
+	if (key) return key;
+	for (const [extra, pattern] of Object.entries(EXTRA_SECTIONS)) {
+		if (pattern.test(path)) return extra as keyof typeof EXTRA_SECTIONS;
+	}
+	return null;
+}

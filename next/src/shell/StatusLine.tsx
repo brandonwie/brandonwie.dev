@@ -15,7 +15,12 @@ import {
 } from './terminal-path';
 
 /**
- * The tmux status line — the site's primary navigation.
+ * The tmux status line — window links to the five fixed sections.
+ *
+ * Not a landmark: the title bar's nav is THE primary navigation, so the line is
+ * `role="none"` (and therefore carries no aria-label, which ARIA prohibits on
+ * that role) rather than a second nav with the same name. Its windows stay
+ * ordinary links.
  *
  * Every window is a real link with the route's own href, reachable by Tab; the
  * current one carries `aria-current="page"` and the trailing `*`. Off-nav
@@ -27,16 +32,7 @@ import {
  * the browser sees the requested URL, so they mark no window and use plain
  * anchors (the 404 is not a place in the site).
  */
-export function StatusLine({
-	locale,
-	label,
-	plain = false,
-}: {
-	locale: Locale;
-	/** Accessible name of the nav landmark (`primary_navigation`). */
-	label: string;
-	plain?: boolean;
-}) {
+export function StatusLine({ locale, plain = false }: { locale: Locale; plain?: boolean }) {
 	const pathname = usePathname();
 	const scrollerRef = useRef<HTMLElement>(null);
 	const state = plain ? { active: null, extra: null } : statusWindowFor(pathname);
@@ -51,7 +47,7 @@ export function StatusLine({
 	}, [pathname]);
 
 	return (
-		<nav className="term-status" aria-label={label} ref={scrollerRef}>
+		<nav className="term-status" role="none" ref={scrollerRef}>
 			<span className="term-status__sess" aria-hidden="true">
 				[brandonwie]
 			</span>

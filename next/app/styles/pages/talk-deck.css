@@ -248,6 +248,11 @@
 		background: none;
 		box-shadow: none;
 	}
+	/* The full-bleed flex column is a screen layout; paper keeps block flow. */
+	body:has(.print-deck) :is(.term-crt, .term-glass) {
+		display: block;
+		min-height: 0;
+	}
 	body:has(.print-deck) .term-glass::before,
 	body:has(.print-deck) .term-glass::after {
 		content: none;
