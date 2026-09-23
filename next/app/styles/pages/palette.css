@@ -1,2 +1,309 @@
 /* Phosphor Fade page styles: palette. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Design: retro-site-pages/pages/CommandPalette. The ⌘K palette is one amber
+   `.term-frame` over a flat 78% glass scrim (no blur: it would smear the
+   scanlines). Rows read like `ls -l`: a marker column, a type glyph
+   (d page, x action, - post), the label and a right-hand route, effect or date.
+   Selection is reverse video (glass on amber, 8.90:1); hover is a `>` marker
+   plus an underlined label with no fill, so the two never look alike; a row
+   reached by Tab gets a dashed amber outline.
+
+   The overlay mounts inside the shell's title-bar slot, so everything is keyed
+   off the `.cmdk-*` hooks the palette suites already read (`.cmdk-overlay`).
+   Inks only (WCAG 2.1 on --crt-glass #0d0b13): hi 15.69, worn 12.60, green
+   11.77, amber 8.90, faint 4.91. */
+@layer components {
+	.cmdk-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 50;
+		display: flex;
+		align-items: flex-start;
+		justify-content: center;
+		padding: 14vh 20px 20px;
+		background: #0d0b13c7;
+		font-family: var(--font-term);
+		font-size: 13px;
+		line-height: 22px;
+		color: var(--crt-worn);
+		animation: cmdk-fade 0.18s ease;
+	}
+	.cmdk-panel {
+		width: min(620px, 100%);
+		margin-top: 0;
+		padding: 0;
+		background: var(--crt-glass);
+		animation: cmdk-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	.cmdk-counter {
+		position: absolute;
+		top: -9px;
+		right: 12px;
+		padding: 0 6px;
+		background: var(--crt-glass);
+		font-size: 12px;
+		line-height: 16px;
+		color: var(--crt-faint);
+	}
+	.cmdk-counter b {
+		font-weight: 400;
+		color: var(--crt-green);
+	}
+
+	/* Title bar: the ⌘K chip is lit while the palette is open. */
+	body:has(.cmdk-overlay) .term-bar__cmd {
+		color: var(--crt-hi);
+	}
+	body:has(.cmdk-overlay) .term-bar__cmd b {
+		border-color: var(--crt-amber);
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+
+	/* Input bar */
+	.cmdk-ibar {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 14px 16px 12px;
+		border-bottom: 1px solid var(--crt-line);
+	}
+	.cmdk-prompt {
+		color: var(--crt-amber);
+	}
+	.cmdk-input {
+		flex: 1 1 auto;
+		min-width: 0;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		font: inherit;
+		color: var(--crt-hi);
+		caret-color: var(--crt-amber);
+		outline: none;
+	}
+	.cmdk-input::placeholder {
+		color: var(--crt-faint);
+		opacity: 1;
+	}
+	.cmdk-overlay .cmdk-ibar input.cmdk-input:focus-visible {
+		outline: none;
+	}
+	.cmdk-overlay kbd {
+		padding: 0 5px;
+		border: 1px solid var(--crt-line);
+		font-family: inherit;
+		font-size: 11px;
+		color: var(--crt-amber);
+	}
+
+	/* Results: 48vh with a thin amber-thumbed track. */
+	.cmdk-results {
+		max-height: 48vh;
+		padding: 6px 0 8px;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-width: thin;
+		scrollbar-color: var(--crt-amber) var(--crt-line);
+	}
+	.cmdk-results::-webkit-scrollbar {
+		width: 3px;
+	}
+	.cmdk-results::-webkit-scrollbar-track {
+		background: var(--crt-line);
+	}
+	.cmdk-results::-webkit-scrollbar-thumb {
+		background: var(--crt-amber);
+	}
+
+	.cmdk-grp {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin: 8px 16px 2px;
+		font-size: 11px;
+		line-height: 20px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	.cmdk-grp::after {
+		content: '';
+		flex: 1;
+		border-top: 1px solid var(--crt-line);
+	}
+	.cmdk-grp__n {
+		letter-spacing: 0;
+	}
+	:lang(ko) .cmdk-grp {
+		letter-spacing: 0.04em;
+	}
+
+	/* One option row: [marker] [type] [main] [right]. */
+	.cmdk-item {
+		display: grid;
+		grid-template-columns: 12px 14px minmax(0, 1fr) auto;
+		column-gap: 8px;
+		align-items: start;
+		margin: 0 16px 0 8px;
+		padding: 2px 8px 2px 4px;
+		color: var(--crt-worn);
+		cursor: pointer;
+	}
+	.cmdk-item--post {
+		padding-block: 5px;
+	}
+	.cmdk-mk {
+		color: var(--crt-amber);
+	}
+	.cmdk-ty {
+		color: var(--crt-faint);
+	}
+	.cmdk-main {
+		min-width: 0;
+	}
+	.cmdk-tt {
+		color: var(--crt-hi);
+	}
+	.cmdk-truncate {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.cmdk-post__desc {
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-faint);
+	}
+	.cmdk-post__meta {
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.cmdk-cat {
+		margin-right: 10px;
+		color: var(--crt-amber);
+	}
+	.cmdk-tag {
+		margin-right: 8px;
+	}
+	.cmdk-rt {
+		font-size: 12px;
+		color: var(--crt-faint);
+		white-space: nowrap;
+	}
+	.cmdk-rt--date {
+		color: var(--crt-amber);
+	}
+
+	/* Hover: marker + underlined label, no fill. */
+	.cmdk-item:hover .cmdk-mk::before {
+		content: '>';
+	}
+	.cmdk-item:hover .cmdk-tt {
+		text-decoration: underline;
+		text-decoration-color: var(--crt-faint);
+		text-underline-offset: 3px;
+	}
+	/* Selection (arrow keys): reverse video with a marker. */
+	.cmdk-item.is-selected,
+	.cmdk-item.is-selected
+		:is(.cmdk-mk, .cmdk-ty, .cmdk-tt, .cmdk-post__desc, .cmdk-cat, .cmdk-tag, .cmdk-rt) {
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+	.cmdk-item.is-selected .cmdk-tag::before {
+		color: var(--crt-glass);
+	}
+	.cmdk-item.is-selected .cmdk-mk::before {
+		content: '>';
+	}
+	/* Tab focus inside the trap: dashed outline, beating the shell ring. */
+	.cmdk-overlay .cmdk-results div.cmdk-item:focus-visible {
+		outline: 1px dashed var(--crt-amber);
+		outline-offset: -1px;
+	}
+
+	.cmdk-empty {
+		display: grid;
+		gap: 2px;
+		padding: 18px 16px 18px 34px;
+	}
+	.cmdk-empty__n {
+		color: var(--crt-amber);
+	}
+	.cmdk-empty__why {
+		color: var(--crt-worn);
+	}
+
+	.cmdk-foot {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 18px;
+		padding: 8px 16px;
+		border-top: 1px solid var(--crt-line);
+		font-size: 12px;
+		color: var(--crt-faint);
+	}
+	.cmdk-foot kbd {
+		margin-right: 6px;
+	}
+	.cmdk-foot__n {
+		margin-left: auto;
+		color: var(--crt-worn);
+	}
+
+	@media (width < 36rem) {
+		.cmdk-overlay {
+			padding: 8vh 12px 12px;
+		}
+		.cmdk-item {
+			margin-right: 8px;
+		}
+		.cmdk-panel > .term-frame__title .dim,
+		.cmdk-esc,
+		.cmdk-foot > span:not(.cmdk-foot__n) {
+			display: none;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.cmdk-overlay,
+		.cmdk-panel {
+			animation: none;
+		}
+	}
+}
+
+/* Fuzzy match: amber + underline, never colour alone. Unlayered to beat the
+   `@utility fuzzy-match` in src/app.css (utilities layer, Rosé Pine accent). */
+.cmdk-overlay .fuzzy-match {
+	color: var(--crt-amber);
+	font-weight: 400;
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+.cmdk-overlay .cmdk-item.is-selected .fuzzy-match {
+	color: var(--crt-glass);
+	font-weight: 700;
+	text-decoration-color: var(--crt-glass);
+}
+
+@keyframes cmdk-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+@keyframes cmdk-pop {
+	from {
+		transform: translateY(-10px) scale(0.98);
+	}
+	to {
+		transform: none;
+	}
+}
