@@ -706,6 +706,9 @@
 	background: var(--crt-glass);
 	font-size: 12px;
 	line-height: 16px;
+	color: var(--crt-amber);
+}
+.pg-post .prose-terminal pre.shiki > .pg-code__label > .pg-code__label-dim {
 	color: var(--crt-faint);
 }
 .pg-post .prose-terminal pre.shiki > .code-copy-btn {
@@ -738,7 +741,8 @@
 }
 
 /* Mermaid: a frame around the diagram (source text before it renders). The
-   config stays verbatim (C11 compares it), so the SVG is recoloured here;
+   config's themeVariables carry the inks (Mermaid.tsx); these rules pin the
+   pieces the page wants drawn differently from mermaid's own mapping.
    mermaid's own <style> is id-scoped, hence !important. */
 .pg-post .prose-terminal :is([data-mermaid], pre[data-mermaid-error]) {
 	position: relative;

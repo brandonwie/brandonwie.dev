@@ -95,6 +95,26 @@ export const SHIKI_LANGS: BundledLanguage[] = [
 export const SHIKI_THEME = 'github-dark';
 
 /**
+ * Stamps the fence language onto each highlighted `<pre>` as `data-language`,
+ * so the client `CodeCopy` frame label can read `<language> · <n> lines`.
+ *
+ * `this.options.lang` is the language Shiki actually highlighted with: the
+ * fence id as written (`ts`, `typescript`, `bash`, ...) or, for a fence whose
+ * language is not in SHIKI_LANGS, the `text` fallback. A fence with NO
+ * language is never highlighted (no `defaultLanguage`), so it has no `.shiki`
+ * `<pre>` and no frame label either. The attribute sits on `<pre>`, outside
+ * `<code>`, so copied text is unaffected.
+ */
+// Typed through the plugin's own options: `shiki` and `@shikijs/rehype` resolve
+// different `@shikijs/types` patch versions, whose transformer types disagree.
+const preLanguageAttribute: NonNullable<RehypeShikiOptions['transformers']>[number] = {
+	name: 'pre-data-language',
+	pre(node) {
+		node.properties['data-language'] = this.options.lang;
+	},
+};
+
+/**
  * mdsvex replacement (plan.md Open Decision 6).
  *
  * Order matters twice over:
@@ -151,6 +171,7 @@ export async function renderMarkdown(
 			theme: SHIKI_THEME,
 			langs: SHIKI_LANGS,
 			fallbackLanguage: 'text',
+			transformers: [preLanguageAttribute],
 		} satisfies RehypeShikiOptions);
 
 	// Frontmatter is seeded onto the vfile BEFORE the transformers run, because
