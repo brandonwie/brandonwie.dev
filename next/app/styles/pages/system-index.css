@@ -1,2 +1,76 @@
 /* Phosphor Fade page styles: system-index. Owned by that page's port; see
    next/app/globals.css (terminal shell) for the shared term-* primitives. */
+@layer components {
+	.pg-system__intro {
+		margin-top: 10px;
+	}
+	.pg-system__intro .term-eyebrow {
+		margin: 0;
+	}
+	.pg-system__ttl {
+		display: inline-block;
+	}
+	.pg-system__lede {
+		margin: 8px 0 0;
+		color: var(--crt-worn);
+	}
+
+	/* ls -l: the three metadata columns size to content and the link takes the
+	   rest, so wider Hangul glyphs on /ko never push the row out of line. */
+	.pg-system__ls {
+		margin-top: 6px;
+	}
+	.pg-system__total {
+		margin: 0;
+		color: var(--crt-faint);
+	}
+	.pg-system__row {
+		display: grid;
+		grid-template-columns: max-content max-content max-content minmax(0, 1fr);
+		column-gap: 22px;
+		align-items: baseline;
+	}
+	.pg-system__perm,
+	.pg-system__own {
+		color: var(--crt-faint);
+	}
+	.pg-system__name {
+		color: var(--crt-amber);
+	}
+	.pg-system__cta {
+		justify-self: start;
+	}
+	.pg-system__arr {
+		color: var(--crt-amber);
+	}
+	/* Keyboard focus draws the row in reverse video (.term-sel): glass on amber
+	   8.90:1. The shell's amber outline stays as the focus ring. */
+	.pg-system__cta:focus-visible {
+		margin-left: -4px;
+		padding: 0 4px;
+		background: var(--crt-amber);
+		text-decoration: none;
+	}
+	.pg-system__cta:focus-visible,
+	.pg-system__cta:focus-visible .n,
+	.pg-system__cta:focus-visible .pg-system__arr {
+		color: var(--crt-glass);
+	}
+
+	.pg-system__desc {
+		max-width: 76ch;
+		margin: 0;
+	}
+
+	/* Phones: perm + owner drop to keep the entry name and link on one line. */
+	@media (width < 36rem) {
+		.pg-system__row {
+			grid-template-columns: max-content minmax(0, 1fr);
+			column-gap: 14px;
+		}
+		.pg-system__perm,
+		.pg-system__own {
+			display: none;
+		}
+	}
+}
