@@ -706,6 +706,9 @@
 	background: var(--crt-glass);
 	font-size: 12px;
 	line-height: 16px;
+	color: var(--crt-amber);
+}
+.pg-post .prose-terminal pre.shiki > .pg-code__label > .pg-code__label-dim {
 	color: var(--crt-faint);
 }
 .pg-post .prose-terminal pre.shiki > .code-copy-btn {

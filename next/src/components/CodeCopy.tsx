@@ -7,7 +7,8 @@ import { useEffect } from 'react';
  *
  * Runs exclusively in the browser after mount. Finds every Shiki `<pre>` inside
  * `.prose-terminal`, which the page CSS draws as a terminal frame, and adds two
- * pieces to the frame border: a line-count label (top left, decorative) and a
+ * pieces to the frame border: a `<language> · <n> lines` label (top left,
+ * decorative; language from the pre's `data-language`) and a
  * bracket `[ Copy ]` button (top right, always visible). Both sit OUTSIDE the
  * `<code>` element, and the line-number gutter is CSS generated content, so the
  * button still copies clean code text. Has zero effect on the prerendered
@@ -30,10 +31,17 @@ export function CodeCopy({
 				if (pre.querySelector('.code-copy-btn')) continue;
 
 				const lines = pre.querySelectorAll('code > .line').length;
+				// `data-language` is stamped by the Shiki step in pipeline.ts: the
+				// fence id as written, or `text` for the plain-text fallback. A
+				// pre without it (should not occur for `.shiki`) also reads `text`.
+				const language = pre.dataset.language || 'text';
 				const label = document.createElement('span');
 				label.className = 'pg-code__label';
 				label.setAttribute('aria-hidden', 'true');
-				label.textContent = `${lines} ${lines === 1 ? 'line' : 'lines'}`;
+				const count = document.createElement('span');
+				count.className = 'pg-code__label-dim';
+				count.textContent = `· ${lines} ${lines === 1 ? 'line' : 'lines'}`;
+				label.append(`${language} `, count);
 
 				const btn = document.createElement('button');
 				btn.type = 'button';
