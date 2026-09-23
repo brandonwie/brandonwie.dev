@@ -13,7 +13,9 @@ import { SITE_AUTHOR, SITE_NAME, SITE_URL, absoluteUrl, localeCode } from '../..
 import { articlePath, sourceDate } from './article-contract';
 import { homeHref } from '../data/nav';
 import { formatDateLong } from './date';
-import { articleCopy } from '../i18n/copy';
+import { articleCopy, shellCopy } from '../i18n/copy';
+import { TermPrompt } from '@/shell/TermPrompt';
+import { cwdFor } from '@/shell/terminal-path';
 import { articleJsonLd } from './article-json-ld';
 import { heroBlockHtml } from './hero';
 import { findPostFile, listPostSlugs, loadPost, type Locale } from './posts';
@@ -134,125 +136,212 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 
 	const meta = post.frontmatter;
 	const copy = articleCopy(locale);
+	const shell = shellCopy(locale);
 	const contentLocale = contentLocaleOf(locale, isFallback);
 	const otherLocale: Locale = locale === 'ko' ? 'en' : 'ko';
 	const switchPath = articlePath(slug, otherLocale);
 	const socialLinks = socialLinksBySlug[slug] ?? [];
+	const cwd = cwdFor(articlePath(slug, locale));
+	const hasToc = post.headings.length > 0;
+	const showUpdated = Boolean(meta.updated && meta.updated !== meta.date);
+	const frontmatterRows =
+		3 + (showUpdated ? 1 : 0) + (post.readingTime ? 1 : 0) + (meta.tags.length > 0 ? 1 : 0);
 
 	return (
-		<>
-			<ReadingProgress label={copy.readingProgress} />
-			<article className="article-shell" data-article-locale={locale} data-pagefind-body>
-				{/* Pagefind locale facet, as PostDetail.svelte:73,204: the facet follows the CONTENT,
-				   not the route, so a Korean URL serving the English body indexes as "en". */}
-				<span data-pagefind-filter="lang" className="hidden">
-					{contentLocale}
-				</span>
-				{isFallback && (
-					<div className="post__fallback" data-pagefind-ignore>
-						<p>{copy.translationNotice}</p>
-						<a href={articlePath(slug, 'en')}>{copy.viewInEnglish}</a>
+		<div className="pg-post">
+			<ReadingProgress
+				label={copy.readingProgress}
+				file={`${slug}/index.md`}
+				headings={post.headings}
+			/>
+			<TermPrompt
+				cwd={cwd}
+				command="less index.md"
+				flags={`${hasToc ? '--toc ' : ''}--lang ${contentLocale}`}
+			/>
+			<div className={hasToc ? 'pg-post__read has-toc' : 'pg-post__read'}>
+				<article
+					className="article-shell pg-post__article"
+					data-article-locale={locale}
+					data-pagefind-body
+				>
+					{/* Pagefind locale facet, as PostDetail.svelte:73,204: the facet follows the CONTENT,
+					   not the route, so a Korean URL serving the English body indexes as "en". */}
+					<span data-pagefind-filter="lang" className="hidden">
+						{contentLocale}
+					</span>
+					{isFallback && (
+						<p className="post__fallback pg-post__warn" data-pagefind-ignore>
+							<span className="text-crt-amber">warn:</span> {copy.translationNotice}{' '}
+							<a className="term-lnk" href={articlePath(slug, 'en')} hrefLang="en" lang="en">
+								<span className="n" aria-hidden="true">
+									[1]
+								</span>{' '}
+								{copy.viewInEnglish}
+							</a>
+						</p>
+					)}
+					<script
+						type="application/ld+json"
+						dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta, contentLocale) }}
+					/>
+					<div className="pg-post__crumbs" data-pagefind-ignore>
+						<BackToPosts locale={locale} label={copy.backToPosts} />
+						<nav aria-label={copy.breadcrumb}>
+							<ol className="breadcrumb-list">
+								<li>
+									<a className="term-lnk" href={homeHref(locale)}>
+										{copy.home}
+									</a>
+								</li>
+								<li aria-current="page">{meta.title}</li>
+							</ol>
+						</nav>
 					</div>
-				)}
-				<script
-					type="application/ld+json"
-					dangerouslySetInnerHTML={{ __html: articleJsonLd(slug, meta, contentLocale) }}
-				/>
-				<div className="post__back" data-pagefind-ignore>
-					<BackToPosts locale={locale} label={copy.backToPosts} />
-				</div>
-				<nav aria-label={copy.breadcrumb} data-pagefind-ignore>
-					<ol className="breadcrumb-list">
-						<li>
-							<a href={homeHref(locale)}>{copy.home}</a>
-						</li>
-						<li aria-current="page">{meta.title}</li>
-					</ol>
-				</nav>
-				<div
-					className="article-hero post__hero"
-					data-pagefind-ignore
-					dangerouslySetInnerHTML={{ __html: heroBlockHtml(slug) }}
-				/>
-				<header className="article-header post__head">
-					<h1>{meta.title}</h1>
-					<p className="article-description post__lede">{meta.description}</p>
-					<div className="article-meta">
-						<span>
-							{copy.published}{' '}
-							<time dateTime={sourceDate(meta.date)} data-pagefind-sort="date[datetime]">
-								{displayDate(meta.date, locale)}
-							</time>
+					<div className="term-frame pg-post__hero" data-pagefind-ignore>
+						<span className="term-frame__title" aria-hidden="true">
+							hero.png <span className="dim">· 2400×1260</span>
 						</span>
-						{meta.updated && meta.updated !== meta.date ? (
-							<span>
-								<span className="post__sep">·</span> {copy.updated}{' '}
-								<time dateTime={sourceDate(meta.updated)}>{displayDate(meta.updated, locale)}</time>
-							</span>
-						) : null}
-						{post.readingTime ? (
-							<span>
-								<span className="post__sep">·</span> {copy.readingTimeWithMinutes(post.readingTime)}
-							</span>
-						) : null}
-						<span>
-							<span className="post__sep">·</span> {copy.category}:{' '}
-							<span data-pagefind-filter="category">{meta.category}</span>
-						</span>
-						<PostCopyButton copyLabel={copy.copyLink} copiedLabel={copy.copied} />
+						<div
+							className="article-hero term-worn"
+							dangerouslySetInnerHTML={{ __html: heroBlockHtml(slug) }}
+						/>
 					</div>
-					{meta.tags.length > 0 ? (
-						<div className="post__tags">
-							<span>{copy.tags}: </span>
-							<ul className="article-tags" aria-label={copy.tags}>
-								{meta.tags.map((tag) => (
-									<li key={tag} className="post__tag">
-										{tag}
+					<p className="term-eyebrow pg-post__eyebrow" aria-hidden="true" data-pagefind-ignore>
+						post · {meta.category}
+					</p>
+					{/* The header must open with a bare <h1>: the article suite (A11) and the C5
+					   fallback row read it that way, so the terminal title look is page CSS. */}
+					<header className="article-header pg-post__head">
+						<h1>{meta.title}</h1>
+						<p className="article-description pg-post__lede">{meta.description}</p>
+						<div className="term-frame article-meta pg-post__fm">
+							<span className="term-frame__title" aria-hidden="true" data-pagefind-ignore>
+								frontmatter <span className="dim">· head -n {frontmatterRows}</span>
+							</span>
+							<div className="pg-post__row">
+								<span className="k">{copy.published}</span>
+								<span className="v">
+									<time dateTime={sourceDate(meta.date)} data-pagefind-sort="date[datetime]">
+										{displayDate(meta.date, locale)}
+									</time>
+								</span>
+							</div>
+							{showUpdated && meta.updated ? (
+								<div className="pg-post__row">
+									<span className="k">{copy.updated}</span>
+									<span className="v">
+										<time dateTime={sourceDate(meta.updated)}>
+											{displayDate(meta.updated, locale)}
+										</time>
+									</span>
+								</div>
+							) : null}
+							{post.readingTime ? (
+								<div className="pg-post__row">
+									<span className="k" aria-hidden="true">
+										reading
+									</span>
+									<span className="v">{copy.readingTimeWithMinutes(post.readingTime)}</span>
+								</div>
+							) : null}
+							<div className="pg-post__row">
+								<span className="k">{copy.category}</span>
+								<span className="v" data-pagefind-filter="category">
+									{meta.category}
+								</span>
+							</div>
+							{meta.tags.length > 0 ? (
+								<div className="pg-post__row">
+									<span className="k">{copy.tags}</span>
+									<ul className="v article-tags" aria-label={copy.tags}>
+										{meta.tags.map((tag) => (
+											<li key={tag} className="term-tag">
+												{tag}
+											</li>
+										))}
+									</ul>
+								</div>
+							) : null}
+							<div className="pg-post__row" data-pagefind-ignore>
+								<span className="k" aria-hidden="true">
+									lang
+								</span>
+								<span className="v">
+									<span aria-hidden="true">{contentLocale}</span>
+									{locale === 'ko' || post.hasKoreanTranslation ? (
+										<>
+											<span className="text-crt-faint" aria-hidden="true">
+												{' → '}
+											</span>
+											<a
+												className="locale-switch term-lnk"
+												href={switchPath}
+												hrefLang={otherLocale}
+												lang={otherLocale}
+												data-locale-switch={otherLocale}
+												aria-label={copy.switchLabel}
+											>
+												{copy.switchText}
+											</a>
+										</>
+									) : null}
+								</span>
+							</div>
+							<div className="pg-post__actions" data-pagefind-ignore>
+								<PostCopyButton copyLabel={copy.copyLink} copiedLabel={copy.copied} />
+							</div>
+						</div>
+					</header>
+					{hasToc ? (
+						<TableOfContents variant="inline" headings={post.headings} title={copy.toc} />
+					) : null}
+					<div className="prose-terminal prose post__content">{post.content}</div>
+					{socialLinks.length > 0 ? (
+						<aside className="post__social pg-post__social" data-pagefind-ignore>
+							<TermPrompt cwd={cwd} command="ls --crosspost" />
+							<p className="post__social-label">{copy.alsoPublishedOn}</p>
+							<ul className="pg-post__social-list">
+								{socialLinks.map((link, index) => (
+									<li key={link.url}>
+										<a
+											className="term-lnk post__social-chip"
+											href={link.url}
+											target="_blank"
+											rel="noopener noreferrer"
+										>
+											<span className="n" aria-hidden="true">
+												[{index + 1}]
+											</span>{' '}
+											{link.label} <span aria-hidden="true">↗</span>
+										</a>
 									</li>
 								))}
 							</ul>
-						</div>
+						</aside>
 					) : null}
-					{locale === 'ko' || post.hasKoreanTranslation ? (
-						<a
-							className="locale-switch"
-							href={switchPath}
-							hrefLang={otherLocale}
-							lang={otherLocale}
-							data-locale-switch={otherLocale}
-							aria-label={copy.switchLabel}
-						>
-							{copy.switchText}
-						</a>
-					) : null}
-				</header>
-				{post.headings.length > 0 ? (
-					<TableOfContents headings={post.headings} title={copy.toc} />
+				</article>
+				{hasToc ? (
+					<TableOfContents
+						variant="rail"
+						headings={post.headings}
+						title={copy.toc}
+						backLabel={copy.backToPosts}
+						searchLabel={shell.search}
+						readLabel={copy.readingProgress}
+					/>
 				) : null}
-				<div className="prose-terminal prose post__content">{post.content}</div>
-				{socialLinks.length > 0 ? (
-					<aside className="post__social" data-pagefind-ignore>
-						<span className="post__social-label">{copy.alsoPublishedOn}</span>
-						{socialLinks.map((link) => (
-							<a
-								key={link.url}
-								className="post__social-chip"
-								href={link.url}
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								{link.label}
-							</a>
-						))}
-					</aside>
-				) : null}
-				<Giscus slug={slug} locale={locale} title={copy.comments} />
-				<div className="post__bottom" data-pagefind-ignore>
-					<BackToPosts locale={locale} label={copy.backToPosts} />
-				</div>
-			</article>
+			</div>
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command={`giscus --term ${slug}`} flags={`--lang ${locale} --lazy`} />
+			<Giscus slug={slug} locale={locale} title={copy.comments} />
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="cd .." />
+			<p className="post__bottom pg-post__bottom" data-pagefind-ignore>
+				<BackToPosts locale={locale} label={copy.backToPosts} /> <kbd aria-hidden="true">bksp</kbd>
+			</p>
 			<ArticleKeyNavigation locale={locale} />
 			<CodeCopy copyLabel={copy.codeCopy} copiedLabel={copy.codeCopied} />
-		</>
+		</div>
 	);
 }

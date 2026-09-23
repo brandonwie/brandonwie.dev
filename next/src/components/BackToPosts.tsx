@@ -14,10 +14,7 @@ export function BackToPosts({
 	label?: string;
 }) {
 	return (
-		<a
-			href={postsHref(locale)}
-			className="inline-flex items-center gap-1 text-sm text-muted no-underline transition-colors hover:text-accent"
-		>
+		<a href={postsHref(locale)} className="pg-post__back">
 			<span aria-hidden="true">←</span>
 			<span>{label}</span>
 		</a>

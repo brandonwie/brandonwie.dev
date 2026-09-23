@@ -63,16 +63,25 @@ export function Giscus({ slug, locale, title }: GiscusProps) {
 
 	return (
 		<section
-			className="comments-shell mt-16 border-t border-terminal-border pt-12"
+			className="term-frame comments-shell pg-post__comments"
 			aria-labelledby="comments-title"
 			data-pagefind-ignore
 		>
-			<h2 id="comments-title" className="mb-8 text-xl font-semibold text-terminal-text-primary">
+			<h2 id="comments-title" className="term-frame__title">
 				{title}
+				<span className="dim" aria-hidden="true">
+					{' '}
+					· github discussions
+				</span>
 			</h2>
+			{/* A resolve log echoing the embed config above: decorative terminal output. */}
+			<p className="pg-post__log" aria-hidden="true">
+				repo <span className="text-crt-green">brandonwie/brandonwie.dev</span> · category &quot;Blog
+				Comments&quot; · term {slug}
+			</p>
 			<div
 				ref={containerRef}
-				className="giscus-container"
+				className="giscus-container pg-post__mount"
 				id="giscus-comments"
 				data-giscus-mount="true"
 				data-giscus-term={slug}
