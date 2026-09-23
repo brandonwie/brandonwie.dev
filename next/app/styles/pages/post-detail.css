@@ -1,2 +1,796 @@
 /* Phosphor Fade page styles: post-detail. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Design: retro-site-pages/pages/PostDetailPage (README + preview.html). The
+   article is `less` output: a pager line with the reading meter, a crumbs row,
+   the hero and frontmatter frames, 72ch mono prose, a TOC rail (a <details>
+   frame below 60rem), the giscus frame and a `cd ..` back link.
+
+   Two cascade tiers:
+   - Layout pieces sit in `@layer components`, scoped under `.pg-post`.
+   - The PROSE rules below the layer are UNLAYERED on purpose. The article body
+     carries Tailwind Typography's `prose` utility and the `@utility
+     prose-terminal` from src/app.css (Space Grotesk, Rosé Pine inks); both live
+     in the utilities layer, which beats every layered rule. Unlayered and
+     scoped under `.pg-post .prose-terminal`, these win without touching the
+     shared utility the legacy Svelte build still uses.
+
+   Inks only (WCAG 2.1 on --crt-glass #0d0b13): hi 15.69, worn 12.60, green
+   11.77, amber 8.90, faint 4.91; glass on amber 8.90. Post prose is the D5
+   type exception: 14/24. */
+
+@layer components {
+	/* --- pager: reading progress pinned to the top of the viewport ---------- */
+	.pg-post__pager {
+		position: sticky;
+		top: 0;
+		z-index: 3;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		margin: -18px -26px 14px;
+		padding: 4px 26px;
+		border-bottom: 1px solid var(--crt-line);
+		background: var(--crt-glass);
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-faint);
+		white-space: nowrap;
+	}
+	.pg-post__pager-file,
+	.pg-post__pager-sec {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.pg-post__pager-file {
+		flex-shrink: 2;
+		color: var(--crt-worn);
+	}
+	.pg-post__meter {
+		flex-shrink: 0;
+		margin-left: auto;
+	}
+	.pg-post__meter--narrow {
+		display: none;
+	}
+	.pg-post__pager-pct {
+		flex-shrink: 0;
+		width: 4ch;
+		text-align: right;
+		color: var(--crt-amber);
+	}
+
+	/* --- two columns: 72ch article + sticky TOC rail ------------------------ */
+	.pg-post__read {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		align-items: start;
+	}
+	.pg-post__article {
+		min-width: 0;
+		max-width: 605px;
+	}
+	.pg-post .pg-post__toc {
+		display: none;
+	}
+
+	/* --- warn line (KO URL serving the English body) ------------------------ */
+	.pg-post__warn {
+		margin: 0 0 12px;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-worn);
+	}
+
+	/* --- back link + breadcrumb row ----------------------------------------- */
+	.pg-post__crumbs {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 18px;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-faint);
+	}
+	.pg-post__crumbs nav {
+		flex: 1 1 12ch;
+		min-width: 0;
+	}
+	.pg-post__crumbs ol {
+		display: flex;
+		gap: 8px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-post__crumbs li {
+		flex-shrink: 0;
+		white-space: nowrap;
+	}
+	.pg-post__crumbs li[aria-current] {
+		flex-shrink: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		color: var(--crt-worn);
+	}
+	.pg-post__crumbs li + li::before {
+		content: '/ ';
+		color: var(--crt-faint);
+	}
+	.pg-post__back {
+		color: var(--crt-green);
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.pg-post__back:hover,
+	.pg-post__back:focus-visible {
+		text-decoration: underline;
+	}
+	.pg-post__back > [aria-hidden] {
+		margin-right: 1ch;
+	}
+
+	/* --- hero frame ---------------------------------------------------------- */
+	.pg-post__hero {
+		margin-top: 22px;
+	}
+	.pg-post__hero img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	/* --- article header: eyebrow, h1, lede, frontmatter frame --------------- */
+	.pg-post__eyebrow {
+		margin: 22px 0 0;
+	}
+	/* The h1 stays a bare element (see article.tsx), so it takes the shell's
+	   .term-ttl look and the .term-worn crossline here instead of via classes. */
+	.pg-post__head > h1 {
+		position: relative;
+		margin: 4px 0 0;
+		font-size: 26px;
+		line-height: 34px;
+		font-weight: 700;
+		letter-spacing: -0.01em;
+		color: var(--crt-hi);
+		overflow-wrap: anywhere;
+	}
+	.pg-post__head > h1::before {
+		content: '# ';
+		font-weight: 400;
+		color: var(--crt-amber);
+	}
+	.pg-post__head > h1::after {
+		content: '';
+		position: absolute;
+		inset: -4px;
+		pointer-events: none;
+		background-image: repeating-linear-gradient(0deg, #05040a66 0 1px, transparent 1px 3px);
+	}
+	:lang(ko) .pg-post__head > h1,
+	:lang(ko) .pg-post__lede {
+		word-break: keep-all;
+	}
+	.pg-post__lede {
+		margin: 10px 0 0;
+		font-size: 14px;
+		line-height: 24px;
+		color: var(--crt-worn);
+	}
+	.pg-post__fm {
+		margin-top: 18px;
+	}
+	.pg-post__row {
+		display: grid;
+		grid-template-columns: 110px minmax(0, 1fr);
+		gap: 12px;
+		font-size: 12px;
+		line-height: 22px;
+	}
+	.pg-post__row .k {
+		color: var(--crt-faint);
+		text-transform: lowercase;
+	}
+	.pg-post__row .v {
+		min-width: 0;
+		color: var(--crt-worn);
+		overflow-wrap: anywhere;
+	}
+	.pg-post__row time {
+		color: var(--crt-amber);
+	}
+	.pg-post__row ul.v {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0 12px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-post__actions {
+		display: flex;
+		gap: 12px;
+		margin-top: 8px;
+		padding-top: 10px;
+		border-top: 1px solid var(--crt-line);
+	}
+
+	/* --- bracket buttons: copy link, copy code ------------------------------- */
+	.pg-post .pg-btn {
+		padding: 0 6px;
+		border: 1px solid var(--crt-line);
+		background: var(--crt-glass);
+		font: inherit;
+		font-size: 12px;
+		line-height: 18px;
+		color: var(--crt-green);
+		white-space: nowrap;
+		cursor: pointer;
+	}
+	.pg-post .pg-btn::before {
+		content: '[';
+		margin-right: 4px;
+		color: var(--crt-faint);
+	}
+	.pg-post .pg-btn::after {
+		content: ']';
+		margin-left: 4px;
+		color: var(--crt-faint);
+	}
+	.pg-post .pg-btn:hover {
+		border-color: var(--crt-green);
+	}
+	.pg-post .pg-btn.is-done {
+		border-color: var(--crt-amber);
+		color: var(--crt-amber);
+	}
+	.pg-post .pg-btn:focus-visible,
+	.pg-post .pg-btn:focus-visible::before,
+	.pg-post .pg-btn:focus-visible::after {
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+
+	/* --- TOC: rail frame and the collapsible frame --------------------------- */
+	.pg-post__toc-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		font-size: 12px;
+		line-height: 18px;
+	}
+	.pg-post__toc-list li + li {
+		margin-top: 7px;
+	}
+	.pg-post__toc-list a {
+		display: grid;
+		grid-template-columns: 3ch minmax(0, 1fr);
+		color: var(--crt-faint);
+		text-decoration: none;
+	}
+	.pg-post__toc-list li.toc-depth-3 a,
+	.pg-post__toc-list li.toc-depth-4 a {
+		grid-template-columns: 3ch 2ch minmax(0, 1fr);
+	}
+	.pg-post__toc-list a:hover {
+		color: var(--crt-worn);
+	}
+	.pg-post__toc-list a:hover .t {
+		text-decoration: underline;
+	}
+	.pg-post__toc-list li.is-on a {
+		color: var(--crt-amber);
+	}
+	.pg-post__toc-list a:focus-visible {
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+	.pg-post__keys {
+		margin-top: 14px;
+		padding-top: 10px;
+		border-top: 1px solid var(--crt-line);
+		font-size: 11px;
+		line-height: 20px;
+		color: var(--crt-faint);
+	}
+	.pg-post__keys div {
+		display: flex;
+		justify-content: space-between;
+		gap: 8px;
+	}
+	.pg-post__keys kbd {
+		margin-right: 4px;
+	}
+
+	.pg-post__toc-inline {
+		margin-top: 22px;
+	}
+	.pg-post__toc-inline > summary {
+		list-style: none;
+		cursor: pointer;
+	}
+	.pg-post__toc-inline > summary::-webkit-details-marker {
+		display: none;
+	}
+	.pg-post__toc-mark::before {
+		content: '[+] ';
+		color: var(--crt-faint);
+	}
+	.pg-post__toc-inline[open] .pg-post__toc-mark::before {
+		content: '[-] ';
+	}
+	.pg-post__toc-inline[open] .pg-post__toc-list {
+		margin-top: 4px;
+	}
+
+	/* --- crosspost links (renders only when social-links.json has data) ----- */
+	.pg-post__social {
+		margin-top: 22px;
+	}
+	.pg-post__social .post__social-label {
+		margin: 0;
+		font-size: 12px;
+		color: var(--crt-faint);
+	}
+	.pg-post__social-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0 18px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	/* --- comments: giscus mount inside a frame ------------------------------ */
+	.pg-post__comments {
+		max-width: 605px;
+	}
+	.pg-post__log {
+		margin: 0;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-faint);
+		overflow-wrap: anywhere;
+	}
+	.pg-post__mount {
+		min-height: 64px;
+		margin-top: 12px;
+		border: 1px dashed var(--crt-line);
+	}
+	.pg-post__mount:has(iframe) {
+		min-height: 0;
+		border: 0;
+	}
+
+	/* --- bottom: cd .. + back link ------------------------------------------ */
+	.pg-post__bottom {
+		margin: 0;
+		font-size: 13px;
+	}
+	.pg-post__bottom kbd {
+		margin-left: 8px;
+	}
+
+	/* --- wide screens: the rail replaces the collapsible frame -------------- */
+	@media (width >= 60rem) {
+		.pg-post__read.has-toc {
+			grid-template-columns: minmax(0, 605px) minmax(0, 1fr);
+			gap: 28px;
+		}
+		.pg-post .pg-post__toc {
+			display: block;
+			position: sticky;
+			top: 40px;
+			margin-top: 9px;
+			background: var(--crt-glass);
+		}
+		.pg-post__toc .pg-post__toc-list {
+			max-height: calc(100vh - 170px);
+			overflow-y: auto;
+		}
+		.pg-post .pg-post__toc-inline {
+			display: none;
+		}
+	}
+
+	@media (width < 48rem) {
+		.pg-post__pager {
+			gap: 10px;
+			margin-inline: -16px;
+			padding-inline: 16px;
+		}
+		.pg-post__pager-file {
+			display: none;
+		}
+		.pg-post__meter--wide {
+			display: none;
+		}
+		.pg-post__meter--narrow {
+			display: inline;
+		}
+		.pg-post__row {
+			grid-template-columns: 76px minmax(0, 1fr);
+			gap: 8px;
+		}
+	}
+}
+
+/* === Prose (UNLAYERED: must beat the `prose` / `prose-terminal` utilities) === */
+
+.pg-post .prose-terminal {
+	--tw-prose-body: var(--crt-worn);
+	--tw-prose-headings: var(--crt-hi);
+	--tw-prose-lead: var(--crt-worn);
+	--tw-prose-links: var(--crt-green);
+	--tw-prose-bold: var(--crt-hi);
+	--tw-prose-counters: var(--crt-faint);
+	--tw-prose-bullets: var(--crt-amber);
+	--tw-prose-hr: var(--crt-line);
+	--tw-prose-quotes: var(--crt-hi);
+	--tw-prose-quote-borders: var(--crt-amber);
+	--tw-prose-captions: var(--crt-faint);
+	--tw-prose-kbd: var(--crt-amber);
+	--tw-prose-code: var(--crt-amber);
+	--tw-prose-pre-code: var(--crt-worn);
+	--tw-prose-pre-bg: transparent;
+	--tw-prose-th-borders: var(--crt-amber);
+	--tw-prose-td-borders: var(--crt-line);
+	max-width: 72ch;
+	margin-top: 26px;
+	font-family: var(--font-term);
+	font-size: 14px;
+	line-height: 24px;
+	color: var(--crt-worn);
+}
+.pg-post .prose-terminal:lang(ko) {
+	word-break: keep-all;
+	overflow-wrap: anywhere;
+}
+.pg-post .prose-terminal > :first-child {
+	margin-top: 0;
+}
+.pg-post .prose-terminal p {
+	margin: 0 0 14px;
+}
+
+/* Headings: shell `##` prefixes; clear the sticky pager on TOC jumps. */
+.pg-post .prose-terminal :is(h2, h3, h4, h5, h6) {
+	scroll-margin-top: 48px;
+	color: var(--crt-hi);
+	font-weight: 700;
+}
+.pg-post .prose-terminal h2 {
+	margin: 28px 0 10px;
+	font-size: 16px;
+	line-height: 26px;
+}
+.pg-post .prose-terminal :is(h3, h4, h5, h6) {
+	margin: 26px 0 10px;
+	font-size: 14px;
+	line-height: 24px;
+}
+.pg-post .prose-terminal :is(h2, h3, h4)::before {
+	font-weight: 400;
+	color: var(--crt-amber);
+}
+.pg-post .prose-terminal h2::before {
+	content: '## ';
+}
+.pg-post .prose-terminal h3::before {
+	content: '### ';
+}
+.pg-post .prose-terminal h4::before {
+	content: '#### ';
+}
+
+/* Links: green with a permanent underline (never colour alone). */
+.pg-post .prose-terminal a {
+	color: var(--crt-green);
+	font-weight: 400;
+	text-decoration: underline;
+	text-decoration-color: var(--crt-line);
+	text-underline-offset: 3px;
+}
+.pg-post .prose-terminal a:hover {
+	text-decoration-color: var(--crt-green);
+}
+.pg-post .prose-terminal strong {
+	color: var(--crt-hi);
+	font-weight: 700;
+}
+
+/* Inline code: amber, backticks as generated content (never copied). */
+.pg-post .prose-terminal code:not(pre code) {
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: 400;
+	color: var(--crt-amber);
+}
+.pg-post .prose-terminal code:not(pre code)::before,
+.pg-post .prose-terminal code:not(pre code)::after {
+	content: '`';
+	color: var(--crt-faint);
+}
+.pg-post .prose-terminal kbd {
+	padding: 0 5px;
+	border: 1px solid var(--crt-line);
+	border-radius: 0;
+	box-shadow: none;
+	font-family: inherit;
+	font-size: 11px;
+	color: var(--crt-amber);
+}
+
+/* Blockquote: a mail-style `>` gutter drawn in characters. The gutter is
+   decorative, so its alternative text is empty. */
+.pg-post .prose-terminal blockquote {
+	position: relative;
+	margin: 0 0 16px;
+	padding: 0 0 0 3ch;
+	overflow: hidden;
+	border: 0;
+	font-style: normal;
+	font-weight: 400;
+	color: var(--crt-hi);
+}
+.pg-post .prose-terminal blockquote::before {
+	content: '>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>';
+	content: '>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>\A>' /
+		'';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	overflow: hidden;
+	white-space: pre;
+	color: var(--crt-amber);
+}
+.pg-post .prose-terminal blockquote p {
+	margin: 0 0 8px;
+}
+.pg-post .prose-terminal blockquote p:last-child {
+	margin-bottom: 0;
+}
+/* B2: Typography's `prose` adds open-quote/close-quote to the first and last
+   quoted paragraph; post sources already carry their quotes, so the page
+   showed them twice. Drop the generated pair. Guarded by
+   scripts/assert-browser-post-blockquote.mjs. */
+.pg-post .prose-terminal blockquote p::before,
+.pg-post .prose-terminal blockquote p::after {
+	content: none;
+}
+
+/* Lists: amber asterisk bullets; ordered lists keep numbers in faint. */
+.pg-post .prose-terminal :is(ul, ol) {
+	margin: 0 0 16px;
+}
+.pg-post .prose-terminal :is(ul, ol) :is(ul, ol) {
+	margin: 4px 0 0;
+}
+.pg-post .prose-terminal ul {
+	padding: 0;
+	list-style: none;
+}
+.pg-post .prose-terminal ul > li {
+	position: relative;
+	margin: 4px 0;
+	padding-left: 3ch;
+}
+.pg-post .prose-terminal ul > li::before {
+	content: '*';
+	position: absolute;
+	left: 0;
+	color: var(--crt-amber);
+}
+.pg-post .prose-terminal ol {
+	padding-left: 4ch;
+}
+.pg-post .prose-terminal ol > li {
+	margin: 4px 0;
+	padding-left: 0;
+}
+.pg-post .prose-terminal ol > li::marker {
+	color: var(--crt-faint);
+}
+.pg-post .prose-terminal li > p {
+	margin: 0 0 8px;
+}
+
+.pg-post .prose-terminal hr {
+	margin: 24px 0;
+	border: 0;
+	border-top: 1px dashed var(--crt-line);
+}
+.pg-post .prose-terminal img {
+	max-width: 100%;
+	height: auto;
+	border: 1px solid var(--crt-line);
+}
+
+/* Table: uppercase faint header over an amber rule; cells wrap rather than
+   push the page sideways on a phone. */
+.pg-post .prose-terminal table {
+	width: 100%;
+	margin: 6px 0 18px;
+	border-collapse: collapse;
+	font-size: 13px;
+	line-height: 22px;
+}
+.pg-post .prose-terminal th {
+	padding: 2px 12px 4px 0;
+	border-bottom: 1px solid var(--crt-amber);
+	font-size: 11px;
+	font-weight: 400;
+	letter-spacing: 0.12em;
+	text-align: left;
+	text-transform: uppercase;
+	color: var(--crt-faint);
+}
+.pg-post .prose-terminal td {
+	padding: 3px 12px 3px 0;
+	border-bottom: 1px solid var(--crt-line);
+	vertical-align: top;
+}
+.pg-post .prose-terminal :is(th, td) {
+	overflow-wrap: anywhere;
+}
+.pg-post .prose-terminal thead {
+	border: 0;
+}
+.pg-post .prose-terminal tbody tr {
+	border: 0;
+}
+
+/* Code block: the Shiki <pre> is the frame. The copy button and line-count
+   label (CodeCopy) sit on its top border; <code> scrolls inside it; the line
+   gutter is a CSS counter, so it is never part of the copied text. */
+.pg-post .prose-terminal pre {
+	margin: 22px 0 18px;
+	border-radius: 0;
+	font-family: inherit;
+	font-size: 12.5px;
+	line-height: 20px;
+}
+.pg-post .prose-terminal pre.shiki {
+	position: relative;
+	padding: 14px 0 10px;
+	overflow: visible;
+	border: 1px solid var(--crt-line);
+	/* Shiki inlines github-dark's background and base colour on the element. */
+	background-color: transparent !important;
+	color: var(--crt-worn) !important;
+}
+.pg-post .prose-terminal pre.shiki > code {
+	display: block;
+	padding: 0 14px 0 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	counter-reset: pg-line;
+	white-space: pre;
+}
+.pg-post .prose-terminal pre.shiki .line::before {
+	counter-increment: pg-line;
+	content: counter(pg-line);
+	position: sticky;
+	left: 0;
+	display: inline-block;
+	vertical-align: top;
+	width: 5.5ch;
+	padding-right: 1.5ch;
+	background: var(--crt-glass);
+	text-align: right;
+	color: var(--crt-faint);
+	user-select: none;
+}
+.pg-post .prose-terminal pre.shiki > .pg-code__label {
+	position: absolute;
+	top: -9px;
+	left: 12px;
+	padding: 0 6px;
+	background: var(--crt-glass);
+	font-size: 12px;
+	line-height: 16px;
+	color: var(--crt-faint);
+}
+.pg-post .prose-terminal pre.shiki > .code-copy-btn {
+	position: absolute;
+	top: -10px;
+	right: 12px;
+}
+/* Syntax onto the six inks. Shiki writes github-dark colours inline, so the
+   mapping overrides by value: keyword -> amber, function -> hi, string and
+   regexp -> green, comment -> faint; constants, parameters, tags and plain
+   text stay worn. */
+.pg-post .prose-terminal pre.shiki span[style*='color:#E1E4E8'],
+.pg-post .prose-terminal pre.shiki span[style*='color:#79B8FF'],
+.pg-post .prose-terminal pre.shiki span[style*='color:#FFAB70'],
+.pg-post .prose-terminal pre.shiki span[style*='color:#85E89D'] {
+	color: var(--crt-worn) !important;
+}
+.pg-post .prose-terminal pre.shiki span[style*='color:#F97583'] {
+	color: var(--crt-amber) !important;
+}
+.pg-post .prose-terminal pre.shiki span[style*='color:#B392F0'] {
+	color: var(--crt-hi) !important;
+}
+.pg-post .prose-terminal pre.shiki span[style*='color:#9ECBFF'],
+.pg-post .prose-terminal pre.shiki span[style*='color:#DBEDFF'] {
+	color: var(--crt-green) !important;
+}
+.pg-post .prose-terminal pre.shiki span[style*='color:#6A737D'] {
+	color: var(--crt-faint) !important;
+}
+
+/* Mermaid: a frame around the diagram (source text before it renders). The
+   config stays verbatim (C11 compares it), so the SVG is recoloured here;
+   mermaid's own <style> is id-scoped, hence !important. */
+.pg-post .prose-terminal :is([data-mermaid], pre[data-mermaid-error]) {
+	position: relative;
+	margin: 22px 0 18px;
+	padding: 16px 12px 12px;
+	border: 1px solid var(--crt-line);
+	background: transparent;
+}
+.pg-post .prose-terminal [data-mermaid] {
+	overflow-x: auto;
+}
+.pg-post .prose-terminal [data-mermaid] > pre {
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	color: var(--crt-faint);
+}
+.pg-post .prose-terminal [data-mermaid] svg {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	margin-inline: auto;
+}
+.pg-post
+	.prose-terminal
+	[data-mermaid]
+	svg
+	:is(rect, circle, ellipse, polygon, path).label-container,
+.pg-post .prose-terminal [data-mermaid] svg .node :is(rect, circle, ellipse, polygon),
+.pg-post .prose-terminal [data-mermaid] svg rect.actor {
+	fill: var(--crt-glass) !important;
+	stroke: var(--crt-amber) !important;
+}
+.pg-post .prose-terminal [data-mermaid] svg .cluster rect {
+	fill: transparent !important;
+	stroke: var(--crt-line) !important;
+}
+.pg-post
+	.prose-terminal
+	[data-mermaid]
+	svg
+	:is(.flowchart-link, .edgePath path, .messageLine0, .messageLine1, line) {
+	stroke: var(--crt-faint) !important;
+}
+.pg-post .prose-terminal [data-mermaid] svg :is(marker path, .arrowheadPath, #arrowhead path) {
+	fill: var(--crt-faint) !important;
+	stroke: var(--crt-faint) !important;
+}
+.pg-post .prose-terminal [data-mermaid] svg :is(text, tspan) {
+	fill: var(--crt-worn) !important;
+}
+.pg-post
+	.prose-terminal
+	[data-mermaid]
+	svg
+	:is(.nodeLabel, .edgeLabel, .label, foreignObject div, span) {
+	/* Colour only: mermaid sized each label with its configured font, so
+	   changing the face here would clip the text. */
+	color: var(--crt-worn) !important;
+}
+.pg-post .prose-terminal [data-mermaid] svg :is(.edgeLabel, .edgeLabel rect, .labelBkg) {
+	background-color: var(--crt-glass) !important;
+	fill: var(--crt-glass) !important;
+}

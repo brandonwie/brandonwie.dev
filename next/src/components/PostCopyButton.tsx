@@ -32,7 +32,7 @@ export function PostCopyButton({
 	return (
 		<button
 			type="button"
-			className="post__copy"
+			className={copied ? 'pg-btn post__copy is-done' : 'pg-btn post__copy'}
 			onClick={handleCopy}
 			aria-label={copied ? copiedLabel : copyLabel}
 		>

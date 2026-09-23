@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { useReadingProgress } from './ReadingProgress';
+
 export interface TocHeading {
 	text: string;
 	depth: number;
@@ -11,21 +13,58 @@ export interface TocHeading {
 interface TableOfContentsProps {
 	headings: TocHeading[];
 	title: string;
+	/**
+	 * `rail`: the sticky right-hand frame (wide screens), `nav.article-toc`.
+	 * `inline`: the collapsible `<details>` frame above the prose (narrow screens).
+	 */
+	variant: 'rail' | 'inline';
+	/** Rail footer labels, from the article copy. */
+	backLabel?: string;
+	searchLabel?: string;
+	readLabel?: string;
+}
+
+interface TocRow {
+	heading: TocHeading;
+	/** `01`.. for top-level rows; empty for nested ones. */
+	num: string;
+	/** Tree glyph for nested rows: `├` inside a run, `└` on its last row. */
+	branch: string | null;
+}
+
+function tocRows(headings: TocHeading[]): TocRow[] {
+	let n = 0;
+	return headings.map((heading, index) => {
+		if (heading.depth <= 2) {
+			n += 1;
+			return { heading, num: String(n).padStart(2, '0'), branch: null };
+		}
+		const next = headings[index + 1];
+		return { heading, num: '', branch: next && next.depth > 2 ? '├' : '└' };
+	});
 }
 
 /**
- * TableOfContents — responsive article navigation.
+ * TableOfContents — article navigation in a terminal frame.
  *
- * Ported from `src/lib/components/TableOfContents.svelte`.
- * Desktop: sticky right sidebar (`nav.article-toc`) positioned relative to `.post`.
- * Mobile: collapsible `<details>` section at the top of the article.
- * Tracks current active heading via IntersectionObserver.
+ * Ported from `src/lib/components/TableOfContents.svelte`. The article renders
+ * it twice: the rail beside the prose on wide screens and the `<details>` frame
+ * above the prose below that; CSS shows one. Both track the active heading with
+ * the same IntersectionObserver, and a jump from the collapsible frame closes it.
  */
-export function TableOfContents({ headings, title }: TableOfContentsProps) {
+export function TableOfContents({
+	headings,
+	title,
+	variant,
+	backLabel,
+	searchLabel,
+	readLabel,
+}: TableOfContentsProps) {
 	const [activeId, setActiveId] =
 		typeof useState === 'function' ? useState<string>('') : ['', () => {}];
 	const [mobileOpen, setMobileOpen] =
 		typeof useState === 'function' ? useState(false) : [false, () => {}];
+	const progress = useReadingProgress();
 
 	if (typeof useEffect === 'function') {
 		useEffect(() => {
@@ -62,75 +101,94 @@ export function TableOfContents({ headings, title }: TableOfContentsProps) {
 
 	if (headings.length === 0) return null;
 
-	return (
-		<>
-			{/* Mobile ToC (<xl): collapsible section */}
+	const count = (
+		<span className="dim" aria-hidden="true">
+			{' '}
+			· {headings.length}
+		</span>
+	);
+
+	const list = (
+		<ol className="toc-list pg-post__toc-list">
+			{tocRows(headings).map(({ heading, num, branch }) => {
+				const active = activeId === heading.id;
+				return (
+					<li key={heading.id} className={`toc-depth-${heading.depth}${active ? ' is-on' : ''}`}>
+						<a
+							href={`#${heading.id}`}
+							aria-current={active ? 'location' : undefined}
+							onClick={(e) => {
+								e.preventDefault();
+								scrollTo(heading.id);
+							}}
+						>
+							<span className="n" aria-hidden="true">
+								{active ? '>' : num}
+							</span>
+							{branch ? (
+								<span className="tr" aria-hidden="true">
+									{branch}
+								</span>
+							) : null}
+							<span className="t">{heading.text}</span>
+						</a>
+					</li>
+				);
+			})}
+		</ol>
+	);
+
+	if (variant === 'inline') {
+		return (
 			<details
-				className="xl:hidden mb-8 rounded-lg border border-terminal-border bg-terminal-bg-secondary"
+				className="term-frame pg-post__toc-inline"
 				open={mobileOpen}
 				onToggle={(e) => setMobileOpen(e.currentTarget.open)}
 				data-pagefind-ignore
 			>
-				<summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-terminal-text-muted select-none">
+				<summary className="term-frame__title">
+					<span className="pg-post__toc-mark" aria-hidden="true" />
 					{title}
+					{count}
 				</summary>
-				<ol className="toc-list px-4 pb-3 space-y-1">
-					{headings.map((heading) => (
-						<li key={heading.id} className={`toc-depth-${heading.depth}`}>
-							<a
-								href={`#${heading.id}`}
-								onClick={(e) => {
-									e.preventDefault();
-									scrollTo(heading.id);
-								}}
-								className={`block w-full text-left text-sm py-0.5 transition-colors ${
-									heading.depth === 3 ? 'pl-4' : 'pl-0'
-								} ${
-									activeId === heading.id
-										? 'text-terminal-accent-orange'
-										: 'text-terminal-text-dim hover:text-terminal-text-muted'
-								}`}
-							>
-								{heading.text}
-							</a>
-						</li>
-					))}
-				</ol>
+				{list}
 			</details>
+		);
+	}
 
-			{/* Desktop ToC (xl+): positioned in right margin of relative parent */}
-			<nav className="article-toc" aria-labelledby="article-toc-title" data-pagefind-ignore>
-				<div className="sticky top-32">
-					<h2
-						id="article-toc-title"
-						className="text-xs font-semibold uppercase tracking-wider text-terminal-text-dim mb-3"
-					>
-						{title}
-					</h2>
-					<ol className="toc-list space-y-1 border-l border-terminal-border">
-						{headings.map((heading) => (
-							<li key={heading.id} className={`toc-depth-${heading.depth}`}>
-								<a
-									href={`#${heading.id}`}
-									onClick={(e) => {
-										e.preventDefault();
-										scrollTo(heading.id);
-									}}
-									className={`block w-full text-left text-sm leading-relaxed transition-colors duration-150 ${
-										heading.depth === 3 ? 'pl-5' : 'pl-3'
-									} ${
-										activeId === heading.id
-											? 'text-terminal-accent-orange border-l-2 border-terminal-accent-orange -ml-px'
-											: 'text-terminal-text-dim hover:text-terminal-text-muted'
-									}`}
-								>
-									{heading.text}
-								</a>
-							</li>
-						))}
-					</ol>
-				</div>
-			</nav>
-		</>
+	return (
+		<nav
+			className="term-frame article-toc pg-post__toc"
+			aria-labelledby="article-toc-title"
+			data-pagefind-ignore
+		>
+			<h2 id="article-toc-title" className="term-frame__title">
+				{title}
+				{count}
+			</h2>
+			{list}
+			<div className="pg-post__keys">
+				{backLabel ? (
+					<div>
+						<span>
+							<kbd>bksp</kbd> {backLabel}
+						</span>
+					</div>
+				) : null}
+				{searchLabel ? (
+					<div>
+						<span>
+							<kbd>⌘K</kbd> {searchLabel}
+						</span>
+					</div>
+				) : null}
+				{readLabel ? (
+					<div aria-hidden="true">
+						<span>{readLabel}</span>
+						<span className="text-crt-amber">{Math.round(progress)}%</span>
+					</div>
+				) : null}
+			</div>
+		</nav>
 	);
 }
