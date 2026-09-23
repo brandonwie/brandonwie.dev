@@ -20,7 +20,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"migration:verify": "tsx scripts/migration-verify.ts",
 		"migration:capture": "tsx scripts/migration-verify.ts capture build verification/baseline/svelte-e23e808.json",
-		"migration:controls": "tsx scripts/migration-verify-controls.ts build verification/baseline/svelte-e23e808.json",
+		"migration:controls": "tsx scripts/migration-verify-controls.ts build verification/baseline/svelte-e23e808.json --ledger verification/svelte-d9-ledger.json",
 		"migration:verify:next": "tsx scripts/migration-verify.ts compare verification/baseline/svelte-e23e808.json next/build",
 		"migration:verify:svelte": "tsx scripts/migration-verify.ts compare verification/baseline/svelte-e23e808.json build --ledger verification/svelte-d9-ledger.json",
 		"migration:c13": "tsx scripts/assert-c13-shell.ts",
