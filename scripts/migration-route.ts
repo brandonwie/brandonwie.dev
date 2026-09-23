@@ -183,6 +183,70 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		// B4: /ko/posts count line reads `· 전체`, /posts `· all`. Reads next/build.
+		command: 'migration:posts:count-line',
+		entry: 'scripts/assert-posts-count-line.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// D7 posts filter in a real browser; browser-probe spawns serve-build.
+		command: 'migration:browser:posts-filter',
+		entry: 'scripts/assert-browser-posts-filter.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// D6 home preview pane: row 01 without JS, follows focus and hover.
+		command: 'migration:browser:home-preview',
+		entry: 'scripts/assert-browser-home-preview.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// B2: no generated quotes on post blockquotes.
+		command: 'migration:browser:blockquote',
+		entry: 'scripts/assert-browser-post-blockquote.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// Post code frames show every line (the redesign's last-line clip).
+		command: 'migration:browser:post-code',
+		entry: 'scripts/assert-browser-post-code.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// B3: ⌘K / Ctrl+K open the palette on the 404.
+		command: 'migration:browser:notfound-palette',
+		entry: 'scripts/assert-browser-notfound-palette.mjs',
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// Spawns the B3 probe, an edge the import closure cannot see.
+		command: 'migration:browser:notfound-palette:controls',
+		entry: 'scripts/assert-browser-notfound-palette-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-notfound-palette.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
+		// Spawns the probe above, an edge the import closure cannot see.
+		command: 'migration:browser:blockquote:controls',
+		entry: 'scripts/assert-browser-post-blockquote-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-post-blockquote.mjs',
+			'scripts/serve-build.mjs',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
 		// TWO spawn edges, both invisible to the import closure, both declared
 		// here instead. `browser-probe.mjs` spawns `serve-build.mjs` to serve the
 		// build under test, and the controls suite below spawns the probe to
