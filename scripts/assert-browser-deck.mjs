@@ -29,6 +29,12 @@
  *          because the deck stopped listening altogether.
  *   DK-04  Escape leaves presenting (frames, prompt and chrome come back) and
  *          `[ present ]` re-enters it.
+ *   DK-05  the skip link (reviewer round 2, gap 1): from a fresh load, real
+ *          CDP Tab presses reach "Skip to content", Enter moves focus to
+ *          `main#main-content` — an ancestor of the deck root — and then
+ *          ArrowRight advances the deck and End reaches 20/20, both with the
+ *          default prevented. Run presenting (default) and browsing (after
+ *          Escape).
  *
  * Positive controls (each must FAIL its row, exit 1):
  *   node scripts/assert-browser-deck.mjs --control=frames
@@ -44,6 +50,10 @@
  *   node scripts/assert-browser-deck.mjs --control=sticky
  *     DK-04 presses Escape with Meta held, a chord the deck ignores — the
  *     overlay stays, so DK-04 fails.
+ *   node scripts/assert-browser-deck.mjs --control=skipdead
+ *     a capture-phase keydown listener on `#main-content` stops propagation
+ *     of keys targeted at that element, so the deck never sees them after
+ *     the skip link — DK-05 fails.
  *
  * Exit 0 pass, 1 assertion failed, 2 harness error, 3 SKIPPED (no browser).
  */
@@ -51,12 +61,16 @@ import { launch, serve, ready, evaluate, findBrowser, until, EXIT } from './brow
 
 const ROUTE = '/talks/my-career';
 const CONTROL = (process.argv.find((arg) => arg.startsWith('--control=')) ?? '').slice(10);
-const CONTROLS = ['', 'frames', 'leak', 'dead', 'sticky'];
+const CONTROLS = ['', 'frames', 'leak', 'dead', 'sticky', 'skipdead'];
 
 /** CDP key definitions for the keys this probe presses. */
 const KEYS = {
 	End: { key: 'End', code: 'End', windowsVirtualKeyCode: 35 },
 	Escape: { key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 },
+	Tab: { key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 },
+	// Enter carries text so Chrome runs the keypress that activates a link.
+	Enter: { key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' },
+	ArrowRight: { key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 },
 };
 
 /** Installed before any page script: records the last keydown's defaultPrevented. */
@@ -68,6 +82,16 @@ const RECORDER = `
 		const s = document.createElement('style');
 		s.textContent = '.deck.is-presenting .deck-stage, .deck.is-presenting .deck-rail { border: 1px solid var(--crt-line) !important; }';
 		document.head.appendChild(s);
+	});`
+			: ''
+	}
+	${
+		CONTROL === 'skipdead'
+			? `document.addEventListener('DOMContentLoaded', () => {
+		const main = document.getElementById('main-content');
+		main?.addEventListener('keydown', (event) => {
+			if (event.target === main) event.stopPropagation();
+		}, true);
 	});`
 			: ''
 	}
@@ -85,7 +109,10 @@ const PRESENTING = "!!document.querySelector('.deck.is-presenting')";
 async function press(page, name, { meta = false } = {}) {
 	const base = { ...KEYS[name], modifiers: meta ? 4 : 0 };
 	await evaluate(page, 'window.__deckLastKey = null');
-	await page.send('Input.dispatchKeyEvent', { ...base, type: 'rawKeyDown' });
+	await page.send('Input.dispatchKeyEvent', {
+		...base,
+		type: base.text ? 'keyDown' : 'rawKeyDown',
+	});
 	await page.send('Input.dispatchKeyEvent', { ...base, type: 'keyUp' });
 	// A state update lands on React's next commit; give it a frame or two.
 	await evaluate(page, 'new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))');
@@ -280,6 +307,71 @@ async function dk04(page, port) {
 	);
 }
 
+const ACTIVE = `(() => {
+	const el = document.activeElement;
+	if (!el) return 'none';
+	return el.tagName + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
+})()`;
+
+const POSITION = `(() => { const q = new URLSearchParams(location.search); return q.get('page') + ':' + q.get('step'); })()`;
+
+/** Real Tab presses until the skip link has focus; false if it never does. */
+async function tabToSkipLink(page) {
+	for (let i = 0; i < 20; i += 1) {
+		await press(page, 'Tab');
+		if (await evaluate(page, "document.activeElement?.classList.contains('skip-link') ?? false")) {
+			return true;
+		}
+	}
+	return false;
+}
+
+async function dk05(page, port) {
+	let failed = 0;
+	for (const view of ['presenting', 'browsing']) {
+		const entered =
+			view === 'browsing' ? await browsing(page, port) : (await open(page, port), true);
+		const presenting = await evaluate(page, PRESENTING);
+		const skip = await tabToSkipLink(page);
+		await press(page, 'Enter');
+		const onMain = await until(
+			async () => await evaluate(page, "document.activeElement?.id === 'main-content'"),
+			{ timeoutMs: 2000 },
+		);
+		const active = await evaluate(page, ACTIVE);
+		const mainIsAncestor = await evaluate(
+			page,
+			"!!document.getElementById('main-content')?.contains(document.querySelector('.deck'))",
+		);
+		const before = await evaluate(page, POSITION);
+		const slideBefore = await evaluate(page, SLIDE);
+		const right = await press(page, 'ArrowRight');
+		await until(async () => (await evaluate(page, POSITION)) !== before, { timeoutMs: 2000 });
+		const afterRight = await evaluate(page, POSITION);
+		const end = await press(page, 'End');
+		await until(async () => (await evaluate(page, SLIDE)) === '20/20', { timeoutMs: 2000 });
+		const afterEnd = await evaluate(page, SLIDE);
+		const wantPresenting = view === 'presenting';
+		const ok =
+			entered &&
+			presenting === wantPresenting &&
+			skip &&
+			onMain &&
+			mainIsAncestor &&
+			slideBefore === '1/20' &&
+			afterRight !== before &&
+			right?.prevented === true &&
+			afterEnd === '20/20' &&
+			end?.prevented === true;
+		failed += report(
+			'DK-05',
+			ok,
+			`view=${view} presenting=${presenting} skipLinkFocused=${skip} Enter -> active=${active} mainEnclosesDeck=${mainIsAncestor}  ArrowRight: ${slideBefore} page:step ${before} -> ${afterRight}, defaultPrevented=${right?.prevented}  End: -> ${afterEnd}, defaultPrevented=${end?.prevented}`,
+		);
+	}
+	return failed;
+}
+
 async function main() {
 	if (!CONTROLS.includes(CONTROL)) {
 		console.error(
@@ -309,6 +401,7 @@ async function main() {
 		failed += await dk02(page, server.port);
 		failed += await dk03(page, server.port);
 		failed += await dk04(page, server.port);
+		failed += await dk05(page, server.port);
 		if (CONTROL) console.log(`control=${CONTROL}: ${failed} failing row check(s)`);
 		return failed === 0 ? EXIT.PASS : EXIT.FAIL;
 	} finally {

@@ -7,6 +7,8 @@
  *   - DKC-03 DEFECT: a dead key handler trips DK-03
  *   - DKC-04 DEFECT: Escape that cannot leave presenting trips DK-04
  *   - DKC-05 INVARIANCE: the unmutated probe passes
+ *   - DKC-06 DEFECT: keys swallowed on main#main-content after the skip link
+ *     trip DK-05 (reviewer round 2, gap 1)
  */
 import { runFlagControls, exitWith } from './browser-flag-controls.mjs';
 import { EXIT } from './browser-probe.mjs';
@@ -51,6 +53,14 @@ exitWith(
 			what: 'unmutated deck probe passes',
 			args: [],
 			expect: EXIT.PASS,
+		},
+		{
+			id: 'DKC-06',
+			kind: 'DEFECT',
+			what: 'keys dead after the skip link are caught by DK-05',
+			args: ['--control=skipdead'],
+			expect: EXIT.FAIL,
+			expectedFailures: ['DK-05'],
 		},
 	]),
 );
