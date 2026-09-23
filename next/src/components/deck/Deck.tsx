@@ -4,9 +4,15 @@
  * Deck — fullscreen, keyboard-driven slide runner. The React port of
  * `src/lib/components/deck/Deck.svelte`.
  *
- * WHAT: fullscreen overlay above the site chrome; owns two indices (which
- * slide, which step within it). Slides receive `step` and animate
- * themselves; the deck never touches their internals.
+ * WHAT: owns two indices (which slide, which step within it). Slides
+ * receive `step` and animate themselves; the deck never touches their
+ * internals.
+ *
+ * TWO VIEWS (Phosphor Fade, D8): browsing — the deck sits inside the
+ * terminal shell as a `deck play` prompt, the slide frame and a rail frame
+ * (20-cell meter, label, controls); presenting — `[ present ]` switches to
+ * the production full-viewport overlay above all site chrome, and Escape or
+ * `[ exit ]` switches back. Keys, URL sync and print behave the same in both.
  *
  * STEP MODEL: a slide declares `steps: N`. ArrowRight walks steps first,
  * then moves to the next slide. Stepping backwards lands on the previous
@@ -40,9 +46,12 @@
  *   slide remounts, a step advance does not.
  */
 
+import { usePathname } from 'next/navigation';
 import { useEffect, useLayoutEffect, useState } from 'react';
 
 import type { DeckSlide } from '@/deck/types';
+import { TermPrompt } from '@/shell/TermPrompt';
+import { cwdFor } from '@/shell/terminal-path';
 
 /** A layout effect on the client and a passive one during the static export. */
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
@@ -56,9 +65,44 @@ function clamp(value: number, max: number): number {
 	return Math.min(Math.max(value, 0), Math.max(max, 0));
 }
 
+/** Two-digit slide numbers for the frame title (`slide 02/20`). */
+function pad(value: number): string {
+	return String(value).padStart(2, '0');
+}
+
+/**
+ * `[███░░░…]` — one cell per slide, filled through the current one. The cells
+ * are decoration; the progressbar role carries the position for assistive
+ * tech, and the counter beside it says the same thing in text.
+ */
+function DeckMeter({ index, total }: { index: number; total: number }) {
+	return (
+		<div
+			className="deck-meter term-meter"
+			role="progressbar"
+			aria-label="Slide progress"
+			aria-valuemin={1}
+			aria-valuemax={total}
+			aria-valuenow={index + 1}
+			aria-valuetext={`${index + 1} / ${total}`}
+		>
+			<span aria-hidden="true">
+				{'█'.repeat(index + 1)}
+				<span className="off">{'░'.repeat(Math.max(total - index - 1, 0))}</span>
+			</span>
+		</div>
+	);
+}
+
 export default function Deck({ slides, title = 'Presentation' }: Props) {
 	const [index, setIndex] = useState(0);
 	const [step, setStep] = useState(0);
+	const cwd = cwdFor(usePathname() ?? '/');
+
+	// Presenting (D8): production's full-viewport overlay above every piece of
+	// site chrome. Off by default, so the deck is browsed inside the terminal
+	// shell; `[ present ]` turns it on, Escape or `[ exit ]` turns it off.
+	const [presenting, setPresenting] = useState(false);
 
 	// Position lives in the URL (?page=2&step=3), one-based so it reads the way
 	// a person counts. A reload lands where you were; any slide links directly.
@@ -77,7 +121,6 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 	const printMode = query !== null && query.has('print');
 	const current = slides[index];
 	const stepCount = current?.steps ?? 1;
-	const progress = (index + 1) / slides.length;
 
 	function next() {
 		if (step < stepCount - 1) {
@@ -179,6 +222,13 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 					event.preventDefault();
 					go(slides.length - 1);
 					break;
+				case 'Escape':
+					// Only while presenting: leaves the overlay for the shell view.
+					if (presenting) {
+						event.preventDefault();
+						setPresenting(false);
+					}
+					break;
 			}
 		}
 
@@ -189,7 +239,7 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 	if (printMode) {
 		// PDF fallback: every slide, final step, no motion, one per page.
 		return (
-			<div className="print-deck" id="main-content" tabIndex={-1}>
+			<div className="print-deck" tabIndex={-1}>
 				{slides.map((slide) => {
 					const Body = slide.component;
 					return (
@@ -204,16 +254,39 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 
 	const Body = current.component;
 	return (
-		<div className="deck" role="application" aria-label={title}>
-			{/* Satisfies the layout's skip-to-content link and gives keyboard users a
-			    landing target when they jump past the site chrome. */}
-			<div className="deck-stage" id="main-content" tabIndex={-1}>
+		<div
+			className={presenting ? 'deck is-presenting' : 'deck'}
+			role="application"
+			aria-label={title}
+		>
+			{/* The URL query as a shell command; hidden while presenting. */}
+			<TermPrompt
+				className="deck-ps1"
+				cwd={cwd}
+				command="deck play"
+				flags={`--page ${index + 1} --step ${step + 1}`}
+			/>
+
+			{/* The slide frame. The shell's <main id="main-content"> is the
+			    skip-link target, so the stage keeps only its tabIndex landing.
+			    The body stays the stage's first element child; the frame title
+			    follows it in the DOM and is drawn into the border by CSS. */}
+			<div className="deck-stage term-frame" tabIndex={-1}>
 				<Body key={current.id} step={step} animate={true} />
+				<p className="term-frame__title deck-frame-title" aria-hidden="true">
+					slide {pad(index + 1)}/{pad(slides.length)} · {current.label}
+					{stepCount > 1 && (
+						<span className="dim">
+							{' '}
+							· step {step + 1}/{stepCount}
+						</span>
+					)}
+				</p>
 			</div>
 
 			{/* Progress rail. Deliberately quiet: a presenter aid, not decoration. */}
-			<nav className="deck-rail" aria-label="Slide navigation">
-				<div className="deck-bar" style={{ '--progress': progress } as React.CSSProperties} />
+			<nav className="deck-rail term-frame" aria-label="Slide navigation">
+				<DeckMeter index={index} total={slides.length} />
 				<div className="deck-meta">
 					<span className="deck-label">{current.label}</span>
 
@@ -236,6 +309,13 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 						</span>
 						<button type="button" onClick={next} disabled={atEnd} aria-label="Next step">
 							Next &rarr;
+						</button>
+						<button
+							type="button"
+							className="deck-present"
+							onClick={() => setPresenting(!presenting)}
+						>
+							{presenting ? 'exit' : 'present'}
 						</button>
 					</div>
 				</div>
