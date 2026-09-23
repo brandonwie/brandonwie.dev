@@ -2548,6 +2548,17 @@ pre:hover .code-copy-btn,
 		--pine: #286983 !important;
 		--gold: #8a5300 !important;
 		--iris: #5f4b82 !important;
+		/* The study page is drawn in the shell inks, so those re-ink for paper
+		   too (on #fff: hi 18.88, worn 12.63, faint 7.46, amber 6.33, green
+		   6.11; line/off are rules only). */
+		--crt-glass: #ffffff !important;
+		--crt-hi: #111111 !important;
+		--crt-worn: #333333 !important;
+		--crt-faint: #555555 !important;
+		--crt-amber: #8a5300 !important;
+		--crt-green: #286983 !important;
+		--crt-line: #cccccc !important;
+		--crt-off: #cccccc !important;
 		color-scheme: light;
 	}
 	body:has([data-aws-study])
