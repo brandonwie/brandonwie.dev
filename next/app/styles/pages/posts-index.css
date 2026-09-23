@@ -1,2 +1,213 @@
 /* Phosphor Fade page styles: posts-index. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Everything is scoped under `.pg-posts` (PostsListPage root) and prefixed
+   `pg-posts__`, because bare pack names (`.entry`, `.meta`, `.more`, `.post`)
+   already exist as unlayered globals elsewhere.
+
+   Specificity note: the shell's focus ring is
+   `.term-glass :is(…, [tabindex]):focus-visible` (0,3,0) and the shell block
+   comes AFTER this file in the cascade, so the two page focus rules below carry
+   an element selector (0,3,1) to win inside the same layer. */
+@layer components {
+	.pg-posts__lede {
+		margin: 4px 0 0;
+		color: var(--crt-worn);
+	}
+
+	/* Filter + results: two panes, like a file manager (D7: list at >= 880px). */
+	.pg-posts__panes {
+		display: grid;
+		grid-template-columns: 276px minmax(0, 1fr);
+		column-gap: 18px;
+		align-items: start;
+		margin-top: 4px;
+	}
+	.pg-posts .term-frame:has(:focus-visible) {
+		border-color: var(--crt-amber);
+	}
+
+	/* Category filter: one toggle button per row — marker, name, count, bar. */
+	.pg-posts__cats {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-posts__cats li {
+		margin: 0;
+	}
+	.pg-posts__cat {
+		display: grid;
+		grid-template-columns: 12px 9ch 3ch 12ch;
+		column-gap: 8px;
+		box-sizing: border-box;
+		width: 100%;
+		margin: 0;
+		padding: 0 6px;
+		border: 0;
+		background: none;
+		font: inherit;
+		text-align: left;
+		white-space: pre;
+		color: var(--crt-worn);
+		cursor: pointer;
+	}
+	.pg-posts__mk {
+		color: var(--crt-amber);
+	}
+	.pg-posts__mk::before {
+		content: ' ';
+	}
+	.pg-posts__cat.is-sel .pg-posts__mk::before {
+		content: '*';
+	}
+	.pg-posts__cat:focus-visible .pg-posts__mk::before {
+		content: '>';
+	}
+	.pg-posts__nm {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.pg-posts__c {
+		text-align: right;
+		color: var(--crt-faint);
+	}
+	.pg-posts__bar {
+		color: var(--crt-amber);
+	}
+	.pg-posts__bar .off {
+		color: var(--crt-off);
+	}
+	.pg-posts__cat:hover .pg-posts__nm {
+		text-decoration: underline;
+	}
+	.pg-posts button.pg-posts__cat:focus-visible {
+		outline: 1px solid var(--crt-amber);
+		outline-offset: -1px;
+	}
+	/* Selected: reverse video, glass on amber 8.90:1 (shell pair). */
+	.pg-posts__cat.is-sel,
+	.pg-posts__cat.is-sel :is(.pg-posts__mk, .pg-posts__c, .pg-posts__bar, .off) {
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+	.pg-posts__rule {
+		height: 1px;
+		margin: 6px 0;
+		background: var(--crt-line);
+	}
+
+	/* Results: `ls -l` style entries, one link each. */
+	.pg-posts__count {
+		margin: 0 0 6px;
+		color: var(--crt-faint);
+	}
+	.pg-posts__entry {
+		display: block;
+		padding: 6px 6px 8px;
+		border-top: 1px dashed var(--crt-line);
+		color: inherit;
+		text-decoration: none;
+	}
+	.pg-posts__count + .pg-posts__entry {
+		border-top: 0;
+	}
+	.pg-posts__meta {
+		display: grid;
+		grid-template-columns: 5ch 13ch 9ch minmax(0, 1fr);
+		column-gap: 8px;
+		white-space: nowrap;
+	}
+	.pg-posts__n {
+		color: var(--crt-faint);
+	}
+	.pg-posts__dt {
+		color: var(--crt-amber);
+	}
+	.pg-posts__cat-col {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		color: var(--crt-faint);
+	}
+	.pg-posts__slug {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		color: var(--crt-green);
+	}
+	.pg-posts__ti {
+		display: block;
+		margin: 2px 0 0;
+		padding-left: calc(5ch + 8px);
+		font-size: 13px;
+		line-height: 22px;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+	.pg-posts__ds {
+		display: -webkit-box;
+		overflow: hidden;
+		padding-left: calc(5ch + 8px);
+		color: var(--crt-worn);
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+	}
+	.pg-posts__entry:hover .pg-posts__ti {
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+	.pg-posts__entry:hover .pg-posts__slug {
+		text-decoration: underline;
+	}
+	.pg-posts a.pg-posts__entry:focus-visible {
+		outline: 1px solid var(--crt-amber);
+		outline-offset: -1px;
+	}
+	.pg-posts__entry:focus-visible :is(.pg-posts__meta, .pg-posts__meta > *) {
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+
+	.pg-posts__empty {
+		margin: 0;
+		color: var(--crt-worn);
+	}
+	.pg-posts__x {
+		color: var(--crt-amber);
+	}
+
+	/* Below 880px (the old card grid's breakpoint): one column, and the same
+	   buttons wrap as pills. Production wraps, so no side-scroll. */
+	@media (width < 880px) {
+		.pg-posts__panes {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.pg-posts__cats {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px 8px;
+		}
+		.pg-posts__rule,
+		.pg-posts__mk,
+		.pg-posts__bar {
+			display: none;
+		}
+		.pg-posts__cat {
+			display: inline-flex;
+			gap: 6px;
+			width: auto;
+			border: 1px solid var(--crt-line);
+		}
+		.pg-posts__cat.is-sel {
+			border-color: var(--crt-amber);
+		}
+	}
+	@media (width < 36rem) {
+		.pg-posts__meta {
+			grid-template-columns: 5ch 13ch minmax(0, 1fr);
+		}
+		.pg-posts__slug {
+			display: none;
+		}
+	}
+}

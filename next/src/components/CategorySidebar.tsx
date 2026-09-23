@@ -13,11 +13,69 @@ export interface CategorySidebarProps {
 	allCategoriesLabel?: string;
 }
 
+/** Bar width in cells and posts per filled cell (`█` = 5 posts, rounded up). */
+const BAR_CELLS = 12;
+const POSTS_PER_CELL = 5;
+
 /**
- * CategorySidebar — category filter for the posts list.
+ * Block bar for a category count: `filled` cells of `█`, the rest `░`.
+ * The count itself is announced as text, so the bar is decoration only.
  *
- * Terminal redesign: a single horizontal chip row (used on every viewport).
- * Ports `src/lib/components/CategorySidebar.svelte`.
+ * @example countBar(43) → { filled: '█████████', empty: '░░░' }
+ */
+export function countBar(
+	count: number,
+	cellSize = POSTS_PER_CELL,
+	width = BAR_CELLS,
+): { filled: string; empty: string } {
+	const cells = Math.min(width, Math.max(0, Math.ceil(count / cellSize)));
+	return { filled: '█'.repeat(cells), empty: '░'.repeat(width - cells) };
+}
+
+function FilterButton({
+	label,
+	count,
+	pressed,
+	bar,
+	onClick,
+}: {
+	label: string;
+	count: number;
+	pressed: boolean;
+	bar: boolean;
+	onClick: () => void;
+}) {
+	const cells = bar ? countBar(count) : null;
+	return (
+		<button
+			type="button"
+			className={pressed ? 'pg-posts__cat is-sel' : 'pg-posts__cat'}
+			aria-pressed={pressed}
+			onClick={onClick}
+		>
+			<span className="pg-posts__mk" aria-hidden="true" />
+			<span className="pg-posts__nm">{label}</span>
+			<span className="pg-posts__c">{count}</span>
+			<span className="pg-posts__bar" aria-hidden="true">
+				{cells ? (
+					<>
+						{cells.filled}
+						<span className="off">{cells.empty}</span>
+					</>
+				) : null}
+			</span>
+		</button>
+	);
+}
+
+/**
+ * CategorySidebar — the `/posts` category filter.
+ *
+ * Phosphor Fade: at 880px and up a selectable list (marker, name, count, block
+ * bar) in the left pane; below that the same buttons wrap as pills (D7). One
+ * `role="group"` of native toggle buttons with `aria-pressed`; the group wraps
+ * the `<ul>` so the list keeps its semantics. Clicking the selected category
+ * keeps it selected; only All clears the filter.
  */
 export function CategorySidebar({
 	categories,
@@ -29,28 +87,30 @@ export function CategorySidebar({
 	const totalCount = categories.reduce((sum, c) => sum + c.count, 0);
 
 	return (
-		<div className="chips" role="group" aria-label={categoryFilterLabel}>
-			<button
-				type="button"
-				className={`chip${activeCategory === null ? ' is-active' : ''}`}
-				aria-pressed={activeCategory === null}
-				onClick={() => onSelect(null)}
-			>
-				{allCategoriesLabel}
-				<span className="chip__count">{totalCount}</span>
-			</button>
-			{categories.map((cat) => (
-				<button
-					key={cat.name}
-					type="button"
-					className={`chip${activeCategory === cat.name ? ' is-active' : ''}`}
-					aria-pressed={activeCategory === cat.name}
-					onClick={() => onSelect(cat.name)}
-				>
-					{cat.name}
-					<span className="chip__count">{cat.count}</span>
-				</button>
-			))}
+		<div role="group" aria-label={categoryFilterLabel}>
+			<ul className="pg-posts__cats">
+				<li>
+					<FilterButton
+						label={allCategoriesLabel}
+						count={totalCount}
+						pressed={activeCategory === null}
+						bar={false}
+						onClick={() => onSelect(null)}
+					/>
+				</li>
+				<li className="pg-posts__rule" aria-hidden="true" />
+				{categories.map((cat) => (
+					<li key={cat.name}>
+						<FilterButton
+							label={cat.name}
+							count={cat.count}
+							pressed={activeCategory === cat.name}
+							bar
+							onClick={() => onSelect(cat.name)}
+						/>
+					</li>
+				))}
+			</ul>
 		</div>
 	);
 }

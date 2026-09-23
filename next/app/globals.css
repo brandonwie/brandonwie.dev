@@ -1871,15 +1871,6 @@
 	border-color: var(--foam);
 	color: var(--foam);
 }
-.chip.is-active {
-	border-color: var(--foam);
-	background: var(--foam);
-	color: var(--bg);
-}
-.chip__count {
-	font-size: 10px;
-	opacity: 0.8;
-}
 
 /* --- PostCard --- */
 .post-card {
@@ -2269,15 +2260,7 @@
 	}
 }
 
-/* --- PostsListPage --- */
-.posts {
-	max-width: 72rem;
-	margin: 0 auto;
-	padding: 0 1.5rem;
-}
-.page-head {
-	padding: 48px 0 24px;
-}
+/* --- .crumb (social feed, 3B flow) --- */
 .crumb {
 	display: flex;
 	align-items: center;
@@ -2295,41 +2278,6 @@
 }
 .crumb a:hover {
 	color: var(--foam);
-}
-.crumb__sep {
-	color: var(--line2);
-}
-.page-title {
-	font-family: var(--font-sans);
-	font-weight: 700;
-	font-size: clamp(30px, 5vw, 56px);
-	line-height: 1.05;
-	letter-spacing: -0.02em;
-	color: var(--ink);
-}
-.page-lede {
-	max-width: 62ch;
-	margin-top: 18px;
-	font-family: var(--font-sans);
-	font-size: clamp(16px, 2vw, 20px);
-	line-height: 1.55;
-	color: var(--muted);
-}
-.posts__filter {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	margin-bottom: 20px;
-}
-.posts__count {
-	font-family: var(--font-mono);
-	font-size: 12px;
-	color: var(--faint);
-}
-.posts__empty {
-	color: var(--muted);
 }
 
 /* --- PostDetail & Article Shell --- */
