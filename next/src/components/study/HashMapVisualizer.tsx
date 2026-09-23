@@ -79,7 +79,7 @@ export default function HashMapVisualizer({ copy }: { copy: HashMapVisualizerCop
 	const enterDuration = reduced ? 0 : 160;
 
 	return (
-		<article className="study-card min-w-0 p-5">
+		<article className="study-card min-w-0 p-5" data-viz="hashmap">
 			<h3 className="text-lg font-semibold text-ink">{copy.title}</h3>
 			<p className="mt-2 text-sm leading-6 text-muted">{copy.description}</p>
 			<p className="mt-2 text-sm leading-6 text-muted">{messageText(copy, state.message)}</p>

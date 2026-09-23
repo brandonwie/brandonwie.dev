@@ -140,27 +140,37 @@ export default function GraphTraversalVisualizer({ copy }: { copy: GraphTraversa
 	const mode = frame.mode;
 	const currentMode = copy.modes[mode];
 
+	// Shell state inks (inside `.pg-study`: gold → amber, accent/foam → green,
+	// muted → worn, bg → glass). The current node and chip are reverse video
+	// (amber fill, glass text), visited is green, unvisited worn on `--line`.
 	function nodeClass(role: Role): string {
-		if (role === 'current') return 'fill-bg stroke-gold';
+		if (role === 'current') return 'fill-gold stroke-gold';
 		if (role === 'queued') return 'fill-bg stroke-foam';
-		if (role === 'visited') return 'fill-highlight-med stroke-accent';
+		if (role === 'visited') return 'fill-bg stroke-accent';
 		if (role === 'backtrack') return 'fill-bg stroke-accent';
 		return 'fill-bg stroke-line';
 	}
 
 	function nodeTextClass(role: Role): string {
-		if (role === 'current') return 'fill-gold';
+		if (role === 'current') return 'fill-bg';
 		if (role === 'queued') return 'fill-foam';
 		if (role === 'visited' || role === 'backtrack') return 'fill-accent';
-		return 'fill-faint';
+		return 'fill-muted';
+	}
+
+	// The role badge sits beside the circle on the glass, so the current badge
+	// keeps amber text rather than the reverse-video glass label.
+	function badgeClass(role: Role): string {
+		if (role === 'current') return 'fill-gold';
+		return nodeTextClass(role);
 	}
 
 	function chipClass(role: Role): string {
-		if (role === 'current') return 'border-gold text-gold';
+		if (role === 'current') return 'border-gold bg-gold text-bg';
 		if (role === 'queued') return 'border-foam text-foam';
-		if (role === 'visited') return 'border-accent bg-highlight-med text-accent';
+		if (role === 'visited') return 'border-line text-accent';
 		if (role === 'backtrack') return 'border-accent text-accent';
-		return 'border-line text-faint';
+		return 'border-line text-muted';
 	}
 
 	function badgeX(vertex: Vertex): number {
@@ -237,7 +247,7 @@ export default function GraphTraversalVisualizer({ copy }: { copy: GraphTraversa
 					{vertices.map((vertex) => {
 						const role = frame.roles[vertex.id];
 						return (
-							<g key={vertex.id}>
+							<g key={vertex.id} data-state={role}>
 								<circle
 									cx={vertex.x}
 									cy={vertex.y}
@@ -259,7 +269,7 @@ export default function GraphTraversalVisualizer({ copy }: { copy: GraphTraversa
 									x={badgeX(vertex)}
 									y={vertex.y + 4}
 									textAnchor={badgeAnchor(vertex)}
-									className={`font-mono text-[8px] uppercase tracking-wider ${nodeTextClass(role)}`}
+									className={`font-mono text-[8px] uppercase tracking-wider ${badgeClass(role)}`}
 								>
 									{copy.roleLabels[role]}
 								</text>
@@ -278,6 +288,7 @@ export default function GraphTraversalVisualizer({ copy }: { copy: GraphTraversa
 						frame.frontier.map((id, index) => (
 							<span
 								key={`${id}-${index}`}
+								data-state={frame.roles[id]}
 								className={`border px-2.5 py-1 font-mono text-sm ${chipClass(frame.roles[id])}`}
 							>
 								{id}
@@ -297,6 +308,7 @@ export default function GraphTraversalVisualizer({ copy }: { copy: GraphTraversa
 					{frame.order.map((id, index) => (
 						<span
 							key={`${id}-${index}`}
+							data-state={frame.roles[id]}
 							className={`border px-2.5 py-1 font-mono text-sm ${chipClass(frame.roles[id])}`}
 						>
 							{id}

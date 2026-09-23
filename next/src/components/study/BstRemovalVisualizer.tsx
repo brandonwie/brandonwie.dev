@@ -119,7 +119,7 @@ export default function BstRemovalVisualizer({ copy }: { copy: BstRemovalCopy })
 	}
 
 	return (
-		<article className="study-card min-w-0 p-5">
+		<article className="study-card min-w-0 p-5" data-viz="bst-removal">
 			<div className="flex items-center justify-between gap-4">
 				<div>
 					<h3 className="text-lg font-semibold text-ink">{copy.title}</h3>
