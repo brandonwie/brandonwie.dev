@@ -1,4 +1,3 @@
-import { AppLink } from '@/components/AppLink';
 import { sourceDate } from '@/content/article-contract';
 import { effectiveDate, formatDateShort } from '@/content/date';
 import type { Locale } from '@/i18n/locale';
@@ -66,31 +65,4 @@ export function postListing(post: PostCardPost, locale: Locale): PostListing {
 export function PostCover({ post, className }: { post: { slug: string }; className?: string }) {
 	const coverHtml = `<img src="${coverImage(post.slug)}" alt="" loading="lazy" decoding="async" width="1200" height="630" onerror="if(this.dataset.fallback){this.onerror=null}else{this.dataset.fallback='1';this.src='${DEFAULT_COVER}'}"/>`;
 	return <div className={className} dangerouslySetInnerHTML={{ __html: coverHtml }} />;
-}
-
-export interface PostCardProps {
-	post: PostCardPost;
-	href: string;
-	locale?: Locale;
-	headingLevel?: 'h2' | 'h3';
-}
-
-/** PostCard — cover-on-top card; the home page's recent grid until its port. */
-export function PostCard({ post, href, locale, headingLevel = 'h3' }: PostCardProps) {
-	const resolvedLocale: Locale = locale ?? (href.startsWith('/ko') ? 'ko' : 'en');
-	const item = postListing(post, resolvedLocale);
-	const Heading = headingLevel;
-	return (
-		<AppLink className="post-card" href={href}>
-			<PostCover post={post} className="post-card__cover" />
-			<div className="post-card__body">
-				<div className="post-card__meta">
-					<span className="post-card__cat">{item.category}</span>
-					<time dateTime={item.date}>{item.dateLabel}</time>
-				</div>
-				<Heading className="post-card__title">{item.title}</Heading>
-				{item.description ? <p className="post-card__desc">{item.description}</p> : null}
-			</div>
-		</AppLink>
-	);
 }

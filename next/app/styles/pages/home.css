@@ -1,2 +1,315 @@
 /* Phosphor Fade page styles: home. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Everything is scoped under `.pg-home` (BlogHome root) and prefixed
+   `pg-home__`: bare pack names (`.post`, `.more`, `.row`) already exist as
+   unlayered globals elsewhere and would win over a layered rule.
+
+   Specificity note: the shell's focus ring is
+   `.term-glass :is(…, [tabindex]):focus-visible` (0,3,0) and the shell block
+   comes AFTER this file, so the row focus rule carries an element selector
+   (0,3,1) to win inside the same layer. */
+@layer components {
+	.pg-home__motd {
+		margin: 0;
+		color: var(--crt-faint);
+	}
+
+	/* whoami --verbose: the old TerminalHero, folded into the session. */
+	.pg-home__out {
+		margin: 4px 0 0;
+		min-height: 22px;
+		color: var(--crt-hi);
+	}
+	.pg-home .typed-text__cursor {
+		display: inline-block;
+		width: 8px;
+		height: 14px;
+		margin-left: 1px;
+		vertical-align: -2px;
+		background: var(--crt-amber);
+	}
+	.pg-home__h1 {
+		display: inline-block;
+		margin-top: 18px;
+	}
+	/* D5: the home h1 is one of the two named type-size exceptions (32/40). */
+	.pg-home .pg-home__name {
+		margin: 0;
+		font-size: 32px;
+		line-height: 40px;
+	}
+	.pg-home__bio {
+		max-width: 660px;
+		margin: 10px 0 0;
+		color: var(--crt-worn);
+	}
+	.pg-home__cta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px 26px;
+		margin: 14px 0 0;
+	}
+	.pg-home__go {
+		font-weight: 700;
+	}
+	.pg-home__go::before {
+		content: '> ';
+		font-weight: 400;
+		color: var(--crt-amber);
+	}
+
+	/* Hero stats: a <dl>, four fixed columns. */
+	.pg-home__stats-frame {
+		margin-top: 22px;
+	}
+	.pg-home__stats {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		margin: 0;
+	}
+	.pg-home__stats > div {
+		min-width: 0;
+		padding: 0 14px;
+		border-left: 1px solid var(--crt-line);
+	}
+	.pg-home__stats > div:first-child {
+		padding-left: 0;
+		border-left: 0;
+	}
+	.pg-home__stats dt {
+		font-size: 11px;
+		line-height: 16px;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	:lang(ko) .pg-home__stats dt {
+		letter-spacing: 0;
+	}
+	.pg-home__stats dd {
+		margin: 4px 0 0;
+		font-size: 22px;
+		line-height: 28px;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+
+	/* Frame titles that are the section headings (h2): keep the shell look. */
+	.pg-home h2.term-frame__title {
+		margin: 0;
+		font-weight: 400;
+	}
+
+	/* ls -l ~/work: one link per row. #2a261f divider = the shell's window-dot
+	   fill (non-text). */
+	.pg-home__row {
+		display: grid;
+		grid-template-columns: 92px 28px minmax(0, 1fr) auto;
+		column-gap: 12px;
+		color: inherit;
+		text-decoration: none;
+	}
+	.pg-home__row + .pg-home__row {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid #2a261f;
+	}
+	.pg-home__perm {
+		color: var(--crt-faint);
+	}
+	.pg-home__ix {
+		color: var(--crt-amber);
+	}
+	.pg-home__nm {
+		margin: 0;
+		font-size: inherit;
+		line-height: inherit;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+	.pg-home__sub {
+		font-weight: 400;
+		color: var(--crt-faint);
+	}
+	.pg-home__visit {
+		text-align: right;
+		color: var(--crt-green);
+	}
+	.pg-home__desc {
+		grid-column: 3 / 5;
+		color: var(--crt-worn);
+	}
+	.pg-home__row:hover :is(.pg-home__nm, .pg-home__visit) {
+		text-decoration: underline;
+	}
+
+	/* ls -lt ~/posts | head -10 + fzf-style preview. */
+	.pg-home__recent {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 252px;
+		column-gap: 18px;
+		align-items: start;
+	}
+	.pg-home__recent.is-empty {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.pg-home .term-frame:has(:focus-visible) {
+		border-color: var(--crt-amber);
+	}
+	.pg-home__hdr,
+	.pg-home__post {
+		display: grid;
+		grid-template-columns: 22px 98px 60px minmax(0, 1fr);
+		column-gap: 12px;
+	}
+	.pg-home__hdr {
+		margin-bottom: 6px;
+		padding-bottom: 4px;
+		border-bottom: 1px solid var(--crt-line);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	.pg-home__post {
+		margin: 0 -6px;
+		padding: 3px 6px;
+		color: inherit;
+		text-decoration: none;
+	}
+	.pg-home__post + .pg-home__post {
+		margin-top: 4px;
+	}
+	.pg-home__dt {
+		white-space: nowrap;
+		color: var(--crt-faint);
+	}
+	.pg-home__cat {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--crt-amber);
+	}
+	.pg-home__ti {
+		margin: 0;
+		font-size: inherit;
+		line-height: inherit;
+		font-weight: 400;
+		color: var(--crt-hi);
+	}
+	.pg-home__ds {
+		grid-column: 4;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--crt-faint);
+	}
+	.pg-home__post:hover .pg-home__ti {
+		text-decoration: underline;
+	}
+	/* Keyboard focus = reverse video on the whole row (glass on amber 8.90:1). */
+	.pg-home a.pg-home__post:focus-visible {
+		outline: none;
+	}
+	.pg-home__post:focus-visible,
+	.pg-home__post:focus-visible > * {
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+	.pg-home__more {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 4px 16px;
+		margin-top: 10px;
+		padding-top: 8px;
+		border-top: 1px solid #2a261f;
+	}
+	.pg-home__empty {
+		margin: 0;
+		color: var(--crt-worn);
+	}
+
+	.pg-home__cover {
+		height: 132px;
+		overflow: hidden;
+		border: 1px solid var(--crt-line);
+		background: #15121b;
+	}
+	.pg-home__cover img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.pg-home__pv-meta {
+		margin: 10px 0 0;
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-home__pv-ti {
+		margin: 4px 0 0;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+	.pg-home__pv-ds {
+		display: -webkit-box;
+		overflow: hidden;
+		margin: 6px 0 0;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-worn);
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 8;
+		line-clamp: 8;
+	}
+
+	/* The preview collapses and rows take the full width below 880px — the
+	   README's floor is 768px, but at 768 the 252px pane squeezed the title
+	   column to ~16ch (Korean titles wrapped to four lines). */
+	@media (width < 880px) {
+		.pg-home__recent {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.pg-home__pv {
+			display: none;
+		}
+	}
+	/* Phones: date + category become a meta line above the title. */
+	@media (width < 36rem) {
+		.pg-home__stats {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			row-gap: 12px;
+		}
+		.pg-home__stats > div:nth-child(3) {
+			padding-left: 0;
+			border-left: 0;
+		}
+		.pg-home__row {
+			grid-template-columns: 28px minmax(0, 1fr);
+		}
+		.pg-home__perm {
+			display: none;
+		}
+		.pg-home__visit {
+			grid-column: 2;
+			grid-row: 3;
+			text-align: left;
+		}
+		.pg-home__desc {
+			grid-column: 2;
+		}
+		.pg-home__hdr {
+			display: none;
+		}
+		.pg-home__post {
+			grid-template-columns: 22px auto minmax(0, 1fr);
+			column-gap: 10px;
+		}
+		.pg-home__ti,
+		.pg-home__ds {
+			grid-column: 2 / 4;
+		}
+	}
+}
