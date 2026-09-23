@@ -48,9 +48,11 @@ function statusLabel(copy: HashMapVisualizerCopy, status: SlotStatus): string {
 }
 
 function statusClass(status: SlotStatus): string {
+	// Shell state inks (inside `.pg-study`: gold → amber, muted → worn):
+	// `placed` is a `--line` border, `chained` and `probed` are amber dashed.
 	if (status === 'collision') return 'border-gold border-dashed text-gold';
-	if (status === 'probed') return 'border-foam text-foam';
-	return 'border-accent bg-highlight-med text-accent';
+	if (status === 'probed') return 'border-gold border-dashed text-gold';
+	return 'border-line text-muted';
 }
 
 function messageText(copy: HashMapVisualizerCopy, message: MessageState): string {
@@ -146,6 +148,7 @@ export default function HashMapVisualizer({ copy }: { copy: HashMapVisualizerCop
 													<span className="font-mono text-xs text-faint">→</span>
 												) : null}
 												<div
+													data-state={node.status}
 													className={`min-w-12 border bg-bg p-1 text-center font-mono text-sm ${statusClass(node.status)}`}
 												>
 													<span className="block text-[10px] uppercase">
@@ -168,6 +171,7 @@ export default function HashMapVisualizer({ copy }: { copy: HashMapVisualizerCop
 						{state.slots.map((slot, index) => (
 							<div
 								key={index}
+								data-state={slot === null ? 'empty' : slot.status}
 								className={`min-h-16 border bg-bg p-1 text-center font-mono text-sm motion-reduce:transition-none ${slot === null ? 'border-line' : statusClass(slot.status)}`}
 							>
 								<span className="block text-[10px] text-faint">{index}</span>

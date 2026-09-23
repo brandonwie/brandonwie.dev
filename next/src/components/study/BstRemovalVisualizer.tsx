@@ -92,27 +92,30 @@ export default function BstRemovalVisualizer({ copy }: { copy: BstRemovalCopy })
 		}
 	}
 
+	// Shell state inks (inside `.pg-study`: gold → amber, foam → green,
+	// faint → faint, muted → worn). Target and promoted are amber bold, the
+	// successor green bold, and the removed node faint with its edge dropped.
 	function nodeClass(role: Role | null, removed: boolean): string {
-		if (removed) return 'fill-bg stroke-line opacity-40';
-		if (role === 'target') return 'fill-highlight-med stroke-accent';
+		if (removed) return 'fill-bg stroke-faint';
+		if (role === 'target') return 'fill-bg stroke-gold';
 		if (role === 'successor') return 'fill-bg stroke-foam';
-		if (role === 'promoted') return 'fill-highlight-med stroke-accent';
-		if (role === 'removed') return 'fill-bg stroke-crit opacity-50';
+		if (role === 'promoted') return 'fill-bg stroke-gold';
+		if (role === 'removed') return 'fill-bg stroke-faint';
 		return 'fill-bg stroke-line';
 	}
 
 	function nodeTextClass(role: Role | null, removed: boolean): string {
 		if (removed) return 'fill-faint';
-		if (role === 'target' || role === 'promoted') return 'fill-accent';
-		if (role === 'successor') return 'fill-foam';
+		if (role === 'target' || role === 'promoted') return 'fill-gold font-bold';
+		if (role === 'successor') return 'fill-foam font-bold';
 		if (role === 'removed') return 'fill-faint';
 		return 'fill-muted';
 	}
 
 	function tagClass(role: Role): string {
-		if (role === 'target' || role === 'promoted') return 'fill-accent';
-		if (role === 'successor') return 'fill-foam';
-		return 'fill-crit';
+		if (role === 'target' || role === 'promoted') return 'fill-gold font-bold';
+		if (role === 'successor') return 'fill-foam font-bold';
+		return 'fill-faint';
 	}
 
 	return (
@@ -159,6 +162,7 @@ export default function BstRemovalVisualizer({ copy }: { copy: BstRemovalCopy })
 						return (
 							<g
 								key={node.id}
+								data-state={removed ? 'removed' : (role ?? 'idle')}
 								className="transition-opacity duration-200 motion-reduce:transition-none"
 							>
 								<circle
@@ -191,7 +195,7 @@ export default function BstRemovalVisualizer({ copy }: { copy: BstRemovalCopy })
 										x={node.x}
 										y={node.y - 22}
 										textAnchor="middle"
-										className="font-mono text-[8px] uppercase tracking-wider fill-crit"
+										className="font-mono text-[8px] uppercase tracking-wider fill-faint"
 									>
 										{copy.roleLabels.removed}
 									</text>
@@ -202,7 +206,7 @@ export default function BstRemovalVisualizer({ copy }: { copy: BstRemovalCopy })
 				</svg>
 			</div>
 
-			<p className="mt-5 border-l border-accent bg-bg px-3 py-2 text-sm leading-6 text-muted">
+			<p className="mt-5 border-l border-gold bg-bg px-3 py-2 text-sm leading-6 text-muted">
 				{step + 1}. {copy.steps[step]}
 			</p>
 		</article>
