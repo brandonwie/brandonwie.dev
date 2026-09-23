@@ -81,31 +81,45 @@
 }
 
 @layer components {
+	/* Full-bleed enclosure (user instruction 2026-09-23): the CRT is the page, so
+	   its bezel sits on the page edges. Bars and body span the full width while
+	   their contents keep the old reading column: `--term-col` is the old glass
+	   width (960 page - 2x24 padding - 2x1 border - 2x2 bezel = 906px), so every
+	   page's content box stays 854px wide on desktop. `--term-pad` is that
+	   column's inset, used by every shell row. */
 	.term-page {
+		--term-col: 906px;
+		--term-gutter: 26px;
+		--term-pad: max(var(--term-gutter), calc((100% - var(--term-col)) / 2 + var(--term-gutter)));
 		width: 100%;
-		max-width: 960px;
 		min-height: 100vh;
-		margin-inline: auto;
-		padding: 24px;
+		min-height: 100dvh;
 	}
 
 	/* Enclosure: bezel + bloom, then the glass with its scanlines and vignette
-	   BENEATH every text layer. `overflow: clip` (not hidden) rounds the corners
-	   without making the glass a scroll container, so `position: sticky` inside
+	   BENEATH every text layer. The bloom is inset so it glows at the page
+	   edges; it fades to under 2% amber at the 26px gutter, so faint text keeps
+	   its 4.5:1. A flex column lets the body grow and puts the status line at
+	   the bottom of the viewport on short pages. `overflow: clip` (not hidden)
+	   does not make the glass a scroll container, so `position: sticky` inside
 	   pages (post pager, TOC rail) still sticks to the viewport. */
 	.term-crt {
 		position: relative;
+		display: flex;
+		flex-direction: column;
+		min-height: 100vh;
+		min-height: 100dvh;
 		border: 1px solid var(--crt-line);
-		border-radius: 14px;
 		background: var(--crt-glass);
-		padding: 2px;
 		box-shadow:
-			0 0 12px #e0a35c99,
-			0 0 40px #e0a35c33;
+			inset 0 0 12px #e0a35c99,
+			inset 0 0 40px #e0a35c33;
 	}
 	.term-glass {
 		position: relative;
-		border-radius: 12px;
+		display: flex;
+		flex: 1 0 auto;
+		flex-direction: column;
 		overflow: clip;
 		font-family: var(--font-term);
 		font-size: 13px;
@@ -141,7 +155,7 @@
 	.term-ghost {
 		position: absolute;
 		top: 150px;
-		right: 26px;
+		right: var(--term-pad);
 		z-index: 0;
 		font-size: 92px;
 		line-height: 1;
@@ -160,14 +174,51 @@
 		outline: none;
 	}
 
-	/* Title bar: window dots, cwd, language + palette. */
+	/* Title bar: window dots, cwd, language + palette; then the primary nav. */
 	.term-bar {
+		border-bottom: 1px solid var(--crt-line);
+	}
+	.term-bar__row {
 		display: flex;
 		align-items: center;
 		gap: 12px;
 		min-width: 0;
-		padding: 10px 26px;
-		border-bottom: 1px solid var(--crt-line);
+		padding: 10px var(--term-pad);
+	}
+	/* Primary nav: worn links, amber for the current section, reverse video on
+	   focus like the status line. Wraps rather than scrolls, so all eight links
+	   are visible at 375px; each is a 28px tap target. */
+	.term-bar__nav {
+		display: flex;
+		flex-wrap: wrap;
+		padding: 2px var(--term-pad);
+		border-top: 1px solid var(--crt-line);
+		font-size: 12px;
+		letter-spacing: 0.06em;
+	}
+	.term-bar__nav a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 28px;
+		padding: 0 8px;
+		color: var(--crt-worn);
+		text-decoration: none;
+		text-transform: lowercase;
+	}
+	.term-bar__nav a:first-child {
+		margin-left: -8px;
+	}
+	.term-bar__nav a:hover {
+		color: var(--crt-hi);
+		text-decoration: underline;
+	}
+	.term-bar__nav a.is-on {
+		color: var(--crt-amber);
+	}
+	.term-glass .term-bar__nav a:focus-visible {
+		outline: none;
+		background: var(--crt-amber);
+		color: var(--crt-glass);
 	}
 	.term-bar__dots {
 		display: flex;
@@ -243,7 +294,8 @@
 	}
 
 	.term-body {
-		padding: 18px 26px 28px;
+		flex: 1 0 auto;
+		padding: 18px var(--term-pad) 28px;
 	}
 	.term-main {
 		display: block;
@@ -433,10 +485,12 @@
 		color: var(--crt-faint);
 	}
 
-	/* tmux status line = primary nav. Reverse video: glass on amber 8.90:1,
-	   glass on green 11.77:1. Scrolls inside itself, never the page. */
+	/* tmux status line. Reverse video: glass on amber 8.90:1, glass on green
+	   11.77:1. Full width, windows aligned to the column's edge (no gutter, as
+	   before). Scrolls inside itself, never the page. */
 	.term-status {
 		display: flex;
+		padding-inline: max(0px, calc((100% - var(--term-col)) / 2));
 		overflow-x: auto;
 		white-space: nowrap;
 		font-size: 12px;
@@ -482,12 +536,17 @@
 	}
 
 	@media (width < 48rem) {
+		/* 16px gutter; the bloom tightens so it is under 1.5% amber at 16px. */
 		.term-page {
-			padding: 12px;
+			--term-gutter: 16px;
 		}
-		.term-bar {
+		.term-crt {
+			box-shadow:
+				inset 0 0 10px #e0a35c80,
+				inset 0 0 22px #e0a35c26;
+		}
+		.term-bar__row {
 			gap: 10px;
-			padding-inline: 16px;
 		}
 		.term-bar__dots,
 		.term-bar__cmd-label {
@@ -498,9 +557,6 @@
 		}
 		.term-bar__tools {
 			gap: 12px;
-		}
-		.term-body {
-			padding-inline: 16px;
 		}
 		.term-frame {
 			padding-inline: 12px;
@@ -1097,6 +1153,11 @@
 		background: none;
 		box-shadow: none;
 		color: var(--ink);
+	}
+	/* The full-bleed flex column is a screen layout; paper keeps block flow. */
+	body:has([data-aws-study]) :is(.term-crt, .term-glass) {
+		display: block;
+		min-height: 0;
 	}
 	body:has([data-aws-study]) .term-glass::before,
 	body:has([data-aws-study]) .term-glass::after {

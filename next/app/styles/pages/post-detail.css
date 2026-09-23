@@ -28,8 +28,11 @@
 		display: flex;
 		align-items: center;
 		gap: 14px;
-		margin: -18px -26px 14px;
-		padding: 4px 26px;
+		/* Full-bleed like the shell's bars: main is centred in the viewport, so
+		   50% - 50vw reaches the page edges (the glass clips any scrollbar
+		   overshoot) and the padding returns the contents to main's edge. */
+		margin: -18px calc(50% - 50vw) 14px;
+		padding: 4px calc(50vw - 50%);
 		border-bottom: 1px solid var(--crt-line);
 		background: var(--crt-glass);
 		font-size: 12px;
@@ -399,8 +402,6 @@
 	@media (width < 48rem) {
 		.pg-post__pager {
 			gap: 10px;
-			margin-inline: -16px;
-			padding-inline: 16px;
 		}
 		.pg-post__pager-file {
 			display: none;

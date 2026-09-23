@@ -9,8 +9,9 @@ import { TerminalTitleBar } from './TerminalTitleBar';
 
 /**
  * SiteShell — the Phosphor Fade terminal every page lives in: skip link, one
- * CRT enclosure, the title bar, the page body (`main`), the `~/.plan` footer,
- * an idle prompt, and the tmux status line that is the primary navigation.
+ * full-bleed CRT enclosure (the page edges are its bezel), the title bar with
+ * the primary navigation, the page body (`main`), the `~/.plan` footer, an idle
+ * prompt, and the tmux status line.
  *
  * The copy is resolved ONCE here and passed down, so the client pieces (title
  * bar, status line) never pull the Paraglide message modules into the client
@@ -68,7 +69,7 @@ export function SiteShell({
 						<TerminalFooter locale={locale} copy={copy} />
 						<ShellPrompt pinnedCwd={pinnedCwd} />
 					</div>
-					<StatusLine locale={locale} label={copy.navigation} plain={errorRoute} />
+					<StatusLine locale={locale} plain={errorRoute} />
 				</div>
 			</div>
 		</div>
