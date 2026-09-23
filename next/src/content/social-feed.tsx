@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 
 import feed from '../../../src/lib/data/social-feed.json';
 import { SITE_NAME, SITE_URL } from '../../../src/lib/seo';
+import { TermPrompt } from '@/shell/TermPrompt';
+import { cwdFor } from '@/shell/terminal-path';
 import type { Locale } from './posts';
 
 /**
@@ -117,10 +119,25 @@ export function generateFeedMetadata(locale: Locale): Metadata {
 	};
 }
 
+/** A surface row's target column: the href without its scheme. */
+function targetText(href: string): string {
+	return href.replace(/^https?:\/\//, '');
+}
+
 /**
- * The `/feed` (or `/ko/feed`) page body: crumb, title, lede and the campaign
- * cards from the shared snapshot. Renders inside the site shell's
- * `<main id="main-content">`.
+ * The `/feed` (or `/ko/feed`) page body in the Phosphor Fade shell:
+ * `cat README` (the `~/feed` crumb, worn h1, lede), then `ls -lt campaigns/`
+ * with one frame per campaign whose surfaces are fixed-column rows. Renders
+ * inside the site shell's `<main id="main-content">`.
+ *
+ * PARITY: `scripts/assert-feed-redirects.ts` reads this markup against the
+ * Svelte build, so the contract class names stay on the same elements
+ * (`crumb`, `feed__lede`, `feed__empty`, `feed__list`, `campaign`,
+ * `campaign__id`, `campaign__topic`, `campaign__links`) and each surface is
+ * still exactly one `<a class="chip …">` whose text is the label. The row's
+ * other columns (tree, `[n]`, lang, fmt, target, canonical mark) are sibling
+ * spans outside the anchor; the page styles reach the chips through
+ * `.pg-feed .chip`, never through an extra class token on the anchor.
  *
  * @param locale - selects the `COPY` strings, the crumb path and the blog-chip
  *   href prefix; both locales render the same EN-only campaign snapshot
@@ -128,58 +145,138 @@ export function generateFeedMetadata(locale: Locale): Metadata {
 export function SocialFeedPage({ locale }: { locale: Locale }) {
 	const copy = COPY[locale];
 	const path = feedPath(locale);
+	const cwd = cwdFor(path);
 	const campaigns = listFeedCampaigns();
+	const surfaceCount = campaigns.reduce(
+		(sum, campaign) => sum + campaign.entries.length + (campaign.blog_slug ? 1 : 0),
+		0,
+	);
 
 	// The SvelteKit component owns `<main id="main-content">`; in this package
 	// the site shell renders it, so the page is a section inside it. Adjacent
 	// text expressions are joined into one string because React's server
 	// renderer separates sibling text nodes with `<!-- -->` comments.
 	return (
-		<section className="feed" aria-labelledby="feed-title">
+		<section className="feed pg-feed" aria-labelledby="feed-title">
 			<header className="feed__head">
-				<div className="crumb">{`~${path}`}</div>
-				<h1 className="feed__title" id="feed-title">
-					{copy.title}
-				</h1>
+				<TermPrompt cwd={cwd} command="cat README" />
+				<div className="crumb term-eyebrow">{`~${path}`}</div>
+				<div className="term-worn pg-feed__h1">
+					<h1 className="feed__title term-ttl" id="feed-title">
+						{copy.title}
+					</h1>
+				</div>
 				<p className="feed__lede">{copy.lede}</p>
 			</header>
+
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="ls -lt campaigns/" />
+			<p className="pg-feed__summary" aria-hidden="true">
+				{`total ${campaigns.length} · ${surfaceCount}`}
+			</p>
 
 			{campaigns.length === 0 ? (
 				<p className="feed__empty">{copy.empty}</p>
 			) : (
 				<ol className="feed__list">
-					{campaigns.map((campaign) => (
-						<li className="campaign" key={campaign.cluster_id ?? campaign.entries[0].post_id}>
-							<div className="campaign__meta">
-								<time dateTime={campaign.date}>{campaign.date}</time>
-								{campaign.cluster_id ? (
-									<span className="campaign__id">{campaign.cluster_id}</span>
-								) : null}
-							</div>
-							<h2 className="campaign__topic">{campaign.topic}</h2>
-							<ul className="campaign__links">
-								{campaign.blog_slug ? (
-									<li>
-										<a className="chip chip--blog" href={blogHref(campaign.blog_slug, path)}>
-											{copy.blogPost}
-										</a>
-									</li>
-								) : null}
-								{campaign.entries.map((entry) => (
-									<li key={entry.post_id + entry.platform + entry.lang}>
-										<a
-											className={entry.is_canonical ? 'chip chip--canonical' : 'chip'}
-											href={entry.url}
-											target="_blank"
-											rel="noopener noreferrer"
-										>
-											{`${entryLabel(entry)}${entry.lang !== 'en' ? ` (${entry.lang})` : ''}`}
-										</a>
-									</li>
-								))}
-							</ul>
-						</li>
-					))}
+					{campaigns.map((campaign) => {
+						const offset = campaign.blog_slug ? 1 : 0;
+						const rows = campaign.entries.length + offset;
+						const tree = (position: number) => (position === rows - 1 ? '└──' : '├──');
+						return (
+							<li
+								className="campaign term-frame"
+								key={campaign.cluster_id ?? campaign.entries[0].post_id}
+							>
+								<span className="term-frame__title" aria-hidden="true">
+									{campaign.cluster_id ?? campaign.date} <span className="dim">{`· ${rows}`}</span>
+								</span>
+								<div className="campaign__meta">
+									<time dateTime={campaign.date}>{campaign.date}</time>
+									{campaign.cluster_id ? (
+										<>
+											<span className="pg-feed__key" aria-hidden="true">
+												cluster
+											</span>
+											<span className="campaign__id">{campaign.cluster_id}</span>
+										</>
+									) : null}
+								</div>
+								<h2 className="campaign__topic term-sub">{campaign.topic}</h2>
+								<div className="pg-feed__hd" aria-hidden="true">
+									<span />
+									<span>#</span>
+									<span>surface</span>
+									<span>lang</span>
+									<span>fmt</span>
+									<span>target</span>
+									<span />
+								</div>
+								<ul className="campaign__links">
+									{campaign.blog_slug ? (
+										<li className="pg-feed__row">
+											<span className="pg-feed__tr" aria-hidden="true">
+												{tree(0)}
+											</span>
+											<span className="pg-feed__n" aria-hidden="true">
+												[b]
+											</span>
+											<a className="chip chip--blog" href={blogHref(campaign.blog_slug, path)}>
+												{copy.blogPost}
+											</a>
+											<span className="pg-feed__dim" aria-hidden="true">
+												{locale}
+											</span>
+											<span className="pg-feed__dim" aria-hidden="true">
+												post
+											</span>
+											<span className="pg-feed__tgt" aria-hidden="true">
+												{blogHref(campaign.blog_slug, path)}
+											</span>
+											<span />
+										</li>
+									) : null}
+									{campaign.entries.map((entry, index) => {
+										const label = `${entryLabel(entry)}${entry.lang !== 'en' ? ` (${entry.lang})` : ''}`;
+										return (
+											<li
+												key={entry.post_id + entry.platform + entry.lang}
+												className={entry.is_canonical ? 'pg-feed__row is-canon' : 'pg-feed__row'}
+											>
+												<span className="pg-feed__tr" aria-hidden="true">
+													{tree(index + offset)}
+												</span>
+												<span className="pg-feed__n" aria-hidden="true">
+													{`[${index + 1}]`}
+												</span>
+												<a
+													className={entry.is_canonical ? 'chip chip--canonical' : 'chip'}
+													href={entry.url}
+													target="_blank"
+													rel="noopener noreferrer"
+													title={label}
+												>
+													{label}
+												</a>
+												<span className="pg-feed__dim" aria-hidden="true">
+													{entry.lang}
+												</span>
+												<span className="pg-feed__dim" aria-hidden="true">
+													{entry.format}
+												</span>
+												<span className="pg-feed__tgt" aria-hidden="true">
+													{targetText(entry.url)}
+												</span>
+												<span className="pg-feed__mk" aria-hidden="true">
+													{entry.is_canonical ? '*' : ''}
+												</span>
+											</li>
+										);
+									})}
+								</ul>
+							</li>
+						);
+					})}
 				</ol>
 			)}
 		</section>
