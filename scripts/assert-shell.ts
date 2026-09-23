@@ -26,6 +26,15 @@
  *     label would fail, and why every assertion below is scoped to its own
  *     container.
  *
+ * REDESIGN (Phosphor Fade terminal shell): the candidate's chrome no longer
+ * mirrors the Svelte markup, so the rows compare chrome FUNCTIONS, not markup.
+ * The baseline is still read through its own selectors (`header.site-nav`,
+ * `footer.site-footer`); the candidate through `header.term-bar`, the tmux
+ * status line `nav.term-status` and `footer.term-plan`. Destinations, the
+ * current-page marker, footer links with their accessible labels and order,
+ * and the skip link are still held to the baseline; nav labels and nav order
+ * are not, because D3 renames them to tmux windows by design.
+ *
  * Exit 0 = no chrome regression on the routes the candidate builds today. It
  * never means the chrome is discharged over all 366 routes; the row table
  * prints its coverage.
@@ -97,6 +106,13 @@ interface Link {
 	classes: string;
 	current: string | null;
 }
+
+type Side = 'candidate' | 'baseline';
+
+// REDESIGN: containers are side-aware. The baseline keeps the Svelte chrome;
+// the candidate is the Phosphor Fade terminal shell (next/src/shell/*.tsx).
+const HEADER: Record<Side, string> = { baseline: 'site-nav', candidate: 'term-bar' };
+const FOOTER: Record<Side, string> = { baseline: 'site-footer', candidate: 'term-plan' };
 
 function linksIn(html: string): Link[] {
 	const out: Link[] = [];
@@ -230,9 +246,11 @@ export function runAssertions(candidateDir: string, baselineDir: string, quiet =
 	// has chrome, and only chrome-bearing routes go on to the content rows. A
 	// route the baseline dresses and the candidate does not (or the reverse) is
 	// a finding, which is exactly how the candidate's dressed /404 surfaced.
-	const hasChrome = (dir: string, route: string): boolean => {
+	// REDESIGN: the candidate's chrome is the terminal shell (title bar + tmux
+	// status line), so "has chrome" is read through each side's own selectors.
+	const hasChrome = (side: Side, dir: string, route: string): boolean => {
 		const html = readRoute(dir, route) ?? '';
-		return region(html, 'header', 'site-nav') !== null && navOf(html) !== null;
+		return region(html, 'header', HEADER[side]) !== null && navOf(side, html) !== null;
 	};
 
 	/**
@@ -280,8 +298,8 @@ export function runAssertions(candidateDir: string, baselineDir: string, quiet =
 			fallbacks.push(route);
 			continue;
 		}
-		const cand = hasChrome(candidateDir, route);
-		const base = hasChrome(baselineDir, route);
+		const cand = hasChrome('candidate', candidateDir, route);
+		const base = hasChrome('baseline', baselineDir, route);
 		if (cand !== base) {
 			asymmetric.push(
 				`${route}: baseline ${base ? 'has' : 'has no'} chrome, candidate ${cand ? 'has' : 'has no'} chrome`,
@@ -309,7 +327,8 @@ export function runAssertions(candidateDir: string, baselineDir: string, quiet =
 			['baseline', baselineDir],
 		] as const) {
 			const html = readRoute(dir, route) ?? '';
-			if (region(html, 'footer', 'site-footer') === null) missing.push(`${route}: ${side} footer`);
+			// REDESIGN: the candidate footer is `footer.term-plan`; the baseline keeps `footer.site-footer`.
+			if (region(html, 'footer', FOOTER[side]) === null) missing.push(`${route}: ${side} footer`);
 		}
 	}
 	if (missing.length > 0) {
@@ -339,27 +358,95 @@ export function runAssertions(candidateDir: string, baselineDir: string, quiet =
 	return failures > 0 ? 1 : 0;
 }
 
-function navOf(html: string): Link[] | null {
-	const header = region(html, 'header', 'site-nav');
-	if (header === null) return null;
-	const nav = region(header, 'nav', 'site-nav__links');
-	if (nav === null) return null;
-	return linksIn(nav).filter((link) => link.classes.split(' ').includes('site-nav__link'));
+/**
+ * The primary nav on each side. The baseline keeps the Svelte header nav
+ * (`header.site-nav` > `nav.site-nav__links` > `a.site-nav__link`).
+ *
+ * REDESIGN: the candidate's primary nav is the tmux status line
+ * `nav.term-status`, which sits at the bottom of the enclosure, outside the
+ * title bar -- so it is read from the document, not from inside the header.
+ * Every anchor in it is a window; the session and clock spans carry no links.
+ */
+function navOf(side: Side, html: string): Link[] | null {
+	if (side === 'baseline') {
+		const header = region(html, 'header', HEADER.baseline);
+		if (header === null) return null;
+		const nav = region(header, 'nav', 'site-nav__links');
+		if (nav === null) return null;
+		return linksIn(nav).filter((link) => link.classes.split(' ').includes('site-nav__link'));
+	}
+	const nav = region(html, 'nav', 'term-status');
+	return nav === null ? null : linksIn(nav);
+}
+
+/** `/ko` for Korean routes, `/` otherwise: the home window's href. */
+function localeHome(route: string): string {
+	return route === '/ko' || route.startsWith('/ko/') ? '/ko' : '/';
+}
+
+interface StatusWindow extends Link {
+	index: number;
+}
+
+/**
+ * The candidate's status-line windows, split into the fixed set and the
+ * temporary off-nav window. The split is DERIVED FROM THE BASELINE: the fixed
+ * set is the baseline's nav plus the home window, so the temporary window's
+ * index is the baseline nav length + 1. A window whose name has no `n:` index,
+ * or whose index fits neither slot, is reported, never silently classified.
+ */
+function windowsOf(
+	cand: Link[],
+	base: Link[],
+): { fixed: StatusWindow[]; temporary: StatusWindow[]; problems: string[] } {
+	const fixedCount = base.length + 1;
+	const fixed: StatusWindow[] = [];
+	const temporary: StatusWindow[] = [];
+	const problems: string[] = [];
+	for (const link of cand) {
+		const index = /^(\d+):/.exec(link.text);
+		if (!index) {
+			problems.push(`window "${link.text}" (${link.href}) has no n: index`);
+			continue;
+		}
+		// Same object, so callers can compare a marked link to a window by identity.
+		const win: StatusWindow = Object.assign(link, { index: Number(index[1]) });
+		if (win.index < fixedCount) fixed.push(win);
+		else if (win.index === fixedCount) temporary.push(win);
+		else problems.push(`window "${link.text}" has index ${win.index}, beyond ${fixedCount}`);
+	}
+	return { fixed, temporary, problems };
 }
 
 function assertNav(candidateDir: string, baselineDir: string, routes: string[]): void {
 	const problems: string[] = [];
 	for (const route of routes) {
-		const cand = navOf(readRoute(candidateDir, route) ?? '');
-		const base = navOf(readRoute(baselineDir, route) ?? '');
+		const cand = navOf('candidate', readRoute(candidateDir, route) ?? '');
+		const base = navOf('baseline', readRoute(baselineDir, route) ?? '');
 		if (!base || !cand) {
 			problems.push(`${route}: nav missing on ${!cand ? 'candidate' : 'baseline'}`);
 			continue;
 		}
-		const shape = (links: Link[]): string =>
-			links.map((link) => `${link.href}=${link.text}`).join(' | ');
-		if (shape(cand) !== shape(base)) {
-			problems.push(`${route}: nav is ${shape(cand)}, baseline is ${shape(base)}`);
+		// REDESIGN: labels and order are no longer compared -- D3 replaces
+		// `~/Label` with fixed tmux window names in tmux order. What must survive
+		// is the set of destinations: the baseline nav plus the locale home.
+		const { fixed, temporary, problems: shape } = windowsOf(cand, base);
+		problems.push(...shape.map((problem) => `${route}: ${problem}`));
+		const indices = fixed.map((win) => win.index).join(',');
+		const expectedIndices = Array.from({ length: base.length + 1 }, (_, i) => i).join(',');
+		if (indices !== expectedIndices) {
+			problems.push(`${route}: fixed window indices are ${indices}, expected ${expectedIndices}`);
+		}
+		if (temporary.length > 1) problems.push(`${route}: ${temporary.length} temporary windows`);
+		if (temporary.length === 1 && cand[cand.length - 1] !== temporary[0]) {
+			problems.push(`${route}: the temporary window is not the last window`);
+		}
+		const got = fixed.map((win) => win.href).sort();
+		const want = [...base.map((link) => link.href), localeHome(route)].sort();
+		if (got.join(' | ') !== want.join(' | ')) {
+			problems.push(
+				`${route}: fixed windows link to ${got.join(', ')}; expected ${want.join(', ')}`,
+			);
 		}
 	}
 	if (problems.length > 0) record('FAIL', 'SH-03 nav links', problems.join('; '));
@@ -367,28 +454,71 @@ function assertNav(candidateDir: string, baselineDir: string, routes: string[]):
 		record(
 			'PASS',
 			'SH-03 nav links',
-			`href, label and order match the baseline inside the header nav on ${routes.length} route(s)`,
+			`fixed status-line windows link to exactly the baseline nav hrefs plus the locale home on ${routes.length} route(s)`,
 		);
 }
 
 function assertActive(candidateDir: string, baselineDir: string, routes: string[]): void {
 	const problems: string[] = [];
+	const isOn = (link: Link): boolean => link.classes.split(' ').includes('is-on');
 	for (const route of routes) {
-		const cand = navOf(readRoute(candidateDir, route) ?? '');
-		const base = navOf(readRoute(baselineDir, route) ?? '');
+		const cand = navOf('candidate', readRoute(candidateDir, route) ?? '');
+		const base = navOf('baseline', readRoute(baselineDir, route) ?? '');
 		if (!base || !cand) {
 			problems.push(`${route}: nav missing on ${!cand ? 'candidate' : 'baseline'}`);
 			continue;
 		}
-		const marks = (links: Link[]): string =>
-			links
-				.map(
-					(link) =>
-						`${link.href}:${link.classes.split(' ').includes('is-active') ? 'active' : '-'}:${link.current ?? '-'}`,
-				)
-				.join(' | ');
-		if (marks(cand) !== marks(base)) {
-			problems.push(`${route}: ${marks(cand)} vs baseline ${marks(base)}`);
+		const baseActive = base.filter(
+			(link) => link.classes.split(' ').includes('is-active') || link.current !== null,
+		);
+		// REDESIGN: the candidate marks the current window with `is-on` (was
+		// `is-active`); both it and aria-current must sit on the same window.
+		const marked = cand.filter((link) => isOn(link) || link.current !== null);
+		const split = marked.filter((link) => !isOn(link) || link.current !== 'page');
+		if (split.length > 0) {
+			problems.push(
+				`${route}: ${split.map((link) => link.href).join(', ')} carries only one of is-on / aria-current="page"`,
+			);
+			continue;
+		}
+		const { temporary } = windowsOf(cand, base);
+		const hrefs = marked.map((link) => link.href).join(', ') || 'nothing';
+		if (baseActive.length > 1) {
+			problems.push(`${route}: the baseline marks ${baseActive.length} nav items`);
+		} else if (baseActive.length === 1) {
+			// Where the baseline marks a section, the candidate marks that section.
+			const want = baseActive[0].href;
+			if (
+				marked.length !== 1 ||
+				marked[0].href !== want ||
+				temporary.includes(marked[0] as StatusWindow)
+			) {
+				problems.push(`${route}: candidate marks ${hrefs}; baseline marks ${want}`);
+			}
+		} else {
+			// REDESIGN: the baseline had no home link and no off-nav marker. The
+			// candidate may mark only the home window on the locale home route, or
+			// only a temporary window pointing at the route itself -- and a
+			// temporary window, when present, must be the one marked.
+			const home = localeHome(route);
+			const ok =
+				marked.length === 0
+					? temporary.length === 0
+					: marked.length === 1 &&
+						((route === home &&
+							marked[0].href === home &&
+							!temporary.includes(marked[0] as StatusWindow)) ||
+							(temporary.length === 1 &&
+								marked[0] === temporary[0] &&
+								temporary[0].href === route));
+			if (!ok) {
+				problems.push(
+					`${route}: baseline marks nothing; candidate marks ${hrefs}` +
+						(temporary.length > 0
+							? ` with temporary window ${temporary.map((w) => w.href).join(', ')}`
+							: ''),
+				);
+			}
 		}
 	}
 	if (problems.length > 0) record('FAIL', 'SH-04 active section', problems.join('; '));
@@ -396,15 +526,29 @@ function assertActive(candidateDir: string, baselineDir: string, routes: string[
 		record(
 			'PASS',
 			'SH-04 active section',
-			`is-active and aria-current are bound to the same nav item as the baseline, per route`,
+			`is-on and aria-current mark the baseline's active section, or only the home / temporary window where the baseline marks none, per route`,
 		);
+}
+
+/**
+ * Accessible text of a footer link.
+ *
+ * REDESIGN: the candidate prefixes each link with an `aria-hidden` `[n]` and
+ * moves the external-link arrow into an `aria-hidden` span; the baseline emits
+ * `GitHub ↗` as plain text. Both sides drop aria-hidden elements and a trailing
+ * `↗`, and nothing else, so a changed or missing label still fails.
+ */
+function accessibleText(html: string): string {
+	return normalizeText(
+		html.replace(/<(\w+)\b[^>]*\baria-hidden="true"[^>]*>[\s\S]*?<\/\1>/gi, ''),
+	).replace(/\s*↗$/, '');
 }
 
 function assertFooter(candidateDir: string, baselineDir: string, routes: string[]): void {
 	const problems: string[] = [];
 	for (const route of routes) {
-		const candFooter = region(readRoute(candidateDir, route) ?? '', 'footer', 'site-footer');
-		const baseFooter = region(readRoute(baselineDir, route) ?? '', 'footer', 'site-footer');
+		const candFooter = region(readRoute(candidateDir, route) ?? '', 'footer', FOOTER.candidate);
+		const baseFooter = region(readRoute(baselineDir, route) ?? '', 'footer', FOOTER.baseline);
 		if (candFooter === null || baseFooter === null) {
 			problems.push(
 				`${route}: footer missing on ${candFooter === null ? 'candidate' : 'baseline'}`,
@@ -412,11 +556,16 @@ function assertFooter(candidateDir: string, baselineDir: string, routes: string[
 			continue;
 		}
 		const shape = (html: string): string =>
-			linksIn(html)
-				.map((link) => `${link.href}=${link.text}`)
+			Array.from(html.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi))
+				.map((match) => {
+					const tag = /<a\b[^>]*>/i.exec(match[0])?.[0] ?? '';
+					return `${attrOf(tag, 'href') ?? ''}=${accessibleText(match[1])}`;
+				})
 				.join(' | ');
 		if (shape(candFooter) !== shape(baseFooter)) {
-			problems.push(`${route}: footer links differ from the baseline`);
+			problems.push(
+				`${route}: footer links are ${shape(candFooter)}, baseline is ${shape(baseFooter)}`,
+			);
 		}
 	}
 	if (problems.length > 0) record('FAIL', 'SH-05 footer links', problems.join('; '));
@@ -424,14 +573,14 @@ function assertFooter(candidateDir: string, baselineDir: string, routes: string[
 		record(
 			'PASS',
 			'SH-05 footer links',
-			`href, label and order match the baseline inside the footer on ${routes.length} route(s)`,
+			`href, accessible label and order match the baseline inside the footer on ${routes.length} route(s)`,
 		);
 }
 
 /**
  * SH-06 is scoped to the markup BEFORE the header, not to the whole document.
  *
- * `next/src/shell/site-shell.tsx` places the skip link ahead of `SiteHeader`,
+ * `next/src/shell/site-shell.tsx` places the skip link ahead of the title bar,
  * which is the only position where it does its job: a link that FOLLOWS the
  * chrome cannot skip the chrome. An earlier revision searched every link in the
  * document, so relocating the skip link below the header -- the exact
@@ -443,7 +592,11 @@ function assertSkipLink(candidateDir: string, routes: string[]): void {
 	const problems: string[] = [];
 	for (const route of routes) {
 		const html = readRoute(candidateDir, route) ?? '';
-		const headerAt = /<header\b[^>]*class="[^"]*\bsite-nav\b[^"]*"[^>]*>/i.exec(html);
+		// REDESIGN: the header the skip link must precede is `header.term-bar`.
+		const headerAt = new RegExp(
+			`<header\\b[^>]*class="[^"]*\\b${HEADER.candidate}\\b[^"]*"[^>]*>`,
+			'i',
+		).exec(html);
 		if (!headerAt) {
 			problems.push(`${route}: no header to place a skip link before`);
 			continue;
@@ -461,7 +614,7 @@ function assertSkipLink(candidateDir: string, routes: string[]): void {
 		record(
 			'PASS',
 			'SH-06 skip link',
-			`skip link and its target present on ${routes.length} route(s)`,
+			`skip link precedes the title bar and its target is present on ${routes.length} route(s)`,
 		);
 }
 

@@ -6,10 +6,10 @@
  * false and no `a.language-toggle` is emitted — but the hydrating client sees
  * the real unmatched URL, passes the check, and mounts the toggle. Server and
  * client DOM disagree, React logs #418 twice, and the page self-recovers. The
- * fix is the `suppressLocaleToggle` flag threaded from `global-not-found.tsx`
- * (and `global-error.tsx`) through `SiteShell` → `SiteHeader` →
- * `HeaderControls` → `LanguageToggle`, so both renders agree on the no-toggle
- * output.
+ * fix is the error-route flag threaded from `global-not-found.tsx` (and
+ * `global-error.tsx`) through `SiteShell` (`errorRoute`) → `TerminalTitleBar`
+ * → `LanguageToggle`, so both renders agree on the no-toggle output (a plain
+ * `span` locale label, never an `a.language-toggle`).
  *
  * Each row loads an error-route URL in a real browser, lets hydration finish,
  * and asserts ZERO captured errors — `console.error` included, because that is
@@ -114,7 +114,9 @@ async function main() {
 			await mutateBehavior(
 				page,
 				`new MutationObserver(() => {
-	const hc = document.querySelector('.header-controls');
+	// REDESIGN: HeaderControls is gone; the toggle now lives in the terminal
+	// title bar's tools cluster, so that is where the defect is injected.
+	const hc = document.querySelector('.term-bar__tools');
 	if (hc && !hc.querySelector('a.language-toggle')) {
 		const a = document.createElement('a');
 		a.className = 'language-toggle';

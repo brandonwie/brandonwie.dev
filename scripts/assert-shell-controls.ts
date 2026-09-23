@@ -32,31 +32,46 @@ interface Control {
 
 const EN = 'posts/giscus-sveltekit-integration.html';
 const KO = 'ko/system/3b.html';
+/** An off-nav route: its status line carries the temporary `5:tags*` window. */
+const OFF_NAV = 'tags.html';
 
+const HEADER = /<header\b[^>]*class="[^"]*\bterm-bar\b[^"]*"[\s\S]*?<\/header>/i;
+const STATUS = /<nav\b[^>]*class="[^"]*\bterm-status\b[^"]*"[\s\S]*?<\/nav>/i;
+const FOOTER = /<footer\b[^>]*class="[^"]*\bterm-plan\b[^"]*"[\s\S]*?<\/footer>/i;
+
+/**
+ * Applies `edit` inside the first match of `container` only, so a mutation
+ * aimed at the chrome can never land on an identical string in the article.
+ */
+function within(container: RegExp, edit: (region: string) => string): (html: string) => string {
+	return (html) => html.replace(container, (region) => edit(region));
+}
+
+// REDESIGN: every candidate-side mutation now targets the Phosphor Fade shell
+// (`header.term-bar`, `nav.term-status`, `footer.term-plan`); baseline-side
+// controls (SC-13/14/15) still target the Svelte chrome, which is unchanged.
 const CONTROLS: Control[] = [
 	{
 		id: 'SC-01',
 		kind: 'DEFECT',
-		what: 'the entire header is removed from a Korean route',
+		what: 'the entire title bar is removed from a Korean route (SH-01)',
 		target: KO,
-		apply: (html) =>
-			html.replace(/<header\b[^>]*class="[^"]*site-nav[^"]*"[\s\S]*?<\/header>/i, ''),
+		apply: (html) => html.replace(HEADER, ''),
 	},
 	{
 		id: 'SC-02',
 		kind: 'DEFECT',
-		what: 'the entire footer is removed from a Korean route',
+		what: 'the entire footer is removed from a Korean route (SH-02)',
 		target: KO,
-		apply: (html) =>
-			html.replace(/<footer\b[^>]*class="[^"]*site-footer[^"]*"[\s\S]*?<\/footer>/i, ''),
+		apply: (html) => html.replace(FOOTER, ''),
 	},
 	{
 		id: 'SC-03',
 		kind: 'DEFECT',
-		what: 'a nav link is relocated out of the header into main, where it must not count',
+		what: 'a status-line window is relocated into main, where it must not count (SH-03)',
 		target: EN,
 		apply: (html) => {
-			const link = /<a\b[^>]*class="[^"]*site-nav__link[^"]*"[\s\S]*?<\/a>/i.exec(html);
+			const link = /<a\b[^>]*href="\/study"[^>]*>2:study<\/a>/i.exec(html);
 			if (!link) return html;
 			return html
 				.replace(link[0], '')
@@ -66,62 +81,62 @@ const CONTROLS: Control[] = [
 	{
 		id: 'SC-04',
 		kind: 'DEFECT',
-		what: 'a nav link keeps its place but loses its label',
+		// REDESIGN: was "a nav link loses its label"; labels are no longer compared, destinations are.
+		what: 'a fixed status-line window keeps its name but points somewhere else (SH-03)',
 		target: EN,
-		apply: (html) =>
-			html.replace(/(<a\b[^>]*class="[^"]*site-nav__link[^"]*"[^>]*>)[\s\S]*?(<\/a>)/i, '$1$2'),
+		apply: within(STATUS, (nav) => nav.replace('href="/study"', 'href="/elsewhere"')),
 	},
 	{
 		id: 'SC-05',
 		kind: 'DEFECT',
-		what: 'the active nav item moves to a different section',
+		what: 'the current window moves to a different section (SH-04)',
 		target: KO,
-		apply: (html) =>
-			html
+		apply: within(STATUS, (nav) =>
+			nav
 				.replace(
-					/ class="site-nav__link is-active" aria-current="page"/i,
-					' class="site-nav__link"',
+					/<a class="is-on" aria-current="page" href="\/ko\/system\/3b">3:3b<span aria-hidden="true">\*<\/span><\/a>/,
+					'<a href="/ko/system/3b">3:3b</a>',
 				)
 				.replace(
-					/(<a\b[^>]*href="\/ko\/posts"[^>]*)class="site-nav__link"/i,
-					'$1class="site-nav__link is-active" aria-current="page"',
+					'<a href="/ko/posts">1:posts</a>',
+					'<a class="is-on" aria-current="page" href="/ko/posts">1:posts<span aria-hidden="true">*</span></a>',
 				),
+		),
 	},
 	{
 		id: 'SC-06',
 		kind: 'DEFECT',
-		what: 'a footer column link points somewhere else',
+		what: 'a footer column link points somewhere else (SH-05)',
 		target: EN,
-		apply: (html) => html.replace('href="/tags"', 'href="/elsewhere"'),
+		apply: within(FOOTER, (footer) => footer.replace('href="/tags"', 'href="/elsewhere"')),
 	},
 	{
 		id: 'SC-07',
 		kind: 'DEFECT',
-		what: 'the skip link loses its target',
+		what: 'the skip link loses its target (SH-06)',
 		target: EN,
 		apply: (html) => html.replace('href="#main-content"', 'href="#gone"'),
 	},
 	{
 		id: 'SC-08',
 		kind: 'INVARIANCE',
-		what: 'whitespace inside the header does not move any row — paired with SC-01/03/04',
+		what: 'whitespace inside the status line does not move any row — paired with SC-03/04/20',
 		target: EN,
-		apply: (html) => html.replace('<nav class="site-nav__links"', '<nav  class="site-nav__links"'),
+		apply: (html) => html.replace('<nav class="term-status"', '<nav  class="term-status"'),
 	},
 	{
 		id: 'SC-09',
 		kind: 'INVARIANCE',
-		what: 'a Svelte-style scoped class on a nav link is ignored — paired with SC-04/06',
+		what: 'a Svelte-style scoped class on the current window is ignored — paired with SC-05/17/18',
 		target: EN,
-		apply: (html) =>
-			html.replace('class="site-nav__link"', 'class="site-nav__link svelte-deadbeef"'),
+		apply: within(STATUS, (nav) => nav.replace('class="is-on"', 'class="is-on svelte-deadbeef"')),
 	},
 	{
 		id: 'SC-10',
 		kind: 'INVARIANCE',
-		what: 'a comment between label text nodes is ignored — paired with SC-04',
+		what: 'a comment between window-name text nodes is ignored — paired with SC-04',
 		target: EN,
-		apply: (html) => html.replace('~/<!-- -->', '~/<!-- --><!-- -->'),
+		apply: within(STATUS, (nav) => nav.replace('>2:study<', '>2:<!-- -->study<')),
 	},
 	/**
 	 * SC-11..SC-15 are the implementation-review findings, executed. The first
@@ -131,24 +146,16 @@ const CONTROLS: Control[] = [
 	{
 		id: 'SC-11',
 		kind: 'DEFECT',
-		what: 'the candidate header exists only inside an HTML comment',
+		what: 'the candidate title bar exists only inside an HTML comment (SH-01)',
 		target: EN,
-		apply: (html) =>
-			html.replace(
-				/<header\b[^>]*class="[^"]*site-nav[^"]*"[\s\S]*?<\/header>/i,
-				(match) => `<!--${match}-->`,
-			),
+		apply: (html) => html.replace(HEADER, (match) => `<!--${match}-->`),
 	},
 	{
 		id: 'SC-12',
 		kind: 'DEFECT',
-		what: 'the candidate footer exists only inside an HTML comment',
+		what: 'the candidate footer exists only inside an HTML comment (SH-02)',
 		target: EN,
-		apply: (html) =>
-			html.replace(
-				/<footer\b[^>]*class="[^"]*site-footer[^"]*"[\s\S]*?<\/footer>/i,
-				(match) => `<!--${match}-->`,
-			),
+		apply: (html) => html.replace(FOOTER, (match) => `<!--${match}-->`),
 	},
 	{
 		id: 'SC-13',
@@ -178,12 +185,12 @@ const CONTROLS: Control[] = [
 	{
 		id: 'SC-16',
 		kind: 'DEFECT',
-		what: 'the skip link is relocated below the header, where it can no longer skip the chrome',
+		what: 'the skip link is relocated below the title bar, where it can no longer skip the chrome (SH-06)',
 		target: EN,
 		apply: (html) => {
 			const link = /<a\b[^>]*class="[^"]*\bskip-link\b[^"]*"[\s\S]*?<\/a>/i.exec(html);
 			if (!link) return html;
-			return html.replace(link[0], '').replace(/(<\/header>)/i, (close) => `${close}${link[0]}`);
+			return html.replace(link[0], '').replace(HEADER, (header) => `${header}${link[0]}`);
 		},
 	},
 	{
@@ -193,6 +200,96 @@ const CONTROLS: Control[] = [
 		target: '404.html',
 		side: 'baseline',
 		apply: (html) => html.replace(/kit\.start\s*\(/, 'kit.notStart('),
+	},
+	/**
+	 * SC-17..SC-25 cover the functions the terminal shell re-expresses: the
+	 * status line's marking rules (SH-04), the locale home and the temporary
+	 * window (SH-03/04), and the footer's accessible labels (SH-05).
+	 */
+	{
+		id: 'SC-17',
+		kind: 'DEFECT',
+		what: 'the current window keeps is-on but drops aria-current (SH-04)',
+		target: EN,
+		apply: within(STATUS, (nav) => nav.replace(' aria-current="page"', '')),
+	},
+	{
+		id: 'SC-18',
+		kind: 'DEFECT',
+		what: 'a second window is also marked current (SH-04)',
+		target: EN,
+		apply: within(STATUS, (nav) =>
+			nav.replace('<a href="/study">', '<a class="is-on" aria-current="page" href="/study">'),
+		),
+	},
+	{
+		id: 'SC-19',
+		kind: 'DEFECT',
+		what: 'the temporary window on an off-nav route points away from the route itself (SH-04)',
+		target: OFF_NAV,
+		apply: within(STATUS, (nav) => nav.replace('href="/tags"', 'href="/elsewhere"')),
+	},
+	{
+		id: 'SC-20',
+		kind: 'DEFECT',
+		what: 'the status line exists only inside an HTML comment (SH-01)',
+		target: EN,
+		apply: (html) => html.replace(STATUS, (match) => `<!--${match}-->`),
+	},
+	{
+		id: 'SC-21',
+		kind: 'DEFECT',
+		what: 'two footer links swap places (SH-05 order)',
+		target: EN,
+		apply: within(FOOTER, (footer) => {
+			const about = /<a\b[^>]*href="\/about"[^>]*>[\s\S]*?<\/a>/i.exec(footer)?.[0];
+			const posts = /<a\b[^>]*href="\/posts"[^>]*>[\s\S]*?<\/a>/i.exec(footer)?.[0];
+			if (!about || !posts) return footer;
+			return footer.replace(about, '\u0000').replace(posts, about).replace('\u0000', posts);
+		}),
+	},
+	{
+		id: 'SC-22',
+		kind: 'DEFECT',
+		what: 'a footer link keeps only its aria-hidden [n] and loses its accessible label (SH-05)',
+		target: EN,
+		apply: within(FOOTER, (footer) =>
+			footer.replace(
+				// React emits `[<!-- -->6<!-- -->]`; the optional comment groups absorb it.
+				/(href="\/tags"><span class="n" aria-hidden="true">\[(?:<!-- -->)?\d+(?:<!-- -->)?\]<\/span>)Tags/,
+				'$1',
+			),
+		),
+	},
+	{
+		id: 'SC-23',
+		kind: 'INVARIANCE',
+		what: 'the aria-hidden [n] decoration on a footer link is not part of its label — paired with SC-22',
+		target: EN,
+		apply: within(FOOTER, (footer) =>
+			footer.replace(
+				/(href="\/tags"><span class="n" aria-hidden="true">\[(?:<!-- -->)?)(\d+)/,
+				(_, open: string, n: string) => `${open}0${n}`,
+			),
+		),
+	},
+	{
+		id: 'SC-24',
+		kind: 'DEFECT',
+		what: 'the home window on an English route points at the Korean home (SH-03)',
+		target: EN,
+		apply: within(STATUS, (nav) =>
+			nav.replace('<a href="/">0:home</a>', '<a href="/ko">0:home</a>'),
+		),
+	},
+	{
+		id: 'SC-25',
+		kind: 'DEFECT',
+		what: 'the temporary window on an off-nav route is present but no longer marked current (SH-04)',
+		target: OFF_NAV,
+		apply: within(STATUS, (nav) =>
+			nav.replace(' class="is-on" aria-current="page" href="/tags"', ' href="/tags"'),
+		),
 	},
 ];
 
