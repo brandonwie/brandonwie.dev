@@ -101,6 +101,8 @@
 		"migration:browser:mermaid:controls": "node scripts/assert-browser-mermaid-controls.mjs",
 		"migration:browser:deck": "node scripts/assert-browser-deck.mjs",
 		"migration:browser:deck:controls": "node scripts/assert-browser-deck-controls.mjs",
+		"migration:browser:shell-layout": "node scripts/assert-browser-shell-layout.mjs",
+		"migration:browser:shell-layout:controls": "node scripts/assert-browser-shell-layout-controls.mjs",
 		"migration:browser:study-states": "node scripts/assert-browser-study-states.mjs",
 		"migration:browser:study-states:controls": "node scripts/assert-browser-study-states-controls.mjs",
 		"migration:browser:notfound-palette": "node scripts/assert-browser-notfound-palette.mjs",
