@@ -8,11 +8,12 @@
  * receive `step` and animate themselves; the deck never touches their
  * internals.
  *
- * TWO VIEWS (Phosphor Fade, D8): browsing — the deck sits inside the
- * terminal shell as a `deck play` prompt, the slide frame and a rail frame
- * (20-cell meter, label, controls); presenting — `[ present ]` switches to
- * the production full-viewport overlay above all site chrome, and Escape or
- * `[ exit ]` switches back. Keys, URL sync and print behave the same in both.
+ * TWO VIEWS (Phosphor Fade, D8): presenting — the default, as in
+ * production: a full-viewport overlay above all site chrome, no frames, no
+ * prompt, the page never scrolls. Escape or `[ exit ]` switches to browsing —
+ * the deck inside the terminal shell as a `deck play` prompt, the slide frame
+ * and a rail frame (20-cell meter, label, controls) — and `[ present ]`
+ * switches back. Keys, URL sync and print behave the same in both.
  *
  * STEP MODEL: a slide declares `steps: N`. ArrowRight walks steps first,
  * then moves to the next slide. Stepping backwards lands on the previous
@@ -39,7 +40,10 @@
  *   href guard (replace, never push: Back mid-talk must leave the deck, not
  *   walk back one step at a time). `useRouter().replace` would route-navigate
  *   and re-render; the history call mirrors Svelte exactly.
- * - `<svelte:window onkeydown>` → a window listener added in an effect.
+ * - `<svelte:window onkeydown>` → a window listener added in an effect. It
+ *   claims a key only when focus is inside the deck or nowhere (body), so a
+ *   key pressed on the shell's chrome (status line, title bar, footer,
+ *   palette) keeps its own default and never moves the slide.
  * - `<svelte:head>` (title + robots) lives in the route's `generateMetadata`,
  *   not here — see `next/app/(en)/talks/my-career/page.tsx`.
  * - `{#key index}` remount → `key={current.id}` on the slide body: a new
@@ -47,7 +51,7 @@
  */
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import type { DeckSlide } from '@/deck/types';
 import { TermPrompt } from '@/shell/TermPrompt';
@@ -100,9 +104,12 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 	const cwd = cwdFor(usePathname() ?? '/');
 
 	// Presenting (D8): production's full-viewport overlay above every piece of
-	// site chrome. Off by default, so the deck is browsed inside the terminal
-	// shell; `[ present ]` turns it on, Escape or `[ exit ]` turns it off.
-	const [presenting, setPresenting] = useState(false);
+	// site chrome. ON by default, so a fresh load or a deep link opens straight
+	// into it — and the static prerender renders it too, so the framed view
+	// never flashes first. Escape or `[ exit ]` turns it off for the shell
+	// view; `[ present ]` turns it back on.
+	const [presenting, setPresenting] = useState(true);
+	const rootRef = useRef<HTMLDivElement>(null);
 
 	// Position lives in the URL (?page=2&step=3), one-based so it reads the way
 	// a person counts. A reload lands where you were; any slide links directly.
@@ -195,6 +202,15 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 			if (event.metaKey || event.ctrlKey || event.altKey) return;
 
 			const target = event.target as HTMLElement | null;
+
+			// Only keys aimed at the deck: focus inside it, or nothing focused
+			// (the event then targets body). A key on the shell's chrome — a
+			// status-line link, the title bar, the footer, the palette — keeps
+			// its own default and leaves the slide alone.
+			const root = rootRef.current;
+			const unfocused = target === document.body || target === document.documentElement;
+			if (!unfocused && !(root && target && root.contains(target))) return;
+
 			if (target && (target.tagName === 'INPUT' || target.isContentEditable)) return;
 
 			// A focused control already handles Space and Enter itself. Without
@@ -255,37 +271,46 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 	const Body = current.component;
 	return (
 		<div
+			ref={rootRef}
 			className={presenting ? 'deck is-presenting' : 'deck'}
 			role="application"
 			aria-label={title}
 		>
-			{/* The URL query as a shell command; hidden while presenting. */}
-			<TermPrompt
-				className="deck-ps1"
-				cwd={cwd}
-				command="deck play"
-				flags={`--page ${index + 1} --step ${step + 1}`}
-			/>
+			{/* The URL query as a shell command; browsing only. */}
+			{!presenting && (
+				<TermPrompt
+					className="deck-ps1"
+					cwd={cwd}
+					command="deck play"
+					flags={`--page ${index + 1} --step ${step + 1}`}
+				/>
+			)}
 
-			{/* The slide frame. The shell's <main id="main-content"> is the
+			{/* The slide frame (browsing only — presenting is frameless, like
+			    production). The shell's <main id="main-content"> is the
 			    skip-link target, so the stage keeps only its tabIndex landing.
 			    The body stays the stage's first element child; the frame title
 			    follows it in the DOM and is drawn into the border by CSS. */}
-			<div className="deck-stage term-frame" tabIndex={-1}>
+			<div className={presenting ? 'deck-stage' : 'deck-stage term-frame'} tabIndex={-1}>
 				<Body key={current.id} step={step} animate={true} />
-				<p className="term-frame__title deck-frame-title" aria-hidden="true">
-					slide {pad(index + 1)}/{pad(slides.length)} · {current.label}
-					{stepCount > 1 && (
-						<span className="dim">
-							{' '}
-							· step {step + 1}/{stepCount}
-						</span>
-					)}
-				</p>
+				{!presenting && (
+					<p className="term-frame__title deck-frame-title" aria-hidden="true">
+						slide {pad(index + 1)}/{pad(slides.length)} · {current.label}
+						{stepCount > 1 && (
+							<span className="dim">
+								{' '}
+								· step {step + 1}/{stepCount}
+							</span>
+						)}
+					</p>
+				)}
 			</div>
 
 			{/* Progress rail. Deliberately quiet: a presenter aid, not decoration. */}
-			<nav className="deck-rail term-frame" aria-label="Slide navigation">
+			<nav
+				className={presenting ? 'deck-rail' : 'deck-rail term-frame'}
+				aria-label="Slide navigation"
+			>
 				<DeckMeter index={index} total={slides.length} />
 				<div className="deck-meta">
 					<span className="deck-label">{current.label}</span>
