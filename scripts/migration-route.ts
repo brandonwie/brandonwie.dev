@@ -174,6 +174,15 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		// The terminal shell's nav contract. Its rule layer imports
+		// `next/src/shell/terminal-path.ts`, whose `@/` alias imports the closure
+		// cannot follow, so the Next sources are declared as data roots.
+		command: 'migration:terminal',
+		entry: 'scripts/assert-terminal-shell.ts',
+		dataRoots: [...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
 		// TWO spawn edges, both invisible to the import closure, both declared
 		// here instead. `browser-probe.mjs` spawns `serve-build.mjs` to serve the
 		// build under test, and the controls suite below spawns the probe to

@@ -89,6 +89,7 @@
 		"format:check": "prettier --check .",
 		"migration:shell": "tsx scripts/assert-shell.ts",
 		"migration:shell:controls": "tsx scripts/assert-shell-controls.ts",
+		"migration:terminal": "tsx --tsconfig next/tsconfig.json scripts/assert-terminal-shell.ts",
 		"migration:browser": "node scripts/assert-browser-palette.mjs",
 		"migration:browser:controls": "node scripts/assert-browser-probe-controls.mjs",
 		"migration:browser:search": "node scripts/assert-browser-search.mjs",
