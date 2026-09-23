@@ -236,6 +236,77 @@ export const MERMAID_DIVERGENCES: Record<string, { svelte: unknown; next: unknow
 			next: 'strict',
 			why: 'Behavior-identical on this corpus (see the M2 census) and compile-corpus.ts already asserts strict; reverting would turn a green assertion red.',
 		},
+		// REDESIGN: colour-only (LOOK) divergences. The terminal redesign remaps
+		// mermaid's themeVariables from the Svelte greys/violet onto the
+		// Phosphor Fade inks (PostDetailPage spec, Porting: "themeVariables
+		// remapped to --glass, --line, --worn and --amber"). The first 15 keys
+		// change a Svelte value; the rest are new keys pinned so the dark
+		// theme's colour maths cannot derive a non-ink for sequence and gantt
+		// diagrams. On-screen proof: migration:browser:mermaid. The FUNCTION
+		// keys (securityLevel above, flowchart.curve, theme, htmlLabels, fonts)
+		// are NOT listed and still must match.
+		...Object.fromEntries(
+			(
+				[
+					['background', '#1a1a1a', '#0d0b13'], // glass
+					['mainBkg', '#2d2d2d', '#0d0b13'], // glass
+					['secondaryBkg', '#353535', '#0d0b13'], // glass
+					['primaryTextColor', '#e5e5e5', '#d6cfbf'], // worn
+					['secondaryTextColor', '#888888', '#857f72'], // faint
+					['tertiaryTextColor', '#666666', '#857f72'], // faint
+					['primaryBorderColor', '#404040', '#e0a35c'], // amber
+					['lineColor', '#888888', '#4a4437'], // line
+					['primaryColor', '#a855f7', '#0d0b13'], // glass
+					['secondaryColor', '#6b9eff', '#0d0b13'], // glass
+					['tertiaryColor', '#2d2d2d', '#0d0b13'], // glass
+					['nodeBorder', '#404040', '#e0a35c'], // amber
+					['clusterBkg', '#2d2d2d', '#0d0b13'], // glass
+					['clusterBorder', '#404040', '#4a4437'], // line
+					['edgeLabelBackground', '#2d2d2d', '#0d0b13'], // glass
+					['textColor', undefined, '#d6cfbf'], // worn
+					['titleColor', undefined, '#ece6d6'], // hi
+					['arrowheadColor', undefined, '#857f72'], // faint
+					['actorBkg', undefined, '#0d0b13'], // glass
+					['actorBorder', undefined, '#e0a35c'], // amber
+					['actorTextColor', undefined, '#d6cfbf'], // worn
+					['actorLineColor', undefined, '#4a4437'], // line
+					['signalColor', undefined, '#857f72'], // faint
+					['signalTextColor', undefined, '#d6cfbf'], // worn
+					['labelBoxBkgColor', undefined, '#0d0b13'], // glass
+					['labelBoxBorderColor', undefined, '#4a4437'], // line
+					['labelTextColor', undefined, '#d6cfbf'], // worn
+					['loopTextColor', undefined, '#d6cfbf'], // worn
+					['noteBkgColor', undefined, '#3d372c'], // off
+					['noteBorderColor', undefined, '#4a4437'], // line
+					['noteTextColor', undefined, '#d6cfbf'], // worn
+					['activationBkgColor', undefined, '#3d372c'], // off
+					['activationBorderColor', undefined, '#4a4437'], // line
+					['sequenceNumberColor', undefined, '#0d0b13'], // glass
+					['sectionBkgColor', undefined, '#0d0b13'], // glass
+					['altSectionBkgColor', undefined, '#0d0b13'], // glass
+					['sectionBkgColor2', undefined, '#0d0b13'], // glass
+					['gridColor', undefined, '#4a4437'], // line
+					['taskBkgColor', undefined, '#3d372c'], // off
+					['taskBorderColor', undefined, '#4a4437'], // line
+					['taskTextColor', undefined, '#ece6d6'], // hi
+					['taskTextLightColor', undefined, '#ece6d6'], // hi
+					['taskTextDarkColor', undefined, '#ece6d6'], // hi
+					['taskTextOutsideColor', undefined, '#d6cfbf'], // worn
+					['taskTextClickableColor', undefined, '#9fd6a7'], // green
+					['activeTaskBkgColor', undefined, '#0d0b13'], // glass
+					['activeTaskBorderColor', undefined, '#e0a35c'], // amber
+					['doneTaskBkgColor', undefined, '#0d0b13'], // glass
+					['doneTaskBorderColor', undefined, '#4a4437'], // line
+					['critBkgColor', undefined, '#4a4437'], // line
+					['critBorderColor', undefined, '#e0a35c'], // amber
+					['todayLineColor', undefined, '#e0a35c'], // amber
+					['excludeBkgColor', undefined, '#0d0b13'], // glass
+				] as const
+			).map(([key, svelte, next]) => [
+				`themeVariables.${key}`,
+				{ svelte, next, why: 'REDESIGN: shell-ink remap (LOOK), see comment above.' },
+			]),
+		),
 	};
 
 /** The corpus measurement the securityLevel divergence rests on.

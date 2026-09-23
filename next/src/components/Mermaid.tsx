@@ -20,43 +20,101 @@ type MermaidApi = (typeof import('mermaid'))['default'];
  * it produces no comparator difference at all, so a ledger entry would match
  * nothing and be stale on arrival.
  *
- * themeVariables and flowchart are restored verbatim. They are invisible to the
- * comparator — the SVG is client-rendered and the export holds only the fence
- * source — which makes them exactly the class of drift the parity harness
- * cannot see. flowchart.curve: 'basis' is the one that would have been most
- * visible: it changes edge GEOMETRY, not colour, on 55 of 68 fences across 25
- * of 28 files.
+ * flowchart is restored verbatim. It is invisible to the comparator — the SVG
+ * is client-rendered and the export holds only the fence source — which makes
+ * it exactly the class of drift the parity harness cannot see.
+ * flowchart.curve: 'basis' is the one that would have been most visible: it
+ * changes edge GEOMETRY, not colour, on 55 of 68 fences across 25 of 28 files.
+ *
+ * REDESIGN: themeVariables are NO LONGER verbatim. Their colours are remapped
+ * onto the Phosphor Fade shell inks (colour only; fontFamily and fontSize are
+ * unchanged, because a font change re-measures labels and clipped Korean text
+ * before). Each changed or added key is declared in C11's MERMAID_DIVERGENCES,
+ * and migration:browser:mermaid checks the rendered SVG against the inks.
  */
 const MERMAID_CONFIG = {
 	startOnLoad: false,
 	theme: 'dark',
 	themeVariables: {
+		// REDESIGN: every colour below moved from the pre-redesign greys and
+		// violet onto the Phosphor Fade inks (src/app.css --crt-*), per the
+		// PostDetailPage spec: surfaces glass, text worn, strokes line, accents
+		// amber. Hex literals, not var(--crt-*): mermaid runs colour maths on
+		// these values. Declared per key in MERMAID_DIVERGENCES (C11 M1).
 		// Background
-		background: '#1a1a1a',
-		mainBkg: '#2d2d2d',
-		secondaryBkg: '#353535',
+		background: '#0d0b13', // glass
+		mainBkg: '#0d0b13', // glass
+		secondaryBkg: '#0d0b13', // glass
 
 		// Text
-		primaryTextColor: '#e5e5e5',
-		secondaryTextColor: '#888888',
-		tertiaryTextColor: '#666666',
+		primaryTextColor: '#d6cfbf', // worn
+		secondaryTextColor: '#857f72', // faint
+		tertiaryTextColor: '#857f72', // faint
 
 		// Borders & lines
-		primaryBorderColor: '#404040',
-		lineColor: '#888888',
+		primaryBorderColor: '#e0a35c', // amber
+		lineColor: '#4a4437', // line
 
-		// Accent colors (matching terminal theme)
-		primaryColor: '#a855f7', // neon violet (brand)
-		secondaryColor: '#6b9eff', // blue
-		tertiaryColor: '#2d2d2d',
+		// Accent colors
+		primaryColor: '#0d0b13', // glass (node fill)
+		secondaryColor: '#0d0b13', // glass
+		tertiaryColor: '#0d0b13', // glass
 
 		// Node colors
-		nodeBorder: '#404040',
-		clusterBkg: '#2d2d2d',
-		clusterBorder: '#404040',
+		nodeBorder: '#e0a35c', // amber
+		clusterBkg: '#0d0b13', // glass
+		clusterBorder: '#4a4437', // line
 
 		// Flowchart specific
-		edgeLabelBackground: '#2d2d2d',
+		edgeLabelBackground: '#0d0b13', // glass
+
+		// REDESIGN: the keys below are NEW (the Svelte config never set them).
+		// Left unset, the dark theme derives them by colour maths into greys,
+		// blues and reds (#cccccc text, #e83737 crit bars, #81b1db active bars),
+		// none of which is an ink. Pinned so sequence and gantt diagrams draw in
+		// the same six inks as flowcharts; migration:browser:mermaid proves it.
+		textColor: '#d6cfbf', // worn
+		titleColor: '#ece6d6', // hi
+		arrowheadColor: '#857f72', // faint
+
+		// Sequence diagrams
+		actorBkg: '#0d0b13', // glass
+		actorBorder: '#e0a35c', // amber
+		actorTextColor: '#d6cfbf', // worn
+		actorLineColor: '#4a4437', // line
+		signalColor: '#857f72', // faint, as flowchart edges
+		signalTextColor: '#d6cfbf', // worn
+		labelBoxBkgColor: '#0d0b13', // glass
+		labelBoxBorderColor: '#4a4437', // line
+		labelTextColor: '#d6cfbf', // worn
+		loopTextColor: '#d6cfbf', // worn
+		noteBkgColor: '#3d372c', // off
+		noteBorderColor: '#4a4437', // line
+		noteTextColor: '#d6cfbf', // worn (7.60:1 on off)
+		activationBkgColor: '#3d372c', // off
+		activationBorderColor: '#4a4437', // line
+		sequenceNumberColor: '#0d0b13', // glass
+
+		// Gantt: bars on dark surfaces so one text ink (hi) reads on all of them
+		sectionBkgColor: '#0d0b13', // glass
+		altSectionBkgColor: '#0d0b13', // glass
+		sectionBkgColor2: '#0d0b13', // glass
+		gridColor: '#4a4437', // line
+		taskBkgColor: '#3d372c', // off
+		taskBorderColor: '#4a4437', // line
+		taskTextColor: '#ece6d6', // hi (9.46:1 on off)
+		taskTextLightColor: '#ece6d6', // hi
+		taskTextDarkColor: '#ece6d6', // hi, used on done/active/crit bars
+		taskTextOutsideColor: '#d6cfbf', // worn
+		taskTextClickableColor: '#9fd6a7', // green
+		activeTaskBkgColor: '#0d0b13', // glass
+		activeTaskBorderColor: '#e0a35c', // amber
+		doneTaskBkgColor: '#0d0b13', // glass
+		doneTaskBorderColor: '#4a4437', // line
+		critBkgColor: '#4a4437', // line (7.76:1 under hi)
+		critBorderColor: '#e0a35c', // amber
+		todayLineColor: '#e0a35c', // amber
+		excludeBkgColor: '#0d0b13', // glass
 
 		// Fonts
 		fontFamily: 'JetBrains Mono, monospace',

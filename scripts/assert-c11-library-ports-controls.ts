@@ -49,6 +49,7 @@ import {
 	FLOW_SENTINEL,
 	FALLBACK_SENTINEL,
 	LANE_COUNTS,
+	MERMAID_DIVERGENCES,
 	REPORTER_SENTINEL,
 	SHELL_CLAIMS,
 	listChunks,
@@ -811,8 +812,12 @@ const CONTROLS: Control[] = [
 		what: 'the allowlist declares a divergence the two configs do not have',
 		setup: () => ({
 			skipTypecheck: true,
+			// REDESIGN: spread the real allowlist (securityLevel plus the
+			// themeVariables ink remap) so the ONLY defect is the invented
+			// `theme` entry; without the spread the row would fail on the
+			// undeclared colour keys first and never reach the stale check.
 			mermaidDivergences: {
-				securityLevel: { svelte: 'loose', next: 'strict', why: 'real' },
+				...MERMAID_DIVERGENCES,
 				theme: { svelte: 'dark', next: 'forest', why: 'invented' },
 			},
 		}),
