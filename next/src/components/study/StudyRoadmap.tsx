@@ -1,13 +1,14 @@
 import type { DsaModule } from '../../data/study';
 
 /**
- * StudyRoadmap — module sequence for one DSA course.
+ * StudyRoadmap — module sequence for one DSA course, drawn as `ls modules/
+ * --roadmap` output: an amber `[01]` badge trailed by a `─` rule that joins the
+ * next node, then the kicker, the `h3` and the summary. Four columns from `md`,
+ * one column below (`.sc-map` in `next/app/styles/pages/study-course.css`).
  *
- * Port of `src/lib/components/study/StudyRoadmap.svelte`. The Svelte original
- * carries its layout in a scoped `<style>` block; the rules move with it into
- * `next/app/globals.css` (`.roadmap`), following the `.code-copy-btn`
- * precedent there for Next-owned component CSS. No client behavior: server
- * component.
+ * The rule is a typographic run of box-drawing characters clipped by the column,
+ * so it is decorative (`aria-hidden`) and the last node's rule is transparent.
+ * The `module-n` ids stay: they are anchor targets. Server-safe, no state.
  */
 export default function StudyRoadmap({
 	modules,
@@ -17,15 +18,16 @@ export default function StudyRoadmap({
 	ariaLabel?: string;
 }) {
 	return (
-		<ol className="roadmap" aria-label={ariaLabel}>
+		<ol className="sc-map" aria-label={ariaLabel}>
 			{modules.map((module, index) => (
-				<li key={index} id={`module-${index + 1}`} className="node">
-					<span className="badge font-mono" aria-hidden="true">
-						{String(index + 1).padStart(2, '0')}
-					</span>
-					<p className="font-mono text-xs uppercase tracking-wider text-accent">{module.kicker}</p>
-					<h3 className="mt-2 text-base font-semibold text-ink">{module.title}</h3>
-					<p className="mt-2 text-sm leading-7 text-muted">{module.summary}</p>
+				<li key={index} id={`module-${index + 1}`}>
+					<div className="sc-map__rail" aria-hidden="true">
+						<b>[{String(index + 1).padStart(2, '0')}]</b>
+						{'─'.repeat(40)}
+					</div>
+					<p className="sc-kick">{module.kicker}</p>
+					<h3 className="sc-h">{module.title}</h3>
+					<p className="sc-small">{module.summary}</p>
 				</li>
 			))}
 		</ol>
