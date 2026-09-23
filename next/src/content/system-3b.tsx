@@ -9,6 +9,8 @@ import koOverlay from '../../../src/lib/data/system-snapshot.ko.json';
 import { localizeSnapshot, type SnapshotOverlay } from './localize-snapshot';
 import { koreanTitleBySlug } from './post-list';
 import { homeHref } from '../data/nav';
+import { TermPrompt } from '../shell/TermPrompt';
+import { cwdFor } from '../shell/terminal-path';
 
 /**
  * The /system/3b page — the full port of `src/lib/components/System3bPage.svelte`.
@@ -40,84 +42,121 @@ export function generateSystem3bMetadata(locale: Locale): Metadata {
 	});
 }
 
-function SectionHead({ label, id }: { label: string; id?: string }) {
+const EVOLUTION_HEADING_ID = 'system-3b-evolution-heading';
+
+/** Cells in the blog-series progress meter. */
+const SERIES_METER_CELLS = 20;
+
+/** Frame title: the section's real heading, with an optional dim count. */
+function FrameTitle({ label, meta, id }: { label: string; meta?: string; id?: string }) {
 	return (
-		<div className="mb-5 flex items-center gap-3.5">
-			<span className="font-mono font-bold text-foam">#</span>
-			<h2 id={id} className="font-sans text-xl font-semibold tracking-tight text-ink">
-				{label}
-			</h2>
-			<span className="h-px flex-1 bg-line2" />
-		</div>
+		<h2 id={id} className="term-frame__title">
+			{label}
+			{meta ? <span className="dim"> · {meta}</span> : null}
+		</h2>
 	);
 }
 
-const EVOLUTION_HEADING_ID = 'system-3b-evolution-heading';
+/** `█`/`░` text meter; decorative, the number beside it carries the value. */
+function Meter({ on, off, bracket = false }: { on: number; off: number; bracket?: boolean }) {
+	return (
+		<span className="term-meter" aria-hidden="true">
+			{bracket ? '[' : null}
+			{'█'.repeat(Math.max(0, on))}
+			<span className="off">{'░'.repeat(Math.max(0, off))}</span>
+			{bracket ? ']' : null}
+		</span>
+	);
+}
 
+/**
+ * The /system/3b page as a `3b` terminal session (Phosphor Fade). Each former
+ * `#` section head is now a prompt line (decorative) plus a frame whose title
+ * is the section's real `h2`; the page keeps its single `h1`.
+ */
 export function System3bPage({ locale }: { locale: Locale }) {
 	const localized = snapshotFor(locale);
 	const series = localized.blog_series;
 	const publishedCount = series.filter((entry) => entry.status === 'published').length;
 	const basePath = locale === 'ko' ? '/ko' : '';
+	const route = `${basePath}/system/3b`;
+	const cwd = cwdFor(route);
 
 	// Node count per layer, derived from the snapshot so the diagram + badges
 	// stay accurate across snapshot regenerations.
 	const countByLayer: Record<string, number> = {};
 	for (const node of localized.nodes)
 		countByLayer[node.layer] = (countByLayer[node.layer] ?? 0) + 1;
+	const laneMax = Math.max(1, ...localized.layers.map((layer) => countByLayer[layer.id] ?? 0));
+	const nodesLabel = m.system_3b_nodes_label({}, { locale });
 
 	// Decision history, newest first.
 	const evolution = [...localized.evolution].sort((a, b) => b.date.localeCompare(a.date));
 
+	const seriesOn =
+		series.length > 0 ? Math.round((publishedCount / series.length) * SERIES_METER_CELLS) : 0;
+
 	return (
-		<div className="mx-auto max-w-6xl px-6 py-12 lg:py-16">
-			{/* Header */}
-			<section className="max-w-3xl">
-				<div className="mb-5 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-faint">
-					<a
-						href={homeHref(locale)}
-						className="transition-colors hover:text-foam"
-						aria-label={m.palette_nav_home({}, { locale })}
-					>
-						~
-					</a>
-					<span className="text-line2">/</span>
-					<span>system</span>
-					<span className="text-line2">/</span>
-					<span>3b</span>
+		<div className="pg-s3b">
+			{/* Header: the prompt path is the crumb; `~` still links home. */}
+			<p className="term-ps1">
+				<span className="u" aria-hidden="true">
+					brandon@seoul
+				</span>
+				<span className="s" aria-hidden="true">
+					:
+				</span>
+				<a
+					href={homeHref(locale)}
+					className="p pg-s3b__crumb"
+					aria-label={m.palette_nav_home({}, { locale })}
+				>
+					~
+				</a>
+				<span className="p" aria-hidden="true">
+					{route}
+				</span>
+				<span className="s" aria-hidden="true">
+					{' $ '}
+				</span>
+				<span className="cmd" aria-hidden="true">
+					cat
+				</span>{' '}
+				<span className="flag" aria-hidden="true">
+					README.md
+				</span>
+			</p>
+			<div className="pg-s3b__hdr">
+				<p className="term-eyebrow">{m.system_3b_subtitle({}, { locale })}</p>
+				<div className="term-worn pg-s3b__ttl">
+					<h1 className="term-ttl">{m.system_3b_title({}, { locale })}</h1>
 				</div>
-				<p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-foam">
-					{m.system_3b_subtitle({}, { locale })}
-				</p>
-				<h1 className="mt-4 font-sans text-4xl font-bold leading-tight tracking-tight text-ink sm:text-5xl">
-					{m.system_3b_title({}, { locale })}
-				</h1>
-				<p className="mt-6 font-sans text-lg leading-8 text-muted">
-					{m.system_3b_intro({}, { locale })}
-				</p>
-			</section>
+				<p className="pg-s3b__lede">{m.system_3b_intro({}, { locale })}</p>
+			</div>
 
 			{/* Overview / stats grid */}
-			<section className="mt-14">
-				<SectionHead label={m.system_3b_overview_heading({}, { locale })} />
-				<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="3b stats" />
+			<section className="term-frame pg-s3b__stats">
+				<FrameTitle
+					label={m.system_3b_overview_heading({}, { locale })}
+					meta={String(localized.stats.length)}
+				/>
+				<dl className="pg-s3b__statgrid">
 					{localized.stats.map((stat) => (
-						<div
-							key={stat.metric}
-							className="rounded-lg border border-line2 bg-surface p-4 transition-colors hover:border-foam"
-						>
-							<div className="font-sans text-2xl font-bold tabular-nums text-foam">
-								{stat.value}
-							</div>
-							<div className="mt-1 font-mono text-xs text-muted">{stat.metric}</div>
+						<div key={stat.metric} className="pg-s3b__stat">
+							<dt className="pg-s3b__statk">{stat.metric}</dt>
+							<dd className="pg-s3b__statv">{stat.value}</dd>
 						</div>
 					))}
-				</div>
+				</dl>
 			</section>
 
 			{/* Architecture map */}
-			<section className="mt-16">
-				<SectionHead label={m.system_3b_map_heading({}, { locale })} />
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="3b graph" flags="--altitude overview" />
+			<section className="term-frame pg-s3b__graph">
+				<FrameTitle label={m.system_3b_map_heading({}, { locale })} />
 				<System3bGraph
 					nodes={localized.nodes}
 					edges={localized.edges}
@@ -127,75 +166,78 @@ export function System3bPage({ locale }: { locale: Locale }) {
 			</section>
 
 			{/* Layers */}
-			<section className="mt-16">
-				<SectionHead label={m.system_3b_layers_heading({}, { locale })} />
-				<div className="grid gap-4 lg:grid-cols-2">
-					{localized.layers.map((layer, i) => (
-						<article
-							key={layer.id}
-							className="rounded-lg border border-line2 bg-surface p-5 transition-colors hover:border-foam"
-						>
-							<div className="flex items-start justify-between gap-3">
-								<h3 className="font-sans text-base font-semibold text-ink">
-									<span className="font-mono tabular-nums text-faint">{i + 1}.</span> {layer.name}
-								</h3>
-								<span className="shrink-0 rounded border border-line2 px-2 py-0.5 font-mono text-xs text-foam">
-									{countByLayer[layer.id] ?? 0} {m.system_3b_nodes_label({}, { locale })}
-								</span>
-							</div>
-							<p className="mt-3 font-sans text-sm leading-7 text-muted">{layer.description}</p>
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="ls -l" flags="layers/" />
+			<section className="term-frame">
+				<FrameTitle
+					label={m.system_3b_layers_heading({}, { locale })}
+					meta={`${localized.layers.length} · ${localized.nodes.length} ${nodesLabel}`}
+				/>
+				{localized.layers.map((layer, i) => {
+					const count = countByLayer[layer.id] ?? 0;
+					return (
+						<article key={layer.id} className="pg-s3b__layer">
+							<span className="pg-s3b__idx" aria-hidden="true">
+								[{i + 1}]
+							</span>
+							<h3 className="pg-s3b__nm">{layer.name}</h3>
+							<p className="pg-s3b__cnt">
+								<Meter on={count} off={laneMax - count} />{' '}
+								<span className="text-crt-green">{count}</span>{' '}
+								<span className="text-crt-faint">{nodesLabel}</span>
+							</p>
+							<p className="pg-s3b__ds">{layer.description}</p>
 						</article>
-					))}
-				</div>
+					);
+				})}
 			</section>
 
 			{/* Subsystems */}
-			<section className="mt-16">
-				<SectionHead label={m.system_3b_subsystems_heading({}, { locale })} />
-				<div className="grid gap-3 lg:grid-cols-2">
-					{localized.subsystems.map((sub) => (
-						<article
-							key={sub.key}
-							className="rounded-lg border border-line2 bg-surface p-4 transition-colors hover:border-foam"
-						>
-							<div className="flex flex-wrap items-center gap-2">
-								<h3 className="font-sans text-sm font-semibold text-ink">{sub.name}</h3>
-								{!sub.public_safe && (
-									<span className="rounded border border-line2 px-2 py-0.5 font-mono text-xs text-faint">
-										{m.system_3b_reads_private({}, { locale })}
-									</span>
-								)}
-							</div>
-							<p className="mt-2 font-sans text-sm leading-7 text-muted">{sub.display_one_liner}</p>
-						</article>
-					))}
-				</div>
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="ls -F" flags="subsystems/" />
+			<section className="term-frame">
+				<FrameTitle
+					label={m.system_3b_subsystems_heading({}, { locale })}
+					meta={String(localized.subsystems.length)}
+				/>
+				{localized.subsystems.map((sub) => (
+					<article key={sub.key} className="pg-s3b__sub">
+						<div className="pg-s3b__subhead">
+							<span className="text-crt-amber" aria-hidden="true">
+								/{' '}
+							</span>
+							<h3 className="pg-s3b__nm">{sub.name}</h3>
+							{!sub.public_safe && (
+								<span className="pg-s3b__priv">[{m.system_3b_reads_private({}, { locale })}]</span>
+							)}
+						</div>
+						<p className="pg-s3b__ds">{sub.display_one_liner}</p>
+					</article>
+				))}
 			</section>
 
 			{/* Decision history (ADRs) */}
-			<section className="mt-16">
-				<SectionHead
-					label={m.system_3b_evolution_heading({}, { locale })}
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="git log" flags="--oneline decisions/" />
+			<section className="term-frame pg-s3b__adr">
+				<FrameTitle
 					id={EVOLUTION_HEADING_ID}
+					label={m.system_3b_evolution_heading({}, { locale })}
+					meta={String(evolution.length)}
 				/>
 				{/* axe requires keyboard focus for this scrollable region. */}
 				<div
-					className="max-h-96 overflow-y-auto rounded-lg border border-line2 bg-surface"
+					className="pg-s3b__adrscroll"
 					role="region"
 					tabIndex={0}
 					aria-labelledby={EVOLUTION_HEADING_ID}
 				>
-					<ul className="divide-y divide-line">
+					<ul className="pg-s3b__adrlist">
 						{evolution.map((adr) => (
-							<li
-								key={adr.id}
-								className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5"
-							>
-								<span className="shrink-0 font-mono text-xs tabular-nums text-faint">
-									{adr.date}
-								</span>
-								<span className="shrink-0 font-mono text-xs text-foam">{adr.id}</span>
-								<span className="min-w-0 font-sans text-sm text-muted">{adr.title}</span>
+							<li key={adr.id} className="pg-s3b__adrrow">
+								<span className="text-crt-faint">{adr.date}</span>
+								<span className="text-crt-amber">{adr.id}</span>
+								<span className="pg-s3b__adrt">{adr.title}</span>
 							</li>
 						))}
 					</ul>
@@ -203,29 +245,35 @@ export function System3bPage({ locale }: { locale: Locale }) {
 			</section>
 
 			{/* Blog series progress */}
-			<section className="mt-16">
-				<SectionHead label={m.system_3b_blog_heading({}, { locale })} />
-				<p className="mb-4 font-mono text-xs text-faint">
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="3b series" flags="--progress" />
+			<section className="term-frame pg-s3b__series">
+				<FrameTitle label={m.system_3b_blog_heading({}, { locale })} />
+				<p className="pg-s3b__fr">
+					<Meter on={seriesOn} off={SERIES_METER_CELLS - seriesOn} bracket />{' '}
 					{m.system_3b_blog_progress(
 						{ published: publishedCount, total: series.length },
 						{ locale },
 					)}
 				</p>
-				<ol className="series-list">
+				<ol className="pg-s3b__serieslist">
 					{series.map((post) => (
 						<li key={post.slug} className="series-item">
-							<span className="font-mono tabular-nums text-faint">{post.order}.</span>{' '}
+							<span className="pg-s3b__n">{String(post.order).padStart(2, '0')}.</span>{' '}
 							{post.status === 'published' ? (
-								<a
-									href={`${basePath}/posts/${post.slug}`}
-									className="font-sans text-sm font-medium"
-								>
+								<a href={`${basePath}/posts/${post.slug}`} className="term-lnk">
 									{post.title}
 								</a>
 							) : (
 								<span className="name">{post.title}</span>
 							)}
-							<span className="series-status">
+							<span
+								className={
+									post.status === 'published'
+										? 'series-status text-crt-green'
+										: 'series-status text-crt-faint'
+								}
+							>
 								{post.status === 'published'
 									? m.system_3b_published({}, { locale })
 									: m.system_3b_planned({}, { locale })}
@@ -236,29 +284,21 @@ export function System3bPage({ locale }: { locale: Locale }) {
 			</section>
 
 			{/* Snapshot status */}
-			<section className="mt-16">
-				<SectionHead label={m.system_3b_status_heading({}, { locale })} />
-				<div className="rounded-lg border border-line2 bg-surface p-5">
-					<div className="flex items-baseline justify-between gap-4">
-						<span className="font-sans text-sm text-muted">
-							{m.system_3b_model_generated({}, { locale })}
-						</span>
-						<span className="font-mono text-sm tabular-nums text-ink">
-							{localized.model_generated}
-						</span>
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="stat" flags="snapshot.json" />
+			<section className="term-frame pg-s3b__kv">
+				<FrameTitle label={m.system_3b_status_heading({}, { locale })} />
+				<dl>
+					<div>
+						<dt>{m.system_3b_model_generated({}, { locale })}</dt>
+						<dd>{localized.model_generated}</dd>
 					</div>
-					<div className="mt-2 flex items-baseline justify-between gap-4">
-						<span className="font-sans text-sm text-muted">
-							{m.system_3b_snapshot_built({}, { locale })}
-						</span>
-						<span className="font-mono text-sm tabular-nums text-ink">
-							{localized.snapshot_built_at}
-						</span>
+					<div>
+						<dt>{m.system_3b_snapshot_built({}, { locale })}</dt>
+						<dd>{localized.snapshot_built_at}</dd>
 					</div>
-					<p className="mt-3 font-mono text-xs leading-relaxed text-faint">
-						{m.system_3b_status_note({}, { locale })}
-					</p>
-				</div>
+				</dl>
+				<p className="pg-s3b__note">{m.system_3b_status_note({}, { locale })}</p>
 			</section>
 		</div>
 	);

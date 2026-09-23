@@ -787,46 +787,22 @@
 /* ---------------------------------------------------------------------------
  * /system/3b graph (C11)
  *
- * Svelte scoped every one of these rules to its component and stamped a
- * `svelte-<hash>` class on the matching elements. React has no equivalent, so
- * the rules are collected here under their existing class names, which is why
- * the ported markup keeps those names verbatim rather than being restyled.
- * Extracted from System3bGraph/Flow/Node/BandNode.svelte with only the scoping
- * removed — no rule was rewritten.
+ * The graph's Phosphor Fade styles live in app/styles/pages/system-3b.css. What
+ * remains here: the bare-name rules the Svelte port collected (`.note`, `.head`,
+ * `.name`, `.count`, `.title`, `.crumb`, `.btn`, `.chip`, `.swatch`, `.line`,
+ * `.dot`, `.label`) because other components still carry those class names,
+ * and the edge-dimming transition, which is the app's own xyflow rule.
  * ------------------------------------------------------------------------- */
-
-/* --- from System3bGraph.svelte --- */
-.s3b-fallback {
-	border: 1px solid var(--line2);
-	border-radius: 12px;
-	padding: 16px;
-	background: var(--panel);
-}
 .note {
 	margin: 0 0 12px;
 	font-family: var(--font-mono);
 	font-size: 12px;
 	color: var(--faint);
 }
-.s3b-fallback.failed .note {
-	color: var(--gold);
-}
-.layers {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-}
 .head {
 	display: flex;
 	align-items: baseline;
 	gap: 8px;
-}
-.idx {
-	color: var(--faint);
-	font-variant-numeric: tabular-nums;
 }
 .name {
 	color: var(--ink);
@@ -838,41 +814,11 @@
 	font-size: 11px;
 	white-space: nowrap;
 }
-.desc {
-	margin: 4px 0 0;
-	color: var(--muted);
-	font-size: 13px;
-	line-height: 1.5;
-}
-
-/* --- from System3bFlow.svelte --- */
-.s3b-flow {
-	border: 1px solid var(--line2);
-	border-radius: 12px;
-	overflow: hidden;
-	background: var(--panel);
-}
-.toolbar {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 10px 14px;
-	border-bottom: 1px solid var(--line2);
-	background: var(--surface);
-	font-family: var(--font-mono);
-	font-size: 12px;
-}
 .title {
 	color: var(--ink);
 }
 .crumb {
 	color: var(--foam);
-}
-.spacer {
-	flex: 1;
-}
-.hint {
-	color: var(--faint);
 }
 .btn {
 	background: var(--bg);
@@ -889,32 +835,6 @@
 .btn:hover {
 	border-color: var(--foam);
 	color: var(--foam);
-}
-.canvas {
-	height: clamp(440px, 70vh, 760px);
-	width: 100%;
-}
-.legend {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	padding: 10px 14px;
-	border-top: 1px solid var(--line2);
-	background: var(--surface);
-	font-family: var(--font-mono);
-	font-size: 11px;
-}
-.legend-row {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 10px;
-}
-.legend-head {
-	color: var(--faint);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	min-width: 64px;
 }
 .chip {
 	display: inline-flex;
@@ -934,52 +854,6 @@
 	display: inline-block;
 	vertical-align: middle;
 }
-/* xyflow surface tweaks to match the terminal palette */
-.canvas .react-flow {
-	background: var(--panel);
-}
-.canvas .react-flow__controls-button {
-	background: var(--surface);
-	border-bottom: 1px solid var(--line2);
-	fill: var(--ink);
-	color: var(--ink);
-}
-.canvas .react-flow__controls-button:hover {
-	background: var(--overlay);
-}
-.canvas .react-flow__edge-path {
-	transition: opacity 120ms ease;
-}
-
-/* --- from System3bNode.svelte --- */
-.s3b-node {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	width: 180px;
-	height: 56px;
-	padding: 0 12px;
-	background: var(--panel);
-	border: 1px solid var(--line2);
-	border-left: 3px solid var(--c);
-	border-radius: 8px;
-	color: var(--ink);
-	font-family: var(--font-mono);
-	font-size: 12px;
-	line-height: 1.2;
-	text-align: left;
-	cursor: default;
-	transition:
-		background 120ms ease,
-		border-color 120ms ease;
-}
-.s3b-node.expandable {
-	cursor: pointer;
-}
-.s3b-node.expandable:hover {
-	background: var(--overlay);
-	border-color: var(--c);
-}
 .dot {
 	width: 8px;
 	height: 8px;
@@ -993,30 +867,11 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
-.chev {
-	color: var(--c);
-	font-weight: 700;
-	font-size: 14px;
-	flex: 0 0 auto;
-}
-
-/* --- from System3bBandNode.svelte --- */
-.s3b-band {
-	border: 1px dashed var(--line2);
-	border-radius: 10px;
-	background: color-mix(in srgb, var(--panel) 30%, transparent);
-	pointer-events: none;
-}
-.lane-label {
-	position: absolute;
-	top: 6px;
-	left: 10px;
-	font-family: var(--font-mono);
-	font-size: 11px;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-	color: var(--faint);
-	white-space: nowrap;
+/* Hover dimming fades; reduced motion snaps. */
+@media (prefers-reduced-motion: no-preference) {
+	.s3b-flow .react-flow__edge-path {
+		transition: opacity 120ms ease;
+	}
 }
 
 /* ===========================================================================
@@ -1718,36 +1573,6 @@
 	font-weight: 600;
 	color: var(--ink);
 	margin: 0 0 8px;
-}
-.series-list {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: grid;
-	gap: 10px;
-}
-.series-item {
-	display: flex;
-	align-items: baseline;
-	gap: 10px;
-	border: 1px solid var(--line2);
-	border-radius: 10px;
-	padding: 12px 14px;
-	background: var(--surface);
-}
-.series-item a {
-	color: var(--foam);
-	font-weight: 500;
-}
-.series-status {
-	margin-left: auto;
-	border: 1px solid var(--line2);
-	border-radius: 6px;
-	padding: 2px 8px;
-	font-family: var(--font-mono);
-	font-size: 11px;
-	color: var(--faint);
-	white-space: nowrap;
 }
 
 /* --- TerminalHero --- */

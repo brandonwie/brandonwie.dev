@@ -21,6 +21,11 @@ import { useGraphCopy } from './System3bLocale';
  * The counts are computed here by a plain reduce rather than by importing the
  * layout helper, which is what keeps dagre out of the prerendered shell — the
  * same reason the Svelte original inlined them.
+ *
+ * Phosphor Fade: one line per layer (index, name, count, ellipsised
+ * description), with `[···]` before the loading note and `!` before the
+ * failure note. The full description stays in the DOM (and in `title`), only
+ * its overflow is clipped.
  */
 export interface FallbackData {
 	nodes: SnapNode[];
@@ -48,24 +53,31 @@ export function System3bFallbackProvider({
 export function System3bFallback({ state }: { state: 'loading' | 'failed' }) {
 	const copy = useGraphCopy();
 	const { nodes, layers } = useContext(FallbackContext);
+	const failed = state === 'failed';
 
 	const countByLayer: Record<string, number> = {};
 	for (const n of nodes) countByLayer[n.layer] = (countByLayer[n.layer] ?? 0) + 1;
 
 	return (
-		<div className={state === 'failed' ? 's3b-fallback failed' : 's3b-fallback'}>
-			<p className="note">{state === 'failed' ? copy.unavailable : copy.loading}</p>
-			<ol className="layers">
+		<div className={failed ? 's3b-fallback failed' : 's3b-fallback'}>
+			<p className="s3b-fb__note">
+				<span className="s3b-fb__sig" aria-hidden="true">
+					{failed ? '!' : '[···]'}
+				</span>{' '}
+				{failed ? copy.unavailable : copy.loading}
+			</p>
+			<ol className="s3b-fb__list">
 				{layers.map((layer, i) => (
-					<li key={layer.id}>
-						<div className="head">
-							<span className="idx">{i + 1}.</span>
-							<span className="name">{layer.name}</span>
-							<span className="count">
-								{countByLayer[layer.id] ?? 0} {copy.nodesLabel}
-							</span>
-						</div>
-						<p className="desc">{layer.description}</p>
+					<li key={layer.id} className="s3b-fb__row">
+						<span className="s3b-fb__idx">{i + 1}.</span>
+						<span className="s3b-fb__name">{layer.name}</span>
+						{/* One text node: migration:c11 H2 reads `<n> nodes` from here. */}
+						<span className="s3b-fb__count">
+							{countByLayer[layer.id] ?? 0} {copy.nodesLabel}
+						</span>
+						<span className="s3b-fb__desc" title={layer.description}>
+							{layer.description}
+						</span>
 					</li>
 				))}
 			</ol>
