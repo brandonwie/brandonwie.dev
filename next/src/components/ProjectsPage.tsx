@@ -1,6 +1,11 @@
+import type { ReactNode } from 'react';
+
 import { AppLink } from '@/components/AppLink';
+import { base } from '@/data/nav';
 import { projectsCopy } from '@/i18n/copy';
 import type { Locale } from '@/i18n/locale';
+import { TermPrompt } from '@/shell/TermPrompt';
+import { cwdFor } from '@/shell/terminal-path';
 import { getAboutContent } from '../../../src/lib/data/about';
 
 export interface ProjectsPageProps {
@@ -11,74 +16,122 @@ function isExternal(href: string): boolean {
 	return href.startsWith('http');
 }
 
+/** One link to a system: internal via AppLink, external in a new tab. */
+function SystemLink({
+	href,
+	className,
+	children,
+}: {
+	href: string;
+	className: string;
+	children: ReactNode;
+}) {
+	return isExternal(href) ? (
+		<a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+			{children}
+		</a>
+	) : (
+		<AppLink href={href} className={className}>
+			{children}
+		</AppLink>
+	);
+}
+
+/**
+ * ProjectsPage — `/projects` and `/ko/projects` in the Phosphor Fade shell.
+ *
+ * `cd ~/projects && cat .about` (crumb, eyebrow, h1, intro), then the same
+ * three systems twice: an `ls -l --index` table and `cat *\/README` frames.
+ * Rows and frames are separate links to the same target, so nothing nests.
+ * Data stays `getAboutContent(locale).systems` (shared with /about); the
+ * thumbnail keeps the real OG image and its alt inside a bordered, worn box.
+ */
 export function ProjectsPage({ locale = 'en' }: ProjectsPageProps) {
 	const content = getAboutContent(locale);
 	const copy = projectsCopy(locale);
-	const basePath = locale === 'ko' ? '/ko' : '';
+	const cwd = cwdFor(`${base(locale)}/projects`);
+	const systems = content.systems.map((system, index) => ({
+		...system,
+		n: index + 1,
+		name: `${system.title.toLowerCase()}/`,
+		external: isExternal(system.href),
+	}));
 
 	return (
-		<main id="main-content" className="mx-auto max-w-6xl px-6 py-12 lg:py-16">
-			{/* Header */}
-			<section className="max-w-3xl">
-				<div className="mb-5 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-faint">
-					<AppLink href={basePath || '/'} className="transition-colors hover:text-foam">
-						~
-					</AppLink>
-					<span className="text-line2">/</span>
-					<span>projects</span>
+		<div className="pg-projects">
+			<TermPrompt cwd={cwd} command="cd ~/projects && cat .about" />
+			<p className="pg-projects__crumb">
+				<AppLink href={base(locale) || '/'}>~</AppLink>
+				<span className="pg-projects__sep" aria-hidden="true">
+					/
+				</span>
+				projects
+			</p>
+			<div className="pg-projects__hero">
+				<p className="term-eyebrow text-crt-green">{copy.eyebrow}</p>
+				<div className="term-worn pg-projects__h1">
+					<h1 className="term-ttl">{copy.title}</h1>
 				</div>
-				<p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-foam">
-					{copy.eyebrow}
+				<p className="pg-projects__intro">{copy.intro}</p>
+			</div>
+
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="ls -l" flags="--index" />
+			<div className="pg-projects__ls">
+				<p className="text-crt-faint" aria-hidden="true">
+					total {systems.length}
 				</p>
-				<h1 className="mt-4 font-sans text-4xl font-bold leading-tight tracking-tight text-ink sm:text-5xl">
-					{copy.title}
-				</h1>
-				<p className="mt-6 font-sans text-lg leading-8 text-muted">{copy.intro}</p>
-			</section>
+				<div className="pg-projects__lshead" aria-hidden="true">
+					<span />
+					<span>type</span>
+					<span>name</span>
+					<span>kicker</span>
+					<span>target</span>
+				</div>
+				{systems.map((system) => (
+					<SystemLink key={system.name} href={system.href} className="pg-projects__lsrow">
+						<span className="pg-projects__n" aria-hidden="true">
+							[{system.n}]
+						</span>
+						<span className="pg-projects__ty">{system.external ? 'ext' : 'int'}</span>
+						<span className="pg-projects__nm">{system.name}</span>
+						<span className="pg-projects__kk">{system.kicker}</span>
+						<span className="pg-projects__tg">
+							→ {system.href}
+							{system.external ? <span className="text-crt-faint"> ↗</span> : null}
+						</span>
+					</SystemLink>
+				))}
+			</div>
 
-			{/* System cards (reused from about.ts systems[]) */}
-			<section className="mt-12 grid gap-5 lg:grid-cols-3">
-				{content.systems.map((system) => {
-					const external = isExternal(system.href);
-					const cardContent = (
-						<>
-							<img
-								src={system.image}
-								alt={system.alt}
-								className="aspect-[16/9] w-full object-cover"
-							/>
-							<div className="p-5">
-								<p className="font-mono text-xs uppercase tracking-[0.14em] text-faint">
-									{system.kicker}
-								</p>
-								<h2 className="mt-2 font-sans text-lg font-semibold transition-colors group-hover:text-foam">
-									{system.title}
-								</h2>
-								<p className="mt-3 font-sans text-sm leading-7 text-muted">{system.body}</p>
-							</div>
-						</>
-					);
-					const cardClass =
-						'group block overflow-hidden rounded-lg border border-line2 bg-surface text-ink no-underline transition-colors hover:border-foam';
-
-					return external ? (
-						<a
-							key={system.title}
-							href={system.href}
-							target="_blank"
-							rel="noopener noreferrer"
-							className={cardClass}
-						>
-							{cardContent}
-						</a>
-					) : (
-						<AppLink key={system.title} href={system.href} className={cardClass}>
-							{cardContent}
-						</AppLink>
-					);
-				})}
-			</section>
-		</main>
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="cat */README" flags="--with-preview" />
+			{systems.map((system) => (
+				<SystemLink key={system.name} href={system.href} className="term-frame pg-projects__card">
+					<span className="term-frame__title">
+						[{system.n}] {system.name}{' '}
+						<span className="dim">· {system.external ? 'ext ↗' : 'int'}</span>
+					</span>
+					<span className="pg-projects__grid">
+						<span className="term-worn pg-projects__thumb">
+							<img src={system.image} alt={system.alt} width="1200" height="630" loading="lazy" />
+						</span>
+						<span className="pg-projects__info">
+							<span className="term-eyebrow pg-projects__kicker">{system.kicker}</span>
+							<h2 className="term-sub pg-projects__title">{system.title}</h2>
+							<span className="pg-projects__bd">{system.body}</span>
+							<span className="pg-projects__go">
+								<span className="text-crt-faint">open</span> {system.href}
+								{system.external ? <span className="text-crt-faint"> ↗</span> : null}
+							</span>
+							<span className="pg-projects__src" aria-hidden="true">
+								img: {system.image}
+							</span>
+						</span>
+					</span>
+				</SystemLink>
+			))}
+		</div>
 	);
 }
 
