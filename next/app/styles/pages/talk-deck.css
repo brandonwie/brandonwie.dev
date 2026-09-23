@@ -1,2 +1,258 @@
-/* Phosphor Fade page styles: talk-deck. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+/* Phosphor Fade page styles: talk-deck (/talks/my-career). Owned by that
+   page's port; see next/app/globals.css (terminal shell) for the shared term-*
+   primitives. The deck chrome (type scale, stage, rail, print sheet) moved
+   here from globals.css; the per-slide blocks and the `.deck .title`-style
+   scoping guards stay there. */
+
+@layer components {
+	/* --- Type scale the slides read (from Deck.svelte) ---------------------
+	   Live: relative to the slide frame (`cqi` on the stage container), so a
+	   slide scales the same inside the shell as it did across the viewport.
+	   Print: the viewport, as before. */
+	.deck {
+		--deck-title: clamp(2rem, 4.4cqi, 3.5rem);
+		--deck-subtitle: clamp(1rem, 1.7cqi, 1.35rem);
+		--deck-heading: clamp(1.15rem, 2cqi, 1.6rem);
+		--deck-body: clamp(1rem, 1.5cqi, 1.25rem);
+		--deck-meta: clamp(0.8rem, 1.15cqi, 1rem);
+	}
+	.print-deck {
+		--deck-title: clamp(2rem, 4.4vw, 3.5rem);
+		--deck-subtitle: clamp(1rem, 1.7vw, 1.35rem);
+		--deck-heading: clamp(1.15rem, 2vw, 1.6rem);
+		--deck-body: clamp(1rem, 1.5vw, 1.25rem);
+		--deck-meta: clamp(0.8rem, 1.15vw, 1rem);
+	}
+
+	/* --- Live deck: shell inks -------------------------------------------
+	   The 20 slide bodies colour themselves with currentColor plus a few Rosé
+	   Pine tokens (`var(--muted)`, `var(--foam)`, `text-ink`, …). Their GSAP
+	   timelines target their own markup, so instead of editing 20 slides the
+	   tokens are re-pointed at the shell inks inside the live deck (the same
+	   remap the study visualizers use). The print deck keeps production's
+	   white-paper values. */
+	.deck {
+		--bg: var(--crt-glass);
+		--bg2: var(--crt-glass);
+		--surface: var(--crt-glass);
+		--overlay: var(--crt-glass);
+		--line: var(--crt-line);
+		--line2: var(--crt-line);
+		--ink: var(--crt-hi);
+		--muted: var(--crt-worn);
+		--faint: var(--crt-faint);
+		--foam: var(--crt-green);
+		--pine: var(--crt-green);
+		--accent: var(--crt-green);
+		--gold: var(--crt-amber);
+		--rose: var(--crt-amber);
+		--iris: var(--crt-hi);
+		--love: var(--crt-faint);
+		--crit: var(--crt-faint);
+		--color-bg: var(--crt-glass);
+		--color-bg2: var(--crt-glass);
+		--color-surface: var(--crt-glass);
+		--color-overlay: var(--crt-glass);
+		--color-highlight-med: var(--crt-glass);
+		--color-line: var(--crt-line);
+		--color-line2: var(--crt-line);
+		--color-ink: var(--crt-hi);
+		--color-muted: var(--crt-worn);
+		--color-faint: var(--crt-faint);
+		--color-foam: var(--crt-green);
+		--color-pine: var(--crt-green);
+		--color-accent: var(--crt-green);
+		--color-gold: var(--crt-amber);
+		--color-rose: var(--crt-amber);
+		--color-iris: var(--crt-hi);
+		--color-love: var(--crt-faint);
+		--color-crit: var(--crt-faint);
+		--font-sans: var(--font-term);
+		--font-mono: var(--font-term);
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		color: var(--crt-hi);
+	}
+
+	/* --- Browsing: the deck inside the shell -------------------------------
+	   Slide frame + rail frame fill one viewport under the title bar; the
+	   ~/.plan footer sits below the fold. */
+	.deck .deck-stage {
+		container-type: inline-size;
+		display: grid;
+		place-items: center;
+		min-width: 0;
+		min-height: max(380px, calc(100dvh - 290px));
+		padding: 34px clamp(16px, 4vw, 34px) 30px;
+		overflow-x: clip;
+		/* Slides were drawn on the document's unitless 1.5, not the shell's
+		   fixed 22px, which would overlap their clamp()-sized headlines. */
+		line-height: 1.5;
+	}
+	.deck .deck-stage:focus {
+		outline: none;
+	}
+	.deck .deck-frame-title {
+		z-index: 1;
+		max-width: calc(100% - 24px);
+		margin: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.deck .deck-rail {
+		padding: 12px 16px;
+	}
+	.deck-meter {
+		overflow: hidden;
+		white-space: nowrap;
+		letter-spacing: 3px;
+		line-height: 20px;
+	}
+	.deck-meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px 16px;
+		margin-top: 8px;
+		font-size: 13px;
+		line-height: 22px;
+		font-variant-numeric: tabular-nums;
+	}
+	.deck-label {
+		color: var(--crt-hi);
+	}
+	.deck-label::before {
+		content: '> ';
+		color: var(--crt-amber);
+	}
+	.deck-controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 14px;
+	}
+	.deck-count {
+		color: var(--crt-hi);
+	}
+	.deck-step {
+		margin-left: 1ch;
+		color: var(--crt-faint);
+	}
+	/* Bracket buttons: green on a rule, amber hover, reverse-video focus. */
+	.deck-controls button {
+		border: 1px solid var(--crt-line);
+		background: none;
+		padding: 0 8px;
+		font: inherit;
+		color: var(--crt-green);
+		cursor: pointer;
+	}
+	.deck-controls button::before {
+		content: '[';
+		margin-right: 4px;
+		color: var(--crt-faint);
+	}
+	.deck-controls button::after {
+		content: ']';
+		margin-left: 4px;
+		color: var(--crt-faint);
+	}
+	.deck-controls button:hover:not(:disabled) {
+		border-color: var(--crt-amber);
+		color: var(--crt-hi);
+	}
+	.deck-controls button:focus-visible {
+		border-color: var(--crt-amber);
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+	.deck-controls button:focus-visible::before,
+	.deck-controls button:focus-visible::after {
+		color: var(--crt-glass);
+	}
+	/* Inactive control: --off is below 4.5:1 on purpose (WCAG 1.4.3 exempts
+	   inactive UI components). */
+	.deck-controls button:disabled,
+	.deck-controls button:disabled::before,
+	.deck-controls button:disabled::after {
+		border-color: var(--crt-off);
+		color: var(--crt-off);
+		cursor: default;
+	}
+
+	/* --- Presenting (D8): production's full-viewport overlay ---------------
+	   Above the title bar, ~/.plan and status line; the page does not scroll.
+	   The shell's frames are stacking contexts (z-index 1), which would trap
+	   the overlay beneath the status line, so they drop theirs while the deck
+	   presents. z-index 40 stays under the ⌘K palette (50), which keeps
+	   working over the deck, and the skip link (100). */
+	.deck.is-presenting {
+		position: fixed;
+		inset: 0;
+		z-index: 40;
+		padding: 18px clamp(16px, 4vw, 48px) 14px;
+		background: var(--crt-glass);
+		overflow: hidden;
+	}
+	.deck.is-presenting .deck-ps1 {
+		display: none;
+	}
+	.deck.is-presenting .deck-stage {
+		flex: 1;
+		min-height: 0;
+		margin-top: 9px;
+	}
+	:is(.term-bar, .term-body):has(.deck.is-presenting),
+	.term-glass:has(.deck.is-presenting) > .term-bar {
+		z-index: auto;
+	}
+	html:has(.deck.is-presenting) {
+		overflow: hidden;
+	}
+
+	/* --- ?print: white paper, outside the CRT ------------------------------
+	   Print is ink on paper, not phosphor, on screen and on paper alike: the
+	   shell chrome is hidden and the enclosure flattens around the print deck. */
+	.print-deck {
+		background: #fff;
+		color: #111;
+	}
+	.print-slide {
+		display: grid;
+		place-items: center;
+		min-height: 100vh;
+		padding: 2rem;
+		break-after: page;
+	}
+	html:has(.print-deck),
+	body:has(.print-deck) {
+		background: #fff;
+	}
+	body:has(.print-deck) :is(.term-bar, .term-ghost, .term-plan, .term-status, .term-ps1) {
+		display: none;
+	}
+	body:has(.print-deck) :is(.term-page, .term-crt, .term-glass, .term-body) {
+		max-width: none;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+		background: none;
+		box-shadow: none;
+	}
+	body:has(.print-deck) .term-glass::before,
+	body:has(.print-deck) .term-glass::after {
+		content: none;
+	}
+
+	@media print {
+		.print-slide {
+			min-height: auto;
+			height: 100vh;
+		}
+	}
+}
