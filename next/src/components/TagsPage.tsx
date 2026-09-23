@@ -1,9 +1,12 @@
 import { AppLink } from '@/components/AppLink';
 import type { PostCardPost } from '@/components/PostCard';
 import { sourceDate } from '@/content/article-contract';
-import { effectiveDate } from '@/content/date';
+import { effectiveDate, formatKoreanDate } from '@/content/date';
+import { base } from '@/data/nav';
 import { tagsCopy } from '@/i18n/copy';
 import type { Locale } from '@/i18n/locale';
+import { TermPrompt } from '@/shell/TermPrompt';
+import { cwdFor } from '@/shell/terminal-path';
 
 export interface TagsPageProps {
 	locale?: Locale;
@@ -35,137 +38,171 @@ export function tagSlug(tag: string): string {
 		.replace(/(^-|-$)/g, '');
 }
 
+/** Tags with at least this many posts get a meter row; the rest are `uniq -c` rows. */
+const METER_MIN = 10;
+/** Meter width in cells. */
+const METER_CELLS = 40;
+
+function postDate(post: PostCardPost): string {
+	const rawDate = post.date ?? post.frontmatter?.date ?? '';
+	const rawUpdated = post.updated ?? post.frontmatter?.updated;
+	const dateStr = (sourceDate(rawDate) as string) ?? (typeof rawDate === 'string' ? rawDate : '');
+	const updatedStr =
+		(sourceDate(rawUpdated) as string) ?? (typeof rawUpdated === 'string' ? rawUpdated : undefined);
+	return effectiveDate(dateStr, updatedStr);
+}
+
+/** Group-row date: ISO `YYYY-MM-DD` (EN) or `YYYY.MM.DD` (KO), UTC like the rest of the site. */
+function rowDate(date: string, locale: Locale): string {
+	if (locale === 'ko') return formatKoreanDate(date);
+	const d = new Date(date);
+	return Number.isNaN(d.getTime()) ? date : d.toISOString().slice(0, 10);
+}
+
+/** `█` cells scaled to the largest count, `░` for the rest (at least one filled cell). */
+function meter(count: number, max: number): { filled: string; empty: string } {
+	const cells = Math.min(METER_CELLS, Math.max(1, Math.round((count / max) * METER_CELLS)));
+	return { filled: '█'.repeat(cells), empty: '░'.repeat(METER_CELLS - cells) };
+}
+
+/**
+ * TagsPage — `/tags` and `/ko/tags` in the Phosphor Fade shell.
+ *
+ * `tags --index` (eyebrow, worn h1, intro), `tags --cloud --sort=count` (tags
+ * with 10+ posts as meter rows, the rest as `uniq -c` rows by count; every tag
+ * rendered, frequency carried by the meter and the row instead of font size),
+ * then `tags --all --group-by=tag`: one `article#tag-{slug}` frame per tag with
+ * every post, newest first, and its effective date. Cloud links keep
+ * `href="#tag-{slug}"`; a targeted group gets the amber frame border and keeps
+ * a scroll margin so its title is not tucked under the viewport edge.
+ */
 export function TagsPage({ locale = 'en', posts = [] }: TagsPageProps) {
-	const basePath = locale === 'ko' ? '/ko' : '';
 	const copy = tagsCopy(locale);
+	const cwd = cwdFor(`${base(locale)}/tags`);
 
 	const tagList = getTagsWithCounts(posts);
 	const maxCount = tagList.length ? tagList[0].count : 1;
 
-	const postsByTag: Record<string, PostCardPost[]> = {};
+	const postsByTag: Record<string, { post: PostCardPost; date: string }[]> = {};
 	for (const post of posts) {
 		const tags = (post as { tags?: string[] }).tags ?? post.frontmatter?.tags ?? [];
 		for (const tag of tags) {
-			(postsByTag[tag] ??= []).push(post);
+			(postsByTag[tag] ??= []).push({ post, date: postDate(post) });
 		}
 	}
 	for (const tag of Object.keys(postsByTag)) {
-		postsByTag[tag].sort((a, b) => {
-			const rawDateA = a.date ?? a.frontmatter?.date ?? '';
-			const rawUpdatedA = a.updated ?? a.frontmatter?.updated;
-			const dateStrA =
-				(sourceDate(rawDateA) as string) ?? (typeof rawDateA === 'string' ? rawDateA : '');
-			const updatedStrA =
-				(sourceDate(rawUpdatedA) as string) ??
-				(typeof rawUpdatedA === 'string' ? rawUpdatedA : undefined);
-			const dateA = effectiveDate(dateStrA, updatedStrA);
-
-			const rawDateB = b.date ?? b.frontmatter?.date ?? '';
-			const rawUpdatedB = b.updated ?? b.frontmatter?.updated;
-			const dateStrB =
-				(sourceDate(rawDateB) as string) ?? (typeof rawDateB === 'string' ? rawDateB : '');
-			const updatedStrB =
-				(sourceDate(rawUpdatedB) as string) ??
-				(typeof rawUpdatedB === 'string' ? rawUpdatedB : undefined);
-			const dateB = effectiveDate(dateStrB, updatedStrB);
-
-			return new Date(dateB).getTime() - new Date(dateA).getTime();
-		});
+		postsByTag[tag].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 	}
 
-	function cloudSize(count: number): string {
-		const ratio = maxCount > 0 ? count / maxCount : 0;
-		return `${(0.8 + ratio * 0.9).toFixed(3)}rem`;
+	const metered = tagList.filter((tag) => tag.count >= METER_MIN);
+	const byCount: { count: number; tags: TagItem[] }[] = [];
+	for (const tag of tagList) {
+		if (tag.count >= METER_MIN) continue;
+		const last = byCount[byCount.length - 1];
+		if (last && last.count === tag.count) last.tags.push(tag);
+		else byCount.push({ count: tag.count, tags: [tag] });
 	}
 
 	return (
-		<main id="main-content" className="mx-auto max-w-6xl px-6 py-12 lg:py-16">
-			{/* Header */}
-			<section className="max-w-3xl">
-				<div className="mb-5 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.12em] text-faint">
-					<AppLink href={basePath || '/'} className="transition-colors hover:text-foam">
-						~
-					</AppLink>
-					<span className="text-line2">/</span>
-					<span>tags</span>
-				</div>
-				<p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-foam">
-					{copy.eyebrow}
-				</p>
-				<h1 className="mt-4 font-sans text-4xl font-bold leading-tight tracking-tight text-ink sm:text-5xl">
-					{copy.title}
-				</h1>
-				<p className="mt-6 font-sans text-lg leading-8 text-muted">
-					{copy.intro(tagList.length, posts.length)}
-				</p>
-			</section>
+		<div className="pg-tags">
+			<TermPrompt cwd={cwd} command="tags" flags="--index" />
+			<p className="term-eyebrow pg-tags__eyebrow">{copy.eyebrow}</p>
+			<div className="term-worn pg-tags__h1">
+				<h1 className="term-ttl">{copy.title}</h1>
+			</div>
+			<p className="pg-tags__intro">{copy.intro(tagList.length, posts.length)}</p>
 
+			<div className="term-gap" />
+			<TermPrompt cwd={cwd} command="tags" flags="--cloud --sort=count" />
 			{tagList.length === 0 ? (
-				<p className="mt-14 font-mono text-sm text-faint">{copy.empty}</p>
+				<p className="text-crt-faint">
+					<span aria-hidden="true">tags: </span>
+					{copy.empty}
+				</p>
 			) : (
 				<>
-					{/* Cloud */}
-					<section className="mt-14">
-						<div className="mb-5 flex items-center gap-3.5">
-							<span className="font-mono font-bold text-foam">#</span>
-							<h2 className="font-sans text-xl font-semibold tracking-tight text-ink">
-								{copy.cloudHeading}
-							</h2>
-							<span className="h-px flex-1 bg-line2" />
+					<section className="term-frame pg-tags__cloud" aria-labelledby="tags-cloud">
+						<h2 className="term-frame__title pg-tags__ft" id="tags-cloud">
+							{copy.cloudHeading} <span className="dim">· {tagList.length}</span>
+						</h2>
+						<div className="pg-tags__meters">
+							{metered.map((tag) => {
+								const cells = meter(tag.count, maxCount);
+								return (
+									<div key={tag.name} className="pg-tags__mrow">
+										<a className="term-lnk pg-tags__lnk" href={`#tag-${tagSlug(tag.name)}`}>
+											{tag.name}
+										</a>
+										<span className="term-meter" aria-hidden="true">
+											[{cells.filled}
+											<span className="off">{cells.empty}</span>]
+										</span>
+										<span className="pg-tags__ct">{tag.count}</span>
+									</div>
+								);
+							})}
 						</div>
-						<div className="flex flex-wrap items-baseline gap-x-4 gap-y-3">
-							{tagList.map((tag) => (
-								<a
-									key={tag.name}
-									href={`#tag-${tagSlug(tag.name)}`}
-									className="font-mono leading-none text-muted transition-colors hover:text-foam"
-									style={{ fontSize: cloudSize(tag.count) }}
-								>
-									{tag.name}
-									<span className="ml-1 align-super text-[0.6em] text-faint">{tag.count}</span>
-								</a>
-							))}
-						</div>
+						{byCount.length > 0 ? (
+							<>
+								<p className="pg-tags__rule" aria-hidden="true">
+									── uniq -c ──
+								</p>
+								{byCount.map((group) => (
+									<div key={group.count} className="pg-tags__urow">
+										<span className="pg-tags__ct">{group.count}</span>
+										<span className="pg-tags__flow">
+											{group.tags.map((tag) => (
+												<a
+													key={tag.name}
+													className="term-lnk pg-tags__lnk"
+													href={`#tag-${tagSlug(tag.name)}`}
+												>
+													{tag.name}
+												</a>
+											))}
+										</span>
+									</div>
+								))}
+							</>
+						) : null}
 					</section>
 
-					{/* Grouped list */}
-					<section className="mt-16">
-						<div className="mb-5 flex items-center gap-3.5">
-							<span className="font-mono font-bold text-foam">#</span>
-							<h2 className="font-sans text-xl font-semibold tracking-tight text-ink">
-								{copy.allHeading}
-							</h2>
-							<span className="h-px flex-1 bg-line2" />
-						</div>
-						<div className="grid gap-4">
-							{tagList.map((tag) => (
-								<article
-									key={tag.name}
-									id={`tag-${tagSlug(tag.name)}`}
-									className="scroll-mt-24 rounded-lg border border-line2 bg-surface p-5"
-								>
-									<div className="mb-3 flex items-baseline justify-between gap-3 border-b border-line pb-3">
-										<h3 className="font-mono text-sm text-foam">#{tag.name}</h3>
-										<span className="font-mono text-xs text-faint">{copy.count(tag.count)}</span>
-									</div>
-									<ul className="grid gap-1.5">
-										{(postsByTag[tag.name] ?? []).map((post) => (
-											<li key={post.slug}>
-												<AppLink
-													href={`${basePath}/posts/${post.slug}`}
-													className="font-sans text-sm leading-7 text-muted no-underline transition-colors hover:text-foam"
-												>
-													{post.title ?? post.frontmatter?.title}
-												</AppLink>
-											</li>
-										))}
-									</ul>
-								</article>
-							))}
-						</div>
-					</section>
+					<div className="term-gap" />
+					<TermPrompt cwd={cwd} command="tags" flags="--all --group-by=tag" />
+					<h2 className="term-eyebrow pg-tags__all">
+						{copy.allHeading} <span className="text-crt-green">{tagList.length}</span>
+					</h2>
+					{tagList.map((tag) => (
+						<article
+							key={tag.name}
+							id={`tag-${tagSlug(tag.name)}`}
+							className="term-frame pg-tags__grp"
+						>
+							<h3 className="term-frame__title pg-tags__ft">
+								<span className="term-tag">{tag.name}</span>{' '}
+								<span className="dim">· {copy.count(tag.count)}</span>
+							</h3>
+							<ul>
+								{(postsByTag[tag.name] ?? []).map(({ post, date }) => (
+									<li key={post.slug}>
+										<time className="pg-tags__dt" dateTime={date}>
+											{rowDate(date, locale)}
+										</time>
+										<span>
+											<AppLink
+												className="term-lnk pg-tags__lnk"
+												href={`${base(locale)}/posts/${post.slug}`}
+											>
+												{post.title ?? post.frontmatter?.title}
+											</AppLink>
+										</span>
+									</li>
+								))}
+							</ul>
+						</article>
+					))}
 				</>
 			)}
-		</main>
+		</div>
 	);
 }
