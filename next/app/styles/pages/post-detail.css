@@ -554,6 +554,14 @@
 .pg-post .prose-terminal blockquote p:last-child {
 	margin-bottom: 0;
 }
+/* B2: Typography's `prose` adds open-quote/close-quote to the first and last
+   quoted paragraph; post sources already carry their quotes, so the page
+   showed them twice. Drop the generated pair. Guarded by
+   scripts/assert-browser-post-blockquote.mjs. */
+.pg-post .prose-terminal blockquote p::before,
+.pg-post .prose-terminal blockquote p::after {
+	content: none;
+}
 
 /* Lists: amber asterisk bullets; ordered lists keep numbers in faint. */
 .pg-post .prose-terminal :is(ul, ol) {
