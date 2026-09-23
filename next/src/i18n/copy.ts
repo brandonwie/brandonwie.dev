@@ -159,6 +159,8 @@ export function postsListCopy(locale: Locale) {
 		pageDescription: m.posts_description({}, { locale }),
 		categoryFilter: m.category_filter({}, { locale }),
 		allCategories: m.all_categories({}, { locale }),
+		/** The count line's unfiltered label: `// 167 · all` / `// 167 · 전체` (B4). */
+		countAll: m.posts_count_all({}, { locale }),
 		noPosts: m.no_posts({}, { locale }),
 	};
 }

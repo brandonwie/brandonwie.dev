@@ -93,7 +93,7 @@ export function PostsListPage({ posts, basePath = '/' }: PostsListPageProps) {
 						</span>
 					</span>
 					<p className="pg-posts__count">
-						// {filteredPosts.length} · {activeCategory ?? 'all'}
+						// {filteredPosts.length} · {activeCategory ?? copy.countAll}
 					</p>
 
 					{filteredPosts.length === 0 ? (
