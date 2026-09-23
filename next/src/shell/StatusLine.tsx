@@ -53,7 +53,8 @@ export function StatusLine({ locale, plain = false }: { locale: Locale; plain?: 
 	// line (and only the line) here.
 	const reveal = (event: FocusEvent<HTMLDivElement>) => {
 		const scroller = scrollerRef.current;
-		const win = event.target;
+		// The handler sits on the line; the focused window link is the target.
+		const win = event.target as HTMLElement;
 		if (!scroller || win === scroller || scroller.scrollWidth <= scroller.clientWidth) return;
 		const overflowRight =
 			win.offsetLeft + win.offsetWidth - (scroller.scrollLeft + scroller.clientWidth);

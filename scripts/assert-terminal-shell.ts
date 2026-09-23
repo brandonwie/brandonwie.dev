@@ -254,8 +254,8 @@ const PRIMARY: Record<'en' | 'ko', string> = {
  * Header-nav failures for one exported page: order and locale of the eight
  * hrefs, the current-section mark (is-on and aria-current together, on the
  * expected link only), and the landmark rule (exactly one nav named
- * primary_navigation, inside the title bar; the status line is role="none"
- * with no aria-label).
+ * primary_navigation, inside the title bar; the status line is not a <nav>
+ * and carries no role, aria-label or aria-labelledby).
  */
 function headerFailures(html: string, c: ExportCase): string[] {
 	const out: string[] = [];
@@ -371,12 +371,15 @@ if (!existsSync(buildDir)) {
 	const page = (file: string) => readFileSync(join(buildDir, file), 'utf8');
 	const HEADER_CONTROLS: {
 		id: string;
+		/** A failure message must contain this, so a control cannot pass on an unrelated check. */
+		expect: string;
 		file: string;
 		what: string;
 		mutate: (h: string) => string;
 	}[] = [
 		{
 			id: 'control:header-unmarked',
+			expect: 'marked [',
 			file: 'posts.html',
 			what: 'the current section loses its mark',
 			mutate: (h) =>
@@ -384,6 +387,7 @@ if (!existsSync(buildDir)) {
 		},
 		{
 			id: 'control:header-drops-ko',
+			expect: 'hrefs ',
 			file: 'ko/posts.html',
 			what: 'Korean header hrefs lose /ko',
 			mutate: (h) =>
@@ -393,6 +397,7 @@ if (!existsSync(buildDir)) {
 		},
 		{
 			id: 'control:header-drops-link',
+			expect: 'hrefs ',
 			file: 'index.html',
 			what: 'a destination disappears',
 			mutate: (h) =>
@@ -400,6 +405,7 @@ if (!existsSync(buildDir)) {
 		},
 		{
 			id: 'control:header-marks-search',
+			expect: 'marked [',
 			file: 'search.html',
 			what: 'an off-nav route marks a section',
 			mutate: (h) =>
@@ -412,12 +418,14 @@ if (!existsSync(buildDir)) {
 		// navigation landmark; each way back to one must be rejected.
 		{
 			id: 'control:status-nav-none',
+			expect: 'status line is a landmark candidate',
 			file: 'about.html',
 			what: 'the status line is <nav role="none"> again',
 			mutate: (h) => h.replace('<div class="term-status"', '<nav class="term-status" role="none"'),
 		},
 		{
 			id: 'control:status-landmark',
+			expect: 'status line is a landmark candidate',
 			file: 'about.html',
 			what: 'the status line is a second primary nav landmark',
 			mutate: (h) =>
@@ -428,6 +436,7 @@ if (!existsSync(buildDir)) {
 		},
 		{
 			id: 'control:status-labelled',
+			expect: 'status line is a landmark candidate',
 			file: 'about.html',
 			what: 'the status line carries an aria-label',
 			mutate: (h) =>
@@ -438,6 +447,7 @@ if (!existsSync(buildDir)) {
 		},
 		{
 			id: 'control:status-role',
+			expect: 'status line is a landmark candidate',
 			file: 'about.html',
 			what: 'the status line carries role="navigation"',
 			mutate: (h) =>
@@ -447,8 +457,9 @@ if (!existsSync(buildDir)) {
 	for (const ctl of HEADER_CONTROLS) {
 		const original = page(ctl.file);
 		const mutated = ctl.mutate(original);
+		const failures = mutated === original ? [] : headerFailures(mutated, byFile(ctl.file));
 		record(
-			mutated !== original && headerFailures(mutated, byFile(ctl.file)).length > 0,
+			failures.some((f) => f.includes(ctl.expect)),
 			ctl.id,
 			`header check rejects: ${ctl.what}${mutated === original ? ' (MUTATION DID NOT APPLY)' : ''}`,
 		);
