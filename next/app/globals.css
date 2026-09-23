@@ -22,6 +22,29 @@
 */
 @import '../../src/app.css';
 
+/*
+  Phosphor Fade page styles, one file per page design. Each page's port owns
+  its file, so page work never collides in this one; every rule there sits in
+  `@layer components` and builds on the shell's term-* primitives below.
+*/
+@import './styles/pages/home.css';
+@import './styles/pages/posts-index.css';
+@import './styles/pages/post-detail.css';
+@import './styles/pages/study-index.css';
+@import './styles/pages/study-course.css';
+@import './styles/pages/study-aws.css';
+@import './styles/pages/system-index.css';
+@import './styles/pages/system-3b.css';
+@import './styles/pages/projects.css';
+@import './styles/pages/contact.css';
+@import './styles/pages/search.css';
+@import './styles/pages/tags.css';
+@import './styles/pages/feed.css';
+@import './styles/pages/talk-deck.css';
+@import './styles/pages/not-found.css';
+@import './styles/pages/palette.css';
+@import './styles/pages/about.css';
+
 /* --- Phosphor Fade terminal shell ------------------------------------------
    Ported from the retro-site-pages design pack (`shell/terminal-shell.css`,
    SHELL v1). Every class is prefixed `term-`: the pack's bare names (`.bar`,
