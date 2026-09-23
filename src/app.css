@@ -44,6 +44,11 @@
 	--color-crt-amber: var(--crt-amber);
 	--color-crt-green: var(--crt-green);
 	--color-crt-scanline: var(--crt-scanline);
+	--color-crt-hi: var(--crt-hi);
+	--color-crt-worn: var(--crt-worn);
+	--color-crt-faint: var(--crt-faint);
+	--color-crt-line: var(--crt-line);
+	--color-crt-off: var(--crt-off);
 
 	/*
 	  Legacy terminal-* tokens kept as ALIASES over the semantic/role vars so
@@ -77,6 +82,10 @@
 	--font-mono:
 		'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono',
 		'Source Code Pro', monospace;
+	/* Phosphor Fade enclosure face. JetBrains Mono has no Hangul, so Korean falls
+	   through to a system face (D2Coding when installed) — no web-font download. */
+	--font-term:
+		'JetBrains Mono', 'D2Coding', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', monospace;
 
 	/* Blink animation for terminal cursor */
 	--animate-blink: blink 1s step-end infinite;
@@ -141,10 +150,18 @@
 		--ok: var(--foam);
 		--warn: var(--gold);
 		--crit: var(--love);
+		/* Phosphor Fade inks, WCAG 2.1 on --crt-glass: hi 15.69, worn 12.60,
+		   green 11.77, amber 8.90, faint 4.91. --crt-line and --crt-off are
+		   non-text (frames, rules, unlit meter cells). */
 		--crt-glass: #0d0b13;
 		--crt-amber: #e0a35c;
 		--crt-green: #9fd6a7;
 		--crt-scanline: #05040acc;
+		--crt-hi: #ece6d6;
+		--crt-worn: #d6cfbf;
+		--crt-faint: #857f72;
+		--crt-line: #4a4437;
+		--crt-off: #3d372c;
 
 		color-scheme: dark;
 

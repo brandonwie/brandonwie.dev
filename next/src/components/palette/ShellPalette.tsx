@@ -32,14 +32,15 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
 
 import PaletteHost from '@/components/palette/PaletteHost';
-import { SiteHeader } from '@/components/SiteHeader';
 import type { ShellCopy } from '@/i18n/copy';
 import type { Locale } from '@/i18n/locale';
 import { isKorean, type PalettePost } from '@/palette/items';
 import { planGlobalChord } from '@/palette/shortcuts';
+import { TerminalTitleBar } from '@/shell/TerminalTitleBar';
 
 /** The marker a browser probe waits on. Set with the listener, cleared with it. */
 export const PALETTE_READY_ATTRIBUTE = 'data-palette-ready';
@@ -128,18 +129,26 @@ export default function ShellPalette({
 		};
 	}, [navigate, pathname]);
 
+	// The overlay is `position: fixed`, but the title bar sits in the enclosure's
+	// z-indexed layers; a portal keeps those stacking contexts from trapping it.
+	// `open` only turns true in the browser, so `document` exists here.
 	return (
 		<>
-			<SiteHeader locale={locale} copy={copy} onOpenPalette={handleOpen} />
-			<PaletteHost
-				posts={posts}
-				pathname={pathname}
-				locale={locale}
-				navigate={navigate}
-				open={open}
-				onClose={handleClose}
-				opener={opener}
-			/>
+			<TerminalTitleBar locale={locale} copy={copy} onOpenPalette={handleOpen} />
+			{open
+				? createPortal(
+						<PaletteHost
+							posts={posts}
+							pathname={pathname}
+							locale={locale}
+							navigate={navigate}
+							open={open}
+							onClose={handleClose}
+							opener={opener}
+						/>,
+						document.body,
+					)
+				: null}
 		</>
 	);
 }

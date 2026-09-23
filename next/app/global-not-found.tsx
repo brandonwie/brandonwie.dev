@@ -4,7 +4,7 @@ import { SiteShell } from '@/shell/site-shell';
 export default function GlobalNotFound() {
 	return (
 		<DocumentShell lang="en" title="Page not found | Brandon Wie" standaloneHead>
-			<SiteShell locale="en" suppressLocaleToggle>
+			<SiteShell locale="en" errorRoute>
 				<section className="failure-panel" aria-labelledby="not-found-title">
 					<p>404</p>
 					<h1 id="not-found-title">Page not found</h1>

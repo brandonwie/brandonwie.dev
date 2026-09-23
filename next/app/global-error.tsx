@@ -11,7 +11,7 @@ export default function GlobalError({
 }) {
 	return (
 		<DocumentShell lang="en" title="Something went wrong | Brandon Wie" standaloneHead>
-			<SiteShell locale="en" suppressLocaleToggle>
+			<SiteShell locale="en" errorRoute>
 				<section className="failure-panel" aria-labelledby="error-title">
 					<p>Error</p>
 					<h1 id="error-title">Something went wrong</h1>

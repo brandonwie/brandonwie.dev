@@ -1,60 +1,76 @@
 import type { ReactNode } from 'react';
 
-import { Footer } from '@/components/Footer';
-import { SiteHeader } from '@/components/SiteHeader';
 import { shellCopy } from '@/i18n/copy';
 import type { Locale } from './document';
+import { ShellPrompt } from './ShellPrompt';
+import { StatusLine } from './StatusLine';
+import { TerminalFooter } from './TerminalFooter';
+import { TerminalTitleBar } from './TerminalTitleBar';
 
 /**
- * SiteShell — skip link, global header, main landmark, global footer.
+ * SiteShell — the Phosphor Fade terminal every page lives in: skip link, one
+ * CRT enclosure, the title bar, the page body (`main`), the `~/.plan` footer,
+ * an idle prompt, and the tmux status line that is the primary navigation.
  *
- * Replaces the 38-line Slice 1 placeholder, whose two-link nav and one-line
- * footer existed only until the real chrome was ported. `SiteHeader` and
- * `Footer` now come from `@/components`, driven by `@/data/nav`.
- *
- * The copy is resolved ONCE here and passed down. Both children would otherwise
- * call `shellCopy(locale)` themselves, and `SiteHeader` is a client component —
- * resolving there would pull the Paraglide message modules into the client
+ * The copy is resolved ONCE here and passed down, so the client pieces (title
+ * bar, status line) never pull the Paraglide message modules into the client
  * bundle for strings the server already knows.
  *
- * `global-error.tsx` and `global-not-found.tsx` also render this shell. They
- * inherit the real chrome from this change and are otherwise untouched; those
- * routes belong to a later PR.
- *
- * THE HEADER IS A SLOT, and that is what keeps the palette off the error
- * routes. `global-error.tsx` is `'use client'`, so anything mounted
+ * THE TITLE BAR IS A SLOT, and that is what keeps the palette off the error
+ * boundary. `global-error.tsx` is `'use client'`, so anything mounted
  * unconditionally here compiles into its client graph — a truthiness check
  * would not help, because the static import stays in that route's module
- * graph. The locale layouts pass `ShellPalette` (client) as `header`; the
- * error routes pass nothing and get the plain header below, with no palette
- * code in their bundle and no behavior to infer from a call site.
+ * graph. The locale layouts pass `ShellPalette` (client) as `header`, which
+ * renders the title bar with a working `⌘K` plus the palette host; without it
+ * the plain title bar's `⌘K` is a link to the search page.
+ *
+ * `errorRoute` pins the cwd to `~`, marks no status window and shows a plain
+ * locale label. The error routes prerender as `/_not-found` while the browser
+ * hydrates with the requested URL, so anything derived from the pathname would
+ * disagree between the two renders (hydration error #418).
  */
 export function SiteShell({
 	locale,
 	header,
-	suppressLocaleToggle = false,
+	errorRoute = false,
 	children,
 }: {
 	locale: Locale;
 	header?: ReactNode;
-	/** Error routes set this so the client render matches the server's no-toggle HTML. */
-	suppressLocaleToggle?: boolean;
+	errorRoute?: boolean;
 	children: ReactNode;
 }) {
 	const copy = shellCopy(locale);
+	const pinnedCwd = errorRoute ? '~' : undefined;
 
 	return (
-		<div className="site-shell">
+		<div className="site-shell term-page">
 			<a className="skip-link" href="#main-content">
 				{copy.skip}
 			</a>
-			{header ?? (
-				<SiteHeader locale={locale} copy={copy} suppressLocaleToggle={suppressLocaleToggle} />
-			)}
-			<main id="main-content" className="page-frame" tabIndex={-1}>
-				{children}
-			</main>
-			<Footer locale={locale} copy={copy} />
+			<div className="term-crt">
+				<div className="term-glass">
+					<span className="term-ghost" aria-hidden="true">
+						3B
+					</span>
+					{header ?? (
+						<TerminalTitleBar
+							locale={locale}
+							copy={copy}
+							pinnedCwd={pinnedCwd}
+							suppressLocaleToggle={errorRoute}
+						/>
+					)}
+					<div className="term-body">
+						<main id="main-content" className="term-main" tabIndex={-1}>
+							{children}
+						</main>
+						<TerminalFooter locale={locale} copy={copy} />
+						<ShellPrompt pinnedCwd={pinnedCwd} />
+					</div>
+					<StatusLine locale={locale} label={copy.navigation} plain={errorRoute} />
+				</div>
+			</div>
 		</div>
 	);
 }

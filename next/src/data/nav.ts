@@ -3,8 +3,9 @@ import type { Locale } from '../i18n/locale';
 /**
  * nav.ts — single source of truth for top-level site navigation.
  *
- * A port of `src/lib/data/nav.ts`. Drives the global `SiteHeader` and `Footer`:
- * the canonical link set, their locale-aware hrefs, and the active-section
+ * A port of `src/lib/data/nav.ts`. Drives the terminal shell (`@/shell`: status
+ * line, title bar, `~/.plan` footer): the canonical link set, their
+ * locale-aware hrefs, and the active-section
  * matcher. Keeping hrefs and active state here means every route inherits the
  * same chrome from one place instead of each page hand-rolling its own header.
  *

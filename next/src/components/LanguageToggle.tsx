@@ -2,24 +2,24 @@ import { hasLocaleVariant, pathForLocale } from '@/data/nav';
 import type { Locale } from '@/i18n/locale';
 
 /**
- * LanguageToggle — inline EN/KR switch, ported from
- * `src/lib/components/LanguageToggle.svelte`.
+ * LanguageToggle — the title bar's `en / ko` switch, the current locale amber.
+ * Originally ported from `src/lib/components/LanguageToggle.svelte`.
  *
  * The Svelte original derives its locale from `page.url.pathname`. Here the
- * pathname arrives as a prop from `SiteHeader`, which reads it once via
+ * pathname arrives as a prop from `TerminalTitleBar`, which reads it once via
  * `usePathname()`, and the locale arrives separately from the route group —
  * the server already knows it, so re-deriving it from the URL would add a
  * second answer to a settled question.
  *
- * ENGLISH-ONLY ROUTES RENDER NOTHING. `hasLocaleVariant` gates the link
+ * ENGLISH-ONLY ROUTES GET NO LINK. `hasLocaleVariant` gates the link
  * (`LanguageToggle.svelte:21`): a route such as `/talks` has no Korean twin, so
  * offering the switch would both mislead the reader and, on the Svelte side,
- * point the SSG crawler at a path that does not exist. The Next candidate has
- * no crawler, but the reader-facing half of that reason is unchanged.
+ * point the SSG crawler at a path that does not exist. Those routes (and the
+ * error routes) show the current locale as a plain label instead.
  *
  * NOT A SERVER COMPONENT, despite carrying no `'use client'` directive. It is
- * imported by `HeaderControls`, which is imported by the client `SiteHeader`,
- * so React compiles it into the client graph. That is legal -- a module without
+ * imported by the client `TerminalTitleBar`, so React compiles it into the
+ * client graph. That is legal -- a module without
  * the directive is compiled for whichever graph imports it, and only a
  * `server-only` import or a server API would make it an error -- and it is
  * cheap here, because this file imports nothing but `@/data/nav` and types. The
@@ -47,7 +47,15 @@ export function LanguageToggle({
 	 */
 	suppress?: boolean;
 }) {
-	if (suppress || !hasLocaleVariant(pathname)) return null;
+	// No twin to switch to: show the current locale as a plain label (the 404's
+	// `en`, a talk's `en`) instead of a link that would lead nowhere.
+	if (suppress || !hasLocaleVariant(pathname)) {
+		return (
+			<span className="language-toggle is-static">
+				<span className="is-current">{locale}</span>
+			</span>
+		);
+	}
 
 	const isKorean = locale === 'ko';
 	const toggleUrl = pathForLocale(pathname, isKorean ? 'en' : 'ko');
@@ -58,9 +66,9 @@ export function LanguageToggle({
 			href={toggleUrl}
 			aria-label={isKorean ? copy.switchToEnglish : copy.switchToKorean}
 		>
-			<span className={isKorean ? undefined : 'is-current'}>EN</span>
-			<span className="language-toggle__sep">/</span>
-			<span className={isKorean ? 'is-current' : undefined}>KR</span>
+			<span className={isKorean ? undefined : 'is-current'}>en</span>
+			<span className="language-toggle__sep"> / </span>
+			<span className={isKorean ? 'is-current' : undefined}>ko</span>
 		</a>
 	);
 }
