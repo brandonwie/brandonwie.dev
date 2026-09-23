@@ -283,6 +283,26 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
+		// Reviewer round 3: the status-line scroller must not be a navigation landmark.
+		// Reads the primary_navigation label from messages/ directly.
+		command: 'migration:browser:landmarks',
+		entry: 'scripts/assert-browser-landmarks.mjs',
+		dataRoots: ['scripts/serve-build.mjs', 'messages', ...NEXT_BUILD_SOURCES],
+		tier: 'push',
+	},
+	{
+		// Spawns its probe, an edge the import closure cannot see.
+		command: 'migration:browser:landmarks:controls',
+		entry: 'scripts/assert-browser-landmarks-controls.mjs',
+		dataRoots: [
+			'scripts/assert-browser-landmarks.mjs',
+			'scripts/serve-build.mjs',
+			'messages',
+			...NEXT_BUILD_SOURCES,
+		],
+		tier: 'push',
+	},
+	{
 		// Reviewer round 1 gap 3c: visualizer state inks (reverse video current/new).
 		command: 'migration:browser:study-states',
 		entry: 'scripts/assert-browser-study-states.mjs',

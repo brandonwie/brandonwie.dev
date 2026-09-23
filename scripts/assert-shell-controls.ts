@@ -36,7 +36,10 @@ const KO = 'ko/system/3b.html';
 const OFF_NAV = 'tags.html';
 
 const HEADER = /<header\b[^>]*class="[^"]*\bterm-bar\b[^"]*"[\s\S]*?<\/header>/i;
-const STATUS = /<nav\b[^>]*class="[^"]*\bterm-status\b[^"]*"[\s\S]*?<\/nav>/i;
+// REDESIGN: reviewer round 3: the status-line scroller must not be a navigation
+// landmark, so it is a <div> (was <nav role="none">). It holds no nested div, so
+// the first </div> closes it.
+const STATUS = /<div\b[^>]*class="[^"]*\bterm-status\b[^"]*"[\s\S]*?<\/div>/i;
 const FOOTER = /<footer\b[^>]*class="[^"]*\bterm-plan\b[^"]*"[\s\S]*?<\/footer>/i;
 
 /**
@@ -48,7 +51,7 @@ function within(container: RegExp, edit: (region: string) => string): (html: str
 }
 
 // REDESIGN: every candidate-side mutation now targets the Phosphor Fade shell
-// (`header.term-bar`, `nav.term-status`, `footer.term-plan`); baseline-side
+// (`header.term-bar`, `div.term-status`, `footer.term-plan`); baseline-side
 // controls (SC-13/14/15) still target the Svelte chrome, which is unchanged.
 const CONTROLS: Control[] = [
 	{
@@ -122,7 +125,8 @@ const CONTROLS: Control[] = [
 		kind: 'INVARIANCE',
 		what: 'whitespace inside the status line does not move any row — paired with SC-03/04/20',
 		target: EN,
-		apply: (html) => html.replace('<nav class="term-status"', '<nav  class="term-status"'),
+		// REDESIGN: reviewer round 3: the status line is a <div>, not a <nav>.
+		apply: (html) => html.replace('<div class="term-status"', '<div  class="term-status"'),
 	},
 	{
 		id: 'SC-09',

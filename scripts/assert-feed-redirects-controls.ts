@@ -233,7 +233,8 @@ const PAGE_MUTATIONS: PageMutation[] = [
 	 * changes nothing proves nothing, and it fails rather than passing vacuously.
 	 * REDESIGN: re-anchored again when the terminal shell replaced that chrome
 	 * (footer copy in `footer.term-plan` > `.term-plan__copy`, primary nav in
-	 * `nav.term-status`).
+	 * `nav.term-status`), and once more when that status line became
+	 * `div.term-status` (reviewer round 3: not a navigation landmark).
 	 * Re-anchoring keeps the assertion these rows exist to make: the feed
 	 * contract is page-owned, so shell edits must not move it.
 	 */
@@ -253,7 +254,9 @@ const PAGE_MUTATIONS: PageMutation[] = [
 		apply: (html) =>
 			html.replace(
 				// REDESIGN: the primary nav is now the tmux status line `nav.term-status`; the added link is a window.
-				/(<nav class="term-status"[^>]*>)/,
+				// REDESIGN: reviewer round 3: the status-line scroller must not be a navigation
+				// landmark, so it is `div.term-status` (was `<nav role="none">`).
+				/(<div class="term-status"[^>]*>)/,
 				'$1<a href="/posts">9:posts</a>',
 			),
 	},

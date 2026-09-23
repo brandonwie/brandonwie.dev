@@ -20,7 +20,10 @@
  * `HEADER_LINKS` order with locale-aware hrefs, exactly one link marked
  * `is-on` + `aria-current="page"` on section routes and none on search, feed
  * and the 404, and it is the ONLY nav landmark named `primary_navigation` —
- * the status line is `role="none"` with no aria-label.
+ * the status line is a plain element, not a `<nav>`, with no role and no
+ * aria-label (REDESIGN: reviewer round 3: the status-line scroller must not be
+ * a navigation landmark; `<nav role="none">` was exposed as an unnamed nav once
+ * it overflowed at phone widths).
  *
  * POSITIVE CONTROLS run first. The rule table is replayed against deliberately
  * broken implementations (a cwd that drops `/ko`, a status map that never
@@ -28,8 +31,8 @@
  * contact); if the table accepts any, the table cannot catch the regression it
  * exists for and the suite fails. The header export check is replayed against
  * mutated copies of real exports (unmarked link, un-prefixed Korean hrefs, a
- * dropped link, a marked search page, the status line named as a landmark
- * again), each of which must fail.
+ * dropped link, a marked search page, the status line back as a `<nav>`, named,
+ * or given a landmark role), each of which must fail.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -284,9 +287,14 @@ function headerFailures(html: string, c: ExportCase): string[] {
 	if (named.length !== 1) out.push(`${named.length} nav landmarks named ${PRIMARY[c.locale]}`);
 	else if (!(named[0].index! > barAt && named[0].index! < barEnd))
 		out.push('the primary nav landmark is not inside the title bar');
-	const status = /<nav class="term-status"[^>]*>/.exec(html)?.[0] ?? '';
-	if (!/\brole="none"/.test(status) || /\baria-label=/.test(status))
-		out.push(`status line is a landmark: ${status || '(missing)'}`);
+	// REDESIGN: reviewer round 3: the status-line scroller must not be a
+	// navigation landmark. It was `<nav role="none">`, which Chrome exposes as an
+	// unnamed nav once it overflows, so the line is now not a <nav> at all and
+	// carries no role or aria-label (migration:browser:landmarks checks the tree).
+	const status = /<(\w+) class="term-status"[^>]*>/.exec(html);
+	if (!status) out.push('status line missing');
+	else if (status[1] === 'nav' || /\b(role|aria-label|aria-labelledby)=/.test(status[0]))
+		out.push(`status line is a landmark candidate: ${status[0]}`);
 	return out;
 }
 
@@ -317,7 +325,8 @@ if (!existsSync(buildDir)) {
 		}
 		const html = readFileSync(path, 'utf8');
 		const bar = region(html, /<header class="term-bar"/, '</header>');
-		const nav = region(html, /<nav class="term-status"/, '</nav>');
+		// REDESIGN: reviewer round 3: the status line is a <div>, not a <nav>.
+		const nav = region(html, /<div class="term-status"/, '</div>');
 		if (!bar || !nav) {
 			record(false, `export:${c.file}`, 'title bar or status line missing');
 			continue;
@@ -399,15 +408,40 @@ if (!existsSync(buildDir)) {
 					'$1<a class="is-on" aria-current="page" href="/posts"',
 				),
 		},
+		// REDESIGN: reviewer round 3: the status-line scroller must not be a
+		// navigation landmark; each way back to one must be rejected.
+		{
+			id: 'control:status-nav-none',
+			file: 'about.html',
+			what: 'the status line is <nav role="none"> again',
+			mutate: (h) => h.replace('<div class="term-status"', '<nav class="term-status" role="none"'),
+		},
 		{
 			id: 'control:status-landmark',
 			file: 'about.html',
 			what: 'the status line is a second primary nav landmark',
 			mutate: (h) =>
 				h.replace(
-					'<nav class="term-status" role="none"',
+					'<div class="term-status"',
 					`<nav class="term-status" aria-label="${PRIMARY.en}"`,
 				),
+		},
+		{
+			id: 'control:status-labelled',
+			file: 'about.html',
+			what: 'the status line carries an aria-label',
+			mutate: (h) =>
+				h.replace(
+					'<div class="term-status"',
+					`<div class="term-status" aria-label="${PRIMARY.en}"`,
+				),
+		},
+		{
+			id: 'control:status-role',
+			file: 'about.html',
+			what: 'the status line carries role="navigation"',
+			mutate: (h) =>
+				h.replace('<div class="term-status"', '<div class="term-status" role="navigation"'),
 		},
 	];
 	for (const ctl of HEADER_CONTROLS) {

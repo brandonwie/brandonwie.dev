@@ -30,7 +30,7 @@
  * mirrors the Svelte markup, so the rows compare chrome FUNCTIONS, not markup.
  * The baseline is still read through its own selectors (`header.site-nav`,
  * `footer.site-footer`); the candidate through `header.term-bar`, the tmux
- * status line `nav.term-status` and `footer.term-plan`. Destinations, the
+ * status line `div.term-status` and `footer.term-plan`. Destinations, the
  * current-page marker, footer links with their accessible labels and order,
  * and the skip link are still held to the baseline; nav labels and nav order
  * are not, because D3 renames them to tmux windows by design.
@@ -363,7 +363,7 @@ export function runAssertions(candidateDir: string, baselineDir: string, quiet =
  * (`header.site-nav` > `nav.site-nav__links` > `a.site-nav__link`).
  *
  * REDESIGN: the candidate's primary nav is the tmux status line
- * `nav.term-status`, which sits at the bottom of the enclosure, outside the
+ * `div.term-status`, which sits at the bottom of the enclosure, outside the
  * title bar -- so it is read from the document, not from inside the header.
  * Every anchor in it is a window; the session and clock spans carry no links.
  */
@@ -375,7 +375,9 @@ function navOf(side: Side, html: string): Link[] | null {
 		if (nav === null) return null;
 		return linksIn(nav).filter((link) => link.classes.split(' ').includes('site-nav__link'));
 	}
-	const nav = region(html, 'nav', 'term-status');
+	// REDESIGN: reviewer round 3: the status-line scroller must not be a
+	// navigation landmark, so it is a <div> (was <nav role="none">).
+	const nav = region(html, 'div', 'term-status');
 	return nav === null ? null : linksIn(nav);
 }
 

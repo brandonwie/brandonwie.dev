@@ -260,7 +260,7 @@ function exportedRouteExists(candidateDir: string, href: string): boolean {
  * A12-chrome-link-deferrals.md. Retire with PR 3 (posts, tags, /ko), PR 6 (the
  * static pages) and Slice 4 (study); zero deferrals before cutover.
  */
-// REDESIGN: the terminal shell's primary nav (`nav.term-status`) sits outside
+// REDESIGN: the terminal shell's status line (`div.term-status`) sits outside
 // the title bar, so it is a chrome container of its own.
 type ChromeContainer = 'header' | 'status' | 'footer';
 
@@ -274,16 +274,19 @@ interface LinkDeferral {
 const CHROME_LINK_DEFERRALS: readonly LinkDeferral[] = [];
 
 // REDESIGN: chrome containers are the terminal shell's title bar, status line
-// and footer (`header.term-bar`, `nav.term-status`, `footer.term-plan`), which
+// and footer (`header.term-bar`, `div.term-status`, `footer.term-plan`), which
 // replaced `header.site-nav` / `footer.site-footer`.
+// REDESIGN: reviewer round 3: the status-line scroller must not be a navigation
+// landmark, so it is a <div> (was <nav role="none">); it holds no nested div, so
+// the first </div> closes it.
 const CHROME_OPEN: Record<ChromeContainer, RegExp> = {
 	header: /<header\b[^>]*class="[^"]*\bterm-bar\b/i,
-	status: /<nav\b[^>]*class="[^"]*\bterm-status\b/i,
+	status: /<div\b[^>]*class="[^"]*\bterm-status\b/i,
 	footer: /<footer\b[^>]*class="[^"]*\bterm-plan\b/i,
 };
 const CHROME_CLOSE: Record<ChromeContainer, string> = {
 	header: '</header>',
-	status: '</nav>',
+	status: '</div>',
 	footer: '</footer>',
 };
 
@@ -379,7 +382,9 @@ function shellProblems(html: string, locale: 'en' | 'ko'): string[] {
 	// REDESIGN: site header is the terminal title bar `header.term-bar` (was `header.site-nav`).
 	if (!classToken(html, 'header', 'term-bar')) problems.push('site header missing');
 	// REDESIGN: site navigation is the tmux status line `nav.term-status` (was `nav.site-nav__links`).
-	if (!classToken(html, 'nav', 'term-status')) problems.push('site navigation missing');
+	// REDESIGN: reviewer round 3: the status-line scroller must not be a navigation
+	// landmark, so it is `div.term-status` (was `nav.term-status` with role="none").
+	if (!classToken(html, 'div', 'term-status')) problems.push('site navigation missing');
 	// REDESIGN: site footer is `footer.term-plan` (was `footer.site-footer`).
 	if (!classToken(html, 'footer', 'term-plan')) problems.push('site footer missing');
 	if (tagsOf(html, 'article').length !== 1 || !classToken(html, 'article', 'article-shell')) {
