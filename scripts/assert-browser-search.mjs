@@ -15,11 +15,14 @@
  *   - BS-06: S4 — malformed index row (missing title/URL or 'Untitled') is reported
  *            as a defect rather than rendered as a normal result
  *   - BS-07: S5 — query execution failure is distinguishable from empty results
+ *   - BS-08: B1 guard — a Hangul query (캘린더) on /ko/search renders at least one
+ *            result, and every result links under /ko/posts/
  *
  * Negative control flags:
  *   node scripts/assert-browser-search.mjs --broken-runtime  # S3 control
  *   node scripts/assert-browser-search.mjs --malformed-row   # S4 control
  *   node scripts/assert-browser-search.mjs --throw-query     # S5 control
+ *   node scripts/assert-browser-search.mjs --english-index-on-ko  # B1 defect control
  */
 import {
 	launch,
@@ -45,6 +48,7 @@ const SUPPRESS_SEARCH = flag('--suppress-search');
 const MASK_DEV_MODE = flag('--mask-dev-mode');
 const MASK_MALFORMED = flag('--mask-malformed');
 const MASK_QUERY_ERROR = flag('--mask-query-error');
+const ENGLISH_INDEX_ON_KO = flag('--english-index-on-ko');
 
 const MALFORMED_ROW_OVERRIDE = `
 	window.__pagefindOverride = {
@@ -89,6 +93,27 @@ const MASK_DEV_MODE_BEHAVIOR = `
 
 const MASK_MALFORMED_BEHAVIOR = `
 	window.__maskMalformed = true;
+`;
+
+// B1's reported mechanism: a Korean page that initialises Pagefind as English
+// loads the \`en\` index, where the lang=ko filter matches nothing. Pagefind
+// picks its index from <html lang> at init, so the defect relabels the root
+// element on /ko routes before the runtime reads it.
+const ENGLISH_INDEX_ON_KO_BEHAVIOR = `
+	if (location.pathname.startsWith('/ko')) {
+		const relabel = () => {
+			if (document.documentElement && document.documentElement.lang !== 'en') {
+				document.documentElement.lang = 'en';
+			}
+		};
+		relabel();
+		new MutationObserver(relabel).observe(document, {
+			childList: true,
+			subtree: true,
+			attributes: true,
+			attributeFilter: ['lang'],
+		});
+	}
 `;
 
 const MASK_QUERY_ERROR_BEHAVIOR = `
@@ -176,6 +201,9 @@ async function main() {
 		}
 		if (MASK_QUERY_ERROR) {
 			await mutateBehavior(page, MASK_QUERY_ERROR_BEHAVIOR);
+		}
+		if (ENGLISH_INDEX_ON_KO) {
+			await mutateBehavior(page, ENGLISH_INDEX_ON_KO_BEHAVIOR);
 		}
 
 		// --- Scenario S3 Control Run: Broken Runtime Load ---
@@ -416,6 +444,31 @@ async function main() {
 			facetOk
 				? 'locale facet isolation preserved: EN query returned only /posts/, KO query returned only /ko/posts/'
 				: `facet leak: enIsolated=${enIsolated} (${enHrefs}), koIsolated=${koIsolated} (${koHrefs})`,
+		);
+
+		// BS-08: B1 guard. The pack reported /ko/search returning zero hits for
+		// every query; it does not reproduce, and this row keeps it that way for a
+		// Hangul query, which the ASCII `giscus` rows above never exercise.
+		await visit(page, server, KO_ROUTE);
+		await typeQuery(page, '캘린더');
+		const hangulFound = await until(
+			async () =>
+				(await evaluate(page, "document.querySelectorAll('.search-result-item').length")) > 0,
+			{ timeoutMs: 6000 },
+		);
+		const hangulHrefs = hangulFound
+			? await evaluate(
+					page,
+					"Array.from(document.querySelectorAll('.search-result-item')).map(el => el.getAttribute('href'))",
+				)
+			: [];
+		const hangulOk = hangulHrefs.length > 0 && hangulHrefs.every((h) => h.startsWith('/ko/posts/'));
+		report(
+			'BS-08',
+			hangulOk,
+			hangulOk
+				? `Hangul query "캘린더" on /ko/search returned ${hangulHrefs.length} result(s), all under /ko/posts/`
+				: `Hangul query "캘린더" on /ko/search: ${hangulHrefs.length} result(s) (${hangulHrefs.join(', ')})`,
 		);
 
 		// BS-04: Legitimate no-results state

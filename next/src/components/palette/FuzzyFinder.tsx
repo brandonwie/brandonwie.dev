@@ -60,6 +60,39 @@ export function restoreFocusTarget(opener?: HTMLElement | null): HTMLElement | n
 	return opener ?? (document.activeElement as HTMLElement | null) ?? null;
 }
 
+/** `ls -l` type column: directories are pages, executables are actions. */
+const TYPE_GLYPH: Record<PaletteGroup, string> = { nav: 'd', action: 'x', post: '-' };
+
+/**
+ * Right-column hint for an action row, derived from what its `run()` does.
+ * Terminal syntax (paths, `mailto:`), identical in both locales.
+ */
+function actionHint(id: string): string | undefined {
+	if (typeof window === 'undefined') return undefined;
+	const path = window.location.pathname;
+	const ko = path === '/ko' || path.startsWith('/ko/');
+	switch (id) {
+		case 'action:switch-language':
+			return ko ? path.replace(/^\/ko/, '') || '/' : `/ko${path === '/' ? '' : path}`;
+		case 'action:copy-link':
+			return 'clipboard';
+		case 'action:rss':
+			return ko ? '/ko/rss.xml' : '/rss.xml';
+		case 'action:github':
+		case 'action:linkedin':
+			return '↗ new tab';
+		case 'action:email':
+			return 'mailto:';
+		default:
+			return undefined;
+	}
+}
+
+/** Post dates arrive as ISO strings; the row shows the calendar day only. */
+function shortDate(value: string): string {
+	return value.slice(0, 10);
+}
+
 export default function FuzzyFinder({ items, onSelect, onClose, locale, opener }: Props) {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const resultsContainerRef = useRef<HTMLDivElement>(null);
@@ -75,6 +108,11 @@ export default function FuzzyFinder({ items, onSelect, onClose, locale, opener }
 
 	const at = useMemo(() => ({ locale }), [locale]);
 	const activeOptionId = results.length > 0 ? optionId(selectedIndex) : undefined;
+	const groupCounts = useMemo(() => {
+		const counts: Record<PaletteGroup, number> = { nav: 0, action: 0, post: 0 };
+		for (const result of results) counts[result.item.group] += 1;
+		return counts;
+	}, [results]);
 
 	// AUTO-SCROLL TO SELECTED ROW
 	// Section headers interleave the result rows in the DOM, so a positional
@@ -181,6 +219,17 @@ export default function FuzzyFinder({ items, onSelect, onClose, locale, opener }
 		}
 	};
 
+	const label = (result: FuzzyResult) =>
+		highlightedLabel(result).map((segment, si) =>
+			segment.highlighted ? (
+				<span className="fuzzy-match" key={si}>
+					{segment.text}
+				</span>
+			) : (
+				<span key={si}>{segment.text}</span>
+			),
+		);
+
 	return (
 		<div
 			ref={dialogRef}
@@ -192,7 +241,14 @@ export default function FuzzyFinder({ items, onSelect, onClose, locale, opener }
 			aria-label={m.palette_aria_label({}, at)}
 			tabIndex={-1}
 		>
-			<div className="cmdk-panel">
+			<div className="cmdk-panel term-frame is-active">
+				<span className="term-frame__title" aria-hidden="true">
+					palette <span className="dim">· fuzzy · posts + commands</span>
+				</span>
+				<span className="cmdk-counter" aria-hidden="true">
+					<b>{results.length}</b>/{items.length}
+				</span>
+
 				{/* SEARCH INPUT HEADER */}
 				<div className="cmdk-ibar">
 					<span className="cmdk-prompt" aria-hidden="true">
@@ -227,113 +283,104 @@ export default function FuzzyFinder({ items, onSelect, onClose, locale, opener }
 					aria-label={m.search_results_status({}, at)}
 				>
 					{results.length === 0 ? (
-						<div className="cmdk-empty">{m.palette_no_results({}, at)}</div>
+						<div className="cmdk-empty">
+							<span className="cmdk-empty__n" aria-hidden="true">
+								0 matches
+							</span>
+							<span className="cmdk-empty__why">{m.palette_no_results({}, at)}</span>
+						</div>
 					) : (
-						results.map((result, index) => (
-							/* A Fragment, not a <div>: React needs one node per key, but a real
-							   element between role="listbox" and its role="option" children
-							   breaks the ownership the accessibility tree reads. The Svelte
-							   template emits the header and the row as direct siblings. */
-							<Fragment key={result.item.id}>
-								{startsSection(results, index) && (
-									<div className="cmdk-grp">{groupLabel(result.item.group)}</div>
-								)}
-								<div
-									id={optionId(index)}
-									data-result-index={index}
-									className={`cmdk-item${index === selectedIndex ? ' is-selected' : ''}`}
-									onClick={() => onSelect(result.item)}
-									onKeyDown={(event) => event.key === 'Enter' && onSelect(result.item)}
-									role="option"
-									aria-selected={index === selectedIndex}
-									tabIndex={0}
-								>
-									{result.item.group === 'post' ? (
-										/* POST ROW (rich: title, description, category/tags/date) */
-										<div className="cmdk-post">
-											<div className="cmdk-post__main">
-												<div className="cmdk-tt cmdk-truncate">
-													{highlightedLabel(result).map((segment, si) =>
-														segment.highlighted ? (
-															<span className="fuzzy-match" key={si}>
-																{segment.text}
-															</span>
-														) : (
-															<span key={si}>{segment.text}</span>
-														),
-													)}
-												</div>
-												{result.item.description && (
-													<div className="cmdk-post__desc cmdk-truncate">
-														{result.item.description}
-													</div>
-												)}
-												<div className="cmdk-post__meta">
-													{result.item.meta?.category && (
-														<span className="cmdk-cat">{result.item.meta.category}</span>
-													)}
-													{(result.item.meta?.tags ?? []).slice(0, 3).map((tag) => (
-														<span className="cmdk-tag" key={tag}>
-															{tag}
-														</span>
-													))}
-												</div>
-											</div>
-											{result.item.meta?.date && (
-												<div className="cmdk-ds">{result.item.meta.date}</div>
-											)}
-										</div>
-									) : (
-										/* NAV / ACTION ROW (icon box + label + dim hint) */
-										<>
-											<span className="cmdk-ic" aria-hidden="true">
-												{result.item.icon ?? '›'}
+						results.map((result, index) => {
+							const { item } = result;
+							const hint = item.group === 'nav' ? item.description : actionHint(item.id);
+							return (
+								/* A Fragment, not a <div>: React needs one node per key, but a real
+								   element between role="listbox" and its role="option" children
+								   breaks the ownership the accessibility tree reads. The Svelte
+								   template emits the header and the row as direct siblings. */
+								<Fragment key={item.id}>
+									{startsSection(results, index) && (
+										<div className="cmdk-grp">
+											{groupLabel(item.group)}
+											<span className="cmdk-grp__n" aria-hidden="true">
+												· {groupCounts[item.group]}
 											</span>
-											<div className="cmdk-row__main">
-												<div className="cmdk-tt cmdk-truncate">
-													{highlightedLabel(result).map((segment, si) =>
-														segment.highlighted ? (
-															<span className="fuzzy-match" key={si}>
-																{segment.text}
-															</span>
-														) : (
-															<span key={si}>{segment.text}</span>
-														),
-													)}
-												</div>
-												{result.item.description && (
-													<div className="cmdk-ds cmdk-truncate">{result.item.description}</div>
-												)}
-											</div>
-										</>
+										</div>
 									)}
-								</div>
-							</Fragment>
-						))
+									<div
+										id={optionId(index)}
+										data-result-index={index}
+										className={`cmdk-item cmdk-item--${item.group}${
+											index === selectedIndex ? ' is-selected' : ''
+										}`}
+										onClick={() => onSelect(item)}
+										onKeyDown={(event) => event.key === 'Enter' && onSelect(item)}
+										role="option"
+										aria-selected={index === selectedIndex}
+										tabIndex={0}
+									>
+										<span className="cmdk-mk" aria-hidden="true" />
+										<span className="cmdk-ty" aria-hidden="true">
+											{TYPE_GLYPH[item.group]}
+										</span>
+										{item.group === 'post' ? (
+											/* POST ROW: title, description, category + tags; date right */
+											<>
+												<div className="cmdk-main">
+													<div className="cmdk-tt cmdk-truncate">{label(result)}</div>
+													{item.description && (
+														<div className="cmdk-post__desc cmdk-truncate">{item.description}</div>
+													)}
+													<div className="cmdk-post__meta cmdk-truncate">
+														{item.meta?.category && (
+															<span className="cmdk-cat">{item.meta.category}</span>
+														)}
+														{(item.meta?.tags ?? []).slice(0, 3).map((tag) => (
+															<span className="cmdk-tag term-tag" key={tag}>
+																{tag}
+															</span>
+														))}
+													</div>
+												</div>
+												<span className="cmdk-rt cmdk-rt--date">
+													{item.meta?.date ? shortDate(item.meta.date) : ''}
+												</span>
+											</>
+										) : (
+											/* NAV / ACTION ROW: label + right-column route or effect */
+											<>
+												<div className="cmdk-main cmdk-tt cmdk-truncate">{label(result)}</div>
+												<span className="cmdk-rt" aria-hidden="true">
+													{hint ?? ''}
+												</span>
+											</>
+										)}
+									</div>
+								</Fragment>
+							);
+						})
 					)}
 				</div>
 
 				{/* FOOTER - keyboard hints + result count */}
 				<div className="cmdk-foot">
-					<div className="cmdk-foot__hints">
-						<span>
-							<kbd>↑↓</kbd>
-							{m.palette_hint_navigate({}, at)}
-						</span>
-						<span>
-							<kbd>↵</kbd>
-							{m.palette_hint_select({}, at)}
-						</span>
-						<span>
-							<kbd>esc</kbd>
-							{m.palette_hint_close({}, at)}
-						</span>
-					</div>
-					<div>
+					<span>
+						<kbd>↑↓</kbd>
+						{m.palette_hint_navigate({}, at)}
+					</span>
+					<span>
+						<kbd>↵</kbd>
+						{m.palette_hint_select({}, at)}
+					</span>
+					<span>
+						<kbd>esc</kbd>
+						{m.palette_hint_close({}, at)}
+					</span>
+					<span className="cmdk-foot__n">
 						{results.length === 1
 							? m.palette_result_count({ count: results.length }, at)
 							: m.palette_results_count({ count: results.length }, at)}
-					</div>
+					</span>
 				</div>
 			</div>
 		</div>

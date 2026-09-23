@@ -1,2 +1,139 @@
 /* Phosphor Fade page styles: not-found. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Design: retro-site-pages/pages/NotFoundPage. The requested path is typed at
+   the prompt and the shell answers `command not found`; the failure panel is a
+   `stderr · exit 404` frame with block-letter art beside the h1 and one
+   ls-style way home. global-error.tsx reuses the same panel (`$ render`).
+
+   Specificity: the shell focus ring `.term-glass :is(a, button, …):focus-visible`
+   is (0,2,1) and comes later; the row focus rule below is (0,3,1). Class
+   names are prefixed because bare ones (`.name`) exist as unlayered deck
+   globals.
+   Inks only (WCAG 2.1 on --crt-glass #0d0b13): hi 15.69, worn 12.60, green
+   11.77, amber 8.90, faint 4.91; glass on amber 8.90. */
+@layer components {
+	.pg-nf__err {
+		margin: 0;
+		color: var(--crt-worn);
+	}
+	.pg-nf__req {
+		overflow-wrap: anywhere;
+	}
+
+	.pg-nf__fail {
+		display: grid;
+		grid-template-columns: max-content minmax(0, 1fr);
+		column-gap: 36px;
+		align-items: center;
+		padding: 22px 20px 18px;
+	}
+	.pg-nf__fail--error {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.pg-nf__art {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+		background: none;
+		font-family: inherit;
+		font-size: 13px;
+		line-height: 14px;
+		color: var(--crt-amber);
+		white-space: pre;
+	}
+	.pg-nf__art .off {
+		color: var(--crt-off);
+	}
+	.pg-nf__text {
+		min-width: 0;
+	}
+	.pg-nf__text .term-eyebrow {
+		margin: 0;
+	}
+	.pg-nf__ttl {
+		margin-top: 6px;
+	}
+	.pg-nf__ttl .term-ttl {
+		margin: 0;
+	}
+	.pg-nf__why {
+		margin: 10px 0 0;
+		color: var(--crt-worn);
+	}
+
+	/* The way home: one ls-style row, one link. */
+	.pg-nf__ways {
+		margin: 16px 0 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-nf__ways li + li {
+		margin-top: 6px;
+	}
+	.pg-nf__row {
+		display: grid;
+		grid-template-columns: 1ch 3ch max-content 2ch minmax(0, 1fr);
+		column-gap: 1ch;
+		align-items: baseline;
+		margin: 0 -8px;
+		padding: 2px 8px;
+		color: var(--crt-worn);
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.pg-nf__row .car {
+		color: transparent;
+	}
+	.pg-nf__row .n,
+	.pg-nf__row .arr {
+		color: var(--crt-faint);
+	}
+	.pg-nf__row .pg-nf__name {
+		color: var(--crt-green);
+	}
+	.pg-nf__row .val {
+		color: var(--crt-amber);
+	}
+	.pg-nf__row:hover .car {
+		color: var(--crt-amber);
+	}
+	.pg-nf__row:hover .pg-nf__name {
+		text-decoration: underline;
+	}
+	.pg-nf .pg-nf__ways a.pg-nf__row:focus-visible {
+		outline: none;
+		background: var(--crt-amber);
+	}
+	.pg-nf .pg-nf__ways a.pg-nf__row:focus-visible * {
+		color: var(--crt-glass);
+	}
+	.pg-nf__btn {
+		padding: 0 8px;
+		border: 1px solid var(--crt-amber);
+		background: transparent;
+		font: inherit;
+		color: var(--crt-amber);
+		cursor: pointer;
+	}
+	.pg-nf__btn .n {
+		color: var(--crt-faint);
+	}
+	.pg-nf__hint {
+		margin: 10px 0 0;
+		color: var(--crt-faint);
+	}
+
+	@media (width < 48rem) {
+		.pg-nf__fail {
+			grid-template-columns: minmax(0, 1fr);
+			row-gap: 16px;
+			padding-inline: 14px;
+		}
+		.pg-nf__art {
+			font-size: 9px;
+			line-height: 10px;
+		}
+	}
+}

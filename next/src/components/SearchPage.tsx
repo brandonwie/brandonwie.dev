@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 
 import { AppLink } from '@/components/AppLink';
+import { searchHref } from '@/data/nav';
 import { searchCopy } from '@/i18n/copy';
+import { TermPrompt } from '@/shell/TermPrompt';
+import { cwdFor } from '@/shell/terminal-path';
 import type { Locale } from '@/i18n/locale';
 
 export interface SearchPageProps {
@@ -33,6 +36,8 @@ interface PagefindSearchResult {
 
 interface PagefindInstance {
 	init: () => Promise<void>;
+	/** Facet counts; only read for the decorative init line. */
+	filters?: () => Promise<Record<string, Record<string, number>>>;
 	debouncedSearch: (
 		query: string,
 		options: { filters: { lang: string } },
@@ -71,6 +76,8 @@ export function SearchPage({ locale }: SearchPageProps) {
 	const [hasSearched, setHasSearched] = useState(false);
 	const [loadError, setLoadError] = useState(false);
 	const [queryError, setQueryError] = useState(false);
+	const [indexReady, setIndexReady] = useState(false);
+	const [indexPages, setIndexPages] = useState<number | null>(null);
 
 	const pagefindRef = useRef<PagefindInstance | null>(null);
 	const requestIdRef = useRef(0);
@@ -92,6 +99,17 @@ export function SearchPage({ locale }: SearchPageProps) {
 				pagefindRef.current = pf;
 				setLoadError(false);
 				setIsDevMode(false);
+				setIndexReady(true);
+				// Decorative init line only: the page count for the active language.
+				// Never allowed to affect the search states above.
+				if (typeof pf.filters === 'function') {
+					pf.filters()
+						.then((facets) => {
+							const count = facets?.lang?.[locale];
+							if (active && typeof count === 'number') setIndexPages(count);
+						})
+						.catch(() => {});
+				}
 			} catch {
 				if (!active) return;
 				const maskDevMode =
@@ -117,7 +135,7 @@ export function SearchPage({ locale }: SearchPageProps) {
 				delete document.body.dataset.searchReady;
 			}
 		};
-	}, []);
+	}, [locale]);
 
 	async function handleInput(e: ChangeEvent<HTMLInputElement>) {
 		const val = e.target.value;
@@ -204,114 +222,157 @@ export function SearchPage({ locale }: SearchPageProps) {
 		}
 	}
 
+	const cwd = cwdFor(searchHref(locale));
+	const initStatus = isDevMode ? (
+		<span className="text-crt-amber">skipped</span>
+	) : loadError ? (
+		<span className="text-crt-amber">failed</span>
+	) : indexReady ? (
+		<>
+			<span className="text-crt-green">ok</span>
+			{indexPages !== null ? ` · ${indexPages} pages` : ''} · lang={locale}
+		</>
+	) : (
+		'...'
+	);
+
 	return (
-		<div className="min-h-screen bg-terminal-bg-primary">
-			<main id="main-content" className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-				<h1 className="mb-6 text-2xl font-bold text-terminal-text-primary">{copy.pageHeading}</h1>
+		<div className="pg-search">
+			<TermPrompt
+				cwd={cwd}
+				command="pagefind --init"
+				flags={`--bundle /pagefind/ --filter lang=${locale}`}
+			/>
+			<p className="pg-search__init" aria-hidden="true">
+				loading index ......... {initStatus}
+			</p>
+			<div className="term-gap" />
+			<div className="term-worn">
+				<h1 className="term-ttl">{copy.pageHeading}</h1>
+			</div>
 
-				{isDevMode ? (
-					<div
-						data-search-dev-notice
-						className="rounded-lg border border-terminal-accent-yellow/30 bg-terminal-accent-yellow/10 p-4"
-					>
-						<p className="text-sm text-terminal-accent-yellow">{copy.devNotice}</p>
+			{isDevMode ? (
+				<div data-search-dev-notice className="term-frame pg-search__notice">
+					<p className="pg-search__warn">{copy.devNotice}</p>
+				</div>
+			) : loadError ? (
+				<div role="alert" data-search-load-error className="term-frame pg-search__notice">
+					<p className="pg-search__err">{copy.loadError}</p>
+				</div>
+			) : (
+				<>
+					{/* stdin: the search input, drawn as a frame that lights up while focused */}
+					<div className="term-frame pg-search__stdin" role="search">
+						<span className="term-frame__title" aria-hidden="true">
+							stdin<span className="dim pg-search__focused"> · focused</span>
+						</span>
+						<span className="pg-search__gt" aria-hidden="true">
+							&gt;
+						</span>
+						<label htmlFor="site-search" className="sr-only">
+							{copy.pageHeading}
+						</label>
+						<input
+							id="site-search"
+							type="search"
+							value={query}
+							onChange={handleInput}
+							placeholder={copy.searchPlaceholder}
+							className="pg-search__input"
+							autoFocus
+							autoComplete="off"
+							spellCheck={false}
+						/>
+						<span className="pg-search__hint" aria-hidden="true">
+							lang={locale} · debounce 200ms
+						</span>
 					</div>
-				) : loadError ? (
-					<div
-						role="alert"
-						data-search-load-error
-						className="rounded-lg border border-red-500/30 bg-red-500/10 p-4"
-					>
-						<p className="text-sm text-red-400">{copy.loadError}</p>
-					</div>
-				) : (
-					<>
-						{/* Search Input */}
-						<div
-							className="mb-8 flex items-center gap-2 border-b border-terminal-border pb-2"
-							role="search"
-						>
-							<span className="text-terminal-accent-orange font-bold" aria-hidden="true">
-								&gt;
-							</span>
-							<label htmlFor="site-search" className="sr-only">
-								{copy.pageHeading}
-							</label>
-							<input
-								id="site-search"
-								type="search"
-								value={query}
-								onChange={handleInput}
-								placeholder={copy.searchPlaceholder}
-								className="flex-1 bg-transparent text-terminal-text-primary placeholder:text-terminal-text-dim outline-none"
-								autoFocus
-								autoComplete="off"
-								spellCheck={false}
+
+					{hasSearched ? (
+						<>
+							<div className="term-gap" />
+							<TermPrompt
+								cwd={cwd}
+								command={`pagefind --search ${JSON.stringify(query.trim())}`}
+								flags={`--lang ${locale} --limit 20`}
 							/>
-						</div>
+						</>
+					) : null}
 
-						{/* Results */}
-						<section aria-label={copy.resultsStatus} aria-live="polite" aria-busy={isLoading}>
-							{isLoading ? (
-								<p className="text-terminal-text-muted text-sm">{copy.loading}</p>
-							) : queryError ? (
-								<div
-									role="alert"
-									data-search-query-error
-									className="rounded-lg border border-red-500/30 bg-red-500/10 p-4"
-								>
-									<p className="text-sm text-red-400">{copy.queryError}</p>
-								</div>
-							) : hasSearched && results.length === 0 ? (
-								<p data-search-no-results className="text-terminal-text-muted text-sm">
-									{copy.noResults(query)}
+					{/* Results */}
+					<section
+						className="pg-search__results"
+						aria-label={copy.resultsStatus}
+						aria-live="polite"
+						aria-busy={isLoading}
+					>
+						{isLoading ? (
+							<p className="pg-search__loading">
+								<span className="pg-search__spin" aria-hidden="true" />
+								{copy.loading}
+							</p>
+						) : queryError ? (
+							<div role="alert" data-search-query-error className="pg-search__state">
+								<p className="pg-search__err">{copy.queryError}</p>
+							</div>
+						) : hasSearched && results.length === 0 ? (
+							<p data-search-no-results className="pg-search__state pg-search__none">
+								{copy.noResults(query)}
+							</p>
+						) : results.length > 0 ? (
+							<>
+								<p className="pg-search__count" role="status">
+									<b>{copy.resultsCount(resultCount)}</b>
+									<span className="pg-search__rule" aria-hidden="true" />
+									<span className="pg-search__ranked" aria-hidden="true">
+										ranked by pagefind
+									</span>
 								</p>
-							) : results.length > 0 ? (
-								<>
-									<p className="text-terminal-text-dim text-xs mb-6" role="status">
-										{copy.resultsCount(resultCount)}
-									</p>
 
-									<div className="space-y-4">
-										{results.map((result, idx) =>
-											result.malformed ? (
+								<ol className="pg-search__hits">
+									{results.map((result, idx) =>
+										result.malformed ? (
+											<li key={result.url || `defect-${idx}`}>
 												<div
-													key={result.url || `defect-${idx}`}
 													role="alert"
 													data-search-row-defect
-													className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400"
+													className="pg-search__err pg-search__defect"
 												>
 													Malformed search index entry: {result.title} (
 													{result.url || 'missing url'})
 												</div>
-											) : (
-												<AppLink
-													key={result.url}
-													href={result.url}
-													className="search-result-item block rounded-lg border border-terminal-border bg-terminal-bg-secondary p-4 transition-colors hover:border-terminal-accent-orange no-underline"
-												>
-													{result.category && (
-														<span className="rounded-sm bg-terminal-accent-yellow/20 px-2 py-0.5 text-xs text-terminal-accent-yellow mb-2 inline-block">
-															{result.category}
-														</span>
-													)}
-													<h2 className="text-base font-semibold text-terminal-text-primary mb-1">
-														{result.title}
-													</h2>
+											</li>
+										) : (
+											<li key={result.url}>
+												{/* The category must stay the row's FIRST <span>: the
+												   search suite reads it with querySelector('span'). */}
+												<AppLink href={result.url} className="search-result-item pg-search__hit">
+													<i className="n" aria-hidden="true">
+														[{idx + 1}]
+													</i>
+													<div className="pg-search__head">
+														<h2 className="pg-search__ti">{result.title}</h2>
+														{result.category ? (
+															<span className="pg-search__cat">{result.category}</span>
+														) : null}
+													</div>
 													<p
-														className="text-sm text-terminal-text-muted search-excerpt"
+														className="search-excerpt pg-search__ex"
 														dangerouslySetInnerHTML={{ __html: result.excerpt }}
 													/>
+													<p className="pg-search__url" aria-hidden="true">
+														{result.url}
+													</p>
 												</AppLink>
-											),
-										)}
-									</div>
-								</>
-							) : null}
-						</section>
-					</>
-				)}
-			</main>
+											</li>
+										),
+									)}
+								</ol>
+							</>
+						) : null}
+					</section>
+				</>
+			)}
 		</div>
 	);
 }
