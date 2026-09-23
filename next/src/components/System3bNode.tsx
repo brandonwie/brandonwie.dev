@@ -2,15 +2,17 @@
 
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 
-import { kindStyle } from '../graph/system3b-graph';
 import { useGraphCopy } from './System3bLocale';
+import { kindGlyph } from './System3bTerm';
 
 /**
  * Custom @xyflow/react node for the /system/3b graph.
  *
- * Renders a subsystem chip (expandable) or a leaf node, colored by kind.
- * Click (expandable only) -> data.onExpand(subKey); hover -> data.onHover(id).
- * Handles are present but visually hidden so edges can attach.
+ * Renders a subsystem chip (expandable) or a leaf node. Phosphor Fade draws the
+ * kind as an `ls -F`-style glyph instead of a colour dot, and the name wraps
+ * instead of ellipsising. Click (expandable only) -> data.onExpand(subKey);
+ * hover -> data.onHover(id). Handles are present but visually hidden so edges
+ * can attach.
  *
  * Ported from System3bNode.svelte. The copy arrives by context rather than by
  * prop because React Flow hands custom nodes only NodeProps.
@@ -19,7 +21,6 @@ const HANDLE_STYLE = { opacity: 0, width: 6, height: 6, border: 0 } as const;
 
 export default function System3bNode({ id, data }: NodeProps) {
 	const copy = useGraphCopy();
-	const style = kindStyle(String(data.kind));
 	const expandable = Boolean(data.expandable);
 
 	const click = () => {
@@ -37,7 +38,6 @@ export default function System3bNode({ id, data }: NodeProps) {
 			<button
 				type="button"
 				className={expandable ? 's3b-node expandable' : 's3b-node'}
-				style={{ ['--c' as string]: style.color }}
 				onClick={click}
 				onMouseEnter={() => hover(id)}
 				onMouseLeave={() => hover(null)}
@@ -45,10 +45,12 @@ export default function System3bNode({ id, data }: NodeProps) {
 				aria-disabled={!expandable}
 				title={expandable ? `${copy.expand} ${String(data.name)}` : String(data.name)}
 			>
-				<span className="dot" />
-				<span className="label">{String(data.name)}</span>
+				<span className="s3b-node__glyph" aria-hidden="true">
+					{kindGlyph(String(data.kind))}
+				</span>
+				<span className="s3b-node__label">{String(data.name)}</span>
 				{expandable ? (
-					<span className="chev" aria-hidden="true">
+					<span className="s3b-node__x" aria-hidden="true">
 						+
 					</span>
 				) : null}

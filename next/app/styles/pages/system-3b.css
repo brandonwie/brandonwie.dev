@@ -1,2 +1,534 @@
 /* Phosphor Fade page styles: system-3b. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Inks only from the shell. Reverse-video pairs added here: glass #0d0b13 on
+   amber #e0a35c 8.90:1 (focused chip). Dimmed edges (opacity .2), lane
+   borders, minimap blocks and meter cells are non-text. */
+@layer components {
+	/* ---- header ---- */
+	.pg-s3b__crumb {
+		color: var(--crt-amber);
+		text-decoration: none;
+	}
+	.pg-s3b__crumb:hover {
+		text-decoration: underline;
+	}
+	.pg-s3b__hdr {
+		margin-top: 14px;
+	}
+	.pg-s3b__hdr .term-eyebrow {
+		margin: 0;
+	}
+	.pg-s3b__ttl {
+		display: inline-block;
+	}
+	.pg-s3b__lede {
+		margin: 10px 0 0;
+		color: var(--crt-worn);
+	}
+
+	/* Frame titles are the section h2s: keep the shell title look. */
+	.pg-s3b .term-frame__title {
+		margin: 0;
+		font-weight: 400;
+	}
+
+	/* ---- overview stats ---- */
+	.pg-s3b__statgrid {
+		display: grid;
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		gap: 12px 14px;
+		margin: 0;
+	}
+	.pg-s3b__stat {
+		display: flex;
+		flex-direction: column-reverse;
+		justify-content: flex-end;
+		padding-left: 10px;
+		border-left: 1px solid var(--crt-line);
+	}
+	.pg-s3b__statv {
+		margin: 0;
+		font-size: 15px;
+		line-height: 24px;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		color: var(--crt-green);
+	}
+	.pg-s3b__statk {
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--crt-faint);
+	}
+
+	/* ---- architecture map frame ---- */
+	.pg-s3b__graph {
+		padding: 16px 0 0;
+	}
+	.pg-s3b__graph:has(.s3b-fallback.failed) {
+		border-color: var(--crt-amber);
+	}
+
+	/* toolbar (.title/.crumb/.btn/.hint are suite hooks; see the unlayered
+	   block below for the three that old globals also style) */
+	.s3b-flow .toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 12px;
+		padding: 0 16px 10px;
+		border-bottom: 1px solid var(--crt-line);
+		font-size: 12px;
+	}
+	.s3b-flow__spacer {
+		flex: 1;
+	}
+	.s3b-flow .toolbar .hint {
+		color: var(--crt-faint);
+	}
+	.s3b-flow__canvas {
+		position: relative;
+		width: 100%;
+		height: clamp(440px, 70vh, 640px);
+	}
+
+	/* xyflow reads these (it only defines the `-default` twins), so setting them
+	   here restyles the canvas without fighting its unlayered stylesheet. */
+	.s3b-flow {
+		--xy-background-color: transparent;
+		--xy-edge-stroke: var(--crt-faint);
+		--xy-controls-button-background-color: var(--crt-glass);
+		--xy-controls-button-background-color-hover: var(--crt-glass);
+		--xy-controls-button-color: var(--crt-amber);
+		--xy-controls-button-color-hover: var(--crt-hi);
+		--xy-controls-button-border-color: var(--crt-line);
+		--xy-controls-box-shadow: none;
+		--xy-minimap-background-color: var(--crt-glass);
+		font-family: var(--font-term);
+	}
+
+	/* lanes */
+	.s3b-band {
+		position: relative;
+		border: 1px dashed var(--crt-line);
+		pointer-events: none;
+	}
+	.s3b-band__label,
+	.s3b-band__count {
+		position: absolute;
+		top: 3px;
+		font-size: 10.5px;
+		line-height: 16px;
+		white-space: nowrap;
+		color: var(--crt-faint);
+	}
+	.s3b-band__label {
+		left: 8px;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+	.s3b-band__idx {
+		color: var(--crt-amber);
+	}
+	.s3b-band__count {
+		right: 8px;
+	}
+	:lang(ko) .s3b-band__label {
+		letter-spacing: 0;
+	}
+
+	/* chips: square box, glyph, full name wrapping (no ellipsis) */
+	.s3b-node {
+		display: grid;
+		grid-template-columns: 12px minmax(0, 1fr) auto;
+		column-gap: 4px;
+		align-items: start;
+		width: 180px;
+		min-height: 56px;
+		padding: 6px 8px;
+		border: 1px solid var(--crt-line);
+		background: var(--crt-glass);
+		font-family: var(--font-term);
+		font-size: 11px;
+		line-height: 16px;
+		text-align: left;
+		color: var(--crt-hi);
+		cursor: default;
+	}
+	.s3b-node__glyph {
+		color: var(--crt-amber);
+	}
+	.s3b-node__label {
+		overflow-wrap: anywhere;
+	}
+	.s3b-node__x {
+		color: var(--crt-green);
+	}
+	.s3b-node.expandable {
+		border-left: 2px solid var(--crt-amber);
+		cursor: pointer;
+	}
+	.s3b-node:hover {
+		border-color: var(--crt-amber);
+	}
+	/* Keyboard focus: reverse video, glass on amber 8.90:1. */
+	.s3b-node:focus-visible {
+		border-color: var(--crt-amber);
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+	.s3b-node:focus-visible .s3b-node__glyph,
+	.s3b-node:focus-visible .s3b-node__x {
+		color: var(--crt-glass);
+	}
+
+	/* legend */
+	.s3b-legend {
+		padding: 10px 16px 12px;
+		border-top: 1px solid var(--crt-line);
+		font-size: 11px;
+		line-height: 20px;
+	}
+	.s3b-legend__row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 16px;
+	}
+	.s3b-legend__head {
+		min-width: 78px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	:lang(ko) .s3b-legend__head {
+		letter-spacing: 0;
+	}
+	.s3b-legend__item {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--crt-worn);
+	}
+	.s3b-legend__glyph {
+		color: var(--crt-amber);
+	}
+
+	/* no-JS / error fallback: one line per layer */
+	.s3b-fallback {
+		padding: 0 16px 12px;
+		font-size: 12px;
+		line-height: 22px;
+	}
+	.s3b-fb__note {
+		margin: 0;
+	}
+	.s3b-fb__sig {
+		color: var(--crt-amber);
+	}
+	.s3b-fallback.failed .s3b-fb__note {
+		color: var(--crt-amber);
+	}
+	.s3b-fb__list {
+		margin: 10px 0 0;
+		padding: 0;
+		list-style: none;
+	}
+	.s3b-fb__row {
+		display: grid;
+		grid-template-columns: 20px minmax(0, max-content) max-content minmax(0, 1fr);
+		column-gap: 8px;
+	}
+	.s3b-fb__idx {
+		color: var(--crt-faint);
+	}
+	.s3b-fb__name {
+		color: var(--crt-hi);
+	}
+	.s3b-fb__count {
+		text-align: right;
+		white-space: nowrap;
+		color: var(--crt-green);
+	}
+	.s3b-fb__desc {
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		color: var(--crt-faint);
+	}
+
+	/* ---- layers ---- */
+	.pg-s3b__layer {
+		display: grid;
+		grid-template-columns: 34px minmax(0, 1fr) auto;
+		column-gap: 12px;
+	}
+	.pg-s3b__layer + .pg-s3b__layer {
+		margin-top: 10px;
+	}
+	.pg-s3b__idx {
+		color: var(--crt-amber);
+	}
+	.pg-s3b__nm {
+		margin: 0;
+		font-size: inherit;
+		line-height: inherit;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+	.pg-s3b__cnt {
+		margin: 0;
+		text-align: right;
+		font-size: 12px;
+		white-space: pre;
+	}
+	.pg-s3b__ds {
+		margin: 0;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-worn);
+	}
+	.pg-s3b__layer .pg-s3b__ds {
+		grid-column: 2 / 4;
+	}
+
+	/* ---- subsystems ---- */
+	.pg-s3b__sub {
+		display: grid;
+		grid-template-columns: minmax(0, 330px) minmax(0, 1fr);
+		column-gap: 16px;
+	}
+	.pg-s3b__sub + .pg-s3b__sub {
+		margin-top: 6px;
+	}
+	.pg-s3b__subhead {
+		padding-left: 18px;
+		text-indent: -18px;
+	}
+	.pg-s3b__subhead .pg-s3b__nm {
+		display: inline;
+	}
+	.pg-s3b__priv {
+		display: block;
+		text-indent: 0;
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--crt-faint);
+	}
+
+	/* ---- decision history: the frame lights amber while its region has focus */
+	.pg-s3b__adr:focus-within {
+		border-color: var(--crt-amber);
+	}
+	.pg-s3b__adrscroll {
+		max-height: 176px;
+		overflow-y: auto;
+		scrollbar-color: var(--crt-amber) transparent;
+		scrollbar-width: thin;
+	}
+	.pg-s3b .pg-s3b__adrscroll:focus-visible {
+		outline-offset: 4px;
+	}
+	.pg-s3b__adrlist {
+		margin: 0;
+		padding: 0 8px 0 0;
+		list-style: none;
+	}
+	.pg-s3b__adrrow {
+		display: grid;
+		grid-template-columns: 96px 72px minmax(0, 1fr);
+		column-gap: 12px;
+		font-size: 12px;
+		line-height: 22px;
+	}
+	.pg-s3b__adrt {
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		color: var(--crt-worn);
+	}
+
+	/* ---- blog series ---- */
+	.pg-s3b__fr {
+		position: absolute;
+		top: -9px;
+		right: 12px;
+		margin: 0;
+		padding: 0 6px;
+		background: var(--crt-glass);
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--crt-faint);
+	}
+	.pg-s3b__serieslist {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-s3b__series .series-item {
+		display: grid;
+		grid-template-columns: 34px minmax(0, 1fr) max-content;
+		column-gap: 10px;
+	}
+	.pg-s3b__n {
+		color: var(--crt-faint);
+	}
+	.pg-s3b__series .series-status {
+		text-align: right;
+		font-size: 12px;
+	}
+
+	/* ---- snapshot ---- */
+	.pg-s3b__kv dl {
+		margin: 0;
+	}
+	.pg-s3b__kv dl > div {
+		display: grid;
+		grid-template-columns: 180px minmax(0, 1fr);
+		gap: 12px;
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-s3b__kv dt {
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	:lang(ko) .pg-s3b__kv dt {
+		letter-spacing: 0;
+	}
+	.pg-s3b__kv dd {
+		margin: 0;
+		font-variant-numeric: tabular-nums;
+		overflow-wrap: anywhere;
+		color: var(--crt-green);
+	}
+	.pg-s3b__note {
+		margin: 8px 0 0;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-faint);
+	}
+
+	/* ---- tablet ---- */
+	@media (width < 48rem) {
+		.pg-s3b__statgrid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+		.pg-s3b__sub {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.pg-s3b__sub .pg-s3b__ds {
+			padding-left: 18px;
+		}
+		.s3b-fb__row {
+			grid-template-columns: 20px minmax(0, 1fr) max-content;
+		}
+		.s3b-fb__desc {
+			grid-column: 2 / 4;
+			white-space: normal;
+		}
+		/* The progress meter drops under the title instead of sharing the top
+		   border, where it would run into the h2. */
+		.pg-s3b__fr {
+			position: static;
+			margin: 0 0 6px;
+			padding: 0;
+			background: none;
+		}
+		.s3b-flow__canvas {
+			height: 480px;
+		}
+	}
+
+	/* ---- phone ---- */
+	@media (width < 36rem) {
+		.pg-s3b__statgrid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.pg-s3b__layer {
+			grid-template-columns: 34px minmax(0, 1fr);
+		}
+		.pg-s3b__cnt {
+			grid-column: 2;
+			text-align: left;
+		}
+		.pg-s3b__layer .pg-s3b__ds {
+			grid-column: 2;
+		}
+		.pg-s3b__adrrow {
+			grid-template-columns: 88px minmax(0, 1fr);
+		}
+		.pg-s3b__adrt {
+			grid-column: 1 / -1;
+			white-space: normal;
+		}
+		.pg-s3b__series .series-item {
+			grid-template-columns: 30px minmax(0, 1fr);
+		}
+		.pg-s3b__series .series-status {
+			grid-column: 2;
+			text-align: left;
+		}
+		.pg-s3b__kv dl > div {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 0;
+		}
+	}
+}
+
+/* UNLAYERED on purpose. The suites read `.title`, `.crumb`, `.btn` (graph
+   toolbar) and `span.name` (series items), and those bare names still carry
+   unlayered Rosé Pine rules in globals.css that other pages use, so a layered
+   rule here would lose to them. Scoped under `.pg-s3b` so nothing leaks. */
+.pg-s3b .s3b-flow .toolbar .title {
+	color: var(--crt-hi);
+}
+/* The posts-list `.crumb` (display:flex, margin, uppercase) also matches. */
+.pg-s3b .s3b-flow .toolbar .crumb {
+	display: inline;
+	margin: 0;
+	font: inherit;
+	letter-spacing: normal;
+	text-transform: none;
+	color: var(--crt-amber);
+}
+.pg-s3b .s3b-flow .toolbar .btn {
+	padding: 0 8px;
+	border: 1px solid var(--crt-line);
+	border-radius: 0;
+	background: none;
+	font: inherit;
+	color: var(--crt-green);
+	cursor: pointer;
+	transition: none;
+}
+.pg-s3b .s3b-flow .toolbar .btn:hover {
+	border-color: var(--crt-amber);
+	color: var(--crt-green);
+}
+.pg-s3b .series-item .name {
+	font-weight: 400;
+	color: var(--crt-worn);
+}
+
+/* UNLAYERED on purpose: @xyflow/react's stylesheet is unlayered, so the
+   controls box and minimap frame need unlayered rules with
+   higher specificity to draw as shell `kbd` keys and a lined box. */
+.pg-s3b .s3b-flow .react-flow__controls {
+	display: flex;
+	gap: 4px;
+	box-shadow: none;
+}
+.pg-s3b .s3b-flow .react-flow__controls-button {
+	width: 24px;
+	height: 22px;
+	padding: 4px;
+	border: 1px solid var(--crt-line);
+}
+.pg-s3b .s3b-flow .react-flow__controls-button:hover {
+	border-color: var(--crt-amber);
+}
+.pg-s3b .s3b-flow .react-flow__minimap {
+	border: 1px solid var(--crt-line);
+}
