@@ -119,7 +119,8 @@ const PAGE_MUTATIONS: PageMutation[] = [
 	{
 		kind: 'DEFECT',
 		what: (p) => `the ${p} crumb does not spell the path`,
-		apply: (html) => html.replace(/(<div class="crumb">)[^<]*(<\/div>)/, '$1~/wrong$2'),
+		// REDESIGN: the ported crumb carries a second class (`crumb term-eyebrow`).
+		apply: (html) => html.replace(/(<div class="crumb\b[^"]*">)[^<]*(<\/div>)/, '$1~/wrong$2'),
 	},
 	{
 		kind: 'DEFECT',
@@ -129,15 +130,16 @@ const PAGE_MUTATIONS: PageMutation[] = [
 	{
 		kind: 'DEFECT',
 		what: (p) => `a campaign is dropped from ${p} (count)`,
-		apply: (html) => html.replace(/<li class="campaign">[\s\S]*?<\/ul><\/li>/, ''),
+		// REDESIGN: the ported campaign item carries a second class (`campaign term-frame`).
+		apply: (html) => html.replace(/<li class="campaign\b[^"]*">[\s\S]*?<\/ul><\/li>/, ''),
 	},
 	{
 		kind: 'DEFECT',
 		what: (p) => `two chips in ${p} swap order (same set, different sequence)`,
 		apply: (html) => {
-			const items = [...html.matchAll(/<li><a class="chip[^"]*"[\s\S]*?<\/a><\/li>/g)].map(
-				(m) => m[0],
-			);
+			// REDESIGN: chip rows are now `<li class="pg-feed__row">` with decoration
+			// around the anchor, so the chip anchors themselves are swapped.
+			const items = [...html.matchAll(/<a class="chip[^"]*"[\s\S]*?<\/a>/g)].map((m) => m[0]);
 			const [a, b] = items;
 			return html.replace(a, '__swap__').replace(b, a).replace('__swap__', b);
 		},
@@ -156,7 +158,9 @@ const PAGE_MUTATIONS: PageMutation[] = [
 	{
 		kind: 'DEFECT',
 		what: (p) => `a campaign topic in ${p} is wrong`,
-		apply: (html) => html.replace(/(<h2 class="campaign__topic">)[^<]*(<\/h2>)/, '$1Wrong topic$2'),
+		// REDESIGN: the ported topic heading carries a second class (`campaign__topic term-sub`).
+		apply: (html) =>
+			html.replace(/(<h2 class="campaign__topic\b[^"]*">)[^<]*(<\/h2>)/, '$1Wrong topic$2'),
 	},
 	{
 		kind: 'DEFECT',
@@ -184,12 +188,20 @@ const PAGE_MUTATIONS: PageMutation[] = [
 	{
 		kind: 'DEFECT',
 		what: (p) => `an external chip in ${p} loses rel="noopener noreferrer"`,
-		apply: (html) => html.replace(' rel="noopener noreferrer">', '>'),
+		// REDESIGN: chip anchors now end with `title="…"`, so an unscoped `rel="…">` match hit the
+		// footer's GitHub link instead; the edit is scoped to the first chip anchor.
+		apply: (html) =>
+			html.replace(/<a class="chip[^"]*"[^>]*>/, (tag) =>
+				tag.replace(' rel="noopener noreferrer"', ''),
+			),
 	},
 	{
 		kind: 'DEFECT',
 		what: (p) => `an external chip in ${p} loses target="_blank"`,
-		apply: (html) => html.replace(' target="_blank"', ''),
+		// REDESIGN: scoped to the first chip anchor, like the rel row above, so the
+		// shell footer's external links can never absorb the mutation.
+		apply: (html) =>
+			html.replace(/<a class="chip[^"]*"[^>]*>/, (tag) => tag.replace(' target="_blank"', '')),
 	},
 	{
 		kind: 'DEFECT',

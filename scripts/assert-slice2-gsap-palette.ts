@@ -226,6 +226,11 @@ export const DECK_SENTINELS = ['data-flip-id', 'account-separation'];
  */
 /** The palette overlay's class name: present in whichever chunk carries FuzzyFinder. */
 const PALETTE_SENTINEL = 'cmdk-overlay';
+/**
+ * A string only global-error's compiled code carries: its document title
+ * (`next/app/global-error.tsx`). M4 uses it to find that boundary's chunks.
+ */
+const GLOBAL_ERROR_MARKER = 'Something went wrong | Brandon Wie';
 
 export const GSAP_SENTINEL = 'Missing plugin? gsap.registerPlugin()';
 
@@ -292,7 +297,14 @@ export interface Slice2GsapOptions {
 	 * sentinel), the same way I7 substitutes the ordering function.
 	 */
 	paletteSentinel?: string;
-	mountPages?: { locale: string; error: string };
+	// REDESIGN: `error` became `notFound` -- B3 mounts the palette on 404.html,
+	// so that document is now asserted to CARRY it (see M4).
+	mountPages?: { locale: string; notFound: string };
+	/**
+	 * M4's third seam: a string only the global-error boundary's compiled code
+	 * carries, used to find that boundary's chunks in the export.
+	 */
+	errorMarker?: string;
 	/** Replace the declared dependency pins. */
 	dependencyPins?: Record<string, string>;
 	/** Replace the declared deck export counts. */
@@ -443,6 +455,61 @@ function tweenExpressions(
 		pairs[match[1]] = match[2].replace(/,$/, '').replace(/\s+/g, ' ').trim();
 	}
 	return pairs;
+}
+
+/**
+ * Repo-relative modules a source file imports, directly or transitively.
+ *
+ * Follows static `import … from`, side-effect `import '…'`, `export … from` and
+ * dynamic `import('…')` specifiers that are relative or use the `@/` alias
+ * (`next/tsconfig.json`: `@/*` -> `./src/*`); package imports are not ours
+ * and are skipped. Only `.ts`/`.tsx` modules are walked. Reads go through the
+ * caller's `read`/`exists`, so source overrides apply.
+ */
+function importClosure(
+	entry: string,
+	read: (rel: string) => string,
+	exists: (rel: string) => boolean,
+): string[] {
+	const seen = new Set<string>();
+	const resolveSpecifier = (from: string, spec: string): string | null => {
+		let base: string;
+		if (spec.startsWith('@/')) base = `next/src/${spec.slice(2)}`;
+		else if (spec.startsWith('./') || spec.startsWith('../')) {
+			const parts = from.split('/').slice(0, -1);
+			for (const piece of spec.split('/')) {
+				if (piece === '..') parts.pop();
+				else if (piece !== '.') parts.push(piece);
+			}
+			base = parts.join('/');
+		} else return null;
+		for (const candidate of [
+			base,
+			`${base}.ts`,
+			`${base}.tsx`,
+			`${base}/index.ts`,
+			`${base}/index.tsx`,
+		]) {
+			if (/\.(ts|tsx)$/.test(candidate) && exists(candidate)) return candidate;
+		}
+		return null;
+	};
+	const visit = (rel: string): void => {
+		if (seen.has(rel)) return;
+		seen.add(rel);
+		const source = stripComments(read(rel));
+		const specs = [
+			...source.matchAll(/\b(?:import|export)\b[^'"`;]*?\bfrom\s*['"]([^'"]+)['"]/g),
+			...source.matchAll(/\bimport\s*['"]([^'"]+)['"]/g),
+			...source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g),
+		].map((m) => m[1]);
+		for (const spec of specs) {
+			const next = resolveSpecifier(rel, spec);
+			if (next) visit(next);
+		}
+	};
+	visit(entry);
+	return [...seen];
 }
 
 /**
@@ -1378,63 +1445,97 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 	// M1 scans the whole app tree for stray mounts, and owns its roots.
 	const MOUNT_SCAN_ROOTS = ['next/src', 'next/app'];
 
-	r.row('M1', 'the palette mounts once per locale layout and nowhere else', () => {
-		// Cardinality is PER SITE, not tree-wide: the design has two root layouts,
-		// one per locale group, and each mounts the controller exactly once. An
-		// import count is not an instance count, so both are checked — the import
-		// row bounds who CAN mount a host, the render rows bound how many DO.
-		const renders = (source: string, tag: string): number =>
-			(codeOnly(source).match(new RegExp(`<${tag}[\\s/>]`, 'g')) ?? []).length;
+	// REDESIGN: title names the B3 not-found mount (was "once per locale layout and nowhere else").
+	r.row(
+		'M1',
+		'the palette mounts once per locale layout, once on the not-found shell, and nowhere else',
+		() => {
+			// Cardinality is PER SITE, not tree-wide: the design has two root layouts,
+			// one per locale group, and each mounts the controller exactly once. An
+			// import count is not an instance count, so both are checked — the import
+			// row bounds who CAN mount a host, the render rows bound how many DO.
+			const renders = (source: string, tag: string): number =>
+				(codeOnly(source).match(new RegExp(`<${tag}[\\s/>]`, 'g')) ?? []).length;
 
-		for (const locale of ['en', 'ko']) {
-			const layout = read(`next/app/(${locale})/layout.tsx`);
-			eq(renders(layout, 'ShellPalette'), 1, `${locale} layout ShellPalette renders`);
-		}
-
-		// Every other module: zero renders. `global-error.tsx` and
-		// `global-not-found.tsx` are the load-bearing members of this set — they
-		// render `SiteShell`, and the error route is `'use client'`, so a mount
-		// that reached them would pull the palette into that route's bundle.
-		const allowed = new Set(['next/app/(en)/layout.tsx', 'next/app/(ko)/layout.tsx']);
-		const strays: string[] = [];
-		let scanned = 0;
-		// Fixed roots, NOT `options.scanRoots`: that seam belongs to P3's claim
-		// about Svelte imports. Sharing it would let a P3 control decide how much
-		// of the tree this row inspects, which is how a row starts passing for a
-		// reason that has nothing to do with what it asserts.
-		for (const dir of MOUNT_SCAN_ROOTS) {
-			for (const file of walk(resolve(root, dir))) {
-				if (!/\.(ts|tsx)$/.test(file)) continue;
-				const rel = relative(root, file);
-				if (rel.includes(`${'/'}paraglide${'/'}`)) continue;
-				scanned += 1;
-				if (allowed.has(rel)) continue;
-				if (renders(read(rel), 'ShellPalette') > 0) strays.push(rel);
+			for (const locale of ['en', 'ko']) {
+				const layout = read(`next/app/(${locale})/layout.tsx`);
+				eq(renders(layout, 'ShellPalette'), 1, `${locale} layout ShellPalette renders`);
 			}
-		}
-		must(scanned > 0, 'the mount scan read no files, so it proves nothing');
-		must(strays.length === 0, `ShellPalette is also rendered by ${strays.join(', ')}`);
+			// REDESIGN: B3 (02e5ae2) mounts the controller as the 404 shell's header,
+			// so `global-not-found.tsx` is a third allowed site -- exactly once.
+			eq(
+				renders(read('next/app/global-not-found.tsx'), 'ShellPalette'),
+				1,
+				'global-not-found ShellPalette renders',
+			);
 
-		// One host inside the controller, and one importer of the host: two hosts
-		// mean two chord listeners and two overlays on the same page.
-		const shell = read('next/src/components/palette/ShellPalette.tsx');
-		eq(renders(shell, 'PaletteHost'), 1, 'PaletteHost renders inside the controller');
-
-		const importers: string[] = [];
-		for (const dir of MOUNT_SCAN_ROOTS) {
-			for (const file of walk(resolve(root, dir))) {
-				if (!/\.(ts|tsx)$/.test(file)) continue;
-				const rel = relative(root, file);
-				if (rel === 'next/src/components/palette/PaletteHost.tsx') continue;
-				if (/from '@\/components\/palette\/PaletteHost'/.test(stripComments(read(rel)))) {
-					importers.push(rel);
+			// Every other module: zero renders. `global-error.tsx` is the load-bearing
+			// member of this set -- it renders `SiteShell` and is `'use client'`, so a
+			// mount that reached it would pull the palette into that route's bundle.
+			const allowed = new Set([
+				'next/app/(en)/layout.tsx',
+				'next/app/(ko)/layout.tsx',
+				'next/app/global-not-found.tsx',
+			]);
+			const strays: string[] = [];
+			let scanned = 0;
+			// Fixed roots, NOT `options.scanRoots`: that seam belongs to P3's claim
+			// about Svelte imports. Sharing it would let a P3 control decide how much
+			// of the tree this row inspects, which is how a row starts passing for a
+			// reason that has nothing to do with what it asserts.
+			for (const dir of MOUNT_SCAN_ROOTS) {
+				for (const file of walk(resolve(root, dir))) {
+					if (!/\.(ts|tsx)$/.test(file)) continue;
+					const rel = relative(root, file);
+					if (rel.includes(`${'/'}paraglide${'/'}`)) continue;
+					scanned += 1;
+					if (allowed.has(rel)) continue;
+					if (renders(read(rel), 'ShellPalette') > 0) strays.push(rel);
 				}
 			}
-		}
-		eq(importers, ['next/src/components/palette/ShellPalette.tsx'], 'PaletteHost importers');
+			must(scanned > 0, 'the mount scan read no files, so it proves nothing');
+			must(strays.length === 0, `ShellPalette is also rendered by ${strays.join(', ')}`);
 
-		return `2 locale mounts, 0 strays across ${scanned} modules, 1 host, 1 importer`;
-	});
+			// REDESIGN: global-error has no exported document for M4 to read, so its
+			// palette-freedom is also bounded here, at the source: nothing it imports,
+			// directly or transitively, may reach the controller or the host. A render
+			// count alone would miss an import that mounts the palette one level down.
+			const forbidden = [
+				'next/src/components/palette/ShellPalette.tsx',
+				'next/src/components/palette/PaletteHost.tsx',
+			];
+			const closure = importClosure('next/app/global-error.tsx', read, exists);
+			must(
+				closure.length > 1,
+				'the global-error import walk resolved no imports, so it proves nothing',
+			);
+			const reached = forbidden.filter((file) => closure.includes(file));
+			must(
+				reached.length === 0,
+				`global-error.tsx reaches ${reached.join(', ')} through its imports`,
+			);
+
+			// One host inside the controller, and one importer of the host: two hosts
+			// mean two chord listeners and two overlays on the same page.
+			const shell = read('next/src/components/palette/ShellPalette.tsx');
+			eq(renders(shell, 'PaletteHost'), 1, 'PaletteHost renders inside the controller');
+
+			const importers: string[] = [];
+			for (const dir of MOUNT_SCAN_ROOTS) {
+				for (const file of walk(resolve(root, dir))) {
+					if (!/\.(ts|tsx)$/.test(file)) continue;
+					const rel = relative(root, file);
+					if (rel === 'next/src/components/palette/PaletteHost.tsx') continue;
+					if (/from '@\/components\/palette\/PaletteHost'/.test(stripComments(read(rel)))) {
+						importers.push(rel);
+					}
+				}
+			}
+			eq(importers, ['next/src/components/palette/ShellPalette.tsx'], 'PaletteHost importers');
+
+			return `2 locale mounts + 1 not-found mount, 0 strays across ${scanned} modules, global-error closure of ${closure.length} module(s) palette-free, 1 host, 1 importer`;
+		},
+	);
 
 	r.row('M2', 'readiness is attachment: the marker is set and cleared with the listener', () => {
 		// A browser probe waits on `data-palette-ready` before it chords. If the
@@ -1733,45 +1834,64 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		return `${lazyHits} lazy chunk(s) carry GSAP, 0 of the ${eager.size} eager ones do`;
 	});
 
-	r.row('M4', 'the palette ships to the locale documents and not to the error document', () => {
-		// The exported artifact half of the header-slot decision. The locale
-		// layouts mount the controller, so a locale document must eagerly load a
-		// chunk carrying the palette overlay; `404.html` is rendered by
-		// `global-not-found`, which passes no header, so the same chunk must be
-		// absent from what that document loads. Source counts (M1) bound where a
-		// mount may be written; this bounds what actually shipped.
-		const eagerOf = (page: string): Set<string> => {
-			const html = readFileSync(join(buildDir, page), 'utf8');
-			const eager = new Set<string>();
-			for (const match of html.matchAll(/(?:src|href)="([^"]+\.js)"/g)) eager.add(match[1]);
-			must(eager.size > 0, `${page} references no scripts at all`);
-			return eager;
-		};
+	// REDESIGN: M4 used to require 404.html to load NO palette chunk. B3
+	// (02e5ae2) mounts the palette on global-not-found by design, so 404.html
+	// must now CARRY it, and the "not on the error route" half moves to the one
+	// error route that still must stay palette-free: global-error. A static
+	// export writes no document for global-error -- its boundary ships as
+	// client chunks loaded with every page -- so the row reads those chunks,
+	// found by a marker only global-error's compiled code carries. M1 bounds the
+	// same route at the source through its import closure.
+	r.row(
+		'M4',
+		'the palette ships to the locale and not-found documents, and not in the global-error boundary',
+		() => {
+			const eagerOf = (page: string): Set<string> => {
+				const html = readFileSync(join(buildDir, page), 'utf8');
+				const eager = new Set<string>();
+				for (const match of html.matchAll(/(?:src|href)="([^"]+\.js)"/g)) eager.add(match[1]);
+				must(eager.size > 0, `${page} references no scripts at all`);
+				return eager;
+			};
 
-		const sentinel = options.paletteSentinel ?? PALETTE_SENTINEL;
-		const pages = options.mountPages ?? { locale: 'index.html', error: '404.html' };
+			const sentinel = options.paletteSentinel ?? PALETTE_SENTINEL;
+			const marker = options.errorMarker ?? GLOBAL_ERROR_MARKER;
+			const pages = options.mountPages ?? { locale: 'index.html', notFound: '404.html' };
 
-		const carriers = new Set<string>();
-		for (const file of walk(join(buildDir, '_next'))) {
-			if (!file.endsWith('.js')) continue;
-			const url = `/_next/${relative(join(buildDir, '_next'), file).split('\\').join('/')}`;
-			if (readFileSync(file, 'utf8').includes(sentinel)) carriers.add(url);
-		}
-		// A sentinel that matches nothing would make both halves below vacuous.
-		must(carriers.size > 0, `no chunk contains ${sentinel}; the sentinel is stale`);
+			const carriers = new Set<string>();
+			const errorChunks = new Set<string>();
+			for (const file of walk(join(buildDir, '_next'))) {
+				if (!file.endsWith('.js')) continue;
+				const url = `/_next/${relative(join(buildDir, '_next'), file).split('\\').join('/')}`;
+				const text = readFileSync(file, 'utf8');
+				if (text.includes(sentinel)) carriers.add(url);
+				if (text.includes(marker)) errorChunks.add(url);
+			}
+			// A sentinel or marker that matches nothing would make its half vacuous.
+			must(carriers.size > 0, `no chunk contains ${sentinel}; the sentinel is stale`);
+			must(
+				errorChunks.size > 0,
+				`no chunk contains the global-error marker ${JSON.stringify(marker)}; the marker is stale`,
+			);
 
-		const localeEager = eagerOf(pages.locale);
-		const errorEager = eagerOf(pages.error);
-		const onLocale = [...carriers].filter((url) => localeEager.has(url));
-		const onError = [...carriers].filter((url) => errorEager.has(url));
-
-		must(
-			onLocale.length > 0,
-			'no locale document eagerly loads the palette; the mount did not ship',
-		);
-		must(onError.length === 0, `the error document loads the palette in ${onError.join(', ')}`);
-		return `${onLocale.length} palette chunk(s) on the locale document, 0 on the error document`;
-	});
+			const onLocale = [...carriers].filter((url) => eagerOf(pages.locale).has(url));
+			const onNotFound = [...carriers].filter((url) => eagerOf(pages.notFound).has(url));
+			must(
+				onLocale.length > 0,
+				'no locale document eagerly loads the palette; the mount did not ship',
+			);
+			must(
+				onNotFound.length > 0,
+				`${pages.notFound} loads no palette chunk; the B3 not-found mount did not ship`,
+			);
+			const shared = [...errorChunks].filter((url) => carriers.has(url));
+			must(
+				shared.length === 0,
+				`the global-error boundary's chunk(s) carry the palette: ${shared.join(', ')}`,
+			);
+			return `${onLocale.length} palette chunk(s) on the locale document, ${onNotFound.length} on the not-found document, 0 in the ${errorChunks.size} global-error chunk(s)`;
+		},
+	);
 
 	// ------------------------------------------------------------ C: typecheck
 

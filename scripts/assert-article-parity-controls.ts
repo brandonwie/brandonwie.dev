@@ -53,6 +53,19 @@ function replaceJsonLdField(html: string, field: string, value: string): string 
 	);
 }
 
+/**
+ * Renames one class TOKEN on the first element carrying it, leaving the other
+ * tokens in place. The post port adds layout classes beside the hooks the
+ * assertions read (`term-frame article-toc pg-post__toc`), so a whole-attribute
+ * match like `class="article-toc"` stopped matching and became a no-op.
+ */
+function renameClassToken(html: string, from: string, to: string): string {
+	return html.replace(
+		new RegExp(`class="((?:[^"]*\\s)?)${from}((?:\\s[^"]*)?)"`),
+		(_, before: string, after: string) => `class="${before}${to}${after}"`,
+	);
+}
+
 const CONTROLS: Control[] = [
 	{
 		id: 'AP-01',
@@ -249,14 +262,16 @@ const CONTROLS: Control[] = [
 		kind: 'DEFECT',
 		what: 'the Korean static table of contents is removed',
 		target: 'ko',
-		apply: (html) => html.replace('class="article-toc"', 'class="article-outline"'),
+		// REDESIGN: the TOC's class list is now `term-frame article-toc pg-post__toc`; rename the token.
+		apply: (html) => renameClassToken(html, 'article-toc', 'article-outline'),
 	},
 	{
 		id: 'AP-25',
 		kind: 'DEFECT',
 		what: 'the Korean tag list is removed',
 		target: 'ko',
-		apply: (html) => html.replace('class="article-tags"', 'class="article-labels"'),
+		// REDESIGN: the tag list's class list is now `v article-tags`; rename the token.
+		apply: (html) => renameClassToken(html, 'article-tags', 'article-labels'),
 	},
 	{
 		id: 'AP-26',
@@ -302,7 +317,8 @@ const CONTROLS: Control[] = [
 		kind: 'DEFECT',
 		what: 'the Korean article details are removed',
 		target: 'ko',
-		apply: (html) => html.replace('class="article-meta"', 'class="article-summary"'),
+		// REDESIGN: the details' class list is now `term-frame article-meta pg-post__fm`; rename the token.
+		apply: (html) => renameClassToken(html, 'article-meta', 'article-summary'),
 	},
 	{
 		id: 'AP-32',
@@ -431,7 +447,8 @@ const CONTROLS: Control[] = [
 		id: 'AP-45',
 		kind: 'DEFECT',
 		what: 'the article shell identity is removed while its landmark remains',
-		apply: (html) => html.replace('class="article-shell"', 'class="content-shell"'),
+		// REDESIGN: the article's class list is now `article-shell pg-post__article`; rename the token.
+		apply: (html) => renameClassToken(html, 'article-shell', 'content-shell'),
 	},
 ];
 

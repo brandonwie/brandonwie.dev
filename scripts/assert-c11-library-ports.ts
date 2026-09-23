@@ -53,7 +53,7 @@ import {
 	symlinkSync,
 	writeFileSync,
 } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 
 import {
 	buildDrilldown,
@@ -654,6 +654,31 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 	const exists = (rel: string): boolean =>
 		existsSync(overrides[rel] ? resolve(root, overrides[rel]) : resolve(root, rel));
 
+	/**
+	 * The app's own stylesheet: `next/app/globals.css` plus every file it
+	 * `@import`s by a relative path, recursively (bare package imports such as
+	 * `tailwindcss` are not ours and are skipped). Each file goes through `read`,
+	 * so the controls' overrides apply per file.
+	 *
+	 * REDESIGN: the Phosphor Fade page ports moved page styles, including the 3B
+	 * graph's react-flow rules, out of globals.css into `styles/pages/*.css`
+	 * imported from it. Reading globals.css alone would miss a foreign selector
+	 * in those files, and would pass P6 only as long as one rule stayed behind.
+	 */
+	const ownStylesheet = (rel = 'next/app/globals.css', seen = new Set<string>()): string => {
+		if (seen.has(rel)) return '';
+		seen.add(rel);
+		const text = read(rel);
+		const parts = [text];
+		for (const match of text.matchAll(/@import\s+['"](\.{1,2}\/[^'"]+)['"]/g)) {
+			const child = relative(root, resolve(root, dirname(rel), match[1]))
+				.split('\\')
+				.join('/');
+			parts.push(ownStylesheet(child, seen));
+		}
+		return parts.join('\n');
+	};
+
 	if (!existsSync(buildDir)) {
 		console.error(`FATAL: ${relative(root, buildDir)} is missing. Run pnpm build:next first.`);
 		return 2;
@@ -767,7 +792,8 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 	);
 
 	await r.row('P6', "the app's own CSS targets the shipped stack's flow prefix", () => {
-		const css = read('next/app/globals.css');
+		// REDESIGN: reads globals.css and its imported page stylesheets, where the graph CSS now lives.
+		const css = ownStylesheet();
 		const foreign = [...new Set([...css.matchAll(/\.svelte-flow[_a-z-]*/g)].map((m) => m[0]))];
 		must(
 			foreign.length === 0,
@@ -993,7 +1019,8 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 
 	await r.row('H3', 'flow code lives ONLY in chunks the page does not reference', () => {
 		must(chunks.length > 0, 'no chunks found under _next/static/chunks');
-		const css = read('next/app/globals.css');
+		// REDESIGN: "our own stylesheet" now spans globals.css and its imported page files.
+		const css = ownStylesheet();
 		const leaked = FLOW_RUNTIME_SENTINELS.filter((sentinel) => css.includes(sentinel));
 		must(
 			leaked.length === 0,

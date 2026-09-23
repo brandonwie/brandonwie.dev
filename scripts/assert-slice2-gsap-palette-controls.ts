@@ -1008,6 +1008,36 @@ const CONTROLS: Control[] = [
 			),
 		}),
 	},
+	// REDESIGN: B3 made global-not-found an allowed mount site, exactly once;
+	// these two rows hold that bound and the global-error import closure.
+	{
+		id: 'M1-defect-not-found-mounts-twice',
+		kind: 'defect',
+		row: 'M1',
+		what: 'the not-found shell mounts the controller a second time beside its header slot',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/app/global-not-found.tsx', (text) =>
+				text.replace(
+					'\t\t\t<SiteShell\n\t\t\t\tlocale="en"',
+					'\t\t\t<ShellPalette locale="en" copy={shellCopy(\'en\')} posts={palettePosts(\'en\')} />\n\t\t\t<SiteShell\n\t\t\t\tlocale="en"',
+				),
+			),
+		}),
+	},
+	{
+		id: 'M1-defect-error-route-reaches-the-controller-transitively',
+		kind: 'defect',
+		row: 'M1',
+		what: 'a module global-error imports (the site shell) pulls in the controller without rendering it',
+		setup: (dir) => ({
+			sourceOverrides: mutateSource(dir, 'next/src/shell/site-shell.tsx', (text) =>
+				text.replace(
+					"import type { ReactNode } from 'react';",
+					"import type { ReactNode } from 'react';\nimport '@/components/palette/ShellPalette';",
+				),
+			),
+		}),
+	},
 	{
 		id: 'M1-defect-second-host-inside-the-controller',
 		kind: 'defect',
@@ -1085,14 +1115,50 @@ const CONTROLS: Control[] = [
 		id: 'M4-defect-error-document-carries-the-palette',
 		kind: 'defect',
 		row: 'M4',
-		what: 'the document standing in for the error route eagerly loads the palette',
+		what: 'the chunks standing in for the global-error boundary carry the palette',
 		setup: () => ({
 			// Substituted, not mutated: the row reads built chunks, so a source
 			// edit would leave it reading the same build. Pointing the error half
-			// at a document that DOES mount the palette proves the row reads that
-			// document rather than assuming its answer.
-			mountPages: { locale: 'index.html', error: 'index.html' },
+			// at chunks that DO carry the palette proves the row reads those
+			// chunks rather than assuming its answer.
+			// REDESIGN: the error half is now global-error's chunks (found by
+			// marker), not 404.html, which B3 deliberately gives the palette.
+			errorMarker: 'cmdk-overlay',
 		}),
+	},
+	{
+		id: 'M4-defect-not-found-document-drops-the-palette',
+		kind: 'defect',
+		row: 'M4',
+		what: '404.html no longer loads the palette chunk, so the B3 mount did not ship',
+		setup: (dir) => {
+			// REDESIGN: B3 requires the palette on 404.html; strip every script
+			// reference to a palette-carrying chunk from a copy of that document.
+			const copy = copyBuild(dir);
+			const carriers = new Set<string>();
+			const chunks = join(copy, '_next', 'static', 'chunks');
+			for (const name of readdirSync(chunks)) {
+				if (
+					name.endsWith('.js') &&
+					readFileSync(join(chunks, name), 'utf8').includes('cmdk-overlay')
+				)
+					carriers.add(name);
+			}
+			mutateFile(join(copy, '404.html'), (html) =>
+				html.replace(
+					/<(script|link)\b[^>]*(?:src|href)="[^"]*\/([^"/]+\.js)"[^>]*>(?:<\/script>)?/g,
+					(tag, _t, name: string) => (carriers.has(name) ? '' : tag),
+				),
+			);
+			return { buildDir: copy };
+		},
+	},
+	{
+		id: 'M4-defect-error-marker-matches-nothing',
+		kind: 'defect',
+		row: 'M4',
+		what: 'the global-error marker is stale, which would make the error half vacuous',
+		setup: () => ({ errorMarker: 'this-marker-does-not-exist' }),
 	},
 	{
 		id: 'M4-defect-sentinel-matches-nothing',

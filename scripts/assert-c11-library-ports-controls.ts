@@ -89,6 +89,9 @@ interface Control {
 
 /** Copy one repo file into scratch with a substitution applied, and PROVE the
  *  substitution changed something. */
+/** Where the 3B graph's react-flow rules live since the page ports. */
+const SYSTEM_3B_CSS = 'next/app/styles/pages/system-3b.css';
+
 function mutateSource(
 	dir: string,
 	rel: string,
@@ -233,8 +236,9 @@ const CONTROLS: Control[] = [
 		what: "the graph CSS keeps the Svelte stack's class prefix — the review finding this row exists for",
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (sourceText) =>
-				sourceText.split('.canvas .react-flow').join('.canvas .svelte-flow'),
+			// REDESIGN: the graph rules moved to styles/pages/system-3b.css (imported by globals.css).
+			sourceOverrides: mutateSource(dir, SYSTEM_3B_CSS, (sourceText) =>
+				sourceText.split('.s3b-flow .react-flow').join('.s3b-flow .svelte-flow'),
 			),
 		}),
 	},
@@ -245,9 +249,16 @@ const CONTROLS: Control[] = [
 		what: 'the graph CSS is dropped rather than ported',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (sourceText) =>
-				sourceText.split('.canvas .react-flow').join('.canvas .no-such-flow'),
-			),
+			// REDESIGN: dropping the graph CSS now means both files that hold react-flow rules --
+			// the page stylesheet and the one rule kept in globals.css.
+			sourceOverrides: {
+				...mutateSource(dir, 'next/app/globals.css', (sourceText) =>
+					sourceText.split('.s3b-flow .react-flow').join('.s3b-flow .no-such-flow'),
+				),
+				...mutateSource(dir, SYSTEM_3B_CSS, (sourceText) =>
+					sourceText.split('.s3b-flow .react-flow').join('.s3b-flow .no-such-flow'),
+				),
+			},
 		}),
 	},
 	{
@@ -257,8 +268,12 @@ const CONTROLS: Control[] = [
 		what: 'the graph CSS gains a comment',
 		setup: (dir) => ({
 			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'next/app/globals.css', (sourceText) =>
-				sourceText.replace('.canvas .react-flow {', '/* graph surface */\n.canvas .react-flow {'),
+			// REDESIGN: the comment lands beside the graph rules in their new file.
+			sourceOverrides: mutateSource(dir, SYSTEM_3B_CSS, (sourceText) =>
+				sourceText.replace(
+					'.pg-s3b .s3b-flow .react-flow__controls {',
+					'/* graph surface */\n.pg-s3b .s3b-flow .react-flow__controls {',
+				),
 			),
 		}),
 	},
