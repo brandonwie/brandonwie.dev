@@ -191,7 +191,10 @@
 	.term-bar__nav {
 		display: flex;
 		flex-wrap: wrap;
-		padding: 2px var(--term-pad);
+		/* Each link carries 8px of side padding for its tap target, so the row
+		   starts 8px early: every wrapped row then lines its text up with the
+		   column, which a first-child negative margin only did for row one. */
+		padding: 2px calc(var(--term-pad) - 8px);
 		border-top: 1px solid var(--crt-line);
 		font-size: 12px;
 		letter-spacing: 0.06em;
@@ -204,9 +207,6 @@
 		color: var(--crt-worn);
 		text-decoration: none;
 		text-transform: lowercase;
-	}
-	.term-bar__nav a:first-child {
-		margin-left: -8px;
 	}
 	.term-bar__nav a:hover {
 		color: var(--crt-hi);
