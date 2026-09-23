@@ -1,2 +1,114 @@
 /* Phosphor Fade page styles: tags. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Scoped under `.pg-tags` and prefixed `pg-tags__`.
+
+   Specificity note: the shell's focus ring is
+   `.term-glass :is(…, [tabindex]):focus-visible` (0,3,0) and the shell block
+   comes after this file, so the link focus rule carries an element selector
+   (0,3,1): tag and title links show reverse video on keyboard focus. */
+@layer components {
+	.pg-tags__eyebrow {
+		margin: 14px 0 0;
+	}
+	.pg-tags__h1 {
+		display: inline-block;
+		margin-top: 4px;
+	}
+	.pg-tags__intro {
+		max-width: 680px;
+		margin: 10px 0 0;
+	}
+	.pg-tags h2.pg-tags__ft,
+	.pg-tags h3.pg-tags__ft {
+		margin: 0;
+		font-weight: 400;
+	}
+
+	/* Cloud: meters for 10+ posts, `uniq -c` rows below. */
+	.pg-tags__cloud {
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-tags__mrow {
+		display: grid;
+		grid-template-columns: 150px max-content 40px;
+		gap: 12px;
+		justify-content: start;
+	}
+	.pg-tags__ct {
+		text-align: right;
+		white-space: pre;
+		color: var(--crt-amber);
+	}
+	.pg-tags__rule {
+		margin: 12px 0 6px;
+		font-size: 11px;
+		color: var(--crt-faint);
+	}
+	.pg-tags__urow {
+		display: grid;
+		grid-template-columns: 30px minmax(0, 1fr);
+		gap: 16px;
+	}
+	.pg-tags__urow + .pg-tags__urow {
+		margin-top: 4px;
+	}
+	.pg-tags__flow {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0 10px;
+		min-width: 0;
+	}
+	.pg-tags__flow .pg-tags__lnk {
+		white-space: nowrap;
+	}
+	.pg-tags a.pg-tags__lnk:focus-visible {
+		outline: none;
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+
+	/* All tags: one frame per tag. `:target` = the active frame (amber border);
+	   the scroll margin keeps production's 6rem so the cut-in title stays clear
+	   of the viewport edge after a cloud jump. */
+	.pg-tags__all {
+		margin: 14px 0 0;
+		font-weight: 400;
+	}
+	.pg-tags__grp {
+		scroll-margin-top: 6rem;
+	}
+	.pg-tags__grp:target {
+		border-color: var(--crt-amber);
+	}
+	.pg-tags__grp ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-tags__grp li {
+		display: grid;
+		grid-template-columns: 104px minmax(0, 1fr);
+		gap: 12px;
+	}
+	.pg-tags__dt {
+		color: var(--crt-faint);
+	}
+
+	@media (width < 36rem) {
+		.pg-tags__mrow {
+			grid-template-columns: minmax(0, 1fr) 40px;
+		}
+		.pg-tags__mrow .term-meter {
+			display: none;
+		}
+		.pg-tags__grp li {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 0;
+		}
+		.pg-tags__grp li + li {
+			margin-top: 6px;
+		}
+	}
+}

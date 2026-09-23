@@ -1,2 +1,103 @@
 /* Phosphor Fade page styles: contact. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Scoped under `.pg-contact` and prefixed `pg-contact__`.
+
+   Specificity note: the shell's focus ring is
+   `.term-glass :is(…, [tabindex]):focus-visible` (0,3,0) and the shell block
+   comes after this file, so the row focus rule carries an element selector
+   (0,3,1): keyboard focus is reverse video across the whole row instead. */
+@layer components {
+	.pg-contact__readme {
+		margin-top: 10px;
+		padding-left: 2ch;
+		border-left: 1px solid var(--crt-line);
+	}
+	.pg-contact__readme .term-eyebrow {
+		margin: 0;
+	}
+	.pg-contact__h1 {
+		display: inline-block;
+		margin-top: 4px;
+	}
+	.pg-contact__intro {
+		margin: 8px 0 0;
+		color: var(--crt-worn);
+	}
+	.pg-contact h2.pg-contact__ft {
+		margin: 0;
+		font-weight: 400;
+	}
+
+	/* ls -l channels/: every row is one <a>, fixed ch columns. */
+	.pg-contact__ls {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-contact__total {
+		margin-bottom: 4px;
+		color: var(--crt-faint);
+	}
+	.pg-contact__row {
+		display: grid;
+		grid-template-columns: 1ch 3ch 10ch 6ch 8ch 2ch minmax(0, 1fr) 7ch;
+		column-gap: 1ch;
+		align-items: baseline;
+		margin: 0 -8px;
+		padding: 2px 8px;
+		white-space: nowrap;
+		color: var(--crt-worn);
+		text-decoration: none;
+	}
+	.pg-contact__car {
+		color: transparent;
+	}
+	.pg-contact__n,
+	.pg-contact__perm,
+	.pg-contact__arr,
+	.pg-contact__kind {
+		color: var(--crt-faint);
+	}
+	.pg-contact__sch {
+		color: var(--crt-amber);
+	}
+	.pg-contact__name {
+		color: var(--crt-hi);
+	}
+	.pg-contact__val {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		color: var(--crt-green);
+	}
+	.pg-contact__kind {
+		text-align: right;
+	}
+	.pg-contact__row:hover .pg-contact__car,
+	.pg-contact__row:hover .pg-contact__kind {
+		color: var(--crt-amber);
+	}
+	.pg-contact__row:hover .pg-contact__val {
+		text-decoration: underline;
+	}
+	/* Keyboard focus: .sel reverse video, glass on amber 8.90:1 (shell pair). */
+	.pg-contact a.pg-contact__row:focus-visible {
+		outline: none;
+		background: var(--crt-amber);
+	}
+	.pg-contact__row:focus-visible * {
+		color: var(--crt-glass);
+	}
+
+	/* Below ~720px perms, scheme and kind drop: `[n] name -> value`. */
+	@media (width < 45rem) {
+		.pg-contact__row {
+			grid-template-columns: 1ch 3ch 8ch 2ch minmax(0, 1fr);
+		}
+		.pg-contact__perm,
+		.pg-contact__sch,
+		.pg-contact__kind {
+			display: none;
+		}
+	}
+}

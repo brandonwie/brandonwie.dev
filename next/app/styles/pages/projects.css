@@ -1,2 +1,196 @@
 /* Phosphor Fade page styles: projects. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Scoped under `.pg-projects` and prefixed `pg-projects__` (bare pack names
+   such as `.crumb` and `.card` are unlayered globals elsewhere).
+
+   Specificity note: the shell's focus ring is
+   `.term-glass :is(…, [tabindex]):focus-visible` (0,3,0) and the shell block
+   comes after this file, so the card focus rule carries an element selector
+   (0,3,1) to replace the ring with the amber frame border. */
+@layer components {
+	.pg-projects__crumb {
+		margin: 14px 0 0;
+		font-size: 11px;
+		line-height: 16px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	.pg-projects__crumb a {
+		color: var(--crt-green);
+		text-decoration: none;
+	}
+	.pg-projects__crumb a:hover {
+		text-decoration: underline;
+	}
+	.pg-projects__sep {
+		margin: 0 8px;
+		color: var(--crt-line);
+	}
+	.pg-projects__hero {
+		max-width: 640px;
+		margin-top: 10px;
+	}
+	.pg-projects__h1 {
+		display: inline-block;
+		margin-top: 6px;
+	}
+	.pg-projects__intro {
+		margin: 8px 0 0;
+		color: var(--crt-worn);
+	}
+
+	/* ls -l --index */
+	.pg-projects__ls {
+		margin-top: 4px;
+	}
+	.pg-projects__ls > p {
+		margin: 0;
+	}
+	.pg-projects__lshead,
+	.pg-projects__lsrow {
+		display: grid;
+		grid-template-columns: 36px 40px 160px 230px minmax(0, 1fr);
+		column-gap: 12px;
+	}
+	.pg-projects__lshead {
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	.pg-projects__lsrow {
+		margin: 0 -4px;
+		padding: 0 4px;
+		color: var(--crt-worn);
+		text-decoration: none;
+	}
+	.pg-projects__n,
+	.pg-projects__ty {
+		color: var(--crt-faint);
+	}
+	.pg-projects__nm {
+		color: var(--crt-amber);
+	}
+	.pg-projects__kk,
+	.pg-projects__tg {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.pg-projects__tg {
+		color: var(--crt-green);
+	}
+	.pg-projects__lsrow:hover .pg-projects__nm,
+	.pg-projects__lsrow:focus-visible .pg-projects__nm {
+		text-decoration: underline;
+	}
+
+	/* cat (star)/README --with-preview: each frame is one link. */
+	.pg-projects__card {
+		display: block;
+		margin-top: 22px;
+		padding: 18px 16px 16px;
+		color: var(--crt-worn);
+		text-decoration: none;
+	}
+	.pg-projects__card:hover {
+		border-color: var(--crt-amber);
+	}
+	.pg-projects a.pg-projects__card:focus-visible {
+		outline: none;
+		border-color: var(--crt-amber);
+	}
+	.pg-projects__grid {
+		display: grid;
+		grid-template-columns: 392px minmax(0, 1fr);
+		gap: 24px;
+	}
+	.pg-projects__thumb {
+		display: block;
+		align-self: start;
+		border: 1px solid var(--crt-line);
+	}
+	/* The OG image, pulled toward the amber inks; the worn crossline sits on top. */
+	.pg-projects__thumb img {
+		display: block;
+		width: 100%;
+		height: auto;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		filter: grayscale(0.35) sepia(0.25);
+	}
+	.pg-projects__info {
+		display: block;
+		min-width: 0;
+	}
+	.pg-projects__info > * {
+		display: block;
+	}
+	.pg-projects__kicker {
+		margin-top: 2px;
+	}
+	.pg-projects__title {
+		margin-top: 6px;
+	}
+	.pg-projects__bd {
+		margin-top: 8px;
+	}
+	.pg-projects__go {
+		margin-top: 12px;
+		overflow-wrap: anywhere;
+		color: var(--crt-green);
+	}
+	.pg-projects__src {
+		margin-top: 4px;
+		font-size: 11px;
+		color: var(--crt-faint);
+		overflow-wrap: anywhere;
+	}
+	.pg-projects__card:is(:hover, :focus-visible) .pg-projects__title {
+		text-decoration: underline;
+		text-decoration-color: var(--crt-amber);
+		text-underline-offset: 4px;
+	}
+	.pg-projects__card:is(:hover, :focus-visible) .pg-projects__go {
+		text-decoration: underline;
+	}
+
+	/* Thumbnail stacks over the text below 880px (at 768 the 392px thumb left
+	   the body ~26ch wide). */
+	@media (width < 880px) {
+		.pg-projects__grid {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 14px;
+		}
+		.pg-projects__thumb {
+			max-width: 480px;
+		}
+	}
+	@media (width < 48rem) {
+		.pg-projects__lshead,
+		.pg-projects__lsrow {
+			grid-template-columns: 36px 40px 132px minmax(0, 1fr);
+		}
+		.pg-projects__lshead > :nth-child(4),
+		.pg-projects__kk {
+			display: none;
+		}
+	}
+	@media (width < 36rem) {
+		.pg-projects__lshead {
+			display: none;
+		}
+		.pg-projects__lsrow {
+			grid-template-columns: 30px minmax(0, 1fr);
+			row-gap: 0;
+		}
+		.pg-projects__ty {
+			display: none;
+		}
+		.pg-projects__tg {
+			grid-column: 2;
+		}
+	}
+}

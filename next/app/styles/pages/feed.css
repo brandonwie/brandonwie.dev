@@ -1,2 +1,162 @@
 /* Phosphor Fade page styles: feed. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   Scoped under `.pg-feed` (the `section.feed` root). The parity contract
+   (scripts/assert-feed-redirects.ts) pins the class names `crumb`,
+   `feed__*`, `campaign*` and `chip*`, so the page keeps them and styles them
+   from here rather than renaming them. */
+@layer components {
+	.pg-feed .feed__lede {
+		max-width: 660px;
+		margin: 8px 0 0;
+		color: var(--crt-worn);
+	}
+	.pg-feed__h1 {
+		display: inline-block;
+		margin-top: 4px;
+	}
+	.pg-feed__summary {
+		margin: 6px 0 0;
+		color: var(--crt-faint);
+	}
+	.pg-feed .feed__empty {
+		margin: 6px 0 0;
+		color: var(--crt-worn);
+	}
+
+	/* One campaign = one frame. */
+	.pg-feed .feed__list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-feed .campaign {
+		margin-top: 20px;
+	}
+	/* The frame title repeats the cluster id, which is printed in full on the
+	   meta line, so it may truncate instead of wrapping over that line. */
+	.pg-feed .campaign > .term-frame__title {
+		max-width: calc(100% - 24px);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.pg-feed .campaign:has(:focus-visible) {
+		border-color: var(--crt-amber);
+	}
+	.pg-feed .campaign__meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0 18px;
+	}
+	.pg-feed .campaign__meta time {
+		color: var(--crt-amber);
+	}
+	.pg-feed__key {
+		color: var(--crt-faint);
+	}
+	.pg-feed .campaign__id {
+		overflow-wrap: anywhere;
+		color: var(--crt-green);
+	}
+	.pg-feed .campaign__topic {
+		margin-top: 4px;
+	}
+
+	/* Surfaces: fixed-column rows; the ul keeps list semantics. */
+	.pg-feed .campaign__links {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-feed__hd,
+	.pg-feed__row {
+		display: grid;
+		grid-template-columns: 26px 34px 16ch 40px 56px minmax(0, 1fr) 12px;
+		column-gap: 12px;
+	}
+	.pg-feed__hd {
+		margin: 10px 0 2px;
+		border-bottom: 1px solid var(--crt-line);
+		color: var(--crt-faint);
+	}
+	.pg-feed__tr,
+	.pg-feed__n,
+	.pg-feed__dim {
+		color: var(--crt-faint);
+	}
+	.pg-feed__tgt {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--crt-faint);
+	}
+	.pg-feed__mk {
+		color: var(--crt-amber);
+	}
+	/* Keyboard focus: the whole row in reverse video (glass on amber 8.90:1). */
+	.pg-feed__row:has(.chip:focus-visible),
+	.pg-feed__row:has(.chip:focus-visible) > * {
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+
+	@media (width < 45rem) {
+		.pg-feed__hd,
+		.pg-feed__row {
+			grid-template-columns: 26px 34px minmax(0, 1fr) 12px;
+		}
+		.pg-feed__hd > :nth-child(4),
+		.pg-feed__hd > :nth-child(5),
+		.pg-feed__hd > :nth-child(6),
+		.pg-feed__row > .pg-feed__dim,
+		.pg-feed__row > .pg-feed__tgt {
+			display: none;
+		}
+	}
+}
+
+/* UNLAYERED on purpose: `.crumb`, `.chip` and `.chip:hover` are unlayered
+   globals shared with the 3B flow and the deck slides, and an unlayered rule
+   beats any layered one. These three are scoped under `.pg-feed` so they win
+   by specificity without touching the other users. */
+.pg-feed .crumb {
+	display: block;
+	margin: 8px 0 0;
+	font-family: inherit;
+	font-size: 11px;
+	line-height: 16px;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--crt-faint);
+}
+.pg-feed .chip {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	font: inherit;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--crt-green);
+	text-decoration: none;
+	transition: none;
+}
+.pg-feed .chip:hover {
+	border: 0;
+	color: var(--crt-green);
+	text-decoration: underline;
+}
+.pg-feed .chip--canonical,
+.pg-feed .chip--canonical:hover {
+	color: var(--crt-amber);
+}
+/* Focus: the row turns reverse video (layered rule above); the link keeps an
+   outline so forced-colours mode still shows where focus is. */
+.pg-feed .chip:focus-visible {
+	outline: 1px solid var(--crt-glass);
+	outline-offset: -1px;
+	color: var(--crt-glass);
+}
