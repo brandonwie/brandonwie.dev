@@ -430,7 +430,9 @@ const CONTROLS: Control[] = [
 		kind: 'DEFECT',
 		what: 'the site navigation identity is removed while article navigation remains',
 		// REDESIGN: the site navigation is now the tmux status line `nav.term-status`.
-		apply: (html) => html.replace('<nav class="term-status"', '<nav class="shell-nav"'),
+		// REDESIGN: reviewer round 3: the status-line scroller must not be a navigation
+		// landmark, so it is `div.term-status` (was `<nav role="none">`).
+		apply: (html) => html.replace('<div class="term-status"', '<div class="shell-nav"'),
 	},
 	{
 		id: 'AP-44',

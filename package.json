@@ -103,6 +103,8 @@
 		"migration:browser:deck:controls": "node scripts/assert-browser-deck-controls.mjs",
 		"migration:browser:shell-layout": "node scripts/assert-browser-shell-layout.mjs",
 		"migration:browser:shell-layout:controls": "node scripts/assert-browser-shell-layout-controls.mjs",
+		"migration:browser:landmarks": "node scripts/assert-browser-landmarks.mjs",
+		"migration:browser:landmarks:controls": "node scripts/assert-browser-landmarks-controls.mjs",
 		"migration:browser:study-states": "node scripts/assert-browser-study-states.mjs",
 		"migration:browser:study-states:controls": "node scripts/assert-browser-study-states-controls.mjs",
 		"migration:browser:notfound-palette": "node scripts/assert-browser-notfound-palette.mjs",
