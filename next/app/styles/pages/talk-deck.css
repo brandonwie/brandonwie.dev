@@ -185,11 +185,15 @@
 	}
 
 	/* --- Presenting (D8): production's full-viewport overlay ---------------
-	   Above the title bar, ~/.plan and status line; the page does not scroll.
-	   The shell's frames are stacking contexts (z-index 1), which would trap
-	   the overlay beneath the status line, so they drop theirs while the deck
-	   presents. z-index 40 stays under the ⌘K palette (50), which keeps
-	   working over the deck, and the skip link (100). */
+	   The default view. Above the title bar, ~/.plan and status line; the page
+	   does not scroll. The stage and rail render without their term-frame
+	   borders and titles (Deck.tsx drops the classes), and the chrome under
+	   the overlay is hidden, not just covered, so Tab cannot land on a link
+	   nobody can see. The shell's frames are stacking contexts (z-index 1),
+	   which would trap the overlay beneath the status line, so they drop
+	   theirs while the deck presents. z-index 40 stays under the ⌘K palette
+	   (50, portalled to body), which keeps working over the deck, and the
+	   skip link (100). */
 	.deck.is-presenting {
 		position: fixed;
 		inset: 0;
@@ -198,17 +202,17 @@
 		background: var(--crt-glass);
 		overflow: hidden;
 	}
-	.deck.is-presenting .deck-ps1 {
-		display: none;
-	}
 	.deck.is-presenting .deck-stage {
 		flex: 1;
 		min-height: 0;
-		margin-top: 9px;
 	}
 	:is(.term-bar, .term-body):has(.deck.is-presenting),
 	.term-glass:has(.deck.is-presenting) > .term-bar {
 		z-index: auto;
+	}
+	body:has(.deck.is-presenting)
+		:is(.term-bar, .term-ghost, .term-plan, .term-status, .term-ps1--idle) {
+		visibility: hidden;
 	}
 	html:has(.deck.is-presenting) {
 		overflow: hidden;

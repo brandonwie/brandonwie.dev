@@ -9058,8 +9058,8 @@
 	{
 		"url": "/talks/my-career",
 		"field": "text",
-		"fingerprint": "f39d1e8f60c2882408ba448a1895f888",
-		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes.",
+		"fingerprint": "8aafd2696f15922c2eb9e2e144059f73",
+		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. REDESIGN: re-keyed from f39d1e8f60c2882408ba448a1895f888 by fix(deck) (D8): the deck now prerenders presenting, so the `deck play` prompt and the slide frame title are no longer in the exported text (candidate textLength 634 vs baseline 468).",
 		"approved_by": "pending: Brandon at the feat/terminal-redesign merge gate (retro-site-pages redesign)",
 		"approved_on": "2026-09-23"
 	},
