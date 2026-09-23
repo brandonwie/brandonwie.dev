@@ -203,13 +203,17 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 
 			const target = event.target as HTMLElement | null;
 
-			// Only keys aimed at the deck: focus inside it, or nothing focused
-			// (the event then targets body). A key on the shell's chrome — a
-			// status-line link, the title bar, the footer, the palette — keeps
+			// Only keys aimed at the deck: focus inside it, or on an element
+			// that encloses it. The enclosing case covers nothing focused (the
+			// event targets body or html) and the shell's `main#main-content`,
+			// which takes focus after "Skip to content". A key on the shell's
+			// chrome — a status-line link, the title bar, the footer, the
+			// palette — targets a sibling branch, not an ancestor, so it keeps
 			// its own default and leaves the slide alone.
 			const root = rootRef.current;
 			const unfocused = target === document.body || target === document.documentElement;
-			if (!unfocused && !(root && target && root.contains(target))) return;
+			const aimed = !!root && !!target && (root.contains(target) || target.contains(root));
+			if (!unfocused && !aimed) return;
 
 			if (target && (target.tagName === 'INPUT' || target.isContentEditable)) return;
 
