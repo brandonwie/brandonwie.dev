@@ -128,6 +128,9 @@
 	.pg-post__back:focus-visible {
 		text-decoration: underline;
 	}
+	.pg-post__back > [aria-hidden] {
+		margin-right: 1ch;
+	}
 
 	/* --- hero frame ---------------------------------------------------------- */
 	.pg-post__hero {
@@ -167,7 +170,8 @@
 		pointer-events: none;
 		background-image: repeating-linear-gradient(0deg, #05040a66 0 1px, transparent 1px 3px);
 	}
-	:lang(ko) .pg-post__head > h1 {
+	:lang(ko) .pg-post__head > h1,
+	:lang(ko) .pg-post__lede {
 		word-break: keep-all;
 	}
 	.pg-post__lede {
