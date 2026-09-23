@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { type FocusEvent, useEffect, useRef } from 'react';
 
 import { AppLink } from '@/components/AppLink';
 import type { Locale } from '@/i18n/locale';
@@ -18,9 +18,11 @@ import {
  * The tmux status line — window links to the five fixed sections.
  *
  * Not a landmark: the title bar's nav is THE primary navigation, so the line is
- * `role="none"` (and therefore carries no aria-label, which ARIA prohibits on
- * that role) rather than a second nav with the same name. Its windows stay
- * ordinary links.
+ * a plain `div` with no role and no aria-label. It was `<nav role="none">`,
+ * but a presentational role is ignored on an element the browser treats as
+ * interactive, and at phone widths the line overflows into a keyboard
+ * scroller, so Chrome exposed it as an unnamed navigation landmark (reviewer
+ * round 3). Its windows stay ordinary links.
  *
  * Every window is a real link with the route's own href, reachable by Tab; the
  * current one carries `aria-current="page"` and the trailing `*`. Off-nav
@@ -34,7 +36,7 @@ import {
  */
 export function StatusLine({ locale, plain = false }: { locale: Locale; plain?: boolean }) {
 	const pathname = usePathname();
-	const scrollerRef = useRef<HTMLElement>(null);
+	const scrollerRef = useRef<HTMLDivElement>(null);
 	const state = plain ? { active: null, extra: null } : statusWindowFor(pathname);
 
 	useEffect(() => {
@@ -46,8 +48,22 @@ export function StatusLine({ locale, plain = false }: { locale: Locale; plain?: 
 		if (overflowRight > 0) scroller.scrollLeft = overflowRight + 16;
 	}, [pathname]);
 
+	// Tab onto a window that is cut off at an edge: Chrome's focus scroll leaves
+	// a partly visible element where it is, so bring the whole window into the
+	// line (and only the line) here.
+	const reveal = (event: FocusEvent<HTMLDivElement>) => {
+		const scroller = scrollerRef.current;
+		const win = event.target;
+		if (!scroller || win === scroller || scroller.scrollWidth <= scroller.clientWidth) return;
+		const overflowRight =
+			win.offsetLeft + win.offsetWidth - (scroller.scrollLeft + scroller.clientWidth);
+		if (overflowRight > 0) scroller.scrollLeft += overflowRight + 16;
+		else if (win.offsetLeft < scroller.scrollLeft)
+			scroller.scrollLeft = Math.max(0, win.offsetLeft - 16);
+	};
+
 	return (
-		<nav className="term-status" role="none" ref={scrollerRef}>
+		<div className="term-status" ref={scrollerRef} onFocus={reveal}>
 			<span className="term-status__sess" aria-hidden="true">
 				[brandonwie]
 			</span>
@@ -86,6 +102,6 @@ export function StatusLine({ locale, plain = false }: { locale: Locale; plain?: 
 				<span>&quot;brandonwie.dev&quot;</span>
 				<StatusClock />
 			</span>
-		</nav>
+		</div>
 	);
 }
