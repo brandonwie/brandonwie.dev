@@ -1,2 +1,383 @@
 /* Phosphor Fade page styles: study-aws. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell and the AWS `@media print` token sheet)
+   and study-course.css for the study base (`.pg-study`, `st-*`, study-btn). */
+
+@layer components {
+	.pg-study-aws {
+		--st-pane: 292px;
+	}
+
+	/* Pass line: systemd-style `[ ok ] Passed · <date>`, no icon. */
+	.pg-study-aws .sa-pass {
+		margin-top: 14px;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-green);
+	}
+	.pg-study-aws .sa-pass__ok {
+		margin-right: 8px;
+		color: var(--crt-faint);
+	}
+	.pg-study-aws .sa-pass__ok b {
+		font-weight: 700;
+		color: var(--crt-green);
+	}
+
+	/* Section head (kicker, h2, rule, note). */
+	.pg-study-aws .sa-sh {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		gap: 0 14px;
+		margin-top: 6px;
+	}
+	.pg-study-aws .sa-sh__rl {
+		flex: 1 1 40px;
+		height: 1px;
+		margin-bottom: 11px;
+		background: var(--crt-line);
+	}
+	.pg-study-aws .sa-sh__nt {
+		font-size: 12px;
+		line-height: 22px;
+		color: var(--crt-faint);
+	}
+
+	/* Cards: one column below lg, the data's 12-column spans from lg. */
+	.pg-study-aws .sa-cards {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 22px 14px;
+		margin-top: 22px;
+	}
+	.pg-study-aws .sa-card {
+		margin-top: 0;
+		min-width: 0;
+	}
+	.pg-study-aws .sa-card > h3.term-frame__title {
+		max-width: calc(100% - 24px);
+		margin: 0;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+	.pg-study-aws .sa-card.sa-tt > h3.term-frame__title {
+		color: var(--crt-green);
+	}
+	.pg-study-aws .sa-card__sub {
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-faint);
+	}
+	.pg-study-aws .sa-card__def {
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-worn);
+	}
+	.pg-study-aws .sa-card > * + .sa-blk,
+	.pg-study-aws .sa-blk + .sa-blk {
+		margin-top: 10px;
+	}
+	.pg-study-aws .sa-card__sub + .sa-card__def {
+		margin-top: 2px;
+	}
+
+	/* Shared cell text. */
+	.pg-study-aws .sa-b {
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+	.pg-study-aws .sa-d {
+		color: var(--crt-worn);
+	}
+	.pg-study-aws .sa-sg {
+		color: var(--crt-green);
+	}
+	.pg-study-aws .sa-sg::before {
+		content: '> ';
+		color: var(--crt-amber);
+	}
+	.pg-study-aws .sa-ex {
+		color: var(--crt-faint);
+	}
+	.pg-study-aws .sa-ex::before {
+		content: '-- ';
+	}
+
+	/* compare / services grids. */
+	.pg-study-aws .sa-cells {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 10px 12px;
+	}
+	.pg-study-aws .sa-cell {
+		min-width: 0;
+		overflow-wrap: break-word;
+		border-left: 2px solid var(--crt-green);
+		padding: 2px 0 2px 10px;
+		font-size: 12px;
+		line-height: 18px;
+	}
+	.pg-study-aws .sa-cell.sa-tw {
+		border-left-color: var(--crt-amber);
+	}
+	.pg-study-aws .sa-cell.sa-tw .sa-sg {
+		color: var(--crt-amber);
+	}
+	.pg-study-aws .sa-cell.sa-tv {
+		border-left-color: var(--crt-hi);
+	}
+	.pg-study-aws .sa-cell.sa-tv .sa-sg {
+		color: var(--crt-hi);
+	}
+	.pg-study-aws .sa-cell.sa-tt {
+		border-left-style: dotted;
+	}
+	.pg-study-aws .sa-svc {
+		min-width: 0;
+		overflow-wrap: break-word;
+		border: 1px solid var(--crt-line);
+		padding: 6px 10px 7px;
+		font-size: 12px;
+		line-height: 18px;
+	}
+	.pg-study-aws .sa-svc .sa-sg {
+		margin-top: 4px;
+	}
+	.pg-study-aws .sa-svc .sa-ex {
+		margin-top: 2px;
+	}
+
+	/* hierarchy: nested square boxes. */
+	.pg-study-aws .sa-lay {
+		border: 1px solid var(--crt-line);
+		padding: 5px 10px 6px;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-worn);
+	}
+	.pg-study-aws .sa-lay .sa-lay {
+		margin-top: 6px;
+	}
+	.pg-study-aws .sa-lay__k {
+		margin-right: 4px;
+		font-weight: 700;
+		color: var(--crt-green);
+	}
+
+	/* flow: [step] → [step]. */
+	.pg-study-aws .sa-flow {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 10px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-study-aws .sa-flow li {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
+	}
+	.pg-study-aws .sa-flow__st {
+		min-width: 0;
+		border: 1px solid var(--crt-line);
+		padding: 3px 10px 4px;
+		font-size: 12px;
+		line-height: 18px;
+	}
+	.pg-study-aws .sa-flow__d {
+		color: var(--crt-faint);
+	}
+	.pg-study-aws .sa-flow__j {
+		color: var(--crt-amber);
+	}
+
+	/* tags: square chips in tone ink. */
+	.pg-study-aws .sa-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-study-aws .sa-chip {
+		border: 1px solid var(--crt-line);
+		padding: 0 6px;
+		font-size: 11px;
+		line-height: 20px;
+		color: var(--crt-worn);
+	}
+	.pg-study-aws .sa-chip.sa-tw {
+		border-color: var(--crt-amber);
+		color: var(--crt-amber);
+	}
+	.pg-study-aws .sa-chip.sa-tv {
+		border-color: var(--crt-hi);
+		color: var(--crt-hi);
+	}
+	.pg-study-aws .sa-chip.sa-tt {
+		color: var(--crt-green);
+	}
+
+	/* note block: a shell comment. */
+	.pg-study-aws .sa-nt {
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-faint);
+	}
+	.pg-study-aws .sa-nt::before {
+		content: '# ';
+		color: var(--crt-amber);
+	}
+
+	/* Traps: a `cat -n` table of signal → pick, reading down then across.
+	   Row numbers are a CSS counter, so the <dl> stays `div > dt + dd`. */
+	.pg-study-aws .sa-thd {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		column-gap: 24px;
+	}
+	.pg-study-aws .sa-thd__hd,
+	.pg-study-aws .sa-traps > div {
+		display: grid;
+		grid-template-columns: 20px minmax(0, 1.3fr) minmax(0, 1fr);
+		gap: 8px;
+		font-size: 12px;
+		line-height: 20px;
+		break-inside: avoid;
+	}
+	.pg-study-aws .sa-thd__hd {
+		margin-bottom: 4px;
+		border-bottom: 1px solid var(--crt-line);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	.pg-study-aws .sa-thd__hd:nth-child(2) {
+		display: none;
+	}
+	.pg-study-aws .sa-thd__hd span:first-child {
+		text-align: right;
+	}
+	.pg-study-aws .sa-traps {
+		margin: 0;
+		counter-reset: trap;
+	}
+	.pg-study-aws .sa-traps > div::before {
+		counter-increment: trap;
+		content: counter(trap);
+		text-align: right;
+		color: var(--crt-faint);
+	}
+	.pg-study-aws .sa-traps > div + div {
+		margin-top: 2px;
+	}
+	.pg-study-aws .sa-traps dt {
+		min-width: 0;
+		overflow-wrap: break-word;
+		color: var(--crt-worn);
+	}
+	.pg-study-aws .sa-traps dd {
+		min-width: 0;
+		margin: 0;
+		overflow-wrap: break-word;
+		color: var(--crt-green);
+	}
+	.pg-study-aws .sa-traps dd::before {
+		content: '→ ';
+		color: var(--crt-amber);
+	}
+
+	/* Sources frame. */
+	.pg-study-aws .sa-src p:not(.term-frame__title) {
+		color: var(--crt-worn);
+	}
+
+	@media (width >= 40rem) {
+		.pg-study-aws .sa-c2,
+		.pg-study-aws .sa-c4 {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.pg-study-aws .sa-c3 {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+	@media (width >= 48rem) {
+		.pg-study-aws .sa-thd {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.pg-study-aws .sa-thd__hd:nth-child(2) {
+			display: grid;
+		}
+		.pg-study-aws .sa-traps {
+			columns: 2;
+			column-gap: 24px;
+		}
+	}
+	@media (width >= 64rem) {
+		.pg-study-aws .sa-cards {
+			grid-template-columns: repeat(12, minmax(0, 1fr));
+		}
+		.pg-study-aws .sa-s4 {
+			grid-column: span 4;
+		}
+		.pg-study-aws .sa-s5 {
+			grid-column: span 5;
+		}
+		.pg-study-aws .sa-s6 {
+			grid-column: span 6;
+		}
+		.pg-study-aws .sa-s7 {
+			grid-column: span 7;
+		}
+		.pg-study-aws .sa-s8 {
+			grid-column: span 8;
+		}
+		.pg-study-aws .sa-s12 {
+			grid-column: span 12;
+		}
+		.pg-study-aws .sa-c4 {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+
+	/* Paper: the CRT and every prompt are dropped by the print block in
+	   globals.css (which also re-inks the --crt-* tokens for white paper);
+	   these rules re-flow this page's own markup for it. Cards stack one per
+	   row so `break-inside: avoid` works (Chrome ignores it on grid items). */
+	@media print {
+		.pg-study-aws .term-gap,
+		.pg-study-aws .term-worn::after {
+			display: none;
+		}
+		.pg-study-aws .st-hero {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.pg-study-aws .sa-cards {
+			display: block;
+		}
+		.pg-study-aws .sa-cards > .sa-card {
+			margin-top: 22px;
+			break-inside: avoid;
+		}
+		.pg-study-aws .sa-sh {
+			break-after: avoid;
+		}
+		.pg-study-aws .sa-traps > div {
+			break-inside: avoid;
+		}
+	}
+}
+
+/* UNLAYERED: the print button is a `study-btn` (a Tailwind utility, which
+   beats `@layer components`), so its full-width pane layout sits here. */
+.pg-study-aws .study-btn.sa-print {
+	display: block;
+	width: 100%;
+	margin-top: 12px;
+	padding: 3px 8px;
+}

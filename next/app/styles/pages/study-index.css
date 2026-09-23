@@ -1,2 +1,225 @@
 /* Phosphor Fade page styles: study-index. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives and
+   study-course.css for the study base (`.pg-study`, `st-*`) this page uses. */
+
+@layer components {
+	.pg-study-index {
+		--st-pane: 300px;
+	}
+
+	/* "the approach" pane in the hero. */
+	.pg-study-index .si-about__h {
+		margin-bottom: 6px;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+	.pg-study-index .si-about__bd {
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-worn);
+	}
+
+	/* `ls -l courses/`: one link per row. Fixed px columns from lg (never
+	   space-padded strings: Hangul would break the grid); below lg the mode
+	   and meter columns drop and the title wraps under the slug. */
+	.pg-study-index .si-ls {
+		font-size: 12px;
+		line-height: 22px;
+	}
+	.pg-study-index .si-ls__hd {
+		display: none;
+	}
+	.pg-study-index .si-ls__rows {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-study-index .si-ls__row {
+		display: flex;
+		flex-wrap: wrap;
+		column-gap: 12px;
+		margin: 0 -6px;
+		padding: 0 6px;
+		color: var(--crt-worn);
+		text-decoration: none;
+	}
+	.pg-study-index .si-ls__rows li + li .si-ls__row {
+		margin-top: 4px;
+	}
+	.pg-study-index .si-ls__perm,
+	.pg-study-index .si-ls__mtr {
+		display: none;
+	}
+	.pg-study-index .si-ls__perm,
+	.pg-study-index .si-ls__dt,
+	.pg-study-index .si-ls__none {
+		color: var(--crt-faint);
+	}
+	.pg-study-index .si-ls__st {
+		color: var(--crt-amber);
+	}
+	.pg-study-index .si-ls__nm {
+		color: var(--crt-green);
+	}
+	.pg-study-index .si-ls__ti {
+		flex-basis: 100%;
+		min-width: 0;
+		color: var(--crt-hi);
+	}
+	.pg-study-index .si-ls__row:hover .si-ls__nm {
+		text-decoration: underline;
+	}
+	/* Row selection: `.term-sel` reverse video, meter included. */
+	.pg-study-index .si-ls__row:focus-visible,
+	.pg-study-index .si-ls__row:focus-visible span {
+		background: var(--crt-amber);
+		color: var(--crt-glass);
+	}
+	.pg-study-index .si-ls__tot {
+		margin-top: 6px;
+		color: var(--crt-faint);
+	}
+
+	/* Course frames: the whole frame is the link. */
+	.pg-study-index .si-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0 14px;
+		margin-top: 4px;
+	}
+	.pg-study-index .si-course {
+		display: block;
+		min-width: 0;
+		color: var(--crt-worn);
+		text-decoration: none;
+	}
+	.pg-study-index .si-course > :where(span) {
+		display: block;
+	}
+	.pg-study-index .si-course__stat {
+		font-size: 11px;
+		line-height: 16px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-amber);
+	}
+	.pg-study-index .si-course h3 {
+		margin: 4px 0 8px;
+		font-size: 15px;
+		line-height: 24px;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+	.pg-study-index .si-course__sum {
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-study-index .si-kv {
+		display: grid;
+		grid-template-columns: 72px minmax(0, 1fr);
+		gap: 10px;
+		margin-top: 10px;
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-study-index .si-kv__k {
+		color: var(--crt-faint);
+	}
+	.pg-study-index .si-kv__v {
+		color: var(--crt-green);
+	}
+	.pg-study-index .si-mods {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		column-gap: 12px;
+	}
+	.pg-study-index .si-mods i {
+		font-style: normal;
+		color: var(--crt-amber);
+	}
+	.pg-study-index .si-course__foot {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 0 12px;
+		margin-top: 12px;
+		padding-top: 8px;
+		border-top: 1px dashed var(--crt-line);
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-faint);
+	}
+	.pg-study-index .si-course__go {
+		color: var(--crt-green);
+	}
+	.pg-study-index .si-course:hover,
+	.pg-study-index .si-course:focus-visible {
+		border-color: var(--crt-amber);
+	}
+	.pg-study-index .si-course:hover h3,
+	.pg-study-index .si-course:focus-visible h3 {
+		color: var(--crt-green);
+		text-decoration: underline;
+	}
+
+	/* approach.txt: three `/` lines. */
+	.pg-study-index .si-approach ul {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 6px 16px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-study-index .si-approach i {
+		margin-right: 8px;
+		font-style: normal;
+		color: var(--crt-amber);
+	}
+
+	@media (width >= 48rem) {
+		.pg-study-index .si-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.pg-study-index .si-course.is-wide {
+			grid-column: 1 / -1;
+		}
+		.pg-study-index .si-course.is-wide .si-mods {
+			grid-template-columns: repeat(3, max-content);
+			column-gap: 32px;
+		}
+		.pg-study-index .si-approach ul {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+	@media (width >= 64rem) {
+		.pg-study-index .si-ls__hd,
+		.pg-study-index .si-ls__row {
+			display: grid;
+			grid-template-columns: 30px 92px 78px 136px 156px minmax(0, 1fr);
+			column-gap: 12px;
+			white-space: nowrap;
+		}
+		.pg-study-index .si-ls__hd {
+			margin: 0 -6px;
+			padding: 0 6px;
+			font-size: 11px;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: var(--crt-faint);
+		}
+		.pg-study-index .si-ls__perm,
+		.pg-study-index .si-ls__mtr {
+			display: inline;
+		}
+		.pg-study-index .si-ls__rows li + li .si-ls__row {
+			margin-top: 0;
+		}
+		.pg-study-index .si-ls__ti {
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
+}

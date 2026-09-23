@@ -1,23 +1,26 @@
 import type { ReactNode } from 'react';
 
 /**
- * StudyPageShell — shared `<main>` wrapper for the study pages.
+ * StudyPageShell — the page root for the study pages inside the terminal shell.
  *
- * Port of `src/lib/components/study/StudyPageShell.svelte`. The header lives
- * once in the root layout, so this shell only owns the study content column.
- * A server component: it holds no state, only the `main-content` landmark the
- * skip link targets and the Pagefind body marker.
+ * The site shell (`next/src/shell/site-shell.tsx`) owns `<main
+ * id="main-content">`, so this wrapper is a plain `div`: rendering a second
+ * `main` or a second `id="main-content"` would give the skip link two targets.
+ * It keeps the Pagefind body marker and carries the `pg-study` root class, the
+ * scope every study rule in `next/app/styles/pages/study-*.css` hangs from
+ * (including the token remap that puts the visualizers on the shell inks).
  */
-export default function StudyPageShell({ children }: { children: ReactNode }) {
+export default function StudyPageShell({
+	className,
+	children,
+}: {
+	/** The page's own root class (`pg-study-index`, `pg-study-course`, …). */
+	className?: string;
+	children: ReactNode;
+}) {
 	return (
-		<div className="min-h-screen bg-bg">
-			<main
-				id="main-content"
-				data-pagefind-body
-				className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16"
-			>
-				{children}
-			</main>
+		<div className={className ? `pg-study ${className}` : 'pg-study'} data-pagefind-body>
+			{children}
 		</div>
 	);
 }

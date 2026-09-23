@@ -1,2 +1,431 @@
 /* Phosphor Fade page styles: study-course. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+   next/app/globals.css (terminal shell) for the shared term-* primitives.
+
+   This file also carries the STUDY BASE shared by all three study designs
+   (/study, /study/dsa-*, /study/aws-ai-practitioner): the `.pg-study` token
+   remap, the `st-*` breadcrumb / hero / inside-pane pieces, and the Next-only
+   restyle of the `study-btn` / `study-card` / `study-recall` utilities. Those
+   utilities live in src/app.css and are shared with the legacy Svelte build,
+   so they are overridden here, under `.pg-study`, never edited there. */
+
+@layer components {
+	/* --- Study base -------------------------------------------------------
+
+	   TOKEN REMAP. The 17 visualizers and the AWS blocks are coloured with the
+	   Rosé Pine utilities (`text-ink`, `fill-foam`, `border-gold`, …). Their
+	   state logic must not change, so instead of rewriting ~600 class strings
+	   the Tailwind colour tokens those utilities read are re-pointed at the six
+	   shell inks inside the study root. Rosé Pine hues never reach the glass:
+	   ink → hi, muted → worn, faint → faint, foam/accent/pine → green,
+	   gold/rose → amber, iris → hi, love/crit → faint (the old red "removed"
+	   state becomes faint, as the design directs), bg/surface/highlight → glass,
+	   line/line2 → the shell rule. Fonts and the small type steps follow, so
+	   every visualizer is mono on the shell scale (11/12/13px). */
+	.pg-study {
+		--color-bg: var(--crt-glass);
+		--color-bg2: var(--crt-glass);
+		--color-surface: var(--crt-glass);
+		--color-surface-2: var(--crt-glass);
+		--color-panel: var(--crt-glass);
+		--color-overlay: var(--crt-glass);
+		--color-highlight-low: var(--crt-glass);
+		--color-highlight-med: var(--crt-glass);
+		--color-highlight-high: var(--crt-glass);
+		--color-line: var(--crt-line);
+		--color-line2: var(--crt-line);
+		--color-ink: var(--crt-hi);
+		--color-muted: var(--crt-worn);
+		--color-faint: var(--crt-faint);
+		--color-accent: var(--crt-green);
+		--color-accent-strong: var(--crt-green);
+		--color-foam: var(--crt-green);
+		--color-pine: var(--crt-green);
+		--color-ok: var(--crt-green);
+		--color-gold: var(--crt-amber);
+		--color-warn: var(--crt-amber);
+		--color-rose: var(--crt-amber);
+		--color-iris: var(--crt-hi);
+		--color-love: var(--crt-faint);
+		--color-crit: var(--crt-faint);
+		--font-sans: var(--font-term);
+		--font-mono: var(--font-term);
+		--text-xs: 11px;
+		--text-xs--line-height: 16px;
+		--text-sm: 12px;
+		--text-sm--line-height: 20px;
+		--text-base: 13px;
+		--text-base--line-height: 22px;
+		--text-lg: 13px;
+		--text-lg--line-height: 20px;
+		display: block;
+		min-width: 0;
+	}
+
+	/* `pwd` output: `~` and `study` are links, the leaf is plain. */
+	.pg-study .st-bc {
+		color: var(--crt-hi);
+		overflow-wrap: anywhere;
+	}
+	.pg-study .st-bc a {
+		color: var(--crt-green);
+		text-decoration: none;
+	}
+	.pg-study .st-bc a:hover {
+		text-decoration: underline;
+	}
+	.pg-study .st-bc__sep {
+		color: var(--crt-faint);
+	}
+
+	/* README hero: text left, a pane right (stacks below md). */
+	.pg-study .st-hero {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 22px;
+		margin-top: 10px;
+	}
+	.pg-study .st-hero .term-ttl {
+		max-width: 560px;
+	}
+	.pg-study .st-lede {
+		margin-top: 12px;
+		max-width: 560px;
+		color: var(--crt-worn);
+	}
+	.pg-study .st-hero > .term-frame {
+		margin-top: 0;
+	}
+	.pg-study .st-inside ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-study .st-inside a {
+		display: block;
+		padding-left: 2ch;
+		text-indent: -2ch;
+		text-decoration: none;
+	}
+	.pg-study .st-inside a::before {
+		content: '> ';
+		color: var(--crt-amber);
+	}
+	.pg-study .st-inside a:hover {
+		text-decoration: underline;
+	}
+	.pg-study .st-sec {
+		margin-top: 22px;
+	}
+	.pg-study .st-kick {
+		font-size: 11px;
+		line-height: 16px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-amber);
+	}
+	:lang(ko) .pg-study .st-kick {
+		letter-spacing: 0.04em;
+	}
+
+	@media (width >= 48rem) {
+		.pg-study .st-hero {
+			grid-template-columns: minmax(0, 1fr) var(--st-pane, 250px);
+			gap: 28px;
+			align-items: end;
+		}
+	}
+
+	/* --- StudyCoursePage (/study/dsa-i..iv) ------------------------------- */
+
+	/* coverage.txt: numbered lines like `cat -n`. */
+	.pg-study-course .sc-cov {
+		margin-top: 22px;
+	}
+	.pg-study-course .sc-cov ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-study-course .sc-cov li {
+		display: grid;
+		grid-template-columns: 24px minmax(0, 1fr);
+		gap: 10px;
+		font-size: 12px;
+		line-height: 20px;
+	}
+	.pg-study-course .sc-cov li + li {
+		margin-top: 4px;
+	}
+	.pg-study-course .sc-cov__ln {
+		color: var(--crt-faint);
+		text-align: right;
+	}
+
+	/* Learning map: `[01]` badges joined by a box-drawn rule. */
+	.pg-study-course .sc-map {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 14px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pg-study-course .sc-map__rail {
+		overflow: hidden;
+		white-space: nowrap;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-line);
+	}
+	.pg-study-course .sc-map__rail b {
+		font-weight: 400;
+		color: var(--crt-amber);
+	}
+	.pg-study-course .sc-map li:last-child .sc-map__rail {
+		color: transparent;
+	}
+	.pg-study-course .sc-map .sc-small {
+		margin-top: 6px;
+	}
+	.pg-study-course .sc-kick,
+	.pg-study-course .sc-map .sc-kick {
+		font-size: 11px;
+		line-height: 16px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--crt-amber);
+	}
+	.pg-study-course .sc-h {
+		margin: 4px 0 0;
+		font-size: 13px;
+		line-height: 20px;
+		font-weight: 700;
+		color: var(--crt-hi);
+	}
+	.pg-study-course .sc-small {
+		font-size: 12px;
+		line-height: 20px;
+	}
+
+	/* Section label: the h2 a prompt line introduces (`## visual lab · 4`). */
+	.pg-study-course .sc-lbl {
+		margin: 6px 0 0;
+		font-size: 11px;
+		line-height: 16px;
+		font-weight: 400;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--crt-faint);
+	}
+	.pg-study-course .sc-lbl::before {
+		content: '## ';
+		color: var(--crt-amber);
+	}
+	:lang(ko) .pg-study-course .sc-lbl {
+		letter-spacing: 0.04em;
+	}
+
+	/* Visual lab (panes are the visualizers' own `study-card` articles) and
+	   the 2-up grids for notes and recall. */
+	.pg-study-course .sc-lab {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0 14px;
+		margin-top: 4px;
+	}
+	.pg-study-course .sc-grid2 {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0 14px;
+		margin-top: 4px;
+	}
+	.pg-study-course .sc-grid2 > .term-frame {
+		min-width: 0;
+	}
+	.pg-study-course .sc-note .sc-small {
+		margin-top: 6px;
+		color: var(--crt-worn);
+	}
+	.pg-study-course .sc-src {
+		margin-top: 10px;
+		font-size: 11px;
+		line-height: 16px;
+		color: var(--crt-faint);
+	}
+	.pg-study-course .sc-src::before {
+		content: '-- ';
+	}
+	.pg-study-course .sc-rc__list {
+		margin-top: 10px;
+	}
+	.pg-study-course .sc-rc__a {
+		padding: 0 8px 8px 24px;
+		font-size: 12px;
+		line-height: 20px;
+		color: var(--crt-worn);
+	}
+
+	@media (width >= 48rem) {
+		/* One row whatever the module count (dsa-i has 5, the others 4). */
+		.pg-study-course .sc-map {
+			grid-template-columns: none;
+			grid-auto-flow: column;
+			grid-auto-columns: minmax(0, 1fr);
+			gap: 18px;
+		}
+		.pg-study-course .sc-grid2 {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+	@media (width >= 64rem) {
+		.pg-study-course .sc-lab {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+}
+
+/* --- Study primitives, UNLAYERED on purpose ------------------------------
+   `study-btn`, `study-card` and `study-recall` are Tailwind `@utility` rules
+   (src/app.css), and the visualizers size their insides with utilities
+   (`p-5`, `text-lg`, `mt-2`). A rule in `@layer components` loses to every
+   utility, so these overrides sit outside the layer, still scoped under
+   `.pg-study` so nothing leaks to the Svelte build or other pages. */
+
+/* study-btn: square, bracketed, one line. */
+.pg-study .study-btn {
+	border: 1px solid var(--crt-line);
+	background: var(--crt-glass);
+	padding: 1px 8px;
+	font-family: var(--font-term);
+	font-size: 12px;
+	line-height: 20px;
+	color: var(--crt-worn);
+	cursor: pointer;
+	transition: none;
+}
+.pg-study .study-btn::before {
+	content: '[';
+	margin-right: 4px;
+	color: var(--crt-faint);
+}
+.pg-study .study-btn::after {
+	content: ']';
+	margin-left: 4px;
+	color: var(--crt-faint);
+}
+.pg-study .study-btn:hover:not(:disabled) {
+	border-color: var(--crt-amber);
+	color: var(--crt-amber);
+}
+.pg-study .study-btn:focus-visible {
+	outline: 1px solid var(--crt-amber);
+	outline-offset: 2px;
+	border-color: var(--crt-amber);
+	color: var(--crt-amber);
+	box-shadow: none;
+}
+.pg-study .study-btn:disabled {
+	border-style: dashed;
+	color: var(--crt-faint);
+	cursor: not-allowed;
+}
+
+/* study-card: the TUI frame, square, title cut into the top border. */
+.pg-study .study-card {
+	position: relative;
+	margin-top: 14px;
+	border: 1px solid var(--crt-line);
+	background: transparent;
+	padding: 18px 16px 14px;
+	min-width: 0;
+}
+
+/* Lab panes: the visualizer's own `h3` moves into the border (still an h3),
+   and its step counter (`3/6`) is cut into the right side of the border. */
+.pg-study .sc-lab > .study-card > h3:first-child,
+.pg-study .sc-lab > .study-card > div:first-child h3 {
+	position: absolute;
+	top: -9px;
+	left: 12px;
+	max-width: calc(100% - 96px);
+	margin: 0;
+	padding: 0 6px;
+	background: var(--crt-glass);
+	font-size: 12px;
+	line-height: 16px;
+	font-weight: 400;
+	color: var(--crt-amber);
+}
+.pg-study .sc-lab > .study-card > div:first-child > span.font-mono:last-child {
+	position: absolute;
+	top: -9px;
+	right: 12px;
+	padding: 0 6px;
+	background: var(--crt-glass);
+	font-size: 12px;
+	line-height: 16px;
+	color: var(--crt-faint);
+}
+/* The description is the pane's first line (no top margin once the title
+   has left the flow); a following message line reads as `> output`. */
+.pg-study .sc-lab > .study-card > h3:first-child + p,
+.pg-study .sc-lab > .study-card > div:first-child h3 + p {
+	margin-top: 0;
+}
+.pg-study .sc-lab > .study-card > h3:first-child + p + p {
+	color: var(--crt-hi);
+}
+.pg-study .sc-lab > .study-card > h3:first-child + p + p::before {
+	content: '> ';
+	color: var(--crt-amber);
+}
+
+/* Native selects, restyled as a `[ value ▾ ]` field (the element stays a
+   native <select> with its <label for>). */
+.pg-study select {
+	appearance: none;
+	border: 1px solid var(--crt-line);
+	border-radius: 0;
+	background: var(--crt-glass)
+		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23e0a35c'/%3E%3C/svg%3E")
+		no-repeat right 8px center;
+	padding: 1px 26px 1px 8px;
+	font-family: var(--font-term);
+	font-size: 12px;
+	line-height: 20px;
+	color: var(--crt-green);
+}
+.pg-study select option {
+	background: var(--crt-glass);
+	color: var(--crt-hi);
+}
+
+/* study-recall: a native <details> disclosure row. */
+.pg-study .study-recall {
+	margin-top: 6px;
+	border: 1px solid var(--crt-line);
+	background: transparent;
+}
+.pg-study .study-recall > summary {
+	gap: 0;
+	padding: 5px 8px;
+	font-size: 12px;
+	line-height: 20px;
+	color: var(--crt-hi);
+	transition: none;
+}
+.pg-study .study-recall > summary::before {
+	flex: 0 0 16px;
+	color: var(--crt-amber);
+}
+.pg-study .study-recall > summary:hover {
+	color: var(--crt-amber);
+}
+/* Keyboard focus reads as `.term-sel` reverse video. */
+.pg-study .study-recall > summary:focus-visible {
+	background: var(--crt-amber);
+	color: var(--crt-glass);
+}
+.pg-study .study-recall > summary:focus-visible::before {
+	color: var(--crt-glass);
+}
