@@ -11,7 +11,11 @@
  * conditional render would not help, because the static import stays in that
  * route's module graph either way. The shell exposes a `header` slot instead;
  * the two locale layouts fill it with this component, and the error routes
- * keep the plain header with no palette code at all.
+ * keep the plain header with no palette code at all. The one exception is
+ * `global-not-found` (a server component, so no client-graph leak): it mounts
+ * this controller deliberately (B3) and passes `pinnedCwd` and
+ * `suppressLocaleToggle` so its title bar keeps the errorRoute contract.
+ * `global-error` stays palette-free.
  *
  * WHY THE CHORD LIVES HERE. One piece of state gets one owner. The header
  * button and the Cmd/Ctrl+K chord are two ways to open the same palette, so
@@ -65,10 +69,16 @@ export default function ShellPalette({
 	locale,
 	copy,
 	posts,
+	pinnedCwd,
+	suppressLocaleToggle = false,
 }: {
 	locale: Locale;
 	copy: ShellCopy;
 	posts: PalettePost[];
+	/** Error-route title bar: pin the cwd (the 404 prerenders as `/_not-found`). */
+	pinnedCwd?: string;
+	/** Error-route title bar: a plain locale label instead of the toggle. */
+	suppressLocaleToggle?: boolean;
 }) {
 	const pathname = usePathname();
 	const router = useRouter();
@@ -134,7 +144,13 @@ export default function ShellPalette({
 	// `open` only turns true in the browser, so `document` exists here.
 	return (
 		<>
-			<TerminalTitleBar locale={locale} copy={copy} onOpenPalette={handleOpen} />
+			<TerminalTitleBar
+				locale={locale}
+				copy={copy}
+				onOpenPalette={handleOpen}
+				pinnedCwd={pinnedCwd}
+				suppressLocaleToggle={suppressLocaleToggle}
+			/>
 			{open
 				? createPortal(
 						<PaletteHost

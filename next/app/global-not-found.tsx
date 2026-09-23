@@ -1,6 +1,9 @@
 import { Fragment } from 'react';
 
 import { NotFoundEcho } from '@/components/NotFoundEcho';
+import ShellPalette from '@/components/palette/ShellPalette';
+import { shellCopy } from '@/i18n/copy';
+import { palettePosts } from '@/palette/server-posts';
 import { DocumentShell } from '@/shell/document';
 import { SiteShell } from '@/shell/site-shell';
 
@@ -28,7 +31,23 @@ function artLine(line: string, row: number) {
 export default function GlobalNotFound() {
 	return (
 		<DocumentShell lang="en" title="Page not found | Brandon Wie" standaloneHead>
-			<SiteShell locale="en" errorRoute>
+			{/* B3: the palette is mounted here on purpose. This is a server component,
+			   so the controller is a deliberate addition to the 404's client code;
+			   global-error stays palette-free. The title-bar props keep the
+			   errorRoute contract (cwd `~`, no window, plain `en`). */}
+			<SiteShell
+				locale="en"
+				errorRoute
+				header={
+					<ShellPalette
+						locale="en"
+						copy={shellCopy('en')}
+						posts={palettePosts('en')}
+						pinnedCwd="~"
+						suppressLocaleToggle
+					/>
+				}
+			>
 				<div className="pg-nf">
 					<NotFoundEcho />
 					<div className="term-gap" />
