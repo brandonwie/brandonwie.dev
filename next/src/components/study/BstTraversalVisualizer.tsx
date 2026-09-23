@@ -111,16 +111,20 @@ const builtFrom = sequences.preorder;
 
 type NodeState = 'current' | 'visited' | 'unvisited';
 
+// Shell state inks (inside `.pg-study` the tokens resolve to the CRT inks:
+// gold → amber, accent → green, muted → worn, bg → glass). The current node
+// is reverse video: an amber fill with glass text. Visited is green, unvisited
+// is worn on a `--line` stroke.
 function circleClass(state: NodeState): string {
-	if (state === 'current') return 'fill-bg stroke-gold';
-	if (state === 'visited') return 'fill-highlight-med stroke-accent';
+	if (state === 'current') return 'fill-gold stroke-gold';
+	if (state === 'visited') return 'fill-bg stroke-accent';
 	return 'fill-bg stroke-line';
 }
 
 function textClass(state: NodeState): string {
-	if (state === 'current') return 'fill-gold';
+	if (state === 'current') return 'fill-bg';
 	if (state === 'visited') return 'fill-accent';
-	return 'fill-faint';
+	return 'fill-muted';
 }
 
 export default function BstTraversalVisualizer({ copy }: { copy: BstTraversalCopy }) {
@@ -213,6 +217,7 @@ export default function BstTraversalVisualizer({ copy }: { copy: BstTraversalCop
 						return (
 							<g
 								key={n.value}
+								data-state={state}
 								className="transition-all duration-200 motion-reduce:transition-none"
 							>
 								<circle
@@ -247,10 +252,11 @@ export default function BstTraversalVisualizer({ copy }: { copy: BstTraversalCop
 							key={`${value}-${index}`}
 							data-motion-key={`${value}-${index}`}
 							data-motion-enter={`fade:${enterDuration}`}
+							data-state={index === visited.length - 1 ? 'current' : 'visited'}
 							className={`border px-2.5 py-1 font-mono text-sm ${
 								index === visited.length - 1
-									? 'border-gold text-gold'
-									: 'border-accent bg-highlight-med text-accent'
+									? 'border-gold bg-gold text-bg'
+									: 'border-line text-accent'
 							}`}
 						>
 							{value}

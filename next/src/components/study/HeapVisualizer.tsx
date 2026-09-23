@@ -196,34 +196,37 @@ export default function HeapVisualizer({ copy }: { copy: HeapVisualizerCopy }) {
 		return copy.statusLabels.settled;
 	}
 
+	// Shell state inks (inside `.pg-study`: gold → amber, foam → green,
+	// muted → worn, bg → glass). `new` is reverse video (amber fill, glass
+	// text), `swap` an amber dashed border, `min` (root) green, `set` worn.
 	function statusClass(status: NodeStatus): string {
-		if (status === 'inserted') return 'border-accent bg-highlight-med text-accent';
-		if (status === 'swapped') return 'border-gold border-dashed text-gold';
-		if (status === 'root') return 'border-foam text-foam';
-		return 'border-line text-muted';
+		if (status === 'inserted') return 'border-gold bg-gold text-bg';
+		if (status === 'swapped') return 'border-gold border-dashed bg-bg text-gold';
+		if (status === 'root') return 'border-foam bg-bg text-foam';
+		return 'border-line bg-bg text-muted';
 	}
 
 	function strokeColor(status: NodeStatus): string {
-		if (status === 'inserted') return 'var(--color-accent)';
+		if (status === 'inserted') return 'var(--color-gold)';
 		if (status === 'swapped') return 'var(--color-gold)';
 		if (status === 'root') return 'var(--color-foam)';
 		return 'var(--color-line)';
 	}
 
 	function fillColor(status: NodeStatus): string {
-		if (status === 'inserted') return 'var(--color-highlight-med)';
+		if (status === 'inserted') return 'var(--color-gold)';
 		return 'var(--color-bg)';
 	}
 
 	function textColor(status: NodeStatus): string {
-		if (status === 'inserted') return 'var(--color-accent)';
+		if (status === 'inserted') return 'var(--color-bg)';
 		if (status === 'swapped') return 'var(--color-gold)';
 		if (status === 'root') return 'var(--color-foam)';
 		return 'var(--color-muted)';
 	}
 
 	return (
-		<article className="study-card min-w-0 p-5">
+		<article className="study-card min-w-0 p-5" data-viz="heap">
 			<h3 className="text-lg font-semibold text-ink">{copy.title}</h3>
 			<p className="mt-2 text-sm leading-6 text-muted">{copy.description}</p>
 			<p className="mt-2 text-sm leading-6 text-muted">{messageText}</p>
@@ -256,9 +259,14 @@ export default function HeapVisualizer({ copy }: { copy: HeapVisualizerCopy }) {
 								data-motion-key={cell.node.id}
 								data-motion-flip={flipDuration}
 								data-motion-enter={`scale:${enterDuration}`}
-								className={`min-h-16 min-w-[2.75rem] flex-1 border bg-bg p-1 text-center font-mono text-sm motion-reduce:transition-none ${statusClass(cell.node.status)}`}
+								data-state={cell.node.status}
+								className={`min-h-16 min-w-[2.75rem] flex-1 border p-1 text-center font-mono text-sm motion-reduce:transition-none ${statusClass(cell.node.status)}`}
 							>
-								<span className="block text-[10px] text-faint">{cell.index}</span>
+								<span
+									className={`block text-[10px] ${cell.node.status === 'inserted' ? 'text-bg' : 'text-faint'}`}
+								>
+									{cell.index}
+								</span>
 								<span className="block text-[10px] uppercase">{statusLabel(cell.node.status)}</span>
 								<span>{cell.node.value}</span>
 							</div>
@@ -296,14 +304,15 @@ export default function HeapVisualizer({ copy }: { copy: HeapVisualizerCopy }) {
 								/>
 							))}
 							{placedNodes.map((placed) => (
-								<g key={placed.node.id}>
+								<g key={placed.node.id} data-state={placed.node.status}>
 									<circle
 										cx={placed.x}
 										cy={placed.y}
 										r={NODE_R}
 										fill={fillColor(placed.node.status)}
 										stroke={strokeColor(placed.node.status)}
-										strokeWidth="2"
+										strokeWidth="1.5"
+										strokeDasharray={placed.node.status === 'swapped' ? '4 3' : undefined}
 									/>
 									<text
 										x={placed.x}
@@ -339,7 +348,9 @@ export default function HeapVisualizer({ copy }: { copy: HeapVisualizerCopy }) {
 					<span className="font-mono text-xs uppercase tracking-wider text-faint">
 						{copy.minLabel}
 					</span>
-					<span className="ml-2 font-mono text-foam">{heap[1].value}</span>
+					<span data-state="min" className="ml-2 font-mono text-foam">
+						{heap[1].value}
+					</span>
 				</p>
 			) : null}
 		</article>
