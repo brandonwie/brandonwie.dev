@@ -675,6 +675,15 @@
 	counter-reset: pg-line;
 	white-space: pre;
 }
+/* The last line box overflows the content box by ~11px, which overflow-y:
+   hidden clipped (the final line was cut off). Bottom padding cannot fix it:
+   src/app.css pins `pre code { padding: 0 !important }` in the base layer. A
+   spacer block grows the content box instead; pseudo content is not copied. */
+.pg-post .prose-terminal pre.shiki > code::after {
+	content: '';
+	display: block;
+	height: 12px;
+}
 .pg-post .prose-terminal pre.shiki .line::before {
 	counter-increment: pg-line;
 	content: counter(pg-line);
