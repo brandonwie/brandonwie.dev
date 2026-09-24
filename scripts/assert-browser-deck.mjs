@@ -178,6 +178,9 @@ async function dk01(page, port) {
 				return JSON.stringify({
 					fixed: deck ? getComputedStyle(deck).position : null,
 					covers: !!r && r.left <= 0 && r.top <= 0 && r.right >= innerWidth && r.bottom >= innerHeight,
+					// Diagnostic: a classic-scrollbar gutter kept open while presenting shows
+					// here as a positive number and leaves the overlay short of the edge.
+					gutter: innerWidth - document.documentElement.clientWidth,
 					stage: widths(document.querySelector('.deck-stage')),
 					rail: widths(document.querySelector('.deck-rail')),
 					frameTitle: !!document.querySelector('.deck-frame-title'),
@@ -216,7 +219,7 @@ async function dk01(page, port) {
 		failed += report(
 			'DK-01',
 			ok,
-			`${ROUTE}${search || ''}  static=${staticOk} position=${live.fixed} covers=${live.covers} stage=${live.stage} rail=${live.rail} frameTitle=${live.frameTitle} ps1=${live.ps1} chrome=${live.chrome.map((c) => c.join(':')).join(',')} scrollY=${scrollY} slide=${live.slide}`,
+			`${ROUTE}${search || ''}  static=${staticOk} position=${live.fixed} covers=${live.covers} gutter=${live.gutter} stage=${live.stage} rail=${live.rail} frameTitle=${live.frameTitle} ps1=${live.ps1} chrome=${live.chrome.map((c) => c.join(':')).join(',')} scrollY=${scrollY} slide=${live.slide}`,
 		);
 	}
 	return failed;

@@ -214,8 +214,14 @@
 		:is(.term-bar, .term-ghost, .term-plan, .term-status, .term-ps1--idle) {
 		visibility: hidden;
 	}
+	/* `src/app.css` gives <html> `scrollbar-gutter: stable`. Where scrollbars
+	   are classic (Windows, Linux), that keeps a scrollbar-wide strip reserved
+	   even with overflow hidden, so the fixed overlay stopped short of the
+	   right edge (CI's DK-01 `covers=false`). Presenting is full-screen, so
+	   release the gutter while it lasts. */
 	html:has(.deck.is-presenting) {
 		overflow: hidden;
+		scrollbar-gutter: auto;
 	}
 
 	/* --- ?print: white paper, outside the CRT ------------------------------
