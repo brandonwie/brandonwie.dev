@@ -87,6 +87,18 @@
 	   width (960 page - 2x24 padding - 2x1 border - 2x2 bezel = 906px), so every
 	   page's content box stays 854px wide on desktop. `--term-pad` is that
 	   column's inset, used by every shell row. */
+	/* The enclosure is full-bleed, so its glowing border is the page edge.
+	   `src/app.css` (shared with the Svelte tree) reserves a scrollbar gutter on
+	   <html>; with classic scrollbars (Windows, Linux) that left an empty strip
+	   at the right of every page too short to scroll (CI SL-01: 1272 of 1280).
+	   The shell drops the reservation: short pages run edge to edge, long
+	   pages put the scrollbar at the edge. The centred column may move by half
+	   a scrollbar between short and long pages; the border reaching the edge
+	   is the requirement. */
+	html {
+		scrollbar-gutter: auto;
+	}
+
 	.term-page {
 		--term-col: 906px;
 		--term-gutter: 26px;
