@@ -19,7 +19,7 @@ references:
   - url: 'https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md'
     title: 'markdownlint MD041 — first-line-heading'
     type: official
-source_content_hash: 94b743d389bb5aa18c4b92817a7fc24f5d9dde6cad40e80ff74b05eacccfd517
+source_content_hash: 2612c37f859108ca277410129cdb82aa0712fffa4a020a7f932bd82df09281a7
 ---
 
 When a session-state dashboard regenerates from a single source (e.g., today's journal), unresolved follow-ups from prior sessions vanish silently on every rebuild. Compounded with single-source discovery and conversation-only mentions, follow-ups disappear three ways at once. The fix is a 4-layer architecture that defends against each loss mode independently.
@@ -39,6 +39,8 @@ The original v1.3.0 design did in-skill carry-forward merge of prior ACTIVE-STAT
 
 1. **Parallel-wrap concurrency safety.** When two /wrap sessions race on the same dashboard, carry-forward merge can lose updates. The generator acquires a lock + treats `ACTIVE-STATUS.md` as durable-source-only output (never reads prior dashboard state).
 2. **Single source of truth.** Carry-forward implicitly trusted the dashboard's prior content as state; durable-source-only reads journal + project todos.md + actives folders directly. The dashboard reflects them, not the other way around.
+
+> **Update (2026-09-24).** The generator no longer relies on that single lock directory. It now takes a lease named after the file it protects, `.agents/locks/ACTIVE-STATUS.md.lock`, first, and the old flat `active-status.lock` second. The flat directory stays as a compatibility bridge, so writers that predate the change are still kept out. A stuck lock is now recovered only when its holder is proven dead, never because the lock looks old.
 
 The carry-forward test case became design-obsolete with this shift; the remaining merge logic (multi-source scan, resolution drop, dedup, tag derivation) all moved into the generator's `collectPriorities` + `collectProjectFollowups` + `withProject` functions, covered by 20 unit tests in `scripts/regenerate-active-status.test.js` (all green as of 2026-04-30 close).
 

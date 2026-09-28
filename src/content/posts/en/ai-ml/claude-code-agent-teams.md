@@ -12,7 +12,7 @@ category: ai-ml
 draft: false
 lang: en
 expanded: true
-source_content_hash: 2d864bda3c9080a02d1b4e1b87440cfb22f631396e92eeabc728b676116a3538
+source_content_hash: 4cce61a2dbe2433f3fea43720c6b9b138c594c9ff4b7157796cb6edabe994fa8
 references:
   - url: "https://code.claude.com/docs/en/agent-teams"
     title: Orchestrate teams of Claude Code sessions
@@ -84,6 +84,15 @@ Enable the experimental feature flag:
   }
 }
 ```
+
+A correction from my own setup (2026-09-21): I no longer set this flag. I
+removed it from my Claude Code profiles, together with
+`CLAUDE_CODE_SUBAGENT_MODEL_FORCE`, after seeing what it did to effort pins.
+With the flag on, an Agent call that passes a `name` spawns a teammate, and
+teammates run at the lead session's effort, so the `effort:` pins in my agent
+presets were skipped. In my own logs, teammate spawns missed the pin 28 of 69
+times, while plain spawns matched it 107 of 107 times. `teammateMode` is still
+in my settings, but it does nothing without the flag.
 
 Display behavior has changed across releases. If you need a specific mode,
 consult the documentation for the installed Claude Code version rather than

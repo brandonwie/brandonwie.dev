@@ -16,7 +16,7 @@ lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
 source_updated: '2026-09-20'
-translation_date: '2026-09-20'
+translation_date: '2026-09-28'
 references:
   - url: 'https://code.claude.com/docs/en/agent-teams'
     title: Claude Code Agent Teams 공식 문서
@@ -80,6 +80,8 @@ artifact에 쓰이기 전에는 lead가 읽을 수 없어요. fan-out 뒤 모든
   }
 }
 ```
+
+바로잡을 게 하나 있어요(2026-09-21). 지금 제 설정에서는 이 flag를 켜지 않아요. flag 때문에 effort pin이 먹히지 않는 걸 보고 `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`와 함께 Claude Code profile에서 뺐어요. flag가 켜져 있으면 `name`을 넘긴 Agent 호출은 팀원을 spawn해요. 팀원은 lead session의 effort로 돌기 때문에 agent preset에 걸어 둔 `effort:` pin이 적용되지 않았어요. 제 로그를 보면 팀원 spawn은 69번 중 28번 pin을 놓쳤고, 일반 spawn은 107번 모두 pin을 지켰어요. `teammateMode`는 아직 설정에 남아 있지만 flag 없이는 아무 효과가 없어요.
 
 화면 동작은 release마다 바뀌었어요. 특정 mode가 필요하면 오래된 설정을 그대로
 복사하지 말고 설치한 version의 문서를 확인해요. tmux를 선호할 때 사용해 온

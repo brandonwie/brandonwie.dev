@@ -386,10 +386,10 @@
 	{
 		"url": "/ko/posts/claude-code-agent-teams",
 		"field": "text",
-		"fingerprint": "582a976e0089b9c494ac176bbc8338dd",
-		"reason": "D9 (Phosphor Fade redesign): messages/ko.json footer_copy_secondary changed (가동 시간: ∞ · 테마: rosé-pine → 가동 시간: ∞ · 테마: phosphor-fade); the legacy Svelte footer renders that key on every route. This is the ONLY text difference on this route: reverting just the D9 string in a copy of build/ yields 0 unapproved differences against svelte-e23e808.",
-		"approved_by": "Brandon (D9 decision, commit 9759b77)",
-		"approved_on": "2026-09-23"
+		"fingerprint": "3648795e42818ca4ccc92cdaeac35854",
+		"reason": "D9 (Phosphor Fade redesign): messages/ko.json footer_copy_secondary changed (가동 시간: ∞ · 테마: rosé-pine → 가동 시간: ∞ · 테마: phosphor-fade); the legacy Svelte footer renders that key on every route. Re-keyed 2026-09-28 (post resync for the c3 W2 upstream drift): KO body gains the translated 2026-09-21 flag-removal correction paragraph. The D9 footer change and this resync paragraph are the only text differences on this route; the D9-only fingerprint (approved 2026-09-23) matched before this commit. By decision, `updated` (EN) and `updated`/`source_updated` (KO) stay at their previous values, so listings, RSS, sitemap lastmod and article metadata do not drift; only the KO `translation_date` moved (2026-09-28, the date of the delta translation), and nothing renders that field.",
+		"approved_by": "Brandon (D9 decision, commit 9759b77; post-resync decision, 2026-09-29)",
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/ko/posts/claude-code-expert-workflows",
@@ -1490,10 +1490,10 @@
 	{
 		"url": "/ko/posts/wrap-followup-persistence-architecture",
 		"field": "text",
-		"fingerprint": "da01e9c44778238475bd0634e1067a80",
-		"reason": "D9 (Phosphor Fade redesign): messages/ko.json footer_copy_secondary changed (가동 시간: ∞ · 테마: rosé-pine → 가동 시간: ∞ · 테마: phosphor-fade); the legacy Svelte footer renders that key on every route. This is the ONLY text difference on this route: reverting just the D9 string in a copy of build/ yields 0 unapproved differences against svelte-e23e808.",
-		"approved_by": "Brandon (D9 decision, commit 9759b77)",
-		"approved_on": "2026-09-23"
+		"fingerprint": "da1fd6384775618a955d8a24dcc70363",
+		"reason": "D9 (Phosphor Fade redesign): messages/ko.json footer_copy_secondary changed (가동 시간: ∞ · 테마: rosé-pine → 가동 시간: ∞ · 테마: phosphor-fade); the legacy Svelte footer renders that key on every route. Re-keyed 2026-09-28 (post resync for the c3 W2 upstream drift): KO body gains the translated 2026-09-24 lock-lease update blockquote. The D9 footer change and this resync paragraph are the only text differences on this route; the D9-only fingerprint (approved 2026-09-23) matched before this commit. By decision, `updated` (EN) and `updated`/`source_updated` (KO) stay at their previous values, so listings, RSS, sitemap lastmod and article metadata do not drift; only the KO `translation_date` moved (2026-09-28, the date of the delta translation), and nothing renders that field.",
+		"approved_by": "Brandon (D9 decision, commit 9759b77; post-resync decision, 2026-09-29)",
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/ko/posts/zsh-backtick-eval-in-skills",
@@ -1818,10 +1818,10 @@
 	{
 		"url": "/posts/claude-code-agent-teams",
 		"field": "text",
-		"fingerprint": "6bc468e7172e52b276dd8f1fd58fd7a6",
-		"reason": "D9 (Phosphor Fade redesign): messages/en.json footer_copy_secondary changed (uptime: ∞ · theme: rosé-pine → uptime: ∞ · theme: phosphor-fade); the legacy Svelte footer renders that key on every route. This is the ONLY text difference on this route: reverting just the D9 string in a copy of build/ yields 0 unapproved differences against svelte-e23e808.",
-		"approved_by": "Brandon (D9 decision, commit 9759b77)",
-		"approved_on": "2026-09-23"
+		"fingerprint": "864f770505ea036997f476b0fe4ae665",
+		"reason": "D9 (Phosphor Fade redesign): messages/en.json footer_copy_secondary changed (uptime: ∞ · theme: rosé-pine → uptime: ∞ · theme: phosphor-fade); the legacy Svelte footer renders that key on every route. Re-keyed 2026-09-28 (post resync for the c3 W2 upstream drift): EN body gains the 2026-09-21 flag-removal correction paragraph from the 3B source (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS no longer set; teammate spawns skipped effort pins 28 of 69). The D9 footer change and this resync paragraph are the only text differences on this route; the D9-only fingerprint (approved 2026-09-23) matched before this commit. By decision, `updated` (EN) and `updated`/`source_updated` (KO) stay at their previous values, so listings, RSS, sitemap lastmod and article metadata do not drift; only the KO `translation_date` moved (2026-09-28, the date of the delta translation), and nothing renders that field.",
+		"approved_by": "Brandon (D9 decision, commit 9759b77; post-resync decision, 2026-09-29)",
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/posts/claude-code-expert-workflows",
@@ -2922,10 +2922,10 @@
 	{
 		"url": "/posts/wrap-followup-persistence-architecture",
 		"field": "text",
-		"fingerprint": "3d0dc4d7eede0686f03473df4e951699",
-		"reason": "D9 (Phosphor Fade redesign): messages/en.json footer_copy_secondary changed (uptime: ∞ · theme: rosé-pine → uptime: ∞ · theme: phosphor-fade); the legacy Svelte footer renders that key on every route. This is the ONLY text difference on this route: reverting just the D9 string in a copy of build/ yields 0 unapproved differences against svelte-e23e808.",
-		"approved_by": "Brandon (D9 decision, commit 9759b77)",
-		"approved_on": "2026-09-23"
+		"fingerprint": "31b01c489d362c72dc7f8fae76f31e3d",
+		"reason": "D9 (Phosphor Fade redesign): messages/en.json footer_copy_secondary changed (uptime: ∞ · theme: rosé-pine → uptime: ∞ · theme: phosphor-fade); the legacy Svelte footer renders that key on every route. Re-keyed 2026-09-28 (post resync for the c3 W2 upstream drift): EN body gains the 2026-09-24 lock-lease update blockquote from the 3B source. The D9 footer change and this resync paragraph are the only text differences on this route; the D9-only fingerprint (approved 2026-09-23) matched before this commit. By decision, `updated` (EN) and `updated`/`source_updated` (KO) stay at their previous values, so listings, RSS, sitemap lastmod and article metadata do not drift; only the KO `translation_date` moved (2026-09-28, the date of the delta translation), and nothing renders that field.",
+		"approved_by": "Brandon (D9 decision, commit 9759b77; post-resync decision, 2026-09-29)",
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/posts/zsh-backtick-eval-in-skills",
