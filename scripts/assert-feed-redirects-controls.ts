@@ -25,8 +25,11 @@
  * it; chip order within the campaign is exercised instead), and with no
  * `blog_slug` the blog chip is injected rather than mutated.
  *
- * Every control runs against a throwaway copy of the candidate under `tmp/`;
- * the real `next/build` and the Svelte baseline are never mutated.
+ * The expected values come from the tracked sources (`public/_redirects`,
+ * `messages/*.json`, `src/lib/data/social-feed.json`) and the frozen baseline;
+ * every control runs against a throwaway copy of the candidate under `tmp/`,
+ * the real `next/build` is never mutated and the retired SvelteKit `build/`
+ * is never read.
  */
 import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -81,7 +84,7 @@ const REDIRECT_CONTROLS: Omit<Control, 'id'>[] = [
 	},
 	{
 		kind: 'DEFECT',
-		what: "a whitespace-only change to _redirects -- invisible to the comparator's collapsed hash, caught by the byte row",
+		what: "a whitespace-only change to _redirects -- invisible to the comparator's collapsed hash, caught by the byte row against public/_redirects",
 		target: REDIRECTS,
 		apply: (text) => text.replace(/ (\d{3})\n/, '  $1\n'),
 	},
@@ -292,8 +295,8 @@ function fingerprint(file: string): string {
 /**
  * Run the FR control lattice against a scratch copy of the candidate export.
  *
- * CLI: `tsx scripts/assert-feed-redirects-controls.ts [candidateDir] [baselineDir]`
- * (defaults `next/build` and `build`). Every control mutates a fresh
+ * CLI: `tsx scripts/assert-feed-redirects-controls.ts [candidateDir]`
+ * (default `next/build`). Every control mutates a fresh
  * dereferenced copy under `tmp/` and reruns `runAssertions`; a DEFECT must
  * exit 1, an INVARIANCE or BASELINE must exit 0, and a mutation that changes
  * no bytes is reported as a failed control.
@@ -303,12 +306,11 @@ function fingerprint(file: string): string {
  */
 async function main(): Promise<number> {
 	const candidate = process.argv[2] ?? 'next/build';
-	const baseline = process.argv[3] ?? 'build';
-	if (!existsSync(candidate) || !existsSync(baseline)) {
-		console.error(`FATAL: need both ${candidate} and ${baseline}; build first`);
+	if (!existsSync(candidate)) {
+		console.error(`FATAL: need ${candidate}; run pnpm build:next first`);
 		return 2;
 	}
-	const clean = await runAssertions(candidate, baseline, true);
+	const clean = await runAssertions(candidate, true);
 	if (clean !== 0) {
 		console.error(
 			`FATAL: the untouched candidate exits ${clean}; controls need a green starting point`,
@@ -341,7 +343,7 @@ async function main(): Promise<number> {
 			rmSync(scratch, { recursive: true, force: true });
 			continue;
 		}
-		const code = await runAssertions(scratch, baseline, true);
+		const code = await runAssertions(scratch, true);
 		const expected = control.kind === 'DEFECT' ? 1 : 0;
 		const ok = code === expected;
 		if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
