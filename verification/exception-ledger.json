@@ -3530,10 +3530,10 @@
 	{
 		"url": "/ko/posts/claude-code-agent-teams",
 		"field": "text",
-		"fingerprint": "c7f8493bb5ac77e882d31b02b548c5bc",
-		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. Supersedes the gen-8 approval at this url+field (fingerprint 1460ca464ae2c26870eac5e4a4c6f81e; reason in git history of verification/exception-ledger.json @ 0d80b01). REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint 8594f0803c1e750daede6eb200b17217.",
+		"fingerprint": "34a49269318fedee5898a10259dcca1f",
+		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. Supersedes the gen-8 approval at this url+field (fingerprint 1460ca464ae2c26870eac5e4a4c6f81e; reason in git history of verification/exception-ledger.json @ 0d80b01). REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint 8594f0803c1e750daede6eb200b17217. Re-keyed 2026-09-29: the route text now also carries the translated 2026-09-21 flag-removal correction paragraph from the post resync (1446613); the redesign-only fingerprint matched before those commits.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-24"
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/ko/posts/claude-code-agent-teams",
@@ -5738,10 +5738,10 @@
 	{
 		"url": "/ko/posts/wrap-followup-persistence-architecture",
 		"field": "text",
-		"fingerprint": "7275d009a06a992f2fe4d6ca7dea2844",
-		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. Supersedes the gen-8 approval at this url+field (fingerprint d699cd7b238e8db66051fd78bd647053; reason in git history of verification/exception-ledger.json @ 0d80b01). REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint a5d73af038a34dd1645750d9e5fc8c28.",
+		"fingerprint": "d85bcd3e855b0f835eaa177e4fd6f332",
+		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. Supersedes the gen-8 approval at this url+field (fingerprint d699cd7b238e8db66051fd78bd647053; reason in git history of verification/exception-ledger.json @ 0d80b01). REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint a5d73af038a34dd1645750d9e5fc8c28. Re-keyed 2026-09-29: the route text now also carries the translated 2026-09-24 lock-lease update blockquote from the post resync (1446613); the redesign-only fingerprint matched before those commits.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-24"
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/ko/posts/wrap-followup-persistence-architecture",
@@ -6330,10 +6330,10 @@
 	{
 		"url": "/posts/claude-code-agent-teams",
 		"field": "text",
-		"fingerprint": "e322ea8436bb247f544cb22532c6c2f5",
-		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. Supersedes the gen-8 approval at this url+field (fingerprint 3efe759e7acb885a05a488d8bb3d9356; reason in git history of verification/exception-ledger.json @ 0d80b01). REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint d33e81e290a8fd15ae472e509ae99668.",
+		"fingerprint": "f1c08ed241101b8f364a0569697b81ba",
+		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. Supersedes the gen-8 approval at this url+field (fingerprint 3efe759e7acb885a05a488d8bb3d9356; reason in git history of verification/exception-ledger.json @ 0d80b01). REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint d33e81e290a8fd15ae472e509ae99668. Re-keyed 2026-09-29: the route text now also carries the 2026-09-21 flag-removal correction paragraph from the post resync (1446613); the redesign-only fingerprint matched before those commits.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-24"
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/posts/claude-code-agent-teams",
@@ -8538,10 +8538,10 @@
 	{
 		"url": "/posts/wrap-followup-persistence-architecture",
 		"field": "text",
-		"fingerprint": "c03756c41ea7180f5a186c3bef371bb0",
-		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. Supersedes the gen-8 approval at this url+field (fingerprint 6cf78803c0e1bd3c7ccfcd9a409835ef; reason in git history of verification/exception-ledger.json @ 0d80b01). REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint c3e9862cb3ab18a1a749a3739c5c3504.",
+		"fingerprint": "ea0da2c11d7067c7ce960b2ea48beeec",
+		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. Supersedes the gen-8 approval at this url+field (fingerprint 6cf78803c0e1bd3c7ccfcd9a409835ef; reason in git history of verification/exception-ledger.json @ 0d80b01). REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint c3e9862cb3ab18a1a749a3739c5c3504. Re-keyed 2026-09-29: the route text now also carries the 2026-09-24 lock-lease update blockquote from the post resync (1446613); the redesign-only fingerprint matched before those commits.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-24"
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/posts/wrap-followup-persistence-architecture",
@@ -8578,10 +8578,34 @@
 	{
 		"url": "/about",
 		"field": "text",
-		"fingerprint": "fc953f5a4b38bd0e2726ba70db9f37d2",
-		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint 5c2f35d6c97b1224bb3d2169d35cac14.",
+		"fingerprint": "4f6ee7b91b79122604a4c65cff832598",
+		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint 5c2f35d6c97b1224bb3d2169d35cac14. Re-keyed 2026-09-29: the route text now also carries the About copy rewritten for the Playtag role (about-playtag-role, 19b4224) and the 96x63 ASCII portrait with its \"96 cols\" caption (about-portrait-v2, eb85f49); the redesign-only fingerprint matched before those commits.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-24"
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/about",
+		"field": "description",
+		"fingerprint": "1451cce59e580777ba9b996526c1d4d3",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. src/lib/data/about.ts en metaDescription rewritten for the new role.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/about",
+		"field": "og",
+		"fingerprint": "06f7542de6b142ac7f298f8687731bd7",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only og:description changed, carrying the new en about.ts metaDescription.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/about",
+		"field": "twitter",
+		"fingerprint": "6dbe9c204012c27e1c851008bcd622c6",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only twitter:description changed, carrying the new en about.ts metaDescription.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/contact",
@@ -8634,10 +8658,34 @@
 	{
 		"url": "/ko/about",
 		"field": "text",
-		"fingerprint": "493488631473dad5671086ef49aa6100",
-		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint e2dd7ab53a6f4c652daba5b56b3496d6.",
+		"fingerprint": "4ce4e8071634233f115fe65c1d512986",
+		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint e2dd7ab53a6f4c652daba5b56b3496d6. Re-keyed 2026-09-29: the route text now also carries the KO About copy rewritten for the Playtag role (about-playtag-role, 19b4224) and the 96x63 ASCII portrait with its \"96칸\" caption (about-portrait-v2, eb85f49); the redesign-only fingerprint matched before those commits.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-24"
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/ko/about",
+		"field": "description",
+		"fingerprint": "50f7c6aa8b2b59ad0f66d6b9551802d4",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. src/lib/data/about.ts ko metaDescription rewritten for the new role.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/ko/about",
+		"field": "og",
+		"fingerprint": "b317d65f261a681c7d4786ccde04c11c",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only og:description changed, carrying the new ko about.ts metaDescription.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/ko/about",
+		"field": "twitter",
+		"fingerprint": "66bdd1191322e229e6eaf1dacee61dbf",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only twitter:description changed, carrying the new ko about.ts metaDescription.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/ko/contact",
@@ -8850,10 +8898,42 @@
 	{
 		"url": "/ko",
 		"field": "text",
-		"fingerprint": "24bee8b2c398b70a6023c58125f408c7",
-		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint 34254d6201bcfa669e5403690cf1a0c2.",
+		"fingerprint": "c5471145e319790570115e185be4c99b",
+		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint 34254d6201bcfa669e5403690cf1a0c2. Re-keyed 2026-09-29: the route text now also carries the KO home bio (messages/ko.json blog_bio) now names Playtag instead of MOBA (about-playtag-role, 19b4224); the redesign-only fingerprint matched before those commits.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-24"
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/ko",
+		"field": "title",
+		"fingerprint": "c826c98672e0a646a1e659e519e6ab08",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. messages/ko.json site_title changed (Brandon Wie | 소프트웨어 엔지니어 → Brandon Wie | 풀스택 AI 엔지니어); the Next /ko home renders it as <title>.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/ko",
+		"field": "og",
+		"fingerprint": "49d20589874a7d50fec60d96530a0f87",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only og:title changed, carrying the new ko site_title.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/ko",
+		"field": "twitter",
+		"fingerprint": "e8a0d73acf00b7ec19c2f684cfb4ed08",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only twitter:title changed, carrying the new ko site_title.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/ko",
+		"field": "jsonLd",
+		"fingerprint": "bf17d5ea0779770d18d064c66fe9774e",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Person JSON-LD (next/src/seo/metadata.ts): jobTitle → Full-stack AI Engineer, plus worksFor Organization Playtag.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/posts",
@@ -9066,10 +9146,42 @@
 	{
 		"url": "/",
 		"field": "text",
-		"fingerprint": "f4450b41e4c3b6e038821b31eb9394e3",
-		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint ff47c0bfba40e1e14b25d30730a60543.",
+		"fingerprint": "fabba21b5f2aeb4ec8b0dd3815e64902",
+		"reason": "Phosphor Fade terminal redesign (feat/terminal-redesign): the page renders inside the terminal shell (title bar with cwd, prompt lines, TUI frames, ~/.plan footer, tmux status line) instead of the Rosé Pine header/footer, so the normalized visible text changes. Copy still comes from existing data and messages (porting-guide content rule); the candidate text is not shorter than the baseline on any route, and the SEO head (title, description, canonical, hreflang, OG, Twitter, JSON-LD) matches main on all 373 routes. REDESIGN (user instruction 2026-09-23: full-bleed enclosure, all nav links in the header): the title bar gains the primary nav row (home, posts, study, 3B, about, projects, tags, contact), so this field changes again; supersedes fingerprint ff47c0bfba40e1e14b25d30730a60543. Re-keyed 2026-09-29: the route text now also carries the home bio (messages/en.json blog_bio) now names Playtag instead of MOBA (about-playtag-role, 19b4224); the redesign-only fingerprint matched before those commits.",
 		"approved_by": "Brandon",
-		"approved_on": "2026-09-24"
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/",
+		"field": "title",
+		"fingerprint": "020d000793d82b448eb5f151a99ea245",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. messages/en.json site_title changed (Brandon Wie | Software Engineer → Brandon Wie | Full-stack AI Engineer); the Next home renders it as <title>.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/",
+		"field": "og",
+		"fingerprint": "ab5383d735cd4296fa1cc9522cc97956",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only og:title changed, carrying the new en site_title.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/",
+		"field": "twitter",
+		"fingerprint": "8a0e0f6bfee0a16ada21b2e96f3930ca",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only twitter:title changed, carrying the new en site_title.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
+	},
+	{
+		"url": "/",
+		"field": "jsonLd",
+		"fingerprint": "6bd53af9135d95da4544672b6520104d",
+		"reason": "about-playtag-role (19b4224): Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Person JSON-LD (next/src/seo/metadata.ts): jobTitle Software Engineer → Full-stack AI Engineer, plus worksFor Organization Playtag.",
+		"approved_by": "Brandon",
+		"approved_on": "2026-09-29"
 	},
 	{
 		"url": "/",
