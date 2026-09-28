@@ -42,6 +42,7 @@
 	.pg-about .ab-portrait {
 		min-width: 0;
 		margin: 0;
+		container-type: inline-size;
 	}
 	/* ASCII art, not a code block: none of the global `pre` chrome. */
 	.pg-about .ab-portrait pre {
@@ -53,8 +54,12 @@
 		box-shadow: none;
 		overflow: hidden;
 		font-family: var(--font-term);
-		font-size: 10px;
-		line-height: 10px;
+		/* 96 cols x 0.6em JetBrains Mono advance = 57.6em per line: shrink to fit
+		   the figure's width, capped at 8px. Dividing by 58 leaves a small margin
+		   so a wider fallback face cannot clip the last column before the web font
+		   swaps in. */
+		font-size: min(8px, calc(100cqi / 58));
+		line-height: 1;
 		color: var(--crt-amber);
 	}
 	.pg-about .ab-portrait figcaption {
@@ -302,7 +307,7 @@
 	}
 	@media (width >= 64rem) {
 		.pg-about .ab-hero {
-			grid-template-columns: 340px minmax(0, 1fr);
+			grid-template-columns: 30rem minmax(0, 1fr);
 			gap: 28px;
 			align-items: start;
 		}
