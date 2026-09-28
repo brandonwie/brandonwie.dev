@@ -269,7 +269,7 @@ export default function MobaSetupSlide({ step = 0, animate = true }: Props) {
 	return (
 		<section className="slide moba-setup" ref={root}>
 			<header>
-				<p className="company">MOBA &middot; 2025 &ndash; now</p>
+				<p className="company">MOBA &middot; 2025 &ndash; 2026</p>
 				{/*
 					NOT "Where the backend had to keep up" — a topic sentence, and passive on
 					the one slide that establishes scope. The header above says the frame is

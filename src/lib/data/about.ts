@@ -66,26 +66,26 @@ const content: Record<AboutLocale, AboutContent> = {
 	en: {
 		metaTitle: 'About Brandon Wie',
 		metaDescription:
-			'About Brandon Wie: Seoul-based backend and DevOps-focused software engineer building toward AI systems.',
+			'About Brandon Wie: Seoul-based full-stack AI engineer at Playtag, building on a backend and DevOps foundation.',
 		eyebrow: 'About Brandon',
 		title: 'I came from film, stayed for systems, and now build toward AI infrastructure.',
 		subtitle:
-			'Product engineer in Seoul, co-leading backend at Moba and sole-maintaining the calendar sync system across backend, infrastructure, and production recovery work.',
+			'Full-stack AI engineer at Playtag in Seoul, working on mono_xyz, AI video analytics for human behavior, across product, backend, and infrastructure.',
 		intro: [
 			'I started in film and theatre, moved into software in 2019, and grew through frontend, full-stack, backend, DevOps, and AI-native engineering work.',
 			'The through-line is not a title. It is the way I work: trace the system, name the tradeoffs, verify with tests and logs, then write down what changed my mind.',
 		],
 		metrics: [
 			{ value: 'Seoul', label: 'Korean / English', tone: 'accent' },
-			{ value: '7M', label: 'calendar events under full sync', tone: 'foam' },
-			{ value: '5-20x', label: 'sync throughput improvement range', tone: 'gold' },
+			{ value: '7M', label: 'calendar events synced at MOBA', tone: 'foam' },
+			{ value: '5-20x', label: 'MOBA sync throughput gains', tone: 'gold' },
 			{ value: '2019', label: 'software switch from film', tone: 'rose' },
 		],
 		visualCaption: 'Current operating surface',
 		visualLayers: [
 			'Backend systems',
 			'AWS / Terraform',
-			'Airflow ETL',
+			'AI video analytics',
 			'Agent workflows',
 			'3B knowledge layer',
 		],
@@ -113,23 +113,28 @@ const content: Record<AboutLocale, AboutContent> = {
 				body: 'Worked across MODULABS, Moviation, and Playtag, moving from product UI to full-stack delivery, service migration, and production operations.',
 			},
 			{
-				year: '2025-now',
-				title: 'Moba backend, DevOps, and AI data systems',
-				body: 'Sole maintainer for calendar sync while also owning billing surfaces, real-time updates, AWS/Terraform infrastructure, and Airflow-based data pipelines.',
+				year: '2025-2026',
+				title: 'MOBA backend, DevOps, and AI data systems',
+				body: 'Sole-maintained calendar sync while owning billing surfaces, real-time updates, AWS/Terraform infrastructure, and Airflow-based data pipelines.',
+			},
+			{
+				year: '2026-now',
+				title: 'Back at Playtag as a full-stack AI engineer',
+				body: 'Returned to Playtag in August 2026 to work on mono_xyz, AI video analytics for human behavior, across product, backend, and infrastructure.',
 			},
 		],
 		now: [
 			{
-				title: 'Calendar sync at product scale',
-				body: 'Took a fragile single-calendar, one-year sync path into full Google/Apple multi-account and multi-calendar sync across 7M events.',
+				title: 'AI video analytics at Playtag',
+				body: 'mono_xyz turns everyday footage into person-level behavioral insight; I work on it full-stack, across product, backend, and infrastructure.',
 			},
 			{
 				title: 'Infrastructure that the team can operate',
-				body: 'Terraform, GitHub Actions, ECS, RDS, S3, DynamoDB state, WAF hardening, and deployment paths that fail visibly.',
+				body: 'Terraform, CI/CD, and AWS deployment paths that are reviewable, repeatable, and fail visibly instead of silently.',
 			},
 			{
-				title: 'Data systems moving toward AI',
-				body: 'Airflow ingestion, Amplitude ETL completeness, product analytics, and the path from local prototypes to production pipelines.',
+				title: 'Agent-native engineering',
+				body: '3B, reviewer loops, and verification tooling that keep AI-assisted work auditable, from the first prompt to the merged diff.',
 			},
 		],
 		systems: [
@@ -193,26 +198,26 @@ const content: Record<AboutLocale, AboutContent> = {
 	ko: {
 		metaTitle: 'Brandon Wie 소개',
 		metaDescription:
-			'영화에서 소프트웨어로 넘어와 백엔드, DevOps, AI 시스템 쪽으로 일하고 있는 Brandon Wie 소개.',
+			'서울의 Playtag에서 풀스택 AI 엔지니어로 일하는 Brandon Wie 소개. 백엔드와 DevOps 경험을 바탕으로 AI 제품을 만듭니다.',
 		eyebrow: 'Brandon 소개',
 		title: '영화에서 시작했고, 시스템에 남았고, 지금은 AI 인프라 쪽으로 만들고 있습니다.',
 		subtitle:
-			'서울에서 일하는 Product Engineer입니다. Moba에서 백엔드를 함께 리드하고, 캘린더 동기화 시스템은 백엔드부터 인프라까지 단독으로 유지보수합니다.',
+			'서울 Playtag의 풀스택 AI 엔지니어입니다. 사람의 행동을 분석하는 AI 영상 분석 서비스 mono_xyz를 제품, 백엔드, 인프라 전반에서 만들고 있습니다.',
 		intro: [
 			'영화와 연극을 전공한 뒤 2019년에 소프트웨어로 방향을 바꿨습니다. 프론트엔드, 풀스택, 백엔드, DevOps, AI-native 워크플로를 지나 지금의 작업 방식이 만들어졌습니다.',
 			'저를 설명하는 중심은 직함보다 일하는 방식에 가깝습니다. 시스템을 추적하고, 트레이드오프를 이름 붙이고, 테스트와 로그로 확인한 뒤, 생각이 바뀐 지점을 기록합니다.',
 		],
 		metrics: [
 			{ value: 'Seoul', label: 'Korean / English', tone: 'accent' },
-			{ value: '700만', label: '전체 동기화 캘린더 이벤트', tone: 'foam' },
-			{ value: '5-20x', label: '동기화 처리량 개선 범위', tone: 'gold' },
+			{ value: '700만', label: 'MOBA에서 동기화한 캘린더 이벤트', tone: 'foam' },
+			{ value: '5-20x', label: 'MOBA 동기화 처리량 개선', tone: 'gold' },
 			{ value: '2019', label: '영화에서 소프트웨어로 전환', tone: 'rose' },
 		],
 		visualCaption: '현재 작업 표면',
 		visualLayers: [
 			'Backend systems',
 			'AWS / Terraform',
-			'Airflow ETL',
+			'AI video analytics',
 			'Agent workflows',
 			'3B knowledge layer',
 		],
@@ -240,23 +245,28 @@ const content: Record<AboutLocale, AboutContent> = {
 				body: 'MODULABS, Moviation, Playtag를 거치며 UI, 풀스택 구현, 서비스 마이그레이션, 프로덕션 운영까지 확장했습니다.',
 			},
 			{
-				year: '2025-now',
-				title: 'Moba 백엔드, DevOps, AI 데이터 시스템',
-				body: '캘린더 동기화 시스템을 단독으로 유지보수하면서 결제, 실시간 업데이트, AWS/Terraform 인프라, Airflow 데이터 파이프라인까지 다룹니다.',
+				year: '2025-2026',
+				title: 'MOBA 백엔드, DevOps, AI 데이터 시스템',
+				body: '캘린더 동기화 시스템을 단독으로 유지보수하면서 결제, 실시간 업데이트, AWS/Terraform 인프라, Airflow 데이터 파이프라인까지 맡았습니다.',
+			},
+			{
+				year: '2026-now',
+				title: '풀스택 AI 엔지니어로 Playtag에 복귀',
+				body: '2026년 8월 Playtag로 돌아와, 사람의 행동을 분석하는 AI 영상 분석 서비스 mono_xyz를 제품, 백엔드, 인프라 전반에서 만들고 있습니다.',
 			},
 		],
 		now: [
 			{
-				title: '제품 규모의 캘린더 동기화',
-				body: '문제가 많던 단일 캘린더, 1년 범위 동기화 경로를 700만 이벤트 규모의 Google/Apple 멀티 계정, 멀티 캘린더 전체 동기화로 확장했습니다.',
+				title: 'Playtag의 AI 영상 분석',
+				body: 'mono_xyz는 일상의 영상을 사람 단위의 행동 인사이트로 바꿉니다. 저는 제품, 백엔드, 인프라를 오가며 풀스택으로 만들고 있습니다.',
 			},
 			{
 				title: '팀이 운영할 수 있는 인프라',
-				body: 'Terraform, GitHub Actions, ECS, RDS, S3, DynamoDB state, WAF, 명확하게 실패하는 배포 경로를 선호합니다.',
+				body: 'Terraform, CI/CD, AWS 배포 경로를 리뷰 가능하고 반복 가능하게, 조용히 망가지지 않고 명확하게 실패하도록 만듭니다.',
 			},
 			{
-				title: 'AI로 이어지는 데이터 시스템',
-				body: 'Airflow ingestion, Amplitude ETL completeness, 제품 분석, 로컬 프로토타입을 프로덕션 파이프라인으로 옮기는 일을 합니다.',
+				title: 'Agent-native 엔지니어링',
+				body: '3B, 리뷰 루프, 검증 도구로 AI와 함께 한 작업을 첫 프롬프트부터 머지된 diff까지 추적 가능하게 유지합니다.',
 			},
 		],
 		systems: [

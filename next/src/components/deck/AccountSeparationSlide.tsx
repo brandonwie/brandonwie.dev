@@ -191,7 +191,7 @@ export default function AccountSeparationSlide({ step = 0, animate = true }: Pro
 	return (
 		<section className="slide account-separation" ref={root}>
 			<header>
-				<p className="company">MOBA · 2025 – now</p>
+				<p className="company">MOBA · 2025 – 2026</p>
 				{/*
 					NOT "Splitting the calendar from the user" — the two boxes below are
 					literally labelled "User account" and "Calendar account", so the headline

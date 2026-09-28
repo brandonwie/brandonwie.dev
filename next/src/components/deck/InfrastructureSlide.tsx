@@ -205,7 +205,7 @@ export default function InfrastructureSlide({ step = 0, animate = true }: Props)
 	return (
 		<section className="slide infrastructure" ref={root}>
 			<header>
-				<p className="company">MOBA &middot; 2025 &ndash; now</p>
+				<p className="company">MOBA &middot; 2025 &ndash; 2026</p>
 				{/*
 					NOT "Rebuilding the infrastructure" — that was the four row labels
 					summed up, and it asserted nothing. The argument this slide makes is

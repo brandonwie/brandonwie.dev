@@ -386,7 +386,7 @@ export default function EventDrivenSlide({ step = 0, animate = true }: Props) {
 	return (
 		<section className="slide event-driven" ref={root}>
 			<header>
-				<p className="company">MOBA &middot; 2025 &ndash; now</p>
+				<p className="company">MOBA &middot; 2025 &ndash; 2026</p>
 				{/*
 					NOT "Decoupling the sync queue". That named the box labels rendered
 					directly below it AND advertised the smaller half of the beat — the

@@ -172,7 +172,7 @@ export default function LearningSlide({ animate = true }: Props) {
 	return (
 		<section className="slide learning" ref={root}>
 			<header>
-				<p className="company">MOBA &middot; 2025 &ndash; now</p>
+				<p className="company">MOBA &middot; 2025 &ndash; 2026</p>
 				{/*
 					NOT "Six credentials, all while leading backend" — that headline was a
 					caption for its own table. The promoted body line is the only

@@ -197,7 +197,7 @@ export default function PushSlide({ step = 0, animate = true }: Props) {
 	return (
 		<section className="slide push" ref={root}>
 			<header>
-				<p className="company">MOBA &middot; 2025 &ndash; now</p>
+				<p className="company">MOBA &middot; 2025 &ndash; 2026</p>
 				<h1>From asking to being told</h1>
 				<p className="state">
 					{pushed

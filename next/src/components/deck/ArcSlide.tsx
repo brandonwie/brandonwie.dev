@@ -42,7 +42,7 @@ const stops = [
 	{ company: 'MODULABS', years: '2021 – 2023', gained: 'Frontend web' },
 	{ company: 'Moviation', years: '2023', gained: 'Frontend mobile · web' },
 	{ company: 'Playtag', years: '2023 – 2025', gained: 'Full-stack' },
-	{ company: 'MOBA', years: '2025 – now', gained: 'Lead backend · Infra' },
+	{ company: 'MOBA', years: '2025 – 2026', gained: 'Lead backend · Infra' },
 ];
 
 export default function ArcSlide({ step = 0, animate = true }: Props) {

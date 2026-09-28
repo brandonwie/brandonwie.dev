@@ -255,7 +255,7 @@ export default function ParallelSyncSlide({ step = 0, animate = true }: Props) {
 	return (
 		<section className="slide parallel-sync" ref={root}>
 			<header>
-				<p className="company">MOBA &middot; 2025 &ndash; now</p>
+				<p className="company">MOBA &middot; 2025 &ndash; 2026</p>
 				{/*
 					NOT "Running the sync in parallel" — that described the animation
 					the room is already watching. The picture IS the 5x, so the headline

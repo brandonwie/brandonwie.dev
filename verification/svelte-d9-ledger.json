@@ -2,18 +2,66 @@
 	{
 		"url": "/",
 		"field": "text",
-		"fingerprint": "bb23300162adfe39a273d5e460a8f12b",
-		"reason": "D9 (Phosphor Fade redesign): messages/en.json footer_copy_secondary changed (uptime: ∞ · theme: rosé-pine → uptime: ∞ · theme: phosphor-fade); the legacy Svelte footer renders that key on every route. This is the ONLY text difference on this route: reverting just the D9 string in a copy of build/ yields 0 unapproved differences against svelte-e23e808.",
-		"approved_by": "Brandon (D9 decision, commit 9759b77)",
-		"approved_on": "2026-09-23"
+		"fingerprint": "361cc6102c593eaa5d2a31ad30f491df",
+		"reason": "D9 (Phosphor Fade redesign): messages/en.json footer_copy_secondary changed (uptime: ∞ · theme: rosé-pine → uptime: ∞ · theme: phosphor-fade); the legacy Svelte footer renders that key on every route. Re-keyed 2026-09-28: the route text now also carries the about-playtag-role copy (Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31): messages/en.json blog_bio (home bio) now names Playtag instead of MOBA. The D9 footer change and this role copy are the only text differences on this route; the D9-only fingerprint (approved 2026-09-23) matched before this commit.",
+		"approved_by": "Brandon (D9 decision, commit 9759b77; about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/",
+		"field": "title",
+		"fingerprint": "020d000793d82b448eb5f151a99ea245",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. messages/en.json site_title changed (Brandon Wie | Software Engineer → Brandon Wie | Full-stack AI Engineer); the legacy Svelte home renders it as <title>.",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/",
+		"field": "og",
+		"fingerprint": "ab5383d735cd4296fa1cc9522cc97956",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only og:title changed, carrying the new en site_title (Brandon Wie | Full-stack AI Engineer).",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/",
+		"field": "twitter",
+		"fingerprint": "8a0e0f6bfee0a16ada21b2e96f3930ca",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only twitter:title changed, carrying the new en site_title (Brandon Wie | Full-stack AI Engineer).",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
 	},
 	{
 		"url": "/about",
 		"field": "text",
-		"fingerprint": "7f736347dc59397ca9243ca251bcad79",
-		"reason": "D9 (Phosphor Fade redesign): messages/en.json footer_copy_secondary changed (uptime: ∞ · theme: rosé-pine → uptime: ∞ · theme: phosphor-fade); the legacy Svelte footer renders that key on every route. This is the ONLY text difference on this route: reverting just the D9 string in a copy of build/ yields 0 unapproved differences against svelte-e23e808.",
-		"approved_by": "Brandon (D9 decision, commit 9759b77)",
-		"approved_on": "2026-09-23"
+		"fingerprint": "d12a160b668977f5340fcc85adf025d1",
+		"reason": "D9 (Phosphor Fade redesign): messages/en.json footer_copy_secondary changed (uptime: ∞ · theme: rosé-pine → uptime: ∞ · theme: phosphor-fade); the legacy Svelte footer renders that key on every route. Re-keyed 2026-09-28: the route text now also carries the about-playtag-role copy (Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31): src/lib/data/about.ts en copy (subtitle, metrics labels, timeline, now items, visual layers) rewritten for the new role. The D9 footer change and this role copy are the only text differences on this route; the D9-only fingerprint (approved 2026-09-23) matched before this commit.",
+		"approved_by": "Brandon (D9 decision, commit 9759b77; about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/about",
+		"field": "description",
+		"fingerprint": "1451cce59e580777ba9b996526c1d4d3",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. src/lib/data/about.ts en metaDescription rewritten for the new role; the legacy Svelte About page renders it as the meta description.",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/about",
+		"field": "og",
+		"fingerprint": "06f7542de6b142ac7f298f8687731bd7",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only og:description changed, carrying the new en about.ts metaDescription.",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/about",
+		"field": "twitter",
+		"fingerprint": "6dbe9c204012c27e1c851008bcd622c6",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only twitter:description changed, carrying the new en about.ts metaDescription.",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
 	},
 	{
 		"url": "/contact",
@@ -34,18 +82,66 @@
 	{
 		"url": "/ko",
 		"field": "text",
-		"fingerprint": "0b126b2aade997b76b5c59972d27fec0",
-		"reason": "D9 (Phosphor Fade redesign): messages/ko.json footer_copy_secondary changed (가동 시간: ∞ · 테마: rosé-pine → 가동 시간: ∞ · 테마: phosphor-fade); the legacy Svelte footer renders that key on every route. This is the ONLY text difference on this route: reverting just the D9 string in a copy of build/ yields 0 unapproved differences against svelte-e23e808.",
-		"approved_by": "Brandon (D9 decision, commit 9759b77)",
-		"approved_on": "2026-09-23"
+		"fingerprint": "69c27ef8629011c1d81c28a4854f4ba5",
+		"reason": "D9 (Phosphor Fade redesign): messages/ko.json footer_copy_secondary changed (가동 시간: ∞ · 테마: rosé-pine → 가동 시간: ∞ · 테마: phosphor-fade); the legacy Svelte footer renders that key on every route. Re-keyed 2026-09-28: the route text now also carries the about-playtag-role copy (Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31): messages/ko.json blog_bio (home bio) now names Playtag instead of MOBA. The D9 footer change and this role copy are the only text differences on this route; the D9-only fingerprint (approved 2026-09-23) matched before this commit.",
+		"approved_by": "Brandon (D9 decision, commit 9759b77; about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/ko",
+		"field": "title",
+		"fingerprint": "c826c98672e0a646a1e659e519e6ab08",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. messages/ko.json site_title changed (Brandon Wie | 소프트웨어 엔지니어 → Brandon Wie | 풀스택 AI 엔지니어); the legacy Svelte /ko home renders it as <title>.",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/ko",
+		"field": "og",
+		"fingerprint": "49d20589874a7d50fec60d96530a0f87",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only og:title changed, carrying the new ko site_title (Brandon Wie | 풀스택 AI 엔지니어).",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/ko",
+		"field": "twitter",
+		"fingerprint": "e8a0d73acf00b7ec19c2f684cfb4ed08",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only twitter:title changed, carrying the new ko site_title (Brandon Wie | 풀스택 AI 엔지니어).",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
 	},
 	{
 		"url": "/ko/about",
 		"field": "text",
-		"fingerprint": "9d5f3a872b47a4aece4bced67830819a",
-		"reason": "D9 (Phosphor Fade redesign): messages/ko.json footer_copy_secondary changed (가동 시간: ∞ · 테마: rosé-pine → 가동 시간: ∞ · 테마: phosphor-fade); the legacy Svelte footer renders that key on every route. This is the ONLY text difference on this route: reverting just the D9 string in a copy of build/ yields 0 unapproved differences against svelte-e23e808.",
-		"approved_by": "Brandon (D9 decision, commit 9759b77)",
-		"approved_on": "2026-09-23"
+		"fingerprint": "c82f68fb52c81382c87180a17d013664",
+		"reason": "D9 (Phosphor Fade redesign): messages/ko.json footer_copy_secondary changed (가동 시간: ∞ · 테마: rosé-pine → 가동 시간: ∞ · 테마: phosphor-fade); the legacy Svelte footer renders that key on every route. Re-keyed 2026-09-28: the route text now also carries the about-playtag-role copy (Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31): src/lib/data/about.ts ko copy (subtitle, metrics labels, timeline, now items, visual layers) rewritten for the new role. The D9 footer change and this role copy are the only text differences on this route; the D9-only fingerprint (approved 2026-09-23) matched before this commit.",
+		"approved_by": "Brandon (D9 decision, commit 9759b77; about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/ko/about",
+		"field": "description",
+		"fingerprint": "50f7c6aa8b2b59ad0f66d6b9551802d4",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. src/lib/data/about.ts ko metaDescription rewritten for the new role; the legacy Svelte /ko/about page renders it as the meta description.",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/ko/about",
+		"field": "og",
+		"fingerprint": "b317d65f261a681c7d4786ccde04c11c",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only og:description changed, carrying the new ko about.ts metaDescription.",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
+	},
+	{
+		"url": "/ko/about",
+		"field": "twitter",
+		"fingerprint": "66bdd1191322e229e6eaf1dacee61dbf",
+		"reason": "about-playtag-role: Brandon left MOBA on 2026-08-14 and returned to Playtag as Full-stack AI Engineer on 2026-08-31. Only twitter:description changed, carrying the new ko about.ts metaDescription.",
+		"approved_by": "Brandon (about-playtag-role decision, 2026-09-28)",
+		"approved_on": "2026-09-28"
 	},
 	{
 		"url": "/ko/contact",

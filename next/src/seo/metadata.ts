@@ -37,7 +37,11 @@ export function homeJsonLd(locale: Locale): string {
 			'@type': 'Person',
 			name: SITE_AUTHOR,
 			url: SITE_URL,
-			jobTitle: 'Software Engineer',
+			jobTitle: 'Full-stack AI Engineer',
+			worksFor: {
+				'@type': 'Organization',
+				name: 'Playtag',
+			},
 			sameAs: [
 				'https://github.com/brandonwie',
 				'https://linkedin.com/in/brandonwie',
@@ -49,7 +53,7 @@ export function homeJsonLd(locale: Locale): string {
 
 export function generateHomeMetadata(locale: Locale): Metadata {
 	const title =
-		locale === 'ko' ? 'Brandon Wie | 소프트웨어 엔지니어' : 'Brandon Wie | Software Engineer';
+		locale === 'ko' ? 'Brandon Wie | 풀스택 AI 엔지니어' : 'Brandon Wie | Full-stack AI Engineer';
 	const description =
 		locale === 'ko'
 			? '소프트웨어 엔지니어링 인사이트, 튜토리얼, 배움'

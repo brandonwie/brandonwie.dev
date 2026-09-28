@@ -164,7 +164,7 @@ export default function DataPipelineSlide({ step = 0, animate = true }: Props) {
 	return (
 		<section className="slide data-pipeline" ref={root}>
 			<header>
-				<p className="company">MOBA &middot; 2025 &ndash; now</p>
+				<p className="company">MOBA &middot; 2025 &ndash; 2026</p>
 				{/*
 					NOT "Moving the pipeline into production" — the state line directly
 					below IS the production move, so the headline was saying it twice,

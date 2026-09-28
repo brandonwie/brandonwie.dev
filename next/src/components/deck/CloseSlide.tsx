@@ -51,7 +51,7 @@ const stops = [
 	{ company: 'MODULABS', years: '2021 – 2023', gained: 'Frontend web', next: false },
 	{ company: 'Moviation', years: '2023', gained: 'Frontend mobile · web', next: false },
 	{ company: 'Playtag', years: '2023 – 2025', gained: 'Full-stack', next: false },
-	{ company: 'MOBA', years: '2025 – now', gained: 'Lead backend · Infra', next: false },
+	{ company: 'MOBA', years: '2025 – 2026', gained: 'Lead backend · Infra', next: false },
 	// The em dash is load-bearing, not decoration: an empty years cell would
 	// collapse its line box and lift the fifth capability slot out of line with
 	// the other four.

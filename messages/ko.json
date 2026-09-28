@@ -1,5 +1,5 @@
 {
-	"site_title": "Brandon Wie | 소프트웨어 엔지니어",
+	"site_title": "Brandon Wie | 풀스택 AI 엔지니어",
 	"site_description": "소프트웨어 엔지니어링 인사이트, 튜토리얼, 배움",
 	"posts_title": "모든 글",
 	"posts_description": "Brandon Wie의 모든 블로그 글",
@@ -25,7 +25,7 @@
 	"updated": "수정일",
 	"comments_title": "댓글",
 	"blog_tagline": "백엔드 시스템, DevOps, 그리고 실제 제품을 만들며 배운 것들을 기록합니다.",
-	"blog_bio": "프로덕션 시스템을 만드는 백엔드 엔지니어입니다. 영화를 전공하다 엔지니어가 되었고, 지금은 Moba에서 백엔드를 리드하고 있어요. 이 블로그엔 그동안 배운 것들을 기록합니다.",
+	"blog_bio": "프로덕션 시스템을 만드는 풀스택 AI 엔지니어입니다. 영화를 전공하다 엔지니어가 되었고, 지금은 Playtag에서 AI 제품을 만들고 있어요. 이 블로그엔 그동안 배운 것들을 기록합니다.",
 	"hero_stats_label": "홈페이지 요약",
 	"hero_stat_events_label": "동기화한 이벤트",
 	"hero_stat_posts_label": "발행한 글",
