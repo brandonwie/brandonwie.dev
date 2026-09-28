@@ -3,9 +3,20 @@
  * Negative controls for the parity harness.
  *
  * WHY. plan.md § Slice 0 step 3: "A harness that has not been shown to fail on
- * a known-bad input is not evidence." This program copies the built site,
- * injects one defect per control, and asserts what the comparator does about
- * it. Results are whatever the run printed, not what was expected.
+ * a known-bad input is not evidence." This program captures the built site as
+ * its own baseline, copies it, injects one defect per control, and asserts what
+ * the comparator does about it. Results are whatever the run printed, not what
+ * was expected.
+ *
+ * STARTING STATE. The tree under test is `next/build`, the output production
+ * serves and the one `migration:verify:next`, c11 and c13 read. Until the
+ * Svelte retirement the controls ran over the Svelte `build/` against the
+ * frozen Svelte baseline plus the D9 seed ledger. The comparator's claims are
+ * about extraction and normalization, not about which framework wrote the
+ * tree, so every control keeps its difference class and, where the Svelte
+ * markup it targeted does not exist in Next output, injects the same class
+ * into the Next equivalent (the per-control comments say what moved and why).
+ * The run first asserts that the unmutated copy compares clean.
  *
  * TWO KINDS OF CONTROL, per plan.md § Slice 0 step 3 as amended 2026-08-25.
  * DEFECT controls must exit 1: the harness rejects a known-bad input. INVARIANCE
@@ -45,18 +56,19 @@
  *   invariance  6 Prettier reflow ignored   8 feed timestamp ignored
  *              15 ledger approves the EXACT difference
  *              19 directory-index file shape is equivalent
- *              22 route-relative vs absolute href
+ *              22 absolute vs route-relative href
  *              24 &amp; vs a raw & in a href
  *              26 bundle stylesheet filenames rehashed
  *              28 two head links swapped in document order
  *              34 og and twitter tags reordered in the document
  *              39 hero onerror body rewritten, handler still present
  *              42 APPROVED candidate-only route
- *              44 ' entity-encoded as &#x27; in title, h1 and text
- *              46 ' entity-encoded inside meta content values
- *              48 paraglide hidden-anchor hrefs retargeted
+ *              44 &#x27; written as a raw ' in h1 and text
+ *              46 &#x27; written as a raw ' in meta content values
+ *              48 paraglide hidden en/ko anchor block injected
  *              51 a comment injected inside a visible word
- *              53 numeric entity re-encoded as its named equivalent
+ *              53 named entity re-encoded as its numeric equivalent
+ *              56 meta content &gt; written as a raw >
  *
  * Controls 21-31 pin `normalizeShell()`. Each of its three loosenings -- href
  * resolution against the page URL, bundle assets collapsed to one presence key,
@@ -70,9 +82,9 @@
  * they introduce -- `onerror` recorded as presence rather than value -- is
  * control 39, bounded by 40.
  *
- * USAGE  tsx scripts/migration-verify-controls.ts <build-dir> <baseline.json> [--ledger <path>]
- *        --ledger seeds every control's ledger with the approvals the real suite
- *        uses (see SEED_LEDGER); without it every control starts from `[]`.
+ * USAGE  tsx scripts/migration-verify-controls.ts <build-dir>
+ *        <build-dir> is `next/build`. Its baseline is captured inside the run and
+ *        every control's ledger starts from `[]`.
  * EXIT   0 = every control produced the exit code it must; 1 = one did not
  */
 
@@ -93,20 +105,44 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const [buildDir, baselineFile, ...flags] = process.argv.slice(2);
-const ledgerFlag = flags.indexOf('--ledger');
-const seedLedgerPath = ledgerFlag === -1 ? null : flags[ledgerFlag + 1];
-if (
-	!buildDir ||
-	!baselineFile ||
-	(ledgerFlag !== -1 && !seedLedgerPath) ||
-	flags.length !== (ledgerFlag === -1 ? 0 : 2)
-) {
-	console.error('usage: migration-verify-controls <build-dir> <baseline.json> [--ledger <path>]');
+const [buildDir, ...extra] = process.argv.slice(2);
+if (!buildDir || extra.length !== 0) {
+	console.error('usage: migration-verify-controls <build-dir>');
+	process.exit(2);
+}
+if (!existsSync(join(buildDir, 'index.html'))) {
+	console.error(`FATAL: ${buildDir} holds no index.html; build it first (pnpm run build:next)`);
 	process.exit(2);
 }
 
 const HARNESS = 'scripts/migration-verify.ts';
+
+/**
+ * The starting state is captured from the build under test, inside this run.
+ *
+ * Until the Svelte retirement every control started from the frozen Svelte
+ * baseline plus the D9 seed ledger over a copy of the Svelte `build/`. That tied
+ * the comparator's only self-test to an output production no longer serves. The
+ * comparator's claims are about its extraction and normalization, not about
+ * which framework wrote the tree, so the tree it is proven on is the one its
+ * live consumers read (`migration:verify:next`, c11, c13): `next/build`.
+ * Capturing it here, with an empty ledger, makes the starting state a
+ * zero-difference comparison by construction -- and the run asserts that before
+ * any control, because a control is only evidence when it differs from a
+ * passing comparison by exactly its own injection.
+ */
+const WORK_ROOT = mkdtempSync(join(tmpdir(), 'migration-verify-controls-'));
+const baselineFile = join(WORK_ROOT, 'self-baseline.json');
+try {
+	execFileSync('npx', ['tsx', HARNESS, 'capture', buildDir, baselineFile], {
+		encoding: 'utf8',
+		stdio: ['ignore', 'pipe', 'pipe'],
+	});
+} catch (error) {
+	const e = error as { stdout?: string; stderr?: string };
+	console.error(`FATAL: capture of ${buildDir} failed\n${e.stdout ?? ''}${e.stderr ?? ''}`);
+	process.exit(2);
+}
 
 function runCompare(candidate: string, ledger: string): { code: number; out: string } {
 	try {
@@ -139,27 +175,15 @@ interface Control {
 	apply: (dir: string, ledgerPath: string) => void;
 }
 
-const EMPTY_LEDGER = '[]\n';
-
 /**
- * REDESIGN: every control starts from the approvals the real Svelte suite runs
- * under, not from `[]`. D9 (9759b77) changed the footer theme line that the
- * legacy Svelte footer renders on every route, and e6febda approved those 367
- * `[text]` differences in verification/svelte-d9-ledger.json for
- * `migration:verify:svelte`. Seeded empty, each control's starting state
- * already carried 367 unapproved differences: every INVARIANCE control exited 1
- * and every DEFECT control exited 1 on the footer, not on its own mutation. A
- * control must differ from the passing real suite by exactly its injection.
+ * Every control starts from `[]`. The Svelte-era run seeded the D9 ledger
+ * because the Svelte tree differed from its frozen baseline by 367 approved
+ * footer lines; a self-captured baseline differs from its own tree by nothing,
+ * so there is nothing to seed and no approval a control could lean on.
  */
-const SEED_LEDGER: string = seedLedgerPath ? readFileSync(seedLedgerPath, 'utf8') : EMPTY_LEDGER;
-if (!Array.isArray(JSON.parse(SEED_LEDGER))) {
-	console.error(`FATAL: seed ledger ${seedLedgerPath} is not a JSON array`);
-	process.exit(2);
-}
+const SEED_LEDGER = '[]\n';
 
-/** Adds a control's own entries AFTER the seeded approvals. Replacing the file
- *  would drop the seed and fail the control on the seeded differences instead
- *  of on the entries it exists to test. */
+/** Adds a control's own entries after whatever the ledger already holds. */
 function appendLedger(ledgerPath: string, entries: Record<string, string>[]): void {
 	const current = JSON.parse(readFileSync(ledgerPath, 'utf8')) as unknown[];
 	writeFileSync(ledgerPath, `${JSON.stringify([...current, ...entries], null, 2)}\n`);
@@ -542,24 +566,20 @@ const CONTROLS: Control[] = [
 		name: 'favicon href points at a DIFFERENT file',
 		kind: 'defect',
 		expect: 1,
-		apply: (dir) => {
-			const file = relativeIconPage(dir);
-			const html = readFileSync(file, 'utf8');
-			writeFileSync(file, html.replace('../favicon.svg', '../favicon.ico'));
-		},
+		apply: (dir) => rewriteIconHref(dir, '/favicon.ico'),
 	},
 	{
 		id: 22,
-		name: 'favicon href written absolute instead of route-relative',
+		name: 'favicon href written route-relative instead of absolute',
 		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
 			// `../favicon.svg` at /posts/<slug> and `/favicon.svg` denote the same
-			// file. 365 of 366 baseline pages spell it relatively; no candidate can
-			// reproduce that spelling, and it never meant anything different.
-			const file = relativeIconPage(dir);
-			const html = readFileSync(file, 'utf8');
-			writeFileSync(file, html.replace('../favicon.svg', '/favicon.svg'));
+			// file. The frozen Svelte baseline spells it relatively on 365 of 366
+			// pages and Next spells it absolutely, which is why the resolution
+			// exists; the Svelte-era control rewrote relative to absolute, and from
+			// a Next starting state the same claim runs the other way.
+			rewriteIconHref(dir, '../favicon.svg');
 		},
 	},
 	{
@@ -568,24 +588,27 @@ const CONTROLS: Control[] = [
 		kind: 'defect',
 		expect: 1,
 		apply: (dir) => {
-			const file = relativeIconPage(dir);
+			const file = iconPage(dir);
 			const html = readFileSync(file, 'utf8');
 			writeFileSync(file, html.replace(/<link rel="icon"[^>]*>/, ''));
 		},
 	},
 	{
 		id: 24,
-		name: 'font href serialized with &amp; instead of a raw &',
+		name: 'font href serialized with a raw & instead of &amp;',
 		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
+			// React escapes the stylesheet href's `&` as `&amp;`; SvelteKit copied
+			// it raw. From a Next starting state the invariance runs raw-ward.
+			// Only the `rel="stylesheet"` link is touched: the `rel="preload"` copy
+			// is not a shell key, so rewriting it would prove nothing.
 			const file = fontLinkPage(dir);
 			const html = readFileSync(file, 'utf8');
 			writeFileSync(
 				file,
-				html.replace(
-					/href="(https:\/\/fonts\.googleapis\.com\/css2[^"]*)"/,
-					(_m, href) => `href="${href.replace(/&/g, '&amp;')}"`,
+				html.replace(FONT_STYLESHEET, (_m, href: string) =>
+					_m.replace(href, href.replace(/&amp;/g, '&')),
 				),
 			);
 		},
@@ -598,13 +621,14 @@ const CONTROLS: Control[] = [
 		apply: (dir) => {
 			const file = fontLinkPage(dir);
 			const html = readFileSync(file, 'utf8');
-			if (!html.includes('JetBrains+Mono:wght@400;500;600;700')) {
+			const weights = 'JetBrains+Mono:wght@400;500;600;700';
+			if (!html.match(FONT_STYLESHEET)?.[1].includes(weights)) {
 				console.error('FATAL: control 25 found no JetBrains Mono weight list to change');
 				process.exit(2);
 			}
 			writeFileSync(
 				file,
-				html.replace('JetBrains+Mono:wght@400;500;600;700', 'JetBrains+Mono:wght@400;500;600'),
+				html.replace(FONT_STYLESHEET, (m) => m.replace(weights, 'JetBrains+Mono:wght@400;500;600')),
 			);
 		},
 	},
@@ -614,15 +638,19 @@ const CONTROLS: Control[] = [
 		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
+			// Head only: the RSC payload in the body also names the chunk, and the
+			// shell is read from `<head>`, so touching the payload would be noise.
 			const file = bundleStylesheetPage(dir);
 			const html = readFileSync(file, 'utf8');
+			const end = html.indexOf('</head>');
 			let n = 0;
 			writeFileSync(
 				file,
-				html.replace(
-					/(_app\/immutable\/assets\/)[^"']+\.css/g,
-					(_m, prefix) => `${prefix}rehashed${n++}.css`,
-				),
+				html
+					.slice(0, end)
+					.replace(BUNDLE_STYLESHEET, (m, href: string) =>
+						m.replace(href, href.replace(/[^/]+\.css$/, `rehashed${n++}.css`)),
+					) + html.slice(end),
 			);
 		},
 	},
@@ -632,15 +660,13 @@ const CONTROLS: Control[] = [
 		kind: 'defect',
 		expect: 1,
 		apply: (dir) => {
-			// The presence key exists so this stays visible. Collapsing 1087
-			// content-hashed entries to one marker is only safe if losing the CSS
+			// The presence key exists so this stays visible. Collapsing every
+			// content-hashed entry to one marker is only safe if losing the CSS
 			// entirely still fails.
 			const file = bundleStylesheetPage(dir);
 			const html = readFileSync(file, 'utf8');
-			writeFileSync(
-				file,
-				html.replace(/<link[^>]*_app\/immutable\/assets\/[^>]*\.css"[^>]*>/g, ''),
-			);
+			const end = html.indexOf('</head>');
+			writeFileSync(file, html.slice(0, end).replace(BUNDLE_STYLESHEET, '') + html.slice(end));
 		},
 	},
 	{
@@ -651,8 +677,8 @@ const CONTROLS: Control[] = [
 		apply: (dir) => {
 			const file = fontLinkPage(dir);
 			const html = readFileSync(file, 'utf8');
-			const a = '<link rel="preconnect" href="https://fonts.googleapis.com" />';
-			const b = '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />';
+			const a = PRECONNECT_GOOGLEAPIS;
+			const b = PRECONNECT_GSTATIC;
 			if (!html.includes(a) || !html.includes(b)) {
 				console.error('FATAL: control 28 found no preconnect pair to swap');
 				process.exit(2);
@@ -668,10 +694,11 @@ const CONTROLS: Control[] = [
 		apply: (dir) => {
 			const file = fontLinkPage(dir);
 			const html = readFileSync(file, 'utf8');
-			writeFileSync(
-				file,
-				html.replace('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />', ''),
-			);
+			if (!html.includes(PRECONNECT_GSTATIC)) {
+				console.error('FATAL: control 29 found no gstatic preconnect to delete');
+				process.exit(2);
+			}
+			writeFileSync(file, html.replace(PRECONNECT_GSTATIC, ''));
 		},
 	},
 
@@ -686,9 +713,9 @@ const CONTROLS: Control[] = [
 			// normalized to the same key and a cache-busting query on any shell
 			// link compared equal. Paired with control 22, which is the invariance
 			// this defect bounds.
-			const file = relativeIconPage(dir);
-			const html = readFileSync(file, 'utf8');
-			writeFileSync(file, html.replace('../favicon.svg', '../favicon.svg?v=2'));
+			// The route-relative spelling keeps the resolution path under test: a
+			// resolver that dropped `search` would erase the query only there.
+			rewriteIconHref(dir, '../favicon.svg?v=2');
 		},
 	},
 	{
@@ -696,11 +723,7 @@ const CONTROLS: Control[] = [
 		name: 'a fragment appended to a shell href',
 		kind: 'defect',
 		expect: 1,
-		apply: (dir) => {
-			const file = relativeIconPage(dir);
-			const html = readFileSync(file, 'utf8');
-			writeFileSync(file, html.replace('../favicon.svg', '../favicon.svg#icon'));
-		},
+		apply: (dir) => rewriteIconHref(dir, '../favicon.svg#icon'),
 	},
 
 	{
@@ -910,21 +933,23 @@ const CONTROLS: Control[] = [
 	// Each loosening is paired with a defect control over the same surface.
 	{
 		id: 44,
-		name: 'apostrophe entity-encoded as &#x27; in title, h1 and text',
+		name: 'apostrophe &#x27; in h1 and text written as a raw character',
 		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
-			// React serializes ' as &#x27;; a browser decodes both to the same
-			// DOM value. `I'd` sits in this page's h1 and text, so the mutation
-			// exercises the decode inside normalizeText on every text-bearing
-			// field at once. Paired with 45 (and 4 on the title surface).
+			// React serializes ' as &#x27;; SvelteKit copied it raw; a browser
+			// decodes both to the same DOM value. From a Next starting state the
+			// invariance runs raw-ward. `I&#x27;d` sits in this page's h1 and
+			// text, so the mutation exercises the decode inside normalizeText on
+			// every text-bearing field at once. Paired with 45 (and 4 on the
+			// title surface).
 			const file = join(dir, 'talks', 'my-career.html');
 			const html = readFileSync(file, 'utf8');
-			if (!html.includes("I'd")) {
-				console.error('FATAL: control 44 found no apostrophe to entity-encode');
+			if (!html.includes('I&#x27;d')) {
+				console.error('FATAL: control 44 found no encoded apostrophe to decode');
 				process.exit(2);
 			}
-			writeFileSync(file, html.replace(/I'd/g, 'I&#x27;d'));
+			writeFileSync(file, html.replace(/I&#x27;d/g, "I'd"));
 		},
 	},
 	{
@@ -946,22 +971,23 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 46,
-		name: 'apostrophe entity-encoded inside meta content values',
+		name: 'apostrophe &#x27; inside meta content values written raw',
 		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
-			// `Wie's` sits in this page's description, og:description and
+			// `Wie&#x27;s` sits in this page's description, og:description and
 			// twitter:description, exercising the attribute-value decode on all
-			// three maps at once. Image `alt` shares the same decode call; no
-			// built alt carries an apostrophe today, so meta content stands in
-			// for the shared path. Paired with 47.
+			// three maps at once. Only the entity spelling is rewritten; the RSC
+			// payload already carries the raw form and is not a captured field.
+			// Image `alt` shares the same decode call; meta content stands in for
+			// the shared path. Paired with 47.
 			const file = join(dir, 'tags.html');
 			const html = readFileSync(file, 'utf8');
-			if (!html.includes("Wie's")) {
-				console.error('FATAL: control 46 found no meta apostrophe to entity-encode');
+			if (!html.includes('Wie&#x27;s')) {
+				console.error('FATAL: control 46 found no encoded meta apostrophe to decode');
 				process.exit(2);
 			}
-			writeFileSync(file, html.replace(/Wie's/g, 'Wie&#x27;s'));
+			writeFileSync(file, html.replace(/Wie&#x27;s/g, "Wie's"));
 		},
 	},
 	{
@@ -981,20 +1007,26 @@ const CONTROLS: Control[] = [
 	},
 	{
 		id: 48,
-		name: 'paraglide hidden-anchor hrefs retargeted',
+		name: 'paraglide hidden en/ko anchor block injected',
 		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
-			// The block is a framework mechanism, not page content: even a wrong
-			// target inside it must be invisible. `>ko</a>` matches only the
-			// paraglide anchor -- the visible toggle carries EN/KR text.
+			// The block is a framework mechanism, not page content: every page of
+			// the frozen Svelte baseline carries one and Next emits none, which is
+			// why `stripParaglideAnchors` exists for `migration:verify:next`. The
+			// Svelte-era control retargeted an existing block's hrefs; Next has no
+			// block to retarget, so this injects one of the exact paraglide shape
+			// -- with deliberately wrong targets -- and it must stay invisible.
+			// Paired with 49, a hidden block that is NOT the en/ko pair.
 			const file = join(dir, 'about.html');
 			const html = readFileSync(file, 'utf8');
-			if (!html.includes('href="/ko/about">ko<')) {
-				console.error('FATAL: control 48 found no paraglide anchor to retarget');
-				process.exit(2);
-			}
-			writeFileSync(file, html.replace('href="/ko/about">ko<', 'href="/ko/elsewhere">ko<'));
+			writeFileSync(
+				file,
+				html.replace(
+					'</body>',
+					'<div style="display:none"><a href="/elsewhere">en</a><a href="/ko/elsewhere">ko</a></div></body>',
+				),
+			);
 		},
 	},
 	{
@@ -1020,16 +1052,15 @@ const CONTROLS: Control[] = [
 		kind: 'defect',
 		expect: 1,
 		apply: (dir) => {
-			// The baseline emits literal `>` inside attribute values (the `>>`
-			// operator posts); bare `[^>]*` ended those tags early and everything
-			// after the `>` was invisible to the comparator. The quote-aware tag
-			// matcher reads the whole tag, so a change after the `>` must diff.
+			// The Svelte baseline emits literal `>` inside attribute values (the
+			// `>>` operator posts); bare `[^>]*` ended those tags early and
+			// everything after the `>` was invisible to the comparator. React
+			// escapes it as `&gt;`, so from a Next starting state the raw `>` is
+			// written back first (control 56 proves that alone is benign), then
+			// the text after it changes. The quote-aware tag matcher reads the
+			// whole tag, so the change after the `>` must diff.
 			const file = join(dir, 'posts', 'airflow-task-dependency-syntax.html');
-			const html = readFileSync(file, 'utf8');
-			if (!html.includes('sets task dependencies')) {
-				console.error('FATAL: control 50 found no post-`>` content to change');
-				process.exit(2);
-			}
+			const html = rawGtMetaContent(readFileSync(file, 'utf8'), 50);
 			writeFileSync(file, html.replace('sets task dependencies', 'sets task DEPENDENCIES'));
 		},
 	},
@@ -1039,16 +1070,17 @@ const CONTROLS: Control[] = [
 		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
-			// React text-boundary markers (`~/<!-- -->About`) render identically
-			// to `~/About`; a comment node contributes no text. Injecting one
-			// inside a nav label must not move the text field. Paired with 52.
+			// React text-boundary markers (`[<!-- -->1<!-- -->]`) render
+			// identically to `[1]`; a comment node contributes no text. Injecting
+			// one inside a nav label must not move the text field. The Svelte-era
+			// label `~/About` is `About` in the Next header nav. Paired with 52.
 			const file = join(dir, 'about.html');
 			const html = readFileSync(file, 'utf8');
-			if (!html.includes('>~/About<')) {
+			if (!html.includes(NAV_ABOUT)) {
 				console.error('FATAL: control 51 found no nav label to split');
 				process.exit(2);
 			}
-			writeFileSync(file, html.replace('>~/About<', '>~/<!-- -->About<'));
+			writeFileSync(file, html.replace(NAV_ABOUT, NAV_ABOUT.replace('>About<', '>Ab<!-- -->out<')));
 		},
 	},
 	{
@@ -1061,37 +1093,32 @@ const CONTROLS: Control[] = [
 			// side of a comment still diffs.
 			const file = join(dir, 'about.html');
 			const html = readFileSync(file, 'utf8');
-			if (!html.includes('>~/About<')) {
+			if (!html.includes(NAV_ABOUT)) {
 				console.error('FATAL: control 52 found no nav label to mutate');
 				process.exit(2);
 			}
-			writeFileSync(file, html.replace('>~/About<', '>~/<!-- -->Elsewhere<'));
+			writeFileSync(file, html.replace(NAV_ABOUT, NAV_ABOUT.replace('>About<', '>Ab<!-- -->ode<')));
 		},
 	},
-	// Controls 53-55 bound the numeric-entity decode added with them. Baseline
-	// Shiki serializes code-span characters as `&#x3C;`, `&#96;`, `&#36;` and
-	// `&#x26;`; the candidate emits named entities or literals. A browser
-	// decodes all spellings to the same DOM text, so the comparator must too --
-	// the same argument that admitted `&#x27;` under controls 44/46. Controls 53
-	// and 55 require the DECODED baseline generation: 53's re-encoded literal
-	// and 55's double-escaped form only compare equal/different once the stored
-	// field itself holds the decoded character.
+	// Controls 53-55 bound the numeric-entity decode. The frozen Svelte baseline
+	// carries Shiki's numeric spellings (`&#x3C;`, `&#96;`, `&#36;`, `&#x26;`);
+	// React emits named entities (`&lt;`). A browser decodes all spellings to the
+	// same DOM text, so the comparator must too -- the same argument that
+	// admitted `&#x27;` under controls 44/46. The Svelte-era controls started
+	// from `&#x3C;`; Next's code blocks carry `&lt;`, so each control now writes
+	// the NUMERIC form, which keeps the numeric decode path the thing under test.
 	{
 		id: 53,
-		name: 'numeric entity re-encoded as its named equivalent',
+		name: 'named entity re-encoded as its numeric equivalent',
 		kind: 'invariance',
 		expect: 0,
 		apply: (dir) => {
-			// `&#x3C;` and `&lt;` are the same character to a reader. Re-spelling
-			// every `&#x3C;` on this page must not move the text field. Paired
-			// with 54.
-			const file = join(dir, 'posts', 'a-harness-that-fixes-itself.html');
+			// `&lt;` and `&#x3C;` are the same character to a reader. Re-spelling
+			// every `&lt;` on this page must not move the text field. Paired with
+			// 54.
+			const file = entityPage(dir, 53);
 			const html = readFileSync(file, 'utf8');
-			if (!html.includes('&#x3C;')) {
-				console.error('FATAL: control 53 found no numeric entity to re-encode');
-				process.exit(2);
-			}
-			writeFileSync(file, html.replace(/&#x3C;/g, '&lt;'));
+			writeFileSync(file, html.replace(/&lt;/g, '&#x3C;'));
 		},
 	},
 	{
@@ -1102,13 +1129,9 @@ const CONTROLS: Control[] = [
 		apply: (dir) => {
 			// The decode must map DIFFERENT codepoints to different characters:
 			// `&#x3E;` is `>`, not `<`, and the swap must diff.
-			const file = join(dir, 'posts', 'a-harness-that-fixes-itself.html');
+			const file = entityPage(dir, 54);
 			const html = readFileSync(file, 'utf8');
-			if (!html.includes('&#x3C;')) {
-				console.error('FATAL: control 54 found no numeric entity to mutate');
-				process.exit(2);
-			}
-			writeFileSync(file, html.replace(/&#x3C;/g, '&#x3E;'));
+			writeFileSync(file, html.replace(/&lt;/g, '&#x3E;'));
 		},
 	},
 	{
@@ -1119,35 +1142,94 @@ const CONTROLS: Control[] = [
 		apply: (dir) => {
 			// The decode is single-pass by design: `&amp;#x3C;` renders the
 			// literal text `&#x3C;`, never `<`. An iterative decoder would wrongly
-			// produce `<` here and miss the change; the stored baseline holds the
-			// decoded `<`, so the literal must diff.
-			const file = join(dir, 'posts', 'a-harness-that-fixes-itself.html');
+			// produce `<` here and miss the change; the baseline holds the decoded
+			// `<`, so the literal must diff.
+			const file = entityPage(dir, 55);
 			const html = readFileSync(file, 'utf8');
-			if (!html.includes('&#x3C;')) {
-				console.error('FATAL: control 55 found no numeric entity to double-escape');
-				process.exit(2);
-			}
-			writeFileSync(file, html.replace(/&#x3C;/g, '&amp;#x3C;'));
+			writeFileSync(file, html.replace(/&lt;/g, '&amp;#x3C;'));
+		},
+	},
+	{
+		id: 56,
+		name: 'meta content &gt; written as a raw >',
+		kind: 'invariance',
+		expect: 0,
+		apply: (dir) => {
+			// NEW with the Next starting state, to keep control 50 discriminating.
+			// On Svelte output the raw `>` was already in the baseline, so a bare
+			// `[^>]*` matcher read BOTH sides truncated and 50 exited 0 -- a FAIL.
+			// From Next, 50 has to write the raw `>` itself, and a truncating
+			// matcher would then diff on the spelling alone and pass 50 for the
+			// wrong reason. This control is that spelling change alone: a
+			// quote-aware matcher decodes both to the same content (exit 0); a
+			// truncating one loses the content attribute and exits 1.
+			const file = join(dir, 'posts', 'airflow-task-dependency-syntax.html');
+			writeFileSync(file, rawGtMetaContent(readFileSync(file, 'utf8'), 56));
 		},
 	},
 ];
 
-/** A built page whose favicon href is ROUTE-RELATIVE with a `../` segment.
+/** The header nav's /about label as the Next shell serializes it. */
+const NAV_ABOUT = 'aria-current="page" href="/about">About<';
+
+/** A post whose body text carries `&lt;` (React's spelling of a code `<`).
+ *  Only text is rewritten: Next's head and JSON payloads carry no `&lt;`. */
+function entityPage(dir: string, id: number): string {
+	const file = join(dir, 'posts', 'a-harness-that-fixes-itself.html');
+	if (!existsSync(file) || !readFileSync(file, 'utf8').includes('&lt;')) {
+		console.error(`FATAL: control ${id} found no &lt; entity to re-spell`);
+		process.exit(2);
+	}
+	return file;
+}
+
+/** Rewrite `&gt;` to a raw `>` inside every head `<meta ... content="...">`
+ *  that carries one. Attribute values may legally hold a raw `>`; the
+ *  Svelte baseline did, React never does. */
+function rawGtMetaContent(html: string, id: number): string {
+	const end = html.indexOf('</head>');
+	let hits = 0;
+	const head = html
+		.slice(0, end)
+		.replace(/(<meta\b[^>]*\bcontent=")([^"]*&gt;[^"]*)(")/g, (_m, open, value: string, close) => {
+			hits += 1;
+			return `${open}${value.replace(/&gt;/g, '>')}${close}`;
+		});
+	if (hits === 0) {
+		console.error(`FATAL: control ${id} found no meta content carrying &gt;`);
+		process.exit(2);
+	}
+	return head + html.slice(end);
+}
+
+/** The favicon link as the Next shell emits it: absolute, in `<head>`. */
+const ICON_LINK = '<link rel="icon" href="/favicon.svg"';
+
+/** A built page ONE directory deep (`/posts/<slug>`) carrying the favicon link.
  *
- * Controls 21-23 are about resolving that spelling, so a page that already
- * spells it `./favicon.svg` would make all three vacuous. No such page is a
- * hard error, the same way `jsonLdPage` refuses to fall back. */
-function relativeIconPage(dir: string): string {
-	for (const base of [join(dir, 'posts'), join(dir, 'ko', 'posts')]) {
-		if (!existsSync(base)) continue;
+ * The depth matters: controls 22, 30 and 31 rewrite the href to
+ * `../favicon.svg`, which resolves to `/favicon.svg` only from one level down.
+ * Matching the whole link tag keeps the rewrite off the RSC payload copies of
+ * the same URL. No such page is a hard error, as `jsonLdPage` is. */
+function iconPage(dir: string): string {
+	const base = join(dir, 'posts');
+	if (existsSync(base)) {
 		for (const entry of readdirSync(base)) {
 			if (!entry.endsWith('.html')) continue;
 			const full = join(base, entry);
-			if (readFileSync(full, 'utf8').includes('href="../favicon.svg"')) return full;
+			if (readFileSync(full, 'utf8').includes(ICON_LINK)) return full;
 		}
 	}
-	console.error('FATAL: no built page links ../favicon.svg; controls 21-23 cannot run');
+	console.error(
+		`FATAL: no /posts/<slug> page carries ${ICON_LINK}; controls 21-23, 30-31 cannot run`,
+	);
 	process.exit(2);
+}
+
+function rewriteIconHref(dir: string, href: string): void {
+	const file = iconPage(dir);
+	const html = readFileSync(file, 'utf8');
+	writeFileSync(file, html.replace(ICON_LINK, `<link rel="icon" href="${href}"`));
 }
 
 /** A built page carrying a full Open Graph and Twitter card set. */
@@ -1214,13 +1296,29 @@ function heroPage(dir: string): string {
 	process.exit(2);
 }
 
+/** The Google Fonts `rel="stylesheet"` link; group 1 is the raw href. React
+ *  also emits a `rel="preload"` copy, which is not a shell key, so the pattern
+ *  demands the stylesheet rel. */
+const FONT_STYLESHEET =
+	/<link\b[^>]*href="(https:\/\/fonts\.googleapis\.com\/css2[^"]*)"[^>]*rel="stylesheet"[^>]*>/;
+const PRECONNECT_GOOGLEAPIS = '<link rel="preconnect" href="https://fonts.googleapis.com"/>';
+const PRECONNECT_GSTATIC =
+	'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>';
+
+/** A framework bundle stylesheet link; group 1 is the href. */
+const BUNDLE_STYLESHEET = /<link rel="stylesheet" href="(\/_next\/[^"]+\.css)"[^>]*>/g;
+
 /** A built page carrying the Google Fonts stylesheet and both preconnect hints. */
 function fontLinkPage(dir: string): string {
 	for (const candidate of ['about.html', 'index.html']) {
 		const full = join(dir, candidate);
 		if (!existsSync(full)) continue;
 		const html = readFileSync(full, 'utf8');
-		if (html.includes('fonts.googleapis.com/css2') && html.includes('fonts.gstatic.com'))
+		if (
+			FONT_STYLESHEET.test(html) &&
+			html.includes(PRECONNECT_GOOGLEAPIS) &&
+			html.includes(PRECONNECT_GSTATIC)
+		)
 			return full;
 	}
 	console.error(
@@ -1229,15 +1327,14 @@ function fontLinkPage(dir: string): string {
 	process.exit(2);
 }
 
-/** A built page carrying at least two ROUTE-RELATIVE bundle stylesheets.
+/** A built page whose `<head>` carries a `/_next/` bundle stylesheet.
  *
- * The relative spelling is required, and finding that out cost control 27 a
- * run: the first version accepted any page and picked `404.html`, whose
- * stylesheets are absolute `/_app/...`. `extractFields()` has always skipped
- * that exact spelling, so the entries were never recorded, deleting them
- * changed nothing the comparator could see, and the control reported exit 0 on
- * a build with its CSS torn out. A control that cannot observe its own mutation
- * proves nothing, so the selector now demands a page where the entries exist. */
+ * The Svelte-era selector learned the hard way that the entries must be ones
+ * the comparator RECORDS: it once picked a page whose `/_app/` stylesheets
+ * `extractFields()` skips, so deleting them changed nothing it could see and
+ * control 27 passed on a build with its CSS torn out. `/_next/` stylesheets
+ * are recorded and then collapsed by `normalizeShell`, which is exactly the
+ * loosening 26 and 27 bound, so the selector demands one in the head. */
 function bundleStylesheetPage(dir: string): string {
 	for (const base of [dir, join(dir, 'posts')]) {
 		if (!existsSync(base)) continue;
@@ -1245,16 +1342,11 @@ function bundleStylesheetPage(dir: string): string {
 			if (!entry.endsWith('.html')) continue;
 			const full = join(base, entry);
 			const head = readFileSync(full, 'utf8').split('</head>')[0];
-			if (
-				[...head.matchAll(/"\.{1,2}\/(?:\.\.\/)*_app\/immutable\/assets\/[^"']+\.css"/g)].length >=
-				2
-			) {
-				return full;
-			}
+			if ([...head.matchAll(BUNDLE_STYLESHEET)].length >= 1) return full;
 		}
 	}
 	console.error(
-		'FATAL: no built page carries two route-relative bundle stylesheets; controls 26-27 cannot run',
+		'FATAL: no built page carries a /_next/ bundle stylesheet; controls 26-27 cannot run',
 	);
 	process.exit(2);
 }
@@ -1352,15 +1444,38 @@ function treeFingerprint(dir: string): string {
 
 let failures = 0;
 console.log(
-	`negative controls against ${buildDir}, baseline ${baselineFile}, ` +
-		`seed ledger ${seedLedgerPath ?? '(empty)'} with ${JSON.parse(SEED_LEDGER).length} entries\n`,
+	`negative controls against ${buildDir}, baseline captured from the same tree this run, ` +
+		'empty starting ledger\n',
 );
-for (const control of CONTROLS) {
-	const work = mkdtempSync(join(tmpdir(), `migration-verify-c${control.id}-`));
-	const candidate = join(work, 'build');
+
+/** A fresh copy of the tree under test plus a fresh starting ledger. */
+function stage(label: string): { work: string; candidate: string; ledger: string } {
+	const work = mkdtempSync(join(WORK_ROOT, `${label}-`));
+	const candidate = join(work, 'candidate');
 	const ledger = join(work, 'ledger.json');
 	cpSync(buildDir, candidate, { recursive: true });
 	writeFileSync(ledger, SEED_LEDGER);
+	return { work, candidate, ledger };
+}
+
+// The unmutated starting state must compare clean. If it does not, every
+// DEFECT control would pass on the pre-existing difference and every
+// INVARIANCE control would fail on it -- the same trap the Svelte-era D9
+// footer set -- so this is a hard stop, not a counted control.
+{
+	const { work, candidate, ledger } = stage('c0');
+	const { code, out } = runCompare(candidate, ledger);
+	if (code !== 0) {
+		console.error(`FATAL: the unmutated starting state does not compare clean (exit ${code})`);
+		console.error(out.split('\n').slice(0, 20).join('\n'));
+		process.exit(2);
+	}
+	console.log('starting state: unmutated copy compares clean (exit 0)\n');
+	rmSync(work, { recursive: true, force: true });
+}
+
+for (const control of CONTROLS) {
+	const { work, candidate, ledger } = stage(`c${control.id}`);
 	const before = treeFingerprint(candidate) + readFileSync(ledger, 'utf8');
 	control.apply(candidate, ledger);
 	const after = treeFingerprint(candidate) + readFileSync(ledger, 'utf8');
@@ -1400,4 +1515,5 @@ console.log(
 );
 console.log('Invariance controls are not weaker defect controls: they assert that a benign change');
 console.log('is ignored, which is why each is paired with a defect control over the same surface.');
+rmSync(WORK_ROOT, { recursive: true, force: true });
 process.exit(failures === 0 ? 0 : 1);
