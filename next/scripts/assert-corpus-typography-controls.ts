@@ -1,27 +1,26 @@
 /**
- * Negative controls for the corpus typography assertions.
+ * Negative controls for the corpus typography invariants.
  *
  *   pnpm migration:typography:controls
  *
- * `assert-corpus-typography.ts` reports 334 matching posts. The number proves
- * nothing until the comparison has been observed to go red on each way it can
- * legitimately fail:
+ * `assert-corpus-typography.ts` reports every post satisfying three invariants.
+ * That proves nothing until each invariant has been observed to go red on the
+ * way it can legitimately fail, and to stay green on a change it must ignore:
  *
- *   DEFECT      the assertion MUST exit 1 on deliberately broken output
+ *   DEFECT      the assertion MUST exit 1 on deliberately broken input
  *   INVARIANCE  the assertion MUST exit 0 on a benign change it should ignore
  *
- * CT-03 is the control that matters most: it flips ONE quote's direction while
- * leaving every count identical. That is the exact shape of the five real
- * mismatches, and a counts-based comparison would pass all five.
+ * The corpus is rendered ONCE and every control runs over that cache. Output
+ * mutations are post-render string edits; the counter controls hand the
+ * assertions a doctored counter reading, because the plugin's real counters are
+ * cumulative with no reset and raising them would poison every later control.
  *
- * The corpus is rendered ONCE and every control runs over that cache — 334
- * React renders per control would make this suite unusable, and the mutations
- * are all post-render string edits anyway.
+ * HISTORY. CT-02, CT-03, CT-06 and CT-07 exercised the per-post comparison
+ * against the built Svelte page. That comparison was dropped with the SvelteKit
+ * app, and their ids are retired rather than reissued.
  */
-import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-
-import { renderCorpus, runAssertions, smartSequence } from './assert-corpus-typography';
+import { MIN_POSTS, renderCorpus, runAssertions, smartSequence } from './assert-corpus-typography';
+import type { PipelineCounters } from './assert-corpus-typography';
 
 type Kind = 'DEFECT' | 'INVARIANCE';
 
@@ -29,15 +28,15 @@ interface Control {
 	id: string;
 	kind: Kind;
 	what: string;
-	/** Applied to one post's rendered markup; `index` selects a single victim. */
-	mutate: (html: string, index: number) => string;
+	/** Applied to one post's rendered markup. */
+	mutate?: (html: string, index: number) => string;
+	/** Replaces the counters the assertions read. */
+	counters?: PipelineCounters;
+	/** Cuts the corpus to one post below the floor. */
+	shrink?: boolean;
 }
 
-/** Replace the FIRST occurrence within each post — one character per post, not one per corpus. */
-const onFirstMatch =
-	(pattern: RegExp, replacement: string) =>
-	(html: string): string =>
-		html.replace(pattern, replacement);
+const zero = (): number => 0;
 
 const CONTROLS: Control[] = [
 	{
@@ -53,39 +52,27 @@ const CONTROLS: Control[] = [
 				.replace(/…/g, '...'),
 	},
 	{
-		id: 'CT-02',
+		id: 'CT-08',
 		kind: 'DEFECT',
-		what: 'a single em dash reverts to the ASCII source spelling',
-		mutate: onFirstMatch(/—/, '--'),
+		what: 'the preprocessor reports one unsupported-markup construct',
+		counters: { unsupportedMarkup: () => 1, unmappedNodes: zero },
 	},
 	{
-		id: 'CT-03',
+		id: 'CT-09',
 		kind: 'DEFECT',
-		what: 'ONE quote flips direction — identical counts, different sequence',
-		mutate: onFirstMatch(/”/, '“'),
+		what: 'the preprocessor reports one text node it could not map',
+		counters: { unsupportedMarkup: zero, unmappedNodes: () => 1 },
 	},
 	{
-		id: 'CT-06',
+		id: 'CT-10',
 		kind: 'DEFECT',
-		what: 'a quote MOVES one visible character — identical sequence, different anchor',
-		// The reviewer's mutation. A sequence-only comparison exits 0 on this: the
-		// same characters appear in the same order, one of them just landed inside
-		// the next word instead of in front of it.
-		mutate: (html) => html.replace(/“([^\s<])/, '$1“'),
-	},
-	{
-		id: 'CT-07',
-		kind: 'DEFECT',
-		what: 'a smart character is changed INSIDE a word covered by a content exception',
-		// The exceptions in assert-corpus-typography.ts forgive a word whose
-		// spelling differs for a markdown-parsing reason. This proves they cannot
-		// forgive the typography inside it.
-		mutate: (html, index) => (EXEMPT_POSTS.has(index) ? html.replace(/“UTC”/, '”UTC”') : html),
+		what: 'the corpus shrinks to one post below the floor',
+		shrink: true,
 	},
 	{
 		id: 'CT-04',
 		kind: 'INVARIANCE',
-		what: 'smart punctuation written as numeric entities — paired with CT-01/02',
+		what: 'smart punctuation written as numeric entities — paired with CT-01',
 		mutate: (html) =>
 			html
 				.replace(/—/g, '&#8212;')
@@ -96,29 +83,12 @@ const CONTROLS: Control[] = [
 	{
 		id: 'CT-05',
 		kind: 'INVARIANCE',
-		what: 'the markup is reflowed with extra whitespace — paired with CT-02',
+		what: 'the markup is reflowed with extra whitespace — paired with CT-01',
 		mutate: (html) => html.replace(/></g, '>\n  <'),
 	},
 ];
 
-const BUILD = fileURLToPath(new URL('../../build/', import.meta.url));
-
-/** Corpus indices of the posts an enumerated content exception covers. */
-const EXEMPT_POSTS = new Set<number>();
-
-if (!existsSync(BUILD)) {
-	console.error(`FATAL: SvelteKit build not found: ${BUILD} — run \`pnpm build\` first`);
-	process.exit(2);
-}
-
 const corpus = await renderCorpus();
-for (const [index, post] of corpus.entries()) {
-	if (post.rel === 'ko/data/amplitude-export-api-timezone.md') EXEMPT_POSTS.add(index);
-}
-if (EXEMPT_POSTS.size === 0) {
-	console.error('FATAL: the post CT-07 targets is not in the corpus; the control would be vacuous');
-	process.exit(2);
-}
 
 // A control suite that never sees the unbroken corpus passing is not a
 // baseline, it is a coincidence.
@@ -132,16 +102,23 @@ if (clean !== 0) {
 const failures: string[] = [];
 for (const control of CONTROLS) {
 	// A mutation that silently matched nothing turns an INVARIANCE control into
-	// a tautology and a DEFECT control into a coincidence.
-	let changed = false;
-	const mutate = (html: string, index: number): string => {
-		const out = control.mutate(html, index);
-		if (out !== html && JSON.stringify(smartSequence(out)) !== JSON.stringify(smartSequence(html)))
-			changed = true;
-		else if (out !== html && control.kind === 'INVARIANCE') changed = true;
-		return out;
-	};
-	const code = runAssertions(corpus, mutate, true);
+	// a tautology and a DEFECT control into a coincidence. Counter and corpus
+	// controls change their input by construction.
+	let changed = control.mutate === undefined;
+	const mutate = control.mutate
+		? (html: string, index: number): string => {
+				const out = control.mutate!(html, index);
+				if (
+					out !== html &&
+					JSON.stringify(smartSequence(out)) !== JSON.stringify(smartSequence(html))
+				)
+					changed = true;
+				else if (out !== html && control.kind === 'INVARIANCE') changed = true;
+				return out;
+			}
+		: undefined;
+	const input = control.shrink ? corpus.slice(0, MIN_POSTS - 1) : corpus;
+	const code = runAssertions(input, mutate, true, control.counters);
 	if (!changed) {
 		failures.push(`${control.id} ${control.what}: the mutation changed nothing observable`);
 		console.log(`FAIL  ${control.id}  ${control.kind.padEnd(10)} NO-OP MUTATION  ${control.what}`);
