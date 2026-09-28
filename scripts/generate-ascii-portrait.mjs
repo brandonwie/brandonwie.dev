@@ -12,7 +12,8 @@
 //   sips --cropToHeightWidth 410 373 --cropOffset 30 20 src/lib/data/portrait.png \
 //     --out /tmp/portrait-crop.png
 //   node scripts/generate-ascii-portrait.mjs /tmp/portrait-crop.png \
-//     src/lib/data/portrait.ascii.txt --cols 96 --ramp ascii --contrast
+//     src/lib/data/portrait.ascii.txt --cols 96 --ramp blocks --contrast \
+//     --contrast-scope all --knockout 0.85
 //
 // No dependencies: PNG is decoded with node:zlib. 8-bit, non-interlaced only
 // (colour types 0/2/3/4/6) — which is what every export path produces. A JPEG
@@ -24,6 +25,14 @@
 //   --invert          dense glyphs for dark pixels (a negative on this light-on-
 //                     dark page; leave it off for a positive image)
 //   --contrast        stretch the 1st..99th percentile of cell luminance to 0..1
+//                     (foreground cells only when --knockout is set, unless
+//                     --contrast-scope all)
+//   --contrast-scope S  foreground (default) | all: which cells set the --contrast
+//                     percentiles; all includes background cells' whole-cell
+//                     luminance (they still print as spaces)
+//   --knockout T      blank the border-connected background: flood-fill from edge
+//                     pixels with luminance >= T (0..1], e.g. 0.88; cells more
+//                     than half background print a space
 //   --cell-ratio N    glyph advance / line height (default 0.6: JetBrains Mono
 //                     advances 0.6em and the page sets line-height: 1)
 
@@ -43,7 +52,7 @@ function parseArgs(argv) {
 	const [input, output, ...rest] = argv;
 	if (!input || !output) {
 		console.error(
-			'usage: generate-ascii-portrait.mjs <input.png> <output.txt> [--cols N] [--ramp ascii|fine|blocks] [--invert] [--contrast] [--cell-ratio N]',
+			'usage: generate-ascii-portrait.mjs <input.png> <output.txt> [--cols N] [--ramp ascii|fine|blocks] [--invert] [--contrast] [--cell-ratio N] [--knockout T] [--contrast-scope foreground|all]',
 		);
 		process.exit(1);
 	}
@@ -55,6 +64,8 @@ function parseArgs(argv) {
 		invert: false,
 		contrast: false,
 		cellRatio: 0.6,
+		knockout: 0,
+		contrastScope: 'foreground',
 	};
 	for (let i = 0; i < rest.length; i++) {
 		if (rest[i] === '--cols') opts.cols = Number(rest[++i]);
@@ -62,6 +73,8 @@ function parseArgs(argv) {
 		else if (rest[i] === '--invert') opts.invert = true;
 		else if (rest[i] === '--contrast') opts.contrast = true;
 		else if (rest[i] === '--cell-ratio') opts.cellRatio = Number(rest[++i]);
+		else if (rest[i] === '--knockout') opts.knockout = Number(rest[++i]);
+		else if (rest[i] === '--contrast-scope') opts.contrastScope = rest[++i];
 		else {
 			console.error(`unknown argument: ${rest[i]}`);
 			process.exit(1);
@@ -73,6 +86,14 @@ function parseArgs(argv) {
 	}
 	if (!Number.isFinite(opts.cellRatio) || opts.cellRatio <= 0 || opts.cellRatio > 4) {
 		console.error('--cell-ratio must be a number greater than 0 and at most 4');
+		process.exit(1);
+	}
+	if (opts.knockout !== 0 && !(opts.knockout > 0 && opts.knockout <= 1)) {
+		console.error('--knockout must be a luminance threshold in (0, 1]');
+		process.exit(1);
+	}
+	if (opts.contrastScope !== 'foreground' && opts.contrastScope !== 'all') {
+		console.error('--contrast-scope must be foreground or all');
 		process.exit(1);
 	}
 	if (!RAMPS[opts.ramp]) {
@@ -170,14 +191,56 @@ function percentile(sorted, q) {
 	return sorted[i];
 }
 
+// Mark the background: flood-fill (BFS, 4-connected) from every border pixel
+// with luminance >= threshold through connected pixels that also pass it. Only
+// light pixels reachable from the edge count, so bright skin enclosed by hair
+// or the face outline survives.
+function knockoutMask(img, threshold) {
+	const { width: w, height: h } = img;
+	const bg = new Uint8Array(w * h);
+	const queue = new Int32Array(w * h);
+	let head = 0;
+	let tail = 0;
+	const visit = (x, y) => {
+		const i = y * w + x;
+		if (bg[i] || lumAt(img, x, y) < threshold) return;
+		bg[i] = 1;
+		queue[tail++] = i;
+	};
+	for (let x = 0; x < w; x++) {
+		visit(x, 0);
+		visit(x, h - 1);
+	}
+	for (let y = 0; y < h; y++) {
+		visit(0, y);
+		visit(w - 1, y);
+	}
+	while (head < tail) {
+		const i = queue[head++];
+		const x = i % w;
+		const y = (i - x) / w;
+		if (x > 0) visit(x - 1, y);
+		if (x < w - 1) visit(x + 1, y);
+		if (y > 0) visit(x, y - 1);
+		if (y < h - 1) visit(x, y + 1);
+	}
+	return bg;
+}
+
 // Box-average the source down to cols x rows, then map to the ramp.
 // rows = cols * h / w * cellRatio: a glyph cell is cellRatio as wide as it is
 // tall, so each row must cover proportionally more source height than a column.
-function toAscii(img, { cols, chars, invert, contrast, cellRatio }) {
+// With a knockout mask, a cell that is more than half background prints a
+// space; otherwise only its foreground pixels are averaged.
+function toAscii(img, { cols, chars, invert, contrast, contrastScope, cellRatio, knockout }) {
 	const rows = Math.max(1, Math.round(((cols * img.height) / img.width) * cellRatio));
 	const cellW = img.width / cols;
 	const cellH = img.height / rows;
+	const bg = knockout ? knockoutMask(img, knockout) : null;
+	// NaN marks a knocked-out (background) cell.
 	const lums = new Float64Array(cols * rows);
+	// Whole-cell mean, background included; feeds --contrast-scope all.
+	const fullLums = new Float64Array(cols * rows);
 	for (let ry = 0; ry < rows; ry++) {
 		for (let rx = 0; rx < cols; rx++) {
 			const x0 = Math.floor(rx * cellW);
@@ -186,24 +249,40 @@ function toAscii(img, { cols, chars, invert, contrast, cellRatio }) {
 			const y1 = Math.max(y0 + 1, Math.floor((ry + 1) * cellH));
 			let sum = 0;
 			let n = 0;
+			let total = 0;
+			let fullSum = 0;
 			for (let y = y0; y < y1 && y < img.height; y++) {
 				for (let x = x0; x < x1 && x < img.width; x++) {
-					sum += lumAt(img, x, y);
+					const l = lumAt(img, x, y);
+					total++;
+					fullSum += l;
+					if (bg && bg[y * img.width + x]) continue;
+					sum += l;
 					n++;
 				}
 			}
-			lums[ry * cols + rx] = n ? sum / n : 0;
+			fullLums[ry * cols + rx] = total ? fullSum / total : 0;
+			if (bg && n * 2 < total) lums[ry * cols + rx] = NaN;
+			else lums[ry * cols + rx] = n ? sum / n : 0;
 		}
 	}
 
 	// Stretch the 1st..99th percentile to the full range so a flat photo still
-	// spans the whole ramp; the outer 1% on each side clamps.
+	// spans the whole ramp; the outer 1% on each side clamps. Scope 'foreground'
+	// measures only non-background cells, which pushes skin to the top of the
+	// ramp; 'all' measures every whole cell, background included, so the white
+	// backdrop stays the brightest value and skin keeps mid-ramp detail.
 	let lo = 0;
 	let hi = 1;
 	if (contrast) {
-		const sorted = Float64Array.from(lums).sort();
-		lo = percentile(sorted, 0.01);
-		hi = percentile(sorted, 0.99);
+		const sorted =
+			contrastScope === 'all'
+				? Float64Array.from(fullLums).sort()
+				: lums.filter((v) => !Number.isNaN(v)).sort();
+		if (sorted.length) {
+			lo = percentile(sorted, 0.01);
+			hi = percentile(sorted, 0.99);
+		}
 		if (hi - lo < 1e-6) [lo, hi] = [0, 1];
 	}
 
@@ -212,7 +291,12 @@ function toAscii(img, { cols, chars, invert, contrast, cellRatio }) {
 	for (let ry = 0; ry < rows; ry++) {
 		let line = '';
 		for (let rx = 0; rx < cols; rx++) {
-			const lum = Math.min(1, Math.max(0, (lums[ry * cols + rx] - lo) / (hi - lo)));
+			const raw = lums[ry * cols + rx];
+			if (Number.isNaN(raw)) {
+				line += ' ';
+				continue;
+			}
+			const lum = Math.min(1, Math.max(0, (raw - lo) / (hi - lo)));
 			const v = invert ? 1 - lum : lum;
 			line += chars.charAt(Math.round(v * last));
 		}
@@ -236,12 +320,14 @@ const art = toAscii(img, {
 	invert: opts.invert,
 	contrast: opts.contrast,
 	cellRatio: opts.cellRatio,
+	knockout: opts.knockout,
+	contrastScope: opts.contrastScope,
 });
 writeFileSync(opts.output, `${art}\n`, 'utf8');
 
 const rows = art.split('\n').length;
 console.log(
-	`${opts.input} (${img.width}x${img.height}) -> ${opts.output}  ${opts.cols}x${rows}  ramp=${opts.ramp}${opts.invert ? ' inverted' : ''}${opts.contrast ? ' contrast' : ''}`,
+	`${opts.input} (${img.width}x${img.height}) -> ${opts.output}  ${opts.cols}x${rows}  ramp=${opts.ramp}${opts.invert ? ' inverted' : ''}${opts.contrast ? ' contrast' : ''}${opts.knockout ? ` knockout=${opts.knockout}` : ''}`,
 );
 console.log(
 	"Check it in a monospace editor before committing. A flat source maps to a flat ramp and reads as noise — raise the photo's contrast and re-run.",
