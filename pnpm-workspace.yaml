@@ -1,12 +1,10 @@
-# Temporary two-app workspace for the SvelteKit -> Next.js migration.
+# The repository root is a thin package: shared content (src/content/posts),
+# the 3B sync and snapshot scripts, and the verification harness. `next/` is
+# the Next.js app; it builds the site to `next/build`, the Cloudflare Pages
+# output directory.
 #
-# The repository root remains the SvelteKit app and keeps building to `build/`.
-# `next/` is the Next.js candidate and builds to `next/build`, which is where
-# `pnpm migration:verify` points its candidate directory.
-#
-# This split is deliberate and temporary: it keeps the Svelte baseline
-# rebuildable while the risky ports happen, so the 34aa7e7 baseline can be
-# re-captured or challenged at any point. `next/` collapses back into the
-# repository root only when SvelteKit is removed.
+# SvelteKit was retired after the 2026-09-20 cutover. Collapsing `next/` into
+# the repository root is a tracked follow-up in the 3B nextjs-migration task
+# ("Deferred post-cutover package and UI consolidation").
 packages:
   - next

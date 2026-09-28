@@ -1,6 +1,7 @@
 # brandonwie.dev
 
-Personal blog built with SvelteKit, featuring a Cmd/Ctrl+K command palette.
+Personal blog built with Next.js (App Router static export), featuring a
+Cmd/Ctrl+K command palette.
 
 ## Features
 
@@ -12,14 +13,14 @@ Personal blog built with SvelteKit, featuring a Cmd/Ctrl+K command palette.
 
 ## Tech Stack
 
-| Component | Choice                     |
-| --------- | -------------------------- |
-| Framework | SvelteKit + adapter-static |
-| Styling   | Tailwind CSS               |
-| i18n      | Paraglide-JS               |
-| Markdown  | mdsvex + Shiki             |
-| Search    | Fuse.js                    |
-| Hosting   | Cloudflare Pages           |
+| Component | Choice                          |
+| --------- | ------------------------------- |
+| Framework | Next.js 16 (`output: 'export'`) |
+| Styling   | Tailwind CSS v4                 |
+| i18n      | Paraglide-JS                    |
+| Markdown  | remark/rehype pipeline + Shiki  |
+| Search    | Fuse.js (palette), Pagefind     |
+| Hosting   | Cloudflare Pages (`next/build`) |
 
 ## Development
 
@@ -31,13 +32,13 @@ The exact version is pinned via `"packageManager"` in `package.json`
 # Install dependencies
 pnpm install
 
-# Start dev server
+# Start the Next dev server (http://localhost:5173)
 pnpm dev
 
-# Build for production
+# Build for production (next/build, then the Pagefind index)
 pnpm build
 
-# Preview production build
+# Serve the production build (http://localhost:4173)
 pnpm preview
 ```
 
@@ -82,17 +83,16 @@ See [docs/TRANSLATION.md](docs/TRANSLATION.md) for translation guidelines.
 ## Project Structure
 
 ```text
+next/                # Next.js app (builds to next/build)
+├── app/             # Routes: (en)/ and (ko)/ko/
+└── src/             # Components, markdown pipeline, palette, SEO
 src/
 ├── content/posts/
 │   ├── en/          # English posts
 │   └── ko/          # Korean translations
-├── lib/
-│   ├── components/  # Svelte components (incl. palette/ UI)
-│   ├── palette/     # Command palette item model
-│   └── paraglide/   # Generated i18n runtime
-├── routes/
-│   ├── posts/       # English routes
-│   └── ko/          # Korean routes
+├── app.css          # Design tokens (imported by next/app/globals.css)
+└── lib/             # Shared data, SEO helpers, remark TOC plugin used by next/
+public/              # Static assets (next/public entries link here)
 messages/
 ├── en.json          # English UI strings
 └── ko.json          # Korean UI strings

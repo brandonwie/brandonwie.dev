@@ -5,6 +5,26 @@ chosen 2026-09-20: **control-plane output-directory flip** (option 1), not a
 root-script change. This document is the git-visible record of that config
 drift — the flip itself is a dashboard change git cannot see.
 
+## Current state (2026-09-29) — read this first
+
+- **Monitoring window closed** 2026-09-29 by Brandon: no rollback in 9 days,
+  15 successful Next production deploys since the flip (including the
+  Phosphor Fade redesign), and the post-deploy probe passing 70/70 on the live
+  domain and the `pages.dev` alias.
+- **SvelteKit is retired** (branch `refactor/retire-svelte`). Root
+  `pnpm run build` now runs only `build:next`, which emits `next/build` plus
+  its Pagefind index. There is no root `build/` tree any more.
+- **Pages build configuration is unchanged by the retirement:** build command
+  `pnpm run build`, output directory `next/build`. Both values were verified
+  live on 2026-09-20; confirm them in the dashboard before relying on them.
+- **The two-step rollback below is void.** It restores a Svelte deployment
+  and points `destination_dir` at a `build/` tree that `main` no longer
+  produces. To roll back now, use the dashboard "Roll back" to an earlier
+  **Next** deployment for an immediate fix, then `git revert` the offending
+  commit on `main` so the next push does not redeploy it.
+- The sections below are the historical cutover record; they are kept as
+  evidence, not as instructions.
+
 ## Why this mechanism
 
 - `pnpm run build` already emits both trees: `build:svelte` → `build/`,
@@ -80,6 +100,9 @@ Assert on the live domain immediately after the new deployment:
       pages.
 - [ ] `x-robots-tag: noindex` present **only** on `/talks/my-career` — the sole
       intended noindex in the tree (`next/app/(en)/talks/my-career/page.tsx`).
+      (`/search` and `/ko/search` also carry an intended
+      `<meta name="robots" content="noindex,follow">` from
+      `next/src/seo/metadata.ts`; a probe that reads meta tags must allow it.)
       No `_headers`/`_routes` file is tracked in the repo, so the rehearsal's
       noindex marker cannot leak — assert that absence on live anyway, on the
       root domain AND `brandonwie-dev.pages.dev` alias.
@@ -90,7 +113,7 @@ Assert on the live domain immediately after the new deployment:
       first deploy (rehearsal observation) — not an error; retry before
       flagging.
 
-## Rollback — TWO steps, ordered
+## Rollback — TWO steps, ordered (historical; void after 2026-09-29)
 
 On threshold breach or probe failure:
 
@@ -128,6 +151,7 @@ user-reported breakage, feed/search regression).
 | Probe result              | **PASS** (live 2026-09-20 ~23:25 UTC): 15 routes 200, unmatched path → real 404; `lang` en/ko correct; canonicals → `brandonwie.dev`; `noindex` only on `/talks/my-career` (meta robots), absent on `/`, `/ko`, `/posts` and the `pages.dev` alias; `/rss.xml` + `/ko/rss.xml` `application/xml` 200, `robots.txt`/`sitemap.xml` 200, `/pagefind/pagefind-entry.json` 200; `giscus.app` + canonical on post pages; live root shows `_next` markers (cutover confirmed) |
 | Token `249ae685…` revoked | yes — Brandon, 2026-09-20                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Monitoring window opened  | 2026-09-20T23:25Z — Search Console / analytics / errors / feeds / CWV                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Monitoring window closed  | 2026-09-29 — Brandon, on 9 days without rollback, 15 successful Next production deploys and a 70/70 live probe; SvelteKit retired afterwards (`refactor/retire-svelte`)                                                                                                                                                                                                                                                                                                |
 
 Note: committing this record pushes to `main`, which post-flip redeploys
 production as Next (the arming warning, operational). Expected and harmless —
