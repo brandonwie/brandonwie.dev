@@ -12,13 +12,21 @@
  *   INVARIANCE  the assertions MUST exit 0 on a benign change they should ignore
  *
  * Every invariance is paired with a defect over the same surface: entity
- * encoding and whitespace against the two prose defects, the rewritten handler
+ * encoding against the loss of smart typography, the rewritten handler
  * against its deletion, attribute order against the attribute values.
  *
  * Build-mutating controls run against a throwaway copy of the candidate under
  * `tmp/`; AP-16 calls the hero generator directly to prove that unsafe slugs
  * fail at its nested HTML/JavaScript quoting boundary. The real `next/build`
- * is never mutated, and the baseline is read-only throughout.
+ * is never mutated.
+ *
+ * SVELTE RETIREMENT (2026-09-29): the suite no longer reads the SvelteKit
+ * export, so the controls that only exercised its comparisons were deleted
+ * with them -- AP-01 and AP-05 (English prose equality), AP-02 and AP-03
+ * (single-character smart-punctuation drift against the Svelte counts), AP-07
+ * and AP-08 (article:* meta equality), AP-37 (Korean prose equality), AP-40 and
+ * AP-41 (JSON-LD date equality). Their ids are not reused. AP-50..AP-52 cover
+ * the Next-side invariants those rows keep.
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -68,43 +76,15 @@ function renameClassToken(html: string, from: string, to: string): string {
 
 const CONTROLS: Control[] = [
 	{
-		id: 'AP-01',
-		kind: 'DEFECT',
-		what: 'one word of the prose is changed',
-		apply: (html) => html.replace(/\bcomments\b/, 'remarks'),
-	},
-	{
-		id: 'AP-02',
-		kind: 'DEFECT',
-		what: 'an em dash reverts to the ASCII source spelling',
-		apply: (html) => html.replace('—', '--'),
-	},
-	{
-		id: 'AP-03',
-		kind: 'DEFECT',
-		what: 'a curly apostrophe reverts to a straight one',
-		apply: (html) => html.replace('’', "'"),
-	},
-	{
 		id: 'AP-04',
 		kind: 'INVARIANCE',
-		what: 'smart punctuation written as numeric entities — paired with AP-02/03',
+		what: 'smart punctuation written as numeric entities — paired with AP-50',
 		apply: (html) =>
 			html
 				.replace(/—/g, '&#8212;')
 				.replace(/’/g, '&#8217;')
 				.replace(/“/g, '&#8220;')
 				.replace(/”/g, '&#8221;'),
-	},
-	{
-		id: 'AP-05',
-		kind: 'INVARIANCE',
-		what: 'the prose is reflowed with extra whitespace — paired with AP-01',
-		// Matched on the CLOSING tag alone. The first version reflowed `</p><p`,
-		// which the candidate never emits — React already writes a newline there —
-		// so the mutation changed nothing and the no-op guard failed the control
-		// rather than letting an untested invariance report success.
-		apply: (html) => html.replace(/<\/p>/g, '</p>\n\n   '),
 	},
 	{
 		id: 'AP-06',
@@ -115,23 +95,6 @@ const CONTROLS: Control[] = [
 				/(property="article:published_time"[^>]*content=")[^"]*(")/,
 				'$1Wed Jan 28 2026 09:00:00 GMT+0900 (Korean Standard Time)$2',
 			),
-	},
-	{
-		id: 'AP-07',
-		kind: 'DEFECT',
-		what: 'one article:tag is removed from a repeated set',
-		apply: (html) => html.replace(/<meta property="article:tag"[^>]*\/?>/, ''),
-	},
-	{
-		id: 'AP-08',
-		kind: 'DEFECT',
-		what: 'the article:* tags are emitted in a different order',
-		apply: (html) => {
-			const tags = [...html.matchAll(/<meta property="article:[^"]*"[^>]*\/?>/g)].map((m) => m[0]);
-			let out = html;
-			for (const tag of tags) out = out.replace(tag, '');
-			return out.replace('</head>', `${[...tags].reverse().join('')}</head>`);
-		},
 	},
 	{
 		id: 'AP-09',
@@ -379,18 +342,6 @@ const CONTROLS: Control[] = [
 		apply: (html) => html.replace('<main id="main-content"', '<main  id="main-content"'),
 	},
 	{
-		id: 'AP-37',
-		kind: 'DEFECT',
-		what: 'one word of the Korean prose differs from its baseline',
-		target: 'ko',
-		apply: (html) => {
-			const prose = html.indexOf('prose-terminal');
-			if (prose === -1) return html;
-			const word = html.indexOf('Giscus', prose);
-			return word === -1 ? html : `${html.slice(0, word)}Disqus${html.slice(word + 6)}`;
-		},
-	},
-	{
 		id: 'AP-38',
 		kind: 'INVARIANCE',
 		what: 'metadata remains discoverable when the document has no closing head tag',
@@ -405,18 +356,6 @@ const CONTROLS: Control[] = [
 				/(<header\b[^>]*class="[^"]*\barticle-header\b[^"]*"[^>]*>)/,
 				'$1<p>frontend</p>',
 			),
-	},
-	{
-		id: 'AP-40',
-		kind: 'DEFECT',
-		what: 'JSON-LD datePublished differs from the baseline',
-		apply: (html) => replaceJsonLdField(html, 'datePublished', '2000-01-01T00:00:00.000Z'),
-	},
-	{
-		id: 'AP-41',
-		kind: 'DEFECT',
-		what: 'JSON-LD dateModified differs from the baseline',
-		apply: (html) => replaceJsonLdField(html, 'dateModified', '2000-01-01'),
 	},
 	{
 		id: 'AP-42',
@@ -452,6 +391,42 @@ const CONTROLS: Control[] = [
 		// REDESIGN: the article's class list is now `article-shell pg-post__article`; rename the token.
 		apply: (html) => renameClassToken(html, 'article-shell', 'content-shell'),
 	},
+	{
+		id: 'AP-50',
+		kind: 'DEFECT',
+		what: 'every smart punctuation mark in the prose reverts to its ASCII source spelling (A4)',
+		apply: (html) => {
+			const prose = html.indexOf('prose-terminal');
+			if (prose === -1) return html;
+			const ascii: Record<string, string> = {
+				'—': '--',
+				'–': '-',
+				'‘': "'",
+				'’': "'",
+				'“': '"',
+				'”': '"',
+				'…': '...',
+			};
+			return html.slice(0, prose) + html.slice(prose).replace(/[—–‘’“”…]/g, (ch) => ascii[ch]);
+		},
+	},
+	{
+		id: 'AP-51',
+		kind: 'DEFECT',
+		what: 'the Korean article prose carries no Hangul, as an English fallback would (A14)',
+		target: 'ko',
+		apply: (html) => {
+			const prose = html.indexOf('prose-terminal');
+			if (prose === -1) return html;
+			return html.slice(0, prose) + html.slice(prose).replace(/[가-힣]/g, 'x');
+		},
+	},
+	{
+		id: 'AP-52',
+		kind: 'DEFECT',
+		what: 'JSON-LD datePublished is emptied (A10)',
+		apply: (html) => replaceJsonLdField(html, 'datePublished', ''),
+	},
 ];
 
 /** Fingerprint the selected HTML or asset target so no-op mutations are detectable. */
@@ -476,22 +451,16 @@ function controlTarget(scratch: string, target: Control['target']): string {
 
 async function main(): Promise<number> {
 	const source = process.argv[2] ?? 'next/build';
-	const baseline = process.argv[3] ?? 'build';
 	const scratch = 'tmp/article-controls';
 
-	for (const [label, dir] of [
-		['candidate', source],
-		['baseline', baseline],
-	] as const) {
-		if (!existsSync(dir)) {
-			console.error(`FATAL: ${label} build not found: ${dir}`);
-			return 2;
-		}
+	if (!existsSync(source)) {
+		console.error(`FATAL: candidate build not found: ${source}`);
+		return 2;
 	}
 
 	// A control suite that never sees the unbroken build passing is not a
 	// baseline, it is a coincidence.
-	const clean = await runAssertions(source, baseline, true);
+	const clean = await runAssertions(source, true);
 	console.log(`BASELINE  ${source} unmodified -> exit ${clean} (expected 0)`);
 	if (clean !== 0) {
 		console.error(
@@ -575,7 +544,7 @@ async function main(): Promise<number> {
 			);
 			continue;
 		}
-		const code = await runAssertions(scratch, baseline, true);
+		const code = await runAssertions(scratch, true);
 		const expected = control.kind === 'DEFECT' ? 1 : 0;
 		const ok = code === expected;
 		if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
