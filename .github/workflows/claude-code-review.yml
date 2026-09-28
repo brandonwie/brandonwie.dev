@@ -5,10 +5,10 @@ name: Claude Code Review
 # excludes this trigger phrase to prevent both workflows firing on the same
 # comment.
 #
-# brandonwie.dev is migrating from a SvelteKit static site to a Next.js App
-# Router static export. During the migration, PRs can touch the Svelte parity
-# baseline, the Next candidate under `next/`, shared verification controls, or
-# bilingual content. The review prompt below routes findings by that surface.
+# brandonwie.dev is a Next.js App Router static export (the `next/` package).
+# SvelteKit was retired after the 2026-09-20 cutover. PRs touch the Next app,
+# the shared root inputs it imports, the verification suites, or bilingual
+# content. The review prompt below routes findings by that surface.
 #
 # Security note: github.event.*.body fields appear ONLY in `if:` contains()
 # expressions (YAML-time evaluation, never shell-injected). Numeric inputs
@@ -72,52 +72,64 @@ jobs:
             ## Project Context
 
             brandonwie.dev is a bilingual personal blog + portfolio deployed
-            as static files to Cloudflare Pages. It is migrating incrementally
-            from the production-parity SvelteKit root (`src/`, adapter-static,
-            output in `build/`) to a Next.js 16 App Router candidate under
-            `next/` (`output: 'export'`, output in `next/build/`). Both read the
-            EN/KO markdown corpus under `src/content/posts/`; review each
-            changed file with its own framework's rules.
+            as static files to Cloudflare Pages. The site is a Next.js 16 App
+            Router static export in the `next/` workspace package
+            (`output: 'export'`, output in `next/build/`, the Pages output
+            directory). A few inputs stay at the repository root and are
+            imported by `next/` on purpose: the EN/KO markdown corpus under
+            `src/content/posts/`, `src/lib/seo.ts`, `src/lib/data/`,
+            `src/lib/plugins/remark-toc-extract.js`, `src/app.css` (design
+            tokens), `messages/{en,ko}.json`, `project.inlang/`, and
+            `public/` (every `next/public` entry is a symlink into it).
+            SvelteKit was retired after the 2026-09-20 cutover; a `.svelte`
+            file, a Vite config, or a Svelte package reappearing in a diff is
+            a regression.
 
-            The root stack remains Svelte 5, SvelteKit 2, Tailwind CSS v4,
-            Paraglide-JS, mdsvex + Shiki, Fuse.js, and Pagefind. The candidate
-            uses Next.js 16, React, Tailwind CSS v4, and an AST-based markdown
-            pipeline under `next/src/markdown/`. Package management is pnpm;
-            deno only runs `scripts/sync-from-3b.ts` tooling.
+            The stack is Next.js 16, React 19, Tailwind CSS v4 through
+            `@tailwindcss/postcss`, Paraglide-JS (compiled into
+            `next/src/paraglide/`), an AST markdown pipeline under
+            `next/src/markdown/` with Shiki, Fuse.js, and Pagefind. Package
+            management is pnpm; deno only runs the 3B sync and snapshot
+            tooling under `scripts/`.
 
-            Root `pnpm build` builds Svelte/Pagefind and then Next; root
-            `pnpm check` runs svelte-check and Next TypeScript. Other gates are
-            lint, Prettier, date validation, and migration controls.
-            `migration:verify:svelte` must stay at zero differences.
-            `migration:verify:next` can be nonzero during an approved phase;
-            `migration:parity:progress` validates its terminal verdict and
-            reports the count. Reviewers must explain count changes and stale
-            ledger entries. There is no conventional unit-test suite; new
-            migration predicates need executable positive and negative
+            Root `pnpm build` runs the Next build and then Pagefind; root
+            `pnpm check` runs Next TypeScript and the scripts TypeScript
+            project. Other gates are lint, Prettier, date validation, and the
+            verification suites routed by `scripts/migration-route.ts`.
+            `migration:verify:next` compares `next/build` with the frozen
+            baseline `verification/baseline/svelte-e23e808.json` through
+            `verification/exception-ledger.json`;
+            `migration:parity:progress` judges its exit and reports the
+            count. Reviewers must explain count changes and stale ledger
+            entries. There is no conventional unit-test suite; new
+            verification predicates need executable positive and negative
             controls, not a new test framework by default.
 
             ## Architecture Notes
 
-            - Command palette: mounted globally in `+layout.svelte`. The item
-              model lives in `src/lib/palette/items.ts`; fuzzy search uses
-              `src/lib/fuzzy.ts`; the modal is
-              `src/lib/components/palette/FuzzyFinder.svelte`.
-            - i18n: `messages/{en,ko}.json` hold UI strings; `src/lib/paraglide/`
-              is GENERATED (never hand-edit). Korean routes mirror under
-              `/ko/*`. A missing KO post falls back to EN content with a notice
-              banner (`isFallback`) — intentional, not a bug.
+            - Command palette: item model and search live in
+              `next/src/palette/` (`items.ts`, `fuzzy.ts`); the modal is
+              `next/src/components/palette/FuzzyFinder.tsx`.
+            - i18n: `messages/{en,ko}.json` hold UI strings;
+              `next/src/paraglide/` is GENERATED (never hand-edit). Korean
+              routes live under `next/app/(ko)/ko/`. A missing KO post falls
+              back to EN content with a notice banner (`isFallback`) —
+              intentional, not a bug.
             - Content: posts require frontmatter (`title`, `description`,
               `date`, `updated`, `tags`, `category`, `lang`, `draft`).
-              `readingTime` is computed by the remark-reading-time plugin at
-              build time — NEVER set manually. KO posts add `source_lang`,
+              `readingTime` is computed by
+              `next/src/markdown/plugins/remark-reading-time.ts` at build
+              time — NEVER set manually. KO posts add `source_lang`,
               `source_slug`, `source_updated`, `translation_date`.
-            - `PostDetail.svelte` is the shared EN/KO detail page (JSON-LD
-              Article schema, hreflang, Open Graph, reading-progress bar). RSS
-              (`rss.xml`, `ko/rss.xml`) and `sitemap.xml` are generated routes.
+            - `next/src/content/article.tsx` renders the shared EN/KO detail
+              page (JSON-LD Article schema, hreflang, Open Graph, reading
+              progress). RSS (`next/app/(en)/rss.xml`,
+              `next/app/(ko)/ko/rss.xml`) and `next/app/sitemap.xml` are
+              route handlers that run once at build time.
 
             ## Review Categories
 
-            For Next / React / shared migration changes:
+            For Next / React / verification changes:
 
             N1. Static export — flag request-time features such as cookies,
                 Server Actions, request-dependent handlers, rewrites, ISR, or
@@ -126,89 +138,71 @@ jobs:
             N2. Server/Client boundary — components are server-first and run at
                 build time. Keep `'use client'` boundaries narrow, props
                 serializable, and browser APIs inside client code.
-            N3. Parity — preserve canonical URLs, locale alternates, metadata,
-                JSON-LD, RSS/sitemap, accessibility, and hydration behavior for
-                the claimed phase. Compare generated artifacts, not JSX shape.
+            N3. Output contract — preserve canonical URLs, locale alternates,
+                metadata, JSON-LD, RSS/sitemap, accessibility, and hydration
+                behavior. Compare generated artifacts, not JSX shape.
             N4. Content — preserve the guarded AST, typography, Shiki, headings,
                 Mermaid, reading time, and safe HTML/JSON-LD serialization.
             N5. Controls — each new comparator predicate needs an invariance
                 case and a defect-injection case that reaches production logic.
-
-            For Svelte / TypeScript changes:
-
-            1. Svelte 5 runes — props via `$props()` (not `export let`); state
-               via `$state()`; computed via `$derived()` (not `$:`); side
-               effects via `$effect()`. Handlers use `onclick={...}` (not
-               `on:click`). Flag any Svelte 4 syntax as a migration regression.
-            2. SSG safety (adapter-static) — everything must prerender. No
-               server-runtime assumptions (no request-time secrets, no
-               always-on `+server` endpoints). Dynamic post routes must resolve
-               via `entries()` / prerender config so every slug is emitted.
-            3. Accessibility — svelte-check surfaces a11y warnings (labels,
-               `alt`, ARIA, keyboard handlers on click targets). Verify focus
-               management and that interactive elements have keyboard
-               equivalents.
-            4. XSS / injection — the real `{@html}` / `innerHTML` sinks are
-               Pagefind search excerpts (`SearchPage.svelte`), the JSON-LD
-               `ld+json` block (`PostDetail.svelte`), and Mermaid diagram
-               rendering (`innerHTML`) — NOT mdsvex-compiled post content.
-               Confirm injected values are trusted (build-time markdown / own
-               schema), not user-controlled data.
-            5. Reactivity correctness — don't mutate state inside `$derived`;
-               watch for `$effect` loops and stale store subscriptions; check
-               `bind:this` lifecycle (null before mount).
-            6. i18n integrity — new UI strings added to BOTH `messages/en.json`
-               and `messages/ko.json` (key parity), consumed via `m.key_name()`
-               from `$lib/paraglide/messages` — not hardcoded. Never edit the
-               generated `src/lib/paraglide/` runtime.
-            7. Tailwind v4 — theme tokens live in `@theme {}` inside
-               `src/app.css`; there is no `tailwind.config.*` / `postcss.config.*`.
-               Custom utilities use `@utility`. Flag reintroduced v3 patterns
-               (`@tailwind base`, JS config, `@layer components` for utilities).
+            N6. Accessibility — labels, `alt`, ARIA, focus management, and
+                keyboard equivalents for every interactive element.
+            N7. XSS / injection — the real sinks are the
+                `dangerouslySetInnerHTML` / `innerHTML` uses under `next/src/`
+                (rendered markdown, Pagefind excerpts, the JSON-LD block,
+                Mermaid output). Confirm injected values are build-time
+                markdown or the site's own schema, not user-controlled data.
+            N8. i18n integrity — new UI strings go into BOTH
+                `messages/en.json` and `messages/ko.json` (key parity) and are
+                read through the generated Paraglide messages, not hardcoded.
+            N9. Tailwind v4 — theme tokens live in `@theme {}` inside
+                `src/app.css` (imported by `next/app/globals.css`); Tailwind
+                runs through `next/postcss.config.mjs` and there is no
+                `tailwind.config.*`. Custom utilities use `@utility`. Flag
+                reintroduced v3 patterns (`@tailwind base`, JS config,
+                `@layer components` for utilities).
 
             For markdown / content changes (blog posts):
 
-            8. Frontmatter completeness — required fields present; `readingTime`
-               NOT set by hand; KO posts include the translation-linkage fields.
-            9. EN/KO parity — a KO post's `source_slug` resolves to a real EN
-               slug; `category` and `tags` stay consistent across the pair.
-            10. Mermaid — diagrams use the `<Mermaid>` component, NOT fenced
-                ```mermaid blocks (Shiki transforms code fences before rehype
-                runs). Curly braces in node labels are Svelte-expression
-                footguns — flag unescaped `{...}` in diagram source.
-            11. Blog voice — the blog SHARES, it does not lecture (intellectual
+            C1. Frontmatter completeness — required fields present;
+                `readingTime` NOT set by hand; KO posts include the
+                translation-linkage fields.
+            C2. EN/KO parity — a KO post's `source_slug` resolves to a real EN
+                slug; `category` and `tags` stay consistent across the pair.
+            C3. Mermaid — diagrams are standard ```mermaid fences;
+                `next/src/markdown/plugins/remark-mermaid-node.ts` turns them
+                into the client Mermaid component before Shiki runs.
+            C4. Blog voice — the blog SHARES, it does not lecture (intellectual
                 humility). Flag fabricated debugging narratives or "here's what
                 I'll teach you" framing. KO translations: natural 해요/합니다,
                 keep technical terms in English, don't over-formalize.
 
             For all changes:
 
-            12. Conventional Commits — PR title `type(scope): description`
+            A1. Conventional Commits — PR title `type(scope): description`
                 (lowercase, no trailing period).
-            13. Atomic scope — only files tied to the claimed change; flag
+            A2. Atomic scope — only files tied to the claimed change; flag
                 unrelated drift.
-            14. Build-order gotcha — `build` MUST precede `check`: Paraglide-JS
-                emits TypeScript into `src/lib/paraglide/` during the vite
-                build, so running `svelte-check` first fails on missing types.
-                Do not suggest reordering CI to run `check` before `build`.
 
             ## brandonwie.dev Conventions (Do NOT flag)
 
-            - `src/lib/paraglide/` is GENERATED by Paraglide-JS — never flag as
-              "duplicated code" or suggest editing it directly.
+            - `next/src/paraglide/` is GENERATED by Paraglide-JS — never flag
+              it as "duplicated code" or suggest editing it directly.
             - Korean pages rendering EN content behind a fallback banner is
               intentional (`isFallback`), not a "missing translation" to fix in
               code.
-            - The simultaneous Svelte root and `next/` package are intentional
-              migration architecture, not accidental framework duplication.
+            - The thin root package plus the `next/` workspace package is the
+              current layout; collapsing `next/` into the root is a tracked
+              follow-up, not a review finding. The root-level shared inputs
+              listed above are imported by `next/` on purpose.
             - A documented nonzero Next parity count is an intermediate-state
               signal, not automatically a defect. Unexplained count changes,
               stale entries, or a malformed terminal verdict ARE findings.
             - Client-side category filtering on `/posts` (no URL params) is a
               deliberate SSG choice — do not suggest server-side or URL-based
               filtering (it would force prerendering every category combo).
-            - Precompressed `.br` / `.gz` output and adapter-static prerendered
-              HTML are expected build artifacts, not misconfiguration.
+            - Prerendered HTML and the Pagefind index under `next/build/` are
+              expected build artifacts, not misconfiguration.
             - `docs/` and `CLAUDE.md` are 3B symlinks (gitignored / SoT
               pointers) — they should NOT appear in PR diffs. If they do, that
               IS the finding.
@@ -228,7 +222,7 @@ jobs:
             messages without posting.
 
             If the PR is purely cosmetic (whitespace, formatter output) or
-            entirely generated-file churn (e.g. `src/lib/paraglide/`), post a
+            entirely generated-file churn (e.g. `next/src/paraglide/`), post a
             single sentence confirming the change scope and skip the category
             checklist.
 
