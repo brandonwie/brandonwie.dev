@@ -12,7 +12,7 @@
 //   sips --cropToHeightWidth 410 373 --cropOffset 30 20 src/lib/data/portrait.png \
 //     --out /tmp/portrait-crop.png
 //   node scripts/generate-ascii-portrait.mjs /tmp/portrait-crop.png \
-//     src/lib/data/portrait.ascii.txt --cols 96 --ramp blocks --contrast \
+//     src/lib/data/portrait.ascii.txt --cols 96 --ramp ascii --contrast \
 //     --contrast-scope all --knockout 0.85
 //
 // No dependencies: PNG is decoded with node:zlib. 8-bit, non-interlaced only

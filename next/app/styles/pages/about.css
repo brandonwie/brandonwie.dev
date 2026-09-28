@@ -4,17 +4,6 @@
    enclosure: the crt-panel / crt-glass-inner / crt-film utilities in
    src/app.css stay for the legacy build and are simply not used here. */
 
-/* The Google Fonts JetBrains Mono subset has no block elements, so the
-   portrait's ░▒▓█ fell back to another face with a different advance and the
-   rows drifted. This face serves only U+2580-259F from the full self-hosted
-   file, keeping every portrait glyph on the same 0.6em advance. */
-@font-face {
-	font-family: 'JetBrains Mono Blocks';
-	src: url('/fonts/JetBrainsMono-Regular.ttf') format('truetype');
-	font-display: block;
-	unicode-range: U+2580-259F;
-}
-
 @layer components {
 	.pg-about {
 		display: block;
@@ -64,7 +53,7 @@
 		background: none;
 		box-shadow: none;
 		overflow: hidden;
-		font-family: 'JetBrains Mono Blocks', var(--font-term);
+		font-family: var(--font-term);
 		/* 96 cols x 0.6em JetBrains Mono advance = 57.6em per line: shrink to fit
 		   the figure's width, capped at 8px. Dividing by 58 leaves a small margin
 		   so a wider fallback face cannot clip the last column before the web font
