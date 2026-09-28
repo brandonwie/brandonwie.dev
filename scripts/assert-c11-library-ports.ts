@@ -11,9 +11,9 @@
  *
  * The rows are grouped by what they hold onto:
  *
- *   P  port roll-call      every Svelte role has a Next counterpart, the
- *                          dependency is pinned, and the lazy boundary is
- *                          actually a boundary
+ *   P  port roll-call      every role the retired Svelte graph carried has a
+ *                          Next file, the dependency is pinned, and the lazy
+ *                          boundary is actually a boundary
  *   A  style and hover     edgeStyleObject returns an object and dimEdges
  *                          MERGES into it (the concatenation regression)
  *   B  markerEnd typing    the narrowing lands on markerEnd.type, proven by
@@ -25,9 +25,15 @@
  *                          normalized keys differ is recomputed, not trusted
  *   S  scenarios S6-S9     each failure induced through a seam, each paired
  *                          with the positive half that makes it falsifiable
- *   M  mermaid parity      config diffed key by key against the Svelte source
- *                          with ONE allowlisted divergence, plus a recomputed
- *                          corpus census behind that divergence's argument
+ *   M  mermaid parity      config diffed key by key against the Svelte config
+ *                          (frozen as a literal, SVELTE_MERMAID_CONFIG) with
+ *                          an allowlist of declared divergences, plus a
+ *                          recomputed corpus census behind securityLevel's
+ *
+ * SVELTE RETIREMENT. The SvelteKit app is gone, so no row reads a Svelte
+ * source. The Svelte side of every comparison survives as a literal frozen
+ * from commit 770bc30 (the last tree that carried it), with the origin
+ * file:line beside it; the rows pin the Next port to those values.
  *
  * WHY N EXISTS. During this PR a claim reached a ledger reason — and a pushed
  * commit message — that `/system/3b` had eleven normalized shell differences.
@@ -72,39 +78,20 @@ import { capture, loadLedger, normalizeShell, type Baseline } from './migration-
 
 // ---------------------------------------------------------------- the surface
 
-/** Every Svelte role and the file that carries it now. A role with no row is
- *  not a port, it is an omission, so the list is exhaustive by construction. */
+/** Every role the Svelte graph carried and the Next file that carries it now.
+ *  A role with no row is not a port, it is an omission, so the list is
+ *  exhaustive by construction.
+ *
+ *  History: the Svelte sources were, in order, src/lib/utils/system3b-graph.ts
+ *  and src/lib/components/System3b{Graph,Flow,Node,FitView,BandNode}.svelte.
+ *  They are retired, so P1 now checks only the Next side. */
 export const PORT_ROLES = [
-	{
-		role: 'data builder',
-		svelte: 'src/lib/utils/system3b-graph.ts',
-		next: 'next/src/graph/system3b-graph.ts',
-	},
-	{
-		role: 'lazy boundary',
-		svelte: 'src/lib/components/System3bGraph.svelte',
-		next: 'next/src/components/System3bGraph.tsx',
-	},
-	{
-		role: 'runtime importer',
-		svelte: 'src/lib/components/System3bFlow.svelte',
-		next: 'next/src/components/System3bFlow.tsx',
-	},
-	{
-		role: 'custom node',
-		svelte: 'src/lib/components/System3bNode.svelte',
-		next: 'next/src/components/System3bNode.tsx',
-	},
-	{
-		role: 'fit-view effect',
-		svelte: 'src/lib/components/System3bFitView.svelte',
-		next: 'next/src/components/System3bFitView.tsx',
-	},
-	{
-		role: 'band node',
-		svelte: 'src/lib/components/System3bBandNode.svelte',
-		next: 'next/src/components/System3bBandNode.tsx',
-	},
+	{ role: 'data builder', next: 'next/src/graph/system3b-graph.ts' },
+	{ role: 'lazy boundary', next: 'next/src/components/System3bGraph.tsx' },
+	{ role: 'runtime importer', next: 'next/src/components/System3bFlow.tsx' },
+	{ role: 'custom node', next: 'next/src/components/System3bNode.tsx' },
+	{ role: 'fit-view effect', next: 'next/src/components/System3bFitView.tsx' },
+	{ role: 'band node', next: 'next/src/components/System3bBandNode.tsx' },
 ] as const;
 
 /** Files with no Svelte counterpart that the port REQUIRES — the fallback that
@@ -227,8 +214,46 @@ export const SHELL_CLAIMS: Record<string, string[]> = {
 	),
 };
 
+/**
+ * The Svelte stack's mermaid config, FROZEN.
+ *
+ * Origin: the object literal passed to `mermaid.initialize(` in
+ * src/lib/components/Mermaid.svelte:14-54 at commit 770bc30, evaluated by
+ * extractConfigObject exactly as M1 used to evaluate it on every run. The
+ * source file is retired with the SvelteKit app; M1 keeps diffing the Next
+ * config against these values key by key.
+ */
+export const SVELTE_MERMAID_CONFIG: Record<string, unknown> = {
+	startOnLoad: false,
+	theme: 'dark',
+	themeVariables: {
+		background: '#1a1a1a',
+		mainBkg: '#2d2d2d',
+		secondaryBkg: '#353535',
+		primaryTextColor: '#e5e5e5',
+		secondaryTextColor: '#888888',
+		tertiaryTextColor: '#666666',
+		primaryBorderColor: '#404040',
+		lineColor: '#888888',
+		primaryColor: '#a855f7',
+		secondaryColor: '#6b9eff',
+		tertiaryColor: '#2d2d2d',
+		nodeBorder: '#404040',
+		clusterBkg: '#2d2d2d',
+		clusterBorder: '#404040',
+		edgeLabelBackground: '#2d2d2d',
+		fontFamily: 'JetBrains Mono, monospace',
+		fontSize: '14px',
+	},
+	flowchart: {
+		htmlLabels: true,
+		curve: 'basis',
+	},
+	securityLevel: 'loose',
+};
+
 /** The Mermaid config key the Next side is ALLOWED to differ on, and why.
- *  Everything else must match the Svelte source key for key. */
+ *  Everything else must match the frozen Svelte config key for key. */
 export const MERMAID_DIVERGENCES: Record<string, { svelte: unknown; next: unknown; why: string }> =
 	{
 		securityLevel: {
@@ -766,10 +791,9 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 
 	// ---------------------------------------------------------------- P group
 
-	await r.row('P1', 'every Svelte role has a Next counterpart', () => {
+	await r.row('P1', 'every retired Svelte role has its Next port', () => {
 		const missing: string[] = [];
 		for (const role of PORT_ROLES) {
-			if (!exists(role.svelte)) missing.push(`${role.role}: source ${role.svelte}`);
 			if (!exists(role.next)) missing.push(`${role.role}: port ${role.next}`);
 		}
 		for (const add of PORT_ADDITIONS) if (!exists(add)) missing.push(`addition ${add}`);
@@ -1045,9 +1069,7 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 				listed.exit === 0,
 				`tsc exited ${listed.exit}:\n${listed.output.split('\n').slice(0, 12).join('\n')}`,
 			);
-			const want = [...PORT_ROLES.map((p) => p.next), ...PORT_ADDITIONS].filter(
-				(f) => !f.endsWith('.svelte'),
-			);
+			const want = [...PORT_ROLES.map((p) => p.next), ...PORT_ADDITIONS];
 			const absent = want.filter((f) => !listed.files.has(resolve(root, f)));
 			must(
 				absent.length === 0,
@@ -1435,11 +1457,8 @@ export async function runAssertions(options: C11Options = {}): Promise<number> {
 
 	// ---------------------------------------------------------------- M group
 
-	await r.row('M1', 'the mermaid config matches the Svelte source key by key', () => {
-		const svelteConfig = extractConfigObject(
-			read('src/lib/components/Mermaid.svelte'),
-			'mermaid.initialize(',
-		);
+	await r.row('M1', 'the mermaid config matches the frozen Svelte config key by key', () => {
+		const svelteConfig = SVELTE_MERMAID_CONFIG;
 		const nextConfig = extractConfigObject(
 			read('next/src/components/Mermaid.tsx'),
 			'const MERMAID_CONFIG =',
