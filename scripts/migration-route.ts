@@ -61,21 +61,10 @@ import ts from 'typescript';
 const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 /**
- * Sources the SvelteKit `build/` output is produced from. Suites that read
- * `build/` depend on these, not on the output directory (which is generated and
- * never committed).
+ * Sources the `next/build/` output is produced from. Suites that read the build
+ * depend on these, not on the output directory (which is generated and never
+ * committed).
  */
-const SVELTE_BUILD_SOURCES = [
-	'src',
-	'static',
-	'public',
-	'messages',
-	'project.inlang',
-	'svelte.config.js',
-	'vite.config.ts',
-];
-
-/** Sources the `next/build/` output is produced from. */
 const NEXT_BUILD_SOURCES = [
 	'next/app',
 	'next/src',
@@ -85,6 +74,14 @@ const NEXT_BUILD_SOURCES = [
 	'next/postcss.config.mjs',
 	'src/content',
 	'src/lib/plugins',
+	// Root inputs next/ imports or compiles: site constants, design tokens, and
+	// the Paraglide message catalogue + project. Until the SvelteKit retirement
+	// they were only reachable through the Svelte suites' 'src' root, so an edit
+	// to them selected the Svelte suites and skipped the Next ones at push time.
+	'src/lib/seo.ts',
+	'src/app.css',
+	'messages',
+	'project.inlang',
 	// The 3B system snapshot. Once the Next /system/3b page consumes it, a
 	// `deno task snapshot:3b` regeneration changes the Next build while
 	// selecting no Next-build-consuming suite -- the build moves and nothing
@@ -122,13 +119,13 @@ export const SUITES: Suite[] = [
 	{
 		command: 'migration:typography',
 		entry: 'next/scripts/assert-corpus-typography.ts',
-		dataRoots: ['src/content/posts', ...SVELTE_BUILD_SOURCES],
+		dataRoots: ['src/content/posts'],
 		tier: 'push',
 	},
 	{
 		command: 'migration:typography:controls',
 		entry: 'next/scripts/assert-corpus-typography-controls.ts',
-		dataRoots: ['src/content/posts', ...SVELTE_BUILD_SOURCES],
+		dataRoots: ['src/content/posts'],
 		tier: 'push',
 	},
 	{
@@ -144,18 +141,6 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
-		command: 'migration:ast',
-		entry: 'next/scripts/assert-mdsvex-ast.ts',
-		dataRoots: ['src/content/posts'],
-		tier: 'push',
-	},
-	{
-		command: 'migration:ast:controls',
-		entry: 'next/scripts/assert-mdsvex-ast-controls.ts',
-		dataRoots: ['src/content/posts'],
-		tier: 'push',
-	},
-	{
 		command: 'migration:c13',
 		entry: 'scripts/assert-c13-shell.ts',
 		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
@@ -164,13 +149,13 @@ export const SUITES: Suite[] = [
 	{
 		command: 'migration:shell',
 		entry: 'scripts/assert-shell.ts',
-		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
+		dataRoots: [...NEXT_BUILD_SOURCES],
 		tier: 'push',
 	},
 	{
 		command: 'migration:shell:controls',
 		entry: 'scripts/assert-shell-controls.ts',
-		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
+		dataRoots: [...NEXT_BUILD_SOURCES],
 		tier: 'push',
 	},
 	{
@@ -375,11 +360,7 @@ export const SUITES: Suite[] = [
 	{
 		command: 'migration:browser:search',
 		entry: 'scripts/assert-browser-search.mjs',
-		dataRoots: [
-			'scripts/serve-build.mjs',
-			...NEXT_BUILD_SOURCES,
-			'src/lib/components/SearchPage.svelte',
-		],
+		dataRoots: ['scripts/serve-build.mjs', ...NEXT_BUILD_SOURCES],
 		tier: 'push',
 	},
 	{
@@ -484,26 +465,10 @@ export const SUITES: Suite[] = [
 		command: 'migration:c11',
 		entry: 'scripts/assert-c11-library-ports.ts',
 		// Reads the Next export, the frozen baseline, the exception ledger (the N
-		// rows recompute what each shell approval claims), the mermaid corpus, and
-		// the Svelte mermaid config it diffs the Next one against.
-		dataRoots: [
-			...NEXT_BUILD_SOURCES,
-			...BASELINE,
-			'verification/exception-ledger.json',
-			// Row P1 reads every Svelte port-role path, and the selector only falls
-			// back to "run everything" for a path matching NO suite input.
-			// SVELTE_BUILD_SOURCES contains 'src', so a deleted System3bNode.svelte
-			// matches the Svelte suites, sets `matched`, skips the fallback -- and
-			// migration:c11 would never be selected while P1 is exactly the row that
-			// should have failed. Named individually for that reason.
-			'src/lib/components/Mermaid.svelte',
-			'src/lib/utils/system3b-graph.ts',
-			'src/lib/components/System3bGraph.svelte',
-			'src/lib/components/System3bFlow.svelte',
-			'src/lib/components/System3bNode.svelte',
-			'src/lib/components/System3bFitView.svelte',
-			'src/lib/components/System3bBandNode.svelte',
-		],
+		// rows recompute what each shell approval claims) and the mermaid corpus.
+		// The Svelte-era mermaid config it diffs the Next one against is frozen in
+		// the script since the SvelteKit retirement.
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE, 'verification/exception-ledger.json'],
 		tier: 'push',
 	},
 	{
@@ -511,46 +476,19 @@ export const SUITES: Suite[] = [
 		// the C and B3 rows. migration:controls-class cost, so CI only.
 		command: 'migration:c11:controls',
 		entry: 'scripts/assert-c11-library-ports-controls.ts',
-		dataRoots: [
-			...NEXT_BUILD_SOURCES,
-			...BASELINE,
-			'verification/exception-ledger.json',
-			// Row P1 reads every Svelte port-role path, and the selector only falls
-			// back to "run everything" for a path matching NO suite input.
-			// SVELTE_BUILD_SOURCES contains 'src', so a deleted System3bNode.svelte
-			// matches the Svelte suites, sets `matched`, skips the fallback -- and
-			// migration:c11 would never be selected while P1 is exactly the row that
-			// should have failed. Named individually for that reason.
-			'src/lib/components/Mermaid.svelte',
-			'src/lib/utils/system3b-graph.ts',
-			'src/lib/components/System3bGraph.svelte',
-			'src/lib/components/System3bFlow.svelte',
-			'src/lib/components/System3bNode.svelte',
-			'src/lib/components/System3bFitView.svelte',
-			'src/lib/components/System3bBandNode.svelte',
-		],
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE, 'verification/exception-ledger.json'],
 		tier: 'ci',
 	},
 	{
 		command: 'migration:spike2',
 		entry: 'scripts/assert-slice2-motion.ts',
-		// Reads the Next export, the exception ledger (row S3 recomputes the
-		// spike route's page-presence approval), and the four Svelte sources the
-		// port came from.
+		// Reads the Next export and the exception ledger (row S3 recomputes the
+		// spike route's page-presence approval). The svelte/* motion oracle is
+		// frozen in the script since the SvelteKit retirement.
 		dataRoots: [
 			...NEXT_BUILD_SOURCES,
 			'verification/exception-ledger.json',
-			// Named individually for the same reason the C11 rows are: row P1
-			// reads every Svelte port-role path, and the selector only falls back
-			// to "run everything" for a path matching NO suite input.
-			// SVELTE_BUILD_SOURCES contains 'src', so deleting a ported Svelte
-			// source matches the Svelte suites, sets `matched`, skips the
-			// fallback -- and this suite would never be selected while P1 is
-			// exactly the row that should have failed.
-			'src/lib/useReducedMotion.svelte.ts',
-			'src/lib/components/study/Stepper.svelte',
-			'src/lib/components/study/BstTraversalVisualizer.svelte',
-			'src/lib/components/study/HashMapVisualizer.svelte',
+			// next/src/data/study.ts re-exports it.
 			'src/lib/data/study.ts',
 		],
 		tier: 'push',
@@ -563,10 +501,6 @@ export const SUITES: Suite[] = [
 		dataRoots: [
 			...NEXT_BUILD_SOURCES,
 			'verification/exception-ledger.json',
-			'src/lib/useReducedMotion.svelte.ts',
-			'src/lib/components/study/Stepper.svelte',
-			'src/lib/components/study/BstTraversalVisualizer.svelte',
-			'src/lib/components/study/HashMapVisualizer.svelte',
 			'src/lib/data/study.ts',
 		],
 		tier: 'ci',
@@ -574,23 +508,11 @@ export const SUITES: Suite[] = [
 	{
 		command: 'migration:gsap-palette',
 		entry: 'scripts/assert-slice2-gsap-palette.ts',
-		// Reads the Next export, the exception ledger (rows S4 recompute both
-		// spike routes' page-presence approvals), and the six Svelte sources the
-		// port came from -- each named individually for the same reason the
-		// spike2 rows are: SVELTE_BUILD_SOURCES contains 'src', so deleting a
-		// ported Svelte source would match the Svelte suites, set `matched`, skip
-		// the run-everything fallback, and never select this suite while P1 and
-		// T1 are exactly the rows that should have failed.
-		dataRoots: [
-			...NEXT_BUILD_SOURCES,
-			'verification/exception-ledger.json',
-			'src/lib/components/deck/gsap.ts',
-			'src/routes/talks/my-career/slides/AccountSeparationSlide.svelte',
-			'src/lib/fuzzy.ts',
-			'src/lib/palette/items.ts',
-			'src/lib/components/palette/FuzzyFinder.svelte',
-			'src/lib/stores/palette.ts',
-		],
+		// Reads the Next export and the exception ledger (rows S4 recompute both
+		// spike routes' page-presence approvals). The Svelte-side tween
+		// expressions and Fuse options are frozen in the script since the
+		// SvelteKit retirement.
+		dataRoots: [...NEXT_BUILD_SOURCES, 'verification/exception-ledger.json'],
 		tier: 'push',
 	},
 	{
@@ -598,16 +520,7 @@ export const SUITES: Suite[] = [
 		// for the C group. migration:controls-class cost, so CI only.
 		command: 'migration:gsap-palette:controls',
 		entry: 'scripts/assert-slice2-gsap-palette-controls.ts',
-		dataRoots: [
-			...NEXT_BUILD_SOURCES,
-			'verification/exception-ledger.json',
-			'src/lib/components/deck/gsap.ts',
-			'src/routes/talks/my-career/slides/AccountSeparationSlide.svelte',
-			'src/lib/fuzzy.ts',
-			'src/lib/palette/items.ts',
-			'src/lib/components/palette/FuzzyFinder.svelte',
-			'src/lib/stores/palette.ts',
-		],
+		dataRoots: [...NEXT_BUILD_SOURCES, 'verification/exception-ledger.json'],
 		tier: 'ci',
 	},
 	{
@@ -621,7 +534,7 @@ export const SUITES: Suite[] = [
 		command: 'migration:c3',
 		entry: 'scripts/assert-c3-runtimes.ts',
 		// It drives every deno task and pnpm wrapper, including build and preview.
-		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		dataRoots: [...NEXT_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
 		// PUSH, NOT CI: this suite drives the Deno scripts that read the 3B
 		// knowledge base. CI has no 3B checkout, so every sync/study/snapshot row
 		// fails there with `Could not locate 3B root`. It is reachable on the
@@ -631,7 +544,7 @@ export const SUITES: Suite[] = [
 	{
 		command: 'migration:c3:controls',
 		entry: 'scripts/assert-c3-runtimes-controls.ts',
-		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		dataRoots: [...NEXT_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
 		// PUSH, NOT CI: this suite drives the Deno scripts that read the 3B
 		// knowledge base. CI has no 3B checkout, so every sync/study/snapshot row
 		// fails there with `Could not locate 3B root`. It is reachable on the
@@ -649,7 +562,7 @@ export const SUITES: Suite[] = [
 		// neither and be executed by nothing.
 		command: 'migration:c3:hermetic',
 		entry: 'scripts/assert-c3-runtimes.ts',
-		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		dataRoots: [...NEXT_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
 		tier: 'ci',
 	},
 	{
@@ -659,43 +572,43 @@ export const SUITES: Suite[] = [
 		// the rest of C3 left the fix this PR made with no central enforcement.
 		command: 'migration:c3:hermetic:controls',
 		entry: 'scripts/assert-c3-runtimes-controls.ts',
-		dataRoots: [...SVELTE_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
+		dataRoots: [...NEXT_BUILD_SOURCES, 'deno.json', 'package.json', 'scripts'],
 		tier: 'ci',
 	},
 	{
 		command: 'migration:publishing',
 		entry: 'scripts/assert-publishing-surfaces.ts',
-		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES, ...BASELINE],
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
 		tier: 'push',
 	},
 	{
 		command: 'migration:publishing:controls',
 		entry: 'scripts/assert-publishing-surfaces-controls.ts',
-		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES, ...BASELINE],
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
 		tier: 'push',
 	},
 	{
 		command: 'migration:feed',
 		entry: 'scripts/assert-feed-redirects.ts',
-		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES, ...BASELINE],
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
 		tier: 'push',
 	},
 	{
 		command: 'migration:feed:controls',
 		entry: 'scripts/assert-feed-redirects-controls.ts',
-		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES, ...BASELINE],
+		dataRoots: [...NEXT_BUILD_SOURCES, ...BASELINE],
 		tier: 'push',
 	},
 	{
 		command: 'migration:article',
 		entry: 'scripts/assert-article-parity.ts',
-		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES],
+		dataRoots: [...NEXT_BUILD_SOURCES],
 		tier: 'push',
 	},
 	{
 		command: 'migration:article:controls',
 		entry: 'scripts/assert-article-parity-controls.ts',
-		dataRoots: [...NEXT_BUILD_SOURCES, ...SVELTE_BUILD_SOURCES],
+		dataRoots: [...NEXT_BUILD_SOURCES],
 		tier: 'push',
 	},
 	{
@@ -713,13 +626,13 @@ export const SUITES: Suite[] = [
 	{
 		command: 'migration:c5',
 		entry: 'scripts/assert-c5-glob-sites.ts',
-		dataRoots: [...SVELTE_BUILD_SOURCES, ...NEXT_BUILD_SOURCES],
+		dataRoots: [...NEXT_BUILD_SOURCES],
 		tier: 'push',
 	},
 	{
 		command: 'migration:c5:controls',
 		entry: 'scripts/assert-c5-glob-sites-controls.ts',
-		dataRoots: [...SVELTE_BUILD_SOURCES, ...NEXT_BUILD_SOURCES],
+		dataRoots: [...NEXT_BUILD_SOURCES],
 		tier: 'push',
 	},
 	{
@@ -769,14 +682,6 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
-		command: 'migration:verify:svelte',
-		entry: 'scripts/migration-verify.ts',
-		// package.json passes this ledger via --ledger; once migration:controls
-		// named it, a ledger edit stopped going broad and would have skipped this.
-		dataRoots: [...SVELTE_BUILD_SOURCES, ...BASELINE, 'verification/svelte-d9-ledger.json'],
-		tier: 'push',
-	},
-	{
 		// The router routes itself: its controls are a suite like any other, so a
 		// change to the selector runs them. Without this row a router edit would
 		// go broad over every suite EXCEPT the one that checks the router.
@@ -786,13 +691,15 @@ export const SUITES: Suite[] = [
 		tier: 'push',
 	},
 	{
-		// 265 s — more than the other fourteen combined, because each of its 40
-		// controls re-captures the whole 366-page build. CI only, in its own job.
+		// The comparator's self-test: it captures next/build as its own zero-diff
+		// baseline, then each of its 56 controls injects one difference into a
+		// copy and re-compares the whole export (~90 s locally). CI only, in its
+		// own job.
 		command: 'migration:controls',
 		entry: 'scripts/migration-verify-controls.ts',
-		// The seed ledger is a runtime input: package.json passes it via --ledger
-		// and every control starts from it, so an edit to it must select this suite.
-		dataRoots: [...SVELTE_BUILD_SOURCES, ...BASELINE, 'verification/svelte-d9-ledger.json'],
+		// The controls spawn migration-verify.ts as a child process and never
+		// import it, so the import closure cannot see the comparator they prove.
+		dataRoots: [...NEXT_BUILD_SOURCES, 'scripts/migration-verify.ts'],
 		tier: 'ci',
 	},
 	{

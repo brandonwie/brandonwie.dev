@@ -115,7 +115,7 @@ const CONTROLS: Control[] = [
 		what: 'the typography suite stops declaring the post corpus as an input',
 		mutations: [
 			{
-				find: "\t\tcommand: 'migration:typography',\n\t\tentry: 'next/scripts/assert-corpus-typography.ts',\n\t\tdataRoots: ['src/content/posts', ...SVELTE_BUILD_SOURCES],",
+				find: "\t\tcommand: 'migration:typography',\n\t\tentry: 'next/scripts/assert-corpus-typography.ts',\n\t\tdataRoots: ['src/content/posts'],",
 				replace:
 					"\t\tcommand: 'migration:typography',\n\t\tentry: 'next/scripts/assert-corpus-typography.ts',\n\t\tdataRoots: [],",
 			},
@@ -177,10 +177,12 @@ const CONTROLS: Control[] = [
 					'\treturn [...source.matchAll(/(?:^|\\n)[ \\t]*import[^\'"\\n]*?from[ \\t]*[\'"]([^\'"]+)[\'"]/g)].map(\n\t\t(match) => match[1],\n\t);',
 			},
 		],
-		// `migration:typography:oracle:controls` reaches the pipeline ONLY through
-		// the multiline `import { ... } from './assert-typography-oracle'` at
-		// `assert-typography-oracle-controls.ts:19-24`. The shipped regex missed it.
-		paths: ['next/src/markdown/pipeline.ts'],
+		// `migration:typography:oracle:controls` reaches the smart-typography
+		// plugin ONLY through the multiline `import { ... } from
+		// './assert-typography-oracle'` at `assert-typography-oracle-controls.ts:26-32`.
+		// The shipped regex missed it. (Before the SvelteKit retirement the oracle
+		// also imported `pipeline.ts`; it no longer does, so the probe path moved.)
+		paths: ['next/src/markdown/plugins/remark-smart-typography.ts'],
 	},
 	{
 		id: 'RT-09',
@@ -856,7 +858,7 @@ function vacuityGuard(): string[] {
 	const oracleControls = importClosure('next/scripts/assert-typography-oracle-controls.ts');
 	if (!oracleControls.has('next/scripts/assert-typography-oracle.ts')) {
 		failures.push(
-			'the multiline import at assert-typography-oracle-controls.ts:19-24 is invisible to import discovery',
+			'the multiline import at assert-typography-oracle-controls.ts:26-32 is invisible to import discovery',
 		);
 	}
 

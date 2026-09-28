@@ -45,7 +45,7 @@ jobs:
   # command again: `migration:all` selects `--tier all` MINUS three named
   # exclusions --
   #
-  #   migration:controls          has its own parallel job below (~265 s)
+  #   migration:controls          has its own parallel job below
   #   migration:c3                its 13 3B-dependent rows need a 3B checkout
   #   migration:c3:controls       same, for the controls that drive those rows
   #
@@ -83,7 +83,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Both outputs: the suites read `build/` (Svelte) and `next/build/` (Next).
+      # The suites read `next/build/`, the only build output since the SvelteKit
+      # retirement.
       - run: pnpm run build
 
       # The rendered-stage suites (`migration:browser`, `migration:browser:controls`)
@@ -119,9 +120,9 @@ jobs:
       - name: Full migration suite
         run: pnpm run migration:all
 
-  # Split out because it is ~265 s on its own — more than the other suites
-  # combined — since each of its controls re-captures the whole 366-page build.
-  # Parallel job, so it never serializes behind the rest. This is the one suite
+  # Split out because each of its 56 controls re-compares a whole copy of the
+  # Next export against a capture of it, which makes it one of the slowest
+  # suites. Parallel job, so it never serializes behind the rest. This is the one suite
   # `migration:all` excludes by name; the router's `--exclude` is fail-closed, so
   # a typo there breaks CI rather than silently dropping a suite.
   migration-controls:

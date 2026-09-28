@@ -162,8 +162,9 @@ export async function renderMarkdown(
 		.use(remarkReadingTime)
 		.use(remarkTocExtract)
 		.use(remarkRehype, {
-			// Raw HTML stays fail-closed: migration:ast proves the 334-post corpus
-			// has no HTML/Svelte-special nodes and rejects any future introduction.
+			// Raw HTML stays fail-closed: migration:typography asserts the corpus
+			// compiles with zero unsupported-markup and zero unmapped nodes, and
+			// migration:typography:oracle proves the unsupported-markup detector.
 			allowDangerousHtml: false,
 		})
 		.use(rehypeSlug)

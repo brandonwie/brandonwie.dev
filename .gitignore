@@ -6,6 +6,12 @@ node_modules/
 build/
 dist/
 
+# `next dev` writes these when it detects an AI agent environment
+# (next/dist/server/lib/generate-agent-files.js). Project instructions come from
+# 3B, so the generated pair stays local and untracked.
+next/AGENTS.md
+next/CLAUDE.md
+
 # Deno
 .deno/
 
