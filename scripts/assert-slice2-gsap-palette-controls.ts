@@ -34,6 +34,7 @@ import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } f
 import { dirname, join, resolve } from 'node:path';
 
 import {
+	SVELTE_SIDE_DEPENDENCIES,
 	runAssertions,
 	type ChordSeam,
 	type ItemSeam,
@@ -103,6 +104,15 @@ interface Control {
 }
 
 // ------------------------------------------------------------- mutation tools
+
+/** A copy of a frozen record with one key removed, no-op guarded like every
+ *  other mutation here: removing a key that is not there proves nothing. */
+function withoutKey(record: Record<string, string>, name: string): Record<string, string> {
+	if (record[name] === undefined) {
+		throw new Error(`no-op mutation: ${name} is not in the record, so removing it changes nothing`);
+	}
+	return Object.fromEntries(Object.entries(record).filter(([key]) => key !== name));
+}
 
 function slideWith(overrides: Partial<SlideSeam>): SlideSeam {
 	return { ...REAL_SLIDE, ...overrides };
@@ -348,19 +358,6 @@ const CONTROLS: Control[] = [
 			slide: slideWith({
 				initialSets: () => initialSets().map((set) => ({ ...set, vars: { autoAlpha: 0 } })),
 			}),
-		}),
-	},
-	{
-		id: 'T7-defect-svelte-flip-call-changed',
-		kind: 'defect',
-		row: 'T7',
-		what: 'the Svelte side of the Flip options comparison drifted',
-		setup: (dir) => ({
-			sourceOverrides: mutateSource(
-				dir,
-				'src/routes/talks/my-career/slides/AccountSeparationSlide.svelte',
-				(text) => text.replace('absolute: true', 'absolute: false'),
-			),
 		}),
 	},
 	{
@@ -1341,10 +1338,10 @@ const CONTROLS: Control[] = [
 		kind: 'defect',
 		row: 'P4',
 		what: 'a library the Svelte side never carried is counted as ported cost',
-		setup: (dir) => ({
-			sourceOverrides: mutateSource(dir, 'package.json', (text) =>
-				text.replace('"gsap": "^3.15.0",', ''),
-			),
+		setup: () => ({
+			// The Svelte manifest is retired and frozen as SVELTE_SIDE_DEPENDENCIES;
+			// dropping gsap from that set is the old root package.json edit.
+			svelteSideDependencies: withoutKey(SVELTE_SIDE_DEPENDENCIES, 'gsap'),
 		}),
 	},
 
@@ -1606,17 +1603,16 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
-		id: 'I-svelte-whitespace',
+		id: 'I-port-whitespace',
 		kind: 'invariance',
 		row: 'T1',
-		what: 'reindenting the Svelte tween body does not break the text comparison',
+		what: 'reindenting a ported tween body does not break the text comparison',
 		setup: (dir) => ({
 			// T1 compares expressions, not formatting. A row that failed on a
-			// prettier run would be unusable.
-			sourceOverrides: mutateSource(
-				dir,
-				'src/routes/talks/my-career/slides/AccountSeparationSlide.svelte',
-				(text) => text.replace('duration: DURATION * d,', 'duration:   DURATION  *  d,'),
+			// prettier run would be unusable. This was a reindent of the Svelte
+			// tween until that side was frozen; the live side is now the port.
+			sourceOverrides: mutateSource(dir, 'next/src/deck/slide-plan.ts', (text) =>
+				text.replace('duration: DURATION * d,', 'duration:   DURATION  *  d,'),
 			),
 		}),
 	},

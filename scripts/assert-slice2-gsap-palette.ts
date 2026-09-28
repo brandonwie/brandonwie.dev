@@ -32,10 +32,10 @@
  *   A  A11Y-1 preserved   The focus-return defect is assigned to Slice 3. A
  *                         port that quietly fixed it would be an unrecorded
  *                         behavior change, so a row fails if it was fixed.
- *   P  port roll-call     Every Svelte source has a counterpart, the client
- *                         boundaries land where they should, no Next module
- *                         imports Svelte, and the two new dependencies are
- *                         pinned exactly.
+ *   P  port roll-call     Every retired Svelte role has its Next port, the
+ *                         client boundaries land where they should, no Next
+ *                         module imports Svelte, and the two new dependencies
+ *                         are pinned exactly.
  *   S  spike routes       What the export contains, that the palette is CLOSED
  *                         in static HTML, that GSAP is not in the eager chunk
  *                         set, and that the ledger approves exactly one page
@@ -109,44 +109,78 @@ import {
 
 // ------------------------------------------------------------------ declared
 
-/** Svelte source to React counterpart. A missing target is a missing port. */
+/**
+ * Every role the Svelte sources carried and the React file that carries it now.
+ * A missing target is a missing port.
+ *
+ * History: the Svelte sources were, in order, src/lib/components/deck/gsap.ts,
+ * src/routes/talks/my-career/slides/AccountSeparationSlide.svelte,
+ * src/lib/fuzzy.ts, src/lib/palette/items.ts,
+ * src/lib/components/palette/FuzzyFinder.svelte (twice) and
+ * src/lib/stores/palette.ts. They are retired, so P1 checks only the Next side.
+ */
 export const PORT_ROLES = [
+	{ next: 'next/src/deck/gsap.ts', role: 'memoized GSAP loader + deck easing constants' },
+	{ next: 'next/src/components/deck/AccountSeparationSlide.tsx', role: 'the Flip slide' },
+	{ next: 'next/src/palette/fuzzy.ts', role: 'Fuse wrapper + match highlighting' },
+	{ next: 'next/src/palette/items.ts', role: 'nav / action / post registry' },
+	{ next: 'next/src/components/palette/FuzzyFinder.tsx', role: 'the palette dialog' },
 	{
-		svelte: 'src/lib/components/deck/gsap.ts',
-		next: 'next/src/deck/gsap.ts',
-		role: 'memoized GSAP loader + deck easing constants',
-	},
-	{
-		svelte: 'src/routes/talks/my-career/slides/AccountSeparationSlide.svelte',
-		next: 'next/src/components/deck/AccountSeparationSlide.tsx',
-		role: 'the Flip slide',
-	},
-	{
-		svelte: 'src/lib/fuzzy.ts',
-		next: 'next/src/palette/fuzzy.ts',
-		role: 'Fuse wrapper + match highlighting',
-	},
-	{
-		svelte: 'src/lib/palette/items.ts',
-		next: 'next/src/palette/items.ts',
-		role: 'nav / action / post registry',
-	},
-	{
-		svelte: 'src/lib/components/palette/FuzzyFinder.svelte',
-		next: 'next/src/components/palette/FuzzyFinder.tsx',
-		role: 'the palette dialog',
-	},
-	{
-		svelte: 'src/lib/stores/palette.ts',
 		next: 'next/src/components/palette/ShellPalette.tsx',
 		role: 'open state + the window chord handler',
 	},
 	{
-		svelte: 'src/lib/components/palette/FuzzyFinder.svelte',
 		next: 'next/src/components/palette/PaletteHost.tsx',
 		role: 'the item registry for the current route, and the modal that renders it',
 	},
 ];
+
+// ------------------------------------------------------ frozen Svelte oracles
+//
+// The SvelteKit app is retired. Each value below was read from the Svelte
+// source at commit 770bc30 by the same extraction the row used to run on every
+// invocation, and is kept so the rows still pin the Next port to it.
+
+/**
+ * T1's oracle: the `key: expression` text of the three reveal tweens, as
+ * tweenExpressions() extracted it from
+ * src/routes/talks/my-career/slides/AccountSeparationSlide.svelte:85-107
+ * (`gsap.to(root.querySelectorAll('.second' | '.chip' | '.note'), { ... })`).
+ */
+export const SVELTE_TWEEN_EXPRESSIONS: Record<string, Record<string, string>> = {
+	'.second': {
+		autoAlpha: 'want ? 1 : 0',
+		duration: 'DURATION * d',
+		ease: 'EASE',
+		delay: 'want ? DURATION * 0.8 * d : 0',
+	},
+	'.chip': {
+		autoAlpha: 'want ? 1 : 0',
+		duration: 'DURATION * 0.8 * d',
+		stagger: '0.06 * d',
+		ease: 'EASE',
+		delay: 'want ? DURATION * 1.05 * d : 0',
+	},
+	'.note': {
+		autoAlpha: 'want ? 1 : 0',
+		y: 'want ? 0 : 6',
+		duration: 'DURATION * d',
+		stagger: '0.07 * d',
+		ease: 'EASE',
+		delay: 'want ? DURATION * 1.3 * d : 0',
+	},
+};
+
+/** F5's oracle: the Fuse option scrape of src/lib/fuzzy.ts:18-25. */
+export const SVELTE_FUSE_OPTIONS =
+	"name: 'label'|weight: 0.5|name: 'keywords'|weight: 0.3|name: 'description'|weight: 0.2|threshold: 0.4|minMatchCharLength: 2";
+
+/** P4's oracle: the Svelte side's own specs for the two ported libraries,
+ *  package.json:143 (`gsap`) and :172 (`fuse.js`). */
+export const SVELTE_SIDE_DEPENDENCIES: Record<string, string> = {
+	gsap: '^3.15.0',
+	'fuse.js': '^7.4.2',
+};
 
 /** Files with no Svelte counterpart that the React port required anyway. */
 export const PORT_ADDITIONS = [
@@ -307,6 +341,9 @@ export interface Slice2GsapOptions {
 	errorMarker?: string;
 	/** Replace the declared dependency pins. */
 	dependencyPins?: Record<string, string>;
+	/** Replace the frozen Svelte-side dependency set (controls prove P4's
+	 *  ported-cost half can fail). */
+	svelteSideDependencies?: Record<string, string>;
 	/** Replace the declared deck export counts. */
 	deckCounts?: typeof DECK_EXPORT_COUNTS;
 	/**
@@ -417,8 +454,10 @@ function itemOf(items: PaletteItem[], id: string): PaletteItem {
  * no pure GSAP function to run both sides through the way `svelte/transition`
  * gave PR 2 a byte-comparable answer — a tween's numbers only become
  * observable once a timeline is running in a browser. What CAN be compared
- * without one is the arithmetic itself: both files spell out the same eleven
- * expressions, and a drifted multiplier stops matching immediately.
+ * without one is the arithmetic itself: both sides spell out the same eleven
+ * expressions, and a drifted multiplier stops matching immediately. Since the
+ * Svelte retirement only the port is extracted live; the Svelte side is the
+ * frozen SVELTE_TWEEN_EXPRESSIONS, produced by this same function.
  */
 function tweenExpressions(
 	source: string,
@@ -426,7 +465,7 @@ function tweenExpressions(
 	selector: string,
 ): Record<string, string> {
 	const found = locate.exec(source);
-	// The Svelte file mentions `.note` twice -- once in the onMount `gsap.set`
+	// The Svelte file mentioned `.note` twice -- once in the onMount `gsap.set`
 	// and once in the reveal `gsap.to`. A plain indexOf finds the SET, whose
 	// body is `{ autoAlpha: 0, y: 6 }`, and the row then compares two tweens
 	// that are not the same tween. The caller passes a locator that names the
@@ -556,6 +595,7 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 	const orderPosts = options.orderPosts ?? orderPostsForPalette;
 	const clientBoundary = options.clientBoundary ?? CLIENT_BOUNDARY;
 	const dependencyPins = options.dependencyPins ?? NEW_DEPENDENCY_PINS;
+	const svelteSideDependencies = options.svelteSideDependencies ?? SVELTE_SIDE_DEPENDENCIES;
 	const deckCounts = options.deckCounts ?? DECK_EXPORT_COUNTS;
 	const slide: SlideSeam = options.slide ?? {
 		planStep,
@@ -602,18 +642,13 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		'T1',
 		'the ported tween arithmetic is the Svelte arithmetic, expression for expression',
 		() => {
-			const svelte = read('src/routes/talks/my-career/slides/AccountSeparationSlide.svelte');
 			const ported = read('next/src/deck/slide-plan.ts');
 			const compared: string[] = [];
 			let total = 0;
 
 			for (const selector of ['.second', '.chip', '.note']) {
 				const escaped = selector.replace('.', '\\.');
-				const a = tweenExpressions(
-					svelte,
-					new RegExp(`gsap\\.to\\(root\\.querySelectorAll\\('${escaped}'\\),\\s*\\{`),
-					selector,
-				);
+				const a = SVELTE_TWEEN_EXPRESSIONS[selector] ?? {};
 				const b = tweenExpressions(
 					ported,
 					new RegExp(`selector: '${escaped}',\\s*vars: \\{`),
@@ -628,11 +663,11 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 				// extractions empty, `eq({}, {})` holds, and the row passes having
 				// compared zero expressions -- while its own prose says "expression
 				// for expression". The counts are the measured baseline (4 + 5 + 6),
-				// not a claim: if the Svelte tween legitimately gains a property this
-				// row fails loudly and the number is updated on purpose.
+				// frozen with the Svelte side; the key comparison above makes a
+				// hoisted port-side tween fail rather than compare nothing.
 				must(
 					Object.keys(a).length > 0,
-					`${selector} yielded no expressions on the Svelte side -- the oracle compared nothing`,
+					`${selector} has no frozen Svelte expressions -- the oracle compared nothing`,
 				);
 				total += Object.keys(a).length;
 				compared.push(`${selector} ${Object.keys(a).length}`);
@@ -738,14 +773,10 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		eq(slide.flipOptions.absolute, true, 'FLIP_OPTIONS.absolute');
 		eq(slide.flipOptions.duration, DURATION, 'FLIP_OPTIONS.duration');
 		eq(slide.flipOptions.ease, EASE, 'FLIP_OPTIONS.ease');
-
-		const svelte = read('src/routes/talks/my-career/slides/AccountSeparationSlide.svelte');
-		must(
-			/Flip\.from\(state,\s*\{\s*duration:\s*DURATION,\s*ease:\s*EASE,\s*absolute:\s*true\s*\}\)/.test(
-				svelte,
-			),
-			'the Svelte original no longer spells FLIP_OPTIONS the way this row assumes',
-		);
+		// The three expectations above ARE the frozen Svelte call site:
+		// `Flip.from(state, { duration: DURATION, ease: EASE, absolute: true })`,
+		// src/routes/talks/my-career/slides/AccountSeparationSlide.svelte:77 at
+		// 770bc30. That source is retired, so the row no longer re-reads it.
 		return 'duration, ease and absolute:true match the original call site';
 	});
 
@@ -1163,15 +1194,13 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 	});
 
 	r.row('F5', 'the Fuse ranking configuration is the transcribed one', () => {
-		const svelte = read('src/lib/fuzzy.ts');
 		const ported = read('next/src/palette/fuzzy.ts');
 		const options = (source: string) =>
 			(
 				source.match(/(weight: [\d.]+|threshold: [\d.]+|minMatchCharLength: \d+|name: '\w+')/g) ??
 				[]
 			).join('|');
-		must(options(svelte).length > 0, 'the option scraper matched nothing on the Svelte side');
-		eq(options(ported), options(svelte), 'Fuse options');
+		eq(options(ported), SVELTE_FUSE_OPTIONS, 'Fuse options');
 
 		// And that they still behave: a title-ish query outranks a tag-ish one,
 		// which is what the 0.5/0.3/0.2 weighting buys.
@@ -1179,7 +1208,7 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 		const hits = fuzzySearch(createPaletteFuse(items), 'Title newest');
 		must(hits.length > 0, 'the fixture query matched nothing');
 		eq(hits[0].item.id, 'post:newest', 'top hit');
-		return `${options(svelte).split('|').length} option values identical, and the ranking still resolves`;
+		return `${SVELTE_FUSE_OPTIONS.split('|').length} option values identical, and the ranking still resolves`;
 	});
 
 	r.row('F6', 'match highlighting splits at the edges as well as the middle', () => {
@@ -1667,10 +1696,9 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 
 	// ------------------------------------------------------- P: port roll-call
 
-	r.row('P1', 'every Svelte source has a counterpart', () => {
+	r.row('P1', 'every retired Svelte role has its Next port', () => {
 		const missing: string[] = [];
 		for (const role of PORT_ROLES) {
-			if (!exists(role.svelte)) missing.push(`${role.svelte} (source gone)`);
 			if (!exists(role.next)) missing.push(`${role.next} (target missing)`);
 		}
 		must(missing.length === 0, `unmapped: ${missing.join(', ')}`);
@@ -1737,16 +1765,13 @@ export function runAssertions(options: Slice2GsapOptions = {}): number {
 			eq(found, pin, `${name} pin`);
 			must(!found.startsWith('^') && !found.startsWith('~'), `${name} is not pinned exactly`);
 		}
-		// Both are dependencies the Svelte side already carries for these same
-		// two surfaces, so they are ported cost rather than a new library.
-		const rootManifest = JSON.parse(read('package.json')) as {
-			dependencies?: Record<string, string>;
-			devDependencies?: Record<string, string>;
-		};
+		// Both are dependencies the Svelte side carried for these same two
+		// surfaces, so they are ported cost rather than a new library. The Svelte
+		// manifest is retired; its entries are frozen in SVELTE_SIDE_DEPENDENCIES.
 		for (const name of Object.keys(dependencyPins)) {
 			must(
-				Boolean(rootManifest.dependencies?.[name] ?? rootManifest.devDependencies?.[name]),
-				`${name} is not already a Svelte-side dependency, so it is new cost`,
+				svelteSideDependencies[name] !== undefined,
+				`${name} was never a Svelte-side dependency, so it is new cost`,
 			);
 		}
 		return Object.entries(dependencyPins)
