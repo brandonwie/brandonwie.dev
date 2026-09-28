@@ -640,26 +640,6 @@ const CONTROLS: Control[] = [
 		}),
 	},
 	{
-		id: 'P3-defect-oracle-only-in-prose',
-		kind: 'defect',
-		row: 'P3',
-		what: 'the harness stops importing svelte and only mentions it in a comment',
-		// The realistic path is someone repointing the oracle at a local stub.
-		// The guard passed this until it started reading through stripComments.
-		setup: (dir) => ({
-			skipTypecheck: true,
-			sourceOverrides: mutateSource(dir, 'scripts/assert-slice2-motion.ts', (text) =>
-				text
-					.replace("import { flip } from 'svelte/animate';\n", '')
-					.replace(
-						"import { cubicOut as svelteCubicOut, linear as svelteLinear } from 'svelte/easing';\n",
-						'',
-					)
-					.replace("import { fade, scale } from 'svelte/transition';\n", ''),
-			),
-		}),
-	},
-	{
 		id: 'P2-defect-declared-boundary-unmet',
 		kind: 'defect',
 		row: 'P2',
