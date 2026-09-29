@@ -452,8 +452,18 @@ export function evaluate(candidateDir: string): { code: 0 | 1 | 2; rows: Row[] }
 			console.error(`FATAL: ${BASELINE_JSON} carries no site hash for ${name}`);
 			return { code: 2, rows };
 		}
-	const en = loadPublishedPosts('en');
-	const ko = loadPublishedPosts('ko');
+	// A duplicate published slug or unreadable frontmatter throws; keep it inside
+	// the exit-code contract (2 = an input the harness cannot read), not an
+	// unhandled rejection that exits 1 like a failed assertion.
+	let en: Map<string, SourcePost>;
+	let ko: Map<string, SourcePost>;
+	try {
+		en = loadPublishedPosts('en');
+		ko = loadPublishedPosts('ko');
+	} catch (error) {
+		console.error(`FATAL: post sources unreadable: ${(error as Error).message}`);
+		return { code: 2, rows };
+	}
 
 	// --- F1-F9  the three feeds --------------------------------------------
 	let index = 1;
