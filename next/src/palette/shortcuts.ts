@@ -17,8 +17,7 @@
  * a property of the reading order of one `if` and of which component mounted
  * first. That survives a refactor by luck. Re-deriving it during the React
  * port would have meant re-deriving it from the same accident, so it is
- * restated here as a pure function with the harness's P-group rows asserting
- * each rule by name.
+ * restated here as a pure function, one named rule at a time.
  *
  * THE RULES, in order:
  *

@@ -1,7 +1,7 @@
 {
 	// Root project: the shared modules next/ imports from src/ and the tools that
 	// `tsx` runs from scripts/ without an explicit --tsconfig. Typechecking lives
-	// in next/tsconfig.json (via `pnpm check:next`) and tsconfig.scripts.json.
+	// in next/tsconfig.json (via `pnpm check`).
 	"include": ["src/**/*.js", "src/**/*.ts"],
 	"exclude": ["node_modules/**"],
 	"compilerOptions": {

@@ -256,7 +256,3 @@ export default function PushSlide({ step = 0, animate = true }: Props) {
 		</section>
 	);
 }
-
-/** Re-exported so the harness can assert the component and the Svelte original
- *  agree on one duration and one curve rather than two copies of the numbers. */
-export { DURATION, EASE };

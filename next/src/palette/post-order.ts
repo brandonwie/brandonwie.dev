@@ -12,10 +12,9 @@ import { effectiveDate } from '@/content/feeds';
  * resolves to whatever order it arrived in — and the palette's first screen came
  * out ordered differently. Same eight slugs, different order.
  *
- * No comparator row can see this: the palette renders only on a chord, so the
- * ordering never reaches the exported HTML the harness diffs. It has to be
- * asserted directly, which is why the ordering is a function with a row of its
- * own (I7) rather than a sort inlined into a fixture page that Slice 4 deletes.
+ * No static check can see this: the palette renders only on a chord, so the
+ * ordering never reaches the exported HTML. That is why the ordering is its own
+ * function rather than a sort inlined into a component.
  * The Slice 3 palette port inherits the identical setup and this module with it.
  */
 export interface OrderablePost {

@@ -11,13 +11,8 @@ import { listPublishedPosts, type Locale, type PublishedPost } from './posts';
  *   src/routes/rss.xml/+server.ts
  *   src/routes/ko/rss.xml/+server.ts
  *
- * The templates are kept byte-identical on purpose. `scripts/migration-verify.ts`
- * compares the feeds SEMANTICALLY (item counts, ordering, links, titles), and
- * that is the acceptance bar in plan.md AC5, but `assert-publishing-surfaces.ts`
- * also holds the candidate to the Svelte build's exact bytes minus
- * `<lastBuildDate>`, because "semantically equal" leaves room for a port that
- * quietly drops `hreflang` alternates or `<lastmod>` -- neither of which the
- * semantic shape sees.
+ * The templates are byte-identical to those Svelte routes (minus
+ * `<lastBuildDate>`), so the cutover changed no feed or sitemap output.
  *
  * Two source-format facts decide the date handling:
  *

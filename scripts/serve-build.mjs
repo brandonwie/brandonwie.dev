@@ -1,18 +1,15 @@
 /**
- * Serve a built site tree for Slice 0 browser evidence capture.
+ * Serve a built static site tree locally (`pnpm preview` serves next/build).
  *
- * Resolution order mirrors resolveStatic() in scripts/migration-verify.ts exactly:
+ * Resolution order, the shape of a static export:
  *   exact file -> `${rel}.html` -> `${rel}/index.html` -> 404.html
- * so the tree a browser sees is the tree the parity harness compares.
  *
  *   node scripts/serve-build.mjs <build-dir> [port]
- *   node scripts/serve-build.mjs build 4173
+ *   node scripts/serve-build.mjs next/build 4173
  *
- * Also serves /__viewport?w=&h=&u= : a same-origin harness page holding one
- * iframe at an exact CSS pixel size. Chrome's window cannot be resized from
- * this tool surface (resize_window reports success and the viewport does not
- * change), so responsive states are captured in a frame whose media queries
- * evaluate against its own box. Documented in verification/thresholds.md.
+ * Also serves /__viewport?w=&h=&u= : a same-origin page holding one iframe at
+ * an exact CSS pixel size, so responsive states can be checked in a browser
+ * whose window cannot be resized.
  */
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -50,7 +47,7 @@ const TYPES = {
 	'.webm': 'video/webm',
 };
 
-/** Same candidate order as migration-verify.ts resolveStatic(). */
+/** Candidate order: exact file, `.html`, `/index.html`. */
 function resolveStatic(dir, urlPath) {
 	const clean = urlPath.split('?')[0].replace(/\/+$/, '') || '/';
 	const rel = clean === '/' ? 'index.html' : clean.replace(/^\//, '');
@@ -107,9 +104,8 @@ const server = createServer((req, res) => {
 });
 
 // Report the ADDRESS ACTUALLY BOUND, not the requested one. Passing 0 asks the
-// OS for a free port, which is how concurrent probes avoid the collision that
-// failed a migration:c3 run when a previous server still held 4173 -- but the
-// caller can only learn the choice from here.
+// OS for a free port, which avoids colliding with a server that still holds
+// 4173 -- but the caller can only learn the choice from here.
 server.listen(port, '127.0.0.1', () => {
 	console.log(`serving ${buildDir} on http://127.0.0.1:${server.address().port}`);
 });

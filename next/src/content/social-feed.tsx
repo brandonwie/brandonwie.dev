@@ -25,11 +25,7 @@ import type { Locale } from './posts';
  * V1 of the snapshot is EN-only (campaign topics come from the archive); a
  * `.ko.json` overlay is deferred until KO campaign copy exists (social-hub
  * H3). Both locales therefore render the same campaigns, exactly as the
- * SvelteKit `ko/feed/+page.ts` does.
- *
- * `scripts/assert-feed-redirects.ts` holds this page to the SvelteKit build's
- * page-owned contract: head, header, campaign list, chip attributes and
- * `<html lang>`.
+ * SvelteKit `ko/feed/+page.ts` did.
  */
 
 export interface FeedEntry {
@@ -105,8 +101,8 @@ function blogHref(slug: string, path: string): string {
  * NOTE: no `alternates.languages` (hreflang) and no `openGraph` block on
  * purpose. The SvelteKit feed pages emit neither — the frozen baseline records
  * `pages["/feed"].alternates = []` and `og = {}` for both locales — so adding
- * them here would be a divergence from the parity oracle, not a fix. Whether
- * the chrome should gain them is a Slice 3 shell decision.
+ * them here would have diverged from the SvelteKit pages during the migration.
+ * Whether the feed pages should gain them is a separate decision.
  */
 export function generateFeedMetadata(locale: Locale): Metadata {
 	const copy = COPY[locale];
@@ -130,8 +126,7 @@ function targetText(href: string): string {
  * with one frame per campaign whose surfaces are fixed-column rows. Renders
  * inside the site shell's `<main id="main-content">`.
  *
- * PARITY: `scripts/assert-feed-redirects.ts` reads this markup against the
- * Svelte build, so the contract class names stay on the same elements
+ * The Svelte-era class names stay on the same elements
  * (`crumb`, `feed__lede`, `feed__empty`, `feed__list`, `campaign`,
  * `campaign__id`, `campaign__topic`, `campaign__links`) and each surface is
  * still exactly one `<a class="chip …">` whose text is the label. The row's

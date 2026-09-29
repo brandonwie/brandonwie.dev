@@ -10,10 +10,9 @@
  * that decision therefore moves into one object and one pure transition, where
  * "after the insert" is just the next value.
  *
- * The second reason is evidence. `assert-slice2-motion.ts` drives `insert`
- * eight times and checks the whole collision, probe and resize sequence
- * without a browser, a DOM, or React. That is only possible because the model
- * is a function of its input.
+ * The second reason is testability: a caller can drive `insert` and check the
+ * whole collision, probe and resize sequence without a browser, a DOM, or
+ * React, because the model is a function of its input.
  *
  * The arithmetic, the queue, and the messages are unchanged from
  * `src/lib/components/study/HashMapVisualizer.svelte`.

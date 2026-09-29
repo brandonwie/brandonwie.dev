@@ -194,8 +194,8 @@ function smartypants() {
 	};
 }
 
-/** Educate one string with mdsvex's educators. Exported for the oracle controls. */
-export function educateSpan(span: string): string {
+/** Educate one string with mdsvex's educators. */
+function educateSpan(span: string): string {
 	return span === '' ? span : String(PROCESSOR.processSync(span));
 }
 
@@ -297,81 +297,15 @@ function nodeSplices(node: TextNode, raw: string): Splice[] | null {
 }
 
 /**
- * Cumulative count of text nodes this preprocessor declined to educate.
- *
- * It must stay at zero, and it is asserted rather than merely logged: a node the
- * map cannot line up is silently left in ASCII, which is precisely the failure
- * this whole preprocessor exists to prevent. The first three versions of
- * `offsetMap` declined 257 nodes across 71 posts, 21 across 18, then 1 — every
- * one of them a wrapped line whose continuation markup the parser strips
- * (list indentation, then a block quote's `> `, then that marker in the TRAILING
- * position). The corpus check reads this after rendering all 334 posts.
- */
-let unmapped = 0;
-
-export function unmappedNodeCount(): number {
-	return unmapped;
-}
-
-/**
- * Markup whose mdsvex education boundaries this preprocessor does NOT reproduce.
- *
- * Reproducing remark-parse 8's node boundaries is not enough on its own: mdsvex
- * runs its own parser extensions BEFORE smartypants, and they change which text
- * is eligible for education at all. Measured divergences, mdsvex first:
- *
- *   `> <span>b</span> c -- d`                     "b c -- d"  here "b c — d"
- *   `<span>a</span>'s b`                          "a's b"     here "a’s b"
- *   `<svelte:component this={X}>a -- b</...>`     "a -- b"    here "… a — b …"
- *
- *   `{@const y = "a -- b"}`                     "a -- b"    here "a — b"
- *   `{#if x}a -- b{/if}`                         "a -- b"    here "a — b"
- *
- * The first two are `html` nodes. The rest are NOT: `svelte:component` is not a
- * valid HTML tag name and a template directive is not a tag at all, so
- * remark-parse 8 leaves both as ordinary TEXT and an html-node counter never
- * sees them — the hole a reviewer found across all nine `svelte:*` elements and
- * then again across `{#if}`, `{:else}`, `{/if}` and `{@const}`.
- *
- * So the detector is three-sided: html nodes, tag OPENERS, and template
- * directive tokens. The opener rule deliberately stops at the tag name and the
- * one character after it. An earlier version matched a whole tag including its
- * attribute body and required that body to contain no angle brackets, which
- * `<svelte:component this={a < b} />` defeats — the fix for a shape must not
- * itself depend on parsing the shape.
- *
- * Both rules fire ZERO times across all 334 posts, measured before adoption.
- *
- * The count must stay at zero and `pnpm migration:typography` asserts it — the
- * MIGRATION-VERIFICATION gate, which is not yet wired into `pnpm build`, `pnpm
- * check` or the git hooks; that wiring is contracts C1 and C2. Across
- * all 334 posts the corpus carries zero of either kind, so the divergence is
- * entirely out of corpus today. That is a reason to DETECT it, not to ignore it:
- * a post introducing this markup tomorrow would be educated on rules this
- * preprocessor cannot claim to match, and the gate says so instead of guessing.
- */
-const TAG_OPENER = /<\/?[A-Za-z][A-Za-z0-9:.-]*[\s/>]/;
-const TEMPLATE_DIRECTIVE = /\{[#:/@][A-Za-z]/;
-
-let unsupportedMarkup = 0;
-
-export function unsupportedMarkupCount(): number {
-	return unsupportedMarkup;
-}
-
-/** True when a source carries markup whose mdsvex boundaries are not reproduced. */
-export function hasUnsupportedMarkup(markdown: string): boolean {
-	const before = unsupportedMarkup;
-	educateSource(markdown);
-	return unsupportedMarkup > before;
-}
-
-/**
  * Typeset a markdown source the way mdsvex would, and return the new source.
  *
  * The tree is remark-parse 8's, so the text-node boundaries the educators see
  * are mdsvex's. Splices are applied last-to-first so earlier offsets stay valid
  * while the text length changes (`--` to an em dash is a two-to-one shrink).
+ *
+ * Known limit: mdsvex ran its own parser extensions for inline HTML, `svelte:*`
+ * elements and template directives before educating, so text next to that
+ * markup can come out differently here. No post uses it.
  */
 export function educateSource(markdown: string): string {
 	const tree = (
@@ -380,22 +314,14 @@ export function educateSource(markdown: string): string {
 		.use(remarkParse8)
 		.parse(markdown);
 
-	visit(tree as never, 'html', () => {
-		unsupportedMarkup += 1;
-	});
-
 	const splices: Splice[] = [];
 	visit(tree as never, 'text', (node: TextNode) => {
-		const value = node.value ?? '';
-		if (TAG_OPENER.test(value) || TEMPLATE_DIRECTIVE.test(value)) unsupportedMarkup += 1;
 		const start = node.position?.start.offset;
 		const end = node.position?.end.offset;
 		if (start === undefined || end === undefined) return;
 		const result = nodeSplices(node, markdown.slice(start, end));
-		if (result === null) {
-			unmapped += 1;
-			return;
-		}
+		// A node the offset map cannot line up is left in ASCII.
+		if (result === null) return;
 		splices.push(...result);
 	});
 

@@ -12,18 +12,17 @@
  * scale, which is a better general answer and a worse parity answer. The
  * migration's whole claim is that the Next build behaves like the Svelte build;
  * "it also animates, differently" is not that claim. Porting the formula makes
- * the claim checkable: `scripts/assert-slice2-motion.ts` runs Svelte's own
+ * the claim checkable: during the migration a harness ran Svelte's own
  * `flip`, `fade` and `scale` against the functions below on the same inputs and
- * compares the CSS they produce, character for character. A library would have
+ * compared the CSS they produce, character for character. A library would have
  * left the comparison unavailable and the difference unmeasured.
  *
  * WHAT IS DELIBERATELY IDENTICAL. Every formula, every default, and the exact
  * shape of the CSS declaration each one emits, including Svelte's own
  * whitespace. `css()` is not the production path — `style()` is, because the
  * Web Animations API takes properties rather than declaration strings — but
- * `css()` is the form the oracle can be compared against, and the harness also
- * asserts the two agree, so the production path cannot drift away from the
- * checked one.
+ * `css()` is the form the migration harness compared against the Svelte
+ * originals.
  *
  * Sources, read from the installed `svelte@5.56.4`:
  *   node_modules/svelte/src/animate/index.js      (flip)
@@ -187,9 +186,9 @@ export interface ScaleParams {
  *
  * The CSS string reproduces Svelte's template literal exactly, tabs and
  * newlines included. That looks like an odd thing to preserve until you
- * remember what it is for: the harness compares this string to the one Svelte
- * produces, and a comparison that normalizes whitespace first is a weaker
- * comparison for no gain.
+ * remember what it was for: the migration harness compared this string to the
+ * one Svelte produces, and a comparison that normalizes whitespace first is a
+ * weaker comparison for no gain.
  */
 export function scaleConfig(metrics: TransitionMetrics, params: ScaleParams = {}): MotionConfig {
 	const { delay = 0, duration = 400, easing = cubicOut, start = 0, opacity = 0 } = params;
@@ -238,7 +237,7 @@ export function scaleConfig(metrics: TransitionMetrics, params: ScaleParams = {}
  * between them, that made the port's curve a slightly CLOSER approximation of
  * `cubicOut` than Svelte's own. Better, and therefore wrong: an unrecorded
  * improvement is a divergence like any other, and this one would have been
- * invisible in every comparison the harness makes.
+ * invisible in every comparison the migration harness made.
  */
 export function frameCount(duration: number): number {
 	// No clamp, deliberately. `Math.ceil` is already 1 or more for any positive

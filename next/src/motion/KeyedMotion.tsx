@@ -208,8 +208,7 @@ export interface MotionReading {
  * DOM. What is NOT checkable this way is the part this file exists to get
  * right — that `before` was measured in the pre-mutation phase and that the
  * previous flips were aborted before `to` and the metrics were read. Those are
- * lifecycle ordering, they need a real document, and the harness says so rather
- * than implying otherwise.
+ * lifecycle ordering, and they need a real document.
  */
 export function planUpdate(
 	before: Map<string, MotionBox>,

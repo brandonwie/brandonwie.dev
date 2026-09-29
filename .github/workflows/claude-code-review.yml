@@ -7,8 +7,8 @@ name: Claude Code Review
 #
 # brandonwie.dev is a Next.js App Router static export (the `next/` package).
 # SvelteKit was retired after the 2026-09-20 cutover. PRs touch the Next app,
-# the shared root inputs it imports, the verification suites, or bilingual
-# content. The review prompt below routes findings by that surface.
+# the shared root inputs it imports, or bilingual content. The review prompt
+# below routes findings by that surface.
 #
 # Security note: github.event.*.body fields appear ONLY in `if:` contains()
 # expressions (YAML-time evaluation, never shell-injected). Numeric inputs
@@ -93,17 +93,9 @@ jobs:
             tooling under `scripts/`.
 
             Root `pnpm build` runs the Next build and then Pagefind; root
-            `pnpm check` runs Next TypeScript and the scripts TypeScript
-            project. Other gates are lint, Prettier, date validation, and the
-            verification suites routed by `scripts/migration-route.ts`.
-            `migration:verify:next` compares `next/build` with the frozen
-            baseline `verification/baseline/svelte-e23e808.json` through
-            `verification/exception-ledger.json`;
-            `migration:parity:progress` judges its exit and reports the
-            count. Reviewers must explain count changes and stale ledger
-            entries. There is no conventional unit-test suite; new
-            verification predicates need executable positive and negative
-            controls, not a new test framework by default.
+            `pnpm check` compiles Paraglide and runs Next TypeScript. The
+            other gates are ESLint, Prettier, frontmatter date validation and
+            the 3B snapshot check. There is no test suite.
 
             ## Architecture Notes
 
@@ -129,7 +121,7 @@ jobs:
 
             ## Review Categories
 
-            For Next / React / verification changes:
+            For Next / React changes:
 
             N1. Static export — flag request-time features such as cookies,
                 Server Actions, request-dependent handlers, rewrites, ISR, or
@@ -143,19 +135,17 @@ jobs:
                 behavior. Compare generated artifacts, not JSX shape.
             N4. Content — preserve the guarded AST, typography, Shiki, headings,
                 Mermaid, reading time, and safe HTML/JSON-LD serialization.
-            N5. Controls — each new comparator predicate needs an invariance
-                case and a defect-injection case that reaches production logic.
-            N6. Accessibility — labels, `alt`, ARIA, focus management, and
+            N5. Accessibility — labels, `alt`, ARIA, focus management, and
                 keyboard equivalents for every interactive element.
-            N7. XSS / injection — the real sinks are the
+            N6. XSS / injection — the real sinks are the
                 `dangerouslySetInnerHTML` / `innerHTML` uses under `next/src/`
                 (rendered markdown, Pagefind excerpts, the JSON-LD block,
                 Mermaid output). Confirm injected values are build-time
                 markdown or the site's own schema, not user-controlled data.
-            N8. i18n integrity — new UI strings go into BOTH
+            N7. i18n integrity — new UI strings go into BOTH
                 `messages/en.json` and `messages/ko.json` (key parity) and are
                 read through the generated Paraglide messages, not hardcoded.
-            N9. Tailwind v4 — theme tokens live in `@theme {}` inside
+            N8. Tailwind v4 — theme tokens live in `@theme {}` inside
                 `src/app.css` (imported by `next/app/globals.css`); Tailwind
                 runs through `next/postcss.config.mjs` and there is no
                 `tailwind.config.*`. Custom utilities use `@utility`. Flag
@@ -195,9 +185,6 @@ jobs:
               current layout; collapsing `next/` into the root is a tracked
               follow-up, not a review finding. The root-level shared inputs
               listed above are imported by `next/` on purpose.
-            - A documented nonzero Next parity count is an intermediate-state
-              signal, not automatically a defect. Unexplained count changes,
-              stale entries, or a malformed terminal verdict ARE findings.
             - Client-side category filtering on `/posts` (no URL params) is a
               deliberate SSG choice — do not suggest server-side or URL-based
               filtering (it would force prerendering every category combo).

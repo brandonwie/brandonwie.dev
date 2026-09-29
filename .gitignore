@@ -76,8 +76,10 @@ tmp/
 # Cross-agent lock symlink mounted into worktrees (3B multi-session locks)
 .agents/
 
-# Next.js migration candidate (temporary two-app workspace)
+# Next.js build artifacts
 next/.next
 next/next-env.d.ts
 next/tsconfig.tsbuildinfo
+
+# Output of the retired migration harness; stale local copies stay ignored.
 tsconfig.scripts.tsbuildinfo

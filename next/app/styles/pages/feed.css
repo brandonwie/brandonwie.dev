@@ -1,10 +1,9 @@
 /* Phosphor Fade page styles: feed. Owned by that page's port; see
    next/app/globals.css (terminal shell) for the shared term-* primitives.
 
-   Scoped under `.pg-feed` (the `section.feed` root). The parity contract
-   (scripts/assert-feed-redirects.ts) pins the class names `crumb`,
-   `feed__*`, `campaign*` and `chip*`, so the page keeps them and styles them
-   from here rather than renaming them. */
+   Scoped under `.pg-feed` (the `section.feed` root). The page keeps the
+   Svelte-era class names `crumb`, `feed__*`, `campaign*` and `chip*` and
+   styles them from here rather than renaming them. */
 @layer components {
 	.pg-feed .feed__lede {
 		max-width: 660px;
