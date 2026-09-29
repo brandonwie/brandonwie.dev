@@ -464,6 +464,13 @@ const CONTROLS: Control[] = [
 			),
 		}),
 	},
+	// The retired P3-defect-oracle-only-in-prose control proved this harness
+	// really executed svelte/animate and friends instead of naming them in prose.
+	// Since the SvelteKit retirement the oracle is the frozen SVELTE_* tables in
+	// assert-slice2-motion.ts, so that guarantee rests on the O rows alone: they
+	// compare every port output against those tables, and an input with no frozen
+	// answer fails loudly. The P3 controls below guard the other direction, a Next
+	// module importing from svelte.
 	{
 		id: 'P3-defect-svelte-import',
 		kind: 'defect',
