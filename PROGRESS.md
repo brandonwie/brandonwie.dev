@@ -1844,3 +1844,21 @@ Knowledge: `3b/knowledge/devops/opencode-native-skill-discovery-folders.md`.
 
 **Next:** Restart OpenCode TUI, confirm `/wrap` resolves; `skills.paths`
 fallback if not.
+
+### Session 16 — 2026-09-29: SvelteKit and the migration harness retired
+
+**What:** PR #68 (`8660ca7`) removed SvelteKit from build, hook, CI and source
+after Brandon closed the Slice 6 rollback window. PR #69 (`4eed3f3`) then
+retired the whole migration verification harness: `ci.yml` is back to the
+single pre-migration `check` job (80-86 s instead of about 20 min), and the
+pre-push hook is back to six steps (18-33 s). The four `/migration-fixture/*`
+spike pages that had been live on production now return 404. Production probe
+70/70 after each deploy.
+
+**Changed (3B):** task `svelte-retirement` archived; CLAUDE.md source updated
+for the one-job CI; knowledge notes on retiring migration scaffolding and on
+Next static-export nondeterminism.
+
+**Next:** decide the co-author trailer policy (this repo squashes with
+`COMMIT_MESSAGES`, so `4eed3f3` has no trailer); confirm the Pages dashboard
+settings; the rest is in 3B `projects/brandonwie.dev/todos.md`.
