@@ -14,11 +14,7 @@ type MermaidApi = (typeof import('mermaid'))['default'];
  * <strong>/<em>, zero fa: icons, zero style/classDef/linkStyle and zero
  * entities. Its only HTML is <br>, in 15 fences, and mermaid's sanitizeMore
  * runs DOMPurify under strict, whose default allowlist permits br. So the
- * hardening is free here, and compile-corpus.ts:165 already asserts 'strict' —
- * reverting to 'loose' would turn a currently-green assertion red. Recorded as
- * a named divergence in the C11 M-group allowlist, NOT in the exception ledger:
- * it produces no comparator difference at all, so a ledger entry would match
- * nothing and be stale on arrival.
+ * hardening is free here.
  *
  * flowchart is restored verbatim. It is invisible to the comparator — the SVG
  * is client-rendered and the export holds only the fence source — which makes
@@ -29,8 +25,7 @@ type MermaidApi = (typeof import('mermaid'))['default'];
  * REDESIGN: themeVariables are NO LONGER verbatim. Their colours are remapped
  * onto the Phosphor Fade shell inks (colour only; fontFamily and fontSize are
  * unchanged, because a font change re-measures labels and clipped Korean text
- * before). Each changed or added key is declared in C11's MERMAID_DIVERGENCES,
- * and migration:browser:mermaid checks the rendered SVG against the inks.
+ * before).
  */
 const MERMAID_CONFIG = {
 	startOnLoad: false,
@@ -72,7 +67,7 @@ const MERMAID_CONFIG = {
 		// Left unset, the dark theme derives them by colour maths into greys,
 		// blues and reds (#cccccc text, #e83737 crit bars, #81b1db active bars),
 		// none of which is an ink. Pinned so sequence and gantt diagrams draw in
-		// the same six inks as flowcharts; migration:browser:mermaid proves it.
+		// the same six inks as flowcharts.
 		textColor: '#d6cfbf', // worn
 		titleColor: '#ece6d6', // hi
 		arrowheadColor: '#857f72', // faint
@@ -174,11 +169,9 @@ export default function Mermaid({ code }: { code: string }) {
 
 /** The browser half of a mermaid diagram, as a seam.
  *
- * Lifted out of the effect so the C11 harness can drive the FAILING path
- * without a browser: substitute a `loadMermaid` whose `render` throws and
- * assert `setError` receives the message. Same seam-substitution shape as
- * `compile-corpus.ts`'s `fakeMermaid`, and the reason S9's error state is
- * provable at all -- a `catch` that nothing can reach is a claim, not a proof.
+ * Lifted out of the effect so the FAILING path can be driven without a
+ * browser: substitute a `loadMermaid` whose `render` throws and check that
+ * `setError` receives the message.
  *
  * `setSvg` and `setError` carry the component's cancellation check, so this
  * function stays free of React entirely. */

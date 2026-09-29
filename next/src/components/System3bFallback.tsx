@@ -71,7 +71,6 @@ export function System3bFallback({ state }: { state: 'loading' | 'failed' }) {
 					<li key={layer.id} className="s3b-fb__row">
 						<span className="s3b-fb__idx">{i + 1}.</span>
 						<span className="s3b-fb__name">{layer.name}</span>
-						{/* One text node: migration:c11 H2 reads `<n> nodes` from here. */}
 						<span className="s3b-fb__count">
 							{countByLayer[layer.id] ?? 0} {copy.nodesLabel}
 						</span>

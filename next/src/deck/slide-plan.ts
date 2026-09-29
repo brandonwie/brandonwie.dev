@@ -19,8 +19,7 @@
  *      arguing what it was written to argue.
  *
  * Extracted, both are checkable against an independently written expectation
- * with no browser and no GSAP — which is what `scripts/assert-slice2-gsap-
- * palette.ts` group T does.
+ * with no browser and no GSAP.
  *
  * The third thing a port can get wrong is ORDERING — capturing the Flip state
  * after the DOM already moved. That is NOT in this file, because it is not a

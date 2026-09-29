@@ -10,7 +10,7 @@
  * WHY:  one Cmd/Ctrl+K surface for jumping anywhere and running quick actions.
  * HOW:  Fuse.js over PaletteItem[]; each item self-executes via item.run().
  *
- * A11Y-1 IS CLOSED HERE. `verification/behavior-matrix.md:122` recorded a
+ * A11Y-1 IS CLOSED HERE. The migration's behavior matrix recorded a
  * serious finding against the Svelte palette: after Escape, focus landed on
  * BODY rather than returning to the control that opened it (WCAG 2.1 AA,
  * 2.4.3). `ShellPalette` captures the opener element across three paths:

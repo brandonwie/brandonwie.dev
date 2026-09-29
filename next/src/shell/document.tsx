@@ -13,8 +13,7 @@ import '../../app/globals.css';
  *
  * Next has no server hook under `output: 'export'`, and a root layout cannot
  * read the current route segment, so the locale is a parameter of this shell
- * and each root layout passes its own. Every element below is asserted by
- * `scripts/assert-c13-shell.ts`; see `plan.md` AC11 for the row table.
+ * and each root layout passes its own.
  *
  * Keeping the shell in ONE module rather than duplicating it per locale root
  * layout is deliberate: C13 exists because a shell element can disappear

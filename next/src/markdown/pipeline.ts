@@ -162,9 +162,8 @@ export async function renderMarkdown(
 		.use(remarkReadingTime)
 		.use(remarkTocExtract)
 		.use(remarkRehype, {
-			// Raw HTML stays fail-closed: migration:typography asserts the corpus
-			// compiles with zero unsupported-markup and zero unmapped nodes, and
-			// migration:typography:oracle proves the unsupported-markup detector.
+			// Raw HTML stays fail-closed: raw HTML nodes in posts are dropped, never
+			// rendered.
 			allowDangerousHtml: false,
 		})
 		.use(rehypeSlug)

@@ -342,13 +342,9 @@ export function unmappedNodeCount(): number {
  *
  * Both rules fire ZERO times across all 334 posts, measured before adoption.
  *
- * The count must stay at zero and `pnpm migration:typography` asserts it — the
- * MIGRATION-VERIFICATION gate, which is not yet wired into `pnpm build`, `pnpm
- * check` or the git hooks; that wiring is contracts C1 and C2. Across
- * all 334 posts the corpus carries zero of either kind, so the divergence is
- * entirely out of corpus today. That is a reason to DETECT it, not to ignore it:
- * a post introducing this markup tomorrow would be educated on rules this
- * preprocessor cannot claim to match, and the gate says so instead of guessing.
+ * Across all 334 posts the corpus carries zero of either kind, so the
+ * divergence is entirely out of corpus today. The counters below still record
+ * any occurrence; since the migration harness was retired nothing reads them.
  */
 const TAG_OPENER = /<\/?[A-Za-z][A-Za-z0-9:.-]*[\s/>]/;
 const TEMPLATE_DIRECTIVE = /\{[#:/@][A-Za-z]/;

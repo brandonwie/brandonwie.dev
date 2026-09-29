@@ -154,8 +154,7 @@ function readParsedPost(file: string): ParsedMarkdownSource {
  * The trailing `.md` is anchored, where the Svelte expression's
  * `replace('.md', '')` is not. They differ only for a basename that contains
  * `.md` before its extension (`a.mdx.md` -> `a.mdx` here, `ax.md` there); no
- * file in either locale does, which `pnpm migration:c5` asserts rather than
- * assumes.
+ * file in either locale does.
  */
 export function postSlugFrom(pathOrGlobKey: string): string {
 	const slug = pathOrGlobKey.split('/').pop()!.replace(/\.md$/, '');
@@ -221,9 +220,8 @@ export interface PublishedPost {
  * `src/routes/sitemap.xml/+server.ts` and both `rss.xml` routes iterate the
  * result of `import.meta.glob`, and Vite sorts those keys by path, so the
  * emission order is `<category>/<slug>.md` ascending by code unit -- not slug
- * order (`listPostSlugs`) and not filesystem order (`walk`). The frozen feed
- * hashes in `verification/baseline/svelte-e23e808.json` are order-sensitive,
- * so this ordering is a contract, not a convenience.
+ * order (`listPostSlugs`) and not filesystem order (`walk`). Feed and sitemap
+ * output keep that order, so it is a contract, not a convenience.
  */
 export function listPublishedPosts(locale: Locale): PublishedPost[] {
 	const root = join(CONTENT_ROOT, locale);
