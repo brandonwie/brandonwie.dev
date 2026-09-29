@@ -7,19 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@dagrejs/dagre':
-        specifier: ^3.0.0
-        version: 3.0.0
-      d3-shape:
-        specifier: ^3.2.0
-        version: 3.2.0
-      fuse.js:
-        specifier: ^7.4.2
-        version: 7.4.2
-      mermaid:
-        specifier: ^11.16.0
-        version: 11.16.0
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -30,9 +17,6 @@ importers:
       '@tailwindcss/typography':
         specifier: ^0.5.20
         version: 0.5.20(tailwindcss@4.3.1)
-      '@types/d3-shape':
-        specifier: ^3.1.8
-        version: 3.1.8
       '@types/mdast':
         specifier: ^4.0.4
         version: 4.0.4
@@ -54,9 +38,6 @@ importers:
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
-      gsap:
-        specifier: ^3.15.0
-        version: 3.15.0
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -69,18 +50,9 @@ importers:
       prettier:
         specifier: ^3.9.1
         version: 3.9.1
-      rehype-slug:
-        specifier: ^6.0.0
-        version: 6.0.0
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1
       satori:
         specifier: ^0.26.0
         version: 0.26.0
-      shiki:
-        specifier: ^4.3.0
-        version: 4.3.0
       tailwindcss:
         specifier: 4.3.1
         version: 4.3.1
@@ -105,6 +77,9 @@ importers:
 
   next:
     dependencies:
+      '@dagrejs/dagre':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@shikijs/rehype':
         specifier: ^4.4.3
         version: 4.4.3

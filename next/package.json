@@ -10,6 +10,7 @@
 		"paraglide": "paraglide-js compile --project ../project.inlang --outdir ./src/paraglide --strategy baseLocale"
 	},
 	"dependencies": {
+		"@dagrejs/dagre": "^3.0.0",
 		"@shikijs/rehype": "^4.4.3",
 		"@xyflow/react": "12.11.6",
 		"d3-shape": "^3.2.0",
