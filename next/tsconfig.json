@@ -29,10 +29,6 @@
 		"**/*.tsx",
 		".next/types/**/*.ts",
 		".next/dev/types/**/*.ts",
-		// `next dev` adds the two `build/` entries below (distDir is `build`) and
-		// rewrites this file whenever they are missing, which trips the C3 mutation
-		// guard. They are committed so the file stays byte-stable; `exclude: ["build"]`
-		// still keeps the export output out of type-checking.
 		"build/types/**/*.ts",
 		"build/dev/types/**/*.ts"
 	],

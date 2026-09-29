@@ -8,7 +8,12 @@ dist/
 
 # `next dev` writes these when it detects an AI agent environment
 # (next/dist/server/lib/generate-agent-files.js). Project instructions come from
-# 3B, so the generated pair stays local and untracked.
+# 3B, so the generated pair stays local and untracked. The same command adds
+# `build/types/**/*.ts` and `build/dev/types/**/*.ts` to next/tsconfig.json
+# (distDir is `build`) and rewrites that file when they are missing, so they are
+# committed there; `exclude: ["build"]` still keeps the export out of
+# type-checking. next/tsconfig.json stays strict JSON: three harnesses read it
+# with JSON.parse.
 next/AGENTS.md
 next/CLAUDE.md
 
