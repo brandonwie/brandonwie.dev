@@ -1,34 +1,13 @@
 {
-	"extends": "./.svelte-kit/tsconfig.json",
-	// Rolldown skips configs without their own file set while walking upward.
-	// Mirror SvelteKit's generated roots so nested worktrees select this project.
-	"include": [
-		".svelte-kit/ambient.d.ts",
-		".svelte-kit/env.d.ts",
-		".svelte-kit/non-ambient.d.ts",
-		".svelte-kit/types/**/$types.d.ts",
-		"vite.config.js",
-		"vite.config.ts",
-		"src/**/*.js",
-		"src/**/*.ts",
-		"src/**/*.svelte",
-		"test/**/*.js",
-		"test/**/*.ts",
-		"test/**/*.svelte",
-		"tests/**/*.js",
-		"tests/**/*.ts",
-		"tests/**/*.svelte"
-	],
-	"exclude": [
-		"node_modules/**",
-		"src/service-worker.js",
-		"src/service-worker/**/*.js",
-		"src/service-worker.ts",
-		"src/service-worker/**/*.ts",
-		"src/service-worker.d.ts",
-		"src/service-worker/**/*.d.ts"
-	],
+	// Root project: the shared modules next/ imports from src/ and the tools that
+	// `tsx` runs from scripts/ without an explicit --tsconfig. Typechecking lives
+	// in next/tsconfig.json (via `pnpm check:next`) and tsconfig.scripts.json.
+	"include": ["src/**/*.js", "src/**/*.ts"],
+	"exclude": ["node_modules/**"],
 	"compilerOptions": {
+		"target": "ES2022",
+		"module": "esnext",
+		"noEmit": true,
 		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,

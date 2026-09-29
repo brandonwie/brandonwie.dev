@@ -1,8 +1,8 @@
 /**
- * The representative article — executable parity assertions.
+ * The representative article — executable assertions on the Next export.
  *
- *   pnpm migration:article                  # next/build against build/
- *   pnpm migration:article <candidate-dir> <baseline-dir>
+ *   pnpm migration:article                  # reads next/build
+ *   pnpm migration:article <candidate-dir>
  *
  * Why this exists when a parity comparator already runs: the comparator hashes
  * the text of a WHOLE PAGE. During the first article port the candidate had no
@@ -19,17 +19,26 @@
  *   3. The hero lost its intrinsic size, both loading hints and its fallback
  *      handler.
  *
- * The comparator now sees all three (`articleMeta`, and `<img>` capture widened
- * to the size pair, the hints and handler presence; controls 35-40 pin them).
- * This file asserts the SAME facts a second way, directly against the built
- * HTML, and owns the representative article's shell, locale, link, media and
- * fallback-chain contracts that the whole-page comparator cannot isolate.
+ * SVELTE RETIREMENT (2026-09-29). This file used to compare the article pair
+ * against the live SvelteKit export (`build/`). That export no longer exists.
+ * Rows whose oracle was the rendered Svelte article -- A1 (article:* meta
+ * equality), A3 (English prose text equality) and the exact-count half of A4,
+ * the JSON-LD date equality in A10, and A14's Korean prose equality -- are
+ * dropped: freezing that HTML would go stale on the next content edit. What
+ * each of those rows ALSO guaranteed about the Next output is kept, using only
+ * the Next export: A2 (ISO published_time), A4 (smart punctuation present at
+ * all), A10 (JSON-LD dates present) and A14 (Korean prose is substantial and
+ * Hangul). A5's hero attributes were Svelte constants and are frozen as
+ * literals citing their origin. Every other row always read only the Next
+ * export and is unchanged: the representative article's shell, locale, link,
+ * media and fallback-chain contracts that a whole-page comparator cannot
+ * isolate.
  *
  * Three exit codes:
  *
  *   0   every row passes
  *   1   at least one row FAILED
- *   2   the script could not run at all (a build or the article is missing)
+ *   2   the script could not run at all (the build or the article is missing)
  */
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
@@ -60,9 +69,8 @@ function decodeEntities(value: string): string {
 /**
  * The prose container, by balanced-tag walk from the `prose-terminal` class.
  *
- * The two stacks spell the class list differently — SvelteKit's is
- * `prose-terminal prose post__content` and the candidate's is `prose-terminal`
- * — so the anchor is the shared token, not the attribute. The walk is
+ * The anchor is the `prose-terminal` token, not the whole class attribute, so
+ * layout classes added beside it cannot hide the container. The walk is
  * necessary rather than fussy: the container holds nested `<div>`s (Shiki code
  * blocks, mermaid placeholders) and a non-greedy match to the first `</div>`
  * would truncate the body at the first code block on the page.
@@ -367,17 +375,12 @@ function shellProblems(html: string, locale: 'en' | 'ko'): string[] {
 	if (tagsOf(html, 'main').length !== 1) problems.push('expected exactly one main landmark');
 	if (tagsOf(html, 'h1').length !== 1) problems.push('expected exactly one h1');
 	/**
-	 * These three tokens follow the BASELINE's chrome, not the candidate's.
-	 * They previously read `site-header` / `site-nav`, which were the Slice 1
-	 * PLACEHOLDER shell's class names -- the SvelteKit baseline has never
-	 * emitted them (`SiteHeader.svelte:36,41` emits `<header class="site-nav">`
-	 * wrapping `<nav class="site-nav__links">`). So the rows asserted that the
-	 * candidate looked like the scaffolding rather than like the thing it must
-	 * match, and Slice 3 PR 2a's real chrome port is what exposed it.
-	 *
-	 * The Phosphor Fade terminal shell then replaced that chrome by design, so
-	 * the tokens now name the shell's own landmarks. Each still requires a
-	 * distinct element, so a missing title bar, status line or footer fails.
+	 * These three tokens name the Phosphor Fade terminal shell's own landmarks.
+	 * History: they once read the Slice 1 PLACEHOLDER shell's `site-header` /
+	 * `site-nav`, which the SvelteKit app never emitted, so the rows asserted
+	 * the scaffolding rather than the real chrome until Slice 3 PR 2a exposed
+	 * it. Each token requires a distinct element, so a missing title bar,
+	 * status line or footer fails.
 	 */
 	// REDESIGN: site header is the terminal title bar `header.term-bar` (was `header.site-nav`).
 	if (!classToken(html, 'header', 'term-bar')) problems.push('site header missing');
@@ -404,7 +407,6 @@ function shellProblems(html: string, locale: 'en' | 'ko'): string[] {
 
 function metadataProblems(
 	html: string,
-	baselineHtml: string,
 	expected: { canonical: string; locale: string; language: string },
 ): string[] {
 	const englishUrl = `https://brandonwie.dev/posts/${ARTICLE_SLUG}`;
@@ -423,7 +425,6 @@ function metadataProblems(
 	if (headMeta(html, 'og:url') !== expected.canonical) problems.push('og:url mismatch');
 	if (headMeta(html, 'og:locale') !== expected.locale) problems.push('og:locale mismatch');
 	const data = jsonLd(html);
-	const baselineData = jsonLd(baselineHtml);
 	const mainEntity = data?.mainEntityOfPage as Record<string, unknown> | undefined;
 	if (!data) problems.push('JSON-LD missing or invalid');
 	else {
@@ -432,12 +433,12 @@ function metadataProblems(
 		if (typeof data.headline !== 'string' || data.headline.length === 0) {
 			problems.push('JSON-LD headline missing');
 		}
+		// The dates used to be compared to the Svelte export's JSON-LD. That
+		// oracle is content-derived and retired; presence is what remains.
 		for (const field of ['datePublished', 'dateModified'] as const) {
-			const baselineValue = baselineData?.[field];
-			if (typeof baselineValue !== 'string' || baselineValue.length === 0) {
-				problems.push(`baseline JSON-LD ${field} missing or invalid`);
-			} else if (data[field] !== baselineValue) {
-				problems.push(`JSON-LD ${field} mismatch`);
+			const value = data[field];
+			if (typeof value !== 'string' || value.length === 0) {
+				problems.push(`JSON-LD ${field} missing or empty`);
 			}
 		}
 	}
@@ -480,11 +481,7 @@ function commentsProblems(html: string, locale: 'en' | 'ko'): string[] {
 	return problems;
 }
 
-export async function runAssertions(
-	candidateDir: string,
-	baselineDir: string,
-	quiet = false,
-): Promise<number> {
+export async function runAssertions(candidateDir: string, quiet = false): Promise<number> {
 	const say = (...parts: unknown[]): void => {
 		if (!quiet) console.log(...parts);
 	};
@@ -496,42 +493,21 @@ export async function runAssertions(
 
 	const candFile = join(candidateDir, 'posts', `${ARTICLE_SLUG}.html`);
 	const candKoFile = join(candidateDir, 'ko', 'posts', `${ARTICLE_SLUG}.html`);
-	const baseFile = join(baselineDir, 'posts', `${ARTICLE_SLUG}.html`);
-	const baseKoFile = join(baselineDir, 'ko', 'posts', `${ARTICLE_SLUG}.html`);
-	for (const [label, file] of [
-		['candidate', candFile],
-		['baseline', baseFile],
-		['Korean baseline', baseKoFile],
-	] as const) {
-		if (!existsSync(file)) {
-			console.error(`FATAL: ${label} article not found: ${file}`);
-			return 2;
-		}
-	}
-	const cand = readFileSync(candFile, 'utf8');
-	const base = readFileSync(baseFile, 'utf8');
-	const baseKo = readFileSync(baseKoFile, 'utf8');
-	const candKo = existsSync(candKoFile) ? readFileSync(candKoFile, 'utf8') : '';
-
-	// --- A1  article:* metadata --------------------------------------------
-	const baseMeta = articleMeta(base);
-	const candMeta = articleMeta(cand);
-	if (baseMeta.length === 0) {
-		console.error('FATAL: the baseline article carries no article: metadata; A1-A2 are vacuous');
+	if (!existsSync(candFile)) {
+		console.error(`FATAL: candidate article not found: ${candFile}`);
 		return 2;
 	}
-	if (JSON.stringify(baseMeta) === JSON.stringify(candMeta)) {
-		pass('A1 article:* metadata', `${candMeta.length} tag(s), same order, duplicates intact`);
-	} else {
-		fail(
-			'A1 article:* metadata',
-			`baseline ${JSON.stringify(baseMeta)} != candidate ${JSON.stringify(candMeta)}`,
-		);
-	}
+	const cand = readFileSync(candFile, 'utf8');
+	const candKo = existsSync(candKoFile) ? readFileSync(candKoFile, 'utf8') : '';
+
+	// A1 (article:* metadata equal to the Svelte export) is retired with that
+	// export: its oracle was the rendered Svelte head. A2 still requires the
+	// published_time tag to exist and be machine-readable.
+	const candMeta = articleMeta(cand);
 
 	// --- A2  published_time is machine-readable ----------------------------
-	// A1 alone would pass if BOTH sides regressed to a locale string. This row
-	// is absolute rather than comparative for that reason.
+	// Absolute rather than comparative: a locale string here depends on the
+	// build machine's timezone.
 	const published = candMeta.find((entry) => entry.startsWith('article:published_time '));
 	const publishedValue = published?.slice('article:published_time '.length) ?? '';
 	if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(publishedValue)) {
@@ -543,89 +519,76 @@ export async function runAssertions(
 		);
 	}
 
-	// --- A3/A4  prose ------------------------------------------------------
-	const basePr = proseHtml(base);
+	// --- A4  prose typography ----------------------------------------------
+	// A3 (prose text equal to the Svelte export) and A4's exact per-character
+	// counts took the rendered Svelte prose as their oracle and are retired. What
+	// A4 also guaranteed is kept: the source markdown for this article carries
+	// no literal smart punctuation (only ASCII quotes and `--`), so any em dash,
+	// en dash, curly quote or ellipsis in the prose was produced by the smart
+	// typography pass. None at all means the pass is off.
 	const candPr = proseHtml(cand);
-	if (basePr === null || candPr === null) {
-		console.error('FATAL: could not locate the prose container on both sides');
+	if (candPr === null) {
+		console.error('FATAL: could not locate the candidate prose container');
 		return 2;
 	}
-	const baseText = visibleText(basePr);
 	const candText = visibleText(candPr);
-	if (baseText === candText) {
-		pass('A3 prose text', `${candText.length} characters, identical after entity decoding`);
-	} else {
-		let at = 0;
-		while (at < baseText.length && at < candText.length && baseText[at] === candText[at]) at += 1;
-		fail(
-			'A3 prose text',
-			`baseline ${baseText.length} chars, candidate ${candText.length}; first difference at ${at}: ` +
-				`${JSON.stringify(baseText.slice(Math.max(0, at - 40), at + 40))} != ` +
-				`${JSON.stringify(candText.slice(Math.max(0, at - 40), at + 40))}`,
-		);
-	}
-
-	// A3 compares the two sides and would pass if both lost their typography.
-	// This row is the absolute one: mdsvex runs smartypants by default, so the
-	// baseline's counts are the contract.
-	const baseSmart = smartCounts(baseText);
 	const candSmart = smartCounts(candText);
-	if (Object.keys(baseSmart).length === 0) {
-		console.error('FATAL: the baseline prose carries no smart punctuation; A4 is vacuous');
-		return 2;
-	}
-	if (JSON.stringify(baseSmart) === JSON.stringify(candSmart)) {
-		pass('A4 smart typography', JSON.stringify(baseSmart));
+	if (Object.keys(candSmart).length > 0) {
+		pass('A4 smart typography present', JSON.stringify(candSmart));
 	} else {
 		fail(
-			'A4 smart typography',
-			`baseline ${JSON.stringify(baseSmart)} != candidate ${JSON.stringify(candSmart)}`,
+			'A4 smart typography present',
+			`the prose (${candText.length} characters) carries no smart punctuation — the smart typography pass did not run`,
 		);
 	}
 
 	// --- A5/A6  hero -------------------------------------------------------
-	const baseHero = heroTag(base);
 	const candHero = heroTag(cand);
-	if (baseHero === null) {
-		console.error('FATAL: the baseline article carries no hero image; A5-A6 are vacuous');
-		return 2;
-	}
 	if (candHero === null) {
 		fail('A5 hero attributes', 'the candidate article has no /hero/ image at all');
 		fail('A6 hero fallback chain', 'no hero image to carry a handler');
 	} else {
-		const ATTRS = ['src', 'alt', 'width', 'height', 'fetchpriority', 'decoding'];
-		const mismatched = ATTRS.filter((name) => attrOf(baseHero, name) !== attrOf(candHero, name));
+		// Frozen from the Svelte hero, which was a constant, not content: origin
+		// src/lib/components/PostDetail.svelte:222-229 at 770bc30, with `src` from
+		// `heroImage` (src/lib/seo.ts:15-17).
+		const EXPECTED_HERO: Record<string, string> = {
+			src: `/hero/${ARTICLE_SLUG}.png`,
+			alt: '',
+			width: '2400',
+			height: '1260',
+			fetchpriority: 'high',
+			decoding: 'async',
+		};
+		const mismatched = Object.entries(EXPECTED_HERO).filter(
+			([name, value]) => attrOf(candHero, name) !== value,
+		);
 		if (mismatched.length === 0) {
 			pass(
 				'A5 hero attributes',
-				ATTRS.map((name) => `${name}=${JSON.stringify(attrOf(candHero, name))}`).join(' '),
+				Object.keys(EXPECTED_HERO)
+					.map((name) => `${name}=${JSON.stringify(attrOf(candHero, name))}`)
+					.join(' '),
 			);
 		} else {
 			fail(
 				'A5 hero attributes',
 				mismatched
 					.map(
-						(name) =>
-							`${name}: baseline ${JSON.stringify(attrOf(baseHero, name))} != candidate ${JSON.stringify(attrOf(candHero, name))}`,
+						([name, value]) =>
+							`${name}: expected ${JSON.stringify(value)} != candidate ${JSON.stringify(attrOf(candHero, name))}`,
 					)
 					.join('; '),
 			);
 		}
 
-		// The VALUE is not compared: SvelteKit's is the `this.__e=event`
-		// delegation stub, a framework artifact no other stack will spell the same
-		// way. What is asserted is that a handler exists on both sides, and that
-		// RUNNING the candidate's walks the same three stages the Svelte component
-		// does — hero, then the 1200x630 cover, then the default cover, then stop.
-		const baseHandler = attrOf(baseHero, 'onerror');
+		// The handler's VALUE is not compared, only its behavior: RUNNING the
+		// candidate's handler must walk the same three stages the Svelte component
+		// did (PostDetail.svelte:78-92 at 770bc30) — hero, then the 1200x630
+		// cover, then the default cover, then stop.
 		const candHandler = attrOf(candHero, 'onerror');
 		const EXPECTED = [`/og/${ARTICLE_SLUG}.png`, '/og/default.png', 'STOP'];
-		if (baseHandler === null || candHandler === null) {
-			fail(
-				'A6 hero fallback chain',
-				`handler presence: baseline ${baseHandler === null ? 'ABSENT' : 'present'}, candidate ${candHandler === null ? 'ABSENT' : 'present'}`,
-			);
+		if (candHandler === null) {
+			fail('A6 hero fallback chain', 'the candidate hero carries no onerror handler');
 		} else {
 			let observed: string[];
 			try {
@@ -636,7 +599,7 @@ export async function runAssertions(
 			if (JSON.stringify(observed) === JSON.stringify(EXPECTED)) {
 				pass(
 					'A6 hero fallback chain',
-					`present on both sides; executing the candidate's handler yields ${observed.join(' -> ')}`,
+					`executing the candidate's handler yields ${observed.join(' -> ')}`,
 				);
 			} else {
 				fail(
@@ -694,13 +657,13 @@ export async function runAssertions(
 	}
 
 	const metadataIssues = [
-		...metadataProblems(cand, base, {
+		...metadataProblems(cand, {
 			canonical: `https://brandonwie.dev/posts/${ARTICLE_SLUG}`,
 			locale: 'en_US',
 			language: 'en-US',
 		}).map((problem) => `en: ${problem}`),
 		...(candKo
-			? metadataProblems(candKo, baseKo, {
+			? metadataProblems(candKo, {
 					canonical: `https://brandonwie.dev/ko/posts/${ARTICLE_SLUG}`,
 					locale: 'ko_KR',
 					language: 'ko-KR',
@@ -761,31 +724,21 @@ export async function runAssertions(
 		fail('A13 comments mount boundary', commentIssues.join('; ') || 'Korean boundary unavailable');
 	}
 
-	const baseKoProse = proseHtml(baseKo);
-	if (baseKoProse === null) {
-		console.error('FATAL: could not locate the Korean baseline prose container; A14 is vacuous');
-		return 2;
-	}
-	const baseKoText = visibleText(baseKoProse);
-	if (baseKoText.length <= 1_000 || !/[가-힣]/.test(baseKoText)) {
-		console.error('FATAL: Korean baseline prose is too short or carries no Hangul; A14 is vacuous');
-		return 2;
-	}
+	// A14 used to require the Korean prose to equal the Svelte export's. That
+	// oracle is retired; what it also guaranteed is kept: the Korean article is a
+	// real translation — substantial prose carrying Hangul — not an English
+	// fallback or an empty shell. The thresholds are the ones the old row
+	// demanded of its baseline before comparing.
 	const koProse = candKo ? proseHtml(candKo) : null;
 	const koText = koProse ? visibleText(koProse) : '';
-	if (koText === baseKoText) {
-		pass(
-			'A14 Korean prose parity',
-			`${koText.length} characters, identical to the Korean baseline`,
-		);
+	if (koText.length > 1_000 && /[가-힣]/.test(koText)) {
+		pass('A14 Korean prose', `${koText.length} characters of Hangul-bearing prose`);
 	} else {
-		let at = 0;
-		while (at < baseKoText.length && at < koText.length && baseKoText[at] === koText[at]) at += 1;
 		fail(
-			'A14 Korean prose parity',
-			`baseline ${baseKoText.length} chars, candidate ${koText.length}; first difference at ${at}: ` +
-				`${JSON.stringify(baseKoText.slice(Math.max(0, at - 40), at + 40))} != ` +
-				`${JSON.stringify(koText.slice(Math.max(0, at - 40), at + 40))}`,
+			'A14 Korean prose',
+			koProse === null
+				? 'no Korean prose container'
+				: `${koText.length} characters, Hangul ${/[가-힣]/.test(koText) ? 'present' : 'absent'}; expected over 1000 characters carrying Hangul`,
 		);
 	}
 
@@ -807,14 +760,10 @@ export async function runAssertions(
 	const failed = rows.filter((r) => r.status === 'FAIL');
 	say(`\nRESULT: ${rows.length - failed.length} pass, ${failed.length} fail`);
 	if (failed.length) return 1;
-	say(
-		'Scope: one bilingual representative article pair. The remaining post corpus and C13 route cohort are still open.',
-	);
+	say('Scope: one bilingual representative article pair in the Next export.');
 	return 0;
 }
 
 if (process.argv[1]?.endsWith('assert-article-parity.ts')) {
-	runAssertions(process.argv[2] ?? 'next/build', process.argv[3] ?? 'build').then((code) =>
-		process.exit(code),
-	);
+	runAssertions(process.argv[2] ?? 'next/build').then((code) => process.exit(code));
 }

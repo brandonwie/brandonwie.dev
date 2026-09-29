@@ -10,23 +10,30 @@
  *   DEFECT      the assertions MUST exit 1 on a deliberately broken input
  *   INVARIANCE  the assertions MUST exit 0 on a change they should ignore
  *
- * The suite reads two independent surfaces, so both get defects AND a paired
- * invariance:
- *
- *   THE ORACLE    four exported Svelte pages. Dropping a link, swapping a pair
- *                 or truncating a list must go red; reformatting the markup
- *                 around the same links must not.
+ * Every doctored surface gets defects AND a paired invariance:
  *
  *   THE FIXTURE   the temporary corpus behind the draft, fallback and ordering
  *                 rows. Un-drafting the hidden post, or translating the one
  *                 untranslated post, must go red; adding a tag to a fixture
  *                 post's frontmatter must not.
  *
- * Nothing here touches the real `build/`, `next/build` or `src/content/posts`:
- * the oracle controls copy the four pages the suite reads into a scratch
- * directory under `tmp/`, and the fixture controls write their own corpus. The
- * baseline control runs the same scratch copies unmodified, so a red run means
- * the mutation, not the copying.
+ *   THE NEXT PAGE the built Korean /system/3b page row 16 reads. Dropping or
+ *                 un-localizing a series title must go red; reformatting the
+ *                 markup around the same titles must not.
+ *
+ *   THE SERIES    the temporary corpus behind the F7 series-title rows.
+ *   FIXTURE       Publishing the drafted entry or translating the untranslated
+ *                 one must go red; an unrelated post or draft must not.
+ *
+ * Nothing here touches the real `next/build` or `src/content/posts`: the Next
+ * controls copy the two pages the suite reads into a scratch directory, and the
+ * fixture controls write their own corpus. The baseline control runs unmodified
+ * fixtures, so a red run means the mutation, not the copying.
+ *
+ * HISTORY. D1-D5 and I1 doctored the four exported Svelte pages in `build/`
+ * that the dropped ORACLE rows read, and the MISS and PART baselines required a
+ * missing or partial Svelte build to exit 2. Those rows went with the SvelteKit
+ * app; their ids are retired rather than reissued.
  */
 import { spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -37,7 +44,6 @@ import { fileURLToPath } from 'node:url';
 
 import {
 	articleLocaleVerdict,
-	linkedSlugs,
 	sitemapVerdict,
 	writeFixture,
 	writeSystemFixture,
@@ -49,8 +55,6 @@ const require = createRequire(import.meta.url);
 const CONTROLS_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(CONTROLS_PATH), '..');
 const SUITE = join(REPO_ROOT, 'scripts/assert-c5-glob-sites.ts');
-const SOURCE_BUILD = join(REPO_ROOT, 'build');
-const ORACLE_PAGES = ['index.html', 'posts.html', 'ko.html', join('ko', 'posts.html')] as const;
 const NEXT_SOURCE_BUILD = join(REPO_ROOT, 'next/build');
 const NEXT_PAGES = [join('ko', 'system', '3b.html'), join('system', '3b.html')] as const;
 
@@ -63,15 +67,14 @@ const SERIES_TITLES: string[] = (
 ).blog_series.map((entry) => entry.title);
 
 type Kind = 'DEFECT' | 'INVARIANCE';
-type Surface = 'oracle' | 'fixture' | 'next' | 'system';
+type Surface = 'fixture' | 'next' | 'system';
 
 interface Control {
 	id: string;
 	kind: Kind;
 	surface: Surface;
 	what: string;
-	/** Rewrites one oracle page, addressed by its path under the scratch build. */
-	page?: (typeof ORACLE_PAGES)[number];
+	/** Rewrites the exported Next page named by `nextPage`. */
 	apply?: (html: string) => string;
 	/** Rewrites the fixture corpus in place. */
 	mutate?: (root: string) => void;
@@ -112,74 +115,7 @@ function renderedSeriesItems(html: string): RenderedSeriesItem[] {
 	});
 }
 
-/** Drop the nth `/posts/<slug>` link from a page, leaving the card around it. */
-function dropLink(html: string, prefix: '' | '/ko', index: number): string {
-	const slug = linkedSlugs(html, prefix)[index];
-	return html.replace(`href="${prefix}/posts/${slug}"`, 'href="#dropped"');
-}
-
-/** Swap two adjacent post links, changing order without changing membership. */
-function swapLinks(html: string, prefix: '' | '/ko', first: number): string {
-	const slugs = linkedSlugs(html, prefix);
-	const [a, b] = [slugs[first], slugs[first + 1]];
-	return html
-		.replace(`href="${prefix}/posts/${a}"`, `href="${prefix}/posts/__swap__"`)
-		.replace(`href="${prefix}/posts/${b}"`, `href="${prefix}/posts/${a}"`)
-		.replace(`href="${prefix}/posts/__swap__"`, `href="${prefix}/posts/${b}"`);
-}
-
 const CONTROLS: Control[] = [
-	{
-		id: 'D1',
-		kind: 'DEFECT',
-		surface: 'oracle',
-		what: '/posts drops one post link',
-		page: 'posts.html',
-		apply: (html) => dropLink(html, '', 40),
-	},
-	{
-		id: 'D2',
-		kind: 'DEFECT',
-		surface: 'oracle',
-		what: '/posts keeps every post but swaps two neighbours',
-		page: 'posts.html',
-		apply: (html) => swapLinks(html, '', 12),
-	},
-	{
-		id: 'D3',
-		kind: 'DEFECT',
-		surface: 'oracle',
-		what: '/ko/posts loses its last entry',
-		page: join('ko', 'posts.html'),
-		apply: (html) => dropLink(html, '/ko', linkedSlugs(html, '/ko').length - 1),
-	},
-	{
-		id: 'D4',
-		kind: 'DEFECT',
-		surface: 'oracle',
-		what: 'the home page reorders its two most recent posts',
-		page: 'index.html',
-		apply: (html) => swapLinks(html, '', 0),
-	},
-	{
-		id: 'D5',
-		kind: 'DEFECT',
-		surface: 'oracle',
-		what: 'the Korean home page reorders two posts',
-		page: 'ko.html',
-		apply: (html) => swapLinks(html, '/ko', 3),
-	},
-	{
-		id: 'I1',
-		kind: 'INVARIANCE',
-		surface: 'oracle',
-		what: 'the same list markup is reformatted around unchanged links',
-		page: 'posts.html',
-		apply: (html) =>
-			html
-				.replaceAll('class="post-card ', 'data-control="c5" class="post-card ')
-				.replaceAll('loading="lazy"', 'loading="eager"'),
-	},
 	{
 		id: 'D6',
 		kind: 'DEFECT',
@@ -379,17 +315,6 @@ const CONTROLS: Control[] = [
 	},
 ];
 
-/** A scratch copy of only the four oracle pages the suite reads. */
-function scratchBuild(root: string): string {
-	const svelteBuild = join(root, 'build');
-	for (const page of ORACLE_PAGES) {
-		const target = join(svelteBuild, page);
-		mkdirSync(dirname(target), { recursive: true });
-		cpSync(join(SOURCE_BUILD, page), target);
-	}
-	return svelteBuild;
-}
-
 /** Scratch copy of the two exported Next pages row 16 reads. */
 function scratchNextBuild(root: string): string {
 	const nextBuild = join(root, 'next-build');
@@ -402,7 +327,6 @@ function scratchNextBuild(root: string): string {
 }
 
 function runSuite(
-	svelteBuild: string,
 	fixtureRoot?: string,
 	nextBuild?: string,
 	systemFixtureRoot?: string,
@@ -412,8 +336,6 @@ function runSuite(
 		'--import',
 		require.resolve('tsx'),
 		SUITE,
-		'--svelte-build',
-		svelteBuild,
 		...(fixtureRoot ? ['--fixture-root', fixtureRoot] : []),
 		...(nextBuild ? ['--next-build', nextBuild] : []),
 		...(systemFixtureRoot ? ['--system-fixture-root', systemFixtureRoot] : []),
@@ -436,47 +358,21 @@ function main(): number {
 	try {
 		// Baseline: unmodified copies must stay green, so a red control below is
 		// the mutation and not the scratch directory.
-		const baselineBuild = scratchBuild(join(root, 'baseline'));
 		const baselineFixture = join(root, 'baseline-fixture');
 		writeFixture(baselineFixture);
-		const baseline = runSuite(baselineBuild, baselineFixture);
+		const baseline = runSuite(baselineFixture);
 		if (baseline !== 0) failures.push(`BASELINE unmodified copies: exit ${baseline}, expected 0`);
 		console.log(
-			`${baseline === 0 ? 'PASS' : 'FAIL'}  BASE  ${'BASELINE'.padEnd(10)} exit ${baseline} (expected 0)  unmodified scratch oracle and fixture`,
+			`${baseline === 0 ? 'PASS' : 'FAIL'}  BASE  ${'BASELINE'.padEnd(10)} exit ${baseline} (expected 0)  unmodified fixture and Next export`,
 		);
 
-		// A missing oracle is "could not run", not "passed".
-		const emptyBuild = join(root, 'empty/build');
-		mkdirSync(emptyBuild, { recursive: true });
-		const missing = runSuite(emptyBuild);
-		if (missing !== 2) failures.push(`BASELINE missing oracle: exit ${missing}, expected 2`);
-		console.log(
-			`${missing === 2 ? 'PASS' : 'FAIL'}  MISS  ${'BASELINE'.padEnd(10)} exit ${missing} (expected 2)  a missing Svelte build cannot pass`,
-		);
-
-		// A build that emitted one oracle page and not another must also be "could
-		// not run". Before the precheck covered every page, this exited 1 -- and
-		// every DEFECT control below accepts exit 1, so a crashed harness passed
-		// as a working one.
-		const partialBuild = scratchBuild(join(root, 'partial'));
-		rmSync(join(partialBuild, 'ko.html'));
-		const partial = runSuite(partialBuild);
-		if (partial !== 2) failures.push(`BASELINE partial oracle: exit ${partial}, expected 2`);
-		console.log(
-			`${partial === 2 ? 'PASS' : 'FAIL'}  PART  ${'BASELINE'.padEnd(10)} exit ${partial} (expected 2)  a build missing one oracle page cannot pass`,
-		);
-
-		// The same statement for the Next export row 16 reads. The suite's CLI
-		// rejection handler already turns any throw into exit 2, so this is not
-		// the crash net -- it asserts that a missing built page is reported as
-		// "could not run" by a NAMED precheck rather than as an ENOENT stack.
+		// A Next export missing a page row 16 reads is "could not run", not
+		// "passed". The suite's CLI rejection handler already turns any throw into
+		// exit 2, so this is not the crash net -- it asserts that a missing built
+		// page is reported by a NAMED precheck rather than as an ENOENT stack.
 		const partialNextBuild = scratchNextBuild(join(root, 'partial-next'));
 		rmSync(join(partialNextBuild, 'ko', 'system', '3b.html'));
-		const partialNext = runSuite(
-			scratchBuild(join(root, 'partial-next-oracle')),
-			undefined,
-			partialNextBuild,
-		);
+		const partialNext = runSuite(undefined, partialNextBuild);
 		if (partialNext !== 2)
 			failures.push(`BASELINE partial next export: exit ${partialNext}, expected 2`);
 		console.log(
@@ -487,7 +383,7 @@ function main(): number {
 		// the probe child fail to read a corpus at all.
 		const emptyFixture = join(root, 'empty-fixture');
 		mkdirSync(join(emptyFixture, 'next'), { recursive: true });
-		const crashed = runSuite(scratchBuild(join(root, 'crash')), emptyFixture);
+		const crashed = runSuite(emptyFixture);
 		if (crashed !== 2) failures.push(`BASELINE harness crash: exit ${crashed}, expected 2`);
 		console.log(
 			`${crashed === 2 ? 'PASS' : 'FAIL'}  CRSH  ${'BASELINE'.padEnd(10)} exit ${crashed} (expected 2)  an unexpected throw exits 2, not 1`,
@@ -588,20 +484,12 @@ function main(): number {
 
 		for (const control of CONTROLS) {
 			const scratch = join(root, control.id);
-			const svelteBuild = scratchBuild(scratch);
 			let fixtureRoot: string | undefined;
 
 			let nextBuild: string | undefined;
 			let systemFixtureRoot: string | undefined;
 
-			if (control.surface === 'oracle') {
-				const target = join(svelteBuild, control.page!);
-				const before = readFileSync(target, 'utf8');
-				const after = control.apply!(before);
-				if (after === before)
-					throw new Error(`${control.id} changed nothing in ${target}; the control proves nothing`);
-				writeFileSync(target, after);
-			} else if (control.surface === 'next') {
+			if (control.surface === 'next') {
 				nextBuild = scratchNextBuild(scratch);
 				const target = join(nextBuild, control.nextPage!);
 				const before = readFileSync(target, 'utf8');
@@ -624,7 +512,6 @@ function main(): number {
 
 			const expected = control.kind === 'DEFECT' ? 1 : 0;
 			const code = runSuite(
-				svelteBuild,
 				fixtureRoot,
 				nextBuild,
 				systemFixtureRoot,
@@ -641,12 +528,12 @@ function main(): number {
 		rmSync(root, { recursive: true, force: true });
 	}
 
-	// 5 baseline runs (BASE, MISS, PART, NPRT, CRSH) and 6 verdict controls (D12,
-	// D13, I4 for the sitemap; D14, D15, I5 for the fallback's language) sit
-	// outside CONTROLS: the first five assert whole-suite exit codes and the last
-	// six call a pure verdict directly, because those two rows generate their own
+	// 3 baseline runs (BASE, NPRT, CRSH) and 6 verdict controls (D12, D13, I4 for
+	// the sitemap; D14, D15, I5 for the fallback's language) sit outside
+	// CONTROLS: the first three assert whole-suite exit codes and the last six
+	// call a pure verdict directly, because those two rows generate their own
 	// input and no scratch file can doctor it.
-	const total = CONTROLS.length + 11;
+	const total = CONTROLS.length + 9;
 	const defects = CONTROLS.filter((control) => control.kind === 'DEFECT').length + 4;
 	console.log(
 		`\n${total} controls: ${defects} defect (a doctored input must be rejected), ${total - defects} invariance/baseline (an untouched or benign input must be accepted)`,

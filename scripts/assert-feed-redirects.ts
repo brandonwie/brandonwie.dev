@@ -1,63 +1,65 @@
 /**
- * /feed, /ko/feed and `_redirects` — executable parity assertions.
+ * /feed, /ko/feed and `_redirects` -- executable contract assertions.
  *
  *   pnpm migration:feed
- *   pnpm exec tsx scripts/assert-feed-redirects.ts <candidate-dir> <baseline-dir>
+ *   pnpm exec tsx scripts/assert-feed-redirects.ts <candidate-dir>
  *
  * These are the last three C8 surfaces. The whole-site comparator
  * (`migration-verify.ts`) sees all of them -- `_redirects` as a site artifact,
  * the two pages by their field map -- but at Slice 1 it is red for hundreds of
  * unrelated reasons (every unported page), so a green row for these surfaces
- * could not be read off it. This file isolates them so they can be proven now
- * and keep being proven per commit.
+ * could not be read off it. This file isolates them so they keep being proven
+ * per commit.
+ *
+ * Inputs: the Next export (`next/build`), the frozen baseline
+ * `verification/baseline/svelte-e23e808.json`, the tracked `public/_redirects`,
+ * the UI strings in `messages/{en,ko}.json` and the campaign snapshot
+ * `src/lib/data/social-feed.json` that the page renders. The SvelteKit
+ * `build/` is retired and is never read; the rows that used to compare
+ * against it now compare against the source it was rendered from.
  *
  * What "proven" means here, per surface:
  *
- *   _redirects  the exported file exists as a FILE at the baseline path; the
- *               comparator's own site-artifact hash equals the frozen value in
- *               `verification/baseline/svelte-e23e808.json`; and the bytes
- *               equal the Svelte build's bytes. Two rows because the comparator
- *               hashes the file after collapsing whitespace
- *               (`migration-verify.ts`, the `SITE_FILES` loop), so a
+ *   _redirects  the exported file exists as a FILE; the comparator's own
+ *               site-artifact hash equals the frozen value; and the bytes
+ *               equal the tracked source `public/_redirects`. Two content rows
+ *               because the comparator hashes the file after collapsing
+ *               whitespace (`migration-verify.ts`, the `SITE_FILES` loop), so a
  *               whitespace-only drift would pass its row; the byte row is what
  *               catches it.
  *
- *   /feed       the PAGE-OWNED contract of `SocialFeedPage.svelte`, asserted
- *   /ko/feed    the way `assert-article-parity.ts` asserts the article: exact
- *               `<title>`, meta description and canonical (against the frozen
- *               baseline fields); `<html lang>`; the `<h1>`, the `~/path`
- *               crumb and the lede; the campaign list -- count, order, each
- *               campaign's `<time datetime>` and text, cluster id, topic, and
- *               every chip's label, href, class tokens, `target` and `rel`;
- *               the blog chip's locale prefix; and the empty-state paragraph
- *               (present with the same text, or absent, exactly as in the
- *               Svelte build).
+ *   /feed       the PAGE-OWNED contract of the feed hub: exact `<title>`, meta
+ *   /ko/feed    description and canonical (against the frozen baseline);
+ *               `<html lang>`; the `<h1>` (messages + frozen baseline), the
+ *               `~/path` crumb and the lede (messages); the campaign list --
+ *               count, order, each campaign's `<time datetime>` and text,
+ *               cluster id, topic, and every chip's label, href, class tokens,
+ *               `target` and `rel`, expected from the snapshot by the render
+ *               rules below (`expectedCampaigns`); the blog chip's locale
+ *               prefix; and the empty-state paragraph (present with the
+ *               messages text exactly when the snapshot has no campaign).
  *
  * Whole-page `internalLinks` / `textHash` equality with the frozen baseline is
- * NOT asserted: the Next site shell is still partial (fewer nav links than the
- * SvelteKit chrome), so those fields are shell-owned noise until Slice 3. The
- * controls prove that a shell change is invisible here and a page-owned change
- * is not.
- *
- * Expected values come from the SVELTE build (`build/feed.html`,
- * `build/ko/feed.html`) and the frozen baseline JSON, never from the candidate.
- * Both sides are read through the same extractor, so a parsing bug cannot make
- * one side look right by accident; Svelte's scoping hashes and hydration
- * comments are stripped before comparison.
+ * NOT asserted: those fields are shell-owned. The controls prove that a shell
+ * change is invisible here and a page-owned change is not.
  *
  * Three exit codes, as the sibling assertion scripts:
  *
  *   0   every row passes
  *   1   at least one row FAILED
- *   2   the script could not run at all (a build or the baseline is missing)
+ *   2   the script could not run at all (the build or an input is missing)
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BASELINE_JSON = 'verification/baseline/svelte-e23e808.json';
+const MESSAGES_DIR = 'messages';
+const SNAPSHOT_JSON = 'src/lib/data/social-feed.json';
 
 export const REDIRECTS = '_redirects';
+/** The tracked file Cloudflare Pages reads; Next copies it through `next/public`. */
+export const REDIRECTS_SOURCE = join('public', REDIRECTS);
 
 /**
  * `lang` is the one field where the frozen baseline is NOT the oracle.
@@ -141,7 +143,7 @@ function attrOf(tag: string, name: string): string | null {
 	return raw === undefined ? null : decodeEntities(raw);
 }
 
-/** Class tokens minus Svelte's per-component scoping hash (`svelte-1quq4e0`). */
+/** Class tokens minus any Svelte-style scoping hash (`svelte-1quq4e0`). */
 function classTokens(tag: string): string[] {
 	return (attrOf(tag, 'class') ?? '')
 		.split(/\s+/)
@@ -207,10 +209,9 @@ function first(list: Element[]): Element | null {
 	return list.length > 0 ? list[0] : null;
 }
 
-/** The page-owned shape of a built feed page. Works on both SvelteKit and Next output. */
+/** The page-owned shape of a built feed page. */
 export function feedShape(rawHtml: string): FeedShape {
-	// Svelte 5 hydration markers (`<!--[-->`, `<!--]-->`) and React's
-	// `<!--$-->` boundaries carry no content.
+	// React's `<!--$-->` boundaries (and any other comment) carry no content.
 	const html = rawHtml.replace(/<!--[\s\S]*?-->/g, '');
 	const htmlTag = html.match(/<html\b[^>]*>/i)?.[0] ?? '';
 	const title = first(byTag(html, 'title'));
@@ -315,22 +316,102 @@ function diffCampaigns(expected: Campaign[], actual: Campaign[]): string[] {
 	return problems;
 }
 
+interface SnapshotEntry {
+	post_id: string;
+	platform: string;
+	lang: string;
+	format: string;
+	url: string;
+	is_canonical: boolean;
+}
+
+interface SnapshotCampaign {
+	cluster_id: string | null;
+	blog_slug: string | null;
+	topic: string;
+	date: string;
+	entries: SnapshotEntry[];
+}
+
+const PLATFORM_LABEL: Record<string, string> = {
+	linkedin: 'LinkedIn',
+	x: 'X',
+	threads: 'Threads',
+	mastodon: 'Mastodon',
+	bluesky: 'Bluesky',
+};
+
+/**
+ * The campaign list a feed page must render from the snapshot. These are the
+ * render rules the retired SvelteKit `SocialFeedPage.svelte` applied, which
+ * the Svelte-build comparison used to enforce by example: campaigns in
+ * snapshot order; an optional blog chip first (locale-prefixed, same-tab);
+ * then one external chip per entry, labelled by platform ("X Article" for an
+ * `-x-article` post, "<platform> thread" for a thread, " (<lang>)" appended
+ * for a non-English entry), opening in a new tab with `noopener noreferrer`,
+ * and marked `chip--canonical` when it is the campaign's canonical.
+ */
+export function expectedCampaigns(
+	campaigns: SnapshotCampaign[],
+	locale: FeedLocale,
+	blogPostLabel: string,
+): Campaign[] {
+	const prefix = locale === 'ko' ? '/ko' : '';
+	return campaigns.map((campaign) => {
+		const chips: Chip[] = [];
+		if (campaign.blog_slug)
+			chips.push({
+				text: blogPostLabel,
+				href: `${prefix}/posts/${campaign.blog_slug}`,
+				target: null,
+				rel: null,
+				classes: ['chip', 'chip--blog'],
+			});
+		for (const entry of campaign.entries) {
+			const platform = PLATFORM_LABEL[entry.platform] ?? entry.platform;
+			const base =
+				entry.platform === 'x' && entry.post_id.endsWith('-x-article')
+					? 'X Article'
+					: entry.format === 'thread'
+						? `${platform} thread`
+						: platform;
+			chips.push({
+				text: `${base}${entry.lang !== 'en' ? ` (${entry.lang})` : ''}`,
+				href: entry.url,
+				target: '_blank',
+				rel: 'noopener noreferrer',
+				classes: entry.is_canonical ? ['chip', 'chip--canonical'] : ['chip'],
+			});
+		}
+		return {
+			datetime: campaign.date,
+			dateText: campaign.date,
+			clusterId: campaign.cluster_id,
+			topic: campaign.topic,
+			chips,
+		};
+	});
+}
+
+interface PageOracle {
+	frozen: FrozenPage;
+	h1: string;
+	crumb: string;
+	lede: string;
+	empty: string | null;
+	campaigns: Campaign[];
+}
+
 /**
  * Run the C8 remainder rows against a candidate Next export.
  *
  * @param candidateDir - the Next export root (normally `next/build`)
- * @param baselineDir - the SvelteKit build root the page-owned values are read
- *   from (normally `build`); the frozen `_redirects` hash comes from the
- *   baseline JSON, not from this directory
  * @param quiet - suppress the per-row log lines (the controls runner sets it)
- * @returns 0 when every row passes, 1 when at least one row fails, 2 when a
- *   build or the frozen baseline is missing and nothing could be asserted
+ * @returns 0 when every row passes, 1 when at least one row fails, 2 when the
+ *   build or an input (baseline, messages, snapshot, `_redirects` source) is
+ *   missing and nothing could be asserted
  */
-export async function runAssertions(
-	candidateDir: string,
-	baselineDir: string,
-	quiet = false,
-): Promise<number> {
+export async function runAssertions(candidateDir: string, quiet = false): Promise<number> {
 	const say = (...parts: unknown[]): void => {
 		if (!quiet) console.log(...parts);
 	};
@@ -356,41 +437,48 @@ export async function runAssertions(
 		console.error(`FATAL: ${BASELINE_JSON} carries no site hash for ${REDIRECTS}`);
 		return 2;
 	}
-	if (!existsSync(join(baselineDir, REDIRECTS))) {
-		console.error(`FATAL: Svelte baseline ${REDIRECTS} not found: ${join(baselineDir, REDIRECTS)}`);
-		return 2;
-	}
-	const expected = {} as Record<FeedLocale, { svelte: FeedShape; frozen: FrozenPage }>;
-	for (const locale of Object.keys(FEED_PAGES) as FeedLocale[]) {
-		const page = FEED_PAGES[locale];
-		const baseFile = join(baselineDir, page.file);
-		if (!existsSync(baseFile)) {
-			console.error(`FATAL: Svelte baseline page not found: ${baseFile}`);
+	for (const input of [REDIRECTS_SOURCE, SNAPSHOT_JSON, MESSAGES_DIR])
+		if (!existsSync(input)) {
+			console.error(`FATAL: input not found: ${input}`);
 			return 2;
 		}
+	const snapshot = JSON.parse(readFileSync(SNAPSHOT_JSON, 'utf8')) as {
+		campaigns: SnapshotCampaign[];
+	};
+	const expected = {} as Record<FeedLocale, PageOracle>;
+	for (const locale of Object.keys(FEED_PAGES) as FeedLocale[]) {
+		const page = FEED_PAGES[locale];
 		const frozenPage = frozen.pages[page.path];
 		if (!frozenPage) {
 			console.error(`FATAL: ${BASELINE_JSON} carries no page row for ${page.path}`);
 			return 2;
 		}
-		const svelte = feedShape(readFileSync(baseFile, 'utf8'));
-		// The Svelte build on disk and the frozen JSON must agree on the fields
-		// both carry; otherwise there is no single oracle to assert against.
-		const disagree = (
-			[
-				['title', svelte.title, frozenPage.title],
-				['description', svelte.description, frozenPage.description],
-				['canonical', svelte.canonical, frozenPage.canonical],
-				['h1', svelte.h1, frozenPage.h1[0] ?? null],
-			] as const
-		).filter(([, a, b]) => a !== b);
-		if (disagree.length) {
-			console.error(
-				`FATAL: ${baseFile} disagrees with ${BASELINE_JSON} on ${disagree.map(([f]) => f).join(', ')}; the Svelte build is not the frozen baseline`,
-			);
+		const messagesFile = join(MESSAGES_DIR, `${locale}.json`);
+		if (!existsSync(messagesFile)) {
+			console.error(`FATAL: UI strings not found: ${messagesFile}`);
 			return 2;
 		}
-		expected[locale] = { svelte, frozen: frozenPage };
+		const messages = JSON.parse(readFileSync(messagesFile, 'utf8')) as Record<string, string>;
+		const keys = [
+			'social_feed_title',
+			'social_feed_lede',
+			'social_feed_empty',
+			'social_feed_blog_post',
+		];
+		const missing = keys.filter((key) => typeof messages[key] !== 'string');
+		if (missing.length) {
+			console.error(`FATAL: ${messagesFile} lacks ${missing.join(', ')}`);
+			return 2;
+		}
+		const campaigns = expectedCampaigns(snapshot.campaigns, locale, messages.social_feed_blog_post);
+		expected[locale] = {
+			frozen: frozenPage,
+			h1: messages.social_feed_title,
+			crumb: `~${page.path}`,
+			lede: messages.social_feed_lede,
+			empty: campaigns.length === 0 ? messages.social_feed_empty : null,
+			campaigns,
+		};
 	}
 
 	// --- R1-R3  _redirects ------------------------------------------------------
@@ -400,7 +488,7 @@ export async function runAssertions(
 		if (exported) {
 			pass(`R1 ${REDIRECTS} exported`, `file at ${candFile}`);
 			const cand = readFileSync(candFile);
-			const base = readFileSync(join(baselineDir, REDIRECTS));
+			const source = readFileSync(REDIRECTS_SOURCE);
 			const hash = redirectsSiteHash(cand.toString('utf8'));
 			if (hash === frozen.site[REDIRECTS])
 				pass(
@@ -410,14 +498,17 @@ export async function runAssertions(
 			else
 				fail(
 					`R2 ${REDIRECTS} comparator hash`,
-					`site-artifact hash ${hash} != frozen ${frozen.site[REDIRECTS]} (Svelte build hashes ${redirectsSiteHash(base.toString('utf8'))})`,
+					`site-artifact hash ${hash} != frozen ${frozen.site[REDIRECTS]} (the tracked source hashes ${redirectsSiteHash(source.toString('utf8'))})`,
 				);
-			if (cand.equals(base))
-				pass(`R3 ${REDIRECTS} exact bytes`, `${cand.length} bytes identical to the Svelte build`);
+			if (cand.equals(source))
+				pass(
+					`R3 ${REDIRECTS} exact bytes`,
+					`${cand.length} bytes identical to the tracked ${REDIRECTS_SOURCE}`,
+				);
 			else
 				fail(
 					`R3 ${REDIRECTS} exact bytes`,
-					`candidate ${cand.length} bytes, Svelte ${base.length}; ${firstDifference(base.toString('utf8'), cand.toString('utf8'))}`,
+					`candidate ${cand.length} bytes, ${REDIRECTS_SOURCE} ${source.length}; ${firstDifference(source.toString('utf8'), cand.toString('utf8'))}`,
 				);
 		} else {
 			fail(`R1 ${REDIRECTS} exported`, `no FILE at ${candFile} (a directory or nothing)`);
@@ -431,7 +522,8 @@ export async function runAssertions(
 	for (const locale of Object.keys(FEED_PAGES) as FeedLocale[]) {
 		const page = FEED_PAGES[locale];
 		const id = (): string => `P${index++}`;
-		const { svelte, frozen: frozenPage } = expected[locale];
+		const oracle = expected[locale];
+		const frozenPage = oracle.frozen;
 		const candFile = join(candidateDir, page.file);
 		const exported = existsSync(candFile) && statSync(candFile).isFile();
 		if (exported) pass(`${id()} ${page.path} exported`, `file at ${candFile}`);
@@ -478,25 +570,28 @@ export async function runAssertions(
 				);
 		}
 
-		// header: h1 (frozen + Svelte agree), crumb and lede (Svelte build)
+		// header: h1 (messages, and the frozen baseline's h1), crumb (the path)
+		// and lede (messages)
 		{
 			const problems: string[] = [];
-			if (cand.h1 !== svelte.h1) problems.push(`<h1> ${show(cand.h1)} != ${show(svelte.h1)}`);
-			if (cand.crumb !== svelte.crumb)
-				problems.push(`crumb ${show(cand.crumb)} != ${show(svelte.crumb)}`);
-			if (cand.lede !== svelte.lede)
-				problems.push(`lede ${show(cand.lede)} != ${show(svelte.lede)}`);
+			if (cand.h1 !== oracle.h1) problems.push(`<h1> ${show(cand.h1)} != ${show(oracle.h1)}`);
+			if (cand.h1 !== (frozenPage.h1[0] ?? null))
+				problems.push(`<h1> ${show(cand.h1)} != frozen ${show(frozenPage.h1[0] ?? null)}`);
+			if (cand.crumb !== oracle.crumb)
+				problems.push(`crumb ${show(cand.crumb)} != ${show(oracle.crumb)}`);
+			if (cand.lede !== oracle.lede)
+				problems.push(`lede ${show(cand.lede)} != ${show(oracle.lede)}`);
 			if (problems.length === 0)
 				pass(
 					`${id()} ${page.path} header`,
-					`h1 ${show(cand.h1)}, crumb ${show(cand.crumb)}, lede (${cand.lede?.length ?? 0} chars) equal the Svelte build`,
+					`h1 ${show(cand.h1)}, crumb ${show(cand.crumb)}, lede (${cand.lede?.length ?? 0} chars) equal messages/${locale}.json and the path`,
 				);
 			else fail(`${id()} ${page.path} header`, problems.join('; '));
 		}
 
 		// campaigns: the ordered list, every chip, and the blog chip's locale prefix
 		{
-			const problems = diffCampaigns(svelte.campaigns, cand.campaigns);
+			const problems = diffCampaigns(oracle.campaigns, cand.campaigns);
 			const prefix = `${locale === 'ko' ? '/ko' : ''}/posts/`;
 			cand.campaigns.forEach((campaign, i) =>
 				campaign.chips.forEach((chip, j) => {
@@ -510,16 +605,17 @@ export async function runAssertions(
 			if (problems.length === 0)
 				pass(
 					`${id()} ${page.path} campaigns`,
-					`${cand.campaigns.length} campaign(s), ${chips} chip(s): order, dates, ids, topics, labels, hrefs, classes, target and rel equal the Svelte build`,
+					`${cand.campaigns.length} campaign(s), ${chips} chip(s): order, dates, ids, topics, labels, hrefs, classes, target and rel equal ${SNAPSHOT_JSON}`,
 				);
 			else fail(`${id()} ${page.path} campaigns`, problems.join('; '));
 		}
 
-		// empty state: present with the same text, or absent, exactly as in Svelte
+		// empty state: present with the messages text exactly when the snapshot
+		// has no campaign, absent otherwise
 		{
 			const problems: string[] = [];
-			if (cand.empty !== svelte.empty)
-				problems.push(`empty-state ${show(cand.empty)} != ${show(svelte.empty)}`);
+			if (cand.empty !== oracle.empty)
+				problems.push(`empty-state ${show(cand.empty)} != ${show(oracle.empty)}`);
 			if ((cand.empty !== null) !== (cand.campaigns.length === 0))
 				problems.push(
 					`empty-state ${cand.empty === null ? 'absent' : 'present'} with ${cand.campaigns.length} campaign(s)`,
@@ -528,8 +624,8 @@ export async function runAssertions(
 				pass(
 					`${id()} ${page.path} empty state`,
 					cand.empty === null
-						? `absent on both sides (${cand.campaigns.length} campaign(s) rendered)`
-						: `${show(cand.empty)} on both sides`,
+						? `absent (${cand.campaigns.length} campaign(s) rendered)`
+						: `${show(cand.empty)} with an empty snapshot`,
 				);
 			else fail(`${id()} ${page.path} empty state`, problems.join('; '));
 		}
@@ -544,13 +640,11 @@ export async function runAssertions(
 	say(`\nRESULT: ${rows.length - failed.length} pass, ${failed.length} fail`);
 	if (failed.length) return 1;
 	say(
-		'Scope: _redirects and the page-owned contract of /feed and /ko/feed. Shell-owned internalLinks/textHash parity for these pages closes with the site shell in Slice 3.',
+		'Scope: _redirects and the page-owned contract of /feed and /ko/feed. Shell-owned internalLinks/textHash are not asserted here.',
 	);
 	return 0;
 }
 
 if (process.argv[1]?.endsWith('assert-feed-redirects.ts')) {
-	runAssertions(process.argv[2] ?? 'next/build', process.argv[3] ?? 'build').then((code) =>
-		process.exit(code),
-	);
+	runAssertions(process.argv[2] ?? 'next/build').then((code) => process.exit(code));
 }

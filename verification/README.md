@@ -1,26 +1,28 @@
 # Parity verification
 
 Slice 0 of the Next.js migration. Nothing here is Next.js code; this is the
-evidence apparatus every later slice is accepted against.
+evidence apparatus every later slice was accepted against. Since SvelteKit was
+retired (2026-09-29) it guards the live Next output: the frozen Svelte baseline
+is the permanent oracle, and nothing can re-measure it any more.
 
-| Path                                      | What it is                                                             |
-| ----------------------------------------- | ---------------------------------------------------------------------- |
-| `baseline/svelte-e23e808.json`            | The SvelteKit baseline captured from a fresh production build          |
-| `exception-ledger.json`                   | Approved differences. Closed format, empty until something is approved |
-| `../scripts/migration-verify.ts`          | The comparator                                                         |
-| `../scripts/migration-verify-controls.ts` | Its negative controls                                                  |
+| Path                                      | What it is                                                                 |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| `baseline/svelte-e23e808.json`            | The SvelteKit baseline captured from a fresh production build              |
+| `exception-ledger.json`                   | Approved differences between `next/build` and the baseline (closed format) |
+| `../scripts/migration-verify.ts`          | The comparator                                                             |
+| `../scripts/migration-verify-controls.ts` | Its negative controls                                                      |
 
 ```bash
-pnpm migration:capture    # RE-MEASURE the baseline from build/ -- see the rule below
-pnpm migration:controls   # prove the harness fails closed
-pnpm migration:projection # prove the committed baseline is exactly the frozen measurement
-pnpm migration:verify compare verification/baseline/svelte-e23e808.json build
+pnpm migration:controls    # prove the harness fails closed (against a capture of next/build)
+pnpm migration:projection  # prove the committed baseline is exactly the frozen measurement
+pnpm migration:verify:next # compare next/build with the baseline through the ledger
 ```
 
 **Widening the schema is a projection, never a re-capture.** When a new field is
 added to `PageFields`, graft it onto the committed baseline and change nothing
-else. Do not run `migration:capture` to get it: the SvelteKit build is not
-byte-reproducible, and a re-capture rewrites the `bundle` block — it moved by
+else. Never re-capture to get it (the `migration:capture` script was retired
+with SvelteKit, and the Svelte build no longer exists): the SvelteKit build was
+not byte-reproducible, and a re-capture rewrote the `bundle` block — it moved by
 three bytes once and nothing caught it, because `bundle` is RECORDED rather than
 compared and the AC9 weight evidence in
 [`./thresholds.md`](./thresholds.md) reads it. `pnpm migration:projection`
@@ -199,9 +201,12 @@ run and every rebuild as a change — and controls 6 and 8 mark exactly where th
 blindness starts, while controls 9 and 10 prove the feed and the 404 page are
 still compared.
 
-Forty controls run via `pnpm migration:controls`, in two kinds that prove
-opposite things. **Defect controls** (30) must exit 1: the harness rejects a
-known-bad input. **Invariance controls** (10) must exit 0: the harness ignores a
-benign change on purpose. Every invariance control is paired with a defect
+Fifty-six controls run via `pnpm migration:controls`. Since the SvelteKit
+retirement they start from a capture of `next/build` taken inside the run and an
+empty ledger, so every control differs from its starting state only by its own
+injection. They come in two kinds that prove opposite things. **Defect
+controls** (39) must exit 1: the harness rejects a known-bad input.
+**Invariance controls** (17) must exit 0: the harness ignores a benign change on
+purpose. Every invariance control is paired with a defect
 control over the same surface, so a blindness can never be the only thing
 proven about a field.

@@ -1,42 +1,43 @@
 /**
- * Differential typography check against the installed mdsvex.
+ * Discrimination of the typography preprocessor's unsupported-markup detector.
  *
  *   pnpm migration:typography:oracle
  *
- * `pnpm migration:typography` compares 334 real posts, which is broad and
- * blind in one direction: it can only see shapes the corpus happens to contain.
- * The bracket-span rule that reproduces mdsvex's text-node boundaries was
- * written from ONE such shape, scored 334/334, and was still wrong — a reviewer
- * found three literal-text shapes it split where mdsvex does not:
- * `[[bot]]'s`, `foo[]'s` and `[a[b]c]'s`.
+ * `pnpm migration:typography` asserts that `unsupportedMarkupCount()` stays at
+ * zero across the corpus. That assertion is only as good as the detector behind
+ * it, `hasUnsupportedMarkup` in `remark-smart-typography.ts`, so this suite
+ * checks the detector in both directions:
  *
- * So this runs fixtures through mdsvex ITSELF and through the replacement
- * pipeline, and compares the visible text. mdsvex is still a devDependency of
- * the SvelteKit app; while both stacks exist it is available as an oracle, and
- * an oracle beats an assertion about an oracle. It is a TEST-ONLY dependency
- * here: nothing in `next/` imports mdsvex at build time.
+ *   detection        every shape in `UNSUPPORTED_MARKUP_FIXTURES` is flagged —
+ *                    raw HTML nodes, `svelte:*` tag openers, and template
+ *                    directives, which are three different detection rules.
+ *   false positives  every ordinary fixture, including brace shapes that look
+ *                    like directives, is left unflagged. A detector that
+ *                    answered "yes" to everything would pass detection alone.
  *
- * Exit 0 = every fixture renders identically. Exit 1 = at least one does not,
- * or the fixture set lost the shapes it exists to cover. Exit 2 = it could not
- * run.
+ * HISTORY. The file name is historical. Until the SvelteKit app was retired it
+ * also rendered `FIXTURES` through the installed `mdsvex` and through the Next
+ * pipeline and required identical visible text — a differential oracle for the
+ * bracket-boundary rules. mdsvex no longer renders anything, so that comparison
+ * (and its `REQUIRED_SHAPES` coverage guard and smart-character floor) was
+ * dropped. The detector rows never depended on mdsvex and are what remains.
+ *
+ * Exit 0 = the detector discriminates. Exit 1 = it misses a shape or flags an
+ * ordinary one.
  */
-import { compile } from 'mdsvex';
-import { renderToStaticMarkup } from 'react-dom/server';
-
-import { renderMarkdown } from '../src/markdown/pipeline';
 import { hasUnsupportedMarkup } from '../src/markdown/plugins/remark-smart-typography';
 
+/** A detector under test: true when a source carries unsupported markup. */
+export type Detector = (markdown: string) => boolean;
+
 /**
- * Fixtures, and why each one is here.
+ * Ordinary markdown the detector must leave unflagged.
  *
- * The first four are the boundary cases: one that IS a shortcut reference in
- * remark-parse 8 and three that are not. The rest cover the educators
- * themselves and the shapes around a reference that could plausibly change a
- * quote's direction.
+ * These were the differential oracle's fixtures: bracket-label shapes around an
+ * apostrophe, the educators' own inputs, and references that could plausibly
+ * change a quote's direction. None carries raw HTML or a template directive.
  */
 export const FIXTURES: string[] = [
-	// Round 4: labels with inline children or an escape. Each of these places the
-	// apostrophe differently, and no bracket regex can see the difference.
 	"[a\\]b]'s review",
 	"[*a*]'s review",
 	"[**a**]'s review",
@@ -70,39 +71,18 @@ export const FIXTURES: string[] = [
 ];
 
 /**
- * Shapes reviewers have demonstrated. Losing any of them from the fixture set is
- * a defect in the fixture set, not a reason for the check to pass.
+ * Unsupported markup: shapes the preprocessor refuses rather than educates.
  *
- * The first three are shapes a bracket regex mis-split. The last three are the
- * ones that killed the regex approach outright: a label with inline children or
- * an escape ends its node somewhere no pattern over the raw text can predict.
- */
-const REQUIRED_SHAPES = [
-	"[[bot]]'s",
-	"foo[]'s",
-	"[a[b]c]'s",
-	"[*a*]'s",
-	"[**a**]'s",
-	'[`a`]',
-	"[a\\]b]'s",
-];
-
-/**
- * Unsupported markup: shapes whose mdsvex education boundaries are NOT reproduced.
- *
- * These are not fixtures in the ordinary sense, because they do not agree and
- * cannot be made to agree by reproducing remark-parse 8 alone: mdsvex runs its
- * own parser extensions before smartypants, and around raw HTML they change
- * which text is eligible for education. Measured divergences:
+ * Raw HTML and Svelte-template syntax change which text is eligible for
+ * education, and the preprocessor does not claim rules for them. The original
+ * divergences were measured against mdsvex, which parsed these specially:
  *
  *   `> <span>b</span> c -- d`   mdsvex "b c -- d"   here "b c — d"
  *   `<span>a</span>'s b`        mdsvex "a's b"      here "a’s b"
  *   `<svelte:component …>a -- b` mdsvex "a -- b"    here "a — b"
  *
- * What IS asserted is that every one of them is DETECTED as html-bearing, so
- * the corpus gate refuses a post that introduces raw HTML rather than educating
- * it on rules this preprocessor cannot claim to match. The corpus carries zero
- * raw-HTML nodes across all 334 posts today.
+ * What IS asserted is that every one of them is DETECTED, so the corpus gate
+ * refuses a post that introduces such markup. The corpus carries none today.
  */
 export const UNSUPPORTED_MARKUP_FIXTURES: string[] = [
 	'> <span>b</span> c -- d',
@@ -133,10 +113,9 @@ export const UNSUPPORTED_MARKUP_FIXTURES: string[] = [
 /**
  * Brace shapes that are ORDINARY prose and must stay unflagged.
  *
- * `{braces}` and a JSON object are not Svelte directives, mdsvex agrees with the
- * candidate on both, and a directive rule that swept them up would fail posts
- * for writing about JSON. Checked by `runFalsePositiveCheck` alongside the
- * thirty ordinary fixtures.
+ * `{braces}` and a JSON object are not template directives, and a directive
+ * rule that swept them up would fail posts for writing about JSON. Checked by
+ * `runFalsePositiveCheck` alongside the thirty ordinary fixtures.
  */
 export const ORDINARY_BRACE_FIXTURES: string[] = [
 	'ordinary {braces} a -- b',
@@ -144,17 +123,17 @@ export const ORDINARY_BRACE_FIXTURES: string[] = [
 ];
 
 /**
- * Every fixture must be seen as html-bearing. Exit 1 if any is not.
+ * Every fixture must be seen as unsupported. Exit 1 if any is not.
  *
- * Exported so the controls can run it over fixtures that carry NO raw HTML and
- * require a failure — a detector that answers "yes" to everything would pass
- * this assertion while proving nothing.
+ * The detector is injectable so the controls can hand over a defective one and
+ * require a failure.
  */
 export function runUnsupportedMarkupDetection(
 	fixtures: string[] = UNSUPPORTED_MARKUP_FIXTURES,
 	quiet = false,
+	detect: Detector = hasUnsupportedMarkup,
 ): number {
-	const missed = fixtures.filter((source) => !hasUnsupportedMarkup(source));
+	const missed = fixtures.filter((source) => !detect(source));
 	if (missed.length) {
 		if (!quiet) {
 			for (const source of missed) console.error(`NOT DETECTED ${JSON.stringify(source)}`);
@@ -171,13 +150,16 @@ export function runUnsupportedMarkupDetection(
  * The NEGATIVE assertion: every one of these must be left unflagged.
  *
  * The positive assertion above is satisfied by a detector that answers "yes" to
- * everything, and the first version of this control only proved that AT LEAST
- * ONE ordinary fixture was unflagged. This requires ALL of them, so a detector
- * that started guessing would fail here even while every real divergence stayed
+ * everything. This requires ALL ordinary fixtures to stay unflagged, so a
+ * detector that started guessing fails here even while every real shape stays
  * caught.
  */
-export function runFalsePositiveCheck(fixtures: string[] = FIXTURES, quiet = false): number {
-	const flagged = fixtures.filter((source) => hasUnsupportedMarkup(source));
+export function runFalsePositiveCheck(
+	fixtures: string[] = [...FIXTURES, ...ORDINARY_BRACE_FIXTURES],
+	quiet = false,
+	detect: Detector = hasUnsupportedMarkup,
+): number {
+	const flagged = fixtures.filter((source) => detect(source));
 	if (flagged.length) {
 		if (!quiet) {
 			for (const source of flagged) console.error(`FALSE POSITIVE ${JSON.stringify(source)}`);
@@ -188,94 +170,26 @@ export function runFalsePositiveCheck(fixtures: string[] = FIXTURES, quiet = fal
 	return 0;
 }
 
-export function visibleText(markup: string): string {
-	return markup
-		.replace(/<script[\s\S]*?<\/script>/g, '')
-		.replace(/<[^>]+>/g, '')
-		.replace(/\s+/g, ' ')
-		.trim();
-}
-
-export async function renderBoth(source: string): Promise<{ mdsvex: string; candidate: string }> {
-	const compiled = await compile(source);
-	const rendered = await renderMarkdown(source);
-	return {
-		mdsvex: visibleText(compiled?.code ?? ''),
-		candidate: visibleText(renderToStaticMarkup(rendered.content)),
-	};
-}
-
-export async function runOracle(
-	fixtures: string[] = FIXTURES,
-	mutate: (candidate: string, source: string) => string | Promise<string> = (candidate) =>
-		candidate,
-	quiet = false,
-): Promise<number> {
-	const say = (...parts: unknown[]): void => {
-		if (!quiet) console.log(...parts);
-	};
-
-	// Only the full set carries the coverage obligation. A control deliberately
-	// runs a SUBSET -- the fixtures that killed one specific rejected rule -- and
-	// demanding full coverage there would abort the control before its mutation
-	// ever ran, which is how this guard first reported two controls as no-ops.
-	if (fixtures === FIXTURES) {
-		for (const shape of REQUIRED_SHAPES) {
-			if (!fixtures.some((f) => f.includes(shape))) {
-				console.error(`FATAL: the fixture set no longer covers ${JSON.stringify(shape)}`);
-				return 2;
-			}
-		}
-	}
-
-	const failures: string[] = [];
-	let smartCharacters = 0;
-	for (const source of fixtures) {
-		const { mdsvex, candidate } = await renderBoth(source);
-		smartCharacters += [...mdsvex].filter((ch) => '—–‘’“”…'.includes(ch)).length;
-		const actual = await mutate(candidate, source);
-		if (mdsvex === actual) continue;
-		failures.push(
-			`${JSON.stringify(source)}\n     mdsvex    ${JSON.stringify(mdsvex)}\n     candidate ${JSON.stringify(actual)}`,
-		);
-	}
-
-	// One smart character per fixture, scaled rather than a fixed floor: the
-	// controls run three-fixture subsets, and a fixed floor reported those runs
-	// as vacuous instead of as the failures they are meant to produce.
-	const floor = Math.max(1, fixtures.length);
-	if (smartCharacters < floor) {
-		console.error(
-			`FATAL: ${fixtures.length} fixture(s) produce only ${smartCharacters} smart character(s), expected at least ${floor}; the comparison is vacuous`,
-		);
-		return 2;
-	}
-
-	say(`\n${fixtures.length} fixtures compared against mdsvex, ${smartCharacters} smart characters`);
-	if (failures.length) {
-		for (const line of failures) console.error(`ORACLE MISMATCH ${line}`);
-		console.error(`RESULT: ${failures.length}/${fixtures.length} fixture(s) differ`);
-		return 1;
-	}
-	// The raw-HTML shapes are checked for DETECTION, not for agreement, and only
-	// on the full run: a control driving a fixture subset is testing one rejected
-	// rule and has no business asserting the detector too.
-	if (fixtures === FIXTURES) {
-		if (runUnsupportedMarkupDetection(UNSUPPORTED_MARKUP_FIXTURES, quiet) !== 0) {
+/** Both directions, over the full fixture sets. */
+export function runDetectorChecks(detect: Detector = hasUnsupportedMarkup, quiet = false): number {
+	if (runUnsupportedMarkupDetection(UNSUPPORTED_MARKUP_FIXTURES, quiet, detect) !== 0) {
+		if (!quiet) {
 			console.error(
 				'RESULT: unsupported-markup detection failed; the corpus gate would educate it silently',
 			);
-			return 1;
 		}
-		if (runFalsePositiveCheck([...FIXTURES, ...ORDINARY_BRACE_FIXTURES], quiet) !== 0) {
-			console.error('RESULT: the detector flags ordinary markdown; it would block valid posts');
-			return 1;
-		}
+		return 1;
 	}
-	say(`RESULT: ${fixtures.length}/${fixtures.length} fixtures render identically`);
+	if (runFalsePositiveCheck([...FIXTURES, ...ORDINARY_BRACE_FIXTURES], quiet, detect) !== 0) {
+		if (!quiet) {
+			console.error('RESULT: the detector flags ordinary markdown; it would block valid posts');
+		}
+		return 1;
+	}
+	if (!quiet) console.log('RESULT: the unsupported-markup detector discriminates');
 	return 0;
 }
 
 if (process.argv[1]?.endsWith('assert-typography-oracle.ts')) {
-	process.exit(await runOracle());
+	process.exit(runDetectorChecks());
 }

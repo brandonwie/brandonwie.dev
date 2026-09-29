@@ -26,8 +26,8 @@
  *   - Every wrapper must still be a `deno run …` line, and every `deno run`
  *     wrapper / deno.json task must have a row: an unlisted surface fails the
  *     harness closed instead of silently escaping the contract.
- *   - `dev` and `preview` are bounded proofs: start, poll `/` on the vite
- *     port until an HTTP response or the timeout, record the status and the
+ *   - `dev` and `preview` are bounded proofs: start, poll `/` on the port
+ *     the script names until an HTTP response or the timeout, record the status and the
  *     elapsed time, stop the process group (SIGTERM, then SIGKILL after a
  *     grace period), confirm the port is free. `preview` needs `build`, and
  *     `check` needs the Paraglide types `build` generates, so T2 runs first.
@@ -163,7 +163,7 @@ export interface Options {
 	threeB?: string;
 	/** Scratch root for the copies write-capable rows run against. */
 	scratchRoot?: string;
-	/** Ports the bounded dev/preview proofs poll. Default: parsed from vite.config.ts. */
+	/** Ports the bounded dev/preview proofs poll. Default: parsed from the root dev/preview scripts. */
 	ports?: { dev?: number; preview?: number };
 	/** How long the health poll waits for the first HTTP response. */
 	healthTimeoutMs?: number;
@@ -265,7 +265,7 @@ function run(
 ): Promise<Captured> {
 	return new Promise((resolvePromise) => {
 		// Detached for the same reason runServer is: `pnpm` and `deno task` fork
-		// grandchildren (deno, vite, svelte-check) that inherit these pipes.
+		// grandchildren (deno, next, tsc) that inherit these pipes.
 		// SIGKILL on the direct child alone leaves a grandchild holding stdout
 		// open, 'close' never fires, and the harness hangs instead of failing.
 		const child = spawn(cmd, args, {
@@ -490,11 +490,20 @@ function readJson(file: string): Record<string, unknown> {
 	return JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
 }
 
-function parseVitePorts(repoRoot: string): { dev: number; preview: number } {
-	const file = join(repoRoot, 'vite.config.ts');
-	const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
-	const dev = text.match(/server:\s*\{[^}]*?port:\s*(\d+)/)?.[1];
-	const preview = text.match(/preview:\s*\{[^}]*?port:\s*(\d+)/)?.[1];
+/**
+ * The ports the bounded proofs poll come from the root scripts that open them:
+ * `dev` passes `--port <n>` to `next dev`, and `preview` serves `next/build`
+ * with `serve-build.mjs <dir> <port>`. The fallbacks are the documented ports; a
+ * script that stops naming its port then listens elsewhere, and T1/T3 fail.
+ */
+function parseRuntimePorts(repoRoot: string): { dev: number; preview: number } {
+	const file = join(repoRoot, 'package.json');
+	const scripts = (existsSync(file) ? (readJson(file).scripts ?? {}) : {}) as Record<
+		string,
+		string
+	>;
+	const dev = scripts.dev?.match(/--port[= ](\d+)/)?.[1];
+	const preview = scripts.preview?.match(/serve-build\.mjs\s+\S+\s+(\d+)/)?.[1];
 	return { dev: dev ? Number(dev) : 5173, preview: preview ? Number(preview) : 4173 };
 }
 
@@ -619,8 +628,11 @@ function buildSurfaces(ctx: SurfaceContext): Surface[] {
 		task(
 			'T5',
 			'check',
-			'exit 0 + svelte-check 0 errors (machine line when piped; check:next is tsc --noEmit, silent on success)',
-			/svelte-check found 0 errors|COMPLETED \d+ FILES 0 ERRORS/,
+			'exit 0 + Paraglide compile line (check:next compiles messages, then tsc --noEmit and check:scripts are silent on success)',
+			// Paraglide's success line, observed with @inlang/paraglide-js 2.20.2
+			// (next/package.json). `paraglide-js compile` prints it on every run,
+			// including this one right after T2's build. Re-check it on upgrade.
+			/Successfully compiled inlang project/,
 			{ timeoutMs: minutes(10) },
 		),
 		task('T1', 'dev', bounded(ctx.ports.dev), /./, { server: { port: ctx.ports.dev } }),
@@ -734,10 +746,10 @@ export async function runAssertions(options: Options): Promise<number> {
 		(options.threeB ?? process.env.THREEB_PATH) || join(homedir(), 'dev', '3b'),
 	);
 	const scratchRoot = resolve(options.scratchRoot ?? join(repoRoot, 'tmp', 'c3-scratch'));
-	const vitePorts = parseVitePorts(repoRoot);
+	const runtimePorts = parseRuntimePorts(repoRoot);
 	const ports = {
-		dev: options.ports?.dev ?? vitePorts.dev,
-		preview: options.ports?.preview ?? vitePorts.preview,
+		dev: options.ports?.dev ?? runtimePorts.dev,
+		preview: options.ports?.preview ?? runtimePorts.preview,
 	};
 	const healthTimeoutMs = options.healthTimeoutMs ?? 60_000;
 	const gitRoot = resolve(options.gitRoot ?? repoRoot);

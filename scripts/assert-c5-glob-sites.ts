@@ -1,60 +1,59 @@
 /**
- * C5 -- the seventeen `import.meta.glob` call sites, proven through consumers.
+ * C5 -- the Next data layer that replaced the seventeen `import.meta.glob`
+ * call sites, proven through its consumers.
  *
  *   pnpm migration:c5
- *   pnpm migration:c5 --svelte-build <dir>
  *
- * WHAT COUNTS AS PROOF HERE. An inventory row saying "site 5 becomes
- * `listPostsForLocale('en')`" asserts nothing: the strategy can be right and
- * the port still drop a draft filter, sort the other way, or key the Korean
- * fallback by path instead of slug. Every row below therefore compares the
- * Next data layer against something produced independently of it:
+ * Row ids keep the numbering of the retired SvelteKit call sites they were
+ * written against (`site 7  rss.xml/+server.ts:25`, ...). Those files no longer
+ * exist; the ids are stable names for the Next behavior that replaced them.
  *
- *   ORACLE ROWS   the Svelte build's own exported HTML. `build/posts.html`
- *                 lists 167 posts in the order `src/routes/posts/+page.ts`
- *                 sorted them; if the port's order differs by one pair, the
- *                 row goes red. The pages are the real downstream consumers
- *                 of five of the seven unported call sites, and they are read
- *                 as bytes, not re-derived.
+ * WHAT COUNTS AS PROOF HERE. A row saying "the list comes from
+ * `listPostsForLocale('en')`" asserts nothing: the data layer can still drop a
+ * draft filter, sort the other way, or key the Korean fallback by path instead
+ * of slug. The rows therefore exercise the real modules through a consumer:
  *
- *   FIXTURE ROWS  three semantics the live corpus cannot show, because it has
- *                 167 English posts, 167 Korean posts with the SAME slugs, and
- *                 zero drafts: draft filtering, the Korean-to-English fallback,
- *                 and its slug-keyed (not path-keyed) deduplication. Each runs
- *                 the real modules against a temporary corpus in a child whose
- *                 working directory is the fixture, which is how
+ *   CORPUS ROWS   the live corpus through the lists, feeds, sitemap and
+ *                 article loader: locale selection, feed order against list
+ *                 order, sitemap URLs and hreflang alternates, and the
+ *                 translation flag.
+ *
+ *   FIXTURE ROWS  semantics the live corpus cannot show, because it has 167
+ *                 English posts, 167 Korean posts with the SAME slugs, and zero
+ *                 drafts: draft filtering, the Korean-to-English fallback, its
+ *                 slug-keyed (not path-keyed) deduplication, the fallback
+ *                 article's declared language, and the series-title fallback.
+ *                 Each runs the real modules against a temporary corpus in a
+ *                 child whose working directory is the fixture, which is how
  *                 `next/scripts/assert-posts-controls.ts` already isolates
  *                 `CONTENT_ROOT`.
  *
- *   S2 ROWS       slug derivation over all 334 source files, plus the forced
+ *   S2 ROWS       slug derivation over every source file, plus the forced
  *                 failure: a path that yields an empty slug must raise a
  *                 diagnostic naming it, never a `<loc>` or `<guid>` pointing at
  *                 the list page. That half is shared C5/C8 evidence.
  *
- * The seventeenth call site, `src/routes/ko/system/3b/+page.ts:11`, is read
- * from the BUILT Korean page: its blog-series titles have to survive the
- * localization merge into `next/build/ko/system/3b.html`, which is the only
- * place that call site's output becomes observable.
+ *   SITE 16 ROWS  the Korean /system/3b page's blog-series titles, read from
+ *                 the BUILT `next/build/ko/system/3b.html`, the only place the
+ *                 localization merge becomes observable.
+ *
+ * HISTORY. Until the SvelteKit app was retired, four ORACLE rows (`site 2`,
+ * `site 3`, `site 4`, `sites 5-6`) compared the post lists against the Svelte
+ * build's exported pages in `build/`, and an S2 row recomputed the twelve slug
+ * derivation sites from `src/routes`. Both oracles are gone, so those rows and
+ * their controls were dropped. Everything they did not depend on is kept.
  *
  * Three exit codes, as the sibling assertion scripts:
  *
  *   0   every row passes
  *   1   at least one row FAILED
- *   2   the script could not run at all (a build is missing)
+ *   2   the script could not run at all (the Next export is missing)
  */
 import { spawnSync } from 'node:child_process';
-import {
-	existsSync,
-	mkdirSync,
-	mkdtempSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { SITE_URL } from '../src/lib/seo.ts';
@@ -69,76 +68,21 @@ const PROBE_ENV = 'C5_FIXTURE_PROBE';
 const MIXED_CASE_SLUGS = ['updatedAt-staleness-guard', 'test-L-vs-realpath-symlink-detection'];
 
 /**
- * The one slug-derivation expression, written the same way at all twelve sites.
+ * The reference slug rule: the file's basename without its `.md` extension.
  *
- * S2's positive half is "all twelve slug-derivation sites enumerated, each
- * producing the expected slug from a real path" (`plan.md:677`). Enumerating
- * them as a hard-coded list would prove nothing on its own -- a thirteenth site
- * could appear and the list would still pass -- so the row RECOMPUTES the set
- * from source and compares it to this one, then runs the source expression
- * itself against every real path.
+ * This is the expression all twelve retired SvelteKit derivation sites used,
+ * `.split('/').pop()?.replace('.md', '') ?? ''`, kept here as an independent
+ * statement of the URL contract so the S2 row compares the port against it on
+ * every real path rather than against itself.
  */
-const SVELTE_SLUG_EXPRESSION = ".split('/').pop()?.replace('.md', '') ?? ''";
-
-/** The twelve sites, as `plan.md:612-618` enumerates them. */
-const SLUG_SITES = [
-	'src/routes/+layout.ts:30',
-	'src/routes/+page.ts:24',
-	'src/routes/ko/+page.ts:22',
-	'src/routes/ko/posts/+page.ts:28',
-	'src/routes/ko/posts/+page.ts:37',
-	'src/routes/ko/rss.xml/+server.ts:38',
-	'src/routes/ko/rss.xml/+server.ts:53',
-	'src/routes/ko/system/3b/+page.ts:19',
-	'src/routes/posts/+page.ts:16',
-	'src/routes/rss.xml/+server.ts:30',
-	'src/routes/sitemap.xml/+server.ts:33',
-	'src/routes/sitemap.xml/+server.ts:40',
-] as const;
-
-/** The source expression, evaluated exactly as the twelve sites evaluate it. */
-function svelteSlug(pathOrGlobKey: string): string {
+function referenceSlug(pathOrGlobKey: string): string {
 	return pathOrGlobKey.split('/').pop()?.replace('.md', '') ?? '';
-}
-
-/** Every `file:line` under `src/` whose line holds the derivation expression. */
-function findSlugSites(repoRoot: string): string[] {
-	const found: string[] = [];
-	const walk = (dir: string) => {
-		for (const entry of readdirSync(dir, { withFileTypes: true })) {
-			const full = join(dir, entry.name);
-			if (entry.isDirectory()) {
-				walk(full);
-			} else if (/\.(ts|svelte|js)$/.test(entry.name)) {
-				readFileSync(full, 'utf8')
-					.split('\n')
-					.forEach((line, index) => {
-						if (line.includes(SVELTE_SLUG_EXPRESSION))
-							found.push(`${relative(repoRoot, full)}:${index + 1}`);
-					});
-			}
-		}
-	};
-	walk(join(repoRoot, 'src'));
-	return found.sort();
 }
 
 interface Row {
 	row: string;
 	status: 'PASS' | 'FAIL';
 	detail: string;
-}
-
-/**
- * Post slugs in the order an exported page links them.
- *
- * Only `/posts/<slug>` and `/ko/posts/<slug>` hrefs count: `/posts` (the list
- * link in the nav) has no second segment and is skipped, so the nav cannot
- * inflate the sequence.
- */
-function linkedSlugs(html: string, prefix: '' | '/ko'): string[] {
-	const pattern = new RegExp(`href="${prefix}/posts/([^"/#?]+)"`, 'g');
-	return [...html.matchAll(pattern)].map((match) => match[1]);
 }
 
 function sequenceProblem(actual: string[], expected: string[]): string | null {
@@ -563,8 +507,6 @@ async function runGeneratorProbe(): Promise<number> {
 }
 
 export interface C5Options {
-	/** Exported Svelte site the oracle rows read. Default `<repo>/build`. */
-	svelteBuild?: string;
 	/**
 	 * Exported Next site the row-16 pages are read from. Default
 	 * `<repo>/next/build`. `--next-build <dir>` exists so the D9/D10/I3 controls
@@ -593,7 +535,6 @@ export interface C5Options {
 }
 
 async function runAssertions(options: C5Options = {}): Promise<number> {
-	const svelteBuild = options.svelteBuild ?? join(REPO_ROOT, 'build');
 	const nextBuild = options.nextBuild ?? join(REPO_ROOT, 'next/build');
 
 	// Row state is per-run, not module-level: the controls invoke this file
@@ -603,19 +544,7 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	const check = (row: string, ok: boolean, okDetail: string, failDetail: string): void => {
 		rows.push({ row, status: ok ? 'PASS' : 'FAIL', detail: ok ? okDetail : failDetail });
 	};
-	// Every page the oracle rows read, not just the first one. A build that
-	// emitted `posts.html` and not `ko.html` used to reach the row and throw, and
-	// an uncaught throw exits 1 -- the same code a red row uses, which every
-	// DEFECT control accepts as success.
-	const oraclePages = ['index.html', 'posts.html', 'ko.html', join('ko', 'posts.html')];
-	const absent = oraclePages.filter((page) => !existsSync(join(svelteBuild, page)));
-	if (absent.length > 0) {
-		console.error(
-			`C5 cannot run: ${absent.map((page) => join(svelteBuild, page)).join(', ')} missing. Run \`pnpm build:svelte\` first.`,
-		);
-		return 2;
-	}
-	// The same precheck for the two exported Next pages row 16 reads.
+	// A precheck for the two exported Next pages row 16 reads.
 	//
 	// The CLI rejection handler already turns any throw into exit 2, so an
 	// unguarded read here would NOT be mistaken for a red row. This precheck is
@@ -642,61 +571,15 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	const english = listPostsForLocale('en');
 	const korean = listPostsForLocale('ko');
 	const koreanWithFallback = listKoreanPostsWithEnglishFallback();
-	const read = (page: string) => readFileSync(join(svelteBuild, page), 'utf8');
 
-	// --- oracle rows -----------------------------------------------------------
-	const listProblem = sequenceProblem(
-		english.map((post) => post.slug),
-		linkedSlugs(read('posts.html'), ''),
-	);
-	check(
-		'site 4  posts/+page.ts:5 -> /posts list',
-		listProblem === null,
-		`${english.length} slugs match build/posts.html in order`,
-		`build/posts.html disagrees: ${listProblem}`,
-	);
-
-	const homeProblem = sequenceProblem(
-		english.slice(0, 10).map((post) => post.slug),
-		linkedSlugs(read('index.html'), ''),
-	);
-	check(
-		'site 2  +page.ts:13 -> / recent posts',
-		homeProblem === null,
-		'the 10 most recent English slugs match build/index.html in order',
-		`build/index.html disagrees: ${homeProblem}`,
-	);
-
-	const koHomeProblem = sequenceProblem(
-		korean.slice(0, 10).map((post) => post.slug),
-		linkedSlugs(read('ko.html'), '/ko'),
-	);
-	check(
-		'site 3  ko/+page.ts:11 -> /ko recent posts',
-		koHomeProblem === null,
-		'the 10 most recent Korean slugs match build/ko.html in order',
-		`build/ko.html disagrees: ${koHomeProblem}`,
-	);
-
-	const koListProblem = sequenceProblem(
-		koreanWithFallback.map((post) => post.slug),
-		linkedSlugs(read(join('ko', 'posts.html')), '/ko'),
-	);
-	check(
-		'sites 5-6  ko/posts/+page.ts:10,15 -> /ko/posts list',
-		koListProblem === null,
-		`${koreanWithFallback.length} slugs match build/ko/posts.html in order`,
-		`build/ko/posts.html disagrees: ${koListProblem}`,
-	);
-
-	// --- layout rows: the same datasets, selected by locale --------------------
+	// --- layout rows: the datasets, selected by locale -------------------------
 	const sample = english[0]?.slug ?? '';
 	const englishTitle = english[0]?.frontmatter.title;
 	const koreanTitle = korean.find((post) => post.slug === sample)?.frontmatter.title;
 	check(
 		'site 0  +layout.ts:14 -> English palette dataset',
 		english.length > 0 && typeof englishTitle === 'string',
-		`${english.length} published English posts, ordered as /posts (row above)`,
+		`${english.length} published English posts`,
 		'the English layout dataset is empty',
 	);
 	check(
@@ -709,23 +592,7 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		`locale selection did not swap titles for ${sample}: ${String(koreanTitle)}`,
 	);
 
-	// --- S2 positive: the twelve sites, then every real path through them ----
-	const foundSites = findSlugSites(REPO_ROOT);
-	const expectedSites = [...SLUG_SITES].sort();
-	const siteProblem =
-		foundSites.length !== expectedSites.length
-			? `source holds ${foundSites.length} derivation site(s), the enumeration names ${expectedSites.length}`
-			: (foundSites.find((site, index) => site !== expectedSites[index]) ?? null);
-	check(
-		'S2 positive  the twelve slug-derivation sites',
-		siteProblem === null,
-		`all ${foundSites.length} sites recomputed from source and matched: ${foundSites.join(', ')}`,
-		typeof siteProblem === 'string' && siteProblem.includes('derivation site')
-			? siteProblem
-			: `enumeration drifted from source at ${String(siteProblem)}`,
-	);
-
-	// --- S2 positive: every slug derivation site, over the whole corpus --------
+	// --- S2 positive: slug derivation over the whole corpus --------------------
 	const derivations = (['en', 'ko'] as const).flatMap((locale) =>
 		listPublishedPosts(locale).map((post) => ({
 			locale,
@@ -733,9 +600,11 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 			slug: post.slug,
 		})),
 	);
-	// Not a restatement of the port's own logic: `svelteSlug` IS the source
-	// expression, so this compares the two implementations on every real path.
-	const wrong = derivations.filter(({ relativePath, slug }) => slug !== svelteSlug(relativePath));
+	// Not a restatement of the port's own logic: `referenceSlug` is the retired
+	// source expression, so this compares the two implementations on every real path.
+	const wrong = derivations.filter(
+		({ relativePath, slug }) => slug !== referenceSlug(relativePath),
+	);
 	const ambiguous = derivations.filter(({ relativePath }) =>
 		relativePath.split('/').pop()!.slice(0, -3).includes('.md'),
 	);
@@ -751,7 +620,7 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		wrong.length > 0
 			? `${wrong.length} mis-derived, first: ${wrong[0].relativePath} -> ${wrong[0].slug}`
 			: ambiguous.length > 0
-				? `${ambiguous[0].relativePath} contains '.md' before its extension, where the Svelte expression and the port disagree`
+				? `${ambiguous[0].relativePath} contains '.md' before its extension, where the reference expression and the port disagree`
 				: `mixed-case slugs missing from the corpus: ${MIXED_CASE_SLUGS.filter((slug) => !mixedCaseFound.includes(slug)).join(', ')}`,
 	);
 
@@ -816,8 +685,8 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 		),
 	];
 	// `sitemapXml()` has ONE loop, over the English posts, and emits the Korean
-	// `<url>` block inside it (`feeds.ts:138-165`), exactly as
-	// `src/routes/sitemap.xml/+server.ts:37-49` does. So the Korean URLs follow
+	// `<url>` block inside it (`feeds.ts:138-165`), exactly as the retired
+	// SvelteKit sitemap route did. So the Korean URLs follow
 	// the ENGLISH path order restricted to twinned slugs -- not Korean path
 	// order, which differs the moment a translation is filed under another
 	// category, as the fixture's `two` already is.
@@ -857,9 +726,9 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 
 	// --- site 16: the seventeenth call site, read from the built Korean page ---
 	//
-	// `src/routes/ko/system/3b/+page.ts:11` globs the Korean corpus to build a
-	// slug-to-title map that `localizeSnapshot` merges over the snapshot's
-	// `blog_series`. The built page is the only place that output becomes
+	// `koreanTitleBySlug()` reads the Korean corpus into a slug-to-title map
+	// that `localizeSnapshot` merges over the snapshot's `blog_series` (the
+	// retired SvelteKit route did the same with a glob). The built page is the only place that output becomes
 	// observable, so these rows read it as bytes.
 	const { koreanTitleBySlug } = await import('../next/src/content/post-list.ts');
 	const seriesSource = (await import('../next/src/data/system-snapshot.ts')).default.blog_series;
@@ -1035,10 +904,10 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 			`drafted outcome was ${article.draftedOutcome}; metadata carried ${article.draftedMetadataKeys.length} keys (${article.draftedMetadataKeys.join(', ')})`,
 		);
 		// Rows 11c/11d: the fallback's LANGUAGE, which row 11 does not constrain.
-		// `PostDetail.svelte:73` derives one `contentLocale` and hangs `og:locale`
-		// (164), its alternate (165-169), the JSON-LD `inLanguage` (142) and
-		// `@id`/canonical (71) plus the Pagefind facet (204) off it, so an English
-		// body under a Korean URL declares English in all six places.
+		// The retired SvelteKit post page derived one `contentLocale` and hung
+		// `og:locale`, its alternate, the JSON-LD `inLanguage` and `@id`/canonical
+		// plus the Pagefind facet off it, so an English body under a Korean URL
+		// declared English in all six places; the Next article must too.
 		const fallbackVerdict = articleLocaleVerdict(article.fallbackFields, {
 			locale: 'en',
 			url: `${SITE_URL}/posts/only-en`,
@@ -1180,7 +1049,7 @@ async function runAssertions(options: C5Options = {}): Promise<number> {
 	say(`\nRESULT: ${rows.length - failed.length} pass, ${failed.length} fail`);
 	if (failed.length) return 1;
 	say(
-		'Scope: all 17 glob call sites, each through a consumer. The seventeenth, `src/routes/ko/system/3b/+page.ts:11`, is read from the BUILT Korean page (rows `site 16`-`site 16d`), which is the only place its output becomes observable. Drafts, the Korean-to-English fallback, its slug-keyed dedup, and the series-title fallback and draft exclusion are proven on fixtures, because the live corpus has 167 English posts, 167 Korean posts with the same slugs, and no drafts.',
+		'Scope: the Next data layer behind the 17 retired glob call sites, each through a consumer. The Korean series titles are read from the BUILT Korean page (rows `site 16`-`site 16d`), which is the only place the merge becomes observable. Drafts, the Korean-to-English fallback, its slug-keyed dedup, and the series-title fallback and draft exclusion are proven on fixtures, because the live corpus has 167 English posts, 167 Korean posts with the same slugs, and no drafts.',
 	);
 	return 0;
 }
@@ -1191,7 +1060,6 @@ function optionsFrom(argv: string[]): C5Options {
 		return at !== -1 && argv[at + 1] ? resolve(argv[at + 1]) : undefined;
 	};
 	return {
-		svelteBuild: value('--svelte-build'),
 		nextBuild: value('--next-build'),
 		fixtureRoot: value('--fixture-root'),
 		systemFixtureRoot: value('--system-fixture-root'),
@@ -1202,7 +1070,7 @@ function optionsFrom(argv: string[]): C5Options {
 	};
 }
 
-export { linkedSlugs, runAssertions, writeFixture, writeSystemFixture, SYSTEM_FIXTURE };
+export { runAssertions, writeFixture, writeSystemFixture, SYSTEM_FIXTURE };
 
 if (process.argv[1]?.endsWith('assert-c5-glob-sites.ts')) {
 	const run =

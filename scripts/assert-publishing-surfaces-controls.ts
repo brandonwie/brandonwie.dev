@@ -12,10 +12,16 @@
  *   INVARIANCE  the assertions MUST exit 0 on a change they should ignore
  *
  * The single invariance is the feed build clock, `<lastBuildDate>`, paired
- * with defects over the same files. Every control runs against a throwaway
- * copy of the candidate under `tmp/`; the real `next/build` and the Svelte
- * baseline are never mutated. Fragment controls re-encode the mutated JSON
- * behind the `pagefind_dcd` marker so the decoder sees a well-formed file.
+ * with defects over the same files. The feed-entry rows (F3, F6, F9) check
+ * what the frozen semantic shape cannot see -- hreflang alternates,
+ * `<lastmod>`, `<pubDate>`, `<category>` -- so each has shape-invisible
+ * defects that name the row (`expectRow`): the control passes only when that
+ * row is among the failures, not merely when something went red.
+ *
+ * Every control runs against a throwaway copy of the candidate under `tmp/`;
+ * the real `next/build` is never mutated and the retired SvelteKit `build/`
+ * is never read. Fragment controls re-encode the mutated JSON behind the
+ * `pagefind_dcd` marker so the decoder sees a well-formed file.
  */
 import { createHash } from 'node:crypto';
 import {
@@ -33,6 +39,7 @@ import { gzipSync } from 'node:zlib';
 import {
 	ARTICLE_FRAGMENTS,
 	decodeFragment,
+	evaluate,
 	runAssertions,
 	type Fragment,
 } from './assert-publishing-surfaces.ts';
@@ -57,6 +64,8 @@ interface Control {
 	applyFragment?: (fragment: Fragment) => Fragment;
 	/** `fragment:synthetic` only: a new fragment written into the scratch index. */
 	writeFragment?: Fragment;
+	/** DEFECT only: the id of the row that must be among the failures (e.g. `F3`). */
+	expectRow?: string;
 }
 
 const CONTROLS: Control[] = [
@@ -84,8 +93,9 @@ const CONTROLS: Control[] = [
 	{
 		id: 'PS-03',
 		kind: 'DEFECT',
-		what: 'a post <lastmod> changes -- invisible to the semantic shape, caught by the byte row',
+		what: 'a post <lastmod> changes -- invisible to the semantic shape, caught by the entry row',
 		target: 'sitemap.xml',
+		expectRow: 'F3',
 		apply: (xml) => xml.replace(/<lastmod>[^<]+<\/lastmod>/, '<lastmod>1970-01-01</lastmod>'),
 	},
 	{
@@ -254,6 +264,64 @@ const CONTROLS: Control[] = [
 		},
 	},
 	{
+		id: 'PS-26',
+		kind: 'DEFECT',
+		what: "a translated post's hreflang=ko alternate is dropped from the sitemap -- shape-invisible",
+		target: 'sitemap.xml',
+		expectRow: 'F3',
+		apply: (xml) =>
+			xml.replace(
+				/\n *<xhtml:link rel="alternate" hreflang="ko" href="https:\/\/brandonwie\.dev\/ko\/posts\/[^"]*"\/>/,
+				'',
+			),
+	},
+	{
+		id: 'PS-27',
+		kind: 'DEFECT',
+		what: 'an English item <pubDate> moves -- shape-invisible',
+		target: 'rss.xml',
+		expectRow: 'F6',
+		apply: (xml) =>
+			xml.replace(/<pubDate>[^<]*<\/pubDate>/, '<pubDate>Thu, 01 Jan 1970 00:00:00 GMT</pubDate>'),
+	},
+	{
+		id: 'PS-28',
+		kind: 'DEFECT',
+		what: 'an English item loses a <category> -- shape-invisible',
+		target: 'rss.xml',
+		expectRow: 'F6',
+		apply: (xml) => xml.replace(/\n *<category>[^<]*<\/category>/, ''),
+	},
+	{
+		id: 'PS-29',
+		kind: 'DEFECT',
+		what: 'a Korean item <pubDate> moves -- shape-invisible',
+		target: 'ko/rss.xml',
+		expectRow: 'F9',
+		apply: (xml) =>
+			xml.replace(/<pubDate>[^<]*<\/pubDate>/, '<pubDate>Thu, 01 Jan 1970 00:00:00 GMT</pubDate>'),
+	},
+	{
+		id: 'PS-30',
+		kind: 'DEFECT',
+		what: 'a Korean item loses a <category> -- shape-invisible',
+		target: 'ko/rss.xml',
+		expectRow: 'F9',
+		apply: (xml) => xml.replace(/\n *<category>[^<]*<\/category>/, ''),
+	},
+	{
+		id: 'PS-31',
+		kind: 'DEFECT',
+		what: 'an English item <guid> stops matching its <link> -- shape-invisible',
+		target: 'rss.xml',
+		expectRow: 'F6',
+		apply: (xml) =>
+			xml.replace(
+				/(<guid isPermaLink="true">https:\/\/brandonwie\.dev\/posts\/)[^<]+(<\/guid>)/,
+				'$1not-a-post$2',
+			),
+	},
+	{
 		id: 'PS-24',
 		kind: 'DEFECT',
 		what: 'the English article is indexed twice (duplicate fragment for one url)',
@@ -293,12 +361,11 @@ function encodeFragment(fragment: Fragment): Buffer {
 
 async function main(): Promise<number> {
 	const candidate = process.argv[2] ?? 'next/build';
-	const baseline = process.argv[3] ?? 'build';
-	if (!existsSync(candidate) || !existsSync(baseline)) {
-		console.error(`FATAL: need both ${candidate} and ${baseline}; build first`);
+	if (!existsSync(candidate)) {
+		console.error(`FATAL: need ${candidate}; run pnpm build:next first`);
 		return 2;
 	}
-	const clean = await runAssertions(candidate, baseline, true);
+	const clean = await runAssertions(candidate, true);
 	if (clean !== 0) {
 		console.error(
 			`FATAL: the untouched candidate exits ${clean}; controls need a green starting point`,
@@ -343,12 +410,19 @@ async function main(): Promise<number> {
 			rmSync(scratch, { recursive: true, force: true });
 			continue;
 		}
-		const code = await runAssertions(scratch, baseline, true);
+		const { code, rows } = evaluate(scratch);
 		const expected = control.kind === 'DEFECT' ? 1 : 0;
-		const ok = code === expected;
-		if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
+		const failedRows = rows.filter((r) => r.status === 'FAIL').map((r) => r.row.split(' ')[0]);
+		const rowOk = !control.expectRow || failedRows.includes(control.expectRow);
+		const ok = code === expected && rowOk;
+		if (code !== expected)
+			failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
+		else if (!rowOk)
+			failures.push(
+				`${control.id} ${control.what}: ${control.expectRow} did not fail (failed: ${failedRows.join(', ')})`,
+			);
 		console.log(
-			`${ok ? 'PASS' : 'FAIL'}  ${control.id}  ${control.kind.padEnd(10)} exit ${code} (expected ${expected})  ${control.what}`,
+			`${ok ? 'PASS' : 'FAIL'}  ${control.id}  ${control.kind.padEnd(10)} exit ${code} (expected ${expected}${control.expectRow ? `, ${control.expectRow} red` : ''})  ${control.what}`,
 		);
 		rmSync(scratch, { recursive: true, force: true });
 	}

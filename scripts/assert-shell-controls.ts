@@ -9,6 +9,12 @@
  *
  * Every invariance row is paired with a defect row over the SAME surface, per
  * plan.md § Slice 0's invariance rule.
+ *
+ * SVELTE RETIREMENT (2026-09-29): SC-13, SC-14 and SC-15 mutated the SvelteKit
+ * baseline export (its header, its footer, its SPA fallback). The suite no
+ * longer reads that export -- its expectations are frozen constants -- so
+ * those three controls were deleted with the rows they exercised. Their ids
+ * are not reused.
  */
 import { cpSync, existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -26,8 +32,6 @@ interface Control {
 	target: string;
 	apply?: (html: string) => string;
 	remove?: boolean;
-	/** Mutates the BASELINE copy instead of the candidate. */
-	side?: 'candidate' | 'baseline';
 }
 
 const EN = 'posts/giscus-sveltekit-integration.html';
@@ -50,9 +54,8 @@ function within(container: RegExp, edit: (region: string) => string): (html: str
 	return (html) => html.replace(container, (region) => edit(region));
 }
 
-// REDESIGN: every candidate-side mutation now targets the Phosphor Fade shell
-// (`header.term-bar`, `div.term-status`, `footer.term-plan`); baseline-side
-// controls (SC-13/14/15) still target the Svelte chrome, which is unchanged.
+// Every mutation targets the Phosphor Fade shell (`header.term-bar`,
+// `div.term-status`, `footer.term-plan`).
 const CONTROLS: Control[] = [
 	{
 		id: 'SC-01',
@@ -143,9 +146,8 @@ const CONTROLS: Control[] = [
 		apply: within(STATUS, (nav) => nav.replace('>2:study<', '>2:<!-- -->study<')),
 	},
 	/**
-	 * SC-11..SC-15 are the implementation-review findings, executed. The first
-	 * four cover false-green cases the suite genuinely had; the last proves the
-	 * fallback recognition is evidence-driven rather than a hole.
+	 * SC-11 and SC-12 are implementation-review findings, executed: false-green
+	 * cases the suite genuinely had.
 	 */
 	{
 		id: 'SC-11',
@@ -160,24 +162,6 @@ const CONTROLS: Control[] = [
 		what: 'the candidate footer exists only inside an HTML comment (SH-02)',
 		target: EN,
 		apply: (html) => html.replace(FOOTER, (match) => `<!--${match}-->`),
-	},
-	{
-		id: 'SC-13',
-		kind: 'DEFECT',
-		what: 'the baseline header is missing, so there is nothing to compare against',
-		target: EN,
-		side: 'baseline',
-		apply: (html) =>
-			html.replace(/<header\b[^>]*class="[^"]*site-nav[^"]*"[\s\S]*?<\/header>/i, ''),
-	},
-	{
-		id: 'SC-14',
-		kind: 'DEFECT',
-		what: 'the baseline footer is missing, so there is nothing to compare against',
-		target: EN,
-		side: 'baseline',
-		apply: (html) =>
-			html.replace(/<footer\b[^>]*class="[^"]*site-footer[^"]*"[\s\S]*?<\/footer>/i, ''),
 	},
 	/**
 	 * SC-16 is a review finding, executed. SH-06 searched every link in the
@@ -196,14 +180,6 @@ const CONTROLS: Control[] = [
 			if (!link) return html;
 			return html.replace(link[0], '').replace(HEADER, (header) => `${header}${link[0]}`);
 		},
-	},
-	{
-		id: 'SC-15',
-		kind: 'DEFECT',
-		what: 'the SPA fallback stops booting, so it is no longer recognized and must be compared strictly',
-		target: '404.html',
-		side: 'baseline',
-		apply: (html) => html.replace(/kit\.start\s*\(/, 'kit.notStart('),
 	},
 	/**
 	 * SC-17..SC-25 cover the functions the terminal shell re-expresses: the
@@ -303,31 +279,29 @@ function fingerprint(file: string): string {
 }
 
 /**
- * Run controls against `next/build` and `build`; no CLI parameters are read.
- * Creates and removes scratch copies, leaving the original exports untouched.
- * Returns 0 when all outcomes match, 1 for failures, or 2 for missing exports.
+ * Run controls against `next/build`; no CLI parameters are read.
+ * Creates and removes a scratch copy, leaving the original export untouched.
+ * Returns 0 when all outcomes match, 1 for failures, or 2 for a missing export.
  */
 async function main(): Promise<number> {
 	const source = resolve('next/build');
-	const baseline = resolve('build');
 	const scratch = resolve('.migration-shell-controls');
-	if (!existsSync(source) || !existsSync(baseline)) {
-		console.error('missing export: run pnpm build first');
+	if (!existsSync(source)) {
+		console.error('missing export: run pnpm build:next first');
 		return 2;
 	}
 
-	const scratchBaseline = resolve('.migration-shell-controls-baseline');
 	// Imported, not spawned. `migration-route.ts` derives a suite's input set
 	// from its entry's transitive imports, and a spawn edge is invisible to that
 	// closure -- so while this ran the suite as a subprocess, editing
 	// `assert-shell.ts` selected `migration:shell` but NOT these controls, and
 	// the negative controls skipped the very change they exist to police. Every
 	// sibling controls suite imports its `runAssertions` for the same reason.
-	const exec = (dir: string, baseDir: string): number => runAssertions(dir, baseDir, true);
+	const exec = (dir: string): number => runAssertions(dir, true);
 
 	rmSync(scratch, { recursive: true, force: true });
 	cpSync(source, scratch, { recursive: true });
-	const baselineCode = exec(scratch, baseline);
+	const baselineCode = exec(scratch);
 	console.log(
 		`${baselineCode === 0 ? 'PASS' : 'FAIL'}  SC-00  BASELINE   exit ${baselineCode} (expected 0)  an untouched candidate is green`,
 	);
@@ -335,11 +309,8 @@ async function main(): Promise<number> {
 
 	for (const control of CONTROLS) {
 		rmSync(scratch, { recursive: true, force: true });
-		rmSync(scratchBaseline, { recursive: true, force: true });
 		cpSync(source, scratch, { recursive: true });
-		const onBaseline = control.side === 'baseline';
-		if (onBaseline) cpSync(baseline, scratchBaseline, { recursive: true });
-		const file = join(onBaseline ? scratchBaseline : scratch, control.target);
+		const file = join(scratch, control.target);
 		if (!existsSync(file) || !statSync(file).isFile()) {
 			failures.push(`${control.id}: target ${control.target} is missing`);
 			console.log(
@@ -358,7 +329,7 @@ async function main(): Promise<number> {
 			);
 			continue;
 		}
-		const code = exec(scratch, onBaseline ? scratchBaseline : baseline);
+		const code = exec(scratch);
 		const expected = control.kind === 'DEFECT' ? 1 : 0;
 		const ok = code === expected;
 		if (!ok) failures.push(`${control.id} ${control.what}: exit ${code}, expected ${expected}`);
@@ -367,7 +338,6 @@ async function main(): Promise<number> {
 		);
 	}
 	rmSync(scratch, { recursive: true, force: true });
-	rmSync(scratchBaseline, { recursive: true, force: true });
 
 	const defects = CONTROLS.filter((c) => c.kind === 'DEFECT').length;
 	console.log(

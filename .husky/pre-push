@@ -5,9 +5,10 @@
 # Blocks push if any check fails.
 #
 # Step 7 is the migration verification set, routed by changed surface
-# (scripts/migration-route.ts). Steps 1-6 already cost ~123 s; the full
-# migration set adds ~100 s and `migration:controls` alone adds ~265 s, so the
-# hook runs only the suites whose inputs this push actually changed. CI runs
+# (scripts/migration-route.ts). Measured locally on 2026-09-29, after the
+# SvelteKit retirement: steps 1-6 take ~25 s, the full push-tier set ~770 s, and
+# `migration:controls` ~110 s, so the hook runs only the suites whose inputs
+# this push actually changed. CI runs
 # every suite EXCEPT `migration:controls` (its own parallel job) and the
 # 3B-dependent lane of C3 (`migration:c3`, `migration:c3:controls`), which have
 # no 3B checkout there — this hook is their only runner, and

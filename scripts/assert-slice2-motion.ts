@@ -13,19 +13,26 @@
  * A port of a formula is the kind of work that looks finished and is wrong by
  * a factor nobody notices — a dropped scale term, a transform origin read in
  * the wrong units, an easing curve handed to the browser instead of baked into
- * the samples. So the O rows do not check that the port "animates". They run
- * Svelte's OWN `flip`, `fade`, `scale` and easings against the ported ones on
- * the same inputs and compare the CSS character for character. That is the
- * strongest oracle available for this work and it needs no browser: both sides
- * are pure functions of a pair of rectangles.
+ * the samples. So the O rows do not check that the port "animates". They
+ * compare the port against Svelte's OWN `flip`, `fade`, `scale` and easings on
+ * the same inputs, CSS character for character. That is the strongest oracle
+ * available for this work and it needs no browser: both sides are pure
+ * functions of a pair of rectangles.
+ *
+ * SVELTE RETIREMENT. The `svelte` package is gone, so the oracle no longer runs
+ * live. Its outputs on this file's exact inputs were generated once from
+ * svelte@5.56.4 at commit 770bc30 and are FROZEN below (SVELTE_* tables); the
+ * O rows pin the port to them. Changing an input (a flip case, an origin, a
+ * sample point) without a frozen answer for it fails the row rather than
+ * comparing against nothing.
  *
  * The rows are grouped by what they hold onto:
  *
- *   O  oracle parity       ported primitives vs. svelte@5.56.4's own, byte for
- *                          byte, including the whitespace inside `scale`
- *   P  port roll-call      every Svelte source has a counterpart, the client
- *                          boundaries land where they should, and no new
- *                          runtime dependency was taken
+ *   O  oracle parity       ported primitives vs. svelte@5.56.4's own (frozen),
+ *                          byte for byte, including the whitespace in `scale`
+ *   P  port roll-call      every retired Svelte role has its Next port, the
+ *                          client boundaries land where they should, and no
+ *                          new runtime dependency was taken
  *   R  reduced motion      resolved at the call site, as in the Svelte
  *                          template; the hook has no opinion about it
  *   M  model               the hash-map state machine, checked against an
@@ -49,10 +56,6 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-
-import { flip } from 'svelte/animate';
-import { cubicOut as svelteCubicOut, linear as svelteLinear } from 'svelte/easing';
-import { fade, scale } from 'svelte/transition';
 
 import {
 	cubicOut,
@@ -85,25 +88,25 @@ import {
 
 // ------------------------------------------------------------------ constants
 
-/** Svelte source -> Next counterpart. The four ports this slice paid for. */
+/** The four ports this slice paid for, by role.
+ *
+ *  History: the Svelte sources were src/lib/useReducedMotion.svelte.ts and
+ *  src/lib/components/study/{Stepper,BstTraversalVisualizer,HashMapVisualizer}.svelte.
+ *  They are retired, so P1 checks only the Next side. */
 export const PORT_ROLES = [
 	{
-		svelte: 'src/lib/useReducedMotion.svelte.ts',
 		next: 'next/src/motion/useReducedMotion.ts',
 		role: 'reduced-motion choke point (12 consumers)',
 	},
 	{
-		svelte: 'src/lib/components/study/Stepper.svelte',
 		next: 'next/src/components/study/Stepper.tsx',
 		role: 'stepper choke point (12 call sites)',
 	},
 	{
-		svelte: 'src/lib/components/study/BstTraversalVisualizer.svelte',
 		next: 'next/src/components/study/BstTraversalVisualizer.tsx',
 		role: 'Stepper-driven sample (12 of 17 visualizers)',
 	},
 	{
-		svelte: 'src/lib/components/study/HashMapVisualizer.svelte',
 		next: 'next/src/components/study/HashMapVisualizer.tsx',
 		role: 'keyed-list FLIP sample (4 of 17 visualizers)',
 	},
@@ -315,40 +318,295 @@ function eq(actual: unknown, expected: unknown, label: string): void {
 	must(a === b, `${label}: expected ${b}, got ${a}`);
 }
 
-// ------------------------------------------------------------- svelte oracles
+// ------------------------------------------------------ frozen svelte oracles
 
-/**
- * Svelte's primitives read `getComputedStyle(node)` and the node's client box.
- * Neither exists here, so both are supplied — which is the whole reason the
- * comparison is possible without a browser. The stub is installed for the call
- * and removed after it, so nothing else in the process sees a fake DOM.
+/*
+ * svelte@5.56.4's `flip` (svelte/animate), `fade` and `scale`
+ * (svelte/transition), `cubicOut` and `linear` (svelte/easing), run ONCE on
+ * the exact inputs this file declares (FLIP_CASES x ORIGINS x SAMPLES, the
+ * fade opacities and delays, the scale transforms) and FROZEN here.
+ *
+ * Origin: the live oracle calls this file made at commit 770bc30
+ * (scripts/assert-slice2-motion.ts:53-55 imports, :536-542 flip, :595-615 flip
+ * durations, :630-632 fade, :654 scale, :681-684 easings), with the same
+ * getComputedStyle stub and client-box node. Generated by
+ * tmp/rsm-gen/gen-spike2-oracle.ts against node_modules/svelte at that commit.
+ *
+ * The package is retired, so these cannot be regenerated. Adding an input
+ * without a frozen answer fails the row through frozen(); it never compares
+ * against nothing.
  */
-interface OracleNode {
-	clientWidth: number;
-	clientHeight: number;
-	currentCSSZoom: number;
+
+type FrozenEasing = 'cubicOut' | 'linear';
+
+/** An oracle config's delay, and the easing it returned: identified by === on
+ *  every t = i / 20 sample, which covers the i / 10 points sameCurve reads. */
+interface FrozenCurve {
+	delay: number;
+	easing: FrozenEasing;
 }
 
-function withComputedStyle<T>(
-	style: { transform: string; transformOrigin: string; opacity: string; zoom: string },
-	body: () => T,
-): T {
-	const globals = globalThis as Record<string, unknown>;
-	const had = 'getComputedStyle' in globals;
-	const previous = globals.getComputedStyle;
-	globals.getComputedStyle = () => style;
-	try {
-		return body();
-	} finally {
-		if (had) globals.getComputedStyle = previous;
-		else delete globals.getComputedStyle;
-	}
-}
+/** cubicOut and linear sampled at t = i / 20, i = 0..20. */
+export const SVELTE_EASING: Record<FrozenEasing, number[]> = {
+	cubicOut: [
+		0, 0.1426250000000001, 0.2709999999999999, 0.3858750000000001, 0.4879999999999999, 0.578125,
+		0.657, 0.7253749999999999, 0.784, 0.833625, 0.875, 0.908875, 0.9359999999999999, 0.957125,
+		0.973, 0.984375, 0.992, 0.996625, 0.999, 0.999875, 1,
+	],
+	linear: [
+		0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85,
+		0.9, 0.95, 1,
+	],
+};
 
-function oracleNode(clientWidth: number, clientHeight: number, zoom = 1): Element {
-	const node: OracleNode = { clientWidth, clientHeight, currentCSSZoom: zoom };
-	return node as unknown as Element;
-}
+/** flip() with { duration: 220 }: delay and easing, identical for every case. */
+const SVELTE_FLIP_CURVE: FrozenCurve = { delay: 0, easing: 'cubicOut' };
+
+/** flip()'s duration when handed { duration: 220 }: passed through. */
+const SVELTE_FLIP_EXPLICIT_DURATION = 220;
+
+/** flip()'s DEFAULT duration, `Math.sqrt(distance) * 120`, per flip case. */
+const SVELTE_FLIP_DEFAULT_DURATION: Record<string, number> = {
+	'moves left and down': 996.5330520434534,
+	'bordered node moves': 1493.9879517586478,
+	'bordered node shrinks as it moves': 1493.9879517586478,
+	grows: 0,
+	shrinks: 682.1130693194649,
+	'moves on y only': 1934.9418595916518,
+	'does not move': 0,
+	'moves under CSS zoom': 1249.3631473877886,
+};
+
+/** flip().css(t, u) per flip case, per origin, at each of SAMPLES in order. */
+const SVELTE_FLIP_CSS: Record<string, Record<string, string[]>> = {
+	'moves left and down': {
+		'top-left': [
+			'transform:  translate(60px, -34px) scale(1.1458333333333333, 1);',
+			'transform:  translate(45px, -25.5px) scale(1.109375, 1);',
+			'transform:  translate(30px, -17px) scale(1.0729166666666665, 1);',
+			'transform:  translate(15px, -8.5px) scale(1.0364583333333333, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		centre: [
+			'transform:  translate(67px, -34px) scale(1.1458333333333333, 1);',
+			'transform:  translate(50.25px, -25.5px) scale(1.109375, 1);',
+			'transform:  translate(33.5px, -17px) scale(1.0729166666666665, 1);',
+			'transform:  translate(16.75px, -8.5px) scale(1.0364583333333333, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		asymmetric: [
+			'transform:  translate(63.5px, -34px) scale(1.1458333333333333, 1);',
+			'transform:  translate(47.625px, -25.5px) scale(1.109375, 1);',
+			'transform:  translate(31.75px, -17px) scale(1.0729166666666665, 1);',
+			'transform:  translate(15.875px, -8.5px) scale(1.0364583333333333, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+	},
+	'bordered node moves': {
+		'top-left': [
+			'transform:  translate(155px, 0px) scale(1, 1);',
+			'transform:  translate(116.25px, 0px) scale(1, 1);',
+			'transform:  translate(77.5px, 0px) scale(1, 1);',
+			'transform:  translate(38.75px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		centre: [
+			'transform:  translate(155px, 0px) scale(1, 1);',
+			'transform:  translate(116.25px, 0px) scale(1, 1);',
+			'transform:  translate(77.5px, 0px) scale(1, 1);',
+			'transform:  translate(38.75px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		asymmetric: [
+			'transform:  translate(155px, 0px) scale(1, 1);',
+			'transform:  translate(116.25px, 0px) scale(1, 1);',
+			'transform:  translate(77.5px, 0px) scale(1, 1);',
+			'transform:  translate(38.75px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+	},
+	'bordered node shrinks as it moves': {
+		'top-left': [
+			'transform:  translate(155px, 0px) scale(1.375, 1);',
+			'transform:  translate(116.25px, 0px) scale(1.28125, 1);',
+			'transform:  translate(77.5px, 0px) scale(1.1875, 1);',
+			'transform:  translate(38.75px, 0px) scale(1.09375, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		centre: [
+			'transform:  translate(166.625px, 0px) scale(1.375, 1);',
+			'transform:  translate(124.96875px, 0px) scale(1.28125, 1);',
+			'transform:  translate(83.3125px, 0px) scale(1.1875, 1);',
+			'transform:  translate(41.65625px, 0px) scale(1.09375, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		asymmetric: [
+			'transform:  translate(160.8125px, 0px) scale(1.375, 1);',
+			'transform:  translate(120.609375px, 0px) scale(1.28125, 1);',
+			'transform:  translate(80.40625px, 0px) scale(1.1875, 1);',
+			'transform:  translate(40.203125px, 0px) scale(1.09375, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+	},
+	grows: {
+		'top-left': [
+			'transform:  translate(0px, 0px) scale(0.5, 0.5);',
+			'transform:  translate(0px, 0px) scale(0.625, 0.625);',
+			'transform:  translate(0px, 0px) scale(0.75, 0.75);',
+			'transform:  translate(0px, 0px) scale(0.875, 0.875);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		centre: [
+			'transform:  translate(-20px, -10px) scale(0.5, 0.5);',
+			'transform:  translate(-15px, -7.5px) scale(0.625, 0.625);',
+			'transform:  translate(-10px, -5px) scale(0.75, 0.75);',
+			'transform:  translate(-5px, -2.5px) scale(0.875, 0.875);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		asymmetric: [
+			'transform:  translate(-10px, -15px) scale(0.5, 0.5);',
+			'transform:  translate(-7.5px, -11.25px) scale(0.625, 0.625);',
+			'transform:  translate(-5px, -7.5px) scale(0.75, 0.75);',
+			'transform:  translate(-2.5px, -3.75px) scale(0.875, 0.875);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+	},
+	shrinks: {
+		'top-left': [
+			'transform:  translate(-30px, -12px) scale(2, 2);',
+			'transform:  translate(-22.5px, -9px) scale(1.75, 1.75);',
+			'transform:  translate(-15px, -6px) scale(1.5, 1.5);',
+			'transform:  translate(-7.5px, -3px) scale(1.25, 1.25);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		centre: [
+			'transform:  translate(0px, 3px) scale(2, 2);',
+			'transform:  translate(0px, 2.25px) scale(1.75, 1.75);',
+			'transform:  translate(0px, 1.5px) scale(1.5, 1.5);',
+			'transform:  translate(0px, 0.75px) scale(1.25, 1.25);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		asymmetric: [
+			'transform:  translate(-15px, 10.5px) scale(2, 2);',
+			'transform:  translate(-11.25px, 7.875px) scale(1.75, 1.75);',
+			'transform:  translate(-7.5px, 5.25px) scale(1.5, 1.5);',
+			'transform:  translate(-3.75px, 2.625px) scale(1.25, 1.25);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+	},
+	'moves on y only': {
+		'top-left': [
+			'transform:  translate(0px, 260px) scale(1, 1);',
+			'transform:  translate(0px, 195px) scale(1, 1);',
+			'transform:  translate(0px, 130px) scale(1, 1);',
+			'transform:  translate(0px, 65px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		centre: [
+			'transform:  translate(0px, 260px) scale(1, 1);',
+			'transform:  translate(0px, 195px) scale(1, 1);',
+			'transform:  translate(0px, 130px) scale(1, 1);',
+			'transform:  translate(0px, 65px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		asymmetric: [
+			'transform:  translate(0px, 260px) scale(1, 1);',
+			'transform:  translate(0px, 195px) scale(1, 1);',
+			'transform:  translate(0px, 130px) scale(1, 1);',
+			'transform:  translate(0px, 65px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+	},
+	'does not move': {
+		'top-left': [
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		centre: [
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		asymmetric: [
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+	},
+	'moves under CSS zoom': {
+		'top-left': [
+			'transform:  translate(102.375px, 35.625px) scale(1, 1);',
+			'transform:  translate(76.78125px, 26.71875px) scale(1, 1);',
+			'transform:  translate(51.1875px, 17.8125px) scale(1, 1);',
+			'transform:  translate(25.59375px, 8.90625px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		centre: [
+			'transform:  translate(102.375px, 35.625px) scale(1, 1);',
+			'transform:  translate(76.78125px, 26.71875px) scale(1, 1);',
+			'transform:  translate(51.1875px, 17.8125px) scale(1, 1);',
+			'transform:  translate(25.59375px, 8.90625px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+		asymmetric: [
+			'transform:  translate(102.375px, 35.625px) scale(1, 1);',
+			'transform:  translate(76.78125px, 26.71875px) scale(1, 1);',
+			'transform:  translate(51.1875px, 17.8125px) scale(1, 1);',
+			'transform:  translate(25.59375px, 8.90625px) scale(1, 1);',
+			'transform:  translate(0px, 0px) scale(1, 1);',
+		],
+	},
+};
+
+/** fade() with { duration: 120, delay }: duration passed through. */
+const SVELTE_FADE_DURATION = 120;
+
+/** fade() delay and easing, per starting opacity (delay 0 at '1', 40 at '0.6'). */
+const SVELTE_FADE_CURVE: Record<string, FrozenCurve> = {
+	'1': { delay: 0, easing: 'linear' },
+	'0.6': { delay: 40, easing: 'linear' },
+};
+
+/** fade().css(t, u) per starting opacity, at each of SAMPLES in order. */
+const SVELTE_FADE_CSS: Record<string, string[]> = {
+	'1': ['opacity: 0', 'opacity: 0.25', 'opacity: 0.5', 'opacity: 0.75', 'opacity: 1'],
+	'0.6': [
+		'opacity: 0',
+		'opacity: 0.15',
+		'opacity: 0.3',
+		'opacity: 0.44999999999999996',
+		'opacity: 0.6',
+	],
+};
+
+/** scale() with { duration: 160 }: delay and easing, identical for both transforms. */
+const SVELTE_SCALE_CURVE: FrozenCurve = { delay: 0, easing: 'cubicOut' };
+
+/** scale().css(t, u) per existing transform, at each of SAMPLES in order.
+ *  The embedded newlines and tabs are svelte's own template indentation. */
+const SVELTE_SCALE_CSS: Record<string, string[]> = {
+	none: [
+		'\n\t\t\ttransform:  scale(0);\n\t\t\topacity: 0\n\t\t',
+		'\n\t\t\ttransform:  scale(0.25);\n\t\t\topacity: 0.25\n\t\t',
+		'\n\t\t\ttransform:  scale(0.5);\n\t\t\topacity: 0.5\n\t\t',
+		'\n\t\t\ttransform:  scale(0.75);\n\t\t\topacity: 0.75\n\t\t',
+		'\n\t\t\ttransform:  scale(1);\n\t\t\topacity: 1\n\t\t',
+	],
+	'rotate(3deg)': [
+		'\n\t\t\ttransform: rotate(3deg) scale(0);\n\t\t\topacity: 0\n\t\t',
+		'\n\t\t\ttransform: rotate(3deg) scale(0.25);\n\t\t\topacity: 0.25\n\t\t',
+		'\n\t\t\ttransform: rotate(3deg) scale(0.5);\n\t\t\topacity: 0.5\n\t\t',
+		'\n\t\t\ttransform: rotate(3deg) scale(0.75);\n\t\t\topacity: 0.75\n\t\t',
+		'\n\t\t\ttransform: rotate(3deg) scale(1);\n\t\t\topacity: 1\n\t\t',
+	],
+};
 
 function box(left: number, top: number, width: number, height: number): MotionBox {
 	return { left, top, width, height };
@@ -466,20 +724,31 @@ const ORIGINS: { label: string; x: number; y: number }[] = [
  * 'linear'` and relies on `sampleKeyframes` baking `config.easing` in, so the
  * config's easing IS the curve the user sees.
  */
-function sameCurve(
-	oracle: { delay?: number; easing?: (t: number) => number },
-	ported: MotionConfig,
-	label: string,
-): void {
-	eq(ported.delay, oracle.delay ?? 0, `${label} delay`);
-	must(oracle.easing !== undefined, `${label}: the svelte oracle returned no easing to compare`);
+function sameCurve(oracle: FrozenCurve, ported: MotionConfig, label: string): void {
+	eq(ported.delay, oracle.delay, `${label} delay`);
+	const samples = SVELTE_EASING[oracle.easing];
+	must(samples.length === 21, `${label}: the frozen ${oracle.easing} table is not 21 samples`);
 	for (let i = 0; i <= 10; i += 1) {
+		// i/10 and 2i/20 are the same correctly rounded double, so the tenths
+		// read straight out of the twentieths table.
 		const t = i / 10;
+		const expected = samples[i * 2];
 		must(
-			ported.easing(t) === oracle.easing!(t),
-			`${label} easing at t=${t}: svelte ${oracle.easing!(t)} != port ${ported.easing(t)}`,
+			ported.easing(t) === expected,
+			`${label} easing at t=${t}: svelte ${expected} != port ${ported.easing(t)}`,
 		);
 	}
+}
+
+/** Look up a frozen oracle answer, failing loudly when the input set has moved
+ *  past what was frozen -- a missing answer must not compare as "no difference". */
+function frozen<T>(table: Record<string, T>, key: string, label: string): T {
+	const value = table[key];
+	must(
+		value !== undefined,
+		`no frozen svelte output for ${label} "${key}" -- the input changed after the oracle was frozen at 770bc30`,
+	);
+	return value;
 }
 
 // ------------------------------------------------------------------ the rows
@@ -520,25 +789,21 @@ export function runAssertions(options: Slice2Options = {}): number {
 
 	// -- O: the ported primitives against Svelte's own -----------------------
 
-	r.row('O1', 'flip CSS matches svelte/animate byte for byte', () => {
+	r.row('O1', 'flip CSS matches frozen svelte/animate output byte for byte', () => {
 		let compared = 0;
 		for (const testCase of FLIP_CASES) {
 			for (const origin of ORIGINS) {
 				const [clientWidth, clientHeight] = testCase.client;
 				const zoom = testCase.zoom ?? 1;
 				const originPx = `${origin.x * clientWidth}px ${origin.y * clientHeight}px`;
-				const style = {
-					transform: 'none',
-					transformOrigin: originPx,
-					opacity: '1',
-					zoom: String(zoom),
-				};
-				const oracle = withComputedStyle(style, () =>
-					flip(
-						oracleNode(clientWidth, clientHeight, zoom),
-						{ from: testCase.from as DOMRect, to: testCase.to as DOMRect },
-						{ duration: 220 },
-					),
+				const oracle = frozen(
+					frozen(SVELTE_FLIP_CSS, testCase.name, 'flip case'),
+					origin.label,
+					'flip origin',
+				);
+				must(
+					oracle.length === SAMPLES.length,
+					`${testCase.name} / ${origin.label}: ${oracle.length} frozen samples for ${SAMPLES.length} sample points`,
 				);
 				const ported = motion.flipConfig(
 					{
@@ -552,20 +817,16 @@ export function runAssertions(options: Slice2Options = {}): number {
 					testCase.to,
 					{ duration: 220 },
 				);
-				for (const [t, u] of SAMPLES) {
-					must(
-						oracle.css !== undefined,
-						'svelte flip returned no css function -- the oracle cannot be compared',
-					);
-					const expected = oracle.css!(t, u);
+				SAMPLES.forEach(([t, u], index) => {
+					const expected = oracle[index];
 					const actual = ported.css(t, u);
 					must(
 						expected === actual,
 						`${testCase.name} / ${origin.label} at t=${t}: svelte ${JSON.stringify(expected)} != port ${JSON.stringify(actual)}`,
 					);
 					compared += 1;
-				}
-				sameCurve(oracle, ported, `flip ${testCase.name} / ${origin.label}`);
+				});
+				sameCurve(SVELTE_FLIP_CURVE, ported, `flip ${testCase.name} / ${origin.label}`);
 			}
 		}
 		return `${compared} CSS strings identical across ${FLIP_CASES.length} rect pairs x ${ORIGINS.length} origins x ${SAMPLES.length} samples, easing and delay compared with each`;
@@ -579,12 +840,6 @@ export function runAssertions(options: Slice2Options = {}): number {
 			// derived from dx and dy, and dx and dy are divided by the zoom, so
 			// pinning it here would leave that divisor unexercised on this row.
 			const zoom = testCase.zoom ?? 1;
-			const style = {
-				transform: 'none',
-				transformOrigin: '0px 0px',
-				opacity: '1',
-				zoom: String(zoom),
-			};
 			const metrics = {
 				clientWidth,
 				clientHeight,
@@ -592,69 +847,57 @@ export function runAssertions(options: Slice2Options = {}): number {
 				transformOrigin: '0px 0px',
 				zoom,
 			};
-			const explicitOracle = withComputedStyle(style, () =>
-				flip(
-					oracleNode(clientWidth, clientHeight, zoom),
-					{ from: testCase.from as DOMRect, to: testCase.to as DOMRect },
-					{ duration: 220 },
-				),
-			);
 			eq(
 				motion.flipConfig(metrics, testCase.from, testCase.to, { duration: 220 }).duration,
-				explicitOracle.duration,
+				SVELTE_FLIP_EXPLICIT_DURATION,
 				`${testCase.name} explicit duration`,
 			);
 			// The DEFAULT is the interesting half: it is a function of the
 			// distance the formula computed, so a wrong dx/dy shows up here even
 			// when both sides are handed the same number for the explicit case.
-			const defaultOracle = withComputedStyle(style, () =>
-				flip(oracleNode(clientWidth, clientHeight, zoom), {
-					from: testCase.from as DOMRect,
-					to: testCase.to as DOMRect,
-				}),
-			);
+			const defaultOracle = frozen(SVELTE_FLIP_DEFAULT_DURATION, testCase.name, 'flip case');
 			const defaultPorted = motion.flipConfig(metrics, testCase.from, testCase.to);
-			eq(defaultPorted.duration, defaultOracle.duration, `${testCase.name} default duration`);
+			eq(defaultPorted.duration, defaultOracle, `${testCase.name} default duration`);
 			results.push(`${testCase.name}=${defaultPorted.duration.toFixed(2)}ms`);
 		}
 		return results.join(', ');
 	});
 
-	r.row('O3', 'fade CSS matches svelte/transition', () => {
+	r.row('O3', 'fade CSS matches frozen svelte/transition output', () => {
 		let compared = 0;
 		for (const opacity of ['1', '0.6']) {
-			const style = { transform: 'none', transformOrigin: '0px 0px', opacity, zoom: '1' };
 			// A non-zero delay on one pass, so sameCurve's delay comparison is not
 			// 0 === 0 on every call it ever makes.
 			const delay = opacity === '1' ? 0 : 40;
-			const oracle = withComputedStyle(style, () =>
-				fade(oracleNode(10, 10), { duration: 120, delay }),
-			);
+			const oracle = frozen(SVELTE_FADE_CSS, opacity, 'fade opacity');
 			const ported = motion.fadeConfig(
 				{ opacity: Number(opacity), transform: 'none' },
 				{ duration: 120, delay },
 			);
-			for (const [t, u] of SAMPLES) {
+			SAMPLES.forEach(([t, u], index) => {
 				must(
-					oracle.css!(t, u) === ported.css(t, u),
-					`fade at opacity ${opacity}, t=${t}: svelte ${JSON.stringify(oracle.css!(t, u))} != port ${JSON.stringify(ported.css(t, u))}`,
+					oracle[index] === ported.css(t, u),
+					`fade at opacity ${opacity}, t=${t}: svelte ${JSON.stringify(oracle[index])} != port ${JSON.stringify(ported.css(t, u))}`,
 				);
 				compared += 1;
-			}
-			eq(ported.duration, oracle.duration, 'fade duration');
-			sameCurve(oracle, ported, `fade at opacity ${opacity}`);
+			});
+			eq(ported.duration, SVELTE_FADE_DURATION, 'fade duration');
+			sameCurve(
+				frozen(SVELTE_FADE_CURVE, opacity, 'fade opacity'),
+				ported,
+				`fade at opacity ${opacity}`,
+			);
 		}
 		return `${compared} CSS strings identical, durations equal`;
 	});
 
-	r.row('O4', 'scale CSS matches svelte/transition, whitespace included', () => {
+	r.row('O4', 'scale CSS matches frozen svelte/transition output, whitespace included', () => {
 		let compared = 0;
 		for (const transform of ['none', 'rotate(3deg)']) {
-			const style = { transform, transformOrigin: '0px 0px', opacity: '1', zoom: '1' };
-			const oracle = withComputedStyle(style, () => scale(oracleNode(10, 10), { duration: 160 }));
+			const oracle = frozen(SVELTE_SCALE_CSS, transform, 'scale transform');
 			const ported = motion.scaleConfig({ opacity: 1, transform }, { duration: 160 });
-			for (const [t, u] of SAMPLES) {
-				const expected = oracle.css!(t, u);
+			SAMPLES.forEach(([t, u], index) => {
+				const expected = oracle[index];
 				const actual = ported.css(t, u);
 				must(
 					expected === actual,
@@ -665,23 +908,27 @@ export function runAssertions(options: Slice2Options = {}): number {
 				// primitive whose template literal spans lines.
 				must(
 					expected.includes('\n\t\t\t'),
-					'the scale oracle stopped emitting its own indentation -- the byte-exact claim would silently become a trivial one',
+					'the frozen scale oracle lost its own indentation -- the byte-exact claim would silently become a trivial one',
 				);
 				compared += 1;
-			}
-			sameCurve(oracle, ported, `scale with transform ${transform}`);
+			});
+			sameCurve(SVELTE_SCALE_CURVE, ported, `scale with transform ${transform}`);
 		}
 		return `${compared} CSS strings identical, indentation included, easing and delay compared`;
 	});
 
-	r.row('O5', 'easings match svelte/easing', () => {
+	r.row('O5', 'easings match frozen svelte/easing samples', () => {
+		must(
+			SVELTE_EASING.cubicOut.length === 21 && SVELTE_EASING.linear.length === 21,
+			'the frozen easing tables are not 21 samples each',
+		);
 		for (let i = 0; i <= 20; i += 1) {
 			const t = i / 20;
 			must(
-				motion.cubicOut(t) === svelteCubicOut(t),
-				`cubicOut(${t}): svelte ${svelteCubicOut(t)} != port ${motion.cubicOut(t)}`,
+				motion.cubicOut(t) === SVELTE_EASING.cubicOut[i],
+				`cubicOut(${t}): svelte ${SVELTE_EASING.cubicOut[i]} != port ${motion.cubicOut(t)}`,
 			);
-			must(motion.linear(t) === svelteLinear(t), `linear(${t}) differs`);
+			must(motion.linear(t) === SVELTE_EASING.linear[i], `linear(${t}) differs`);
 		}
 		return '21 samples each of cubicOut and linear';
 	});
@@ -765,9 +1012,8 @@ export function runAssertions(options: Slice2Options = {}): number {
 
 	// -- P: the port roll-call ------------------------------------------------
 
-	r.row('P1', 'every Svelte source has its Next counterpart', () => {
+	r.row('P1', 'every retired Svelte role has its Next port', () => {
 		for (const role of PORT_ROLES) {
-			must(exists(role.svelte), `${role.svelte} is missing -- the port's source is gone`);
 			must(exists(role.next), `${role.next} is missing (${role.role})`);
 		}
 		for (const addition of PORT_ADDITIONS) {
@@ -809,17 +1055,10 @@ export function runAssertions(options: Slice2Options = {}): number {
 			offenders.length === 0,
 			`the ported motion math reaches back into the framework it replaced: ${offenders.join(', ')}`,
 		);
-		// The harness itself imports svelte on purpose -- that is the oracle.
-		// Asserting it here keeps the two facts from being confused later.
-		// Read through stripComments: this FILE explains the double-quoted import
-		// defect in prose, and that sentence matched the pattern, so the guard
-		// passed a control that deleted all three real imports. A guard
-		// satisfiable by its own commentary is not a guard.
-		must(
-			SVELTE_IMPORT.test(stripComments(read('scripts/assert-slice2-motion.ts'))),
-			'this harness no longer imports svelte, so the O rows are comparing the port against nothing',
-		);
-		return `${scanned} Next modules scanned, 0 svelte imports; the oracle import lives here instead`;
+		// This row used to also assert that THIS harness imports svelte, as the
+		// live oracle. The oracle is frozen now (SVELTE_* tables above) and the
+		// package is gone, so only the Next half remains.
+		return `${scanned} Next modules scanned, 0 svelte imports`;
 	});
 
 	r.row('P4', 'no new runtime dependency was taken for the animation', () => {
@@ -1152,11 +1391,9 @@ export function runAssertions(options: Slice2Options = {}): number {
 		// `in:scale`, not `animate:flip`. Preserving ids would make the React
 		// version animate a transition the Svelte version has never animated.
 		// The row exists so the match is asserted rather than accidental.
-		const svelteSource = read('src/lib/components/study/HashMapVisualizer.svelte');
-		must(
-			/function rehash\(\)[\s\S]*?id: `n\$\{nodeId\+\+\}`/.test(svelteSource),
-			'the Svelte rehash no longer mints new ids, so this row is pinning the port to something the original stopped doing',
-		);
+		// Frozen fact: `rehash()` at src/lib/components/study/HashMapVisualizer.svelte:88-94
+		// (commit 770bc30) pushes `{ id: `n${nodeId++}`, ... }` per rehashed key.
+		// The source is retired, so the row no longer re-reads it.
 		return `${before.length} ids replaced wholesale, matching the Svelte rehash`;
 	});
 
@@ -1465,9 +1702,9 @@ export function stripComments(source: string): string {
 /**
  * Comments removed AND string contents emptied.
  *
- * `stripComments` keeps string contents on purpose -- the P3 oracle guard has
- * to see a real `from 'svelte/animate'`. Rows that check for BEHAVIOR need the
- * opposite, or a sentence in quotes satisfies them.
+ * `stripComments` keeps string contents on purpose -- an import scan has to see
+ * the real specifier, which is a string literal. Rows that check for BEHAVIOR
+ * need the opposite, or a sentence in quotes satisfies them.
  */
 export function codeOnly(source: string): string {
 	return stripComments(source).replace(

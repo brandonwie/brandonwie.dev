@@ -1,11 +1,10 @@
 /**
- * The 3B system snapshot, read from the Svelte tree rather than copied.
+ * The 3B system snapshot, read from the repository root rather than copied.
  *
  * Same rule as `social-feed.json` in `content/social-feed.tsx` and the
- * `public/` symlinks: while both stacks exist, a shared input is imported
- * across rather than duplicated, so the two builds cannot drift apart while
- * nobody is looking. `deno task snapshot:3b` regenerates the file in place and
- * both stacks pick the change up.
+ * `public/` symlinks: shared inputs stay at the root, imported across, until
+ * `next/` collapses into the repository root. `deno task snapshot:3b`
+ * regenerates the file in place.
  *
  * The JSON is already sanitized by that task, so rendering it adds no privacy
  * surface — the same statement `system3b-graph.ts` opens with.
