@@ -362,6 +362,10 @@ function rssProblems(
 	const prefix = locale === 'ko' ? '/ko' : '';
 	// The KO feed reads the whole corpus: the translation where one exists,
 	// the English post otherwise.
+	// NOTE: Korean-only posts ARE handled here: the map spans the union of both
+	// locales and prefers ko.get(slug), so a KO post with no English source maps to
+	// its own frontmatter, never to undefined -- the same composition as
+	// feedPosts() in next/src/content/feeds.ts.
 	const expected = new Map<string, SourcePost>(
 		locale === 'en' ? en : [...en, ...ko].map(([slug]) => [slug, ko.get(slug) ?? en.get(slug)!]),
 	);
