@@ -106,11 +106,9 @@ export function revealTweens(want: boolean, still: boolean): TweenSpec[] {
 	const d = still ? 0 : 1;
 
 	// The three `vars` objects below are written as the SAME expressions the
-	// Svelte original writes, key for key, because group T compares them as
-	// text: it extracts both files' `gsap.to` bodies and requires them to
-	// match. `want ? 1 : 0` is therefore spelled out three times rather than
-	// hoisted into a local -- hoisting it would read better and would silently
-	// turn that oracle into a comparison of one expression against nothing.
+	// Svelte original wrote, key for key, because the migration harness
+	// compared the two files' `gsap.to` bodies as text. That is why
+	// `want ? 1 : 0` is spelled out three times rather than hoisted into a local.
 	return [
 		{
 			selector: '.second',
@@ -157,5 +155,5 @@ export function initialSets(): { selector: string; vars: { autoAlpha: number; y?
 	];
 }
 
-/** Flip's own options, shared so the component and the harness read one source. */
+/** Flip's own options, shared so every consumer reads one source. */
 export const FLIP_OPTIONS = { duration: DURATION, ease: EASE, absolute: true } as const;

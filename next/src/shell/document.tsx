@@ -92,10 +92,8 @@ const FONT_STYLESHEET =
  * Cross-root navigations (such as LanguageToggle crossing `(en)` and `(ko)`)
  * retain native anchors and full page reload.
  *
- * This drops the `body:preload-data` shell key the comparator captures on all
- * 366 baseline pages. The four currently migrated route fingerprints are
- * approved in the exception ledger; every future route needs its own
- * route-specific fingerprint entry before this decision applies there.
+ * This dropped the `body:preload-data` shell key the migration comparator
+ * captured on all 366 baseline pages; the exception ledger approved it.
  */
 export const PREFETCH_DECISION = 'hover-prefetch-app-link' as const;
 

@@ -26,8 +26,7 @@ import { GraphLocaleProvider } from './System3bLocale';
  * the subtree in its OWN <Suspense fallback={null}> — and an outer Suspense at
  * the call site cannot win, because the inner boundary is nearer. Dropping
  * `loading` therefore deletes the static no-JS fallback from the export with no
- * type error and no runtime error. It is asserted by the harness for that
- * reason.
+ * type error and no runtime error.
  *
  * The `loading` component receives no props, so the fallback's data arrives by
  * context from the provider above it — contexts are visible to Suspense

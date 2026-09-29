@@ -11,8 +11,7 @@ import type { NextConfig } from 'next';
  *   output: 'export'   static export, no server runtime on Cloudflare Pages
  *   distDir: 'build'   same directory NAME, but inside this package -- Next
  *                      requires distDir to stay within the project root, so the
- *                      candidate tree is `next/build` and the comparator is
- *                      pointed at it explicitly
+ *                      export lands in `next/build`
  *   trailingSlash      false, matching the URL contract proven by the spike
  *                      (366/366 baseline paths)
  *

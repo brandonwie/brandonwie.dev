@@ -16,9 +16,9 @@ type MermaidApi = (typeof import('mermaid'))['default'];
  * runs DOMPurify under strict, whose default allowlist permits br. So the
  * hardening is free here.
  *
- * flowchart is restored verbatim. It is invisible to the comparator — the SVG
- * is client-rendered and the export holds only the fence source — which makes
- * it exactly the class of drift the parity harness cannot see.
+ * flowchart is restored verbatim. It is invisible to any static-export
+ * comparison — the SVG is client-rendered and the export holds only the fence
+ * source — so drift here would go unnoticed.
  * flowchart.curve: 'basis' is the one that would have been most visible: it
  * changes edge GEOMETRY, not colour, on 55 of 68 fences across 25 of 28 files.
  *

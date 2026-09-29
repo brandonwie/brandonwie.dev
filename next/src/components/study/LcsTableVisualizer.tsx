@@ -147,8 +147,8 @@ interface CellView {
 /**
  * PORT NOTE — the `in:fade` intros on the role badges and the taken chips
  * render statically. Same tradeoff the Slice 4 WIP ports made for `in:fade`
- * (Mst, GraphTraversal): a 120 ms intro is below what the parity harness
- * asserts, and `KeyedMotion` only wraps keyed HTML lists, not SVG text.
+ * (Mst, GraphTraversal): a 120 ms intro is barely perceptible, and
+ * `KeyedMotion` only wraps keyed HTML lists, not SVG text.
  */
 export default function LcsTableVisualizer({ copy }: { copy: LcsTableCopy }) {
 	const [step, setStep] = useState(0);

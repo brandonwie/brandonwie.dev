@@ -12,7 +12,7 @@
  * component stays free of window listeners.
  *
  * `navigate` is injected rather than imported: `useRouter()` is a hook and
- * cannot be called from a plain module, and the harness passes a recorder to
+ * cannot be called from a plain module, and a test can pass a recorder to
  * read back the exact href each item would visit. The shell passes a
  * full-document navigation, which is the shell's recorded decision until PR 2d
  * changes it.

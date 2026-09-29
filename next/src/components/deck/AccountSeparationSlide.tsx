@@ -46,7 +46,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import { DURATION, EASE, loadGsap, reducedMotion } from '@/deck/gsap';
+import { loadGsap, reducedMotion } from '@/deck/gsap';
 import { FLIP_OPTIONS, initialSets, planStep, revealTweens } from '@/deck/slide-plan';
 
 type Bundle = Awaited<ReturnType<typeof loadGsap>>;
@@ -268,7 +268,3 @@ export default function AccountSeparationSlide({ step = 0, animate = true }: Pro
 		</section>
 	);
 }
-
-/** Re-exported so the harness can assert the component and the planner agree
- *  on one duration and one curve rather than two copies of the numbers. */
-export { DURATION, EASE };

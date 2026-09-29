@@ -58,8 +58,7 @@ export interface PaletteItem {
 	meta?: { category?: string; date?: string; tags?: string[] }; // post-only render extras
 }
 
-/** Client navigation, injected. `useRouter().push` in the app, a recorder in
- *  the harness. */
+/** Client navigation, injected: `useRouter().push` in the app. */
 export type Navigate = (href: string) => void;
 
 // Whether the current route is the Korean locale.

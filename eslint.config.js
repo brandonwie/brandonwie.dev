@@ -41,8 +41,8 @@ export default ts.config(
 			'next/build/',
 			'next/.next/',
 			'next/src/paraglide/',
-			// Controls scratch (c3/c13/projection/article lanes write throwaway
-			// copies under tmp/); linting it makes `pnpm lint` order-dependent.
+			// Git-ignored scratch space (the retired migration harness left copies
+			// here); linting it would make `pnpm lint` depend on leftovers.
 			'tmp/',
 		],
 	},

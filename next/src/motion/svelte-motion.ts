@@ -186,9 +186,9 @@ export interface ScaleParams {
  *
  * The CSS string reproduces Svelte's template literal exactly, tabs and
  * newlines included. That looks like an odd thing to preserve until you
- * remember what it is for: the harness compares this string to the one Svelte
- * produces, and a comparison that normalizes whitespace first is a weaker
- * comparison for no gain.
+ * remember what it was for: the migration harness compared this string to the
+ * one Svelte produces, and a comparison that normalizes whitespace first is a
+ * weaker comparison for no gain.
  */
 export function scaleConfig(metrics: TransitionMetrics, params: ScaleParams = {}): MotionConfig {
 	const { delay = 0, duration = 400, easing = cubicOut, start = 0, opacity = 0 } = params;
@@ -237,7 +237,7 @@ export function scaleConfig(metrics: TransitionMetrics, params: ScaleParams = {}
  * between them, that made the port's curve a slightly CLOSER approximation of
  * `cubicOut` than Svelte's own. Better, and therefore wrong: an unrecorded
  * improvement is a divergence like any other, and this one would have been
- * invisible in every comparison the harness makes.
+ * invisible in every comparison the migration harness made.
  */
 export function frameCount(duration: number): number {
 	// No clamp, deliberately. `Math.ceil` is already 1 or more for any positive

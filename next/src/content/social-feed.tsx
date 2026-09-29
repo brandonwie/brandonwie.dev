@@ -101,8 +101,8 @@ function blogHref(slug: string, path: string): string {
  * NOTE: no `alternates.languages` (hreflang) and no `openGraph` block on
  * purpose. The SvelteKit feed pages emit neither — the frozen baseline records
  * `pages["/feed"].alternates = []` and `og = {}` for both locales — so adding
- * them here would be a divergence from the parity oracle, not a fix. Whether
- * the chrome should gain them is a Slice 3 shell decision.
+ * them here would have diverged from the SvelteKit pages during the migration.
+ * Whether the feed pages should gain them is a separate decision.
  */
 export function generateFeedMetadata(locale: Locale): Metadata {
 	const copy = COPY[locale];

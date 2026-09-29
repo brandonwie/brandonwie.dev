@@ -373,7 +373,7 @@ export function edgeStyleObject(
 }
 
 /**
- * Hover dimming, pure so the harness can drive it without a browser.
+ * Hover dimming, pure so it can be exercised without a browser.
  *
  * The Svelte original appended ';opacity:0.1' to a style STRING
  * (System3bFlow.svelte:117-127). Here it is an object MERGE, and the merge must
