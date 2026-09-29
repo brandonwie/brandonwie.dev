@@ -132,6 +132,9 @@ const HARNESS = 'scripts/migration-verify.ts';
  * passing comparison by exactly its own injection.
  */
 const WORK_ROOT = mkdtempSync(join(tmpdir(), 'migration-verify-controls-'));
+// Every fatal path below calls process.exit(2); clean the capture and the build
+// copies on those exits too, not only on the normal end of the run.
+process.on('exit', () => rmSync(WORK_ROOT, { recursive: true, force: true }));
 const baselineFile = join(WORK_ROOT, 'self-baseline.json');
 try {
 	execFileSync('npx', ['tsx', HARNESS, 'capture', buildDir, baselineFile], {
