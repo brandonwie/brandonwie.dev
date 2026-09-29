@@ -629,6 +629,9 @@ function buildSurfaces(ctx: SurfaceContext): Surface[] {
 			'T5',
 			'check',
 			'exit 0 + Paraglide compile line (check:next compiles messages, then tsc --noEmit and check:scripts are silent on success)',
+			// Paraglide's success line, observed with @inlang/paraglide-js 2.20.2
+			// (next/package.json). `paraglide-js compile` prints it on every run,
+			// including this one right after T2's build. Re-check it on upgrade.
 			/Successfully compiled inlang project/,
 			{ timeoutMs: minutes(10) },
 		),
