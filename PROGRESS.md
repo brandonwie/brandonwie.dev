@@ -38,6 +38,19 @@
 
 ## Session Log
 
+### 2026-10-06 (Session 30)
+
+**Published `frontend/intraword-emphasis-fails-before-hangul` (EN + KO)**
+
+- Synced the 3B entry, expanded it, and translated it. Audit reported 0 G1
+  and 0 G2 findings. `npm run build` completed with 374 static pages.
+- Hero `public/hero/intraword-emphasis-fails-before-hangul.png` is 2400x1260.
+  The og card is 1200x630. The blog count is 168 EN and 168 KO.
+- The post records the 2026-08-12 mdsvex / micromark 4.0.2 miss. It does not
+  claim the current Next.js + remark pipeline was retested.
+
+**Next:** point `/blog-publish` at `public/hero` and `public/og`.
+
 ### 2026-09-14 (Session 29)
 
 **Study section: AWS Certified AI Practitioner (EN + KO)**
