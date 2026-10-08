@@ -1058,8 +1058,8 @@ ${cleanedBody}
 			console.log('⚠️  Posts with upstream changes:');
 			for (const m of hashMismatches) {
 				console.log(`   - ${m.path}`);
-				console.log(`     Old: ${m.oldHash.substring(0, 16)}...`);
-				console.log(`     New: ${m.newHash.substring(0, 16)}...`);
+				console.log(`     Old: ${m.oldHash}`);
+				console.log(`     New: ${m.newHash}`);
 				console.log(`     Run: pnpm sync:diff -- --slug=${m.slug}`);
 			}
 		}
