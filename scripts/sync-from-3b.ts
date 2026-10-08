@@ -458,32 +458,22 @@ async function readExistingPost(targetPath: string): Promise<{
 }
 
 /**
- * Update source file with sync timestamps
+ * Update source file with sync timestamps.
+ *
+ * Surgical: only the blog.last_synced / blog.published_at / blog.needs_resync
+ * lines change; every other byte of the 3B source is preserved (see
+ * clearNeedsResyncInPlace for why stringifyYaml is not used on 3B sources).
  */
-async function updateSourceFile(
+export async function updateSourceFile(
 	sourcePath: string,
 	content: string,
-	frontmatter: SourceFrontmatter,
 	isFirstSync: boolean,
+	today = new Date().toISOString().split('T')[0],
 ): Promise<void> {
-	const today = new Date().toISOString().split('T')[0];
-
-	// Update blog metadata
-	if (frontmatter.blog) {
-		frontmatter.blog.last_synced = today;
-		if (isFirstSync) {
-			frontmatter.blog.published_at = today;
-		}
-		// Clear resync flag after successful sync
-		frontmatter.blog.needs_resync = false;
-	}
-
-	// Reconstruct file content
-	const { body } = parseFrontmatter(content);
-	const newFrontmatter = stringifyYaml(frontmatter);
-	const newContent = `---\n${newFrontmatter}---\n${body}`;
-
-	await Deno.writeTextFile(sourcePath, newContent);
+	let updated = upsertBlogKeyInPlace(content, 'last_synced', `"${today}"`);
+	if (isFirstSync) updated = upsertBlogKeyInPlace(updated, 'published_at', `"${today}"`);
+	updated = upsertBlogKeyInPlace(updated, 'needs_resync', 'false');
+	await Deno.writeTextFile(sourcePath, updated);
 }
 
 // ============================================================================
@@ -609,6 +599,43 @@ function setSourceHashInPlace(content: string, newHash: string): string | null {
 	);
 	if (updatedFrontmatter === frontmatterRaw) return null;
 	return `${openDelim}${updatedFrontmatter}${closeDelim}${body}`;
+}
+
+/**
+ * Set `key: value` as a direct child of the block-style `blog:` mapping in the
+ * YAML frontmatter, preserving every other byte (including a trailing
+ * `# comment` on the replaced line). Inserts `<indent>key: value` right after
+ * the `blog:` line when the key is absent. `value` is raw YAML text.
+ * Throws when there is no frontmatter or no block-style `blog:` mapping —
+ * callers only reach this for synced entries, which always have one.
+ */
+export function upsertBlogKeyInPlace(content: string, key: string, value: string): string {
+	const match = content.match(/^(---\n)([\s\S]*?)(\n---\n)([\s\S]*)$/);
+	if (!match) throw new Error(`upsertBlogKeyInPlace(${key}): no frontmatter`);
+	const [, openDelim, frontmatterRaw, closeDelim, body] = match;
+	const lines = frontmatterRaw.split('\n');
+	const blogIdx = lines.findIndex((l) => /^blog:[ \t]*(#.*)?$/.test(l));
+	if (blogIdx === -1) throw new Error(`upsertBlogKeyInPlace(${key}): no block-style blog: mapping`);
+
+	// The block runs until the next non-blank, non-indented line.
+	let end = blogIdx + 1;
+	while (end < lines.length && (lines[end].trim() === '' || /^[ \t]/.test(lines[end]))) end++;
+	const firstChild = lines.slice(blogIdx + 1, end).find((l) => l.trim() !== '');
+	const indent = firstChild?.match(/^[ \t]+/)?.[0] ?? '  ';
+
+	const keyLine = new RegExp(
+		`^(${indent}${key}:)[ \\t]*("[^"\\n]*"|'[^'\\n]*'|[^\\s#]*)([ \\t]+#.*)?$`,
+	);
+	let found = false;
+	for (let i = blogIdx + 1; i < end; i++) {
+		const m = lines[i].match(keyLine);
+		if (!m) continue;
+		lines[i] = `${m[1]} ${value}${m[3] ?? ''}`;
+		found = true;
+		break;
+	}
+	if (!found) lines.splice(blogIdx + 1, 0, `${indent}${key}: ${value}`);
+	return `${openDelim}${lines.join('\n')}${closeDelim}${body}`;
 }
 
 /**
@@ -1036,7 +1063,7 @@ ${cleanedBody}
 
 			// Update source file with sync timestamps
 			const isFirstSync = !frontmatter.blog?.published_at;
-			await updateSourceFile(entry.path, content, frontmatter, isFirstSync);
+			await updateSourceFile(entry.path, content, isFirstSync);
 
 			console.log(`✅ Synced: ${relativePath}`);
 		}
@@ -1085,5 +1112,5 @@ ${cleanedBody}
 	}
 }
 
-// Run
-await syncPosts();
+// Run (guarded so the test can import helpers without triggering a sync)
+if (import.meta.main) await syncPosts();
