@@ -27,8 +27,15 @@ echo "2/6 Linting..."
 corepack pnpm run lint || exit 1
 
 echo ""
-echo "3/6 Format check..."
-corepack pnpm run format:check || exit 1
+echo "3/6 Format check (tracked files)..."
+# CI checks a fresh clone, i.e. tracked files only. Checking tracked files here
+# matches that set, so another tool's untracked files (tokscale-export-*.json)
+# in a shared checkout cannot block a push. .prettierignore still applies.
+# Regular files only (modes 100644/100755): prettier errors on an explicitly
+# named symlink, which `prettier --check .` skips.
+git ls-files -s -z |
+	perl -0ne 'print "$1\0" if /^1006[0-7]{2} [0-9a-f]+ \d+\t(.+)\0$/s' |
+	xargs -0 ./node_modules/.bin/prettier --check --ignore-unknown || exit 1
 
 echo ""
 echo "4/6 Building (includes Pagefind)..."
