@@ -147,8 +147,10 @@ or Svelte config, or a Svelte package reappearing in a diff is a regression.
 - `deno.lock` and `pnpm-lock.yaml` coexist on purpose: deno runs the 3B
   scripts, pnpm runs the app build. Not a "two package managers" mistake.
 
-`docs`, `CLAUDE.md` and `AGENTS.md` are committed symlinks into the 3B repo. A
-PR should not change them; if one does, that is the finding.
+`docs` and `CLAUDE.md` are committed symlinks into the 3B repo. A PR should not
+change them; if one does, that is the finding. `AGENTS.md` is a committed file
+holding only the review pointer to this file; the Codex profile is the
+git-ignored `AGENTS.override.md` symlink, which must never be committed.
 
 ## Verification
 

@@ -16,6 +16,8 @@ dist/
 # with JSON.parse.
 next/AGENTS.md
 next/CLAUDE.md
+# Per-machine symlink to the 3B Codex profile; Codex reads it before AGENTS.md.
+/AGENTS.override.md
 
 # Deno
 .deno/
