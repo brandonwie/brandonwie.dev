@@ -199,7 +199,7 @@ subsystems:
         pre-push: [lint, 'format:check', build, check, 'validate:dates']
       github_workflows:
         ci.yml: 'push/PR to main → install → lint → format:check → build → check → validate:dates → snapshot:3b:check'
-        claude.yml + claude-code-review.yml: 'AI assistant workflows (not build/deploy)'
+        claude.yml + claude-code-review.yml: 'stubs calling the shared @claude assistant and @claude review workflows in brandonwie/claude-review; review rules in REVIEW.md (not build/deploy)'
       deploy: 'Cloudflare Pages via dashboard GitHub integration — NO wrangler.toml, NO IaC in repo'
       gaps: ['no test step (no framework)', 'no deploy IaC', 'sync:check not in any hook/CI']
 
