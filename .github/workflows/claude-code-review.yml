@@ -1,19 +1,10 @@
 name: Claude Code Review
 
-# Formal PR review handler. Triggered ONLY by "@claude review" comments on
-# pull requests. The general @claude assistant (claude.yml) explicitly
-# excludes this trigger phrase to prevent both workflows firing on the same
-# comment.
-#
-# brandonwie.dev is a Next.js App Router static export (the `next/` package).
-# SvelteKit was retired after the 2026-09-20 cutover. PRs touch the Next app,
-# the shared root inputs it imports, or bilingual content. The review prompt
-# below routes findings by that surface.
-#
-# Security note: github.event.*.body fields appear ONLY in `if:` contains()
-# expressions (YAML-time evaluation, never shell-injected). Numeric inputs
-# (issue.number, repository) are interpolated into the prompt block as data,
-# not commands.
+# "@claude review" on a pull request runs the shared review workflow in
+# brandonwie/claude-review, which owns the action pin, model, trigger gate,
+# prompt and tool allowlist. What to review lives in REVIEW.md at the
+# repository root, read from the default branch. The general @claude assistant
+# (claude.yml) excludes this trigger phrase so both never fire on one comment.
 
 on:
   issue_comment:
@@ -21,197 +12,12 @@ on:
 
 jobs:
   claude-review:
-    # PR comments only. issue_comment fires for both issues and PRs; the
-    # `pull_request` field is only present when the parent is a PR.
-    if: |
-      github.event.issue.pull_request &&
-      contains(github.event.comment.body, '@claude review')
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
+    uses: brandonwie/claude-review/.github/workflows/claude-review.yml@main
     permissions:
-      contents: read # read-only review; never auto-pushes commits
-      pull-requests: write # required to post comments + inline annotations
+      contents: read
+      pull-requests: write
       issues: read
       id-token: write
-
-    steps:
-      - name: Validate Claude token
-        env:
-          CLAUDE_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          if [ -z "$CLAUDE_TOKEN" ]; then
-            echo "::error::CLAUDE_CODE_OAUTH_TOKEN is not configured. Set via: gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo brandonwie/brandonwie.dev"
-            exit 1
-          fi
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Run Claude Code Review
-        id: claude-review
-        # Pinned to v1.0.105 (commit e58dfa55, 2026-04-23) — last pre-regression
-        # release. v1.0.106..v1.0.113 ship a bundled install.sh that exits 0 but
-        # does NOT place the claude binary at /home/runner/.local/bin/claude,
-        # causing the action to fail with "Claude Code native binary not found"
-        # (anthropics/claude-code-action#1254 + #1260, both open as of
-        # 2026-05-06). The `@v1` floating tag was bumped to v1.0.113 today,
-        # propagating the regression to every pinned-to-v1 caller. Revisit when
-        # upstream lands the SDK fallback fix proposed in #1260.
-        uses: anthropics/claude-code-action@e58dfa55559035499a4982426bb73605e8b5ad8e # v1.0.105
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          track_progress: true
-          prompt: |
-            REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.issue.number }}
-
-            Please review this pull request.
-
-            ## Project Context
-
-            brandonwie.dev is a bilingual personal blog + portfolio deployed
-            as static files to Cloudflare Pages. The site is a Next.js 16 App
-            Router static export in the `next/` workspace package
-            (`output: 'export'`, output in `next/build/`, the Pages output
-            directory). A few inputs stay at the repository root and are
-            imported by `next/` on purpose: the EN/KO markdown corpus under
-            `src/content/posts/`, `src/lib/seo.ts`, `src/lib/data/`,
-            `src/lib/plugins/remark-toc-extract.js`, `src/app.css` (design
-            tokens), `messages/{en,ko}.json`, `project.inlang/`, and
-            `public/` (every `next/public` entry is a symlink into it).
-            SvelteKit was retired after the 2026-09-20 cutover; a `.svelte`
-            file, a Vite config, or a Svelte package reappearing in a diff is
-            a regression.
-
-            The stack is Next.js 16, React 19, Tailwind CSS v4 through
-            `@tailwindcss/postcss`, Paraglide-JS (compiled into
-            `next/src/paraglide/`), an AST markdown pipeline under
-            `next/src/markdown/` with Shiki, Fuse.js, and Pagefind. Package
-            management is pnpm; deno only runs the 3B sync and snapshot
-            tooling under `scripts/`.
-
-            Root `pnpm build` runs the Next build and then Pagefind; root
-            `pnpm check` compiles Paraglide and runs Next TypeScript. The
-            other gates are ESLint, Prettier, frontmatter date validation and
-            the 3B snapshot check. There is no test suite.
-
-            ## Architecture Notes
-
-            - Command palette: item model and search live in
-              `next/src/palette/` (`items.ts`, `fuzzy.ts`); the modal is
-              `next/src/components/palette/FuzzyFinder.tsx`.
-            - i18n: `messages/{en,ko}.json` hold UI strings;
-              `next/src/paraglide/` is GENERATED (never hand-edit). Korean
-              routes live under `next/app/(ko)/ko/`. A missing KO post falls
-              back to EN content with a notice banner (`isFallback`) —
-              intentional, not a bug.
-            - Content: posts require frontmatter (`title`, `description`,
-              `date`, `updated`, `tags`, `category`, `lang`, `draft`).
-              `readingTime` is computed by
-              `next/src/markdown/plugins/remark-reading-time.ts` at build
-              time — NEVER set manually. KO posts add `source_lang`,
-              `source_slug`, `source_updated`, `translation_date`.
-            - `next/src/content/article.tsx` renders the shared EN/KO detail
-              page (JSON-LD Article schema, hreflang, Open Graph, reading
-              progress). RSS (`next/app/(en)/rss.xml`,
-              `next/app/(ko)/ko/rss.xml`) and `next/app/sitemap.xml` are
-              route handlers that run once at build time.
-
-            ## Review Categories
-
-            For Next / React changes:
-
-            N1. Static export — flag request-time features such as cookies,
-                Server Actions, request-dependent handlers, rewrites, ISR, or
-                default image optimization. Dynamic routes must be fully
-                enumerated with `generateStaticParams`.
-            N2. Server/Client boundary — components are server-first and run at
-                build time. Keep `'use client'` boundaries narrow, props
-                serializable, and browser APIs inside client code.
-            N3. Output contract — preserve canonical URLs, locale alternates,
-                metadata, JSON-LD, RSS/sitemap, accessibility, and hydration
-                behavior. Compare generated artifacts, not JSX shape.
-            N4. Content — preserve the guarded AST, typography, Shiki, headings,
-                Mermaid, reading time, and safe HTML/JSON-LD serialization.
-            N5. Accessibility — labels, `alt`, ARIA, focus management, and
-                keyboard equivalents for every interactive element.
-            N6. XSS / injection — the real sinks are the
-                `dangerouslySetInnerHTML` / `innerHTML` uses under `next/src/`
-                (rendered markdown, Pagefind excerpts, the JSON-LD block,
-                Mermaid output). Confirm injected values are build-time
-                markdown or the site's own schema, not user-controlled data.
-            N7. i18n integrity — new UI strings go into BOTH
-                `messages/en.json` and `messages/ko.json` (key parity) and are
-                read through the generated Paraglide messages, not hardcoded.
-            N8. Tailwind v4 — theme tokens live in `@theme {}` inside
-                `src/app.css` (imported by `next/app/globals.css`); Tailwind
-                runs through `next/postcss.config.mjs` and there is no
-                `tailwind.config.*`. Custom utilities use `@utility`. Flag
-                reintroduced v3 patterns (`@tailwind base`, JS config,
-                `@layer components` for utilities).
-
-            For markdown / content changes (blog posts):
-
-            C1. Frontmatter completeness — required fields present;
-                `readingTime` NOT set by hand; KO posts include the
-                translation-linkage fields.
-            C2. EN/KO parity — a KO post's `source_slug` resolves to a real EN
-                slug; `category` and `tags` stay consistent across the pair.
-            C3. Mermaid — diagrams are standard ```mermaid fences;
-                `next/src/markdown/plugins/remark-mermaid-node.ts` turns them
-                into the client Mermaid component before Shiki runs.
-            C4. Blog voice — the blog SHARES, it does not lecture (intellectual
-                humility). Flag fabricated debugging narratives or "here's what
-                I'll teach you" framing. KO translations: natural 해요/합니다,
-                keep technical terms in English, don't over-formalize.
-
-            For all changes:
-
-            A1. Conventional Commits — PR title `type(scope): description`
-                (lowercase, no trailing period).
-            A2. Atomic scope — only files tied to the claimed change; flag
-                unrelated drift.
-
-            ## brandonwie.dev Conventions (Do NOT flag)
-
-            - `next/src/paraglide/` is GENERATED by Paraglide-JS — never flag
-              it as "duplicated code" or suggest editing it directly.
-            - Korean pages rendering EN content behind a fallback banner is
-              intentional (`isFallback`), not a "missing translation" to fix in
-              code.
-            - The thin root package plus the `next/` workspace package is the
-              current layout; collapsing `next/` into the root is a tracked
-              follow-up, not a review finding. The root-level shared inputs
-              listed above are imported by `next/` on purpose.
-            - Client-side category filtering on `/posts` (no URL params) is a
-              deliberate SSG choice — do not suggest server-side or URL-based
-              filtering (it would force prerendering every category combo).
-            - Prerendered HTML and the Pagefind index under `next/build/` are
-              expected build artifacts, not misconfiguration.
-            - `docs/` and `CLAUDE.md` are 3B symlinks (gitignored / SoT
-              pointers) — they should NOT appear in PR diffs. If they do, that
-              IS the finding.
-            - `deno.lock` and `pnpm-lock.yaml` coexisting is intentional: deno
-              runs the 3B sync scripts, pnpm runs the app build. Not a
-              "two package managers" mistake.
-
-            ## Output Instructions
-
-            Use `gh pr comment` for top-level summary feedback (one comment
-            per review run; do NOT post multiple summary comments).
-
-            Use `mcp__github_inline_comment__create_inline_comment` (with
-            `confirmed: true`) to highlight specific issues on diff lines.
-
-            Only post GitHub comments — do not return review text as assistant
-            messages without posting.
-
-            If the PR is purely cosmetic (whitespace, formatter output) or
-            entirely generated-file churn (e.g. `next/src/paraglide/`), post a
-            single sentence confirming the change scope and skip the category
-            checklist.
-
-          claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+      actions: read
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
