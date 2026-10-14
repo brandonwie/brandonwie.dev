@@ -37,6 +37,52 @@ export const EMPTY_TERMS: Terms = {
 	benignWords: { terms: [] },
 };
 
+/** The list field of each section. */
+const TERM_FIELDS: { [K in keyof Terms]: string } = {
+	employer: 'terms',
+	internalIdentifiers: 'terms',
+	companyRepoOwners: 'owners',
+	personalOwners: 'owners',
+	selfDomains: 'domains',
+	personalFraming: 'terms',
+	namedHumans: 'terms',
+	benignWords: 'terms',
+};
+
+/** Non-detector sections that may be absent; EMPTY_TERMS holds their defaults. */
+const DEFAULTED_SECTIONS = new Set<keyof Terms>(['personalOwners', 'selfDomains']);
+
+/**
+ * Validate a parsed deny list. Throws when a detector section or its string
+ * array is missing or malformed: a merge over EMPTY_TERMS would otherwise turn
+ * `{}` into a "loaded" list with detection silently OFF. Only an absent file
+ * may fall back to EMPTY_TERMS, and only behind --allow-missing-terms. The two
+ * non-detector sections keep their defaults when absent and are type-checked
+ * when present.
+ */
+export function parseTerms(raw: unknown, source: string): Terms {
+	const bad: string[] = [];
+	const isObject = typeof raw === 'object' && raw !== null && !Array.isArray(raw);
+	if (!isObject) bad.push('(root is not an object)');
+	const obj = (isObject ? raw : {}) as Record<string, Record<string, unknown> | undefined>;
+	const terms = { ...EMPTY_TERMS } as Record<string, unknown>;
+	for (const [section, field] of Object.entries(TERM_FIELDS) as [keyof Terms, string][]) {
+		if (obj[section] === undefined && DEFAULTED_SECTIONS.has(section)) continue;
+		const list = obj[section]?.[field];
+		if (!Array.isArray(list) || !list.every((t) => typeof t === 'string')) {
+			bad.push(`${section}.${field}`);
+			continue;
+		}
+		terms[section] = obj[section];
+	}
+	if (bad.length > 0) {
+		throw new Error(
+			`Deny list at ${source} is malformed: ${bad.join(', ')} must be a string array. Fix the file; --allow-missing-terms does not cover a malformed list.`,
+		);
+	}
+	return terms as unknown as Terms;
+}
+
 /**
  * Tags that exist for internal filing and must never ship. The blog renders tags
  * on cards and post pages, so a `work` tag publicly labels a post as

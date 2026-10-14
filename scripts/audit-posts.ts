@@ -36,7 +36,15 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import matter from 'gray-matter';
-import { auditG1, EMPTY_TERMS, hostOf, wordHit, type Finding, type Terms } from './lib/g1.ts';
+import {
+	auditG1,
+	EMPTY_TERMS,
+	hostOf,
+	parseTerms,
+	wordHit,
+	type Finding,
+	type Terms,
+} from './lib/g1.ts';
 
 export { wordHit };
 
@@ -84,7 +92,7 @@ function validateWorkReference(fm: Record<string, unknown>): Finding[] | null {
 function loadTerms(): { terms: Terms; loaded: boolean } {
 	if (!existsSync(TERMS_PATH)) return { terms: EMPTY_TERMS, loaded: false };
 	const raw = JSON.parse(readFileSync(TERMS_PATH, 'utf8'));
-	return { terms: { ...EMPTY_TERMS, ...raw }, loaded: true };
+	return { terms: parseTerms(raw, TERMS_PATH), loaded: true };
 }
 
 function walk(dir: string): string[] {
@@ -260,7 +268,14 @@ async function main() {
 	const includeDrafts = args.includes('--include-drafts');
 	const asJson = args.includes('--json');
 
-	const { terms, loaded } = loadTerms();
+	let loadedTerms: { terms: Terms; loaded: boolean };
+	try {
+		loadedTerms = loadTerms();
+	} catch (err) {
+		console.error(`❌ ${err instanceof Error ? err.message : String(err)}`);
+		process.exit(1);
+	}
+	const { terms, loaded } = loadedTerms;
 
 	// Fail closed. A missing deny list silently disables employer detection, and
 	// a moved path did exactly that for weeks. Structural-only runs are opt-in.

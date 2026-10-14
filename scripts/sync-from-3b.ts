@@ -22,6 +22,12 @@
  *
  * G1 gate: every post is audited (scripts/lib/g1.ts) before any write. A post
  * with a finding is not written and its source is not stamped; exit code 1.
+ * The default mode, --dry-run and --check load the deny list; a malformed list
+ * (bad JSON, or a section without its string array) fails all three. A missing
+ * list stops a writing run unless --allow-missing-terms; --dry-run and --check
+ * continue without it, and a dry run then previews STRUCTURAL G1 checks only
+ * (no employer or identifier detection). --diff, --reconcile and --rehash do
+ * not load the list and do not run the G1 gate.
  *
  * This script:
  * 1. Reads markdown files from 3B knowledge directory
@@ -39,7 +45,7 @@ import {
 	stringify as stringifyYaml,
 } from 'https://deno.land/std@0.220.0/yaml/mod.ts';
 import { basename, dirname, join } from 'https://deno.land/std@0.220.0/path/mod.ts';
-import { auditG1, EMPTY_TERMS, type Terms } from './lib/g1.ts';
+import { auditG1, EMPTY_TERMS, parseTerms, type Terms } from './lib/g1.ts';
 
 // Configuration — all paths absolute so script works from any directory
 // Without HOME every default path below is meaningless, and join() would throw a
@@ -490,15 +496,19 @@ export async function updateSourceFile(
 	await Deno.writeTextFile(sourcePath, updated);
 }
 
-/** Read the deny list over EMPTY_TERMS; `loaded` is false only when the file is absent. */
+/**
+ * Read and validate the deny list. `loaded` is false only when the file is
+ * absent; bad JSON or a malformed section throws (parseTerms), in every mode.
+ */
 async function loadTerms(): Promise<{ terms: Terms; loaded: boolean }> {
+	let text: string;
 	try {
-		const raw = JSON.parse(await Deno.readTextFile(TERMS_PATH));
-		return { terms: { ...EMPTY_TERMS, ...raw }, loaded: true };
+		text = await Deno.readTextFile(TERMS_PATH);
 	} catch (err) {
 		if (err instanceof Deno.errors.NotFound) return { terms: EMPTY_TERMS, loaded: false };
 		throw err;
 	}
+	return { terms: parseTerms(JSON.parse(text), TERMS_PATH), loaded: true };
 }
 
 // ============================================================================
@@ -948,7 +958,14 @@ async function syncPosts() {
 
 	// G1 gate input. Fail closed like the audit: without the deny list, employer
 	// and identifier detection is OFF, so a run that writes refuses to start.
-	const { terms, loaded: termsLoaded } = await loadTerms();
+	let loadedTerms: { terms: Terms; loaded: boolean };
+	try {
+		loadedTerms = await loadTerms();
+	} catch (err) {
+		console.error(`❌ ${err instanceof Error ? err.message : String(err)}`);
+		Deno.exit(1);
+	}
+	const { terms, loaded: termsLoaded } = loadedTerms;
 	const writes = !dryRun && !checkOnly;
 	if (!termsLoaded && writes && !args.includes('--allow-missing-terms')) {
 		console.error(
