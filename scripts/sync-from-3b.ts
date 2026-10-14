@@ -17,6 +17,11 @@
  *                Writes only to blog post frontmatter; never touches sources.
  *   --dry-run    Preview what would sync (or reconcile) without writing.
  *   --verbose    Show skip / clear / keep reasons for each file.
+ *   --allow-missing-terms  Write even when the G1 deny list (BLOG_AUDIT_TERMS,
+ *                else <3B>/.agent-ssot/config/blog-audit-terms.json) is missing.
+ *
+ * G1 gate: every post is audited (scripts/lib/g1.ts) before any write. A post
+ * with a finding is not written and its source is not stamped; exit code 1.
  *
  * This script:
  * 1. Reads markdown files from 3B knowledge directory
@@ -34,6 +39,7 @@ import {
 	stringify as stringifyYaml,
 } from 'https://deno.land/std@0.220.0/yaml/mod.ts';
 import { basename, dirname, join } from 'https://deno.land/std@0.220.0/path/mod.ts';
+import { auditG1, EMPTY_TERMS, type Terms } from './lib/g1.ts';
 
 // Configuration — all paths absolute so script works from any directory
 // Without HOME every default path below is meaningless, and join() would throw a
@@ -61,7 +67,15 @@ function resolveThreeBRoot(): string {
 	}
 	return candidates[0];
 }
-const SOURCE_DIR = join(resolveThreeBRoot(), 'knowledge');
+const THREEB_ROOT = resolveThreeBRoot();
+const SOURCE_DIR = join(THREEB_ROOT, 'knowledge');
+/**
+ * The private G1 deny list, resolved like scripts/audit-posts.ts: BLOG_AUDIT_TERMS
+ * wins, else the copy inside the 3B root this run reads from.
+ */
+const TERMS_PATH =
+	Deno.env.get('BLOG_AUDIT_TERMS') ??
+	join(THREEB_ROOT, '.agent-ssot', 'config', 'blog-audit-terms.json');
 /**
  * The blog checkout this script writes into. BLOG_ROOT wins; the default is the
  * usual location. A default that no longer exists is the same class of bug as
@@ -474,6 +488,17 @@ export async function updateSourceFile(
 	if (isFirstSync) updated = upsertBlogKeyInPlace(updated, 'published_at', `"${today}"`);
 	updated = upsertBlogKeyInPlace(updated, 'needs_resync', 'false');
 	await Deno.writeTextFile(sourcePath, updated);
+}
+
+/** Read the deny list over EMPTY_TERMS; `loaded` is false only when the file is absent. */
+async function loadTerms(): Promise<{ terms: Terms; loaded: boolean }> {
+	try {
+		const raw = JSON.parse(await Deno.readTextFile(TERMS_PATH));
+		return { terms: { ...EMPTY_TERMS, ...raw }, loaded: true };
+	} catch (err) {
+		if (err instanceof Deno.errors.NotFound) return { terms: EMPTY_TERMS, loaded: false };
+		throw err;
+	}
 }
 
 // ============================================================================
@@ -921,15 +946,33 @@ async function syncPosts() {
 		return;
 	}
 
+	// G1 gate input. Fail closed like the audit: without the deny list, employer
+	// and identifier detection is OFF, so a run that writes refuses to start.
+	const { terms, loaded: termsLoaded } = await loadTerms();
+	const writes = !dryRun && !checkOnly;
+	if (!termsLoaded && writes && !args.includes('--allow-missing-terms')) {
+		console.error(
+			`❌ Deny list not found at ${TERMS_PATH}.\n` +
+				`   The G1 gate would run without employer/identifier detection, so sync refuses to write.\n` +
+				`   Set BLOG_AUDIT_TERMS to the private list, or pass --allow-missing-terms\n` +
+				`   for structural G1 checks only.`,
+		);
+		Deno.exit(1);
+	}
+
 	// Determine mode label
 	const modeLabel = checkOnly ? 'HASH CHECK' : dryRun ? 'DRY RUN' : 'APPLY';
 
 	console.log('🔄 Syncing posts from 3B knowledge base...');
 	console.log(`   Mode: ${modeLabel}`);
+	if (!termsLoaded && !checkOnly) {
+		console.log(`⚠️  Deny list not found at ${TERMS_PATH} — G1 runs STRUCTURAL checks only.`);
+	}
 	console.log('');
 
 	let synced = 0;
 	let skipped = 0;
+	let refused = 0;
 	let expandedChecked = 0;
 	const skipReasons: Record<string, number> = {};
 	const hashMismatches: {
@@ -1055,6 +1098,22 @@ ${stringifyYaml(targetFrontmatter)}---
 ${cleanedBody}
 `;
 
+		// --- G1 GATE ---
+		// Audit the exact frontmatter and body about to ship, before any write: a
+		// post with a finding is neither written nor stamped with published_at.
+		const g1Findings = auditG1(
+			targetFrontmatter as unknown as Record<string, unknown>,
+			cleanedBody,
+			terms,
+		);
+		if (g1Findings.length > 0) {
+			console.log(`❌ ${dryRun ? 'Would refuse' : 'Refused'} (G1): ${relativePath}`);
+			for (const f of g1Findings) console.log(`   [${f.gate} ${f.rule}] ${f.detail}`);
+			refused++;
+			continue;
+		}
+		// --- END G1 GATE ---
+
 		if (dryRun) {
 			console.log(`✅ Would sync: ${relativePath} → ${targetPath}`);
 		} else {
@@ -1097,6 +1156,7 @@ ${cleanedBody}
 	console.log('📊 Summary');
 	console.log(`   Synced: ${synced}`);
 	console.log(`   Skipped: ${skipped}`);
+	console.log(`   ${dryRun ? 'Would refuse' : 'Refused'} (G1): ${refused}`);
 
 	if (Object.keys(skipReasons).length > 0) {
 		console.log('');
@@ -1109,6 +1169,12 @@ ${cleanedBody}
 	if (dryRun && synced > 0) {
 		console.log('');
 		console.log('Run without --dry-run to apply changes');
+	}
+
+	if (refused > 0) {
+		console.log('');
+		console.log('❌ G1 findings blocked the posts above. Generalize them in 3B, then re-run.');
+		Deno.exit(1);
 	}
 }
 
