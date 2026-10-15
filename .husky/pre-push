@@ -34,7 +34,7 @@ echo "3/6 Format check (tracked files)..."
 # Regular files only (modes 100644/100755): prettier errors on an explicitly
 # named symlink, which `prettier --check .` skips.
 git ls-files -s -z |
-	perl -0ne 'print "$1\0" if /^1006[0-7]{2} [0-9a-f]+ \d+\t(.+)\0$/s' |
+	perl -0ne 'print "$1\0" if /^100(?:644|755) [0-9a-f]+ \d+\t(.+)\0$/s' |
 	xargs -0 ./node_modules/.bin/prettier --check --ignore-unknown || exit 1
 
 echo ""

@@ -10,7 +10,8 @@ echo ""
 echo "2/3 Format check (staged files)..."
 # Staged files only: a whole-tree `prettier --check .` fails on other tools'
 # untracked files in a shared checkout. pre-push still checks the whole tree.
-git diff --cached --name-only --diff-filter=ACMR -z |
+git diff --cached --raw --diff-filter=ACMR -z |
+	perl -0ne '$regular = /^:\d+ 100(?:644|755) /; $two_paths = / [CR]\d+\0$/; $_ = <>; $_ = <> if $two_paths; print if $regular;' |
 	xargs -0 -r ./node_modules/.bin/prettier --check --ignore-unknown || exit 1
 
 echo ""
