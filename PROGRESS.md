@@ -1924,3 +1924,27 @@ refused the newer ones for `deno.lock`; bump them on or after 2026-10-21.
 `@types/node` stays on 24 for the Node 24 runtime. `remark-parse` 8 and
 `unified` 9 stay as mdsvex-parity aliases. The `packageManager` pin stays at
 `pnpm@10.32.1`.
+
+**Follow-up (same session):** the holds are resolved, and `pnpm outdated -r`
+lists nothing.
+
+- `4e44f9b` moves satori to 0.63.0, typescript-eslint to 8.72.0, wrangler to
+  4.151.2 and `@types/node` to 26.6.5. No Deno script imports an npm package,
+  so `deno.json` exempts those packages from Deno's 24-hour window
+  (`minimumDependencyAge.exclude`). Each version under a day old came from npm
+  trusted publishing with SLSA provenance. The OG cards render pixel-identical.
+  `@types/node` 26 overrules the Held line above while `.node-version` stays
+  24.18.0, so tsc does not flag APIs that only Node 25 or 26 has.
+- The age exemptions in `deno.json` and `pnpm-workspace.yaml` come out on or
+  after 2026-10-21, once every exempted version is older than one day (3B
+  `todos.md` row).
+- `2cb06a1` removes the `remark-parse` 8 and `unified` 9 aliases. The smart
+  typography step now segments with remark-parse 11 and remark-gfm, and a quote
+  after `)`, `]` or `}` closes. Five pages change: a `“` after `)` or `]`
+  becomes `”`.
+- `c8beb31` moves the root `typescript` to the 6.0 API alias (remove, then add)
+  and `@inlang/paraglide-js` to 2.29.1.
+- `de0cb4c` pins `pnpm@12.14.0`. `pnpm-workspace.yaml` exempts 21 exact fresh
+  versions from pnpm 11's one-day release age (`minimumReleaseAgeExcludePrune`
+  drops each once the lockfile moves on) and denies the `esbuild` and `workerd`
+  build scripts, which pnpm 10 skipped.
