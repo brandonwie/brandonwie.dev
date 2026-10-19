@@ -1895,3 +1895,32 @@ knowledge notes on skill-override gates and hash-only refreshes were updated.
 **Follow-up (same session):** the asdf `pnpm` shim is fixed:
 `corepack enable pnpm` under nodejs 24.22.0, and 3B `3638963f2` restores that
 step in `update-all.sh`. The pre-push hook passes with a clean `PATH`.
+
+### Session 18 — 2026-10-20: Packages to latest and the 3b snapshot parser
+
+**What:** `parseAdrIndex` (`scripts/snapshot-3b-system.ts`) now reads the
+4-column active ADR table as well as the 5-column superseded one: the title is
+the second cell and the date the last (`854f317`). 3B reuses ADR numbers 055
+and 075, so `/system/3b` keys evolution rows by id and title. The refreshed
+snapshot (`8c0b507`) has 107 ADR rows; production renders all 107.
+
+**Dependencies:** `a8cb104` bumps every package to latest, including next
+16.4.2, react 19.3.1, mermaid 12.2.0, shiki 4.5.0 and tailwindcss 4.3.3.
+`7167b02` type-checks `next/` with TypeScript 7.0.2 through the documented
+side-by-side aliases; Next and typescript-eslint keep the 6.0 API.
+
+- mermaid 12 defaults to ELK layout, the `neo` look, `wrappingWidth` 120 and
+  `minNodeWidth` 120. `Mermaid.tsx` pins dagre, classic, 200 and 0, so 8 of 9
+  diagrams match the v11 sizes within 3px. The state diagram is 98px wider,
+  and its labels no longer overlap.
+- satori 0.62 overflowed the padded OG root; `boxSizing: 'border-box'` fixes
+  it (0.24% pixel difference, anti-aliasing only).
+- TypeScript 7 resolves a `mdast-util-to-hast` augmentation that 6.0 missed,
+  so `remark-mermaid-node.ts` types `hProperties` as `Record<string, string>`.
+
+**Held:** satori 0.62.0, typescript-eslint 8.71.2 and wrangler 4.151.1 are the
+newest releases older than 24 hours, because Deno's minimum dependency age
+refused the newer ones for `deno.lock`; bump them on or after 2026-10-21.
+`@types/node` stays on 24 for the Node 24 runtime. `remark-parse` 8 and
+`unified` 9 stay as mdsvex-parity aliases. The `packageManager` pin stays at
+`pnpm@10.32.1`.
