@@ -263,13 +263,14 @@ async function getPrivacyPrivate(relPath: string): Promise<boolean> {
 function parseAdrIndex(md: string): { id: string; title: string; date: string }[] {
 	const out: { id: string; title: string; date: string }[] = [];
 	for (const line of md.split('\n')) {
+		// Title is the second cell and the date the last one, so the 4-column active
+		// table and the 5-column superseded table (extra "Superseded By") both match.
 		const m = line.match(
-			/^\|\s*\[(\d{3})\]\([^)]+\)\s*\|\s*(.+?)\s*\|\s*[^|]+?\s*\|\s*[^|]+?\s*\|\s*(\d{4}-\d{2}-\d{2})\s*\|/,
+			/^\|\s*\[(\d{3})\]\([^)]+\)\s*\|\s*([^|]+?)\s*\|.*\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*$/,
 		);
 		if (!m) continue;
-		// split on a raw pipe first (defends against a category column leaking into
-		// the captured title), then scrub + word-boundary truncate for the timeline.
-		let title = sanitizeForOutput(m[2].split('|')[0]);
+		// scrub + word-boundary truncate for the timeline.
+		let title = sanitizeForOutput(m[2]);
 		if (title.length > 80) title = title.slice(0, 80).replace(/\s+\S*$/, '') + '…';
 		out.push({ id: `ADR-${m[1]}`, title, date: m[3] });
 	}

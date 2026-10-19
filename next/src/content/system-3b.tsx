@@ -234,7 +234,8 @@ export function System3bPage({ locale }: { locale: Locale }) {
 				>
 					<ul className="pg-s3b__adrlist">
 						{evolution.map((adr) => (
-							<li key={adr.id} className="pg-s3b__adrrow">
+							// 3B reuses some ADR numbers (two files each for 055 and 075), so the id alone is not unique.
+							<li key={`${adr.id}:${adr.title}`} className="pg-s3b__adrrow">
 								<span className="text-crt-faint">{adr.date}</span>
 								<span className="text-crt-amber">{adr.id}</span>
 								<span className="pg-s3b__adrt">{adr.title}</span>
