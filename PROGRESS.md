@@ -1892,5 +1892,6 @@ were enabled for the session and restored, with the SHA-256 verified.
 **Changed (3B):** `6742c015b` cleared the agent-teams `needs_resync` flag;
 knowledge notes on skill-override gates and hash-only refreshes were updated.
 
-**Next:** the asdf `pnpm` shim has no version under nodejs 24.22.0, so `pnpm`
-scripts and the pre-push hook exit 126 until it is fixed (friction logged).
+**Follow-up (same session):** the asdf `pnpm` shim is fixed:
+`corepack enable pnpm` under nodejs 24.22.0, and 3B `3638963f2` restores that
+step in `update-all.sh`. The pre-push hook passes with a clean `PATH`.
