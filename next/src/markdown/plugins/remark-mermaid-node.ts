@@ -4,14 +4,16 @@ import type { Root, Code, Parent, Paragraph } from 'mdast';
 /**
  * `remark-rehype` reads `data.hName` / `data.hProperties` to build the hast
  * element for a node. Those fields are declared by `mdast-util-to-hast`, whose
- * package.json exports a bare `./index.js` with no types condition, so the
- * augmentation does not resolve through an import. Declaring exactly the two
- * fields this plugin relies on keeps the contract explicit and local.
+ * package.json exports a bare `./index.js` with no types condition, so
+ * TypeScript 6 does not resolve the augmentation through an import (TypeScript
+ * 7 does). Declaring exactly the two fields this plugin relies on keeps the
+ * contract explicit and local; `hProperties` stays assignable to hast
+ * `Properties` so both compilers accept the merge.
  */
 declare module 'mdast' {
 	interface ParagraphData {
 		hName?: string;
-		hProperties?: Record<string, unknown>;
+		hProperties?: Record<string, string>;
 	}
 }
 
