@@ -136,12 +136,12 @@ export async function renderMarkdown(
 	source: string | ParsedMarkdownSource,
 ): Promise<RenderedMarkdown> {
 	const { data: frontmatter, content: raw } = typeof source === 'string' ? matter(source) : source;
-	// Typography is applied to the SOURCE, before this pipeline parses it, and
-	// the segmentation is remark-parse 8's rather than micromark's -- see
-	// `plugins/remark-smart-typography.ts` for why the boundary has to come from
-	// mdsvex's own parser. Everything downstream, reading time and the heading
-	// list included, therefore sees the typeset text, which is the order mdsvex
-	// used when it ran smartypants before the user's remark plugins.
+	// Typography is applied to the SOURCE, before this pipeline parses it, with
+	// text nodes found by this pipeline's own parser configuration -- see
+	// `plugins/remark-smart-typography.ts`. Everything downstream, reading time
+	// and the heading list included, therefore sees the typeset text, which is
+	// the order mdsvex used when it ran smartypants before the user's remark
+	// plugins.
 	const content = educateSource(raw);
 	// mdsvex passed the `---` frontmatter block through the same remark chain,
 	// so the baseline's reading time counted title/description/tags words too.

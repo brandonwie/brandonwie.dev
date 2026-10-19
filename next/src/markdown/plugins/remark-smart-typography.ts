@@ -1,39 +1,29 @@
-import unified from 'unified9';
-import remarkParse8 from 'remark-parse8';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
 import { retext } from 'retext';
 import { visit } from 'unist-util-visit';
 
 /**
- * mdsvex's smart-typography step, ported — educators AND node boundaries.
+ * Smart typography — mdsvex's educators, applied to the source.
  *
- * mdsvex enables `smartypants: true` by default, so every post in the baseline
- * is typeset: `--` becomes an em dash, straight quotes become curly ones. Three
- * rounds of review have established that copying the educators is not enough,
- * because smartypants reads a character's NEIGHBOURS and the neighbours depend
- * on where the markdown parser drew its text nodes:
+ * mdsvex enabled `smartypants: true` by default, so every post is typeset:
+ * `--` becomes an em dash, straight quotes become curly ones. The educators
+ * below are transcribed from mdsvex's bundled copy, because
+ * `retext-smartypants@6` disagrees with it in one branch of the quote educator.
  *
- *   1. `retext-smartypants@6` disagrees with mdsvex's bundled copy in one
- *      branch of the quote educator. Five posts differed. Fixed by transcribing
- *      mdsvex's educators below.
- *   2. mdsvex runs remark-parse 8, which builds a `linkReference` for
- *      `[bot]` where CommonMark keeps literal text, so `claude[bot]'s` is one
- *      text node here and three there. A regex that split on a bracket label
- *      fixed that one shape and 334/334 posts.
- *   3. The regex was still wrong. `[*a*]'s`, `[**a**]'s`, `` [`a`]'s `` and
- *      `[a\]b]'s` all place the apostrophe differently once the label has
- *      inline children or an escape, and a reviewer found them. There is no
- *      regex for "where does remark-parse 8 end an inline node"; the only
- *      faithful answer is remark-parse 8.
+ * smartypants reads a character's NEIGHBOURS, and the neighbours depend on
+ * where the markdown parser drew its text nodes. So the source is segmented by
+ * the same parser configuration the render pipeline uses (`remark-parse` with
+ * `remark-gfm`, `singleTilde: false`; see `../pipeline.ts`), each text node is
+ * educated, and the results are spliced back into the markdown by source
+ * offset. The pipeline then parses already-typeset markdown.
  *
- * So the source is segmented by remark-parse 8 ITSELF (pinned in `next/` as a
- * dev dependency alongside `unified@9`, which is the last unified that speaks
- * its parser API), each text node is educated with mdsvex's educators, and the
- * results are spliced back into the markdown by source offset. The Next
- * pipeline then parses ALREADY-TYPESET markdown, so micromark's own node
- * boundaries never enter the question.
- *
- * That makes this a source PREPROCESSOR, not a remark plugin. It is a temporary
- * cost of running two markdown stacks at once: it leaves with mdsvex.
+ * Until mdsvex was retired this segmentation ran remark-parse 8 (pinned with
+ * unified 9) to match mdsvex's text-node boundaries. remark-parse 8 builds a
+ * `linkReference` for `[bot]` where CommonMark keeps literal text, so
+ * `claude[bot]'s` was three text nodes there and one here; with the pipeline's
+ * own parser the apostrophe now sees the `]` before it.
  *
  * Code is untouched, because `code` and `inlineCode` are their own node types
  * and only `text` is visited.
@@ -128,7 +118,17 @@ function ellipses(
 	node.value = ELLIPSIS;
 }
 
-/** Straight quotes become curly ones. Transcribed branch for branch. */
+/**
+ * A closing bracket before a quote makes it a closing quote, as in
+ * SmartyPants' close class: `claude[bot]'s`, `(see above)'s`. mdsvex's copy
+ * opened it; its remark-parse 8 tree hid the `]` in a `linkReference`, so its
+ * output was right for `[bot]` anyway.
+ */
+function closesSpan(node: NlcstNode): boolean {
+	return node.type === PUNCTUATION && /^[)\]}]$/.test(node.value ?? '');
+}
+
+/** Straight quotes become curly ones. Transcribed branch for branch, plus `closesSpan`. */
 function quotes(node: NlcstNode, index: number | undefined, parent: NlcstParent | undefined): void {
 	if (index === undefined || !parent) return;
 	const siblings = parent.children;
@@ -161,14 +161,14 @@ function quotes(node: NlcstNode, index: number | undefined, parent: NlcstParent 
 		previous &&
 		next &&
 		(previous.type === WHITE_SPACE || previous.type === PUNCTUATION || previous.type === SYMBOL) &&
+		!closesSpan(previous) &&
 		next.type === WORD
 	) {
 		node.value = OPENING[value];
 	} else if (
 		previous &&
-		previous.type !== WHITE_SPACE &&
-		previous.type !== SYMBOL &&
-		previous.type !== PUNCTUATION
+		(closesSpan(previous) ||
+			(previous.type !== WHITE_SPACE && previous.type !== SYMBOL && previous.type !== PUNCTUATION))
 	) {
 		node.value = CLOSING[value];
 	} else if (!next || next.type === WHITE_SPACE || (value === "'" && nextValue === 's')) {
@@ -296,23 +296,18 @@ function nodeSplices(node: TextNode, raw: string): Splice[] | null {
 	];
 }
 
+/** The render pipeline's parser configuration, used only to find text nodes. */
+const SEGMENTER = unified().use(remarkParse).use(remarkGfm, { singleTilde: false });
+
 /**
- * Typeset a markdown source the way mdsvex would, and return the new source.
+ * Typeset a markdown source and return the new source.
  *
- * The tree is remark-parse 8's, so the text-node boundaries the educators see
- * are mdsvex's. Splices are applied last-to-first so earlier offsets stay valid
- * while the text length changes (`--` to an em dash is a two-to-one shrink).
- *
- * Known limit: mdsvex ran its own parser extensions for inline HTML, `svelte:*`
- * elements and template directives before educating, so text next to that
- * markup can come out differently here. No post uses it.
+ * The text-node boundaries the educators see are the render pipeline's.
+ * Splices are applied last-to-first so earlier offsets stay valid while the
+ * text length changes (`--` to an em dash is a two-to-one shrink).
  */
 export function educateSource(markdown: string): string {
-	const tree = (
-		unified as unknown as () => { use: (p: unknown) => { parse: (d: string) => TextNode } }
-	)()
-		.use(remarkParse8)
-		.parse(markdown);
+	const tree = SEGMENTER.parse(markdown);
 
 	const splices: Splice[] = [];
 	visit(tree as never, 'text', (node: TextNode) => {

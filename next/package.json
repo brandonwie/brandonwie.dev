@@ -46,9 +46,7 @@
 		"@types/react-dom": "^19.3.0",
 		"@typescript/native": "npm:typescript@^7.0.2",
 		"react-dom": "^19.3.1",
-		"remark-parse8": "npm:remark-parse@8.0.3",
 		"tailwindcss": "4.3.3",
-		"typescript": "npm:@typescript/typescript6@^6.0.2",
-		"unified9": "npm:unified@9.2.2"
+		"typescript": "npm:@typescript/typescript6@^6.0.2"
 	}
 }
