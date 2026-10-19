@@ -1,6 +1,6 @@
 {
-  "model_generated": "2026-06-14",
-  "snapshot_built_at": "2026-06-14T13:39:23.734Z",
+  "model_generated": "2026-08-18",
+  "snapshot_built_at": "2026-10-19T19:50:41.713Z",
   "layers": [
     {
       "id": "source-of-truth",
@@ -15,7 +15,7 @@
     {
       "id": "mounts-runtimes",
       "name": "Symlink Mounts + Agent Runtimes",
-      "description": "Compatibility back-symlinks/hardlinks that resolve the SoT at each CLI's hardcoded mount, plus the three agent runtimes (Claude Code, Codex CLI, AGY) and the generated docs they load."
+      "description": "Compatibility back-symlinks/hardlinks that resolve the SoT at each CLI's hardcoded mount, plus the four agent runtimes (Claude Code, Codex CLI, AGY, Grok Build) and the generated docs they load. Grok's surface is ~/.grok/rules/, not AGENTS.md."
     },
     {
       "id": "content-lifecycle",
@@ -30,7 +30,7 @@
     {
       "id": "tooling-mcp-layer",
       "name": "Tooling + MCP",
-      "description": "The external code-intelligence and doc-conversion stack (graphify, code-review-graph, opt-in Serena, context-mode, markitdown) plus model-tier routing and the asdf/brew runtime contract."
+      "description": "The external code-intelligence and doc-conversion stack (graphify, code-review-graph, opt-in Serena, context-mode) plus model-tier routing and the asdf/brew runtime contract."
     }
   ],
   "subsystems": [
@@ -453,6 +453,20 @@
       "name": "AGY runtime"
     },
     {
+      "id": "runtime-grok",
+      "kind": "runtime",
+      "layer": "mounts-runtimes",
+      "subsystem": "sot-sync",
+      "name": "Grok Build runtime"
+    },
+    {
+      "id": "detect-wrap-agent",
+      "kind": "generator",
+      "layer": "content-lifecycle",
+      "subsystem": "journals-wrap",
+      "name": "Detect Wrap Agent"
+    },
+    {
       "id": "knowledge-store",
       "kind": "store",
       "layer": "content-lifecycle",
@@ -520,7 +534,7 @@
       "kind": "runtime",
       "layer": "content-lifecycle",
       "subsystem": "knowledge",
-      "name": "/archive-task skill"
+      "name": "/task-archive skill"
     },
     {
       "id": "skill-blog-publish",
@@ -607,11 +621,11 @@
       "name": "context-mode"
     },
     {
-      "id": "markitdown",
+      "id": "skill-anydoc",
       "kind": "runtime",
       "layer": "tooling-mcp-layer",
       "subsystem": "tooling-mcp",
-      "name": "markitdown"
+      "name": "/3b:anydoc skill"
     },
     {
       "id": "model-routing-rule",
@@ -790,6 +804,18 @@
       "to": "runtime-agy",
       "kind": "reads",
       "label": "loaded by"
+    },
+    {
+      "from": "skill-wrap",
+      "to": "detect-wrap-agent",
+      "kind": "dependency",
+      "label": "Step 0 fingerprint SoT"
+    },
+    {
+      "from": "detect-wrap-agent",
+      "to": "runtime-grok",
+      "kind": "reads",
+      "label": "resolves AGENT=grok"
     },
     {
       "from": "skills-dir",
@@ -1098,10 +1124,10 @@
       "label": "declares server"
     },
     {
-      "from": "mcp-config",
-      "to": "markitdown",
+      "from": "skills-dir",
+      "to": "skill-anydoc",
       "kind": "dependency",
-      "label": "declares server"
+      "label": "ships doc-conversion skill"
     },
     {
       "from": "mcp-config",
@@ -1199,81 +1225,81 @@
       "order": 2,
       "slug": "rules-that-route-themselves",
       "title": "Rules That Route Themselves: Frontmatter as the Loader",
-      "status": "planned"
+      "status": "published"
     },
     {
       "order": 3,
       "slug": "skills-three-transports",
       "title": "Same Skill, Three Transport Physics",
-      "status": "planned"
+      "status": "published"
     },
     {
       "order": 4,
       "slug": "computed-backlinks-zettelkasten",
       "title": "Forward Links Only: A Zettelkasten Where Backlinks Are Computed",
-      "status": "planned"
+      "status": "published"
     },
     {
       "order": 5,
       "slug": "folder-is-destiny",
       "title": "Folder Is Destiny: A Six-Layer Information Lifecycle",
-      "status": "planned"
+      "status": "published"
     },
     {
       "order": 6,
       "slug": "wrap-and-rollup",
       "title": "The Session Engine: /wrap, Clean-Slate Rollups, and a Cross-Session Buffer",
-      "status": "planned"
+      "status": "published"
     },
     {
       "order": 7,
       "slug": "parallel-agents-no-collisions",
       "title": "Parallel Agents Without Collisions: Tasks, Worktrees, and Locks",
-      "status": "planned"
+      "status": "published"
     },
     {
       "order": 8,
       "slug": "three-gates-and-an-audit-log",
       "title": "Three Gates and an Audit Log: HITL for an Agent Harness",
-      "status": "planned"
+      "status": "published"
     },
     {
       "order": 9,
       "slug": "a-harness-that-fixes-itself",
       "title": "A Harness That Fixes Itself — And Prunes Its Own Fixes",
-      "status": "planned"
+      "status": "published"
     },
     {
       "order": 10,
       "slug": "the-token-stack",
       "title": "The Token Stack: Four Layers of Code Intelligence Without Re-Scanning",
-      "status": "planned"
+      "status": "published"
     }
   ],
   "evolution": [
     {
       "id": "ADR-001",
-      "title": "Friction Feedback Loop",
+      "title": "Friction Feedback Loop for Claude Configuration",
       "date": "2026-02-12"
     },
     {
       "id": "ADR-002",
-      "title": "Regex Permission Hook",
+      "title": "Regex-Based PermissionRequest Hook Over API Calls",
       "date": "2026-02-19"
     },
     {
       "id": "ADR-003",
-      "title": "Empty Deny, All in Ask",
+      "title": "Empty deny list — all dangerous commands in ask",
       "date": "2026-03-12"
     },
     {
       "id": "ADR-004",
-      "title": "RTK Hook Removal",
+      "title": "Remove RTK PreToolUse Hook",
       "date": "2026-03-21"
     },
     {
       "id": "ADR-005",
-      "title": "QMD MCP Server Removal",
+      "title": "Remove QMD Global MCP Server",
       "date": "2026-03-29"
     },
     {
@@ -1283,203 +1309,508 @@
     },
     {
       "id": "ADR-007",
-      "title": "Claude-Forge Merge into 3B Workspace",
+      "title": "Merge claude-forge into as 3B Project Workspace",
       "date": "2026-04-08"
     },
     {
       "id": "ADR-008",
-      "title": "RTK Hook Re-enable with Defense",
+      "title": "Re-enable RTK Hook with exclude_commands Defense",
       "date": "2026-04-09"
     },
     {
       "id": "ADR-009",
-      "title": "Retire Agent Teams + Restore Symlink",
+      "title": "Retire Agent Teams + Restore Symlink to SoT",
       "date": "2026-04-17"
     },
     {
       "id": "ADR-010",
-      "title": "Retire Pattern A (Forge Theme Saturation) for Apply-over-Shelve",
+      "title": "Retirement of Pattern A (Forge Theme Saturation) in favor of Apply-over-Shelve",
       "date": "2026-04-17"
     },
     {
       "id": "ADR-011",
-      "title": "Retire Storm Brainstorm Engine (superseded by graphify)",
+      "title": "Retire Storm Brainstorm Engine",
       "date": "2026-04-18"
     },
     {
       "id": "ADR-012",
-      "title": "Per-project Claude rules in 3B subdirectory, symlinked",
+      "title": "Per-project Claude rules live in 3B subdirectory, symlinked",
       "date": "2026-04-18"
     },
     {
       "id": "ADR-013",
-      "title": "claude-hud v0.0.12 pin + three-defense pattern",
+      "title": "Pin claude-hud to v0.0.12 with three-defense pattern",
       "date": "2026-04-21"
     },
     {
       "id": "ADR-014",
-      "title": "Cross-Agent SoT Folder; Phase 1 + Phase 2 sub-phases) executed 2026-04-27",
+      "title": "Cross-Agent SoT Folder",
       "date": "2026-04-27"
     },
     {
       "id": "ADR-015",
-      "title": "Codex broader cross-agent sharing via routing + sync generator",
+      "title": "Codex Broader Cross-Agent Sharing — Routing + Generator",
       "date": "2026-04-27"
     },
     {
       "id": "ADR-016",
-      "title": "Cross-agent command permission policy generator",
+      "title": "Cross-Agent Command Permission Policy",
       "date": "2026-04-28"
     },
     {
       "id": "ADR-017",
-      "title": "claude-mem definitive removal (attempt #3) after silent billing leak",
+      "title": "claude-mem Definitive Removal (Attempt #3) After Silent Billing Leak",
       "date": "2026-04-28"
     },
     {
       "id": "ADR-018",
-      "title": "Codex skill discovery boundary for source vs adapters",
+      "title": "Codex Skill Discovery Boundary",
       "date": "2026-04-28"
     },
     {
       "id": "ADR-019",
-      "title": "Graph-tool integration: graphify hooks + scoped rule + cross-agent propagation",
+      "title": "Graph-Tool Integration — + Hook Architecture",
       "date": "2026-04-29"
     },
     {
       "id": "ADR-020",
-      "title": "3B partial-tracking: memories + project.yml in, cache out",
+      "title": "3B Partial-Tracking Policy — Memories In, Cache Out",
       "date": "2026-04-30"
     },
     {
       "id": "ADR-021",
-      "title": "Shared Serena MCP daemon at",
-      "date": "2026-06-11"
+      "title": "Serena MCP — switch from per-session stdio to shared streamable-http daemon",
+      "date": "2026-05-01"
     },
     {
       "id": "ADR-022",
-      "title": "Gemini Phase 3 completion — generator + markers + MCP + parity",
+      "title": "Gemini Phase 3 Completion — Cross-Agent SoT Propagation",
       "date": "2026-05-02"
     },
     {
       "id": "ADR-023",
-      "title": "wrap cross-agent: single skill + agent detect + adapter pattern; HIGH bias #1…",
+      "title": "wrap Cross-Agent Generalization",
       "date": "2026-05-02"
     },
     {
       "id": "ADR-024",
-      "title": "D2 concurrency: cross-journal carry-forward for + mkdir-lock",
+      "title": "D2 Concurrency — carry-forward + advisory lock",
       "date": "2026-05-03"
     },
     {
       "id": "ADR-025",
-      "title": "Custom Cache Keepalive (Claude-only after scope narrowing)",
+      "title": "Custom Cache Keepalive (Claude Code)",
       "date": "2026-05-03"
     },
     {
       "id": "ADR-026",
-      "title": "Cross-Agent Worktree Strategy (agent-namespaced path)",
+      "title": "Cross-Agent Worktree Directory Strategy",
       "date": "2026-05-03"
     },
     {
       "id": "ADR-027",
-      "title": "Per-Agent Content Filtering Convention (v0.1.0 markers ignored, v0.2.0 filtered)",
+      "title": "Per-Agent Content Filtering Convention (v0.1.0 → v0.2.0)",
       "date": "2026-05-06"
     },
     {
       "id": "ADR-028",
-      "title": "Initiative #51 (3B-redesign) Closure — phases shipped (D4 deferred outside…",
+      "title": "Initiative #51 (3B-redesign) Closure",
       "date": "2026-05-06"
     },
     {
       "id": "ADR-029",
-      "title": "Information-Layer Schema Additive ( + + ) — Phase E1",
+      "title": "Information-Layer Schema Additive (aliases + privacy + source_type)",
       "date": "2026-05-11"
     },
     {
       "id": "ADR-030",
-      "title": "3B Layered Self-Improvement Architecture (2-plane + L0-L6 + 9-step loop +…",
-      "date": "2026-05-16"
+      "title": "3B Layered Self-Improvement Architecture",
+      "date": "2026-05-15"
     },
     {
       "id": "ADR-031",
-      "title": "Gates A+B Concurrency + HITL Protocols — 2 canonical rule bodies…",
+      "title": "Gates A+B Concurrency + HITL Protocols",
       "date": "2026-05-18"
     },
     {
+      "id": "ADR-032",
+      "title": "Migrate to + Plus Visual-Header + Strict-GO",
+      "date": "2026-05-20"
+    },
+    {
       "id": "ADR-033",
-      "title": "AGY Migration — Replace Gemini CLI with Antigravity CLI; D1-D5 + 6-phase…",
+      "title": "AGY Migration — Replace Gemini CLI with Antigravity CLI",
       "date": "2026-05-22"
     },
     {
       "id": "ADR-034",
-      "title": "Close emit vs lint reformat drift loop (issue #134) — surgical wrappers around…",
+      "title": "Close Emit vs Lint Reformat Drift Loop",
       "date": "2026-05-22"
     },
     {
       "id": "ADR-035",
-      "title": "Flat Worktree Paths — drop the level; canonical (supersedes ADR-026 on path…",
+      "title": "Flat Worktree Paths (Drop Agent Namespace)",
       "date": "2026-05-23"
     },
     {
       "id": "ADR-036",
-      "title": "Untrack — worktree project-name collision under the shared daemon (partially…",
+      "title": "Untrack (worktree project-name collision under the shared daemon)",
       "date": "2026-05-27"
     },
     {
       "id": "ADR-037",
-      "title": "Cross-Agent SSoT — Codex network-on baseline (the axis approval never touched)…",
+      "title": "Cross-Agent SSoT (Codex network + per-repo escalation)",
       "date": "2026-05-27"
     },
     {
       "id": "ADR-038",
-      "title": "Two-Layer Commit Discipline — branch WIP checkpoints (Layer 1) + atomic…",
+      "title": "Two-Layer Commit Discipline",
       "date": "2026-05-29"
     },
     {
       "id": "ADR-039",
-      "title": "Universal-Rule Native-Load Suppression — never-match sentinel on the 3…",
+      "title": "Universal-Rule Native-Load Suppression (sentinel )",
       "date": "2026-05-30"
     },
     {
       "id": "ADR-040",
-      "title": "F2 Agent-Managed Memory Layer — split-tier candidate → HITL-promotion → tracked…",
+      "title": "F2 Agent-Managed Memory Layer",
       "date": "2026-05-30"
     },
     {
       "id": "ADR-041",
-      "title": "Forced-Read RAG Data Layer + QMD Reinstatement — ratifies the canonical 5-lane…",
+      "title": "Forced-Read RAG Data Layer + QMD Retriever Reinstatement",
       "date": "2026-06-01"
     },
     {
       "id": "ADR-042",
-      "title": "Frontmatter-Driven AGY Skill Adapter Projection — adapter eligibility gated on…",
+      "title": "Frontmatter-Driven AGY Skill Adapter Projection",
       "date": "2026-06-02"
     },
     {
       "id": "ADR-043",
-      "title": "Three Workflow Models for /3b:handoff + /3b:check — Solo / Implement+Review /…",
+      "title": "Three Workflow Models for /3b:handoff + /3b:check",
       "date": "2026-06-05"
     },
     {
       "id": "ADR-044",
-      "title": "Permissions Governance — Catastrophic-Deny Floor + Deny SoT Migration. Amends…",
+      "title": "Permissions Governance — Catastrophic-Deny Floor + Deny SoT Migration",
       "date": "2026-06-09"
     },
     {
       "id": "ADR-045",
-      "title": "Custom Output Style — render-layer 3B house voice (direct / fact-first / no…",
+      "title": "Custom Output Style",
       "date": "2026-06-07"
     },
     {
       "id": "ADR-046",
-      "title": "Verifier-Hook Identity — Per-Agent Hook Wrapper. Reads to stamp agent identity,…",
+      "title": "Verifier-Hook Identity — Per-Agent Hook Wrapper",
       "date": "2026-06-09"
     },
     {
       "id": "ADR-047",
-      "title": "Serena On-Demand Per-Workspace Daemons — retire default shared daemon at;…",
+      "title": "Serena On-Demand Per-Workspace Daemons",
       "date": "2026-06-11"
+    },
+    {
+      "id": "ADR-048",
+      "title": "Codex full-access runtime as the 3B-managed default",
+      "date": "2026-06-19"
+    },
+    {
+      "id": "ADR-049",
+      "title": "step-check spell-status vocabulary + interactive convergence",
+      "date": "2026-06-20"
+    },
+    {
+      "id": "ADR-050",
+      "title": "step-handoff — upstream gate-signal carry (supersedes )",
+      "date": "2026-06-21"
+    },
+    {
+      "id": "ADR-051",
+      "title": "Data-Layer Tooling Selection Rationale",
+      "date": "2026-06-25"
+    },
+    {
+      "id": "ADR-052",
+      "title": "SkillOps Subsystem",
+      "date": "2026-06-27"
+    },
+    {
+      "id": "ADR-053",
+      "title": "Publishing Pipeline — Two-Lane, Campaign-First",
+      "date": "2026-06-27"
+    },
+    {
+      "id": "ADR-054",
+      "title": "Canonical-Main Release Rail",
+      "date": "2026-06-28"
+    },
+    {
+      "id": "ADR-055",
+      "title": "LangGraph + LangSmith Three-Plane Agent Architecture",
+      "date": "2026-06-29"
+    },
+    {
+      "id": "ADR-055",
+      "title": "WorktreeCreate Hook — Native Worktree Path Convergence",
+      "date": "2026-06-29"
+    },
+    {
+      "id": "ADR-056",
+      "title": "Evidence-Validation Doctrine + Reviewer-Loop Escalation + →",
+      "date": "2026-06-30"
+    },
+    {
+      "id": "ADR-057",
+      "title": "Direct Two-Axis Status Taxonomy",
+      "date": "2026-07-04"
+    },
+    {
+      "id": "ADR-058",
+      "title": "Gate B Audit-Trail Durability",
+      "date": "2026-07-09"
+    },
+    {
+      "id": "ADR-059",
+      "title": "Agent Conductor Dispatch Policy",
+      "date": "2026-07-10"
+    },
+    {
+      "id": "ADR-060",
+      "title": "Model Routing Ladder",
+      "date": "2026-07-12"
+    },
+    {
+      "id": "ADR-061",
+      "title": "External Worktree Root",
+      "date": "2026-07-19"
+    },
+    {
+      "id": "ADR-062",
+      "title": "Handoff Lock V2 Root-Session Leases",
+      "date": "2026-07-20"
+    },
+    {
+      "id": "ADR-063",
+      "title": "Track Codex Desired Configuration Separately from Live Runtime State",
+      "date": "2026-07-24"
+    },
+    {
+      "id": "ADR-064",
+      "title": "Repo-Local Worktree Root",
+      "date": "2026-07-26"
+    },
+    {
+      "id": "ADR-065",
+      "title": "Blog Content-Integrity Gates (G1 Generalization, G2 References)",
+      "date": "2026-08-02"
+    },
+    {
+      "id": "ADR-066",
+      "title": "Dotted Neutral SSoT Root",
+      "date": "2026-08-02"
+    },
+    {
+      "id": "ADR-067",
+      "title": "Context-Mode Per-Repo Store Sharding Governs All Three Agents",
+      "date": "2026-08-08"
+    },
+    {
+      "id": "ADR-068",
+      "title": "Retire Active-System State While Preserving Private History",
+      "date": "2026-08-13"
+    },
+    {
+      "id": "ADR-069",
+      "title": "Grok Serena client via a mirrored GROK_HOME",
+      "date": "2026-08-15"
+    },
+    {
+      "id": "ADR-070",
+      "title": "Vendor Propagation Layer under Separation of Concerns",
+      "date": "2026-08-17"
+    },
+    {
+      "id": "ADR-071",
+      "title": "Exa-primary web search via a router CLI, not MCP servers",
+      "date": "2026-08-19"
+    },
+    {
+      "id": "ADR-072",
+      "title": "Reject the Read-Deny Guard",
+      "date": "2026-08-21"
+    },
+    {
+      "id": "ADR-073",
+      "title": "Guard Cross-Tree Instruction Loads with a PreToolUse Hook",
+      "date": "2026-08-25"
+    },
+    {
+      "id": "ADR-074",
+      "title": "Retire the claude-hud version pin; customize by config, not by patching source",
+      "date": "2026-09-01"
+    },
+    {
+      "id": "ADR-075",
+      "title": "Enforce Read-Only AWS CLI Access with an Allowlist Guard",
+      "date": "2026-09-01"
+    },
+    {
+      "id": "ADR-075",
+      "title": "Single Claude profile — plain is the launcher; / retired",
+      "date": "2026-09-02"
+    },
+    {
+      "id": "ADR-076",
+      "title": "Mount the Shared Work Docs Tree at",
+      "date": "2026-09-01"
+    },
+    {
+      "id": "ADR-077",
+      "title": "Per-Repository Cross-Agent Capability Manifest",
+      "date": "2026-09-04"
+    },
+    {
+      "id": "ADR-078",
+      "title": "PostgreSQL MCP Idle Startup and Explicit Database Targets",
+      "date": "2026-09-07"
+    },
+    {
+      "id": "ADR-079",
+      "title": "Coordinated Cross-Vendor Prompt Contract",
+      "date": "2026-09-07"
+    },
+    {
+      "id": "ADR-080",
+      "title": "Remote MCP Servers in the Per-Repository Capability Manifest",
+      "date": "2026-09-07"
+    },
+    {
+      "id": "ADR-081",
+      "title": "Retire the Native Mount",
+      "date": "2026-09-11"
+    },
+    {
+      "id": "ADR-082",
+      "title": "Vendor Namespace Isolation",
+      "date": "2026-09-11"
+    },
+    {
+      "id": "ADR-083",
+      "title": "One Shell-Command Rewriter per Tool per Vendor",
+      "date": "2026-09-14"
+    },
+    {
+      "id": "ADR-084",
+      "title": "Multi-Session Concurrency Contract",
+      "date": "2026-09-25"
+    },
+    {
+      "id": "ADR-085",
+      "title": "Claude Subagent Preset Router — Deny Floor Plus Rewrite Hook",
+      "date": "2026-09-26"
+    },
+    {
+      "id": "ADR-086",
+      "title": "Musk Algorithm Operating Loop — Reversibility Line, Contract, Gate B Reduction",
+      "date": "2026-09-29"
+    },
+    {
+      "id": "ADR-087",
+      "title": "AGY Permission Gate Enforces Gap Rows as Deny-Not-Prompt",
+      "date": "2026-09-30"
+    },
+    {
+      "id": "ADR-088",
+      "title": "Claudex Settings Retirement",
+      "date": "2026-10-02"
+    },
+    {
+      "id": "ADR-089",
+      "title": "Retire the Authority Gate (Gate B) Completely",
+      "date": "2026-10-04"
+    },
+    {
+      "id": "ADR-090",
+      "title": "Per-Session Worktree Isolation for Concurrent 3B Writes",
+      "date": "2026-10-08"
+    },
+    {
+      "id": "ADR-091",
+      "title": "Deny-Not-Ask Command Permission Policy",
+      "date": "2026-10-09"
+    },
+    {
+      "id": "ADR-092",
+      "title": "Post-Implementation E2E Verification Only — TDD and Test Prescriptions Retired",
+      "date": "2026-10-11"
+    },
+    {
+      "id": "ADR-093",
+      "title": "Retain session task ownership through recovery",
+      "date": "2026-10-11"
+    },
+    {
+      "id": "ADR-094",
+      "title": "Decide in the specification; execute within its bounds",
+      "date": "2026-10-11"
+    },
+    {
+      "id": "ADR-095",
+      "title": "Replace the Ouroboros planning layer with vendored grill skills",
+      "date": "2026-10-11"
+    },
+    {
+      "id": "ADR-096",
+      "title": "Linux host support for",
+      "date": "2026-10-14"
+    },
+    {
+      "id": "ADR-097",
+      "title": "Cloud Session Guardrail Hooks",
+      "date": "2026-10-16"
+    },
+    {
+      "id": "ADR-098",
+      "title": "Checkpoint Records and Write Claims",
+      "date": "2026-10-18"
+    },
+    {
+      "id": "ADR-099",
+      "title": "A2A Message Profile for Step Responses",
+      "date": "2026-10-18"
+    },
+    {
+      "id": "ADR-100",
+      "title": "The advisor settles only spec-delegated two-way decisions",
+      "date": "2026-10-18"
+    },
+    {
+      "id": "ADR-101",
+      "title": "Grok Bot precedence: skill files grant no approval",
+      "date": "2026-10-19"
+    },
+    {
+      "id": "ADR-102",
+      "title": "Worktree Root and Lifecycle Ownership",
+      "date": "2026-10-19"
+    },
+    {
+      "id": "ADR-103",
+      "title": "Worktree Checkpoint Model for 3B Writes",
+      "date": "2026-10-19"
+    },
+    {
+      "id": "ADR-104",
+      "title": "Session identity resolves through one vendor table and fails closed",
+      "date": "2026-10-19"
+    },
+    {
+      "id": "ADR-105",
+      "title": "Grok Bot reaches Mac T3 Code over Tailscale Serve",
+      "date": "2026-10-20"
     }
   ],
   "stats": [
@@ -1489,11 +1820,11 @@
     },
     {
       "metric": "Architecture nodes",
-      "value": "92"
+      "value": "95"
     },
     {
       "metric": "Architecture edges",
-      "value": "134"
+      "value": "138"
     },
     {
       "metric": "Documented flows",
@@ -1505,19 +1836,19 @@
     },
     {
       "metric": "ADRs",
-      "value": "46"
+      "value": "107"
     },
     {
       "metric": "Rule files",
-      "value": "57"
+      "value": "1"
     },
     {
       "metric": "Skills",
-      "value": "40"
+      "value": "98"
     },
     {
       "metric": "Knowledge entries",
-      "value": "940"
+      "value": "1892"
     },
     {
       "metric": "Knowledge categories",
