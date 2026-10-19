@@ -8,3 +8,38 @@
 # ("Deferred post-cutover package and UI consolidation").
 packages:
   - next
+
+# pnpm 11+ resolves only versions older than one day (minimumReleaseAge 1440).
+# These exact versions are the latest releases of direct dependencies, plus
+# the packages those releases pin exactly. Each came from npm trusted
+# publishing with SLSA provenance (checked 2026-10-19). Prune drops an entry
+# once the lockfile no longer resolves that version.
+minimumReleaseAgeExclude:
+  - satori@0.63.0
+  - '@inlang/paraglide-js@2.29.1'
+  - typescript-eslint@8.72.0
+  - '@typescript-eslint/eslint-plugin@8.72.0'
+  - '@typescript-eslint/parser@8.72.0'
+  - '@typescript-eslint/project-service@8.72.0'
+  - '@typescript-eslint/scope-manager@8.72.0'
+  - '@typescript-eslint/tsconfig-utils@8.72.0'
+  - '@typescript-eslint/type-utils@8.72.0'
+  - '@typescript-eslint/types@8.72.0'
+  - '@typescript-eslint/typescript-estree@8.72.0'
+  - '@typescript-eslint/utils@8.72.0'
+  - '@typescript-eslint/visitor-keys@8.72.0'
+  - wrangler@4.151.2
+  - miniflare@5.20261019.0-beta
+  - workerd@1.20261019.1
+  - '@cloudflare/workerd-darwin-64@1.20261019.1'
+  - '@cloudflare/workerd-darwin-arm64@1.20261019.1'
+  - '@cloudflare/workerd-linux-64@1.20261019.1'
+  - '@cloudflare/workerd-linux-arm64@1.20261019.1'
+  - '@cloudflare/workerd-windows-64@1.20261019.1'
+minimumReleaseAgeExcludePrune: true
+
+# pnpm 11+ fails an install on an unreviewed build script. pnpm 10 skipped
+# these two, and the build works without them, so they stay denied.
+allowBuilds:
+  esbuild: false
+  workerd: false

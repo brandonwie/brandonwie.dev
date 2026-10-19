@@ -37,7 +37,7 @@ stack:
   comments: Giscus (GitHub Discussions)
   analytics: Umami (self-hosted API)
   fonts: JetBrains Mono
-  package_manager: pnpm 10.32.1 (Corepack-pinned)
+  package_manager: pnpm 12.14.0 (Corepack-pinned)
   script_runtimes: { deno: '2.x (content pipeline)', tsx: 'node (translation/og/validate)' }
   node: '24 (.node-version)'
   testing: NONE # no vitest/jest/playwright/@testing-library — see improvements P1-TEST
@@ -170,7 +170,7 @@ subsystems:
       - 'NOTE: og:generate is NOT in build — manual; static/og has 95 of 139'
     ordering_constraint: '`build` MUST precede `check` — svelte-check imports generated $lib/paraglide/*'
     config_files:
-      'package.json': '75 loc; pnpm@10.32.1; type:module; NO engines field; 5 runtime deps rest dev'
+      'package.json': '75 loc; pnpm@12.14.0; type:module; NO engines field; 5 runtime deps rest dev'
       'vite.config.ts': '@ts-nocheck (Deno dual-typedef workaround); plugins tailwind→sveltekit→paraglide'
       'svelte.config.js': 'adapter-static {fallback:404.html, precompress:true, strict:true}; mdsvex chain; Shiki singleton (89 loc)'
       'tsconfig.json': 'strict, verbatimModuleSyntax, moduleResolution:bundler, checkJs, skipLibCheck'
