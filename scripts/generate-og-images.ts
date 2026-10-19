@@ -86,6 +86,9 @@ function buildMarkup(post: PostMeta) {
 				flexDirection: 'column',
 				width: '100%',
 				height: '100%',
+				// satori >=0.62 sizes a percentage box without its padding; keep the
+				// 60px inset inside the 1200x630 canvas.
+				boxSizing: 'border-box',
 				backgroundColor: colors.bg,
 				padding: '60px',
 				fontFamily: 'JetBrains Mono',
@@ -250,6 +253,9 @@ function buildDefaultMarkup() {
 				flexDirection: 'column',
 				width: '100%',
 				height: '100%',
+				// satori >=0.62 sizes a percentage box without its padding; keep the
+				// 60px inset inside the 1200x630 canvas.
+				boxSizing: 'border-box',
 				backgroundColor: colors.bg,
 				padding: '60px',
 				fontFamily: 'JetBrains Mono',

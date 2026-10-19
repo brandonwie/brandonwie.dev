@@ -29,6 +29,10 @@ type MermaidApi = (typeof import('mermaid'))['default'];
  */
 const MERMAID_CONFIG = {
 	startOnLoad: false,
+	// mermaid 12 defaults to the ELK layout and the `neo` look; pin the v11
+	// rendering so existing diagrams keep their layout and the theme below.
+	layout: 'dagre',
+	look: 'classic',
 	theme: 'dark',
 	themeVariables: {
 		// REDESIGN: every colour below moved from the pre-redesign greys and
@@ -118,6 +122,10 @@ const MERMAID_CONFIG = {
 	flowchart: {
 		htmlLabels: true,
 		curve: 'basis',
+		// mermaid 12 lowered wrappingWidth to 120 and added a 120px minNodeWidth;
+		// keep the v11 values so labels keep the line breaks the posts wrote.
+		wrappingWidth: 200,
+		minNodeWidth: 0,
 	},
 	securityLevel: 'strict',
 } satisfies MermaidConfig;
