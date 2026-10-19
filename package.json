@@ -42,7 +42,7 @@
 		"@resvg/resvg-js": "^2.6.2",
 		"@tailwindcss/typography": "^0.5.20",
 		"@types/mdast": "^4.0.4",
-		"@types/node": "^24.19.2",
+		"@types/node": "^26.6.5",
 		"eslint": "^10.13.0",
 		"eslint-config-prettier": "^10.1.8",
 		"github-slugger": "^2.0.0",
@@ -52,13 +52,13 @@
 		"mdast-util-to-string": "^4.0.0",
 		"pagefind": "^1.5.2",
 		"prettier": "^3.9.10",
-		"satori": "^0.62.0",
+		"satori": "^0.63.0",
 		"tailwindcss": "4.3.3",
 		"tsx": "^4.23.15",
 		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.71.2",
+		"typescript-eslint": "^8.72.0",
 		"unist-util-visit": "^5.1.0",
 		"vfile": "^6.0.3",
-		"wrangler": "4.151.1"
+		"wrangler": "4.151.2"
 	}
 }
