@@ -1875,3 +1875,22 @@ Next static-export nondeterminism.
 **Next:** decide the co-author trailer policy (this repo squashes with
 `COMMIT_MESSAGES`, so `4eed3f3` has no trailer); confirm the Pages dashboard
 settings; the rest is in 3B `projects/brandonwie.dev/todos.md`.
+
+### Session 17 — 2026-10-20: Resync three expanded posts
+
+**What:** `/3b:blog-publish` found three hash mismatches and no new posts.
+`claude-code-agent-teams` (EN + KO) now says an idle teammate with no report is
+unresolved, neither done nor failed, and that a named teammate's read is redone
+with a synchronous unnamed `Agent` or the commit waits.
+`wrap-followup-persistence-architecture` (EN + KO) notes that its test suite
+was later removed. `claude-md-byte-budget-generator-gate` got a hash-only
+`sync:rehash`, because the upstream change does not appear in the post, so its
+`updated` date stays. Commit `072144c`; `sync:check` reports 165/165 hash
+matches. An Opus advisor session made the run's decisions. The four gate skills
+were enabled for the session and restored, with the SHA-256 verified.
+
+**Changed (3B):** `6742c015b` cleared the agent-teams `needs_resync` flag;
+knowledge notes on skill-override gates and hash-only refreshes were updated.
+
+**Next:** the asdf `pnpm` shim has no version under nodejs 24.22.0, so `pnpm`
+scripts and the pre-push hook exit 126 until it is fixed (friction logged).
