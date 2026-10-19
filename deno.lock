@@ -6,6 +6,7 @@
     "npm:@tailwindcss/typography@~0.5.20": "0.5.20_tailwindcss@4.3.3",
     "npm:@types/mdast@^4.0.4": "4.0.4",
     "npm:@types/node@^26.6.5": "26.6.5",
+    "npm:@typescript/typescript6@^6.0.2": "6.0.2",
     "npm:eslint-config-prettier@^10.1.8": "10.1.8_eslint@10.13.0",
     "npm:eslint@^10.13.0": "10.13.0",
     "npm:github-slugger@2": "2.0.0",
@@ -19,7 +20,6 @@
     "npm:tailwindcss@4.3.3": "4.3.3",
     "npm:tsx@^4.23.15": "4.23.15",
     "npm:typescript-eslint@^8.72.0": "8.72.0_eslint@10.13.0_typescript@6.0.3",
-    "npm:typescript@^6.0.3": "6.0.3",
     "npm:unist-util-visit@^5.1.0": "5.1.0",
     "npm:vfile@^6.0.3": "6.0.3",
     "npm:wrangler@4.151.2": "4.151.2"
@@ -749,6 +749,13 @@
         "@typescript-eslint/types",
         "eslint-visitor-keys@5.0.1"
       ]
+    },
+    "@typescript/typescript6@6.0.2": {
+      "integrity": "sha512-mbCddXd+jm7hfx7w2YU64/Av4/NqqeG3GoRZgxPcgoTxYjhrcfJRw9ULch71SS4G+Q3bOXFhRvPqjguN0Hyp5w==",
+      "dependencies": [
+        "@typescript/old@npm:typescript@6.0.3"
+      ],
+      "bin": true
     },
     "acorn-jsx@5.3.2_acorn@8.19.0": {
       "integrity": "sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==",
@@ -1763,6 +1770,7 @@
         "npm:@tailwindcss/typography@~0.5.20",
         "npm:@types/mdast@^4.0.4",
         "npm:@types/node@^26.6.5",
+        "npm:@typescript/typescript6@^6.0.2",
         "npm:eslint-config-prettier@^10.1.8",
         "npm:eslint@^10.13.0",
         "npm:github-slugger@2",
@@ -1776,7 +1784,6 @@
         "npm:tailwindcss@4.3.3",
         "npm:tsx@^4.23.15",
         "npm:typescript-eslint@^8.72.0",
-        "npm:typescript@^6.0.3",
         "npm:unist-util-visit@^5.1.0",
         "npm:vfile@^6.0.3",
         "npm:wrangler@4.151.2"
