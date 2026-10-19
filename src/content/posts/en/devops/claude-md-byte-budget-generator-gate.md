@@ -15,7 +15,7 @@ references:
   - url: 'https://code.claude.com/docs/en/memory'
     title: Claude Code memory — how CLAUDE.md loads into every session's context
     type: official
-source_content_hash: 0940f30c7678e7d1b50d31154512b7fa2f60267d1848ce00c34c10153fc1379e
+source_content_hash: 5d9ffcbb6845a37bd7476a3e537b3f485a16b5964280c755af7b0b156407c249
 ---
 
 Agent tools that load an always-on context file — Claude Code's `CLAUDE.md`,

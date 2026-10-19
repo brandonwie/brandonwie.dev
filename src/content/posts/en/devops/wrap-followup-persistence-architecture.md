@@ -2,7 +2,7 @@
 title: Wrap Skill Follow-Up Persistence Architecture
 description: 'When a session-state dashboard regenerates from a single source (today''s journal), unresolved follow-ups from prior sessions vanish silently on every rebuild. Compounded with single-source discovery and conversation-only mentions, follow-ups disappear three ways at once. The fix is a 4-layer architecture.'
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-10-20'
 tags:
   - devops
   - claude-code
@@ -19,7 +19,7 @@ references:
   - url: 'https://github.com/DavidAnson/markdownlint/blob/main/doc/md041.md'
     title: 'markdownlint MD041 — first-line-heading'
     type: official
-source_content_hash: 2612c37f859108ca277410129cdb82aa0712fffa4a020a7f932bd82df09281a7
+source_content_hash: 8140bf2896fbde2c4ec0c3c285cb22bb1565d77886570ee811f893310805b8be
 ---
 
 When a session-state dashboard regenerates from a single source (e.g., today's journal), unresolved follow-ups from prior sessions vanish silently on every rebuild. Compounded with single-source discovery and conversation-only mentions, follow-ups disappear three ways at once. The fix is a 4-layer architecture that defends against each loss mode independently.
@@ -42,7 +42,7 @@ The original v1.3.0 design did in-skill carry-forward merge of prior ACTIVE-STAT
 
 > **Update (2026-09-24).** The generator no longer relies on that single lock directory. It now takes a lease named after the file it protects, `.agents/locks/ACTIVE-STATUS.md.lock`, first, and the old flat `active-status.lock` second. The flat directory stays as a compatibility bridge, so writers that predate the change are still kept out. A stuck lock is now recovered only when its holder is proven dead, never because the lock looks old.
 
-The carry-forward test case became design-obsolete with this shift; the remaining merge logic (multi-source scan, resolution drop, dedup, tag derivation) all moved into the generator's `collectPriorities` + `collectProjectFollowups` + `withProject` functions, covered by 20 unit tests in `scripts/regenerate-active-status.test.js` (all green as of 2026-04-30 close).
+The carry-forward test case became design-obsolete with this shift; the remaining merge logic (multi-source scan, resolution drop, dedup, tag derivation) all moved into the generator's `collectPriorities` + `collectProjectFollowups` + `withProject` functions, covered by 20 unit tests in `scripts/regenerate-active-status.test.js` (all green as of 2026-04-30 close; that test suite was later removed).
 
 Both steps shipped as commits in my own tooling repo, which is private — so the design is the transferable part here, not the diff.
 

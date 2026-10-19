@@ -5,7 +5,7 @@ description: >-
   follow-up이 rebuild할 때마다 조용히 사라져요. 단일 source 탐색 + 대화에서만 언급된 항목과 겹치면 동시에 세 갈래로
   증발해요. 해결책은 4-layer 아키텍처예요.
 date: 2026-04-25T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-10-20'
 tags:
   - devops
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: wrap-followup-persistence-architecture
-source_updated: '2026-08-02'
-translation_date: '2026-09-28'
+source_updated: '2026-10-20'
+translation_date: '2026-10-20'
 ---
 
 session-state 대시보드를 오늘 journal 하나만 보고 다시 그리면, 어제 처리 못 한 항목은 rebuild마다 조용히 빠져요. 여기에 단일 source 탐색과 대화에서만 언급된 항목까지 겹치면 누락 경로가 셋으로 늘어나요. 해결책은 각 누락 모드를 따로 막는 4-layer 아키텍처예요.
@@ -40,7 +40,7 @@ session-state 대시보드를 오늘 journal 하나만 보고 다시 그리면, 
 
 > **업데이트 (2026-09-24).** 이제 generator는 잠금 디렉터리 하나에만 기대지 않아요. 보호하는 파일 이름을 딴 lease `.agents/locks/ACTIVE-STATUS.md.lock`을 먼저 잡고 예전 flat `active-status.lock`은 그다음에 잡아요. flat 디렉터리는 호환용 bridge로 남겨 뒀어요. 그래서 이 변경 이전 코드로 도는 writer도 여전히 못 들어와요. 멈춘 잠금은 잠금을 쥔 process가 죽은 게 확인될 때만 회수해요. 오래돼 보인다는 이유만으로는 절대 회수하지 않아요.
 
-carry-forward를 검증하던 test case는 이 변화로 자연히 폐기됐어요. 남은 머지 로직 — 다중 source 스캔, 해결된 항목 drop, 중복 제거, 태그 도출 — 은 전부 generator의 `collectPriorities` + `collectProjectFollowups` + `withProject` 함수로 옮겼어요. `scripts/regenerate-active-status.test.js`의 unit test 20개로 다 cover돼요. 2026-04-30 마감 시점에 모두 green이었어요.
+carry-forward를 검증하던 test case는 이 변화로 자연히 폐기됐어요. 남은 머지 로직 — 다중 source 스캔, 해결된 항목 drop, 중복 제거, 태그 도출 — 은 전부 generator의 `collectPriorities` + `collectProjectFollowups` + `withProject` 함수로 옮겼어요. `scripts/regenerate-active-status.test.js`의 unit test 20개로 다 cover했어요. 2026-04-30 마감 시점에는 모두 green이었어요. 이 test suite는 나중에 제거됐어요.
 
 두 단계 모두 제 개인 tooling repo의 commit으로 올라갔는데, 그 repo는 private이에요. 그래서 여기서 가져갈 수 있는 건 diff가 아니라 설계 쪽이에요.
 

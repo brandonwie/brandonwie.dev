@@ -4,7 +4,7 @@ description: >-
   Agent Teams의 현재 동작과 version별 pane 문제, 작업 소유권, 결과 전달
   실패를 구분해서 정리한 사용 기록이에요.
 date: 2026-02-09T00:00:00.000Z
-updated: '2026-09-20'
+updated: '2026-10-20'
 tags:
   - ai-ml
   - claude-code
@@ -15,8 +15,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-agent-teams
-source_updated: '2026-09-20'
-translation_date: '2026-09-28'
+source_updated: '2026-10-20'
+translation_date: '2026-10-20'
 references:
   - url: 'https://code.claude.com/docs/en/agent-teams'
     title: Claude Code Agent Teams 공식 문서
@@ -182,8 +182,9 @@ team 대신 background subagent를 쓰는 session이 이어졌어요.
 
 teammate 응답에는 UI용 짧은 `summary`와 전체 `message`가 따로 있었어요.
 brief가 모호하면 teammate가 summary에 "완료"만 적고 message 본문을 비워
-실제 deliverable이 오지 않았어요. content message 없이 idle 알림만 온 경우도
-완료로 보면 안 돼요.
+실제 deliverable이 오지 않았어요. content message 없이 idle 알림만 온 경우는
+완료도 실패도 아니에요. report가 한참 뒤에 올 수도 있으니 UNRESOLVED로 남겨
+둬요(아래 "이름 있는 teammate의 응답에는 도착 기한이 없어요" 참고).
 
 결과를 메시지로 받아야 한다면 brief에 아래 계약을 넣어요.
 
@@ -212,8 +213,9 @@ background report를 보낼 방법 자체가 없었어요. 이런 worker를 back
 
 그러니 "report 없이 idle이 됐다"를 실패로 보지 말고 UNRESOLVED로 남겨 둬요.
 검토 결과가 commit의 전제라면 이름 없는 synchronous `Agent`로 답을 먼저 받고
-판단해요. 이미 이름 있는 teammate를 띄워 둔 상태에서 기다릴 수 없다면, 손에 있는
-부분 증거로 결론을 적는 대신 review가 아직 남아 있다고 commit에 밝혀요.
+판단해요. 이미 이름 있는 teammate를 띄워 뒀다면 이름 없는 synchronous `Agent`로
+review를 다시 돌리거나 commit을 미루고 review가 아직 남아 있다고 알려요. 손에 쥔 부분
+증거만으로 결론을 적으면 안 돼요.
 
 ## 현재도 전제로 둘 제한
 
