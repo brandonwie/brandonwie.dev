@@ -2,7 +2,7 @@
 title: 스스로 고치고, 그 고침마저 정리하는 harness
 description: agent가 저지르는 가장 비싼 실수는 극적인 실수가 아니에요.
 date: 2026-06-15T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-10-22'
 tags:
   - 3b
   - devops
@@ -12,13 +12,16 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: a-harness-that-fixes-itself
-source_updated: '2026-08-02'
-translation_date: "2026-06-17"
+source_updated: '2026-10-22'
+translation_date: "2026-10-22"
 references:
+  - url: 'https://bun.com/docs/runtime'
+    title: Bun runtime documentation
+    type: official
   - url: 'https://nodejs.org/api/cli.html'
     title: Node.js CLI documentation
     type: official
-source_content_hash: 324d4a676c8ae93bc9c3a170c3652d03534a0de8758ea242cdf0ec0c6e8bdbfc
+source_content_hash: 24da6de7b06c9d823a3fd85ef968d599a4ca7b89752a17db01262e9ce4511075
 ---
 
 agent랑 일하다 보면 같은 실수를 또 마주칠 때가 있어요. 잘못된 명령어 형태, 오래돼서 안 맞는 instruction, permission을 우회하던 임시방편, 진작에 알았어야 할 검색 경로 같은 것들이요. 한 session이 알아채고, 당장 급한 문제만 고친 뒤 넘어가요. 그리고 일주일 뒤 다른 session이 똑같은 실수를 반복해요. 그때 얻은 교훈이 시스템의 일부가 된 적이 없으니까요.
@@ -31,10 +34,10 @@ friction은 단순히 기분의 문제가 아니에요. 데이터죠. agent가 t
 
 붙잡는 창구는 일부러 여러 agent가 같이 쓰도록 만들었어요.
 
-Codex, AGY, Claude 모두 runtime에 상관없이 같은 스크립트를 쓸 수 있어요.
+Codex, AGY, Claude 모두 Bun으로 같은 스크립트를 실행해요.
 
 ```text
-node scripts/report-friction.js --target <type> --severity <sev> --description "..."
+bun scripts/report-friction.js --target <type> --severity <sev> --description "..."
 ```
 
 이 스크립트는 target과 severity를 검증하고, `[FRICTION]` 블록을 만든 뒤, 공용 buffer writer를 거쳐 `.agents/buffer.md`에 덧붙여요. buffer는 최종 저장소가 아니에요. 붙잡아 두는 대기열이죠.
@@ -45,7 +48,7 @@ node scripts/report-friction.js --target <type> --severity <sev> --description "
 
 `/wrap`을 돌리는 동안, friction 분석 단계가 buffer 항목을 읽어요. 구조화된 관찰로 파싱하고, 비슷한 관찰끼리 묶은 뒤, `.agents/friction-log.json`을 업데이트하죠.
 
-관찰 하나가 곧바로 rule이 되지는 않아요. 기본 경로는 반복을 요구해요. 같은 종류의 friction이 충분히 여러 번, 충분히 여러 session에 걸쳐 나타나야 해요. 그래야 한 번의 실수가 아니라 진짜 패턴이라는 게 증명되죠. 심각한 사고는 이 대기 기간을 건너뛸 수 있지만, 평범한 friction은 고침을 받을 자격을 직접 벌어야 해요.
+관찰 하나가 곧바로 rule이 되지는 않아요. 기본 경로는 반복을 요구해요. 같은 종류의 friction이 충분히 여러 번, 충분히 여러 session에 걸쳐 나타나야 해요. 그래야 한 번의 실수가 아니라 진짜 패턴이라는 게 증명되죠. 심각한 사고는 이 대기 기간을 건너뛸 수 있지만, 평범한 friction은 반복해서 나타나야 개선 대상으로 삼아요.
 
 여기가 핵심적인 규율이에요. 스스로 개선하는 harness는 두 가지 나쁜 본능을 동시에 눌러야 하거든요.
 
@@ -62,7 +65,7 @@ friction 시스템에는 두 가지 lifecycle 설명이 있어요.
 
 운영 관점은 더 풍부해요. `/wrap`이 실제 워크플로를 돌려야 하니까요. 여기엔 proposed, applied, verified, dismissed, ineffective, strengthened 같은 상태가 들어가요. 이게 메커니즘 이야기예요. 사람이 적용, 나중에, 기각, 강화, 되돌리기를 말했을 때 무슨 일이 벌어지는지 설명하죠.
 
-언뜻 보면 lifecycle 모델이 둘이라는 게 표류처럼 보일 수 있어요. 그런데 이 경우엔 나누는 게 쓸모 있어요. 4단계 모델은 rule을 만드는 사람과 거버넌스를 위한 거예요. runtime 상태 기계는 session 엔진을 위한 거고요. 하나는 왜 패턴이 졸업해야 하는지 설명하고, 다른 하나는 그 졸업을 어떻게 실행하는지 설명해요.
+언뜻 보면 lifecycle 모델이 둘이라는 게 표류처럼 보일 수 있어요. 그런데 이 경우엔 나누는 게 쓸모 있어요. 4단계 모델은 rule을 만드는 사람과 거버넌스를 위한 거예요. runtime 상태 기계는 session 엔진을 위한 거고요. 하나는 왜 패턴을 다음 단계로 넘기는지 설명하고, 다른 하나는 그 전환을 어떻게 실행하는지 설명해요.
 
 ## 고침은 제안될 뿐, 조용히 적용되지 않아요
 
@@ -70,7 +73,7 @@ friction 시스템에는 두 가지 lifecycle 설명이 있어요.
 
 그래도 고침을 조용히 적용하지는 않아요.
 
-이건 무게를 떠받치는 rule이에요. friction 고침은 settings, rule, hook, skill instruction을 건드릴 때가 많아요. 전부 control-plane 영역이죠. 잘못된 고침은 앞으로의 session을 더 나쁘게 만들 수 있어요. 그래서 시스템은 선택지를 내놔요. 적용, 기각, 나중에, 강화, 되돌리기. 사람은 계속 그 고리 안에 남아 있어요.
+이건 시스템을 지탱하는 핵심 rule이에요. friction 고침은 settings, rule, hook, skill instruction을 건드릴 때가 많아요. 전부 control-plane 영역이죠. 잘못된 고침은 앞으로의 session을 더 나쁘게 만들 수 있어요. 그래서 시스템은 선택지를 내놔요. 적용, 기각, 나중에, 강화, 되돌리기. 최종 판단에는 계속 사람이 참여해요.
 
 여기서 friction lifecycle이 거버넌스 gate와 만나요. [게이트 세 개와 감사 로그](/posts/three-gates-and-an-audit-log)에서 Gate B를 다뤘어요. rule, hook, skill, prompt, settings 같은 control-plane 영역이 바뀔 때 발동하고, 바꾸기 전에 설명하는 payload를 요구하는 사람 개입 gate예요. friction lifecycle은 바로 그런 종류의 변경을 제안하고요. 제안은 똑똑할 수 있지만, 적용은 여전히 gate를 거쳐요.
 
@@ -88,7 +91,7 @@ friction 고침은 patch가 들어갔다고 증명되는 게 아니에요.
 
 ## harness는 스스로 가지치기도 해요
 
-스스로 개선하는 시스템은 흉터 조직을 쌓아가는 경향이 있어요.
+스스로 개선하는 시스템에는 과거 실패에 대응한 규칙이 계속 쌓이기 쉬워요.
 
 오래된 실패 하나하나가 알림 하나, hook 하나, rule 하나, 경고 하나를 더 남겨요. 처음엔 그게 더 안전하게 느껴져요. 그런데 결국 agent는 지금 문제를 푸는 것보다 옛 실수를 피하는 데 더 많은 context를 쓰게 돼요.
 
@@ -96,7 +99,7 @@ friction 고침은 patch가 들어갔다고 증명되는 게 아니에요.
 
 해결되고 검증된 friction은 활성 log에서 archive로 옮겨갈 수 있고, 역사적 맥락으로 아직 쓸모가 있다면 나중에 knowledge로 갈 수도 있어요. 적용된 고침은 충분한 시간이 지나면 일몰 검토를 받을 수 있어요. 클러스터 감지 휴리스틱은 사용자가 너무 자주 기각하면 은퇴할 수 있고요. 구조적 고침이 실패를 기계적으로 불가능하게 만들면, 알려진 실패 유형 항목은 건너뛸 수 있어요.
 
-마지막 생각이 중요해요. 모든 교훈이 prompt에 영원히 남을 자격이 있는 건 아니에요. pre-commit hook이 이제 그 나쁜 상태를 막아준다면, 그러지 말라고 기억하라는 경고는 군더더기일 수 있어요. 더 이상 빠질 수 없는 함정을 두고 기계가 계속 context를 지불할 이유는 없어요.
+마지막 생각이 중요해요. 모든 교훈이 prompt에 영원히 남을 자격이 있는 건 아니에요. pre-commit hook이 이제 그 나쁜 상태를 막아준다면, 그러지 말라고 기억하라는 경고는 군더더기일 수 있어요. 더 이상 빠질 수 없는 함정을 두고 기계가 계속 context를 쓸 이유는 없어요.
 
 ## 내가 가져다 쓸 부분
 
@@ -108,7 +111,7 @@ friction 고침은 patch가 들어갔다고 증명되는 게 아니에요.
 4. 증거와 함께 고침을 내놓고, 사람이 고르게 해요.
 5. 반복을 지켜보며 검증해요.
 6. 고침이 실패하면 강화하거나 되돌려요.
-7. 활성 휴리스틱이 비용값을 못 하게 되면 은퇴시켜요.
+7. 활성 휴리스틱의 효과가 유지 비용에 못 미치면 은퇴시켜요.
 
 그 고리가 개별 스크립트 하나하나보다 중요해요.
 

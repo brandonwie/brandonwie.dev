@@ -5,7 +5,7 @@ description: >-
   새 개발자는 즉시 AI 지시사항을 사용하고 기존 개발자는 개인 확장을
   유지하는 패턴입니다.
 date: 2026-02-04T00:00:00.000Z
-updated: "2026-09-20"
+updated: "2026-10-22"
 tags:
   - devops
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-shared-personal-config
-source_updated: "2026-09-20"
-translation_date: "2026-09-20"
+source_updated: "2026-10-22"
+translation_date: "2026-10-22"
 references:
   - url: "https://code.claude.com/docs/en/memory"
     title: "Claude Code 공식 문서 — CLAUDE.md 로드 순서"
@@ -44,7 +44,7 @@ references:
 저장소를 clone하니 AI 지원이 전혀 없었어요. 설정 전체가 gitignore 처리되어
 있었거든요. 개인 지식 관리 시스템으로의 symlink가 포함되어 있었기 때문이에요.
 
-해결책은 두 레이어 아키텍처예요: 새 개발자가 clone하자마자 AI가 동작하도록
+해결책은 두 레이어 아키텍처예요. 새 개발자가 clone하자마자 AI가 동작하도록
 공유 지시사항을 저장소에 커밋하고 기존 개발자의 커스텀 설정은 gitignore된
 개인 확장으로 유지하는 방식이에요.
 
@@ -72,8 +72,8 @@ GEMINI.md          ← synced copy     .claude/skills/
 .github/copilot-instructions.md
 ```
 
-공유 파일에는 새 개발자에게 필요한 모든 게 들어가요: 프로젝트 아키텍처, 코딩
-컨벤션, 명령어 레퍼런스, 배포 지시사항. 개인 파일에는 개발자별 선호 설정,
+공유 파일에는 프로젝트 아키텍처, 코딩 컨벤션, 명령어 레퍼런스, 배포 지시사항처럼
+새 개발자에게 필요한 모든 게 들어가요. 개인 파일에는 개발자별 선호 설정,
 프라이빗 도구 설정, 외부 시스템으로의 symlink가 들어가요.
 
 ## 핵심 결정 사항
@@ -95,7 +95,7 @@ Claude Code, Codex(`AGENTS.md`), Gemini(`GEMINI.md`) 사이의 drift를 막아�
 
 `.claude/skills/`는 제 지식 관리 시스템으로의 symlink(gitignore됨)로 남겨요.
 팀에 영향 주지 않는 개인 확장은 symlink나 `CLAUDE.local.md`에 유지해요. 기준은
-명확해요: 모두에게 도움이 되면 커밋하고 본인 환경에 특화된 거면 gitignore해요.
+명확해요. 모두에게 도움이 되면 커밋하고 본인 환경에 특화된 거면 gitignore해요.
 
 ## Sync 스크립트
 
@@ -186,7 +186,7 @@ symlink는 모든 도구에 투명해서 어느 쪽을 편집해도 같은 파�
 
 ## 레이어 중복 제거 전략
 
-여러 프로젝트에 공유 설정을 세팅하고 나니 새로운 문제가 생겼어요: 동일한 범용
+여러 프로젝트에 공유 설정을 세팅하고 나니 새로운 문제가 생겼어요. 동일한 범용
 원칙(5W1H 문서화, buffer 형식, `.me.md` 규칙, 커뮤니케이션 스타일)이 모든
 프로젝트 `CLAUDE.md`에 복사-붙여넣기 되어 있었어요. 시간이 지나면서 drift가
 생기고 중복 지시사항으로 토큰을 낭비했어요.
@@ -213,13 +213,16 @@ Claude Code의 로딩 계층 구조가 `~/.claude/CLAUDE.md`를 모든 세션에
   husky pre-commit 훅이 있어서 중복이었어요. 원래 약 330줄에서 28줄로
   압축했다가(2026-02-23), 도구 백스톱이 충분하다고 증명되자 아예 없앴어요
 - Mermaid 섹션을 약 89줄에서 6줄로 압축(동작 규칙만 남기고 예시/테이블/체크리스트는
-  제거했어요. Mermaid 선호를 강제하는 도구가 없으니까요.
+  제거했어요. Mermaid 선호를 강제하는 도구가 없으니까요.)
 - 순수 결과: 전역 `CLAUDE.md`가 491줄에서 371줄로 (~24.4% 절약)
-- Tier 2(2026-03-09): 3개 섹션을 `.claude/rules/` 파일로 더 추출(change-discipline,
-  yaml-frontmatter-schema, personal-folder-governance)
-- 프로젝트 `CLAUDE.md`: 541 → 478(Tier 1) → 328(Tier 2) = 총 -39.4% 축소
+- Tier 2(2026-03-09): 3개 섹션을 `.claude/rules/` 파일로 더 추출했어요.
+  변경 규율(`change-discipline`), frontmatter 형식(`yaml-frontmatter-schema`),
+  개인 폴더 관리 규칙(`personal-folder-governance`)이에요.
+- 프로젝트 `CLAUDE.md`는 처음 541줄에서 Tier 1에 478줄, Tier 2에 328줄로
+  줄었어요. 총 39.4%를 줄인 셈이에요.
 - 항상 로딩되는 컨텍스트 합계: 912줄에서 720줄로 (-21%)
-- best-practices audit에서 나온 rules 파일 총 4개(+ Tier 1의 tag-taxonomy)
+- 모범 사례를 점검한 뒤 규칙을 담은 파일이 총 4개 생겼어요(Tier 1에서 분리한
+  tag-taxonomy 포함).
 - 이제 모든 세션이 같은 원칙을 적용하면서 로딩하는 줄 수는 줄었어요
 
 ## Profile settings 구조 (2026년 7월)
@@ -375,7 +378,7 @@ chain을 폐기한 이유 중 하나이기도 해요.
 `work → personal → SoT` 체인에는 single-file 실패 모드가 있는데 이걸 알아채는
 데 한참 걸렸어요. `~/.claude/settings.json`이 깨지면, 개인 프로필만이 아니라
 **두 프로필 모두 체인을 잃어버려요**. 가장 흔한 원인은 Claude Code UI(또는
-플러그인의 권한 프롬프트)가 파일을 atomic하게 쓰는 거예요: 임시 파일을 만들고
+플러그인의 권한 프롬프트)가 파일을 atomic하게 쓰는 거예요. 임시 파일을 만들고
 `rename()`으로 대상 위에 옮기는 방식이요. 그 `rename()`이 symlink inode를 일반
 파일로 in-place 교체하면서 SoT를 조용히 끊어버려요.
 
@@ -391,8 +394,8 @@ walk하면서, symlink가 있어야 할 자리에 일반 파일이 있으면 "RE
 
 복구 전략은 무엇이 drift됐는지에 따라 달라져요. 두 가지 케이스가 있어요.
 
-첫 번째 케이스는 단순해요. 로컬 파일이 엄밀히 stale하고 SoT가 current하면 --
-즉, 깨진 윈도우 동안 로컬 파일에 사용자 활동이 없었다면 일방향 복원이
+첫 번째 케이스는 단순해요. 로컬 파일은 오래된 상태고 SoT만 최신인 경우예요.
+연결이 깨진 동안 로컬 파일에 사용자 활동이 없었다면 일방향 복원이
 안전해요.
 
 ```bash
@@ -411,7 +414,7 @@ realpath ~/.claude-work/settings.json
 두 번째 케이스는 더 어려워요. 로컬 파일에 UI 토글, "항상 허용" 클릭, 플러그인
 활성화 같은 사용자 의도가 쌓였고 같은 윈도우 동안 SoT도 별도로
 편집됐다면, 단순한 복원은 사용자의 변경을 조용히 되돌려버려요. 이때는
-**양방향 merge**가 필요해요: 두 JSON을 구조적으로 walk하고, 각 diff를 분류하고,
+**양방향 merge**가 필요해요. 두 JSON을 구조적으로 walk하고, 각 diff를 분류하고,
 다시 링크하기 전에 merge해야 해요. 최소한의 walker는 이렇게 생겼어요:
 
 ```python
@@ -450,8 +453,8 @@ git rollback은 없어요. SoT `settings.json`은 머신별 플러그인 install
 복구 윈도우 자체에는 충분해요. 더 길게 보관하고 싶으면 `~/`로 옮기세요.
 
 열린 질문이 하나 있어요. 체인을 분리해야 할까요? 현재의 `work → personal → SoT`
-토폴로지는 역사적으로 프로필이 하나만 있었고 업무 프로필이 두 번째 모자로
-나중에 추가됐기 때문에 존재해요. 대안은 두 개의 독립된 symlink
+토폴로지는 처음에 개인 프로필 하나만 쓰다가 업무 프로필을 나중에 추가하면서
+생겼어요. 대안은 두 개의 독립된 symlink
 (`{personal,work} → SoT`)예요. 이 구조는 하나의 UI 깨짐을 두 프로필에 cascade하는 대신
 한 프로필에 가둬요. 비용은 `settings.local.json` deep merge 메커니즘이 분리된
 체인에서도 동작하는지 재검증해야 한다는 거예요. 아직 그 spike를 안 했지만 다음
@@ -530,8 +533,8 @@ emit하는 로그 라인이에요. 제 경우 다음 세션에서 `[AGENT-TEAMS-
 모니터링 갭도 있어요. 기존의 `symlink-daily-check.sh` SessionStart hook은 다음
 세션 경계에서 atomic-rename 케이스를 잡아줘요. 세션 _중에_ 일어나는 되돌림
 루프는 못 잡아요. UI의 미래 쓰기 패턴이 delete-then-create-new-regular-file로
-바뀌면, 세션 사이에 symlink가 다시 교체될 거고 daily check가 결국은 잡겠지만 --
-실시간 체크는 PostToolUse나 Stop hook에 살아야 해요. 아직 안 만들었어요.
+바뀌면, 세션 사이에 symlink가 다시 교체될 거고 daily check가 결국은 잡겠죠.
+하지만 실시간 체크는 PostToolUse나 Stop hook에 있어야 해요. 아직 안 만들었어요.
 되돌림 cadence가 충분히 빠른지가 열린 질문이에요.
 
 gitignore된 SoT는 복구를 관찰 불가능하게 만들어요. SoT `settings.json`은
@@ -539,7 +542,7 @@ gitignore된 SoT는 복구를 관찰 불가능하게 만들어요. SoT `settings
 reconcile-and-relink 시퀀스 전체가 로컬 작업 트리 안에만 살아있다는 거예요.
 `git status`는 아무것도 안 보여줘요. 어떤 PR도 reconciliation을 리뷰하지 않아요.
 새로 clone해도 drift된 SoT를 재현할 수 없어요. 실용적 완화책은 보관 정책에
-맞춰서 주기적으로 수동 백업(`cp $SOT ~/backup-$(date +%Y%m)/`)하는 거예요 --
+맞춰서 주기적으로 수동 백업(`cp $SOT ~/backup-$(date +%Y%m)/`)하는 거예요.
 "전체 설정 히스토리를 잃는" 결과가 얼마나 나쁜지에 따라 정해야 해요. 제대로 된
 수정은 SoT를 un-gitignore하는 건데, 그러면 플러그인 install 상태와 머신별 권한을
 저장소에 실어 보내게 되니까 더 나빠져요.
@@ -617,13 +620,13 @@ session 레이어의 존재에 절대 의존하지 않게 하려는 거였어요
 ## 교차 검증 규율
 
 공유 지시사항을 만들 때, 다른 개발자에게 동작하지 않을 개인 참조가 없는지 모든
-프롬프트 파일을 교차 검증하세요:
+프롬프트 파일을 교차 검증하세요.
 
 - 하드코딩된 절대 경로 (`/Users/username/...`)
 - assignee 필드의 개인 사용자명
 - gitignore된 스크립트나 폴더 참조
-- "if configured" 가드 없는 MCP 도구 참조
-- buffer 경로 (`~/dev/personal/3b/.claude/buffer.md`)
+- "설정되어 있으면"이라는 조건 없이 MCP 도구를 참조하는 부분
+- 관찰을 모으는 buffer가 개인 경로를 가리키는지 (`~/dev/personal/3b/.claude/buffer.md`)
 - 개인 경로를 가리키는 symlink 문서 (`docs/`)
 - 사용자 컨텍스트 섹션 (레벨, 경력, 역할)
 

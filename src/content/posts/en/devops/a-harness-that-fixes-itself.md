@@ -2,7 +2,7 @@
 title: A Harness That Fixes Itself - And Prunes Its Own Fixes
 description: The most expensive agent mistakes are not the dramatic ones.
 date: 2026-06-15T00:00:00.000Z
-updated: '2026-08-02'
+updated: '2026-10-22'
 expanded: true
 tags:
   - 3b
@@ -12,10 +12,13 @@ category: devops
 draft: false
 lang: en
 references:
+  - url: 'https://bun.com/docs/runtime'
+    title: Bun runtime documentation
+    type: official
   - url: 'https://nodejs.org/api/cli.html'
     title: Node.js CLI documentation
     type: official
-source_content_hash: 32bd93b9fd0517fe1c08935393d8c870fa713cd6eddd2e74e9e0e4d4da4b9e83
+source_content_hash: 24da6de7b06c9d823a3fd85ef968d599a4ca7b89752a17db01262e9ce4511075
 ---
 
 They are the repeat mistakes: the wrong command shape, the stale instruction, the
@@ -34,10 +37,10 @@ the system wants that captured while the context is still fresh.
 
 The capture surface is intentionally cross-agent.
 
-Codex, AGY, and Claude can all use the same runtime-agnostic script:
+Codex, AGY, and Claude can all run the same script with Bun:
 
 ```text
-node scripts/report-friction.js --target <type> --severity <sev> --description "..."
+bun scripts/report-friction.js --target <type> --severity <sev> --description "..."
 ```
 
 The script validates the target and severity, builds a `[FRICTION]` block, and

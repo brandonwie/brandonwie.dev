@@ -2,7 +2,7 @@
 title: 'The pre-commit hook race that put my files in someone else''s commit'
 description: 'Two sessions committing to one repo, a slow pre-commit hook, and `fatal: cannot lock ref HEAD`. The loud failure is the easy one — the quiet failure hands your staged files to the other session''s commit under its message.'
 date: 2026-05-14T00:00:00.000Z
-updated: "2026-09-20"
+updated: "2026-10-22"
 tags:
   - devops
   - transferable
@@ -14,7 +14,7 @@ references:
   - url: 'https://git-scm.com/docs/git-worktree'
     title: git-worktree — Manage multiple working trees
     type: official
-source_content_hash: 033669ee0d5d4503b9afccde92bd4c4f372641c3bc6c17dd85938538924ce4a8
+source_content_hash: 2cec0b70e0579bf0ff3effeb14a9e49bd825df23a09d9183c6067313e434bdb2
 ---
 
 I had two agent sessions working in the same repository at once, and both tried

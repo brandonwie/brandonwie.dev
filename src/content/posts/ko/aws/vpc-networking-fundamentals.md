@@ -1,8 +1,8 @@
 ---
 title: AWS VPC 네트워킹 기초
-description: 'CIDR 계산, NAT Gateway 배치, Route Table — 왜 다들 처음에 헤매는지, 어떻게 제대로 잡는지 정리했어요.'
+description: 'CIDR 계산부터 NAT Gateway 배치, VPC 피어링의 한계, S3 게이트웨이 엔드포인트와 IPv4 요금까지 정리했어요.'
 date: 2025-04-29T00:00:00.000Z
-updated: '2026-03-15'
+updated: '2026-10-22'
 tags:
   - aws
   - networking
@@ -13,8 +13,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: vpc-networking-fundamentals
-source_updated: '2026-03-15'
-translation_date: '2026-02-25'
+source_updated: '2026-10-22'
+translation_date: '2026-10-22'
 references:
   - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/'
     title: AWS VPC 사용자 가이드
@@ -22,13 +22,40 @@ references:
   - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html'
     title: NAT Gateway 문서
     type: official
+  - url: 'https://docs.aws.amazon.com/vpc/latest/peering/invalid-peering-configurations.html'
+    title: VPC 피어링에서 지원하지 않는 구성
+    type: official
+  - url: 'https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html'
+    title: VPC 피어링 연결의 동작 방식
+    type: official
+  - url: 'https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html'
+    title: Amazon S3 게이트웨이 엔드포인트
+    type: official
+  - url: 'https://aws.amazon.com/vpc/pricing/'
+    title: Amazon VPC 요금
+    type: official
+  - url: 'https://aws.amazon.com/transit-gateway/pricing/'
+    title: AWS Transit Gateway 요금
+    type: official
+  - url: 'https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_AllocateAddress.html'
+    title: AllocateAddress API
+    type: official
+  - url: 'https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip'
+    title: Terraform AWS EIP 리소스
+    type: official
+  - url: 'https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_gateway'
+    title: Terraform AWS NAT Gateway 리소스
+    type: official
+  - url: 'https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html'
+    title: Lambda 함수의 VPC 리소스 접근 설정
+    type: official
 ---
 
-AWS를 처음 쓸 때 Terraform으로 VPC, 서브넷 4개, NAT Gateway, Internet Gateway를 만들었는데 -- 어떤 리소스가 인터넷이 필요한 건지 전혀 감이 안 왔어요. "Private" 서브넷의 EC2가 외부와 통신되고(나쁨), "public" 서브넷의 EC2는 인터넷이 안 되더라고요(역시 나쁨). VPC 네트워킹은 쉬워 보이다가 갑자기 안 돼요.
+Private 서브넷에 EC2를 만들고 NAT Gateway도 추가했는데 인터넷에 연결되지 않는다면, 게이트웨이의 위치와 라우팅부터 확인해야 해요. 다른 VPC에 연결된 게이트웨이는 피어링만으로 공유할 수 없고, S3 트래픽까지 NAT로 보내면 피할 수 있는 처리 요금이 붙어요.
 
-핵심 문제는 VPC가 모든 AWS 서비스의 기반이라는 거예요. CIDR 블록을 너무 작게 잡으면 팀이 커질 때 IP가 부족해지고, NAT Gateway를 private 서브넷에 놓으면(논리적으로 맞아 보이지만) 라우팅이 전혀 안 돼요. Route table을 명시적으로 연결하지 않으면 "private" 서브넷이 main route table의 IGW 라우트를 상속받아서 -- 아무도 모르게 public이 되어버려요.
+핵심은 주소 범위와 인터넷 경로를 함께 설계하는 거예요. CIDR 블록을 너무 작게 잡으면 리소스가 늘어날 때 IP가 부족해져요. 인터넷 접속용 public NAT Gateway를 private 서브넷에 놓아도 인터넷 경로가 생기지 않아요. 라우팅 테이블을 명시적으로 연결하지 않은 서브넷은 기본 테이블을 사용하므로, 여기에 IGW 경로를 추가하면 public 서브넷이 될 수 있어요.
 
-이 글에서는 VPC 네트워킹을 처음부터 다룰게요. CIDR 표기법, 서브넷 설계, 게이트웨이, Route Table, 그리고 직접 쓸 수 있는 Terraform 예시까지 정리했어요.
+이 글에서는 VPC 네트워킹을 처음부터 다룰게요. CIDR 표기법, 서브넷 설계, 게이트웨이, Route Table, 그리고 직접 쓸 수 있는 Terraform 예시까지 정리했어요. 피어링의 한계와 S3 게이트웨이 엔드포인트로 NAT 요금을 줄이는 방법도 살펴봐요.
 
 ## IP 주소와 CIDR
 
@@ -38,7 +65,7 @@ AWS를 처음 쓸 때 Terraform으로 VPC, 서브넷 4개, NAT Gateway, Internet
 
 IP 주소(IPv4)는 32비트 숫자로, 점으로 구분된 4개의 옥텟으로 표기해요(예: `10.0.1.5`). 각 옥텟은 0-255 범위예요.
 
-CIDR(Classless Inter-Domain Routing) 표기법은 기본 주소와 프리픽스 길이를 조합해요: `기본_주소/프리픽스_길이`
+CIDR(Classless Inter-Domain Routing) 표기법은 기본 주소와 프리픽스 길이를 조합해서 주소 범위를 나타내요: `기본_주소/프리픽스_길이`
 
 ```text
 예시: 10.0.0.0/24
@@ -113,7 +140,7 @@ CIDR과 서브넷을 이해했으니, VPC 자체를 어떻게 구성하는지 �
 
 ### 표준 VPC 설계
 
-/16 블록은 65,536개 IP를 제공해요 -- 대부분의 프로덕션 워크로드에 충분해요:
+/16 블록은 65,536개 IP를 제공해요. 이 범위 안에서 서브넷별 주소를 나눌 수 있어요:
 
 ```terraform
 resource "aws_vpc" "main" {
@@ -151,7 +178,7 @@ Private 서브넷 (내부용):
 
 ### Internet Gateway (IGW)
 
-Internet Gateway는 VPC의 정문이에요:
+Internet Gateway는 VPC를 인터넷에 연결하는 관문이에요:
 
 - VPC를 인터넷에 연결해요
 - VPC당 하나만 가능해요(하드 리밋)
@@ -164,13 +191,13 @@ resource "aws_internet_gateway" "main" {
 }
 ```
 
-IGW를 만든다고 바로 public이 되는 건 아니에요 -- 그건 곧 다룰 Route Table이 결정해요.
+IGW를 만든다고 서브넷이 바로 public이 되는 건 아니에요. 그건 곧 다룰 Route Table이 결정해요.
 
 ### NAT Gateway
 
-NAT Gateway는 private 서브넷 리소스가 아웃바운드 트래픽(Docker 이미지 pull이나 외부 API 호출 등)으로 인터넷에 접근하면서도 외부에서는 접근 불가능하게 해줘요.
+Public NAT Gateway는 private 서브넷의 리소스가 인터넷으로 요청을 보내고 응답을 받게 해줘요. 인터넷에서 먼저 연결을 시작할 수는 없어요. 다른 VPC나 온프레미스 네트워크와 통신하는 private NAT Gateway도 있지만, 이 유형은 Internet Gateway를 통한 인터넷 접속을 제공하지 않아요.
 
-여기서 다들 헤매는 부분이에요: **NAT Gateway는 public 서브넷에 있어야 해요**, 리소스가 있는 private 서브넷이 아니라요. 거꾸로 같지만, NAT Gateway가 private 리소스의 트래픽을 프록시하려면 자기 자신이 먼저 인터넷에 접근(IGW를 통해)할 수 있어야 해요.
+인터넷 접속용 **public NAT Gateway는 public 서브넷에 있어야 해요**. Elastic IP를 연결하고 Internet Gateway로 향하는 경로도 설정해야 해요. 리소스가 있는 private 서브넷에 게이트웨이를 추가하는 것만으로는 인터넷에 연결되지 않아요.
 
 ```mermaid
 flowchart LR
@@ -202,39 +229,55 @@ resource "aws_nat_gateway" "main" {
 }
 ```
 
-**비용을 주의하세요.** NAT Gateway 하나에 월 ~$32, 여기에 데이터 처리 비용이 추가돼요. 프로덕션 멀티 AZ 구성에서 AZ마다 하나씩 두면 데이터 비용 전에 월 ~$96이에요. 개발 환경이라면 private 서브넷에서 인터넷 접근이 정말 필요한지 먼저 생각해 보세요.
+**요금은 리전마다 달라요.** AWS의 미국 동부(오하이오) 요금 예시에서는 시간당 $0.045에 처리한 데이터 1GB당 $0.045를 부과해요. 730시간을 기준으로 게이트웨이 자체의 요금만 월 약 $32.85예요. 여기에 public IPv4 주소와 데이터 전송 요금이 추가돼요. 엔드포인트로 처리할 수 없는 외부 접속이 필요한지 확인한 뒤 게이트웨이를 만들면 돼요.
+
+### NAT Gateway와 VPC 피어링
+
+피어링으로 연결한 두 VPC는 서로 직접 통신할 수 있어요. 하지만 한쪽의 NAT Gateway나 Internet Gateway를 다른 쪽의 인터넷 접속 경로로 사용할 수는 없어요. 피어링을 향하는 라우트를 추가해도 이 제한은 사라지지 않아요.
+
+피어링은 전이적 라우팅도 지원하지 않아요. A가 B, C와 각각 피어링되어 있어도 B에서 A를 거쳐 C로 갈 수는 없어요. B와 C를 직접 연결하거나 다른 라우팅 구성을 사용해야 해요.
+
+독립적인 VPC라면 각각 인터넷으로 나가는 경로를 마련해야 해요. Transit Gateway로 인터넷 접속 경로를 한곳에 모을 수도 있지만, 연결 시간과 데이터 처리에 따른 요금이 추가돼요. 여러 VPC가 하나의 경로에 의존하게 된다는 점도 고려해야 해요.
+
+### S3 게이트웨이 엔드포인트
+
+Private 서브넷에서 같은 리전의 S3에 접근할 때는 NAT Gateway가 필요하지 않아요. S3 게이트웨이 엔드포인트를 만들고 private 라우팅 테이블에 연결하면, S3로 향하는 경로가 추가돼요. 이 경로를 사용하는 트래픽은 NAT Gateway를 거치지 않아요.
+
+게이트웨이 엔드포인트 자체에는 추가 요금이 없고, 이 경로로 보낸 데이터에는 NAT 처리 요금도 붙지 않아요. S3 요청과 저장 요금은 그대로 적용돼요. 필요한 접근을 허용하도록 보안 그룹, 네트워크 ACL, 엔드포인트 정책과 버킷 정책도 설정해야 해요. 엔드포인트는 해당 VPC 안에서만 사용할 수 있어서, 피어링한 다른 VPC에서는 공유할 수 없어요.
 
 ### IGW-to-EIP 의존성 순서
 
-EIP와 NAT Gateway 리소스의 `depends_on`은 IP 할당과 관련 없어요. **생성 순서**에 관한 거예요. Internet Gateway가 VPC에 먼저 존재하고 연결되어야 EIP와 NAT Gateway를 만들 수 있어요. NAT Gateway가 동작하려면 인터넷 경로가 확보되어 있어야 하기 때문이에요.
+EIP 할당과 인터넷 라우팅은 별개의 작업이에요. AWS의 `AllocateAddress` API는 계정에 주소를 할당하고, 이후에 그 주소를 리소스에 연결해요. 주소를 할당하는 작업 자체에는 Internet Gateway가 필요하지 않아요.
+
+아래 예시에서는 EIP의 `depends_on`으로 IGW를 먼저 생성하도록 순서를 정했어요. 주소 할당만 한다면 이 의존성은 선택 사항이에요. HashiCorp는 일부 EIP 연결 작업에 IGW가 필요할 수 있다고 안내해요. Public NAT Gateway 예시에서도 생성 순서를 명확히 하려고 IGW 의존성을 지정하도록 권장해요.
 
 **IGW와 EIP 핵심 사항:**
 
-- IGW는 IP 주소를 소비하거나 할당하지 **않아요** -- VPC와 인터넷 사이의 논리적 연결 지점이에요
+- IGW는 IP 주소를 소비하거나 할당하지 **않아요**. VPC와 인터넷 사이의 논리적 연결 지점이에요
 - VPC 하나에 IGW는 최대 하나(AWS 하드 리밋)
-- EIP는 IGW에 연결되는 게 **아니에요** -- NAT Gateway(또는 EC2 인스턴스)에 연결돼요
+- EIP는 IGW에 연결되는 게 **아니에요**. NAT Gateway(또는 EC2 인스턴스)에 연결돼요
 - `depends_on`은 단일 의존성이라도 배열 문법을 사용해요
 
 ```hcl
 resource "aws_eip" "nat" {
   domain     = "vpc"
-  # 순서 보장: EIP 생성 전에 IGW가 존재해야 해요
+  # 이 예시의 선택적인 생성 순서이며, EIP 할당의 필수 조건은 아니에요
   depends_on = [aws_internet_gateway.main]
 }
 
 resource "aws_nat_gateway" "main" {
   subnet_id     = aws_subnet.public_a.id
   allocation_id = aws_eip.nat.id
-  # 같은 순서 보장: NAT GW 생성 전에 IGW가 존재해야 해요
+  # HashiCorp는 public NAT Gateway에 명시적인 IGW 의존성을 권장해요
   depends_on = [aws_internet_gateway.main]
 }
 ```
 
-`depends_on` 없이는 Terraform이 EIP와 NAT Gateway를 IGW와 병렬로 만들 수 있어요. AWS API가 비동기적이라서 간헐적 실패가 발생할 수 있어요 -- NAT Gateway 생성은 성공하지만 IGW가 완전히 연결되기 전까지 트래픽을 라우팅하지 못해요.
+인터넷에 접속하려면 public NAT Gateway에 EIP를 연결하고, VPC에 IGW를 연결해야 해요. Public과 private 라우팅 테이블에도 올바른 경로가 있어야 해요. `depends_on`은 Terraform의 작업 순서를 정할 뿐, 이 경로를 만들거나 검증하지는 않아요.
 
 ### Elastic IP (EIP)
 
-Elastic IP는 인스턴스를 중지/시작해도 유지되는 고정 public IP예요. 실행 중인 인스턴스에 연결돼 있으면 무료지만, 연결 안 된 EIP는 월 ~$3.6이 과금돼요 -- Terraform으로 만들어 놓고 나중에 분리하면 슬며시 비용이 나가요.
+Elastic IP는 인스턴스를 중지하거나 다시 시작해도 유지되는 고정 public IP예요. Public IPv4 주소의 기본 요금은 주소 하나당 시간당 $0.005예요. 사용 중이든 유휴 상태든 같아요. 730시간이면 주소 하나에 약 $3.65이며, 적용 가능한 크레딧이나 예외를 반영하기 전 금액이에요.
 
 ### IP 설정 옵션 비교
 
@@ -242,21 +285,21 @@ AWS 리소스에 public IP를 부여하는 다섯 가지 방법이 있고, 비�
 
 | 옵션                      | 비용                          | 고정 IP  | 중지/시작 유지 | 적합한 용도                |
 | ------------------------- | ----------------------------- | -------- | -------------- | -------------------------- |
-| 기본 Public IP            | 무료(EC2에 포함)              | 아니오   | 아니오         | 개발/테스트, LB 뒤         |
-| Load Balancer + Public IP | LB 비용만(월 ~$16)            | DNS 이름 | 해당 없음      | 프로덕션 HA 클러스터       |
-| Route 53 + 기본 Public IP | 월 ~$0.50 + 쿼리 비용         | DNS 이름 | 짧은 TTL 필요  | 저비용 도메인 라우팅       |
-| Private IP + NAT Gateway  | NAT GW 공유(월 ~$32 + 데이터) | 아니오   | 해당 없음      | 백엔드 서비스, 직접 노출 X |
-| Elastic IP(연결 시)       | 실행 중인 EC2에 연결하면 무료 | 예       | 예             | 고정 IP 필요(NAT GW, EC2)  |
+| 기본 Public IP            | Public IPv4 요금              | 아니오   | 아니오         | 개발/테스트, LB 뒤         |
+| Load Balancer + Public IP | LB 요금 + public IPv4 요금    | DNS 이름 | 해당 없음      | 프로덕션 HA 클러스터       |
+| Route 53 + 기본 Public IP | 호스팅 영역 + 쿼리 + IPv4 요금 | DNS 이름 | 짧은 TTL 필요  | 도메인 라우팅              |
+| Private IP + NAT Gateway  | 게이트웨이 시간 + 데이터 + IPv4 요금 | 아니오 | 해당 없음    | 백엔드 서비스, 직접 노출 X |
+| Elastic IP(연결 시)       | Public IPv4 요금              | 예       | 예             | 고정 IP 필요(NAT GW, EC2)  |
 
 **비용 기준 의사 결정 가이드:**
 
-1. **고정 IP 불필요** -- 기본 public IP 사용(무료)
-2. **서버 여러 대, 단일 엔드포인트** -- Load Balancer + 기본 public IP
-3. **고정 이름 필요, IP 무관** -- Route 53 + 기본 public IP
-4. **고정 IP 필요** -- Elastic IP(제대로 연결하면 무료)
-5. **외부 노출 불필요** -- Private 서브넷 + 공유 NAT Gateway
+1. **고정 IP 불필요:** 기본 public IP를 사용하되 IPv4 요금을 고려해요
+2. **서버 여러 대, 단일 엔드포인트:** Load Balancer + 기본 public IP
+3. **고정 이름 필요, IP 무관:** Route 53 + 기본 public IP
+4. **고정 IP 필요:** Elastic IP를 사용해도 IPv4 요금은 발생해요
+5. **외부 노출 불필요:** Private 서브넷 + 공유 NAT Gateway
 
-**NAT Gateway EIP 참고:** Terraform 코드에서 NAT Gateway에 EIP를 사용하는데, 이건 필수예요. NAT Gateway가 private 서브넷의 아웃바운드 트래픽을 처리하려면 안정적인 public IP가 필요하기 때문이에요. NAT Gateway에 연결된 상태라면 이 EIP는 무료예요.
+**NAT Gateway의 EIP:** 예시처럼 public NAT Gateway로 private 서브넷의 인터넷 트래픽을 보내려면 EIP가 필요해요. 이 주소는 게이트웨이에 연결된 동안에도 public IPv4 요금이 발생해요. NAT Gateway 자체의 요금과는 별개예요.
 
 ## Route Table
 
@@ -264,7 +307,7 @@ Route Table은 VPC의 트래픽 규칙이에요. 모든 서브넷은 트래픽�
 
 ### Public Route Table
 
-Public Route Table은 로컬이 아닌 모든 트래픽(`0.0.0.0/0`)을 Internet Gateway로 보내요:
+Public Route Table은 로컬이 아닌 모든 IPv4 목적지로 향하는 기본 경로(`0.0.0.0/0`)를 Internet Gateway로 지정해요:
 
 ```terraform
 resource "aws_route_table" "public" {
@@ -284,7 +327,7 @@ resource "aws_route_table_association" "public_a" {
 
 ### Private Route Table
 
-Private Route Table은 아웃바운드 트래픽을 NAT Gateway로 보내요:
+Private Route Table은 서브넷의 외부 목적지로 향하는 기본 경로를 NAT Gateway로 지정해요:
 
 ```terraform
 resource "aws_route_table" "private" {
@@ -302,7 +345,7 @@ resource "aws_route_table_association" "private_a" {
 }
 ```
 
-**꼭 알아둘 점:** Route Table과 명시적으로 연결되지 않은 서브넷은 VPC의 **main route table**을 사용해요. 누군가 main table에 IGW 라우트를 추가하면, 연결되지 않은 모든 서브넷이 명시적 변경 없이 public이 돼요. 항상 Route Table을 직접 만들어서 명시적으로 연결하세요 -- 기본값에 의존하면 안 돼요.
+**꼭 알아둘 점:** Route Table과 명시적으로 연결되지 않은 서브넷은 VPC의 **main route table**을 사용해요. 누군가 main table에 IGW 라우트를 추가하면, 연결되지 않은 모든 서브넷이 명시적 변경 없이 public이 돼요. 항상 Route Table을 직접 만들어서 명시적으로 연결하세요. 기본값에 의존하면 안 돼요.
 
 ## 트래픽 흐름
 
@@ -343,17 +386,17 @@ ALB 패턴이 대부분의 프로덕션 애플리케이션에서 쓰이는 방�
 
 **유료 리소스:**
 
-- NAT Gateway(시간당 ~$0.045 + 데이터)
-- Elastic IP(연결 안 됐을 때)
+- NAT Gateway(리전별 시간당 요금 + 데이터 처리)
+- Public IPv4 주소(연결된 EIP와 유휴 EIP 모두 기본 요금은 주소당 시간당 $0.005)
 - 데이터 전송(cross-AZ, 인터넷 아웃바운드)
 - VPN 연결
 - Transit Gateway
 
-가장 흔한 요금 폭탄은 NAT Gateway예요. 항상 켜져 있고, 항상 과금되고, 아웃바운드 트래픽이 많으면 데이터 처리 비용이 빠르게 쌓여요.
+구성 요소를 선택할 때는 해당 리전의 현재 요금을 확인해야 해요. S3 게이트웨이 엔드포인트로 S3 트래픽의 NAT 처리 요금을 없앨 수 있지만, 다른 인터넷 목적지에 접속할 때 필요한 NAT까지 대체하지는 못해요.
 
 ## 전체 VPC 예시
 
-여기까지 다룬 내용을 모두 연결한 프로덕션 수준의 Terraform 설정이에요. 이걸 시작점으로 AZ를 추가하거나 애플리케이션별 리소스를 확장하면 돼요:
+아래 예시는 단일 AZ에 VPC와 public·private 서브넷을 하나씩 만들고, Internet Gateway와 NAT Gateway를 연결해요. 운영 환경에 적용할 때는 필요한 가용성에 맞춰 AZ와 게이트웨이 구성을 확장해야 해요:
 
 ```terraform
 # VPC
@@ -433,19 +476,30 @@ resource "aws_route_table_association" "private_a" {
 
 ## 실전 정리
 
-VPC는 AWS 인프라의 기반이에요. 처음에 제대로 잡는 게 중요한데 -- 서비스가 돌아가는 상태에서 CIDR 블록과 서브넷을 바꾸는 건 정말 고통스러워요.
+리소스를 배포하기 전에 VPC의 주소 범위, 인터넷으로 나가는 경로, 서브넷과 라우팅 테이블의 연결을 확인해야 해요. 이 예시의 주요 설계 결정을 정리하면 다음과 같아요.
 
 **커스텀 VPC를 쓸 때:** 네트워크 격리가 필요한 컴퓨팅 리소스(EC2, ECS, RDS)를 배포하거나, public과 내부 전용 티어로 나뉘는 멀티 티어 아키텍처를 구성하거나, 데이터베이스와 애플리케이션 서버용 private 서브넷이 있는 프로덕션 환경에서 사용하세요.
 
-**커스텀 VPC를 안 써도 될 때:** 서버리스 전용 스택(Lambda + DynamoDB + S3)이라면 VPC를 추가하면 콜드 스타트 지연이 늘어나요. S3 + CloudFront 정적 사이트도 VPC가 필요 없어요. 빠른 프로토타이핑에는 기본 VPC로 충분해요.
+**커스텀 VPC를 안 써도 될 때:** 공개 API만 호출하는 Lambda 함수라면 VPC 연결이 필요하지 않아요. VPC 내부의 비공개 리소스에 접근해야 할 때 연결하고, 인터넷 접속도 필요하다면 별도로 아웃바운드 경로를 설정해야 해요. Public 서브넷에 함수를 연결하는 것만으로는 인터넷에 접속할 수 없어요. S3 + CloudFront 정적 사이트도 VPC가 필요 없고, 빠른 프로토타이핑에는 기본 VPC로 충분해요.
 
 **꼭 피해야 할 실수 세 가지:**
 
-1. NAT Gateway를 private 서브넷에 놓는 것 -- public 서브넷에 있어야 해요
-2. Main route table에 의존하는 것 -- 항상 Route Table을 직접 만들어서 명시적으로 연결하세요
-3. 개발 환경에 NAT Gateway를 만드는 것 -- 월 $32씩, 아웃바운드 인터넷 접근이 필요 없는 리소스에는 낭비예요
+1. 인터넷 접속용 public NAT Gateway를 private 서브넷에 놓는 것: public 서브넷과 IGW 경로가 필요해요
+2. 기본 라우팅 테이블에 의존하는 것: 항상 라우팅 테이블을 직접 만들어서 명시적으로 연결하세요
+3. 필요한 접속 경로를 확인하지 않고 NAT Gateway를 만드는 것: 피어링으로는 다른 VPC의 게이트웨이를 공유할 수 없어요. 같은 리전의 S3 트래픽은 게이트웨이 엔드포인트로 보내고, 인터넷 접속이 필요한 경우에는 시간·처리량·public IPv4 요금을 함께 계산해야 해요
+
+단일 AZ 개발 구성은 비용을 줄일 수 있지만 가용성도 낮아져요. CIDR 범위와 AZ를 리전에 맞게 조정하고, 이 절충을 받아들일 수 있는지 확인한 뒤 예시를 적용하면 돼요.
 
 ## 참고 자료
 
 - [AWS VPC 공식 문서](https://docs.aws.amazon.com/vpc/latest/userguide/)
 - [NAT Gateway 공식 문서](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)
+- [VPC 피어링에서 지원하지 않는 구성](https://docs.aws.amazon.com/vpc/latest/peering/invalid-peering-configurations.html)
+- [VPC 피어링 연결의 동작 방식](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html)
+- [Amazon S3 게이트웨이 엔드포인트](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html)
+- [Amazon VPC 요금](https://aws.amazon.com/vpc/pricing/)
+- [AWS Transit Gateway 요금](https://aws.amazon.com/transit-gateway/pricing/)
+- [AWS AllocateAddress API](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_AllocateAddress.html)
+- [Terraform AWS EIP 리소스](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip)
+- [Terraform AWS NAT Gateway 리소스](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_gateway)
+- [Lambda의 VPC 연결 설정](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html)

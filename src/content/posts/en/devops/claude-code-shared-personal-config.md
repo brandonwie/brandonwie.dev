@@ -2,7 +2,7 @@
 title: "Claude Code: Shared + Personal AI Config Pattern"
 description: Split AI instructions into committed (shared) and gitignored (personal) layers
 date: 2026-02-04T00:00:00.000Z
-updated: "2026-09-20"
+updated: "2026-10-22"
 tags:
   - devops
   - claude-code
@@ -12,7 +12,7 @@ category: devops
 draft: false
 lang: en
 expanded: true
-source_content_hash: 349bba6ae83db1dca6f6c1c5845b025ca53f11de3e3b04824e75d4160c4b1bb4
+source_content_hash: 5c476606946b61df4bd27db37e0a171f354fc81556b389e959145e77a5340988
 references:
   - url: "https://code.claude.com/docs/en/memory"
     title: "Claude Code docs — How Claude remembers your project (CLAUDE.md load order)"

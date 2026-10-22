@@ -2,7 +2,7 @@
 title: AWS VPC Networking Fundamentals
 description: 'Comprehensive guide to AWS VPC networking: CIDR notation, subnet design, NAT Gateway placement, route tables, and complete Terraform examples.'
 date: 2025-04-29T00:00:00.000Z
-updated: 2026-03-15T00:00:00.000Z
+updated: 2026-10-22T00:00:00.000Z
 expanded: true
 tags:
   - aws
@@ -19,18 +19,45 @@ references:
   - url: 'https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html'
     title: vpc nat gateway.html
     type: official
-source_content_hash: 34c84784f05a965dc334bf8b05f59d27e3a37208a5f91447cec53025d2c5b972
+  - url: 'https://docs.aws.amazon.com/vpc/latest/peering/invalid-peering-configurations.html'
+    title: 'VPC peering: unsupported configurations'
+    type: official
+  - url: 'https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html'
+    title: How VPC peering connections work
+    type: official
+  - url: 'https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html'
+    title: Gateway endpoints for Amazon S3
+    type: official
+  - url: 'https://aws.amazon.com/vpc/pricing/'
+    title: Amazon VPC pricing
+    type: official
+  - url: 'https://aws.amazon.com/transit-gateway/pricing/'
+    title: AWS Transit Gateway pricing
+    type: official
+  - url: 'https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_AllocateAddress.html'
+    title: AllocateAddress
+    type: official
+  - url: 'https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip'
+    title: Terraform AWS EIP resource
+    type: official
+  - url: 'https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_gateway'
+    title: Terraform AWS NAT Gateway resource
+    type: official
+  - url: 'https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html'
+    title: Giving Lambda functions access to resources in an Amazon VPC
+    type: official
+source_content_hash: b8c6c24961986e4153b40ed9ae81a20723762078243902790972e9394fc864a2
 ---
 
-I spent my first week on AWS wondering why my EC2 instance in a "private subnet" was reachable from the internet, and why the NAT Gateway I placed next to my application wasn't doing anything — except costing me $32/month. VPC networking is one of those topics where a small misunderstanding cascades into hours of debugging and unexpected bills.
+An EC2 instance in a private subnet cannot reach the internet through a NAT Gateway without the right placement and routes. VPC peering does not extend that internet path to another VPC, and routing S3 traffic through NAT can add avoidable processing charges.
 
-This post is the guide I wish I'd had: a ground-up walkthrough of AWS VPC networking, from CIDR math to NAT Gateway placement to Terraform configuration. If you've ever stared at a route table wondering why your traffic isn't flowing, this is for you.
+This guide walks through AWS VPC networking, from CIDR math to NAT Gateway placement and Terraform configuration. It also covers the limits of peering and when an S3 gateway endpoint can avoid NAT charges.
 
 ---
 
 ## The Problem
 
-AWS resources need an isolated network to communicate securely. Without understanding VPC fundamentals — CIDR notation, subnet design, route tables, and gateway placement — you end up with resources that cannot reach the internet, private subnets that are accidentally public, NAT Gateways in the wrong subnet burning money without working, or address spaces too small to accommodate growth. VPC is the foundation that every other AWS service builds on, and mistakes here cascade into every layer above.
+VPC design determines the address space and routes available to your resources. A CIDR block that is too small limits growth, while incorrect route tables or gateway placement can prevent internet access or create an unintended public route. Plan these together before deploying resources.
 
 ---
 
@@ -40,7 +67,7 @@ AWS resources need an isolated network to communicate securely. Without understa
   length requires understanding binary math (`2^(32-prefix)`), and forgetting
   that AWS reserves 5 IPs per subnet means a /28 only gives you 11 usable
   addresses, not 16
-- **NAT Gateway placement is counterintuitive** -- the NAT Gateway must live in
+- **NAT Gateway placement is counterintuitive** -- a public NAT Gateway must live in
   a public subnet to give private subnet resources internet access; placing it
   in the private subnet (where the resources that need it are) seems logical but
   breaks routing entirely
@@ -51,10 +78,16 @@ AWS resources need an isolated network to communicate securely. Without understa
 - **Route table association is implicit** -- subnets not explicitly associated
   with a route table use the VPC's main route table, which can accidentally make
   a "private" subnet public if the main route table has an IGW route
-- **NAT Gateway costs are surprisingly high** -- at ~$32/month plus data
-  processing fees, a NAT Gateway for a dev environment is an expensive
-  oversight; this is easy to miss because Terraform creates it without cost
-  warnings
+- **NAT Gateway costs add up** -- gateway hourly charges, data processing,
+  public IPv4 charges, and any data transfer charges all affect the bill.
+  Terraform does not show these ongoing costs when it creates the resources
+- **Peered VPCs cannot share a NAT Gateway** -- VPC peering does not support
+  edge-to-edge routing. Resources in VPC B cannot use the NAT Gateway in peered
+  VPC A to reach the internet. Peering also does not support transitive routing
+  between three VPCs
+- **S3 traffic can bypass NAT** -- an S3 gateway endpoint has no additional
+  endpoint charge. Associate it with the private route tables so traffic to S3
+  in the same Region avoids NAT data-processing charges
 
 ---
 
@@ -72,8 +105,10 @@ AWS resources need an isolated network to communicate securely. Without understa
 ## When NOT to Use
 
 - **Serverless-only architectures with no VPC resources** -- Lambda functions
-  that only call external APIs and DynamoDB do not need a VPC; adding one
-  increases cold start latency and requires NAT Gateway for internet access
+  that only call public APIs do not need a connection to your VPC. Connect a
+  function when it needs VPC-private resources, and configure outbound routing
+  if it also needs internet access. A public subnet alone does not give a
+  VPC-connected Lambda function internet access
 - **Simple S3 + CloudFront static sites** -- no compute resources means no VPC
   needed; adding one adds cost and complexity with zero benefit
 - **Quick prototyping with default VPC** -- AWS provides a default VPC in every
@@ -81,7 +116,8 @@ AWS resources need an isolated network to communicate securely. Without understa
   instead of building custom VPC infrastructure
 - **Single-AZ development environments** -- a full multi-AZ VPC with NAT
   Gateways per AZ is production architecture; dev environments can use a single
-  AZ with a simpler setup to save ~$64/month on redundant NAT Gateways
+  AZ with a simpler setup to reduce gateway hourly charges, accepting lower
+  availability
 - **Cross-region networking at scale** -- a single VPC cannot span regions; for
   multi-region architectures, you need VPC Peering or Transit Gateway, which are
   separate concepts with their own design patterns
@@ -226,10 +262,13 @@ resource "aws_internet_gateway" "main" {
 
 ### NAT Gateway
 
-NAT Gateway enables private subnet resources to access the internet (outbound
-only).
+A public NAT Gateway enables private subnet resources to access the internet
+without accepting unsolicited inbound connections. A private NAT Gateway also
+exists for private connectivity to other VPCs or on-premises networks; it does
+not provide internet access through an Internet Gateway.
 
-**Critical placement rule**: NAT Gateway must be in a **public subnet**.
+**Critical placement rule**: A public NAT Gateway used for internet access must
+be in a **public subnet**, with an Elastic IP and a route to the Internet Gateway.
 
 ```mermaid
 flowchart LR
@@ -262,15 +301,47 @@ resource "aws_nat_gateway" "main" {
 }
 ```
 
-**Cost consideration**: NAT Gateway costs ~$32/month + data processing fees.
-Only create if private subnets need internet access.
+**Cost consideration**: AWS's US East (Ohio) pricing example uses $0.045/hour
+and $0.045/GB processed. At 730 hours, the gateway alone costs about $32.85/month,
+before public IPv4 and data transfer charges. Rates vary by Region. Create a
+gateway when private subnets need outbound access that endpoints cannot cover.
+
+### NAT Gateways and VPC Peering
+
+A peering connection lets two VPCs communicate directly. It does not let one
+VPC use the other VPC's NAT device or Internet Gateway for internet access.
+Adding a route through the peering connection does not remove this limit.
+
+Peering is also non-transitive: if A peers with B and C, B cannot reach C through
+A. B and C need their own connection or a different routing design.
+
+For independent VPCs, give each one its own egress path. A centralized egress
+design can use Transit Gateway, but adds attachment and data-processing charges
+and a shared dependency between the VPCs.
+
+### S3 Gateway Endpoints
+
+Private resources do not need a NAT Gateway to access S3 in the same Region.
+Create an S3 gateway endpoint and associate it with the private route tables.
+The endpoint adds the S3 route, so matching traffic bypasses the NAT Gateway.
+
+The gateway endpoint has no additional endpoint charge, and this path avoids
+NAT data-processing charges. S3 request and storage charges still apply.
+Configure security groups, network ACLs, and endpoint and bucket policies to
+allow the required access. The endpoint serves its own VPC; a peer VPC cannot
+use it through peering.
 
 ### IGW-to-EIP Dependency Ordering
 
-The `depends_on` on the EIP and NAT Gateway resources is not about IP assignment
--- it is about **creation ordering**. The Internet Gateway must exist and be
-attached to the VPC before the EIP and NAT Gateway are created, because the NAT
-Gateway needs a functioning internet path to operate.
+EIP allocation and internet routing are separate operations. AWS's
+`AllocateAddress` API reserves an address for your account; you associate it
+with a resource afterward. Allocating the address does not require an Internet
+Gateway.
+
+The EIP's `depends_on` below deliberately orders its creation after the IGW;
+it is optional for allocation alone. HashiCorp notes that some EIP associations
+may require an IGW, and its public NAT Gateway example recommends an explicit
+IGW dependency for creation ordering.
 
 **Key facts about IGW and EIP:**
 
@@ -284,29 +355,28 @@ Gateway needs a functioning internet path to operate.
 ```hcl
 resource "aws_eip" "nat" {
   domain     = "vpc"
-  # Ordering: IGW must exist before EIP is created
+  # Optional ordering for this example, not an EIP allocation requirement
   depends_on = [aws_internet_gateway.main]
 }
 
 resource "aws_nat_gateway" "main" {
   subnet_id     = aws_subnet.public_a.id
   allocation_id = aws_eip.nat.id
-  # Same ordering: IGW must exist before NAT GW is created
+  # HashiCorp recommends explicit IGW ordering for a public NAT Gateway
   depends_on = [aws_internet_gateway.main]
 }
 ```
 
-Without `depends_on`, Terraform may create the EIP and NAT Gateway in parallel
-with the IGW. This can cause intermittent failures because AWS APIs are
-asynchronous -- the NAT Gateway creation may succeed but the gateway cannot
-route traffic until the IGW is fully attached.
+For internet access, the public NAT Gateway still needs an EIP, an attached
+IGW, and the correct public and private route tables. `depends_on` controls
+Terraform's operation order; it does not create or validate those routes.
 
 ### Elastic IP (EIP)
 
 - Static public IP address
 - Persists across instance stop/start
-- Free when attached to running instance
-- Charged when unattached (~$3.6/month)
+- Standard public IPv4 rate: $0.005/hour per address, whether in use or idle
+- About $3.65 per address for 730 hours, before applicable credits or exceptions
 
 ### IP Setup Options Comparison
 
@@ -315,24 +385,24 @@ with different cost and flexibility trade-offs:
 
 | Option                       | Cost                              | Fixed IP | Survives Stop/Start | Best For                           |
 | ---------------------------- | --------------------------------- | -------- | ------------------- | ---------------------------------- |
-| Default Public IP            | Free (included with EC2)          | No       | No                  | Dev/test, behind LB                |
-| Load Balancer + Public IP    | LB cost only (~$16/month)         | DNS name | N/A                 | Production HA clusters             |
-| Route 53 + Default Public IP | ~$0.50/month + query fees         | DNS name | Short TTL needed    | Budget-friendly domain routing     |
-| Private IP + NAT Gateway     | NAT GW shared (~$32/month + data) | No       | N/A                 | Backend services, no direct access |
-| Elastic IP (attached)        | Free when attached to running EC2 | Yes      | Yes                 | Fixed IP requirement (NAT GW, EC2) |
+| Default Public IP            | Public IPv4 charge               | No       | No                  | Dev/test, behind LB                |
+| Load Balancer + Public IP    | LB + public IPv4 charges          | DNS name | N/A                 | Production HA clusters             |
+| Route 53 + Default Public IP | Hosted zone + queries + IPv4      | DNS name | Short TTL needed    | Domain routing                     |
+| Private IP + NAT Gateway     | Gateway hours + data + IPv4       | No       | N/A                 | Backend services, no direct access |
+| Elastic IP (attached)        | Public IPv4 charge               | Yes      | Yes                 | Fixed IP requirement (NAT GW, EC2) |
 
 **Cost-driven decision guide:**
 
-1. **No fixed IP needed** -- Use default public IP (free)
+1. **No fixed IP needed** -- Use a default public IP; budget for the IPv4 charge
 2. **Multiple servers, single endpoint** -- Load Balancer + default public IP
 3. **Fixed name needed, IP does not matter** -- Route 53 + default public IP
-4. **Fixed IP required** -- Elastic IP (free when properly attached)
+4. **Fixed IP required** -- Use an Elastic IP; the IPv4 charge still applies
 5. **No public exposure** -- Private subnet + shared NAT Gateway
 
 **Note on NAT Gateway EIP:** The Terraform code uses an EIP for the NAT Gateway.
-This is required because the NAT Gateway needs a stable public IP for outbound
-traffic from private subnets. This EIP is free as long as it remains attached to
-the NAT Gateway.
+This is required for a public NAT Gateway to send internet traffic from private
+subnets. The EIP incurs the public IPv4 charge while attached to the gateway,
+in addition to the NAT Gateway's own charges.
 
 Gateways and EIPs provide the _ability_ to reach the internet, but route tables determine _which subnets_ actually use them.
 
@@ -419,21 +489,24 @@ Internet → IGW → ALB (public) → EC2 (private)
 
 **Charged resources:**
 
-- NAT Gateway (~$0.045/hour + data)
-- Elastic IP (when unattached)
+- NAT Gateway (regional hourly rate + data processing)
+- Public IPv4 addresses, including attached and idle Elastic IPs ($0.005/hour
+  per address at the standard rate)
 - Data transfer (cross-AZ, internet egress)
 - VPN connections
 - Transit Gateway
 
-Understanding the cost model helps you make informed decisions about which components to include — especially for non-production environments where a NAT Gateway might not be worth the $32/month.
+Use the current regional rates when choosing components. An S3 gateway endpoint
+can remove S3 traffic from the NAT processing bill, but it does not replace NAT
+for other destinations that need internet access.
 
-Now let's put everything together into a complete, production-ready Terraform configuration.
+The following Terraform example connects these components in a single Availability Zone.
 
 ---
 
 ## Complete VPC Example
 
-The following Terraform code creates a VPC with one public subnet, one private subnet, an Internet Gateway, and a NAT Gateway — the minimal production setup for a single availability zone:
+The code creates a VPC with one public subnet, one private subnet, an Internet Gateway, and a NAT Gateway. It illustrates routing in one Availability Zone; production availability requirements may call for additional AZs and gateways:
 
 ```terraform
 # VPC
@@ -515,15 +588,15 @@ resource "aws_route_table_association" "private_a" {
 
 ## Practical Takeaways
 
-VPC networking is the invisible foundation of every AWS deployment. Get it right once, and every service you build on top inherits a secure, predictable network. Get it wrong, and you'll spend hours debugging connectivity issues that could have been prevented by understanding three things:
+Before deploying resources, check the VPC's address space, outbound routes, and subnet associations. These three checks cover the main design decisions in this example:
 
 1. **CIDR math determines your growth ceiling.** A `/16` VPC gives you room for 65,536 addresses — start there unless you have a reason not to. Remember that AWS reserves 5 IPs per subnet, so a `/28` only gives you 11 usable addresses.
 
-2. **NAT Gateway placement is counterintuitive by design.** The NAT Gateway lives in the _public_ subnet to give _private_ subnet resources internet access. If you place it in the private subnet (where the resources are), routing breaks entirely. At ~$32/month, a NAT Gateway in a dev environment is an expensive mistake — skip it unless private subnets genuinely need outbound internet access.
+2. **Internet egress needs the right path.** A public NAT Gateway lives in a _public_ subnet to give _private_ subnet resources internet access. Peered VPCs cannot share that gateway through peering. Use an S3 gateway endpoint for same-Region S3 traffic, and budget for NAT hours, processing, and public IPv4 addresses when internet access is needed.
 
 3. **Explicit route table associations prevent accidental exposure.** Never rely on the default main route table. If someone adds an IGW route to it, every unassociated subnet becomes public. Always explicitly associate every subnet with its intended route table.
 
-Start with the complete Terraform example above, adapt the CIDR ranges and AZs to your region, and build from there. For dev environments, a single-AZ setup without redundant NAT Gateways saves ~$64/month with no impact on development workflows.
+Start with the complete Terraform example above, adapt the CIDR ranges and AZs to your Region, and build from there. A single-AZ development setup reduces cost, but also reduces availability; choose that trade-off explicitly.
 
 ---
 
@@ -531,3 +604,12 @@ Start with the complete Terraform example above, adapt the CIDR ranges and AZs t
 
 - [AWS VPC Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/)
 - [NAT Gateway Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)
+- [VPC Peering: Unsupported Configurations](https://docs.aws.amazon.com/vpc/latest/peering/invalid-peering-configurations.html)
+- [How VPC Peering Connections Work](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html)
+- [Gateway Endpoints for Amazon S3](https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html)
+- [Amazon VPC Pricing](https://aws.amazon.com/vpc/pricing/)
+- [AWS Transit Gateway Pricing](https://aws.amazon.com/transit-gateway/pricing/)
+- [AWS AllocateAddress API](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_AllocateAddress.html)
+- [Terraform AWS EIP Resource](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip)
+- [Terraform AWS NAT Gateway Resource](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_gateway)
+- [Lambda VPC Configuration](https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html)
