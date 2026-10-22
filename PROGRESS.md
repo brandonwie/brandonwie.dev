@@ -38,6 +38,16 @@
 
 ## Session Log
 
+### 2026-10-22 (Session 31)
+
+**Reconciled four published posts in English and Korean**
+
+- Updated 8 content files for VPC networking, the self-fixing harness,
+  parallel-session pre-commit races, and shared personal configuration.
+- CI passed. Eight live pages and eight images were verified.
+
+**Next:** reconcile any approved VPC source enrichment.
+
 ### 2026-10-06 (Session 30)
 
 **Published `frontend/intraword-emphasis-fails-before-hangul` (EN + KO)**
