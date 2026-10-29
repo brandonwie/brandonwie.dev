@@ -38,6 +38,21 @@
 
 ## Session Log
 
+### 2026-10-29 (Session 32)
+
+**Renamed 3B to B3 across the blog; recorded the Playtag start**
+
+- 10 commits on `main` (`36a3279`..`cadf40d`): profile symlinks and sync
+  scripts resolve `~/.b3`; `/system/b3`; repo docs name B3; About gives the
+  Playtag start (2026-08-31); three expanded posts reconciled with their B3
+  sources (#71); the SvelteKit-era architecture map marked historical (#72);
+  the claude-hud post rewritten for the current setup, and its intro drops
+  unsourced durations.
+- CI and Cloudflare Pages passed. The EN and KO HUD pages were verified live.
+
+**Next:** none owned in this repo. The LinkedIn About sentence and the GitHub
+profile README's SAA status wait on Brandon.
+
 ### 2026-10-22 (Session 31)
 
 **Reconciled four published posts in English and Korean**
