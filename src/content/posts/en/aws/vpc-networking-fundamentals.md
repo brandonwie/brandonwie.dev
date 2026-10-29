@@ -46,7 +46,7 @@ references:
   - url: 'https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html'
     title: Giving Lambda functions access to resources in an Amazon VPC
     type: official
-source_content_hash: b8c6c24961986e4153b40ed9ae81a20723762078243902790972e9394fc864a2
+source_content_hash: 5e7df9af03bbd1dd690eae0c32a346d501b79cb3e9faa99eac5b91fc704fe929
 ---
 
 An EC2 instance in a private subnet cannot reach the internet through a NAT Gateway without the right placement and routes. VPC peering does not extend that internet path to another VPC, and routing S3 traffic through NAT can add avoidable processing charges.

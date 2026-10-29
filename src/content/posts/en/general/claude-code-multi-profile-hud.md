@@ -2,7 +2,7 @@
 title: Claude Code Multi-Profile HUD Setup
 description: "Running Claude Code with multiple accounts requires careful HUD configuration to show correct per-account usage stats. Here's how to fix cross-profile data leaks."
 date: 2026-02-04T00:00:00.000Z
-updated: 2026-06-13
+updated: 2026-10-29
 tags:
   - general
   - claude-code
@@ -13,7 +13,7 @@ category: general
 draft: false
 lang: en
 expanded: true
-source_content_hash: 5f7f24a4783f6e9561cfbf87ab3d1661ecc5df20139120ea1cbb087d7d4eafef
+source_content_hash: cb99c7b17d8ff2b51b77eccb7bba85571569f427f75ef455cb22f7d49ad1f82d
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository
@@ -332,8 +332,10 @@ These are the mistakes I made (and you should avoid):
    appends Token Optimizer health (`CtxQ`, `Eff`, optional duration) before the
    3B session-state row (`3B claude·<sid> · locks:N`), the Token Optimizer filter
    must print a trailing newline. Otherwise the rows concatenate as
-   `Eff:--3B claude...`. Guard this in `claude-hud-pin-guard.sh`; patch-marker
-   checks can pass while wrapper-only row framing is still broken.
+   `Eff:--3B claude...`. I used to guard this with a `claude-hud-pin-guard.sh`
+   script, but I have since retired that guard and don't plan to bring it back.
+   The newline invariant still matters when checking the wrapper, and
+   patch-marker checks alone don't prove the rows are framed correctly.
 
 ## Why This Works
 

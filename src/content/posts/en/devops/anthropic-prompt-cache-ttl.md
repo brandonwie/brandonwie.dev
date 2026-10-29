@@ -2,7 +2,7 @@
 title: Anthropic Prompt Cache TTL + Cost Mechanics
 description: 'Anthropic silently dropped Claude Code''s prompt-cache TTL from 1 hour to 5 minutes around early March 2026. Without explicit awareness, idle gaps ≥5 min between messages evaporate the cache and force a full cold cache-write on the next message — pricing it at 1.25× base input on the entire conversation prefix.'
 date: 2026-05-03T00:00:00.000Z
-updated: "2026-09-03"
+updated: "2026-10-29"
 tags:
   - knowledge
   - devops
@@ -35,7 +35,7 @@ references:
     title: >-
       MemoHarness: Agent Harnesses That Learn from Experience (Huang et al., 2026)
     type: authoritative
-source_content_hash: 46d679c571022036b622b25ed7b257d6e670ef39352355a7b84dad268a195f17
+source_content_hash: e3cf9a5f0c10915b1abe78c440f4c08eecbe3144ccdc79ff8215bf446224612a
 ---
 
 Anthropic silently dropped Claude Code's prompt-cache TTL from 1 hour to 5 minutes around early March 2026 ([issue #46829](https://github.com/anthropics/claude-code/issues/46829)). Without explicit awareness, idle gaps ≥5 min between messages evaporate the cache and force a full cold cache-write on the next message — pricing it at 1.25× base input on the **entire conversation prefix** (system prompt + tools + CLAUDE.md + every prior turn). On a 200K-token Opus session that's ~$1.25 per resume; across a working day this can raise per-session cost 30–60%.
@@ -50,6 +50,8 @@ Pre-regression, sessions running 1h+ between messages stayed warm. Post-regressi
 | ----- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | 5 min | YES (post-2026-03 regression)                             | Each cache hit resets the timer (sliding window). Active sessions stay warm forever.       |
 | 1 h   | Opt-in via `cache_control: { ttl: "1h" }` on API requests | Same sliding-window behavior, longer dead-clock. NOT user-selectable in Claude Code today. |
+
+So the trade-off runs both ways: 5 min has the cheaper cold write (1.25×), but every idle gap of 5 min or more forces one; 1 h keeps the sliding window open longer, but each cold write costs 2.00×, and Claude Code doesn't let you pick it.
 
 ### Pricing multipliers (vs base input)
 

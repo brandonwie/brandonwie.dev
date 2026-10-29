@@ -5,7 +5,7 @@ description: >-
   모르면 메시지 사이에 5분 이상 비는 순간 cache가 날아가고, 다음 메시지에 전체 conversation prefix를 처음부터 다시
   써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요.
 date: 2026-05-03T00:00:00.000Z
-updated: "2026-09-03"
+updated: "2026-10-29"
 tags:
   - knowledge
   - devops
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: anthropic-prompt-cache-ttl
-source_updated: "2026-09-03"
-translation_date: "2026-09-03"
+source_updated: "2026-10-29"
+translation_date: "2026-10-29"
 ---
 
 점심 먹고 돌아와서 이어서 질문을 던졌더니, `/usage`의 cache hit 비율이 갑자기 떨어져 있었어요. 별 고민 없이 켜둔 줄 알았는데 그 사이에 cache가 통째로 날아가 있었던 거예요. 알고 보니 Anthropic이 2026년 3월 초쯤 Claude Code의 prompt cache TTL을 1시간에서 5분으로 조용히 줄여뒀어요([issue #46829](https://github.com/anthropics/claude-code/issues/46829)). 이걸 모르고 있으면, 메시지 사이에 5분 이상 비는 순간 cache가 증발하고, 다음 메시지에 **전체 conversation prefix**(system prompt + tools + CLAUDE.md + 이전 turn 전부)를 처음부터 다시 써야 해요. 기본 입력 단가의 1.25배짜리 비용으로요. 200K 토큰짜리 Opus 세션이라면 한 번 이어붙일 때 약 $1.25씩 들어요. 하루 일하다 보면 세션당 비용이 30~60% 더 붙어요.
@@ -32,6 +32,8 @@ translation_date: "2026-09-03"
 | ----- | ---------------------------------------------------- | -------------------------------------------------------------------------------- |
 | 5분   | 예 (2026-03 regression 이후)                         | cache hit이 일어날 때마다 타이머 재설정(sliding window). 활성 세션은 영원히 따뜻해요. |
 | 1시간 | API 요청에 `cache_control: { ttl: "1h" }`로 opt-in 가능 | 같은 sliding window 동작이지만 빈 시간 한도가 더 길어요. Claude Code에서는 직접 못 골라요. |
+
+그러니까 trade-off는 양쪽에 다 있어요. 5분은 cold write가 더 싸지만(1.25×), 5분 이상 비는 구간마다 cold write가 한 번씩 생겨요. 1시간은 sliding window가 더 길게 열려 있지만, cold write 한 번에 2.00×가 들고 Claude Code에서는 고를 수도 없어요.
 
 ### 가격 배수 (기본 입력 대비)
 

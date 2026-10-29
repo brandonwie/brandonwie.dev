@@ -4,7 +4,7 @@ description: >-
   Claude Code를 여러 계정(개인 + 업무)으로 운영할 때 HUD 플러그인이 올바른
   계정별 사용량 통계를 표시하도록 설정하는 방법
 date: 2026-02-04T00:00:00.000Z
-updated: '2026-06-13'
+updated: '2026-10-29'
 tags:
   - general
   - claude-code
@@ -16,8 +16,8 @@ draft: false
 lang: ko
 source_lang: en
 source_slug: claude-code-multi-profile-hud
-source_updated: '2026-06-13'
-translation_date: '2026-06-14'
+source_updated: '2026-10-29'
+translation_date: '2026-10-29'
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository
@@ -329,8 +329,10 @@ keychain 삭제 후, 또는 프로필별 토큰과 기본 토큰이 동시에 �
    Token Optimizer 상태(`CtxQ`, `Eff`, 선택적 duration)를 3B session-state row
    (`3B claude·<sid> · locks:N`) 앞에 붙인다면, Token Optimizer filter가 trailing
    newline을 반드시 출력해야 해요. 그렇지 않으면 row가 `Eff:--3B claude...`
-   형태로 이어져요. 이건 `claude-hud-pin-guard.sh`에서 guard하세요. patch-marker
-   check는 통과해도 wrapper에서만 발생하는 row framing 문제는 남아 있을 수 있어요.
+   형태로 이어져요. 예전에는 `claude-hud-pin-guard.sh` 스크립트로 이 문제를
+   검사했지만, 지금은 그 스크립트를 폐기했고 다시 되살릴 생각은 없어요.
+   wrapper를 점검할 때 trailing newline 조건은 여전히 지켜야 하고,
+   patch-marker check만으로는 row framing이 올바르다고 보장할 수 없어요.
 
 ## 왜 이 방식이 효과적인가
 
