@@ -1,1 +1,1 @@
-/Users/brandonwie/dev/3b/.claude/project-claude/brandonwie.dev.md
+/Users/brandonwie/.b3/.claude/project-claude/brandonwie.dev.md
