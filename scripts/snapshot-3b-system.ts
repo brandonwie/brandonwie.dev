@@ -159,7 +159,7 @@ const FLOW_LABELS: Record<string, string> = {
 // ---------- privacy grep (final net; build self-assert + --check) ----------
 const DENY_PATTERNS: { re: RegExp; name: string }[] = [
 	{ re: /\/Users\//, name: 'absolute /Users path' },
-	{ re: /dev\/personal\/3b/, name: '3B repo path' },
+	{ re: /dev\/(personal\/)?(3b|b3)\b|\.b3\//, name: 'B3 repo path' },
 	{ re: /\.(claude|codex|gemini)\//, name: 'agent home/dir path' },
 	{ re: PRIVATE_REPO_RE, name: 'private repo name (moba/crucio)' },
 	{ re: /journals\//, name: 'journals path' },
@@ -425,13 +425,14 @@ function firstExistingDir(candidates: string[]): string {
 // ---------- build ----------
 async function build(): Promise<void> {
 	const HOME = Deno.env.get('HOME')!;
-	// C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b —
-	// THREEB_PATH first, then the first existing root (~/dev/3b, then legacy).
-	// `||`, not `??`: an exported-but-empty THREEB_PATH would otherwise make every
-	// path below relative to the caller's cwd.
+	// 3B was renamed to B3 and its checkout is anchored at ~/.b3 (brandonwie/b3#941):
+	// B3_PATH first, then the legacy THREEB_PATH, then the first existing root
+	// (~/.b3, then ~/dev/b3). `||`, not `??`: an exported-but-empty variable would
+	// otherwise make every path below relative to the caller's cwd.
 	THREEB =
+		Deno.env.get('B3_PATH') ||
 		Deno.env.get('THREEB_PATH') ||
-		firstExistingDir([join(HOME, 'dev', '3b'), join(HOME, 'dev', 'personal', '3b')]);
+		firstExistingDir([join(HOME, '.b3'), join(HOME, 'dev', 'b3')]);
 	const MODEL = join(THREEB, 'projects', '3b', 'architecture', 'model.json');
 	const ADR_INDEX = join(THREEB, 'projects', '3b', 'decisions', '_index.md');
 	// C3: rules moved from .agents/rules to .agent-ssot/rules in 3B; accept either.

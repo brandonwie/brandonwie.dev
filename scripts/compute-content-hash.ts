@@ -13,7 +13,7 @@
  *
  * Examples:
  *   npm run hash -- --slug=ai-code-review-confusion-patterns
- *   npm run hash -- --path=/Users/brandonwie/dev/personal/3b/knowledge/ai-ml/foo.md
+ *   npm run hash -- --path=/Users/brandonwie/.b3/knowledge/ai-ml/foo.md
  *
  * Output: single line, 64-char hex hash followed by newline.
  *
@@ -26,22 +26,22 @@
  * commit must contain the helper without dragging in lockfile churn.
  */
 
-// C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b, so the
-// legacy default no longer exists on a current machine. Honor THREEB_PATH, then
-// fall back to the first existing root: ~/dev/3b, then the legacy path.
+// 3B was renamed to B3 and its checkout is anchored at ~/.b3 (brandonwie/b3#941).
+// Honor B3_PATH, then the legacy THREEB_PATH, then fall back to the first
+// existing root: ~/.b3, then ~/dev/b3.
 function resolveThreeBRoot(): string {
-	const fromEnv = Deno.env.get('THREEB_PATH');
+	const fromEnv = Deno.env.get('B3_PATH') || Deno.env.get('THREEB_PATH');
 	if (fromEnv) return fromEnv;
 	const home = Deno.env.get('HOME');
 	// Without HOME there is no candidate to build: interpolating an undefined
-	// value yields "undefined/dev/3b", which fails later as a missing-file error
+	// value yields "undefined/.b3", which fails later as a missing-file error
 	// that says nothing about the real cause.
 	if (!home) {
 		throw new Error(
-			'Cannot locate the 3B root: neither THREEB_PATH nor HOME is set. Set THREEB_PATH=/absolute/path/to/3b.',
+			'Cannot locate the B3 root: neither B3_PATH nor HOME is set. Set B3_PATH=/absolute/path/to/b3.',
 		);
 	}
-	const candidates = [`${home}/dev/3b`, `${home}/dev/personal/3b`];
+	const candidates = [`${home}/.b3`, `${home}/dev/b3`];
 	for (const candidate of candidates) {
 		try {
 			if (Deno.statSync(candidate).isDirectory) return candidate;

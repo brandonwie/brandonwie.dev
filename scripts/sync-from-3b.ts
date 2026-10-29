@@ -53,17 +53,17 @@ import { auditG1, EMPTY_TERMS, parseTerms, type Terms } from './lib/g1.ts';
 const HOME = Deno.env.get('HOME');
 if (!HOME) {
 	console.error(
-		'Error: HOME is not set. Set THREEB_PATH and BLOG_ROOT to absolute paths, or run with HOME set.',
+		'Error: HOME is not set. Set B3_PATH and BLOG_ROOT to absolute paths, or run with HOME set.',
 	);
 	Deno.exit(1);
 }
-// C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b, so the
-// legacy default no longer exists on a current machine. Honor THREEB_PATH, then
-// fall back to the first existing root: ~/dev/3b, then the legacy path.
+// 3B was renamed to B3 and its checkout is anchored at ~/.b3 (brandonwie/b3#941).
+// Honor B3_PATH, then the legacy THREEB_PATH, then fall back to the first
+// existing root: ~/.b3, then ~/dev/b3.
 function resolveThreeBRoot(): string {
-	const fromEnv = Deno.env.get('THREEB_PATH');
+	const fromEnv = Deno.env.get('B3_PATH') || Deno.env.get('THREEB_PATH');
 	if (fromEnv) return fromEnv;
-	const candidates = [join(HOME, 'dev', '3b'), join(HOME, 'dev', 'personal', '3b')];
+	const candidates = [join(HOME, '.b3'), join(HOME, 'dev', 'b3')];
 	for (const candidate of candidates) {
 		try {
 			if (Deno.statSync(candidate).isDirectory) return candidate;

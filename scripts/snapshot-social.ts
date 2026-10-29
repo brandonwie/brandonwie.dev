@@ -1,8 +1,8 @@
 /**
  * scripts/snapshot-social.ts — Sanitizing generator for the public /feed hub.
  *
- * Projects the PRIVATE 3B social-post ledger
- * (~/dev/personal/3b/personal/brandon/social-posts.jsonl) into
+ * Projects the PRIVATE B3 social-post ledger
+ * (~/.b3/personal/brandon/social-posts.jsonl) into
  * src/lib/data/social-feed.json, consumed at build time by the prerendered
  * /feed route. Mirrors the snapshot-3b-system.ts posture: this file is the
  * single sanitizing chokepoint (generator → committed JSON → prerendered
@@ -39,13 +39,13 @@ if (!HOME) {
 	);
 	Deno.exit(1);
 }
-// C3 (dual-runtime evidence): 3B moved from ~/dev/personal/3b to ~/dev/3b, so the
-// legacy default no longer exists on a current machine. Honor THREEB_PATH, then
-// fall back to the first existing root: ~/dev/3b, then the legacy path.
+// 3B was renamed to B3 and its checkout is anchored at ~/.b3 (brandonwie/b3#941).
+// Honor B3_PATH, then the legacy THREEB_PATH, then fall back to the first
+// existing root: ~/.b3, then ~/dev/b3.
 function resolveThreeBRoot(): string {
-	const fromEnv = Deno.env.get('THREEB_PATH');
+	const fromEnv = Deno.env.get('B3_PATH') || Deno.env.get('THREEB_PATH');
 	if (fromEnv) return fromEnv;
-	const candidates = [join(HOME, 'dev', '3b'), join(HOME, 'dev', 'personal', '3b')];
+	const candidates = [join(HOME, '.b3'), join(HOME, 'dev', 'b3')];
 	for (const candidate of candidates) {
 		try {
 			if (Deno.statSync(candidate).isDirectory) return candidate;

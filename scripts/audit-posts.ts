@@ -52,8 +52,7 @@ const EN_DIR = './src/content/posts/en';
 const KO_DIR = './src/content/posts/ko';
 
 const TERMS_PATH =
-	process.env.BLOG_AUDIT_TERMS ??
-	join(homedir(), 'dev/3b/.agent-ssot/config/blog-audit-terms.json');
+	process.env.BLOG_AUDIT_TERMS ?? join(homedir(), '.b3/.agent-ssot/config/blog-audit-terms.json');
 
 const CREDIBLE_TYPES = new Set(['official', 'authoritative']);
 const CONCURRENCY = 12;

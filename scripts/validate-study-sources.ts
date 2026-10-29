@@ -25,18 +25,19 @@ async function exists(path: string): Promise<boolean> {
 }
 
 async function findThreeBRoot(): Promise<string> {
-	// C3 (dual-runtime evidence): THREEB_PATH is the one env var every 3B-reading
-	// script honors; THREEB_ROOT stays accepted as the alias this script already had.
-	const envRoot = Deno.env.get('THREEB_PATH') ?? Deno.env.get('THREEB_ROOT');
+	// B3_PATH is the one env var every B3-reading script honors (3B was renamed to
+	// B3); the legacy THREEB_PATH and THREEB_ROOT stay accepted.
+	const envRoot =
+		Deno.env.get('B3_PATH') || Deno.env.get('THREEB_PATH') || Deno.env.get('THREEB_ROOT');
 	if (envRoot) return envRoot;
 
 	let current = dirname(fileURLToPath(import.meta.url));
 	for (let depth = 0; depth < 10; depth += 1) {
-		if (basename(current) === '3b' && (await exists(join(current, DSA_I_SOURCE_ROOT_LABEL)))) {
+		if (basename(current) === 'b3' && (await exists(join(current, DSA_I_SOURCE_ROOT_LABEL)))) {
 			return current;
 		}
 
-		const sibling = join(current, '3b');
+		const sibling = join(current, 'b3');
 		if (await exists(join(sibling, DSA_I_SOURCE_ROOT_LABEL))) return sibling;
 
 		const parent = dirname(current);
@@ -44,19 +45,19 @@ async function findThreeBRoot(): Promise<string> {
 		current = parent;
 	}
 
-	// C3: explicit fallback chain — ~/dev/3b, then the legacy ~/dev/personal/3b.
-	// Skipped entirely when HOME is unset: `join('', 'dev', '3b')` is the relative
-	// path `dev/3b`, which resolves against the caller's cwd and turns a missing
-	// env var into a mystery.
+	// Explicit fallback chain: ~/.b3 (the checkout anchor, brandonwie/b3#941), then
+	// ~/dev/b3. Skipped entirely when HOME is unset: `join('', '.b3')` is the
+	// relative path `.b3`, which resolves against the caller's cwd and turns a
+	// missing env var into a mystery.
 	const home = Deno.env.get('HOME');
 	if (home) {
-		for (const candidate of [join(home, 'dev', '3b'), join(home, 'dev', 'personal', '3b')]) {
+		for (const candidate of [join(home, '.b3'), join(home, 'dev', 'b3')]) {
 			if (await exists(join(candidate, DSA_I_SOURCE_ROOT_LABEL))) return candidate;
 		}
 	}
 
 	throw new Error(
-		'Could not locate 3B root. Set THREEB_PATH=/absolute/path/to/3b (THREEB_ROOT is still accepted).',
+		'Could not locate the B3 root. Set B3_PATH=/absolute/path/to/b3 (THREEB_PATH and THREEB_ROOT are still accepted).',
 	);
 }
 
