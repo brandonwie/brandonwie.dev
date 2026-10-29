@@ -120,7 +120,7 @@ const content: Record<AboutLocale, AboutContent> = {
 			{
 				year: '2026-now',
 				title: 'Back at Playtag as a full-stack AI engineer',
-				body: 'Returned to Playtag in August 2026 to work on mono_xyz, AI video analytics for human behavior, across product, backend, and infrastructure.',
+				body: 'Returned to Playtag on August 31, 2026 to work on mono_xyz, AI video analytics for human behavior, across product, backend, and infrastructure.',
 			},
 		],
 		now: [
@@ -252,7 +252,7 @@ const content: Record<AboutLocale, AboutContent> = {
 			{
 				year: '2026-now',
 				title: '풀스택 AI 엔지니어로 Playtag에 복귀',
-				body: '2026년 8월 Playtag로 돌아와, 사람의 행동을 분석하는 AI 영상 분석 서비스 mono_xyz를 제품, 백엔드, 인프라 전반에서 만들고 있습니다.',
+				body: '2026년 8월 31일 Playtag로 돌아와, 사람의 행동을 분석하는 AI 영상 분석 서비스 mono_xyz를 제품, 백엔드, 인프라 전반에서 만들고 있습니다.',
 			},
 		],
 		now: [

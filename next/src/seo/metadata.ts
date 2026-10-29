@@ -40,7 +40,7 @@ export function homeJsonLd(locale: Locale): string {
 			jobTitle: 'Full-stack AI Engineer',
 			worksFor: {
 				'@type': 'Organization',
-				name: 'Playtag',
+				name: 'Playtag Inc.',
 			},
 			sameAs: [
 				'https://github.com/brandonwie',
