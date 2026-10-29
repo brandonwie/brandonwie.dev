@@ -1,8 +1,8 @@
 ---
 tags: [architecture, documentation, renewal]
 created: 2026-06-22
-updated: 2026-06-22
-status: draft
+updated: 2026-10-29
+status: completed
 related:
   - ./README.md
   - ./decisions/0001-terminal-vs-command-palette.md
@@ -13,6 +13,8 @@ when_used: Read before implementing the tmp/site terminal redesign in SvelteKit.
 ---
 
 # Site Redesign From `tmp/site`
+
+> **Historical (SvelteKit era).** This document describes the SvelteKit app as of June 2026. The site moved to a Next.js static export on 2026-09-20, so its file paths, routes and pipeline no longer match the code. Use the project `CLAUDE.md` as the current map, and re-check any item here against the Next.js code before acting on it.
 
 Reviewer-mode brief for redesigning the full `brandonwie.dev` SvelteKit site
 from the static terminal mock in `tmp/site`. This is analysis and planning only:

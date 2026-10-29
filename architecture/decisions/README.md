@@ -1,14 +1,16 @@
 ---
 tags: [architecture, adr, decisions, index]
 created: 2026-06-04
-updated: 2026-06-04
-status: in-progress
+updated: 2026-10-29
+status: completed
 related:
   - ../README.md
   - ../improvements.md
 ---
 
 # Architecture Decision Records
+
+> **Historical (SvelteKit era).** This document describes the SvelteKit app as of June 2026. The site moved to a Next.js static export on 2026-09-20, so its file paths, routes and pipeline no longer match the code. Use the project `CLAUDE.md` as the current map, and re-check any item here against the Next.js code before acting on it.
 
 ADRs for the brandonwie.dev renewal. Each records a non-trivial, hard-to-reverse
 decision: context, options with pros/cons, the chosen option + reasoning, and

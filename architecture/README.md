@@ -2,7 +2,7 @@
 tags: [architecture, documentation, renewal, index]
 created: 2026-06-03
 updated: 2026-10-29
-status: in-progress
+status: completed
 related:
   - ./structure.yaml
   - ./improvements.md
@@ -11,6 +11,8 @@ when_used: Read before any renewal/refactor work; update after structural change
 ---
 
 # Architecture
+
+> **Historical (SvelteKit era).** This document describes the SvelteKit app as of June 2026. The site moved to a Next.js static export on 2026-09-20, so its file paths, routes and pipeline no longer match the code. Use the project `CLAUDE.md` as the current map, and re-check any item here against the Next.js code before acting on it.
 
 Long-term architecture documentation for **brandonwie.dev**. This folder is the
 **structural source of truth** for the codebase — created at the start of the

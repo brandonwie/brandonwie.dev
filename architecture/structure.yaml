@@ -1,3 +1,6 @@
+# HISTORICAL (SvelteKit era): this map describes the SvelteKit app as of 2026-06-03.
+# The site moved to a Next.js static export on 2026-09-20; paths below no longer
+# match the code. Use the project CLAUDE.md as the current map.
 # =============================================================================
 # brandonwie.dev — Architecture Map (machine + human readable source of truth)
 # -----------------------------------------------------------------------------
