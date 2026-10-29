@@ -1,7 +1,7 @@
 ---
 tags: [architecture, renewal, backlog, tech-debt, svelte-kit]
 created: 2026-06-03
-updated: 2026-06-04
+updated: 2026-10-29
 status: in-progress
 related:
   - ./structure.yaml
@@ -209,7 +209,7 @@ _The table lists the **37 active engineering findings** (P0–P3); each has a ma
 - **Problem:** Project `CLAUDE.md` drifted hard (see `structure.yaml › known_drift`): post counts, whole subsystems, plugins, toolchain all stale. Also `AGENTS.md` (Codex SoT) still calls the repo "Next.js + content/MDX pipeline" (lines 14, 22) — wrong framework entirely.
 - **Proposal:** Update CLAUDE.md from `structure.yaml`; add a "keep in sync with architecture/" note.
 - **Pros:** New contributors/agents get accurate context; less misdirection.
-- **Cons:** CLAUDE.md is a 3B symlink — edit the SoT at `3b/.claude/project-claude/brandonwie.dev.md`, not the target.
+- **Cons:** CLAUDE.md is a B3 symlink — edit the SoT at `~/.b3/.claude/project-claude/brandonwie.dev.md`, not the target.
 - **Effort:** S · **Risk:** low
 
 ### DEPS-1 · Dependency audit + scheduled renewal

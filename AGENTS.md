@@ -1,13 +1,13 @@
 ---
 tags: [personal, reference]
 created: 2026-10-09
-updated: 2026-10-09
+updated: 2026-10-29
 status: active
 ---
 
 # AGENTS.md
 
-Local agent instructions for this repository come from the 3B project profile,
+Local agent instructions for this repository come from the B3 project profile,
 linked on each machine as the git-ignored `AGENTS.override.md`. This committed
 file holds only the review pointer that hosted reviewers read.
 

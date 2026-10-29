@@ -1,12 +1,12 @@
 name: rose-pine-neon-website
-description: Semantic website adapter for the 3B-managed Rose Pine Neon palette.
+description: Semantic website adapter for the B3-managed Rose Pine Neon palette.
 format: website-semantic-palette
 variant: neon-website-adapter
-updated: 2026-06-17
-canonical_source: ../../../../3b/colors/rose-pine-neon-website.yaml
+updated: 2026-10-29
+canonical_source: ~/.b3/colors/rose-pine-neon-website.yaml
 sources:
-  rose_pine_neon_terminal: ../../../../3b/colors/rose-pine-neon.yaml
-  rose_pine_dawn_terminal: ../../../../3b/colors/rose-pine-dawn.yaml
+  rose_pine_neon_terminal: ~/.b3/colors/rose-pine-neon.yaml
+  rose_pine_dawn_terminal: ~/.b3/colors/rose-pine-dawn.yaml
   rose_pine_palette: https://rosepinetheme.com/palette/
   rose_pine_ingredients: https://rosepinetheme.com/palette/ingredients/
 managed_targets:
@@ -17,7 +17,7 @@ themes:
   dark:
     css_selector: ':root'
     source_variant: rose-pine-neon
-    source_file: ../../../../3b/colors/rose-pine-neon.yaml
+    source_file: ~/.b3/colors/rose-pine-neon.yaml
     tokens:
       bg:
         value: '#0d0a18'
@@ -85,7 +85,7 @@ themes:
   light:
     css_selector: ":root[data-theme='light']"
     source_variant: rose-pine-dawn-neon-website
-    source_file: ../../../../3b/colors/rose-pine-dawn.yaml
+    source_file: ~/.b3/colors/rose-pine-dawn.yaml
     note: Website-only light companion; Dawn base surfaces with darkened saturated accents for small text contrast.
     tokens:
       bg:

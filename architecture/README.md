@@ -1,7 +1,7 @@
 ---
 tags: [architecture, documentation, renewal, index]
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-10-29
 status: in-progress
 related:
   - ./structure.yaml
@@ -97,7 +97,7 @@ Full detail (files, LOC, data flows, dependencies) lives in `structure.yaml`.
 
 - **On structural change** (new route/subsystem/dep, moved files): update `structure.yaml` in the same PR.
 - **On finding new debt:** add a row to `improvements.md` (keep the summary table + detail in sync).
-- **Keep `CLAUDE.md` aligned** — edit the 3B SoT at `3b/.claude/project-claude/brandonwie.dev.md` (the repo `CLAUDE.md` is a symlink), not the symlink target. See improvement `DOC-1`.
+- **Keep `CLAUDE.md` aligned** — edit the B3 SoT at `~/.b3/.claude/project-claude/brandonwie.dev.md` (the repo `CLAUDE.md` is a symlink), not the symlink target. See improvement `DOC-1`.
 - **Regenerate from scratch:** re-run the per-subsystem analysis (5 `code-explorer` agents over the boundaries above), then a verification pass before trusting any security/count claim.
 - **Frontmatter + relative links** per 3B conventions; this is a `.md` in a 3B-linked repo.
 

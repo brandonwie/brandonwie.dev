@@ -1,7 +1,7 @@
 ---
 tags: [personal, reference]
 created: 2026-10-09
-updated: 2026-10-09
+updated: 2026-10-29
 status: active
 ---
 
@@ -50,7 +50,7 @@ so the output and the Pages directory is `next/build/`). The stack is React 19,
 Tailwind CSS v4 through `@tailwindcss/postcss`, Paraglide-JS (compiled into
 `next/src/paraglide/`), an AST markdown pipeline under `next/src/markdown/`
 with Shiki, Fuse.js and Pagefind. pnpm manages packages; deno runs only the
-3B sync, snapshot, study-source and content-hash scripts under `scripts/`.
+B3 sync, snapshot, study-source and content-hash scripts under `scripts/`.
 
 Some inputs stay at the repository root and `next/` imports them on purpose:
 the EN/KO markdown corpus under `src/content/posts/`, `src/lib/seo.ts`,
@@ -144,10 +144,10 @@ or Svelte config, or a Svelte package reappearing in a diff is a regression.
   filtering; it would force prerendering every category combination.
 - Prerendered HTML and the Pagefind index under `next/build/` are expected
   build artifacts, not misconfiguration.
-- `deno.lock` and `pnpm-lock.yaml` coexist on purpose: deno runs the 3B
+- `deno.lock` and `pnpm-lock.yaml` coexist on purpose: deno runs the B3
   scripts, pnpm runs the app build. Not a "two package managers" mistake.
 
-`docs` and `CLAUDE.md` are committed symlinks into the 3B repo. A PR should not
+`docs` and `CLAUDE.md` are committed symlinks into the B3 repo. A PR should not
 change them; if one does, that is the finding. `AGENTS.md` is a committed file
 holding only the review pointer to this file; the Codex profile is the
 git-ignored `AGENTS.override.md` symlink, which must never be committed.
@@ -155,7 +155,7 @@ git-ignored `AGENTS.override.md` symlink, which must never be committed.
 ## Verification
 
 CI (`.github/workflows/ci.yml`) runs lint, format check, build, type check,
-date validation and the 3B snapshot check on each PR to `main`. The pre-push
+date validation and the B3 snapshot check on each PR to `main`. The pre-push
 hook (`.husky/pre-push`) runs the same set except the snapshot check, plus a
 `deno.lock` drift check. Name the gates the change needs:
 

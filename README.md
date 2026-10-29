@@ -44,9 +44,9 @@ pnpm preview
 
 ## Content Management
 
-### Syncing Posts from 3B
+### Syncing Posts from B3
 
-English posts are synced from the 3B knowledge base:
+English posts are synced from the B3 knowledge base:
 
 ```bash
 pnpm sync
