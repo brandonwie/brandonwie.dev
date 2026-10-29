@@ -13,7 +13,7 @@ category: general
 draft: false
 lang: en
 expanded: true
-source_content_hash: cb99c7b17d8ff2b51b77eccb7bba85571569f427f75ef455cb22f7d49ad1f82d
+source_content_hash: 1afca60faa7ea176067e1adf4b517e3ff9b41ffc921d9403440d027d67a7a7cf
 references:
   - url: "https://github.com/anthropics/claude-code"
     title: Claude Code GitHub repository
@@ -34,6 +34,16 @@ just wrong numbers.
 If you run Claude Code with separate personal and work accounts, the HUD plugin
 needs explicit configuration to show the right stats for each profile.
 
+> **Update (2026-10-29).** Much of the patching below comes from the claude-hud
+> v0.0.x era, when I pinned one plugin version and patched its source heavily.
+> I retired that version pin in September 2026: the pinned cache directory was
+> deleted out from under me twice, and each time the HUD degraded silently.
+> These days nearly all of my customization lives in the plugin's
+> `config.json`, five small source patches remain, and current claude-hud reads
+> usage from the `rate_limits` data Claude Code sends on stdin. I also run a
+> single profile now. The `CLAUDE_CONFIG_DIR` passthrough lesson still holds for
+> anyone running more than one. See [What I Run Now](#what-i-run-now).
+
 ## Why It Matters
 
 Claude Code supports multiple profiles through the `CLAUDE_CONFIG_DIR`
@@ -49,6 +59,11 @@ This isn't a bug in the obvious sense — the HUD still shows data. It just show
 the wrong data. That makes it harder to catch than a crash.
 
 ## Difficulties Encountered
+
+These all come from the patched v0.0.x setup. Several of them — the keychain
+reads, the usage cache, the lock, `usage-api.ts` — no longer apply to current
+claude-hud, which gets usage from Claude Code's stdin instead of calling the
+usage API itself.
 
 **The environment variable didn't propagate.** I assumed `CLAUDE_CONFIG_DIR`
 would pass through to the statusline wrapper script, but Claude Code strips it.
@@ -173,25 +188,50 @@ which config directory (and therefore which keychain entry) to read.
 └── settings.json               (statusline → CLAUDE_CONFIG_DIR=... wrapper)
 ```
 
-Each profile has its own **independent** HUD binary. These are not symlinked and
-must be patched separately. The binary reads environment variables to determine
-which keychain entry and cache path to use.
+That is the layout I first built. Each profile had its own HUD install, and each
+had to be patched separately. It didn't stay that way: by September 2026 the
+work profile's `plugins/` directory was a symlink to the personal one, so both
+profiles shared one plugin cache and one HUD config. Later I retired the work
+profile altogether.
 
-## Required Patches
+## What I Run Now
 
-9 custom patches applied by `claude-hud-post-patches.sh` (down from 30 at v0.0.6 — 22 absorbed upstream):
+Here is what the statusline wrapper and the patch script do today:
 
-| #   | Type | Target File          | Purpose                                           |
-| --- | ---- | -------------------- | ------------------------------------------------- |
-| 1   | sed  | claude-config-dir.ts | `CLAUDE_HUD_CONFIG_DIR` priority over defaults    |
-| 2   | sed  | usage-api.ts         | `CLAUDE_HUD_KEYCHAIN_SERVICE` prepend             |
-| 3   | sed  | config.ts            | Quote config field (interface + defaults + merge) |
-| 4   | copy | colors.ts            | Midnight Aurora 9-role semantic palette           |
-| 5   | copy | project.ts           | Email, env label/version, model display           |
-| 6   | copy | usage.ts             | formatResetHours + provider guard                 |
-| 7   | copy | quote.ts             | Quote line renderer                               |
-| 8   | copy | render/index.ts      | Quote integration + NBSP replacement              |
-| 9   | sed  | usage-api.ts         | Stale cache fallback on API failure               |
+- **No version pin.** The wrapper loads the newest non-orphaned cache directory
+  under `~/.claude/plugins/cache/claude-hud/claude-hud/`. The plugin manager
+  marks each replaced version as orphaned, so that directory is the installed
+  version. An opt-in `CLAUDE_HUD_VERSION` variable can pin a version for
+  bisecting a bad upstream release, and a pin that names a missing directory
+  fails loudly instead of falling back.
+- **Config as a regular file.** claude-hud opens its config with `O_NOFOLLOW`.
+  A symlinked `config.json` fails with `ELOOP`, and the HUD silently falls back
+  to its built-in defaults. So the config deploys as a copy.
+- **Config first, patch last.** A customization goes into `config.json` when a
+  key exists for it; the installed `src/config.ts` is the authority on what
+  config exposes. A source patch is only for what no key covers.
+- **A self-healing patch guard.** On every render the wrapper signs the three
+  patched files (mtime and size). When a plugin update rewrites one, the
+  signature changes, and the wrapper re-runs the patch script in the background
+  so the next render is patched again.
+
+The patch script resolves the same cache directory as the wrapper and applies
+five surgical patches. Each anchors on one exact expression and fails loudly if
+the anchor is gone:
+
+| #   | Target file       | Purpose                                         |
+| --- | ----------------- | ----------------------------------------------- |
+| 1   | `i18n/en.ts`      | Abbreviate the Context label to `Ctx:`          |
+| 2   | `i18n/en.ts`      | Compact usage window labels `5h:` / `7d:`       |
+| 3   | `render/usage.ts` | Pace indicator on each usage window             |
+| 4   | `render/parts.ts` | Compact pipe badge `Opus5\|h` with short effort |
+| 5   | `render/parts.ts` | Purple neon color for the package version text  |
+
+None of these can be expressed through config today: upstream has a
+whole-language switch but no per-label override, and its own pace option only
+recolors a window. The patch count has moved a lot over time — 30 at v0.0.6, 9
+at v0.0.9, 13 on the pinned v0.0.12, briefly 1 after I retired the pin, 4 once
+I allowed small patches again in September 2026, and 5 now.
 
 ## Cache Lock Mechanism
 
@@ -220,8 +260,12 @@ leftover and gets removed; if recent, an active writer might still be going.
 
 ## Midnight Aurora Theme
 
-The HUD supports custom color themes. Midnight Aurora uses 9 semantic color
-roles via ANSI 256-color codes (`\x1b[38;5;{N}m`):
+This theme was a copied `colors.ts` patch in the v0.0.x setup, and that patch is
+retired. Current claude-hud takes truecolor hex values per role (`context`,
+`usage`, `warning`, `critical`, `model`, `project` and so on) in the `colors`
+object of `config.json`, so a palette no longer needs a source patch. The
+original theme used 9 semantic color roles via ANSI 256-color codes
+(`\x1b[38;5;{N}m`):
 
 | Role        | Code | Color Name   | Usage                 |
 | ----------- | ---- | ------------ | --------------------- |
@@ -251,9 +295,10 @@ terminals) and `"expanded"` (multiline with identity, project, environment, and
 usage on separate lines). Use `"expanded"` to avoid losing information to
 truncation.
 
-**Patch durability.** Plugin updates overwrite source files. Maintain
-`claude-hud-post-patches.sh` to reapply patches after updates — as of March
-2026, this covers 9 patches.
+**Patch durability.** Plugin updates overwrite source files, so
+`claude-hud-post-patches.sh` re-applies the patches after updates. Today it
+covers 5 patches, and the wrapper's patch guard re-runs it automatically when an
+update rewrites a patched file.
 
 **Always show the 7-day usage window.** Set `sevenDayThreshold: 0` in config.
 The default (`80`) hides the 7-day window until usage exceeds 80%.
@@ -264,17 +309,18 @@ via the `speed-tracker.ts` module.
 **Context display modes.** The `contextValue` option switches context display
 between `'percent'` and `'tokens'` in both compact and expanded layouts.
 
-**Expanded layout order.** Customizable via `render/index.ts` template — project
-(with model badge) → combined context+usage → activity → environment. The quote
-renders LAST in both compact and expanded modes — on narrow terminals, essential
-info (project, context, usage) survives and the decorative quote is clipped
-first.
+**Expanded layout order.** In the v0.0.x setup a `render/index.ts` template
+patch set the order and rendered the quote LAST, so on narrow terminals the
+decorative quote clipped first. Today the order comes from `elementOrder` in
+`config.json`, and the quote is the config `customLine`, which upstream renders
+inline on the first row. I accepted that trade when I dropped the template
+patch.
 
 **Speed tracker return type.** `getOutputSpeed()` returns `number | null`
 directly, not an object. Check the return type carefully when integrating speed
 into custom renderers.
 
-**Stale-while-revalidate on API failure.** When the usage API fails (423,
+**Stale-while-revalidate on API failure (v0.0.x).** When the usage API fails (423,
 timeout, network error), the HUD checks if the expired cache holds valid data
 (not `apiUnavailable`). If so, it returns the stale data AND refreshes the cache
 timestamp with `writeCache`. This gives the stale data a fresh 60s TTL so
@@ -285,9 +331,9 @@ when no previous good data exists does the HUD fall through to failure-caching.
 
 **Reinstall workflow.** When things go sideways, the full reinstall sequence is:
 `claude plugin uninstall claude-hud@claude-hud`, then
-`claude plugin install claude-hud@claude-hud`, then run
-`claude-hud-post-patches.sh` for both profiles. The plugin install overwrites
-source with clean upstream; the script re-applies custom patches. Remember that
+`claude plugin install claude-hud@claude-hud`. The plugin install overwrites
+source with clean upstream; the patch guard re-runs `claude-hud-post-patches.sh`
+on the next render, or you can run it by hand to see its output. Remember that
 `known_marketplaces.json` stores absolute paths to marketplace clones — these
 must be updated after any profile directory renames.
 
@@ -313,29 +359,35 @@ These are the mistakes I made (and you should avoid):
    per profile. Manual sync breaks things.
 2. **Don't assume env vars pass through.** Embed `CLAUDE_CONFIG_DIR` in the
    statusline command.
-3. **Patch both profiles.** HUD binaries are independent per profile. Patching
-   one doesn't patch the other.
+3. **Don't patch what config can express.** Check `src/config.ts` in the
+   installed plugin first. Every plugin update overwrites a patch; a config key
+   survives.
 4. **Reload your shell after `.zshrc` changes.** Old functions stay in memory.
    New settings only apply in new terminal sessions.
 5. **Check for duplicate keychain entries.** Duplicates cause unpredictable reads.
    List entries with `security find-generic-password -a` and remove duplicates.
-6. **Clear usage caches after patching.** Stale cache from the pre-patch window
-   shows wrong plan/account data.
-7. **Watch for 0-byte lock files.** If the HUD crashes mid-lock-creation, the
+6. **Don't symlink the HUD config.** claude-hud opens it with `O_NOFOLLOW`, so
+   a symlink silently drops every setting back to the defaults.
+7. **Watch for 0-byte lock files (v0.0.x).** If the HUD crashes mid-lock-creation, the
    empty lock file blocks all processes from fetching fresh data. Check for a
    `.usage-cache.lock` file with 0 bytes and delete it manually if usage is
    stuck.
 8. **Update `known_marketplaces.json` after directory renames.** This file
    stores absolute paths to marketplace clones. After renaming a profile
    directory, plugin install commands will fail silently.
-9. **Frame composed statusline rows explicitly.** If `statusline-wrapper.sh`
-   appends Token Optimizer health (`CtxQ`, `Eff`, optional duration) before the
-   3B session-state row (`3B claude·<sid> · locks:N`), the Token Optimizer filter
-   must print a trailing newline. Otherwise the rows concatenate as
-   `Eff:--3B claude...`. I used to guard this with a `claude-hud-pin-guard.sh`
+9. **Frame composed statusline rows explicitly.** In June 2026 my
+   `statusline-wrapper.sh` appended Token Optimizer health (`CtxQ`, `Eff`,
+   optional duration) before the 3B session-state row
+   (`3B claude·<sid> · locks:N`). The Token Optimizer filter had to print a
+   trailing newline, or the rows concatenated as `Eff:--3B claude...`. Today the
+   wrapper prints the claude-hud rows, an optional Ponytail badge row, and the
+   session row last, and each row must still end with a newline. I used to guard this with a `claude-hud-pin-guard.sh`
    script, but I have since retired that guard and don't plan to bring it back.
    The newline invariant still matters when checking the wrapper, and
    patch-marker checks alone don't prove the rows are framed correctly.
+10. **Don't pin a plugin version as a defense.** A plugin reconcile can delete
+    the pinned cache directory. Mine was deleted twice, and both times the HUD
+    degraded without a single error.
 
 ## Why This Works
 
@@ -344,10 +396,12 @@ the passthrough problem. Instead of relying on Claude Code to forward env vars
 to subprocesses (which it doesn't), the correct values are embedded in the
 command string itself.
 
-The HUD binary reads `CLAUDE_CONFIG_DIR` from its own environment, resolves the
-correct keychain entry and cache path, and displays the right usage stats. The
-file-based lock prevents concurrent sessions from stampeding the API. Each
-profile is fully independent.
+In the v0.0.x setup, the HUD read `CLAUDE_CONFIG_DIR` from its own environment,
+resolved the correct keychain entry and cache path, and displayed the right
+usage stats, while the file-based lock kept concurrent sessions from stampeding
+the API. Current claude-hud still reads `CLAUDE_CONFIG_DIR` itself, but it no
+longer needs a keychain entry or a usage cache, because Claude Code hands it the
+rate-limit data on stdin.
 
 ## Practical Tips
 
@@ -358,7 +412,8 @@ statusline.
 **Skip this when:** You have a single account (no profile separation needed),
 only use the web UI (HUD is a terminal feature), or don't use the HUD plugin at
 all. The basic multi-profile setup (`CLAUDE_CONFIG_DIR`) works without HUD
-patches — patches are only needed for accurate statusline stats.
+patches. On v0.0.x the patches were needed for accurate statusline stats; the
+current patches only change appearance.
 
 The key insight: Claude Code's subprocess environment may not match your
 expectations. When in doubt, embed values directly in the command string rather

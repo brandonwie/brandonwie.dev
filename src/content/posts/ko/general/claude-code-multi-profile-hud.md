@@ -38,6 +38,16 @@ references:
 Claude Code를 개인 계정과 업무 계정으로 분리해서 운영한다면, HUD 플러그인이
 각 프로필에 맞는 통계를 보여주도록 명시적인 설정이 필요해요.
 
+> **업데이트 (2026-10-29).** 아래 패치 내용의 상당 부분은 claude-hud v0.0.x
+> 시절 이야기예요. 그때는 플러그인 버전 하나를 고정(pin)해 두고 소스를 많이
+> 패치했어요. 2026년 9월에 이 버전 고정을 폐기했어요. 고정해 둔 캐시 디렉토리가
+> 두 번이나 삭제됐고, 그때마다 HUD가 아무 에러 없이 조용히 망가졌거든요. 지금은
+> 커스터마이징 대부분을 플러그인의 `config.json`에 두고, 작은 소스 패치는 다섯
+> 개만 남아 있어요. 현재 claude-hud는 Claude Code가 stdin으로 보내는
+> `rate_limits` 데이터에서 사용량을 읽어요. 저는 이제 프로필도 하나만 써요. 다만
+> 프로필을 둘 이상 쓰는 분께는 `CLAUDE_CONFIG_DIR` 전달 문제가 여전히 유효해요.
+> 자세한 내용은 [지금 쓰는 구성](#지금-쓰는-구성)을 참고하세요.
+
 ## 왜 중요한가
 
 Claude Code는 `CLAUDE_CONFIG_DIR` 환경 변수로 멀티 프로필을 지원해요.
@@ -53,6 +63,10 @@ Claude Code는 `CLAUDE_CONFIG_DIR` 환경 변수로 멀티 프로필을 지원�
 데이터를 보여줄 뿐이에요. 크래시보다 발견하기 어렵게 만드는 부분이에요.
 
 ## 겪었던 어려움
+
+모두 패치를 많이 하던 v0.0.x 시절에 겪은 문제예요. 그중 keychain 읽기, usage
+캐시, lock, `usage-api.ts` 관련 내용은 현재 claude-hud에는 해당하지 않아요.
+지금은 usage API를 직접 호출하지 않고 Claude Code의 stdin에서 사용량을 받거든요.
 
 **환경 변수가 서브프로세스에 전달되지 않았어요.** `CLAUDE_CONFIG_DIR`이
 statusline 래퍼 스크립트까지 전파될 거라 가정했는데, Claude Code가 이를
@@ -176,25 +190,50 @@ stale 캐시 fallback(Patch 9)이 API 실패 시 정상 데이터를 반환하�
 └── settings.json               (statusline → CLAUDE_CONFIG_DIR=... 래퍼)
 ```
 
-각 프로필은 자체 독립 HUD 바이너리를 가져요. symlink되지 않으며 각각 별도로
-패치해야 해요. 바이너리가 환경 변수를 읽어서 어떤 keychain 항목과 캐시 경로를
-사용할지 결정해요.
+처음에 만든 구조가 이랬어요. 프로필마다 HUD가 따로 설치돼 있었고, 각각 따로
+패치해야 했어요. 이 구조는 오래가지 않았어요. 2026년 9월에는 업무 프로필의
+`plugins/` 디렉토리가 개인 프로필 쪽을 가리키는 symlink였어요. 그래서 두 프로필이
+플러그인 캐시와 HUD config를 하나씩 공유했어요. 이후에는 업무 프로필 자체를
+폐기했어요.
 
-## 필요한 패치
+## 지금 쓰는 구성
 
-`claude-hud-post-patches.sh`로 적용하는 커스텀 패치 9개예요(v0.0.6 기준 30개에서 22개가 업스트림에 흡수됨):
+statusline 래퍼와 패치 스크립트가 지금 하는 일은 이래요:
 
-| #   | 타입 | 대상 파일            | 용도                                              |
-| --- | ---- | -------------------- | ------------------------------------------------- |
-| 1   | sed  | claude-config-dir.ts | `CLAUDE_HUD_CONFIG_DIR` 기본값 우선순위 설정      |
-| 2   | sed  | usage-api.ts         | `CLAUDE_HUD_KEYCHAIN_SERVICE` 앞에 추가           |
-| 3   | sed  | config.ts            | Quote config 필드(interface + defaults + merge)   |
-| 4   | copy | colors.ts            | Midnight Aurora 9역할 시맨틱 팔레트               |
-| 5   | copy | project.ts           | 이메일, 환경 라벨/버전, 모델 표시                 |
-| 6   | copy | usage.ts             | formatResetHours + provider guard                 |
-| 7   | copy | quote.ts             | 인용문 줄 렌더러                                  |
-| 8   | copy | render/index.ts      | 인용문 통합 + NBSP 치환                           |
-| 9   | sed  | usage-api.ts         | API 실패 시 stale 캐시 fallback                   |
+- **버전 고정 없음.** 래퍼는
+  `~/.claude/plugins/cache/claude-hud/claude-hud/` 아래에서 orphan 표시가 없는
+  가장 최신 캐시 디렉토리를 골라요. 플러그인 매니저가 교체된 버전마다 orphan
+  표시를 남기기 때문에, 이 디렉토리가 곧 설치된 버전이에요. 업스트림의 문제
+  릴리스를 bisect로 원인을 좁힐 때만 `CLAUDE_HUD_VERSION` 변수로 버전을 고정할
+  수 있어요.
+  고정한 디렉토리가 없으면 다른 버전으로 넘어가지 않고 바로 실패해요.
+- **config는 일반 파일로.** claude-hud는 config를 `O_NOFOLLOW`로 열어요.
+  symlink로 연결한 `config.json`은 `ELOOP`로 실패하고, HUD는 조용히 기본값으로
+  돌아가요. 그래서 config는 복사본으로 배포해요.
+- **config 먼저, 패치는 마지막.** config 키가 있는 커스터마이징은
+  `config.json`에 넣어요. config가 무엇을 지원하는지는 설치된 `src/config.ts`가
+  기준이에요. 소스 패치는 어떤 키로도 안 되는 변경에만 써요.
+- **스스로 복구하는 패치 가드.** 래퍼는 렌더링할 때마다 패치한 파일 세 개에
+  서명(mtime과 크기)을 남겨요. 플러그인 업데이트가 그중 하나를 덮어쓰면 서명이
+  바뀌고, 래퍼가 백그라운드에서 패치 스크립트를 다시 실행해요. 그래서 다음
+  렌더링부터는 다시 패치된 상태가 돼요.
+
+패치 스크립트는 래퍼와 같은 캐시 디렉토리를 찾아서 작은 패치 다섯 개를 적용해요.
+각 패치는 정확한 표현식 하나에 앵커를 두고, 앵커가 사라지면 바로 실패해요:
+
+| #   | 대상 파일         | 용도                                     |
+| --- | ----------------- | ---------------------------------------- |
+| 1   | `i18n/en.ts`      | Context 라벨을 `Ctx:`로 축약             |
+| 2   | `i18n/en.ts`      | 사용량 윈도우 라벨을 `5h:` / `7d:`로 축약 |
+| 3   | `render/usage.ts` | 사용량 윈도우마다 pace 표시              |
+| 4   | `render/parts.ts` | 짧은 effort를 쓰는 `Opus5\|h` 배지       |
+| 5   | `render/parts.ts` | 패키지 버전 텍스트에 보라색 네온 색상    |
+
+이 다섯 가지는 지금 config로 표현할 수 없어요. 업스트림에는 언어 전체를 바꾸는
+스위치만 있고 라벨별 오버라이드는 없어요. 업스트림의 pace 옵션은 윈도우 색만
+바꿔요. 패치 개수는 그동안 많이 바뀌었어요. v0.0.6에서 30개, v0.0.9에서 9개,
+고정했던 v0.0.12에서 13개였고, 버전 고정을 폐기한 직후 잠깐 1개였어요. 2026년
+9월에 작은 패치를 다시 허용하면서 4개가 됐고, 지금은 5개예요.
 
 ## 캐시 Lock 메커니즘
 
@@ -223,8 +262,11 @@ non-null 타임스탬프만 체크하기 때문에 이 경우를 건너뛰어요
 
 ## Midnight Aurora 테마
 
-HUD는 커스텀 컬러 테마를 지원해요. Midnight Aurora는 ANSI 256-color 코드
-(`\x1b[38;5;{N}m`)를 사용하는 9개 시맨틱 컬러 역할을 사용해요:
+이 테마는 v0.0.x 시절 `colors.ts`를 통째로 복사하는 패치였고, 그 패치는
+폐기했어요. 현재 claude-hud는 `config.json`의 `colors` 객체에서 역할별
+truecolor hex 값(`context`, `usage`, `warning`, `critical`, `model`, `project`
+등)을 받아요. 그래서 팔레트에는 이제 소스 패치가 필요 없어요. 원래 테마는 ANSI
+256-color 코드(`\x1b[38;5;{N}m`)를 쓰는 9개 시맨틱 컬러 역할을 사용했어요:
 
 | 역할        | 코드 | 색상 이름     | 용도                |
 | ----------- | ---- | ------------- | ------------------- |
@@ -252,9 +294,10 @@ HUD 플러그인에는 알아두면 좋은 설정 옵션이 여러 가지 있어
 줄로 identity, project, environment, usage를 각각 표시) 두 가지예요.
 정보 손실을 피하려면 `"expanded"`를 사용하세요.
 
-**패치 내구성.** 플러그인 업데이트가 소스 파일을 덮어써요.
-`claude-hud-post-patches.sh`를 유지해서 업데이트 후 패치를 재적용하세요 --
-2026년 3월 기준으로 9개 패치예요.
+**패치 내구성.** 플러그인 업데이트가 소스 파일을 덮어써요. 그래서
+`claude-hud-post-patches.sh`가 업데이트 후 패치를 다시 적용해요. 지금은 패치가
+5개이고, 업데이트가 패치한 파일을 덮어쓰면 래퍼의 패치 가드가 스크립트를
+자동으로 다시 실행해요.
 
 **7일 사용량 윈도우 항상 표시.** config에서 `sevenDayThreshold: 0`으로 설정하세요.
 기본값(`80`)은 사용량이 80%를 넘어야만 7일 윈도우를 보여줘요.
@@ -265,17 +308,17 @@ HUD 플러그인에는 알아두면 좋은 설정 옵션이 여러 가지 있어
 **컨텍스트 표시 모드.** `contextValue` 옵션으로 compact와 expanded 레이아웃
 모두에서 `'percent'`와 `'tokens'` 간 컨텍스트 표시를 전환할 수 있어요.
 
-**expanded 레이아웃 순서.** `render/index.ts` 템플릿에서 커스터마이징 가능해요
--- project(모델 배지 포함) → 통합 context+usage → activity → environment
-순이에요. 인용문은 compact와 expanded 모드 모두에서 마지막에 렌더링돼요 -- 좁은
-터미널에서 필수 정보(project, context, usage)가 살아남고 장식적인 인용문이 먼저
-잘려요.
+**expanded 레이아웃 순서.** v0.0.x 시절에는 `render/index.ts` 템플릿 패치가
+순서를 정하고 인용문을 마지막에 렌더링했어요. 그래서 좁은 터미널에서는 장식적인
+인용문이 먼저 잘렸어요. 지금은 `config.json`의 `elementOrder`가 순서를 정하고,
+인용문은 config의 `customLine`이 돼서 업스트림이 첫 번째 줄에 함께
+렌더링해요. 템플릿 패치를 없애면서 이 변화는 받아들였어요.
 
 **속도 트래커 반환 타입.** `getOutputSpeed()`는 객체가 아니라 `number | null`을
 직접 반환해요. 커스텀 렌더러에 속도를 통합할 때 반환 타입을 주의해서
 확인하세요.
 
-**API 실패 시 stale-while-revalidate.** usage API가 실패(423, timeout, 네트워크
+**API 실패 시 stale-while-revalidate (v0.0.x).** usage API가 실패(423, timeout, 네트워크
 에러)하면, HUD가 만료된 캐시에 유효한 데이터(`apiUnavailable`이 아닌)가 있는지
 확인해요. 있으면 stale 데이터를 반환하면서 `writeCache`로 캐시 타임스탬프를
 갱신해요. stale 데이터에 새 60초 TTL이 부여되기 때문에 재시도가 매 render
@@ -285,9 +328,10 @@ HUD 플러그인에는 알아두면 좋은 설정 옵션이 여러 가지 있어
 캐싱으로 넘어가요.
 
 **재설치 워크플로우.** 상황이 꼬이면, 전체 재설치 순서는 이래요:
-`claude plugin uninstall claude-hud@claude-hud` → `claude plugin install claude-hud@claude-hud` → 두 프로필 모두 `claude-hud-post-patches.sh`를 실행.
-플러그인 설치가 소스를 깨끗한 업스트림으로 덮어쓰고, 스크립트가 커스텀 패치를
-재적용해요. `known_marketplaces.json`이 marketplace clone의 절대 경로를
+`claude plugin uninstall claude-hud@claude-hud` → `claude plugin install claude-hud@claude-hud`.
+플러그인 설치가 소스를 깨끗한 업스트림으로 덮어써요. 다음 렌더링에서 패치 가드가
+`claude-hud-post-patches.sh`를 다시 실행하고, 출력을 직접 보고 싶으면 손으로
+실행해도 돼요. `known_marketplaces.json`이 marketplace clone의 절대 경로를
 저장하므로, 프로필 디렉토리 이름 변경 후에는 이 파일도 갱신해야 해요.
 
 ## 토큰 관리
@@ -311,28 +355,34 @@ keychain 삭제 후, 또는 프로필별 토큰과 기본 토큰이 동시에 �
    네이티브하게 관리해요. 수동 동기화는 상황을 망가뜨려요.
 2. **환경 변수가 전달된다고 가정하지 마세요.** statusline 명령에
    `CLAUDE_CONFIG_DIR`을 포함시키세요.
-3. **두 프로필 모두 패치하세요.** HUD 바이너리는 프로필별로 독립적이에요.
-   하나를 패치해도 다른 하나는 패치되지 않아요.
+3. **config로 되는 건 패치하지 마세요.** 설치된 플러그인의 `src/config.ts`를
+   먼저 확인하세요. 패치는 플러그인 업데이트 때마다 덮어써지지만, config 키는
+   그대로 남아요.
 4. **`.zshrc` 변경 후 셸을 리로드하세요.** 이전 함수가 메모리에 남아있어요.
    새 설정은 새 터미널을 열어야 적용돼요.
 5. **중복 keychain 항목을 확인하세요.** 중복은 예측 불가능한 읽기를 유발해요.
    `security find-generic-password -a`로 항목을 나열하고 중복을 삭제하세요.
-6. **패치 후 usage 캐시를 삭제하세요.** 패치 적용 전 구간에서 남은 오래된
-   캐시가 잘못된 plan/계정 데이터를 보여줘요.
-7. **0-byte lock 파일을 주의하세요.** HUD가 lock 생성 도중 크래시하면, 빈 lock
+6. **HUD config를 symlink로 연결하지 마세요.** claude-hud는 config를
+   `O_NOFOLLOW`로 열기 때문에, symlink로 두면 모든 설정이 조용히 기본값으로 돌아가요.
+7. **0-byte lock 파일을 주의하세요 (v0.0.x).** HUD가 lock 생성 도중 크래시하면, 빈 lock
    파일이 모든 프로세스의 fetch를 차단해요. 사용량이 멈춰있으면
    `.usage-cache.lock` 파일이 0 byte인지 확인하고 수동으로 삭제하세요.
 8. **디렉토리 이름 변경 후 `known_marketplaces.json`을 갱신하세요.** 이 파일이
    marketplace clone의 절대 경로를 저장해요. 프로필 디렉토리 이름을 바꾸면
    플러그인 설치 명령이 조용히 실패해요.
-9. **합성된 statusline row는 명시적으로 구분하세요.** `statusline-wrapper.sh`가
-   Token Optimizer 상태(`CtxQ`, `Eff`, 선택적 duration)를 3B session-state row
-   (`3B claude·<sid> · locks:N`) 앞에 붙인다면, Token Optimizer filter가 trailing
-   newline을 반드시 출력해야 해요. 그렇지 않으면 row가 `Eff:--3B claude...`
-   형태로 이어져요. 예전에는 `claude-hud-pin-guard.sh` 스크립트로 이 문제를
+9. **합성된 statusline row는 명시적으로 구분하세요.** 2026년 6월에는
+   `statusline-wrapper.sh`가 Token Optimizer 상태(`CtxQ`, `Eff`, 선택적
+   duration)를 3B session-state row(`3B claude·<sid> · locks:N`) 앞에
+   붙였어요. 그래서 Token Optimizer filter가 trailing newline을 반드시 출력해야
+   했고, 그렇지 않으면 row가 `Eff:--3B claude...` 형태로 이어졌어요. 지금
+   래퍼는 claude-hud row, 선택적인 Ponytail 배지 row, 마지막에 session row를
+   출력하고, 각 row는 여전히 newline으로 끝나야 해요. 예전에는 `claude-hud-pin-guard.sh` 스크립트로 이 문제를
    검사했지만, 지금은 그 스크립트를 폐기했고 다시 되살릴 생각은 없어요.
    wrapper를 점검할 때 trailing newline 조건은 여전히 지켜야 하고,
    patch-marker check만으로는 row framing이 올바르다고 보장할 수 없어요.
+10. **방어책으로 플러그인 버전을 고정하지 마세요.** 플러그인 reconcile이 고정한
+    캐시 디렉토리를 지울 수 있어요. 제 경우 두 번 지워졌고, 두 번 모두 HUD가
+    에러 하나 없이 망가졌어요.
 
 ## 왜 이 방식이 효과적인가
 
@@ -340,9 +390,11 @@ keychain 삭제 후, 또는 프로필별 토큰과 기본 토큰이 동시에 �
 Claude Code가 서브프로세스에 환경 변수를 전달하는 것(하지 않는)에 의존하는
 대신, 명령 문자열 자체에 올바른 값을 심어놓는 거예요.
 
-HUD 바이너리가 자신의 환경에서 `CLAUDE_CONFIG_DIR`을 읽고, 올바른 keychain
-항목과 캐시 경로를 해결하고, 올바른 사용량 통계를 표시해요. 파일 기반 lock이
-동시 세션의 API 스탬피드를 방지해요. 각 프로필이 완전히 독립적이에요.
+v0.0.x 구성에서는 HUD가 자신의 환경에서 `CLAUDE_CONFIG_DIR`을 읽고, 올바른
+keychain 항목과 캐시 경로를 찾아서 올바른 사용량 통계를 표시했어요. 파일 기반
+lock은 동시 세션의 API 스탬피드를 막았고요. 현재 claude-hud도
+`CLAUDE_CONFIG_DIR`을 직접 읽지만, keychain 항목이나 usage 캐시는 더 이상 필요
+없어요. Claude Code가 rate-limit 데이터를 stdin으로 넘겨주기 때문이에요.
 
 ## 실전 팁
 
@@ -351,8 +403,9 @@ HUD 바이너리가 자신의 환경에서 `CLAUDE_CONFIG_DIR`을 읽고, 올바
 
 **넘어가도 되는 경우:** 단일 계정 설정(프로필 분리 불필요), 웹 UI만 사용하는
 경우(HUD는 터미널 기능), HUD 플러그인을 아예 사용하지 않는 경우예요.
-기본적인 멀티 프로필 설정(`CLAUDE_CONFIG_DIR`)은 HUD 패치 없이도 동작해요 --
-패치는 정확한 statusline 통계를 위해서만 필요해요.
+기본적인 멀티 프로필 설정(`CLAUDE_CONFIG_DIR`)은 HUD 패치 없이도 동작해요.
+v0.0.x에서는 정확한 statusline 통계를 위해 패치가 필요했지만, 지금 패치는
+겉모습만 바꿔요.
 
 핵심 인사이트: Claude Code의 서브프로세스 환경은 예상과 다를 수 있어요. 확실하지
 않을 때는, 환경 변수 상속에 의존하기보다 명령 문자열에 직접 값을 포함시키세요.
