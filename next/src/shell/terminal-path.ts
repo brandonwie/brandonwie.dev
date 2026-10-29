@@ -25,7 +25,7 @@ export const STATUS_WINDOWS: readonly StatusWindow[] = [
 	{ key: 'home', index: 0, label: 'home' },
 	{ key: 'posts', index: 1, label: 'posts' },
 	{ key: 'study', index: 2, label: 'study' },
-	{ key: 'system', index: 3, label: '3b' },
+	{ key: 'system', index: 3, label: 'b3' },
 	{ key: 'about', index: 4, label: 'about' },
 ];
 
@@ -78,7 +78,7 @@ export function windowHref(key: WindowKey, locale: Locale): string {
  * Which status-line window a pathname marks.
  *
  * Home is `/` or `/ko`. Nav sections reuse `activeKey()`, so `/system` and
- * `/system/3b` both light `3:3b`. Everything else appends a temporary window
+ * `/system/b3` both light `3:b3`. Everything else appends a temporary window
  * named after its first path segment (`/talks/my-career` → `talks`).
  */
 export function statusWindowFor(pathname: string): StatusState {

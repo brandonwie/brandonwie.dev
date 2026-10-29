@@ -614,7 +614,7 @@
 }
 
 /* ---------------------------------------------------------------------------
- * /system/3b graph (C11)
+ * /system/b3 graph (C11)
  *
  * The graph's Phosphor Fade styles live in app/styles/pages/system-3b.css. What
  * remains here: the bare-name rules the Svelte port collected (`.note`, `.head`,

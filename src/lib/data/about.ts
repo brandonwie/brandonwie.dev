@@ -87,7 +87,7 @@ const content: Record<AboutLocale, AboutContent> = {
 			'AWS / Terraform',
 			'AI video analytics',
 			'Agent workflows',
-			'3B knowledge layer',
+			'B3 knowledge layer',
 		],
 		sections: {
 			arc: 'career arc',
@@ -134,15 +134,15 @@ const content: Record<AboutLocale, AboutContent> = {
 			},
 			{
 				title: 'Agent-native engineering',
-				body: '3B, reviewer loops, and verification tooling that keep AI-assisted work auditable, from the first prompt to the merged diff.',
+				body: 'B3, reviewer loops, and verification tooling that keep AI-assisted work auditable, from the first prompt to the merged diff.',
 			},
 		],
 		systems: [
 			{
-				title: '3B',
+				title: 'B3',
 				kicker: "Brandon's Binary Brain",
 				body: 'A version-controlled personal operating system for notes, agent rules, skills, reviewer loops, and decision memory.',
-				href: '/system/3b',
+				href: '/system/b3',
 				image: '/og/claude-code-agent-teams.png',
 				alt: 'Generated topic image for Claude Code agent team workflows',
 			},
@@ -189,7 +189,7 @@ const content: Record<AboutLocale, AboutContent> = {
 			],
 		},
 		links: [
-			{ label: 'Read the system map', href: '/system/3b' },
+			{ label: 'Read the system map', href: '/system/b3' },
 			{ label: 'LinkedIn', href: 'https://linkedin.com/in/brandonwie', external: true },
 			{ label: 'GitHub', href: 'https://github.com/brandonwie', external: true },
 			{ label: 'Email', href: 'mailto:brandon@brandonwie.dev' },
@@ -219,7 +219,7 @@ const content: Record<AboutLocale, AboutContent> = {
 			'AWS / Terraform',
 			'AI video analytics',
 			'Agent workflows',
-			'3B knowledge layer',
+			'B3 knowledge layer',
 		],
 		sections: {
 			arc: '커리어 흐름',
@@ -266,15 +266,15 @@ const content: Record<AboutLocale, AboutContent> = {
 			},
 			{
 				title: 'Agent-native 엔지니어링',
-				body: '3B, 리뷰 루프, 검증 도구로 AI와 함께 한 작업을 첫 프롬프트부터 머지된 diff까지 추적 가능하게 유지합니다.',
+				body: 'B3, 리뷰 루프, 검증 도구로 AI와 함께 한 작업을 첫 프롬프트부터 머지된 diff까지 추적 가능하게 유지합니다.',
 			},
 		],
 		systems: [
 			{
-				title: '3B',
+				title: 'B3',
 				kicker: "Brandon's Binary Brain",
 				body: '노트, 에이전트 규칙, 스킬, 리뷰 루프, 결정 기억을 버전 관리하는 개인 운영체제입니다.',
-				href: '/ko/system/3b',
+				href: '/ko/system/b3',
 				image: '/og/claude-code-agent-teams.png',
 				alt: 'Claude Code 에이전트 팀 워크플로를 표현한 생성 이미지',
 			},
@@ -321,7 +321,7 @@ const content: Record<AboutLocale, AboutContent> = {
 			],
 		},
 		links: [
-			{ label: '3B 시스템 보기', href: '/ko/system/3b' },
+			{ label: 'B3 시스템 보기', href: '/ko/system/b3' },
 			{ label: 'LinkedIn', href: 'https://linkedin.com/in/brandonwie', external: true },
 			{ label: 'GitHub', href: 'https://github.com/brandonwie', external: true },
 			{ label: 'Email', href: 'mailto:brandon@brandonwie.dev' },

@@ -97,7 +97,7 @@ const staticPages = [
 	{ en: '/projects', ko: '/ko/projects', priority: '0.7' },
 	{ en: '/contact', ko: '/ko/contact', priority: '0.6' },
 	{ en: '/system', ko: '/ko/system', priority: '0.5' },
-	{ en: '/system/3b', ko: '/ko/system/3b', priority: '0.7' },
+	{ en: '/system/b3', ko: '/ko/system/b3', priority: '0.7' },
 ];
 
 export function sitemapXml(): string {

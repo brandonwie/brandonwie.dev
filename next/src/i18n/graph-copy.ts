@@ -3,7 +3,7 @@ import * as m from '../paraglide/messages.js';
 import type { Locale } from './locale';
 
 /**
- * Copy for the /system/3b graph, resolved for one locale.
+ * Copy for the /system/b3 graph, resolved for one locale.
  *
  * Separate from `shellCopy`/`articleCopy` because its consumers are reached
  * through React Flow's `nodeTypes`, which passes only `NodeProps` — a custom

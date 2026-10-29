@@ -11,7 +11,7 @@ import { GraphLocaleProvider } from './System3bLocale';
 /**
  * Prerender-safe wrapper around the interactive graph.
  *
- * @xyflow and dagre touch the DOM and are heavy, and /system/3b is exported
+ * @xyflow and dagre touch the DOM and are heavy, and /system/b3 is exported
  * statically. So this wrapper imports the helper TYPE-ONLY (erased at build, so
  * dagre never enters this chunk) and reaches the flow component only through
  * next/dynamic with ssr disabled.
@@ -19,7 +19,7 @@ import { GraphLocaleProvider } from './System3bLocale';
  * HOW THE HYDRATION CONTRACT IS PRODUCED. Under `output: 'export'`, ssr:false
  * routes the render through BailoutToCSR, which throws during prerender; React
  * then renders the Suspense fallback into the exported HTML. So the built
- * /system/3b contains exactly the `loading` component and zero flow elements,
+ * /system/b3 contains exactly the `loading` component and zero flow elements,
  * and the client swaps in the real graph once the chunk resolves.
  *
  * THE ONE-WORD REGRESSION. With ssr:false and NO `loading`, next/dynamic wraps

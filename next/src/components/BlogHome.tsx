@@ -117,7 +117,7 @@ export function BlogHome({ posts, basePath = '/' }: BlogHomeProps) {
 					<span className="pg-home__visit">visit ↗</span>
 					<span className="pg-home__desc">{copy.archcalendarDescription}</span>
 				</a>
-				<AppLink className="pg-home__row" href={withBase('/system/3b')}>
+				<AppLink className="pg-home__row" href={withBase('/system/b3')}>
 					<span className="pg-home__perm" aria-hidden="true">
 						drwxr-xr-x
 					</span>

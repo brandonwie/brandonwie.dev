@@ -1,7 +1,7 @@
 import type { SnapBlogSeries, SystemSnapshot } from '../data/system-snapshot';
 
 /**
- * The Korean overlay for the `/system/3b` snapshot.
+ * The Korean overlay for the `/system/b3` snapshot.
  *
  * Ports `src/lib/utils/localize-snapshot.ts`. The snapshot itself is written by
  * `scripts/snapshot-3b-system.ts`, so Korean text cannot live inside it -- a

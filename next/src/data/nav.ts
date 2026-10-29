@@ -32,12 +32,12 @@ export interface NavItem {
 	path: string;
 }
 
-/** Canonical nav, in bar order. `system` points at the real 3B destination. */
+/** Canonical nav, in bar order. `system` points at the real B3 destination. */
 export const NAV_ITEMS: readonly NavItem[] = [
 	{ key: 'about', path: '/about' },
 	{ key: 'posts', path: '/posts' },
 	{ key: 'study', path: '/study' },
-	{ key: 'system', path: '/system/3b' },
+	{ key: 'system', path: '/system/b3' },
 ];
 
 /** Matches `/ko` as a path segment, so `/koala` is not treated as Korean. */
@@ -105,7 +105,7 @@ export function searchHref(locale: Locale): string {
 /**
  * Active nav section for a path. Locale-stripped, then matched on full path
  * segments so list and detail routes share a section (`/posts` and `/posts/x`
- * → posts; `/study/*` → study; `/system` and `/system/3b` → system) while
+ * → posts; `/study/*` → study; `/system` and `/system/b3` → system) while
  * unrelated routes (`/postscript`, `/studyguide`) do not match. Home and search
  * → null.
  */

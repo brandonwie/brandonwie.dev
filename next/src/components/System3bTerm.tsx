@@ -1,5 +1,5 @@
 /**
- * Phosphor Fade presentation for the /system/3b graph: kind glyphs and edge
+ * Phosphor Fade presentation for the /system/b3 graph: kind glyphs and edge
  * inks. Pure look — the graph model (`system3b-graph.ts`) keeps its kinds,
  * layout and Rosé Pine style map untouched; the flow re-inks edges from
  * `data.kind` on the way into React Flow.

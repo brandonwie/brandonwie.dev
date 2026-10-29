@@ -1,10 +1,10 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-run --allow-env
 /**
- * scripts/snapshot-3b-system.ts — Sanitizing generator for the public /system/3b hub.
+ * scripts/snapshot-3b-system.ts — Sanitizing generator for the public /system/b3 hub.
  *
  * READ-ONLY on the 3B repo. Projects a SANITIZED public subset of the 3B
  * architecture registry (model.json) into src/lib/data/system-snapshot.json,
- * consumed at build time by the prerendered /system/3b route.
+ * consumed at build time by the prerendered /system/b3 route.
  *
  * Privacy is the central concern: model.json interleaves public architecture
  * with private telemetry and filesystem paths, so this generator is the single

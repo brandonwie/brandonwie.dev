@@ -13,7 +13,7 @@ import raw from '../../../src/lib/data/system-snapshot.json';
 
 import type { SnapEdge, SnapLayer, SnapNode } from '../graph/system3b-graph';
 
-/** One entry of the `/system/3b` blog-series list. */
+/** One entry of the `/system/b3` blog-series list. */
 export interface SnapBlogSeries {
 	order: number;
 	slug: string;

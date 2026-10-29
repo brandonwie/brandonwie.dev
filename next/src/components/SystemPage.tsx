@@ -11,8 +11,8 @@ export interface SystemPageProps {
 
 /**
  * /system landing page as a terminal session: `cat index` prints the eyebrow,
- * title and intro, `ls -l` lists the one child route (the 3B hub), and
- * `cat 3b/.description` prints the existing meta description.
+ * title and intro, `ls -l` lists the one child route (the B3 hub), and
+ * `cat b3/.description` prints the existing meta description.
  *
  * The shell owns `<main id="main-content">`, so this renders a plain wrapper.
  * Prompt commands and the `ls -l` columns are terminal syntax and stay English
@@ -21,7 +21,7 @@ export interface SystemPageProps {
 export function SystemPage({ locale = 'en' }: SystemPageProps) {
 	const copy = systemCopy(locale);
 	const root = `${base(locale)}/system`;
-	const hubHref = `${root}/3b`;
+	const hubHref = `${root}/b3`;
 	const cwd = cwdFor(root);
 
 	return (
@@ -52,7 +52,7 @@ export function SystemPage({ locale = 'en' }: SystemPageProps) {
 						brandon
 					</span>
 					<span className="pg-system__name" aria-hidden="true">
-						3b/
+						b3/
 					</span>
 					<AppLink href={hubHref} className="term-lnk pg-system__cta">
 						<span className="n" aria-hidden="true">
@@ -67,7 +67,7 @@ export function SystemPage({ locale = 'en' }: SystemPageProps) {
 			</div>
 
 			<div className="term-gap" />
-			<TermPrompt cwd={cwd} command="cat 3b/.description" />
+			<TermPrompt cwd={cwd} command="cat b3/.description" />
 			<p className="pg-system__desc">{copy.pageDescription}</p>
 		</div>
 	);

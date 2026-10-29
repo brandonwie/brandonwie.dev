@@ -52,7 +52,7 @@ export function SiteShell({
 			<div className="term-crt">
 				<div className="term-glass">
 					<span className="term-ghost" aria-hidden="true">
-						3B
+						B3
 					</span>
 					{header ?? (
 						<TerminalTitleBar

@@ -1,5 +1,5 @@
 /**
- * system3b-graph.ts — pure, DOM-free model + layout helpers for the /system/3b
+ * system3b-graph.ts — pure, DOM-free model + layout helpers for the /system/b3
  * architecture graph. No React, no browser APIs: importable from a plain Node
  * script for unit checks, and tree-shake-friendly. dagre is the only heavy
  * import here, and only the lazy-loaded System3bFlow component pulls this file,

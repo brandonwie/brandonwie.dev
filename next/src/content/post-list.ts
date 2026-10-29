@@ -72,7 +72,7 @@ export function listKoreanPostsWithEnglishFallback(): LocalizedPost[] {
  * Published Korean post titles, keyed by slug.
  *
  * Ports `src/routes/ko/system/3b/+page.ts:16-21`, the seventeenth glob call
- * site. The Korean `/system/3b` page localizes its blog-series titles from the
+ * site. The Korean `/system/b3` page localizes its blog-series titles from the
  * Korean corpus rather than from the snapshot overlay, because the series
  * entries ARE posts: the Korean title of a translated post is the Korean title
  * of that series entry. Drafts are skipped for the same reason the lists skip

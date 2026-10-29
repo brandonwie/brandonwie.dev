@@ -97,7 +97,7 @@ export function buildNavItems(
 		nav('projects', '/projects', m.palette_nav_projects({}, at), '◇'),
 		nav('contact', '/contact', m.palette_nav_contact({}, at), '✉'),
 		nav('search', '/search', m.palette_nav_search({}, at), '⌕'),
-		nav('system', '/system/3b', m.palette_nav_system({}, at), '◆'),
+		nav('system', '/system/b3', m.palette_nav_system({}, at), '◆'),
 	];
 }
 

@@ -6,7 +6,7 @@ import { useGraphCopy } from './System3bLocale';
 import { kindGlyph } from './System3bTerm';
 
 /**
- * Custom @xyflow/react node for the /system/3b graph.
+ * Custom @xyflow/react node for the /system/b3 graph.
  *
  * Renders a subsystem chip (expandable) or a leaf node. Phosphor Fade draws the
  * kind as an `ls -F`-style glyph instead of a colour dot, and the name wraps

@@ -13,7 +13,7 @@ import { TermPrompt } from '../shell/TermPrompt';
 import { cwdFor } from '../shell/terminal-path';
 
 /**
- * The /system/3b page — the full port of `src/lib/components/System3bPage.svelte`.
+ * The /system/b3 page — the full port of `src/lib/components/System3bPage.svelte`.
  *
  * SCOPE. Header crumb + eyebrow + title + intro, overview stats, architecture
  * map (System3bGraph), layer cards, subsystem cards, decision-history (ADR)
@@ -37,7 +37,7 @@ export function generateSystem3bMetadata(locale: Locale): Metadata {
 	return generateStudySeoMetadata({
 		pageTitle: `${m.system_3b_title({}, { locale })} | Brandon Wie`,
 		description: m.system_3b_meta_description({}, { locale }),
-		basePath: '/system/3b',
+		basePath: '/system/b3',
 		locale,
 	});
 }
@@ -70,7 +70,7 @@ function Meter({ on, off, bracket = false }: { on: number; off: number; bracket?
 }
 
 /**
- * The /system/3b page as a `3b` terminal session (Phosphor Fade). Each former
+ * The /system/b3 page as a `b3` terminal session (Phosphor Fade). Each former
  * `#` section head is now a prompt line (decorative) plus a frame whose title
  * is the section's real `h2`; the page keeps its single `h1`.
  */
@@ -79,7 +79,7 @@ export function System3bPage({ locale }: { locale: Locale }) {
 	const series = localized.blog_series;
 	const publishedCount = series.filter((entry) => entry.status === 'published').length;
 	const basePath = locale === 'ko' ? '/ko' : '';
-	const route = `${basePath}/system/3b`;
+	const route = `${basePath}/system/b3`;
 	const cwd = cwdFor(route);
 
 	// Node count per layer, derived from the snapshot so the diagram + badges
@@ -136,7 +136,7 @@ export function System3bPage({ locale }: { locale: Locale }) {
 
 			{/* Overview / stats grid */}
 			<div className="term-gap" />
-			<TermPrompt cwd={cwd} command="3b stats" />
+			<TermPrompt cwd={cwd} command="b3 stats" />
 			<section className="term-frame pg-s3b__stats">
 				<FrameTitle
 					label={m.system_3b_overview_heading({}, { locale })}
@@ -154,7 +154,7 @@ export function System3bPage({ locale }: { locale: Locale }) {
 
 			{/* Architecture map */}
 			<div className="term-gap" />
-			<TermPrompt cwd={cwd} command="3b graph" flags="--altitude overview" />
+			<TermPrompt cwd={cwd} command="b3 graph" flags="--altitude overview" />
 			<section className="term-frame pg-s3b__graph">
 				<FrameTitle label={m.system_3b_map_heading({}, { locale })} />
 				<System3bGraph
@@ -247,7 +247,7 @@ export function System3bPage({ locale }: { locale: Locale }) {
 
 			{/* Blog series progress */}
 			<div className="term-gap" />
-			<TermPrompt cwd={cwd} command="3b series" flags="--progress" />
+			<TermPrompt cwd={cwd} command="b3 series" flags="--progress" />
 			<section className="term-frame pg-s3b__series">
 				<FrameTitle label={m.system_3b_blog_heading({}, { locale })} />
 				<p className="pg-s3b__fr">

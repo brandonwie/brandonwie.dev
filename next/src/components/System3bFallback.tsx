@@ -11,7 +11,7 @@ import { useGraphCopy } from './System3bLocale';
  * THIS IS WHAT THE EXPORTED HTML CONTAINS. Under `output: 'export'` the
  * prerender hits next/dynamic's BailoutToCSR, which throws, and React renders
  * the Suspense fallback into the file — so this component IS the prerendered
- * `/system/3b`, and the hydration contract (zero flow elements before the chunk
+ * `/system/b3`, and the hydration contract (zero flow elements before the chunk
  * resolves) falls out of that.
  *
  * It must live in the WRAPPER's chunk, never the lazy one: a fallback shipped
