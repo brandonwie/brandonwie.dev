@@ -236,7 +236,7 @@ export const DSA_IV_SOURCE_FILES: StudySourceFile[] = [
 	},
 	{
 		path: 'm14-minimum-spanning-trees.md',
-		sha256: 'd4146fa8e4a17ceb57ce52c3761198a7217f05b90fb7845789b485f9383a3f12',
+		sha256: '7460b85b648b19f7a9db1170f4b14b2feb29868a05ef8cd6fb33b9efe63bf6b1',
 		role: 'primary-note',
 	},
 	{
