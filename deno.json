@@ -15,15 +15,6 @@
 	},
 	"nodeModulesDir": "auto",
 	"minimumDependencyAge": {
-		"age": "P1D",
-		"exclude": [
-			"npm:satori",
-			"npm:typescript-eslint",
-			"npm:wrangler",
-			"npm:@typescript-eslint/*",
-			"npm:miniflare",
-			"npm:workerd",
-			"npm:@cloudflare/*"
-		]
+		"age": "P1D"
 	}
 }
