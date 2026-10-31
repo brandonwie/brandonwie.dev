@@ -8,7 +8,8 @@
  *         pnpm og:generate:force   # regenerate all
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { homedir } from 'os';
 import { join, basename } from 'path';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
@@ -22,6 +23,18 @@ const FONTS_DIR = join(ROOT, 'public/fonts');
 const WIDTH = 1200;
 const HEIGHT = 630;
 const FORCE = process.argv.includes('--force');
+
+const USER_HOME = homedir();
+const THREEB_ROOT =
+	process.env.THREEB_PATH ||
+	[join(USER_HOME, 'dev', '3b'), join(USER_HOME, 'dev', 'personal', '3b')].find((candidate) => {
+		try {
+			return statSync(candidate).isDirectory();
+		} catch {
+			return false;
+		}
+	}) ||
+	join(USER_HOME, 'dev', '3b');
 
 // ── Terminal color palette (matches app.css) ────────────────────────────
 const colors = {
@@ -396,9 +409,12 @@ async function main() {
 	// Generate per-post OG images
 	for (const post of posts) {
 		const outPath = join(OUT_DIR, `${post.slug}.png`);
-		// Skip covers owned by media-gen (resources/media/<slug>/brief.json) so this
-		// legacy Satori generator never overwrites a media-gen cover, even with --force.
-		if (existsSync(join(ROOT, 'resources/media', post.slug, 'brief.json'))) {
+		// Preserve local media-gen covers and handmade cards copied from 3B,
+		// including when --force is set.
+		if (
+			existsSync(join(ROOT, 'resources/media', post.slug, 'brief.json')) ||
+			existsSync(join(THREEB_ROOT, 'resources/media', post.slug, 'og.png'))
+		) {
 			skipped++;
 			continue;
 		}
