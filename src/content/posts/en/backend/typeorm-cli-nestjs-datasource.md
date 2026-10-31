@@ -28,7 +28,7 @@ CannotConnectAlreadyConnectedError: Cannot create a "default" connection
 because connection to the database already established.
 ```
 
-The migration had worked fine before. After some digging, I realized the problem was in how our `ormconfig.ts` was set up — it was bootstrapping the entire NestJS application just to get the DataSource, which meant the database connection was already established before the TypeORM CLI could take control.
+After some digging, I realized the problem was in how our `ormconfig.ts` was set up — it was bootstrapping the entire NestJS application just to get the DataSource, which meant the database connection was already established before the TypeORM CLI could take control.
 
 ## The Problem
 

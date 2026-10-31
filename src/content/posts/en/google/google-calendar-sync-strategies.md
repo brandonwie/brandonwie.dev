@@ -182,8 +182,7 @@ run.
 
 ## Takeaways
 
-Sync parity is the requirement, not a nice-to-have — match the Google UI and
-most ambiguity resolves itself.
+For this integration, matching the Google UI was the sync requirement that resolved most of the ambiguity.
 
 Full and incremental sync disagree about absence, and only about absence. Gate
 your orphan detection on the mode.

@@ -21,7 +21,7 @@ source_content_hash: f0bb7669a11d37bd2e35f2e4df8a8cb84f7d9a53a5367c5bbf6fd6c1b12
 expanded: true
 ---
 
-I wired up Slack notifications for an Airflow DAG — failure alerts worked fine, but the success alert never fired. The DAG ran, all tasks succeeded, but no notification. I checked the Slack webhook, verified the callback function, and reviewed task logs. Everything looked correct. The problem turned out to be the DAG-level `on_success_callback` itself — on Airflow 2.11.0 it was silently ignored.
+I wired up Slack notifications for an Airflow DAG — failure alerts worked fine, but the success alert never fired. The DAG ran, all tasks succeeded, but no notification. The problem turned out to be the DAG-level `on_success_callback` itself — on Airflow 2.11.0 it was silently ignored.
 
 No error. No warning. The callback parameter is accepted without complaint and then completely ignored when all tasks succeed.
 
@@ -58,7 +58,7 @@ Task-level callbacks work reliably for both success and failure. By placing the 
 
 - `on_failure_callback` at DAG level **worked** (for task failures)
 - `on_success_callback` at DAG level **did not** (silently ignored)
-- For success alerts, attach the callback to the final task in the DAG
+- For success alerts in this setup, the workaround was to attach the callback to the final task in the DAG
 - This behavior exists in Airflow 2.11.0 (and likely other 2.x versions)
 
 ## Real-World Pattern

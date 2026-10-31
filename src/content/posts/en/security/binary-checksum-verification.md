@@ -24,7 +24,7 @@ references:
 source_content_hash: eaf170a839345794a5672ee7bd3b460251db6d7a81495a8aa80a88794d9e494e
 ---
 
-Six months ago, I was writing a Dockerfile that downloaded the AWS ECR credential helper. `curl -sL`, pipe to a path, `chmod +x`, done. It worked. It passed CI. It shipped to production. And the entire time, I had no way of knowing whether the binary I downloaded was the one AWS published or something an attacker swapped in at the CDN level.
+I added SHA256 verification to a Dockerfile that downloaded the AWS ECR credential helper. Downloading with `curl -sL` and setting `chmod +x` alone does not verify whether the binary is the one AWS published or something an attacker swapped in at the CDN level.
 
 That gap between "it works" and "it's safe" is where supply chain attacks live.
 

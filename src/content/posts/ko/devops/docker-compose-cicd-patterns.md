@@ -20,9 +20,9 @@ references:
     type: official
 ---
 
-제가 작업하던 Airflow 배포에서, 파이프라인이 프로덕션 호스트에서 `docker-compose pull`을 돌리고 나서 `docker-compose up -d`를 실행했어요. 두 명령 모두 정상 종료됐는데, 정작 올라온 건 방금 ECR에 올린 새 image가 아니라 로컬에서 빌드한 옛날 image였어요. 원인은 Compose 파일에 있었어요. `image:` 대신 `build:`를 쓰고 있어서 `pull`이 가져올 게 없었고, 그래서 조용히 아무 일도 안 한 거예요.
+Airflow 배포의 Compose 파일에 `image:` 없이 `build:`만 있으면 `docker-compose pull`이 가져올 image가 없어요. 개발용 빌드와 프로덕션용 image pull 설정을 나누면 이 차이가 명확해져요.
 
-겉으로는 다 맞아 보여서 몇 시간씩 잡아먹는 부류의 실수예요. 이 글에서는 그걸 막아주는 패턴을 다뤄요. Docker Compose 파일을 개발용(`build:`)과 프로덕션용(`image:`)으로 나누는 방법, 그리고 EC2 위에서 돌아가는 Airflow 배포를 위한 CI/CD 파이프라인 전략까지 짚어볼게요.
+겉으로는 다 맞아 보여서 놓치기 쉬운 부류의 실수예요. 이 글에서는 그걸 막아주는 패턴을 다뤄요. Docker Compose 파일을 개발용(`build:`)과 프로덕션용(`image:`)으로 나누는 방법, 그리고 EC2 위에서 돌아가는 Airflow 배포를 위한 CI/CD 파이프라인 전략까지 짚어볼게요.
 
 ---
 
@@ -290,11 +290,11 @@ docker-compose -p <live-project> up -d
 
 Docker Compose CI/CD에서 가장 먼저 제대로 잡아야 할 건 `build:`와 `image:`의 구분이에요. 나머지는 전부 이 분리에서 따라와요.
 
-1. **개발용과 프로덕션용 Compose 파일은 항상 분리하세요.** 로컬 개발은 `build:`를 쓰는 `docker-compose.yml`, 프로덕션은 `image:`를 쓰는 `docker-compose.prod.yml`이에요. 둘을 섞으면 파일이 "로컬에서 빌드하라"고 말하는 탓에 `pull`이 아무 일도 안 하는 조용한 실패로 이어져요.
+1. **이 구성은 개발용과 프로덕션용 Compose 파일을 분리해요.** 로컬 개발은 `build:`를 쓰는 `docker-compose.yml`, 프로덕션은 `image:`를 쓰는 `docker-compose.prod.yml`이에요. 둘을 섞으면 파일이 "로컬에서 빌드하라"고 말하는 탓에 `pull`이 아무 일도 안 하는 조용한 실패로 이어져요.
 
 2. **ECR registry URL은 환경 변수로 주입하세요.** `ECR_REGISTRY` 패턴을 쓰면 Compose 파일이 이식성을 유지해서, 같은 파일이 어떤 AWS 계정이나 리전에서도 돌아가요. CI/CD가 `.env`에 써주면 Docker Compose가 알아서 값을 채워 넣어요.
 
-3. **프로덕션 배포에는 수동 트리거를 쓰세요.** 배포 타입을 고르는 `workflow_dispatch`(`dags`, `images`, `all`)는 main에 push하다 실수로 배포되는 걸 막아줘요. Airflow 같은 시스템에서는 container를 다시 빌드하지 않고도 DAG 변경만 배포할 수 있어서, 2분짜리 작업이 30초로 줄어요.
+3. **이 프로덕션 배포에는 수동 트리거를 써요.** 배포 타입을 고르는 `workflow_dispatch`(`dags`, `images`, `all`)는 main에 push하다 실수로 배포되는 걸 막아줘요. Airflow 같은 시스템에서는 container를 다시 빌드하지 않고도 DAG 변경만 배포할 수 있어서, 2분짜리 작업이 30초로 줄어요.
 
 4. **secret은 repository가 아니라 AWS Secrets Manager에 두세요.** CI/CD 파이프라인이 배포 시점에 secret을 가져와 대상 서버의 `.env`에 써요. 이러면 자격 증명이 git 히스토리에 남지 않고, 교체(rotation)도 간단해져요.
 

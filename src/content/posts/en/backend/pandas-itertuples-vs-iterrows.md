@@ -117,7 +117,7 @@ Use vectorized operations when:
 
 ## Takeaway
 
-Replace `iterrows()` with `itertuples(index=False)` in any performance-sensitive pandas code. The access pattern changes from `row["col"]` to `row.col` (or `getattr(row, "col", default)`), but the ~100x speedup is worth the mechanical migration. Always check if vectorized operations can replace the loop entirely before reaching for either iteration method.
+In the ~10K-row step described here, replacing `iterrows()` with `itertuples(index=False)` produced the measured improvement. The access pattern changes from `row["col"]` to `row.col` (or `getattr(row, "col", default)`), and the ~100x speedup in that step made the mechanical migration worthwhile. Always check if vectorized operations can replace the loop entirely before reaching for either iteration method.
 
 ## References
 

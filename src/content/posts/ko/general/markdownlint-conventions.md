@@ -41,7 +41,7 @@ references:
     type: official
 ---
 
-지식 베이스에 처음으로 `markdownlint`를 돌렸더니 에러 7,500개가
+지식 베이스에 `markdownlint`를 돌렸더니 에러 7,500개가
 쏟아져 나왔어요. 오타나 깨진 링크가 아니라 전부 포맷 불일치였어요. 리스트 앞뒤
 빈 줄 누락, 언어 지정 없는 코드 블록, 중복 헤딩, 스페이싱 없는 테이블. 파일마다
 자기만의 스타일이 있었고, 서로 일치하는 게 하나도 없었어요.
@@ -343,7 +343,7 @@ DavidAnson의 lib 위에 얹은 third-party preset인데, 겨냥하는 독자가
 - GH001 (no-default-alt-text), GH002 (no-generic-link-text), GH003 (no-empty-alt-text) 세 개를 추가해요
 - 함수 기반 설정인 `.markdownlint-cli2.mjs`를 써야 하고, `@github/markdownlint-github`와 `markdownlint-cli2-formatter-pretty`를 npm으로 설치해야 해요
 
-이미지가 들어가는 public OSS 문서를 내면서 접근성까지 강제해야 하는 상황이 아니면 그냥 넘어가도 돼요. 산문 위주의 사내 지식 베이스라면 마이그레이션 비용(3B 콘텐츠 기준으로 수천 개 rewrite 에러 예상)이 얻는 것보다 커요.
+산문 위주의 3B 지식 베이스에서는 마이그레이션 시 수천 개 rewrite 에러가 예상됐어요. 이 preset은 접근성 규칙을 적용하는 public OSS 이미지 문서를 겨냥해요.
 
 ## Scope 경고: 루트 설정이 항상 이기는 건 아니에요
 

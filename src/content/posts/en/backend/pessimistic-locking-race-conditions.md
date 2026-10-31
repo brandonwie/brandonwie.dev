@@ -19,9 +19,9 @@ references:
 source_content_hash: 0a9b78b88bf32db5c0c1302d5ce0d8ae2ed66b215d2b77c1bf738c5e32bcc12a
 ---
 
-We had a calendar sync endpoint that checked if a channel existed, then created it if not. It passed every test. Then two webhooks arrived at the same millisecond, both checked, both found nothing, and both tried to insert — one succeeded, the other threw a duplicate key error that cascaded into a failed sync.
+We had a calendar sync endpoint that checked if a channel existed, then created it if not. Concurrent calls could both find nothing and try to insert, causing a duplicate key error.
 
-The classic check-then-insert race condition is one of those bugs that never appears in development (single request at a time) but strikes reliably under production concurrency. This post explains how PostgreSQL's `SELECT FOR UPDATE` prevents it, why it has a subtle gap when no row exists yet, and how to build a bulletproof solution.
+The check-then-insert race can stay hidden in single-request development and surface under concurrent production calls. This post explains how PostgreSQL's `SELECT FOR UPDATE` prevents it, why it has a subtle gap when no row exists yet, and how this example combines row locking with duplicate-key handling.
 
 ---
 
@@ -117,7 +117,7 @@ async createIfNotExists(integrationId: number, calendarId: string) {
 }
 ```
 
-This two-layer defense — pessimistic lock for the common case, duplicate key catch for the edge case — is robust against any timing scenario. The lock handles the case where a row exists, and the error handler covers the case where it doesn't.
+This two-layer defense — pessimistic lock for the common case, duplicate key catch for the edge case — covers the two cases described here. The lock handles the case where a row exists, and the error handler covers the case where it doesn't.
 
 ## Lock Types
 
@@ -180,7 +180,7 @@ await manager.findOne(Entity, {
 
 ## Practical Takeaways
 
-Race conditions in check-then-insert patterns are invisible in development and reliable in production. The fix is straightforward: wrap the check and insert in a transaction with `SELECT FOR UPDATE`, and add a duplicate key error handler as a safety net for the case where no row exists to lock.
+Single-request development can hide check-then-insert races that concurrent calls expose. The fix is straightforward: wrap the check and insert in a transaction with `SELECT FOR UPDATE`, and add a duplicate key error handler as a safety net for the case where no row exists to lock.
 
 Use pessimistic locking when the operation is critical (you can't afford duplicates), contention is low (a few concurrent requests, not thousands), and the locked section is fast (no external API calls). For high-contention scenarios, consider optimistic locking with retry logic or application-level deduplication with Redis.
 

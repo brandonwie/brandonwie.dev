@@ -19,7 +19,7 @@ references:
 source_content_hash: e2de86c527992b0c7e37eea7ffe108c5335a32ab492a6641a20a8de6c4dcd167
 ---
 
-I shipped an IDOR vulnerability to production because of a question mark. Not a missing auth check, not a broken middleware -- a single `?` character in a TypeScript function signature that made `userId` optional instead of required. The code compiled, the tests passed, and for weeks a service endpoint could return any user's data to any authenticated caller who knew the right IDs.
+During manual API testing, a request returned another user's data. The root cause was a single `?` character in a TypeScript function signature that made `userId` optional instead of required. The code compiled and passed tests without `userId`, because TypeScript treats optional parameters as valid when omitted.
 
 This is the story of how I fixed it by making the compiler do the security review.
 
@@ -87,7 +87,7 @@ This change did three things at once. First, every call site that omitted `userI
 | Code review burden  | Must verify every call site  | Compiler does it for you         |
 | New developer risk  | May not know to pass userId  | Forced by signature              |
 
-The one-time cost was fixing those twelve call sites. Every one of them needed `userId` anyway -- they were getting it from the auth context and passing it through. The refactoring took an afternoon. The permanent guarantee it provides is worth infinitely more.
+The one-time cost was fixing those twelve call sites. Every one of them needed `userId` anyway -- they were getting it from the auth context and passing it through. The refactoring took an afternoon. The compiler now flags call sites that omit the required `userId`.
 
 ## The Refactoring Fear
 
@@ -105,4 +105,4 @@ Skip this pattern for **public resources** where there is no ownership concept (
 
 ## Takeaway
 
-Security constraints belong at the type level, not in conventions, comments, or code review checklists. Moving from `userId?: number` to `userId: number` is a zero-cost change that converts a runtime security concern into a compile-time guarantee. The compiler becomes your security reviewer -- and unlike human reviewers, it never forgets to check.
+For this method, making `userId` required expresses the security constraint in the type rather than relying on conventions, comments, or a review checklist alone. Moving from `userId?: number` to `userId: number` adds a compile-time check without a runtime cost. The compiler checks the required argument at typed call sites.

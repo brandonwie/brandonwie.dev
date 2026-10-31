@@ -42,7 +42,7 @@ references:
 ---
 
 Background jobs in Node.js applications -- API calls, sync operations,
-notifications -- need reliability guarantees that in-process execution cannot
+notifications -- may need reliability guarantees that in-process execution cannot
 provide. This post covers how Redis and BullMQ solve that problem, from data
 structures and threading models to error classification and dead letter queues.
 
@@ -51,7 +51,7 @@ structures and threading models to error classification and dead letter queues.
 ## The Problem
 
 Background jobs in Node.js applications (API calls, sync operations,
-notifications) need reliability guarantees that in-process execution cannot
+notifications) may need reliability guarantees that in-process execution cannot
 provide. When a server crashes mid-job, the work is lost. When an external API
 rate-limits you, there is no built-in retry. When traffic spikes, the system has
 no way to absorb and smooth out load.
@@ -603,8 +603,8 @@ The failure mode this fixes is a retry storm. A stale external event ID made the
 
 ### Layered Retry Strategy
 
-A single retry mechanism is brittle. Network blips resolve in milliseconds; API
-outages last minutes. Combine three layers, each handling a different failure
+A single retry mechanism can be brittle. Network blips resolve in milliseconds; API
+outages last minutes. The following pattern combines three layers, each handling a different failure
 duration:
 
 ```text

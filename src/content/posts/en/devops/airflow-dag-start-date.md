@@ -18,7 +18,7 @@ source_content_hash: 8431c949d9704f5f5c41d1f38a7f00db57c267c2d7f497fb435736aafe2
 expanded: true
 ---
 
-I manually triggered a backfill DAG and it showed "success" instantly — 0.02 seconds, no task logs, no Docker containers started, no Slack notifications. The DAG appeared to run but did absolutely nothing. I checked task dependencies, the Docker image, the Celery worker — everything looked fine. The problem was much simpler: the DAG's `start_date` was set to a future date.
+I manually triggered a backfill DAG and it showed "success" instantly — 0.02 seconds, no task logs, no Docker containers started, no Slack notifications. The DAG appeared to run but did absolutely nothing. The problem was much simpler: the DAG's `start_date` was set to a future date.
 
 When Airflow's trigger date falls before the DAG's `start_date`, it silently marks the run as successful without executing any tasks. No error, no warning, no indication that anything went wrong.
 
@@ -74,7 +74,7 @@ That's it. Change one line. The `start_date` just needs to be far enough in the 
 | Actual deployment date | Semantically meaningful            | May break manual triggers  |
 | Future date            | Prevents accidental scheduled runs | **Breaks manual triggers** |
 
-I recommend `datetime(2024, 1, 1)` as a standard convention across all DAGs. It's predictable, always safe, and eliminates this class of bug entirely.
+For the manually triggered DAG described here, `datetime(2024, 1, 1)` keeps the start date before the trigger date.
 
 ## Won't This Cause Unwanted Scheduled Runs?
 
@@ -82,7 +82,7 @@ No. The `start_date` primarily controls when **scheduled** runs begin, but for D
 
 ## Takeaway
 
-If an Airflow DAG shows "success" in under a second with no task logs, check the `start_date`. A future `start_date` causes Airflow to silently skip task execution on manual triggers. Set `start_date` to a safe past date like `datetime(2024, 1, 1)` across all your DAGs. Combined with `catchup=False`, this prevents both the silent-skip bug and unwanted historical runs.
+An Airflow DAG showing "success" in under a second with no task logs can point to `start_date`. A future `start_date` causes Airflow to silently skip task execution on manual triggers. In the example here, a past date such as `datetime(2024, 1, 1)`, combined with `catchup=False`, avoids the silent skip without creating historical runs.
 
 ## References
 

@@ -30,7 +30,7 @@ references:
 source_content_hash: db2cefe453f9d6969c3c97d26d0453a435fab4de38cb87b8d2a66c71f0167a92
 ---
 
-Three parsing failures turned up in the error logs of a calendar sync I worked on: `Invalid time zone: GMT+09:00`, then `unsupported RRULE parm: X-EVOLUTION-ENDDATE` from a Linux user, then `Unsupported RFC prop EXDATE` from a Google Calendar event with deleted occurrences. Three different external calendar clients, all feeding the same rrule.js parser, which expected clean RFC 5545 input.
+External calendar formats can trigger three parsing errors: `Invalid time zone: GMT+09:00`, `unsupported RRULE parm: X-EVOLUTION-ENDDATE` from GNOME Evolution, and `Unsupported RFC prop EXDATE` from Google Calendar events with deleted occurrences. They all feed the same rrule.js parser, which expects clean RFC 5545 input.
 
 The real world does not produce clean RFC 5545 input. External calendar clients -- Apple Calendar, GNOME Evolution, TripIt, airline booking apps -- each have their own interpretation of the iCalendar standard. If your backend parses recurrence rules, you need a normalization layer between the raw data and your parser.
 
@@ -86,7 +86,7 @@ I used to describe that as a harmless choice -- same offset, different city name
 
 If you want the mapping to stay faithful to a fixed offset, the `Etc/GMT±N` zones are the closer match, because they never shift. Watch the sign -- it is inverted relative to the offset by POSIX convention. The same `Intl` check reports `Etc/GMT-9` as nine hours *ahead* of UTC, and `Etc/GMT+9` as nine hours *behind*. So a `GMT+09:00` input maps to `Etc/GMT-9`, which reads wrong every single time. I did not find that inversion spelled out in the IANA timezone theory notes; I confirmed it by asking the runtime.
 
-The fallback to `Etc/UTC` when an offset is not in the table prevents a crash. It produces incorrect results for that event, but incorrect is better than a fatal error that blocks the entire sync.
+The fallback to `Etc/UTC` when an offset is not in the table prevents a crash. It produces incorrect results for that event, trading that event's correctness against avoiding a fatal error that blocks the entire sync.
 
 ---
 
@@ -178,7 +178,7 @@ This means the normalization layer must be defensive. New external calendar form
 
 ## Takeaway
 
-External calendar data is messy, and it will always be messy. Apple, GNOME, travel apps, and even Google itself produce data that deviates from what the rrule library expects. The solution is not to find a better parser -- it is to normalize the data before it reaches any parser.
+External calendar data is messy, and it will always be messy. Apple, GNOME, travel apps, and even Google itself produce data that deviates from what the rrule library expects. Here, normalization adapts the external data before it reaches the selected parser.
 
 Six principles that held up in production -- the last one only after I got it wrong first:
 

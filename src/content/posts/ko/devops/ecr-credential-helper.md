@@ -25,7 +25,7 @@ references:
 ---
 
 Airflow DockerOperator가 첫날에는 완벽하게 작동했어요. 다음 날 아침, ECR에서
-Docker 이미지를 pull하는 모든 DAG가 "authorization token has expired"로
+Docker 이미지를 pull하는 DAG가 "authorization token has expired"로
 실패했어요. ECR 토큰은 12시간 동안만 유효한데, 컨테이너 시작 시점에 한 번만
 저장해두고 있었거든요. 밤새 토큰이 만료됐고, Airflow는 갱신할 방법이
 없었어요.
@@ -184,6 +184,4 @@ helper는 할 수 있고요.
 - **IAM 역할이 없는 환경** -- Helper가 IAM 자격 증명(인스턴스 역할, 환경
   변수, AWS 설정)에 의존해요. IAM을 사용할 수 없으면 작동하지 않아요.
 
-한 번의 셋업 비용(바이너리 설치 + `config.json` 설정)은 토큰을 갱신하는
-cron job을 모니터링하고 유지하는 운영 비용에 비하면 아무것도 아니에요.
-한 번 설정하고 ECR 인증은 잊어버리세요.
+바이너리 설치와 `config.json` 설정은 한 번 필요하지만, 토큰을 갱신하는 cron job을 모니터링하고 유지하는 운영 비용은 줄어드는 절충이에요. 설정 후에는 credential helper가 ECR 인증 토큰을 필요할 때 가져와요.

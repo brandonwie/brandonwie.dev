@@ -49,11 +49,10 @@ references:
     type: official
 ---
 
-Python 코드를 작성하는 시간보다 Python 도구를 설정하는 데 더 많은 시간을
-쓰고 있었어요. 새 프로젝트를 시작할 때마다 같은 싸움을 반복했죠. pyenv vs asdf,
-pip vs Poetry, flake8 vs pylint, black vs autopep8. 여러 Python 레포지토리(ETL,
-오케스트레이션, 서비스)에 걸쳐 일관성이 없었고, 새 개발자를 온보딩할 때마다 매번
-다른 설정을 안내해야 했어요.
+Python 프로젝트에는 역할마다 별도 도구가 필요할 수 있어요. pyenv vs asdf,
+pip vs Poetry, flake8 vs pylint, black vs autopep8 같은 선택지가 있죠.
+여러 Python 레포지토리(ETL, 오케스트레이션, 서비스)에 걸친 도구 구성의
+불일치가 온보딩과 유지보수를 어렵게 했어요.
 
 어디서든 동작하는 하나의 통일된 스택이 필요했어요.
 
@@ -116,8 +115,7 @@ asdf를 제외한 모든 도구가 **Astral** 제품이에요(Rust 기반, 빠�
 | 복잡도    | 단순, pip과 유사        | 더 복잡, 올인원   |
 | asdf 호환 | 우수                    | venv 충돌 가능    |
 
-uv가 더 단순하고 빨라요. Poetry는 ETL 스크립트와 데이터 파이프라인에는
-과한 도구예요. uv가 Ruff와 같은 Astral 생태계에서 나왔기 때문에, 도구 전반의
+uv가 더 단순하고 빨라요. 여기서 다룬 ETL 스크립트와 데이터 파이프라인에는 Poetry의 고급 기능이 필요하지 않았어요. uv가 Ruff와 같은 Astral 생태계에서 나왔기 때문에, 도구 전반의
 철학이 일관적이에요.
 
 ### Ruff (Black + Flake8 + isort가 아닌 이유)

@@ -22,9 +22,9 @@ references:
 source_content_hash: 88b5444b017f7b032005907add32fb36251eacd9a193bcfa4e6b06e0dd85bc99
 ---
 
-I spent two hours debugging why my ECS tasks could not reach the RDS database, even though both resources were in the same VPC and the connection string was correct. The application logs showed connection timeouts -- not authentication failures, not DNS resolution errors, timeouts. The root cause was a missing ingress rule on the database security group. I had allowed traffic from the VPC CIDR block, but the ECS tasks were running in a different subnet range than I assumed.
+A missing ingress rule on a security group can leave an AWS resource unreachable, even when the application is configured correctly.
 
-Security groups are the most common source of "it works locally but not on AWS" problems. They are also the most common finding in AWS security audits when configured too permissively. Understanding them well is not optional -- it is the difference between debugging infrastructure issues in minutes versus hours.
+Security groups are the most common source of "it works locally but not on AWS" problems. They are also the most common finding in AWS security audits when configured too permissively. Understanding the rule model can help investigate the connectivity and exposure issues described below.
 
 ---
 
@@ -164,7 +164,7 @@ The first rule allows any IP on the internet to connect to any port on your reso
 
 ### 2. Use Security Group References
 
-When one AWS resource needs to talk to another, reference the source security group instead of hardcoding CIDR blocks.
+Where security-group references are supported, a source-group reference can avoid hardcoding changing IP ranges for service communication.
 
 ```hcl
 # Database only accepts traffic from app servers

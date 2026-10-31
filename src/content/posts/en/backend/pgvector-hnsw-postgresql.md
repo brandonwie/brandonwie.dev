@@ -59,13 +59,13 @@ Two parameters control the trade-off between speed and accuracy:
 | `m`                | 16      | Connections per node (higher = more accurate, more memory) |
 | `ef_construction`  | 64      | Search width during build (higher = better recall, slower build) |
 
-With these defaults, HNSW achieves **over 95% recall at under 100K vectors**. For most applications — internal tools, content search, recommendation features — that is more than enough. You do not need Pinecone for 50,000 embeddings.
+With these defaults, HNSW achieves **over 95% recall at under 100K vectors**. For applications such as internal tools, content search, and recommendation features, these figures give a reason to evaluate pgvector for 50,000 embeddings before adding another service.
 
 One thing to know: HNSW index builds are **synchronous**. PostgreSQL blocks writes to the table until the index finishes. At under 100K vectors this completes in seconds. At millions, you would want to plan around it.
 
 ## Schema Design That Scales
 
-Store embeddings in a **separate table** rather than adding a vector column to your main content table. A single 768-dimension embedding occupies `768 × 4 = 3,072 bytes`. If your `articles` table has 10 columns you query frequently, every `SELECT *` drags along 3KB of embedding data you rarely need.
+A **separate table** is one option for embeddings instead of adding a vector column to the main content table. A single 768-dimension embedding occupies `768 × 4 = 3,072 bytes`. If your `articles` table has 10 columns you query frequently, every `SELECT *` drags along 3KB of embedding data you rarely need.
 
 ```sql
 CREATE TABLE article_embeddings (
@@ -77,7 +77,7 @@ CREATE TABLE article_embeddings (
 
 The `content_hash` column stores a SHA256 hash of the source text. Before re-embedding, compare hashes — if the content has not changed, skip the API call. Embedding models charge per token, so deduplication saves real money over time.
 
-The tradeoff: retrieval now requires a JOIN. In practice, this is a non-issue. You search the embeddings table, get matching IDs, then fetch the full content. The JOIN cost is negligible compared to the savings on every other query that touches the main table.
+The tradeoff: retrieval now requires a JOIN. In practice, this can be a non-issue. You search the embeddings table, get matching IDs, then fetch the full content. The JOIN cost can be negligible compared to the savings on every other query that touches the main table.
 
 ## When to Reach for pgvector
 
@@ -87,4 +87,4 @@ If you are on GCP, **Cloud SQL supports pgvector** out of the box — no self-ma
 
 Skip pgvector when you need to search millions of vectors with sub-millisecond latency, or when your workload is pure vector search with no relational component. At that scale, a purpose-built vector database earns its keep.
 
-For everything else, the database you already have is the best one to use.
+For other workloads, the database already in use is one option to evaluate.

@@ -172,8 +172,7 @@ including token expiration or changes in related ACLs". 여기서 기억해 둘 
 
 ## 핵심 정리
 
-Sync parity는 있으면 좋은 게 아니라 요구사항이에요. Google UI에 맞추면 애매한
-것들이 대부분 저절로 풀려요.
+이 통합에서는 Google UI와 맞추는 것을 sync 요구사항으로 삼았어요. 그 기준으로 애매한 결정 대부분을 정리할 수 있었어요.
 
 Full sync와 incremental sync는 "응답에 없음"에 대해서만 서로 다르게 말해요.
 Orphan 감지는 모드에 따라 켜고 꺼야 해요.

@@ -18,7 +18,7 @@ source_content_hash: 18a439f407bbf02edfefc7d739b63432a62ecc2c496e0a6635c6f058129
 expanded: true
 ---
 
-I needed to add real-time notifications to a NestJS application — pushing live updates to connected clients when calendar events changed. REST polling wasn't going to cut it for the responsiveness we needed. NestJS has first-class WebSocket support through its gateway system, but the documentation spreads the key patterns across multiple pages. Here's the consolidated reference I wish I'd had when starting.
+I needed to add real-time notifications to a NestJS application — pushing live updates to connected clients. NestJS has first-class WebSocket support through its gateway system, but the documentation spreads the key patterns across multiple pages. Here's the consolidated reference I wish I'd had when starting.
 
 ## Basic Gateway Setup
 

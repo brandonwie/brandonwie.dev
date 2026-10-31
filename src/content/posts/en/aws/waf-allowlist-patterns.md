@@ -33,24 +33,24 @@ references:
 source_content_hash: 6c7e0668c659bcc2ace3b5159f8ecd6c758ce65d1412f98e534425a288d7ad3b
 ---
 
-I noticed our production API was receiving thousands of requests to paths like `/wp-admin`, `/phpmyadmin`, and `/.env`. Bots scanning for vulnerabilities, hitting every common exploit path they know. Our API returned 404s for all of them, but each request still consumed compute resources, cluttered logs, and occasionally triggered rate limiting for legitimate users.
+Requests to paths an API does not serve can be blocked before they reach the application.
 
-The fix was to flip the default: instead of allowing everything and blocking known-bad paths, block everything and allow only the routes our API serves. This is the allowlist approach to WAF configuration, and it is fundamentally stronger than the blocklist alternative.
+The approach is to flip the default: instead of allowing everything and blocking known-bad paths, block everything and allow only the routes our API serves. This is the allowlist approach to WAF configuration, and it blocks unknown paths by default, unlike the blocklist alternative, at the cost of route maintenance.
 
 ## Allowlist vs Blocklist
 
 | Approach  | Default Action | Security      | Maintenance            |
 | --------- | -------------- | ------------- | ---------------------- |
-| Allowlist | Block          | ✅ Stronger   | Must add new routes    |
-| Blocklist | Allow          | ❌ Weaker     | Must block new attacks |
+| Allowlist | Block          | Unknown paths blocked   | Must add new routes    |
+| Blocklist | Allow          | Unknown paths allowed     | Must block new attacks |
 
-With a blocklist, you are playing defense. Every new attack vector requires a new rule. Miss one, and the request reaches your application. You are always one step behind.
+With a blocklist, you are playing defense. Every new attack vector requires a new rule. Miss one, and the request reaches your application. Its coverage depends on keeping the rules current.
 
 With an allowlist, unknown routes are blocked by default. A bot scanning for `/wp-admin` gets a 403 before it touches your application. You do not need to know about the attack -- any path not in your allowlist is rejected automatically.
 
 **The recommendation:** use allowlist for APIs with known, stable routes. If your API serves `/users`, `/orders`, `/invoices`, and `/socket.io`, those are the only paths that should reach your application. Everything else is noise.
 
-The tradeoff is maintenance. Every time you add a new API route, you must also update the WAF allowlist. Forgetting to do so means the new route returns 403 in production. This is a deployment step that needs to be in your checklist, but the security benefit far outweighs the operational cost.
+The tradeoff is maintenance. Every time you add a new API route, you must also update the WAF allowlist. Forgetting to do so means the new route returns 403 in production. This is a deployment step that needs to be in your checklist, and its value depends on the security boundary and maintenance cost.
 
 ## Implementation Patterns
 
@@ -179,7 +179,7 @@ Each route category gets its own named rule. API routes are grouped in an `or_st
 
 **Pros:** Clear and maintainable. Adding a new route means adding a byte match statement to the appropriate rule. Easy to review, easy to debug. When a request is blocked, the WAF logs tell you which rule evaluated it and why.
 
-**Cons:** More rules means higher WAF cost. Each rule is $1/month. For production, the clarity is worth the cost.
+**Cons:** More rules means higher WAF cost. Each rule is $1/month. That cost can be weighed against the clarity of separate rules.
 
 ## Rule Evaluation: Terminating Allow Skips Later Rules
 
@@ -187,7 +187,7 @@ The `priority` field on each rule is not cosmetic. WAFv2 evaluates rules in asce
 
 That carries a security consequence worth calling out: allowlisted routes bypass the managed protections entirely. If you attach the OWASP or SQL-injection managed rule groups at a lower priority than your allow rule, they only ever see traffic that failed the allowlist -- never the routes you explicitly trust. Those trusted routes get lower latency because WAF short-circuits, but they also get zero managed-rule coverage.
 
-For most public API routes that is an acceptable trade: you control the handler, and the allowlist already rejected everything else. It matters most for internal or privileged endpoints -- an `/admin/*` namespace, say -- where allowlisting means managed rules and rate limiting never apply, so the application itself has to carry that protection. Factor that into the threat model before adding the allow entry.
+For public API routes, accepting that trade-off is a threat-model decision; handler ownership and rejection of unknown paths do not establish managed-rule coverage. It matters most for internal or privileged endpoints -- an `/admin/*` namespace, say -- where allowlisting means managed rules and rate limiting never apply, so the application itself has to carry that protection. Factor that into the threat model before adding the allow entry.
 
 ## Path Matching Strategies
 
@@ -202,7 +202,7 @@ search_string         = "/socket.io"
 
 Matches: `/socket.io`, `/socket.io/`, `/socket.io?EIO=4`
 
-This is the right choice for most API routes. Real requests include query parameters, sub-paths, and trailing slashes. `STARTS_WITH` handles all of these without listing every variation.
+For routes whose sub-paths should be allowed, this is one option to compare with the boundary-safe regex below. Real requests include query parameters, sub-paths, and trailing slashes. `STARTS_WITH` handles all of these without listing every variation.
 
 ### EXACTLY
 
@@ -245,7 +245,7 @@ Socket.IO deserves special attention because it uses multiple sub-paths with que
 
 The initial connection uses HTTP long-polling at `/socket.io/?EIO=4&transport=polling`, then upgrades to WebSocket at `/socket.io/?EIO=4&transport=websocket`. Both paths must be allowed for Socket.IO to function.
 
-Always use `STARTS_WITH` for Socket.IO:
+The Socket.IO example uses `STARTS_WITH`:
 
 ```hcl
 byte_match_statement {
@@ -323,7 +323,7 @@ WAF pricing is predictable but adds up with many rules:
 | Rule                  | $1 each               |
 | Request (per million) | $0.60                 |
 
-**Strategy:** Use regex consolidation in dev environments to minimize cost. Use explicit rules in production for clarity and maintainability. The difference between 2 regex rules ($7/month total) and 10 explicit rules ($15/month total) is small enough that production environments should always prioritize debuggability.
+**Trade-off:** Regex consolidation reduces rule count, while explicit rules can be easier to inspect and maintain. The example compares 2 regex rules ($7/month total) with 10 explicit rules ($15/month total), making the extra cost of separate rules visible.
 
 For high-traffic APIs, the per-request cost ($0.60 per million) is the dominant factor regardless of which pattern you choose. At 100 million requests per month, you pay $60 in request charges compared to $5-$15 in rule charges. Optimizing the number of rules matters less at scale than optimizing whether requests should reach your API at all.
 
@@ -371,7 +371,7 @@ grep -E "^[[:space:]]*\+ +search_string" plan.txt | sed -E 's/.*= "//;s/".*//' |
 Nine principles for WAF allowlist configuration:
 
 1. **Default to block.** Unknown routes should never reach your application. The allowlist approach handles this automatically.
-2. **Use STARTS_WITH for API routes.** Most routes have query parameters or sub-paths. Exact matching is too restrictive for general API paths.
+2. **STARTS_WITH is one option for API routes.** Most routes have query parameters or sub-paths. Exact matching can be too restrictive for general API paths.
 3. **Do not forget WebSockets.** Socket.IO uses multiple sub-paths with query parameters. A single `STARTS_WITH` rule on `/socket.io` covers all of them.
 4. **Use different patterns for dev and prod.** Regex consolidation saves cost in dev. Explicit rules save debugging time in prod.
 5. **Verify after every deployment.** Use the AWS CLI to confirm rules are active and check sampled requests for false positives.

@@ -18,9 +18,7 @@ references:
 source_content_hash: f6b78fc490cd6fb3273ddea4a90cb61e88221aa72eb351cd6ffe70a3bc83a551
 ---
 
-The first time I ran `terraform apply` on a real AWS account, I had no idea what half the files in my project directory were doing. There was a `.terraform.lock.hcl` I never created, a `terraform.tfstate` that appeared out of nowhere, and a `.tfvars` file someone told me to "never commit." I spent an embarrassing amount of time treating Terraform like a black box -- type the commands, hope for the best.
-
-That approach works until it does not. The moment a teammate's `terraform plan` shows different changes than yours, or you accidentally delete a state file, or you push secrets to Git inside a `.tfvars` -- that is when understanding the fundamentals pays for itself.
+Terraform projects contain files with different roles: `.terraform.lock.hcl` locks provider versions, `terraform.tfstate` tracks managed resources, and `.tfvars` supplies input values. Understanding those roles matters when a teammate's `terraform plan` differs from yours, a state file is deleted, or a `.tfvars` file contains secrets.
 
 This post covers the core files, concepts, and patterns you need to work confidently with Terraform on AWS.
 

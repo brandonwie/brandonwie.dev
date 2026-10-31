@@ -25,7 +25,7 @@ references:
 source_content_hash: c4c8b08ea7c8d4f541141981d1f6e5ca8b6b90f8e7a723b0292a40031fe2c940
 ---
 
-After deploying a classification model, how do you know when the incoming data has shifted away from what the model was trained on? If you wait for accuracy to drop, the damage is already done. You need a leading indicator — something that detects distribution drift before it affects predictions.
+After deploying a classification model, how do you know when the incoming data has shifted away from what the model was trained on? Accuracy drops are a lagging signal. A leading indicator can detect distribution drift before it affects predictions.
 
 ## Why PSI
 
@@ -37,7 +37,7 @@ The formula is straightforward:
 PSI = SUM((actual_% - expected_%) * ln(actual_% / expected_%))
 ```
 
-For each category in your classification task, you compare the proportion of requests in production (actual) against the proportion in the training set (expected). The result maps to clear thresholds:
+For each category in your classification task, you compare the proportion of requests in production (actual) against the proportion in the training set (expected). One set of screening thresholds is:
 
 | PSI Value | Interpretation                      | Action                   |
 | --------- | ----------------------------------- | ------------------------ |
@@ -87,4 +87,4 @@ PSI does **not** detect **concept drift** — when the correct labels for the sa
 
 ## Key Takeaway
 
-PSI gives you a single number that answers "has my model's input distribution changed?" It is cheap to compute, easy to understand, and catches data drift before accuracy drops. Add epsilon to avoid log(0), run it weekly on Prometheus counters, and set alerts at PSI > 0.2.
+PSI gives you a single number that answers "has my model's input distribution changed?" It is cheap to compute, easy to understand, and can catch data drift before accuracy drops (not concept drift). Epsilon avoids log(0). The weekly Prometheus job and PSI > 0.2 alert above form one monitoring configuration.

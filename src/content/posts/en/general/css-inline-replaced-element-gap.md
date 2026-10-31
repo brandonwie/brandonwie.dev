@@ -21,9 +21,9 @@ references:
 source_content_hash: a82d6048ef146b313c36c9bf372e9389d3b1b95289cef026c2708f11bd36afe4
 ---
 
-I was building a chat input component -- a textarea with a microphone button absolutely positioned in the corner. The button should have been vertically centered relative to the textarea. It was not. It sat about 3 pixels too low, and no amount of adjusting `top`, `padding`, or `margin` fixed it.
+I was building a chat input component -- a textarea with a microphone button absolutely positioned in the corner. The button should have been vertically centered relative to the textarea. It was not. It sat about 3 pixels too low.
 
-I opened DevTools, inspected the box model, and found nothing. No unexpected margin. No padding. No border. The textarea was 50 pixels tall, but its parent div was 56.5 pixels tall. Something was adding 6.5 pixels of phantom height, and the box model inspector had no explanation for it.
+The textarea was 50 pixels tall, but its parent div was 56.5 pixels tall. The extra 6.5 pixels came from baseline descender space, with no margin or padding shown in the box model inspector.
 
 This is one of the most common CSS "gotchas," and it is invisible to the tools most developers reach for first.
 
@@ -73,7 +73,7 @@ textarea {
 }
 ```
 
-**Flex container** is the best option because it changes the formatting context entirely. Flex items do not participate in inline formatting, so there is no baseline, no descender space, and no gap. This is also the most intuitive fix -- modern layouts use flex for positioning anyway.
+**Flex container** changes the formatting context entirely and fits the layout shown here. Flex items do not participate in inline formatting, so there is no baseline, no descender space, and no gap. This is also the most intuitive fix -- modern layouts use flex for positioning anyway.
 
 **Display block** works because block elements do not sit on a text baseline. But it changes the element's layout behavior in other ways (it becomes full-width by default, for example), so it may require additional adjustments.
 
@@ -117,4 +117,4 @@ The last case is subtle. Even inside a flex container, if the textarea is inside
 
 ## Takeaway
 
-When an inline-replaced element's parent is taller than the element itself and DevTools shows no margin, padding, or border, the culprit is descender space from inline formatting context. Add `display: flex` to the parent. It eliminates the baseline calculation entirely and is the most resilient fix across different layout configurations.
+When an inline-replaced element's parent is taller than the element itself and DevTools shows no margin, padding, or border, the culprit is descender space from inline formatting context. In the layout shown here, `display: flex` on the parent eliminates the baseline calculation.

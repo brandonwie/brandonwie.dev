@@ -21,7 +21,7 @@ source_content_hash: 52d68f99706157551c68913a15a1100e6b17e043c2383678b1f61515cdb
 expanded: true
 ---
 
-I noticed our Google Calendar API quota was climbing steadily, even though our active user count had plateaued. The excess calls were channel renewals — our system was renewing notification channels for users who hadn't opened the app in months. A user would stop using our app, keep using Google Calendar, and every calendar change triggered a webhook that renewed the channel for another 7 days. The loop ran indefinitely for every inactive user.
+Our system was renewing Google Calendar notification channels for inactive users. A user would stop using our app, keep using Google Calendar, and every calendar change triggered a webhook that renewed the channel. The loop ran indefinitely.
 
 The root cause was a missing distinction: webhooks from external services indicate their activity, not your user's activity. Treating them the same creates ghost user loops.
 
@@ -140,7 +140,7 @@ The simple `triggeredByWebhook` flag solved 95% of the problem with a one-line c
 
 ## Takeaway
 
-Webhooks from external services indicate their activity, not your user's. When your sync handler renews resources (channels, tokens, subscriptions) on every webhook, inactive users become perpetual resource consumers. Add a trigger source flag to distinguish webhook-initiated operations from user-initiated ones, and gate resource-intensive operations on user activity. Let resources expire naturally for inactive users — they'll be recreated when the user returns.
+Webhooks from external services indicate their activity, not your user's. When your sync handler renews resources (channels, tokens, subscriptions) on every webhook, inactive users become perpetual resource consumers. A trigger source flag can distinguish webhook-initiated operations from user-initiated ones, so resource-intensive operations can depend on user activity where appropriate. Resources that inactive users do not need can expire naturally and be recreated when the user returns; payment processing still needs the exception described above.
 
 ## References
 

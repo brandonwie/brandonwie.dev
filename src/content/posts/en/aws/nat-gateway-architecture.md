@@ -21,7 +21,7 @@ references:
 source_content_hash: 3e2632286e64f5ef2b59445ed8dbcb4c5b0ecd2bc62dff57c0521fe2a057532f
 ---
 
-My ECS containers kept failing to pull Docker images. The tasks would start, hang for 30 seconds, then crash with a timeout error. The containers were in a private subnet, and I had forgotten one thing: private subnets cannot reach the internet without a NAT Gateway. And the NAT Gateway has to be in the right place.
+ECS containers in a private subnet need an outbound path to pull Docker images. A NAT Gateway provides internet access, and it has to be in the right place.
 
 This post covers NAT Gateway placement, network flow, cost analysis, and the architectural decisions behind private subnet design.
 
@@ -54,7 +54,7 @@ The key relationship: the Internet Gateway connects the VPC to the internet, pub
 
 ## NAT Gateway Placement
 
-The single most important rule: a NAT Gateway **must be in a public subnet**. This trips up everyone at least once.
+The single most important rule: a NAT Gateway **must be in a public subnet**. The placement can be easy to misread.
 
 ### Correct Configuration
 
@@ -271,4 +271,4 @@ This is the most common pattern. The ALB accepts inbound HTTP traffic and forwar
 
 NAT Gateway architecture comes down to one principle: put the NAT Gateway where the internet access is (public subnet) and route private subnet traffic through it. The placement mistake is easy to make and produces confusing timeout errors rather than clear failure messages.
 
-For production workloads, use NAT Gateway over NAT Instance. The $30/month premium buys you managed availability, automatic scaling, and zero patching. For cost optimization, add VPC endpoints for high-volume AWS service traffic (S3 and DynamoDB are the big ones) to keep that data off the NAT Gateway entirely.
+For production workloads, NAT Gateway is an option when managed availability and lower operational overhead justify its cost. The $30/month premium buys you managed availability, automatic scaling, and zero patching. For cost optimization, add VPC endpoints for high-volume AWS service traffic (S3 and DynamoDB are the big ones) to keep that data off the NAT Gateway entirely.

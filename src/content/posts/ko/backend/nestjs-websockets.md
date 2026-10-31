@@ -20,9 +20,8 @@ references:
     type: official
 ---
 
-NestJS 앱에 실시간 알림을 붙여야 했어요. 캘린더 이벤트가 바뀌면 연결된 클라이언트
-모두에게 라이브 업데이트를 밀어주는 기능이었거든요. REST 폴링으론 원하는 반응
-속도가 안 나왔어요. NestJS는 gateway 시스템으로 WebSocket을 first-class로
+NestJS 앱에 실시간 알림을 붙여야 했어요. 연결된 클라이언트에게 라이브 업데이트를
+밀어주는 기능이에요. NestJS는 gateway 시스템으로 WebSocket을 first-class로
 지원하지만, 핵심 패턴들이 문서 여기저기 흩어져 있어요. 시작할 때 한 곳에 모아져
 있었으면 했던 레퍼런스를 정리한 글이에요.
 

@@ -33,7 +33,7 @@ references:
     type: official
 ---
 
-`terraform plan`을 돌렸는데 실제로 쓰고 있는 RDS cluster를 삭제하겠다고 나왔어요. state 파일이 AWS 실제 상태와 어긋난 거죠. AWS에는 있는데 Terraform은 모르는 리소스가 있었고, Terraform이 알고 있는 리소스 정보도 낡아 있었어요. 당황해서 `apply`를 누르는 대신, 순서가 있는 복구 절차가 필요했어요.
+AWS 실제 상태와 어긋난 Terraform state를 복구해야 했어요. AWS에는 있는데 Terraform은 모르는 리소스가 있었고, Terraform이 알고 있는 리소스 정보도 낡아 있었어요. 순서가 있는 복구 절차가 필요했어요.
 
 State drift는 state 파일이 클라우드에 실제로 존재하는 것과 맞지 않을 때 생겨요. 콘솔에서 수동으로 바꿨거나, apply가 중간에 실패했거나, state 파일이 깨진 경우가 대표적이에요. 복구는 순서대로예요. 먼저 백업하고, 피해 범위를 파악하고, 빠진 리소스를 import하고, 설정 drift를 고쳐요.
 

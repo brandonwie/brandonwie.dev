@@ -29,9 +29,9 @@ references:
 source_content_hash: b4367fbc35e0a01954a1839ea394627fcddcb70f8753130e5ff8b0f0f60ba988
 ---
 
-The first time I deployed an ECS service with autoscaling enabled, three containers started simultaneously and all tried to run database migrations at the same time. Two crashed with migration lock conflicts, and the third applied migrations out of order. It took me a full afternoon to untangle the database state.
+When an ECS service scales out, multiple containers can start simultaneously. If each runs database migrations, they can conflict.
 
-That incident taught me the most important lesson about ECS autoscaling: separation of concerns between migration tasks and service containers is not optional. Here is the architecture I use now.
+That is why the architecture below separates migration tasks from service containers.
 
 ## Migration Task Separation
 
@@ -223,8 +223,8 @@ Test during low traffic windows and have rollback commands ready. I keep a scrip
 
 Five principles for ECS autoscaling:
 
-1. **Separate migrations into their own task definition.** Never run migrations from service containers. This is not a best practice -- it is a requirement for correctness.
-2. **Use conservative scale-in cooldowns.** A 5-minute cooldown prevents the expensive flapping pattern where containers are created and destroyed in rapid succession.
+1. **Separate migration task.** In this deployment pattern, migrations finish in their own task before service containers start, avoiding concurrent migration runs from those containers.
+2. **Use conservative scale-in cooldowns.** The example uses a 5-minute cooldown to reduce rapid cycles of container creation and removal.
 3. **Calculate max capacity from database connection limits.** Start with the database, work backward to the task count. Not the other way around.
 4. **Test scaling events during low traffic.** Have rollback commands ready and monitor CloudWatch during the test.
 5. **Set CloudWatch alarms for max capacity scenarios.** If your service hits max capacity, you need to know immediately -- it means load is exceeding your planned ceiling.

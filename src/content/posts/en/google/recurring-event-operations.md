@@ -19,7 +19,7 @@ references:
 source_content_hash: 1f95df23468ce98bfde368ec0bc276da9afd28c9067efdec2c3fa86646805a2e
 ---
 
-I thought I understood recurring events after reading the Google Calendar API docs. Then I started handling real calendars and found shapes the guide never mentions -- the docs describe the happy path. This post covers the implementation patterns I ended up with for `all`, `this`, and `thisAndFollowing` operations, including the partial invitation cases I could not find documented anywhere.
+Recurring event updates need to handle partial invitations as well as the usual series shapes. This post covers the implementation patterns I ended up with for `all`, `this`, and `thisAndFollowing` operations, including the partial invitation cases.
 
 ## A Minimal Storage Model
 

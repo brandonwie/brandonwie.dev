@@ -35,9 +35,9 @@ references:
     type: official
 ---
 
-첫 ECS 배포는 GitHub Actions 로그에서 완벽해 보였어요. 초록색 체크 표시가 쭉 떠 있었죠. 그런데 실제로 도는 서비스를 확인해 보니 여전히 예전 이미지를 서빙하고 있더라고요. task definition은 등록됐는데 정작 ECS 서비스한테 그걸 쓰라고 아무도 안 알려준 거예요. 안정적인 컨테이너 배포에 이르기까지 겪은 "되는 것 같은데 실은 안 되는" 순간들, 그 첫 번째였어요.
+task definition을 등록해도 ECS 서비스가 자동으로 쓰지는 않아요. 새 이미지를 배포하려면 새 revision ARN으로 서비스를 업데이트해야 해요.
 
-Docker 컨테이너를 AWS에 배포하면서 `docker build`부터 자동 롤백이 붙은 무중단 롤링 업데이트까지 전체 파이프라인을 이해하고 싶다면, 이 글이 단계마다 짚어줘요. 문서가 미리 경고해 주지 않는 함정까지요.
+이 글에서는 `docker build`부터 무중단과 자동 롤백을 위한 롤링 업데이트까지 ECR/ECS 배포 흐름을 살펴봐요. 그 과정에서 생길 수 있는 조율 문제도 예시와 함께 정리해요.
 
 ## 문제
 
@@ -45,7 +45,7 @@ Docker 컨테이너를 AWS에 배포하면서 `docker build`부터 자동 롤백
 
 ## 직접 겪은 어려움
 
-이것들 전부 프로덕션에서 저를 힘들게 했어요:
+아래는 이 배포 흐름에서 살펴볼 주의사항이에요:
 
 - **ECR 인증은 세션 기반이에요.** Docker 로그인 토큰이 12시간 뒤 만료돼요. CI/CD 파이프라인이 푸시 전에 토큰을 갱신하지 않으면 "no basic auth credentials"라는 암호 같은 에러와 함께 조용히 실패해요.
 - **Task definition 버전 관리가 헷갈려요.** ECS는 `register-task-definition`을 호출할 때마다 새 revision을 만들지만 서비스가 자동으로 최신 revision을 선택하지 않아요. 새 revision ARN으로 서비스를 명시적으로 업데이트해야 해요.
@@ -525,7 +525,7 @@ resource "aws_lb_target_group" "app" {
 }
 ```
 
-시작이 느린 애플리케이션에는 health check grace period를 넉넉하게 잡으세요. 부팅에 30초 걸리는 NestJS 앱은 최소 60초의 grace period가 필요해요. 그렇지 않으면 ECS가 시작이 끝나기 전에 task를 종료해요.
+시작이 느린 애플리케이션에는 health check grace period를 넉넉하게 잡으세요. 부팅의 최악 시간이 30초인 NestJS 앱이라면 grace period는 그보다 길어야 해요(예: 2배인 60초). 그렇지 않으면 ECS가 시작이 끝나기 전에 task를 종료해요.
 
 ### Graceful Shutdown
 
@@ -646,10 +646,10 @@ ECR/ECS 배포는 기술 문제라기보다 조율 문제예요. 이미지 레�
 
 1. **Circuit breaker는 항상 켜 두세요.** `deployment_circuit_breaker` 없이는 잘못된 이미지가 ECS를 실패하는 task 재시도의 무한 루프에 빠뜨려요. 직접 개입할 때까지 Fargate 비용이 계속 나가고요. Terraform 한 줄이면 되는데 새벽 3시 호출을 막아줘요.
 2. **이미지는 `latest`가 아니라 git SHA로 태그하세요.** `:latest`는 편하지만 어떤 버전이 도는지 알 수 없어서 롤백이 괴로워져요. git SHA 태그(`my-app:abc123def`)를 쓰면 실행 중인 task에서 소스 커밋까지 바로 추적돼요.
-3. **Health check grace period는 넉넉하게 잡으세요.** 앱이 시작하는 데 30초가 걸리면(JVM이나 NestJS 앱이면 흔해요) grace period 10초는 무한 배포 루프를 만들어요. ECS가 task를 띄우고, 준비되기 전에 죽이고, 또 띄우고, 또 죽여요. 최악의 시작 시간의 2배 이상으로 잡으세요.
+3. **Health check grace period는 넉넉하게 잡으세요.** 앱이 시작하는 데 30초가 걸리면(JVM이나 NestJS 앱이면 흔해요) grace period 10초는 무한 배포 루프를 만들어요. ECS가 task를 띄우고, 준비되기 전에 죽이고, 또 띄우고, 또 죽여요. Grace period는 최악의 시작 시간보다 길어야 해요(예: 2배).
 4. **앱에서 SIGTERM을 처리하세요.** ECS는 롤링 업데이트 중 task를 종료하기 전에 SIGTERM을 보내요. 앱이 이 시그널을 처리하지 않으면 진행 중이던 요청이 그냥 끊겨요. 위의 Node.js graceful shutdown 패턴은 10줄이면 되고 배포 중 데이터 손실을 막아줘요.
 
-이 글의 GitHub Actions 워크플로우는 그대로 가져다 쓸 수 있는 프로덕션 출발점이에요. 클론해서 cluster와 service 이름만 바꾸면, 실패 시 자동 롤백이 붙은 무중단 배포가 완성돼요.
+이 글의 GitHub Actions 워크플로우는 무중단 배포와 자동 롤백을 위한 출발점을 보여주는 예시예요. cluster와 service 이름, 앱 시작 과정, health check, 롤백 동작은 대상 환경에 맞춰 확인할 부분이에요.
 
 ## 참고 자료
 

@@ -35,7 +35,7 @@ The instinct when building an LLM-powered feature is to jump straight to fine-tu
 
 ## The Three-Layer Architecture
 
-Think of LLM customization as three layers, where each builds on the previous. The rule is: do not jump to Layer 3 until Layers 1 and 2 are exhausted.
+One way to view LLM customization is as three layers, each building on the previous. The progression evaluates Layers 1 and 2 before investing in Layer 3.
 
 **Layer 1 — Prompt Engineering:** Zero-cost, zero-infra. System prompts, few-shot examples, chain-of-thought reasoning. This is your baseline and often gets you further than expected.
 
@@ -54,7 +54,7 @@ When you do reach Layer 3, the choice of method depends on your data and team si
 | **RLHF** (PPO)                           | Ratings → reward model → policy gradient | High                  | At scale with 1000+ rated examples        |
 | **Few-shot** (in-context)                | 2-5 examples in prompt                   | Zero (inference only) | Quick wins before any training            |
 
-For solo developers and small teams, **DPO beats RLHF**. DPO uses preference pairs directly — "this output is better than that output" — without training a separate reward model. RLHF requires a full reward model plus PPO policy gradient optimization. The compute and data requirements are significantly higher for marginal gains at small scale.
+For solo developers and small teams, **DPO is one alternative to RLHF**. DPO uses preference pairs directly — "this output is better than that output" — without training a separate reward model. RLHF requires a full reward model plus PPO policy gradient optimization. At small scale, the trade-off described here is significantly higher compute and data requirements for marginal gains.
 
 ## Where Training Signals Come From
 
@@ -93,7 +93,7 @@ SERVING (single process):
   Ollama base model + merged LoRA = one process, ~5 GB
 ```
 
-Per-task training is industry standard (OpenAI, Google Vertex AI, HuggingFace PEFT all recommend it) because data distributions differ per task, optimal hyperparameters differ, and you want independent evaluation and rollback for each task.
+Per-task training is an industry-standard option (OpenAI, Google Vertex AI, HuggingFace PEFT all recommend it) because data distributions differ per task, optimal hyperparameters differ, and you want independent evaluation and rollback for each task.
 
 **TIES-Merging** (Yadav et al., 2023) resolves parameter conflicts when combining adapters by trimming redundant parameters, resolving sign conflicts, and merging only the agreed-upon directions. HuggingFace's `mergekit` implements TIES, DARE, and linear merge methods. If the merged adapter regresses more than 5% on any eval metric, revert to the previous merge and retrain the offending task's LoRA.
 
@@ -129,7 +129,7 @@ MULTIMODAL (when you genuinely need it):
   Fine-tuning: requires multimodal training data, vision/audio encoders
 ```
 
-Most resource-constrained projects should use the cascade approach. You get multimodal capability without multimodal training cost.
+For resource-constrained projects, a cascade is one option. It offers multimodal capability without multimodal training cost.
 
 ## A Critical Caveat: Fine-Tuning Is Model-Locked
 
@@ -139,4 +139,4 @@ This is why the three-layer approach matters: Layers 1 and 2 (prompt engineering
 
 ## Key Takeaway
 
-Do not jump to fine-tuning. Exhaust prompt engineering and RAG first — they are cheaper, faster to iterate, and portable across models. When you do fine-tune, use LoRA for parameter efficiency, DPO over RLHF for small teams, and TIES-Merging when your runtime can only serve one adapter. The investment in Layer 3 should be justified by clear evidence that Layers 1 and 2 are not sufficient.
+The three-layer progression puts prompt engineering and RAG before fine-tuning as a cost-conscious option: they are cheaper, faster to iterate, and portable across models. If those layers are insufficient, the training options discussed here include LoRA for parameter efficiency, DPO as an alternative to RLHF for small teams, and TIES-Merging when the runtime can serve only one adapter.

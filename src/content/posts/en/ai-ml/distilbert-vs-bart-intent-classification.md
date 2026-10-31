@@ -26,7 +26,7 @@ references:
 source_content_hash: ea47a20123c1225c32e01b5d5b17e4ab887696bfb91afd041dbf8590e485af9f
 ---
 
-When building an intent classifier for a new domain, you have no labeled data on day one. How do you ship a working classifier immediately while building toward a domain-specific model? The answer is a two-phase deployment pattern that the industry has converged on.
+When building an intent classifier for a new domain, you have no labeled data on day one. How do you ship a working classifier immediately while building toward a domain-specific model? One approach is a two-phase deployment pattern.
 
 ## The Cold Start Problem
 
@@ -68,7 +68,7 @@ collect labeled data (corrections, golden sets)
 
 ## Why This Pattern Is Industry Standard
 
-This two-phase approach is not novel. Google uses it (start generic, collect data, specialize), Spotify applies it to content tagging (zero-shot → fine-tuned), and most enterprise ML teams follow the same progression. The pattern works because it decouples shipping from data collection — you deliver value immediately while building toward a better model in parallel.
+This two-phase approach is not novel. It has been described at Google (start generic, collect data, specialize) and Spotify (zero-shot → fine-tuned content tagging). The pattern works because it decouples shipping from data collection — you deliver value immediately while building toward a better model in parallel.
 
 ## When to Use This Pattern
 
@@ -144,4 +144,4 @@ correctness error worth avoiding.
 
 ## Key Takeaway
 
-Do not wait for perfect data to ship a classifier. Start with zero-shot (BART-MNLI), collect data through user interactions, and graduate to a fine-tuned model (DistilBERT) when you have enough examples. The two-phase pattern lets you ship on day one and improve continuously.
+The two-phase pattern allows an initial zero-shot classifier (BART-MNLI) while user interactions supply training examples. Once enough labeled examples exist, a fine-tuned model (DistilBERT) becomes the next phase to evaluate. This separates initial deployment from later improvement.

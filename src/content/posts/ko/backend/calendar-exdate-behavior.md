@@ -88,7 +88,7 @@ event 객체는 생성되지 않아요.
 
 ## Google Calendar API Passthrough 문제
 
-꼬박 하루의 디버깅이 필요했던 부분이 여기예요. Apple Calendar -> Google
+두 제공자의 신호를 함께 살펴볼 부분이 여기예요. Apple Calendar -> Google
 Calendar -> 앱으로 sync할 때:
 
 - Google이 Apple의 EXDATE를 **보존해요** (passthrough)
@@ -159,8 +159,8 @@ EXDATE 파싱은 직접 처리하세요. `parseExdates` 함수는
 
 1. **Exception event가 존재한다고 가정하지 마세요** -- Apple 삭제는
    exception event를 생성하지 않아요. 유일한 신호는 parent의 EXDATE예요.
-2. **항상 EXDATE를 파싱하세요** -- Google Calendar API를 통해 sync할 때
-   Apple 스타일 삭제를 감지하는 유일한 방법이에요.
+2. **Apple 원본이 섞이면 EXDATE도 파싱해요** -- Google Calendar API를
+   거쳐 들어오는 Apple 스타일 삭제를 감지하는 데 필요해요.
 3. **rrule.js 한계를 처리하세요** -- EXDATE를 RRULE과 별도로 파싱하세요.
    TZID가 있는 EXDATE 줄을 `rrulestr()`에 넘기지 마세요.
 4. **Google은 passthrough예요** -- Apple EXDATE가 보존되지, 변환되지

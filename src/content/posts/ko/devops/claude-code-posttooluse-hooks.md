@@ -75,14 +75,14 @@ usage[skill]["last_used"] = today
 
 **이중 카운팅 함정.** `^Skill$` → `track-skill-usage.py` hook이 전역과 프로젝트 양쪽에 있으면, skill을 한 번 호출할 때마다 카운터가 2씩 올라가요. 기존에 쌓인 수치도 약 2배로 부풀어 있을 거예요. 해결법은 hook을 전역 설정에만 두고, 프로젝트 `settings.local.json`에서는 빼는 거예요.
 
-**실행 권한은 선택이에요(그래도 줘 두세요).** `python3 ~/.claude/scripts/script.py`로 부르는 hook 스크립트는 실행 권한이 필요 없어요. Python이 파일을 직접 읽으니까요. 이 경우 shebang은 장식이에요. 그래도 일관성 측면에서, 그리고 직접 호출할 일이 생길 수 있으니 `chmod +x`는 줘 두세요.
+**실행 권한은 호출 방식에 따라 달라요.** `python3 ~/.claude/scripts/script.py`로 부르는 hook 스크립트는 실행 권한이 필요 없어요. Python이 파일을 직접 읽으니까요. 이 경우 shebang은 장식이에요. `chmod +x`를 주면 권한을 일관되게 맞추고, 나중에 스크립트를 직접 호출할 때도 쓸 수 있어요.
 
 ## 설계 결정
 
 이 구현에서 의도한 선택 몇 가지:
 
-- **로그 말고 카운터** — 빈도 분석에는 O(1) 파일 크기로 충분해요. 호출 하나하나 기록할 필요 없어요.
-- **이중 안전장치** — hook 명령에 `|| true`, Python 쪽에 빈 `except: pass`. 두 겹으로 막아서 hook이 Claude를 절대 막지 못하게 해요. 실패하는 hook은 사용자 눈에 안 보여야 해요.
+- **로그 말고 카운터** — 빈도 분석에는 O(1) 파일 크기로 충분해요. 이 빈도 분석에서는 호출 하나하나 기록할 필요가 없어요.
+- **이중 안전장치** — hook 명령에 `|| true`, Python 쪽에 빈 `except: pass`. 두 겹으로 막아서 hook이 Claude를 절대 막지 못하게 해요. 이 트래커에서는 hook 실패가 사용자 눈에 보이지 않게 해요.
 - **무의존성** — Python 표준 라이브러리(`json`, `sys`, `os`)만 써요. pip install도, 가상환경도 필요 없어요.
 - **이식성** — 스크립트가 `~/.claude/scripts/`(실행 위치)와 `global-claude-setup/scripts/`(부트스트랩) 양쪽에 있어서, setup만 돌리면 새 머신에서도 바로 써요.
 
@@ -91,7 +91,7 @@ usage[skill]["last_used"] = today
 - matcher는 `tool_name`에 대해 테스트하는 regex — skill 호출만 잡으려면 `^Skill$`
 - PostToolUse 항목이 여러 개 있어도 돼요. 매칭되는 건 전부 발동해요
 - hook 명령은 사용자 shell에서 실행돼요(macOS면 zsh)
-- 항상 `|| true`를 붙여서 hook 실패가 Claude를 막지 않게 하세요
+- 이 트래커는 실패가 Claude를 막지 않도록 `|| true`를 붙여요
 - 병합으로 인한 이중 발동을 피하려면 hook은 한쪽 설정에만 두세요
 
 ## 정리

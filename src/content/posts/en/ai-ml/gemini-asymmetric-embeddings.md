@@ -45,9 +45,9 @@ references:
 source_content_hash: 638396d439f2463c92c063bbbf5f2ce514f144f5832dad58766e743988d044e4
 ---
 
-I was building a RAG pipeline and my retrieval quality was mediocre. Queries like "how do I handle database migrations" would come back with tangentially related documents instead of the ones that actually answered the question. I was embedding both sides the same way, one call with no distinction between a question and a passage, and that was the bottleneck.
+Queries and documents play different roles in a RAG pipeline. Embedding both sides the same way makes no distinction between a question and a passage.
 
-Encoding the two sides differently fixed it. Here is how that works, and a correction to what I first wrote about it.
+Here is how encoding the two sides differently works, and a correction to what I first wrote about it.
 
 Start with the models, because they moved. I wired this up with `text-embedding-004`, which is on its way out on both of Google's surfaces. The Gemini API [shut it down in January 2026](https://ai.google.dev/gemini-api/docs/deprecations), and Vertex AI lists it for retirement on 2027-04-01. So the code below uses `gemini-embedding-001`, which carries the same `task_type` mechanism and a Vertex retirement date of "No sooner than May 20, 2028." The two surfaces keep separate calendars, though: the Gemini API lists that same model for shutdown on 2028-05-14. Read the date for the surface you actually call, not the one you happened to find first.
 
@@ -110,7 +110,7 @@ def prepare_document(content, title="none"):
     return f"title: {title} | text: {content}"
 ```
 
-Same asymmetry, different surface. The newer model also raises the input limit to 8,192 tokens and takes multimodal input rather than text alone. Its output is "already L2 normalized for non-default dimensions (unlike `gemini-embedding-001`)," so the manual normalization step above goes away. If you are starting a pipeline today, that is the path; `task_type` is what you keep for an index you already built on `gemini-embedding-001`.
+Same asymmetry, different surface. The newer model also raises the input limit to 8,192 tokens and takes multimodal input rather than text alone. Its output is "already L2 normalized for non-default dimensions (unlike `gemini-embedding-001`)," so the manual normalization step above goes away. For a new pipeline, these differences make `gemini-embedding-2` worth evaluating; `task_type` remains relevant to an index already built on `gemini-embedding-001`.
 
 One batching difference is worth a note before you port an indexing loop over. On the Gemini API, [the embeddings guide](https://ai.google.dev/gemini-api/docs/embeddings) says `gemini-embedding-001` gives you individual embeddings for a list of strings while `gemini-embedding-2` "produces a single aggregated embedding for multiple inputs," and points you at the Batch API when you want many embeddings at once. A loop that passed a list and got a list back would quietly collapse a whole batch into one vector.
 

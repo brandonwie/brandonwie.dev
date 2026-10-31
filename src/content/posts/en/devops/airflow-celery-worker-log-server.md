@@ -121,7 +121,7 @@ Click "View Log" on any task — you should see the full task output instead of 
 
 ## Takeaway
 
-When Airflow task logs show "No host supplied," the issue is almost certainly a missing `WORKER_LOG_SERVER_HOST` configuration on the worker, not a network problem. Set the worker hostname explicitly, make sure the master can resolve it via `extra_hosts`, and open port 8793 between the machines. The three settings that must align are: container `hostname`, `WORKER_LOG_SERVER_HOST`, and the master's `extra_hosts` DNS mapping.
+In the Docker/CeleryExecutor setup above, "No host supplied" came from a missing `WORKER_LOG_SERVER_HOST` configuration on the worker rather than a network problem. Set the worker hostname explicitly, make sure the master can resolve it via `extra_hosts`, and open port 8793 between the machines. The three settings that must align are: container `hostname`, `WORKER_LOG_SERVER_HOST`, and the master's `extra_hosts` DNS mapping.
 
 ## References
 

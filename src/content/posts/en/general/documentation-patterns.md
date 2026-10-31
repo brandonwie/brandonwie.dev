@@ -25,9 +25,9 @@ references:
 source_content_hash: 8c4ff53bed570f7fcd59b64d5123c3d36fcc4344013c4acbbe220b8db6f68df8
 ---
 
-I used to finish a two-hour coding session with Claude, close the terminal, and realize a week later that I had solved a tricky problem during that session but could not remember how. The decision rationale was gone. The debugging insight was gone. The useful API reference I stumbled on -- gone. All of it evaporated the moment the session ended.
+When a coding session with Claude ends, decision rationale, debugging insights, and useful API references can disappear with the session context.
 
-This happened enough times that I built a system to stop the bleeding. I call it the Buffer Pattern, and it has become the single most valuable piece of my documentation workflow.
+I use the Buffer Pattern to capture those discoveries and process them into journals and knowledge files.
 
 ## The Problem: Sessions End, Context Disappears
 
@@ -56,7 +56,7 @@ That failure mode is not new, and it is not specific to AI tooling. Michael Nyga
 
 ## The Solution: Write to a Buffer Immediately
 
-The Buffer Pattern is dead simple. When something important happens during a session, you write it to a single persistent file immediately. Not at the end of the session. Not when you remember. Right now, the moment it happens.
+The Buffer Pattern captures an important session event in a single persistent file when it happens, then leaves organization for later.
 
 At the end of the session, you process the buffer entries into permanent notes and clear the file for next time.
 
@@ -146,7 +146,7 @@ Third, it survives session boundaries. The file is on disk. It does not depend o
 
 ## Takeaway
 
-If you do AI-assisted development and you are not capturing insights during the session, you are leaking value every time you close the terminal. The fix is a single markdown file and a habit: when something important happens, write three lines immediately. Process them later. The twenty seconds per entry saves hours of re-derivation across weeks and months.
+For AI-assisted development, a single Markdown buffer can retain session insights. This pattern uses an immediate three-line entry when something important happens, then processes it later. The stated time tradeoff is twenty seconds per entry against hours of re-derivation across weeks and months.
 
 The buffer file is the safety net. Everything else -- journals, knowledge bases, documentation -- is built on top of what the buffer catches.
 

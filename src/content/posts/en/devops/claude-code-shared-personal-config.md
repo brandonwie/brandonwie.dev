@@ -35,11 +35,9 @@ references:
 > the two-profile examples as examples, not as a description of my current
 > machine.
 
-I spent weeks tuning Claude Code instructions for my project: custom commands,
-domain-specific prompts, coding conventions. Then a new developer joined the
-team, cloned the repo, and got zero AI assistance. My entire configuration was
-gitignored because it contained personal symlinks to my knowledge management
-system.
+A new developer joining the team needed shared Claude Code instructions.
+My personal symlinks to 3B were gitignored, so those instructions were
+unavailable to developers cloning the repository.
 
 The fix is a two-layer architecture: shared instructions committed to the repo
 so new developers get working AI out of the box, and personal extensions

@@ -24,7 +24,7 @@ references:
     type: official
 ---
 
-ECS 서비스를 배포하고, task definition을 설정하고, 컨테이너가 정상인 걸 확인했는데 -- 아무것도 접근이 안 됐어요. 에러도 없고, 타임아웃 메시지도 없고, 그냥 침묵이었어요. 코드, 환경 변수, DNS를 한 시간 동안 확인한 뒤에야 security group에 애플리케이션 포트의 ingress 규칙이 없다는 걸 깨달았어요. 규칙 하나 누락, 도움 되는 에러 메시지 제로.
+애플리케이션을 올바르게 설정해도 security group의 ingress 규칙이 빠지면 AWS 리소스에 접근할 수 없어요.
 
 Security group은 "로컬에서는 되는데 AWS에서는 안 되는" 문제의 가장 흔한 원인이고, 트래픽을 차단할 때 로그를 남기지 않아요.
 
@@ -137,7 +137,7 @@ ingress {
 
 ### 2. Security Group 참조 사용
 
-서비스 간 통신에는 CIDR 블록보다 항상 security group 참조를 사용하세요:
+Security group 참조를 지원하는 환경에서는 서비스 간 통신에 바뀌는 IP 범위를 하드코딩하지 않는 방법으로 사용할 수 있어요:
 
 ```hcl
 # 데이터베이스는 앱 서버에서만 트래픽 허용
@@ -285,8 +285,8 @@ resource "aws_security_group" "alb" {
 ## Terraform에서 Inline vs Standalone 규칙
 
 Terraform으로 security group 규칙을 관리하는 방법은 두 가지예요. 어떤 방식을
-선택하느냐에 따라 state drift가 발생할 수 있어요. 저도 직접 겪었는데 --
-`terraform plan`이 AWS 콘솔에서 직접 추가한 개발자 IP를 삭제하려 했어요.
+선택하느냐에 따라 state drift가 발생할 수 있어요. 예를 들어
+`terraform plan`이 AWS 콘솔에서 직접 추가한 개발자 IP를 삭제 대상으로 표시할 수 있어요.
 security group에 inline ingress 블록이 하나라도 있으면, Terraform이 모든
 ingress 규칙의 소유권을 가져가거든요.
 
@@ -383,7 +383,7 @@ telnet <ip> <port>  # 대안
 
 Security group은 두 가지를 내재화하면 간단해요: stateful이라서 응답이 자동이고, 인바운드 거부/아웃바운드 허용이 기본값이에요.
 
-서비스 간 규칙에는 항상 CIDR 블록 대신 security group 참조를 사용하세요. CIDR 블록은 배포나 스케일링 이벤트 중에 IP가 바뀌면 깨져요. Security group 참조는 이걸 자동으로 처리해요.
+서비스 간 규칙에서 security group 참조를 지원한다면 CIDR 블록과 비교할 수 있는 선택지예요. CIDR 블록은 배포나 스케일링 이벤트 중에 IP가 바뀌면 깨져요. Security group 참조는 이걸 자동으로 처리해요.
 
 연결 문제를 디버깅할 때는 다른 것보다 security group부터 확인하세요. AWS 네트워크 문제의 가장 흔한 원인이고, 기본적으로 로그 출력이 전혀 없어요. 트러블슈팅이 필요할 수 있는 환경에는 VPC Flow Logs를 활성화해 두세요.
 

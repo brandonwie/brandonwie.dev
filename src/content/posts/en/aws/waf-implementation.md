@@ -30,7 +30,7 @@ references:
 source_content_hash: dfeb4da8f1a27b251277af26bee67352a2fc27ec0de89434358e7c8863aaebc7
 ---
 
-A public API sitting behind an ALB was getting hit by scanners probing for WordPress admin panels, `.env` files, and Spring Boot actuator endpoints -- none of which existed on the service. The requests were harmless in that they all returned 404, but they generated log noise, consumed ALB capacity, and made it harder to spot real issues on monitoring dashboards. What I wanted was a way to say "if a request is not for a known endpoint, drop it before it reaches the application."
+AWS WAF can drop requests for unknown endpoints before they reach the application.
 
 That is the allowlist approach to AWS WAF: instead of trying to enumerate every possible attack pattern (blocklist), you define which paths are legitimate and block everything else. This post walks through the architecture, the rules, and the operational procedures the approach needs.
 
@@ -188,4 +188,4 @@ The most notable difference: dev allows the `/api` Swagger documentation path so
 
 The allowlist approach inverts the typical WAF mental model. Instead of asking "what should I block?" you ask "what should I allow?" This is more work upfront -- you need to enumerate every legitimate path -- but it provides stronger default security. Unknown paths are blocked without you having to predict every possible attack vector.
 
-The ongoing cost is discipline: every new API route needs a corresponding WAF rule update. Build that into your deployment checklist, and the allowlist approach becomes a reliable layer of defense that costs less than $25 a month for production-grade protection.
+The ongoing cost is discipline: every new API route needs a corresponding WAF rule update. Build that into your deployment checklist. The roughly $23 monthly figure belongs to the example configuration and request volume, rather than a general price or protection guarantee.

@@ -30,9 +30,9 @@ references:
     type: authoritative
 ---
 
-I dropped Recharts into a dark-themed dashboard and every chart rendered with white grid lines, a bright tooltip, and invisible axis labels. The defaults assume a light background. Recharts uses inline styles on SVG elements, not CSS classes, so you cannot fix this with a global stylesheet. Every color must be passed as a prop.
+Recharts' defaults can produce white grid lines, a bright tooltip, and invisible axis labels on a dark-themed dashboard. The defaults assume a light background. Recharts uses inline styles on SVG elements, not CSS classes, so you cannot fix this with a global stylesheet. Every color must be passed as a prop.
 
-This post covers the specific overrides needed to make Recharts look native in a dark UI -- custom tooltips, gradient fills, axis styling, and the gotchas that burned hours of debugging time.
+This post covers the specific overrides needed to make Recharts look native in a dark UI -- custom tooltips, gradient fills, axis styling, and the gotchas I found.
 
 ## The Core Problem
 

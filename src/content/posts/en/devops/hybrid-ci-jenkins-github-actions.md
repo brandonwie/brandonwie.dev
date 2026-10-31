@@ -39,7 +39,7 @@ references:
 source_content_hash: 4433f3f5d04a9270fa7614b3c8381fee447b64af5ec141e9f4da8580b836b23a
 ---
 
-For a personal repo with polyglot services — Python, Go, Rust, and TypeScript — which CI system should you use? The naive answer is "pick one." The better answer is: use both, each for what it was designed for.
+For a personal repo with polyglot services — Python, Go, Rust, and TypeScript — which CI system fits? One option is to use both, each for the work it was designed for.
 
 ## The Split Principle
 

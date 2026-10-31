@@ -23,7 +23,7 @@ references:
 
 Amplitude export 파일에 `gzip.decompress()`를 호출했더니 알 수 없는
 에러가 났어요. 파일 이름이 `*.json.gz`여서 당연히 gzip 압축된 JSON이라고
-생각했는데, 아니었어요. 30분 디버깅 후에 첫 바이트를 hex-dump 해보니
+생각했는데, 아니었어요. 첫 바이트를 hex-dump 해보니
 `PK`가 나왔어요 -- GZIP이 아니라 ZIP 파일의 magic bytes였어요.
 
 Amplitude Export API는 `.json.gz` 확장자를 가진 파일을 반환하는데, gzip

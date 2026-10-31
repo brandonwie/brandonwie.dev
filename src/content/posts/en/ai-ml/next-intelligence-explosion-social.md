@@ -22,7 +22,7 @@ references:
 
 The singularity narrative has a clean arc: make one mind smarter, repeat until it rewrites reality. A new paper from Google's Paradigms of Intelligence team — James Evans, Benjamin Bratton, and Blaise Agüera y Arcas — challenges that story head-on. Their argument: every major intelligence explosion in history emerged not from upgrading individual cognitive hardware, but from new forms of social organization. AI will be no different.
 
-The paper is called "Agentic AI and the next intelligence explosion," and reading it shifted how I think about what we're actually building when we build AI systems.
+The paper is called "Agentic AI and the next intelligence explosion."
 
 ---
 
@@ -54,7 +54,7 @@ The paper extends this to AI agents:
 | **Centaur** | Human + AI collaborate | Combines complementary strengths | Requires good collaboration design |
 | **Multi-centaur** | Many humans + many AIs | Scales collective intelligence | Requires institutional coordination |
 
-The key configurations: one human directing many agents, one AI serving many humans, or many of each collaborating in shifting arrangements. The bottleneck is never the individual intelligence — it's the quality of the collaboration protocol.
+The key configurations: one human directing many agents, one AI serving many humans, or many of each collaborating in shifting arrangements. The paper's framing shifts attention from individual intelligence to the quality of collaboration protocols.
 
 ## Agent Institutions, Not Just Alignment
 
@@ -70,13 +70,13 @@ This is a fundamental shift from alignment-as-training to alignment-as-governanc
 
 Reading this paper, I kept connecting it to something I see at the practitioner level. More and more people building with AI are talking about the importance of harness design — how you structure the collaboration between human and AI, how you configure the tools, how you design the feedback loops.
 
-The paper is making the same argument at an institutional scale. The intelligence of the system isn't determined by how smart any single agent is. It's determined by how the collaboration is structured. Configuration files, prompt architectures, tool permissions, review protocols — these are the constitutional infrastructure of human-AI systems.
+The paper is making the same argument at an institutional scale. In that framing, the structure of collaboration is central to the system's intelligence. Configuration files, prompt architectures, tool permissions, review protocols — these are the constitutional infrastructure of human-AI systems.
 
 As Claude put it when I was working through this paper:
 
 > "The real AI infrastructure challenge isn't compute — it's constitutional design."
 
-Hard to argue with that.
+That comparison connects harness design with the paper's institutional framing.
 
 ---
 

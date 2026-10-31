@@ -20,7 +20,7 @@ references:
 source_content_hash: eb1bda6bbf87c318b2d8db21622d5c212dccc5b76a2b8ad995c31bedb36974fe
 ---
 
-I was halfway through a complex refactoring session when Claude started losing track of files I had just read. The context window was running out, and I could not figure out why — until I ran `/doctor` and saw the numbers.
+I ran `/doctor` and found that unused MCP integrations were consuming about 71K tokens before I called their tools.
 
 ## The Hidden Cost of MCP Integrations
 
@@ -42,7 +42,7 @@ That is roughly 7% of a 1M context window spent on tool definitions alone. For s
 
 ## The Fix: Disconnect by Default, Enable on Demand
 
-The solution is straightforward — disconnect all Anthropic-hosted integrations you do not actively use, and re-enable them only when needed:
+One option is to disconnect Anthropic-hosted integrations you do not actively use, then re-enable them when needed:
 
 1. Run `/mcp` in Claude Code
 2. Disconnect integrations you are not using this session
@@ -71,4 +71,4 @@ It matters less for quick sessions or when you are specifically doing Sentry tri
 
 ## Key Takeaway
 
-Context window space is a finite resource. Tool schemas are loaded eagerly, not lazily — they cost tokens whether you use them or not. Audit your MCP integrations with `/doctor` or `/mcp`, disconnect what you do not need for the current session, and reclaim that budget for actual work.
+Context window space is a finite resource. Tool schemas are loaded eagerly, not lazily — they cost tokens whether you use them or not. `/doctor` or `/mcp` can show which integrations consume that budget; disconnecting unused ones trades reconnection friction for more space.

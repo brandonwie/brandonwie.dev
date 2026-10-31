@@ -23,8 +23,7 @@ references:
 
 Airflow DAG에 Slack 알림을 붙였어요. 실패 알림은 잘 왔는데 성공 알림은 한 번도
 안 왔어요. DAG는 멀쩡히 돌고 모든 task가 success로 끝나는데, 알림만 안 오는
-거예요. Slack webhook도 확인하고, callback 함수도 검증하고, task 로그도 다
-훑어봤어요. 다 정상이었어요. 문제는 DAG 수준 `on_success_callback` 자체였어요.
+거예요. 문제는 DAG 수준 `on_success_callback` 자체였어요.
 Airflow 2.11.0에서 이게 조용히 무시되고 있었어요.
 
 에러도 없고 경고도 없어요. callback 파라미터는 군말 없이 받아주고, 모든 task가
@@ -69,7 +68,7 @@ task 수준 callback은 성공/실패 둘 다 안정적으로 동작해요. 성�
 
 - DAG 수준 `on_failure_callback`은 **동작했어요**(task 실패 시).
 - DAG 수준 `on_success_callback`은 **동작하지 않았어요**(조용히 무시됨).
-- 성공 알림은 DAG의 마지막 task에 callback으로 붙이세요.
+- 이 구성에서는 성공 알림 callback을 DAG의 마지막 task에 붙여서 우회했어요.
 - Airflow 2.11.0에서 확인된 동작이고, 다른 2.x 버전에서도 같을 가능성이 높아요.
 
 ## 실제 패턴
@@ -127,7 +126,7 @@ Airflow 성공 알림이 안 온다면, 우선 DAG 수준에 걸려 있는지 �
 `on_success_callback`을 파이프라인 마지막 task로 옮기는 건 한 줄 변경이고,
 2.11.0에서 겪은 침묵은 이걸로 우회됐어요. 지금 제가 쓰는 규칙은 이래요. 실패
 callback은 DAG 수준(`default_args` 경유)에, 성공 callback은 task 수준(마지막
-task)에 두세요.
+task)에 두고 있어요.
 
 ## References
 

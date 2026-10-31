@@ -26,7 +26,7 @@ source_content_hash: 2be054a01cd4bb23ff9a62b5e53da863e06891189c9b03206155fc56947
 expanded: true
 ---
 
-I was building a sync-relevance guard that checked which DTO fields the client actually sent, so the service could skip unnecessary Google Calendar API calls. The logic was simple: iterate `Object.keys(dto.detail)` and see if any Google-relevant fields are present. It worked in unit tests with plain objects. Then I tested it with a real HTTP request, and every single field showed up as "present" — even fields the client never sent. The culprit was `class-transformer`'s `plainToInstance()` interacting with a TypeScript compiler change that happened in ES2022.
+I was building a sync-relevance guard that checked which DTO fields the client actually sent, so the service could skip unnecessary Google Calendar API calls. The logic was simple: iterate `Object.keys(dto.detail)` and see if any Google-relevant fields are present. During manual testing, every single field showed up as "present" — even fields the client never sent. The culprit was `class-transformer`'s `plainToInstance()` interacting with a TypeScript compiler change that happened in ES2022.
 
 ## The Problem
 

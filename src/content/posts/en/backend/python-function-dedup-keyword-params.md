@@ -24,7 +24,7 @@ source_content_hash: a1b542f23c6c6fbb135bce1464ed479275b073a31edadfdbfad3157f191
 expanded: true
 ---
 
-I needed to fix a bug in an ETL pipeline's S3 upload function and realized the exact same bug existed in a second copy of the function in a different module. One handled regular automated exports, the other manual backfills. They were 90% identical — the only differences were the S3 prefix and whether to extract data from a ZIP archive. Classic copy-paste duplication, and fixing the bug twice was the nudge I needed to merge them.
+I needed to fix a bug in an ETL pipeline's S3 upload function and realized the exact same bug existed in a second copy of the function in a different module. One handled regular automated exports, the other manual backfills. The only differences were the S3 prefix and whether to extract data from a ZIP archive. Classic copy-paste duplication, and fixing the bug twice was the nudge I needed to merge them.
 
 ## The Problem
 
@@ -104,8 +104,8 @@ The decision of whether to merge functions depends on how much they share:
 
 | Condition                     | Action                                  |
 | ----------------------------- | --------------------------------------- |
-| Functions are >80% identical  | Merge with params                       |
-| Behavioral diff is 1-3 flags  | Use keyword-only params                 |
+| Functions are >80% identical  | Consider merging with params                       |
+| Behavioral diff is 1-3 flags  | Consider keyword-only params                 |
 | Behavioral diff is structural | Keep separate (different abstractions)  |
 | Functions are in same module  | Probably already should be one function |
 | Functions are cross-module    | Move to shared module, import from both |
@@ -125,13 +125,13 @@ I chose keyword-only parameters because the behavioral delta was exactly 2 flags
 
 Merging isn't always the right call:
 
-- **Structural behavioral differences** — if two functions share less than ~80% of their logic, merging creates a function full of conditional branches that's harder to read than two separate functions
-- **More than 3 behavioral flags** — too many keyword-only params signal the functions are different abstractions; consider the Strategy pattern instead
+- **Structural behavioral differences** — if two functions share less than ~80% of their logic, merging can create a function full of conditional branches that's harder to read than two separate functions
+- **More than 3 behavioral flags** — too many keyword-only params can signal that the functions are different abstractions; consider the Strategy pattern instead
 - **Temporary/throwaway code** — if one path will be deleted soon (e.g., a one-time backfill), the refactoring effort is wasted
 
 ## Takeaway
 
-When you find two near-identical functions with 1-3 behavioral differences, merge them using Python's `*` separator to add keyword-only parameters for the differences. Set defaults to match the original "primary" path so existing callers don't need any changes. The result: one source of truth for bug fixes, explicit intent at every call site, and no risk of the two implementations drifting apart.
+For two near-identical functions with 1-3 behavioral differences, Python's `*` separator offers one way to name those differences with keyword-only parameters. Set defaults to match the original "primary" path so existing callers don't need any changes. The result: one source of truth for bug fixes, explicit intent at every call site, and no risk of the two implementations drifting apart.
 
 ## References
 

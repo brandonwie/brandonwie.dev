@@ -29,7 +29,7 @@ references:
 source_content_hash: 21f1cbf359580edfd38136f7cf8c8cad7c7e769c378f33157685dcdd48ccf652
 ---
 
-I kept running `npx shadcn-ui init` every time I started a new Vite project, watching it scaffold a `components.json`, rearrange my folder structure, and install a dozen packages I did not ask for. Then one day the CLI broke something in my existing Tailwind config and I spent an hour fixing it. That was the last time I used the CLI. Here is how to set up shadcn/ui manually -- and why doing it by hand is worth the five extra minutes.
+I set up shadcn/ui manually in a Vite + Tailwind project, installing the dependencies and selected primitives without CLI init. Here is how the pieces fit together.
 
 ## What shadcn/ui Is (and Isn't)
 
@@ -177,4 +177,4 @@ The manual approach takes about five minutes. You install three packages, write 
 
 shadcn/ui's manual setup is four steps: install dependencies, create `cn()`, register the animate plugin, and define CSS variables. The CLI hides these steps behind automation, but the automation is fragile when your project deviates from the happy path. Understanding what each piece does -- `clsx` for conditionals, `tailwind-merge` for deduplication, `cva` for variants, `react-slot` for polymorphism -- makes debugging component issues straightforward instead of mysterious.
 
-Start manual. If you find yourself doing it ten times a week, then consider the CLI.
+Manual setup is one starting point; if it becomes a task you repeat ten times a week, the CLI is another option.

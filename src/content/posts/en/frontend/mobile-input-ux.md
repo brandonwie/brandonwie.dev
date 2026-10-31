@@ -27,7 +27,7 @@ source_content_hash: c8fca86de98d7330be026752eb5f41d66f32b9ca6ee5e79507aa2c71694
 
 I built a terminal-style input for my blog -- the kind with a blinking block cursor and monospaced text that looks like a command prompt. On desktop, it worked perfectly. On my phone, tapping the input did nothing. No keyboard appeared, no focus was triggered, and the cursor sat there blinking at nobody.
 
-What followed was a multi-day debugging session across iOS Safari, Android Chrome, and Chrome DevTools (which, as I learned, does not accurately simulate mobile touch behavior). Every fix uncovered a new problem. This post covers every trap I fell into so you can skip the part where you question your career choices.
+Chrome DevTools does not accurately simulate mobile touch behavior. This post covers the traps I found while fixing the input on mobile Safari.
 
 ---
 
@@ -172,4 +172,4 @@ This hidden-input-plus-overlay approach makes sense for:
 
 Desktop browser testing does not catch mobile input bugs. Chrome DevTools responsive mode simulates viewport sizes but does not replicate iOS Safari's touch event routing or auto-zoom behavior. The only reliable test is a real device.
 
-If you are building a custom-styled input that needs to work on mobile, budget extra time for these platform-specific quirks. The five properties in the table above represent five separate debugging sessions. Save yourself the trouble and start with all of them.
+If you are building a custom-styled input that needs to work on mobile, budget extra time for these platform-specific quirks. The five properties in the table above represent five separate debugging sessions. These properties record the fixes used for this hidden-input implementation.

@@ -23,7 +23,7 @@ source_content_hash: b21e4b0c5f5b18ca96f4ccb62a23f0956dc2508b704014c5c84f7112e23
 
 Picture an Airflow cluster with a master node and two worker nodes, each on its own EC2 instance with its own local disk. A developer updates a DAG file on the master, the scheduler picks up the new version and dispatches a task to a worker -- and the task fails. The worker is still running the old version of the DAG. The file exists on the master's local disk, but each worker keeps its own separate copy, and nothing syncs them.
 
-This is the exact problem that EFS solves: shared storage across multiple EC2 instances. But EFS is not the answer for everything. Databases on EFS perform terribly, and the cost is 4x higher per gigabyte than EBS. Understanding which storage type to use for which workload prevents both outages and wasted money.
+This is the exact problem that EFS solves: shared storage across multiple EC2 instances. But EFS is not the answer for everything. EFS's network I/O can be a poor fit for latency-sensitive databases, and the cost is 4x higher per gigabyte than EBS. Understanding which storage type to use for which workload prevents both outages and wasted money.
 
 ---
 
@@ -194,4 +194,4 @@ The rule of thumb is straightforward:
 - **EBS** for single-instance data: databases, container runtimes, logs, anything that needs fast I/O
 - **EFS** for shared files: code, configuration, anything that multiple instances need to read simultaneously
 
-Protect EBS with automated snapshots -- it holds data that cannot be reconstructed. Treat EFS as ephemeral -- it holds code that exists in Git. If you find yourself wondering whether a workload belongs on EBS or EFS, ask two questions: Does more than one instance need to access this? Does it need sub-millisecond latency? If the answer to the first question is yes, use EFS. If the answer to the second question is yes, use EBS. If both answers are yes, you need to rethink your architecture.
+Protect EBS with automated snapshots -- it holds data that cannot be reconstructed. In the Airflow layout above, EFS holds code that can be restored from Git. Two questions help frame this comparison: Does more than one instance need access? Does it need sub-millisecond latency? Shared access points toward EFS and low latency toward EBS in this layout; needing both calls for another look at the architecture rather than treating these two questions as a complete selection rule.

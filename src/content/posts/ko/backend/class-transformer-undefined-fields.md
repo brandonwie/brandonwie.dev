@@ -30,9 +30,8 @@ references:
 클라이언트가 실제로 보낸 DTO 필드만 골라내는 sync-relevance guard를 만들고
 있었어요. 서비스가 불필요한 Google Calendar API 호출을 건너뛰게 하려는
 목적이었죠. 로직은 간단했어요. `Object.keys(dto.detail)`을 돌면서 Google 관련
-필드가 들어와 있는지 확인하는 거였거든요. 평범한 객체로 짠 unit test에선 잘
-돌았어요. 그런데 실제 HTTP 요청으로 테스트하니까 모든 필드가 "보냈음"으로
-잡혔어요. 클라이언트가 보낸 적도 없는 필드까지요. 범인은 `class-transformer`의
+필드가 들어와 있는지 확인하는 거였거든요. 수동으로 테스트하니까 모든 필드가
+"보냈음"으로 잡혔어요. 클라이언트가 보낸 적도 없는 필드까지요. 범인은 `class-transformer`의
 `plainToInstance()`였고, ES2022에서 바뀐 TypeScript 컴파일러 동작과 맞물려
 있었어요.
 

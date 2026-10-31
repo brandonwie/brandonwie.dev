@@ -30,7 +30,7 @@ references:
 
 ## 분류 프레임워크
 
-AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진짜 버그도 있고, 스타일 선호도 있고, 완전히 틀린 것도 있어요. 단순한 VALID/INVALID 이분법은 얼마 안 가 한계가 왔어요. triage를 빠르게 굴리려면 더 세밀한 등급이 필요했어요.
+AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진짜 버그도 있고, 스타일 선호도 있고, 완전히 틀린 것도 있어요. 단순한 VALID/INVALID 이분법으로는 이 차이를 담을 수 없어요. triage를 빠르게 굴리려면 더 세밀한 등급이 필요했어요.
 
 | 분류                  | 기준                                               | 조치                    |
 | --------------------- | -------------------------------------------------- | ----------------------- |
@@ -41,7 +41,7 @@ AI 리뷰 코멘트가 전부 같은 무게를 가지는 건 아니에요. 진�
 | **OPTIONAL**          | 있으면 좋은 수준, 스타일 관련, 긴급하지 않음       | 사용자에게 확인         |
 | **INVALID**           | 틀림, context 오해, 해당 안 됨                     | 문서화 + 보강 주석 추가 |
 
-나중에 추가한 GOOD-TO-HAVE와 CONTROVERSIAL 두 등급은 release PR에서 특히 제값을 했어요. feature branch에서는 보통 전부 처리할 수 있어요. 그런데 develop-to-main merge에서 19개 지적을 분류하는 건 성격이 다른 일이라, "맞고 수정할 가치가 있는 것"과 "맞지만 지금 건드릴 가치가 없는 것"을 갈라야 했어요. GOOD-TO-HAVE는 수정이 쉽고 위험이 낮은 개선이에요. CONTROVERSIAL은 AI 지적이 타당하지만 현재 context에서 수정 비용이 이점을 넘는 경우예요. release 중에 27개 test file에 type guard를 추가하라는 지적 같은 거죠.
+GOOD-TO-HAVE와 CONTROVERSIAL 두 등급은 release PR에서 특히 제값을 했어요. feature branch에서는 보통 전부 처리할 수 있어요. 그런데 develop-to-main merge에서 19개 지적을 분류하는 건 성격이 다른 일이라, "맞고 수정할 가치가 있는 것"과 "맞지만 지금 건드릴 가치가 없는 것"을 갈라야 했어요. GOOD-TO-HAVE는 수정이 쉽고 위험이 낮은 개선이에요. CONTROVERSIAL은 AI 지적이 타당하지만 현재 context에서 수정 비용이 이점을 넘는 경우예요. release 중에 테스트의 27곳에 type guard를 추가하라는 지적 같은 거죠.
 
 ## AI가 흔히 혼동하는 패턴
 
@@ -288,7 +288,7 @@ sed -n '<claimed-line>p' <claimed-file>
 
 grep이 비어 있거나 line이 다른 내용을 보여주면, finding은 hallucinated이거나 phantom version과 비교 중이에요. grep이 확인할 때까지 모든 미검증 주장을 INVALID로 다루세요. finding당 ~5초 추가되고, 그렇지 않으면 30+ 분 낭비할 cross-skill confusion을 잡아요.
 
-**Reviewer 비대칭(같은 PR의 데이터 포인트):** 같은 PR의 3b-forge plugin review는 grounded였어요. 5개 finding 중 4개가 valid였죠. 세션에 skill 이름 충돌이 있을 때는, 실제 repo file 구조 위에서 도는 plugin reviewer가 세션 scope reviewer(Codex)보다 정밀도 높은 output을 내요.
+**Reviewer 비대칭(같은 PR의 데이터 포인트):** 같은 PR의 3b-forge plugin review는 grounded였어요. 5개 finding 중 4개가 valid였죠. skill 이름 충돌이 있던 그 세션에서는, 실제 repo file 구조 위에서 돈 plugin review가 세션 scope review(Codex)보다 정밀도가 높았어요.
 
 ### 14. 병렬 세션이 작업 중인 checkout에서의 Stale Local Read
 
@@ -387,7 +387,7 @@ git show origin/<branch>:<file>   # reviewer가 실제로 본 bytes
 
 **통계:** 14개 항목(6 CodeRabbit, 8 Claude Bot), 1 VALID BUG, 2 CONTROVERSIAL→FIX, 3 GTH→FIX, 1 SKIP, 6 INVALID, 1 DUP
 
-세 가지 새로운 혼동 패턴이 동시에 나타난 PR이에요. Python 프로젝트에서 Celery prefork worker, Pydantic v2 모델, factory pattern 기반 서비스 초기화를 쓰는데, 전부 AI reviewer가 일관되게 틀리는 것들이에요.
+세 가지 새로운 혼동 패턴이 동시에 나타난 PR이에요. Python 프로젝트에서 Celery prefork worker, Pydantic v2 모델, factory pattern 기반 서비스 초기화를 쓰는데, 이 PR에서는 세 가지 모두 reviewer의 혼동으로 이어졌어요.
 
 **주요 VALID BUG:**
 

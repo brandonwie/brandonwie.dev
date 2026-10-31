@@ -26,9 +26,8 @@ references:
     type: official
 ---
 
-My work profile's HUD was showing personal account usage stats. I tracked the
-wrong numbers for a week before realizing the data was crossed. Fixing it took
-hours of debugging because the failure mode was completely silent — no errors,
+My work profile's HUD was showing personal account usage stats. Fixing it took
+extensive debugging because the failure mode was completely silent — no errors,
 just wrong numbers.
 
 If you run Claude Code with separate personal and work accounts, the HUD plugin

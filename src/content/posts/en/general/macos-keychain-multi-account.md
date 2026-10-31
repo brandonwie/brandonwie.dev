@@ -29,7 +29,7 @@ references:
 source_content_hash: bed1be499b85d36ac99c0719b3c878dd23242fa3e1bebd2447b535ab497b3564
 ---
 
-I spent an afternoon debugging why a Claude Code HUD plugin was showing usage stats for the wrong account. The API calls were succeeding -- no errors, no auth failures. The data came back fine. It was the *wrong* data. The plugin was reading credentials from the macOS Keychain, and the Keychain was returning a token for Account A when the plugin expected Account B.
+I was debugging why a Claude Code HUD plugin was showing usage stats for the wrong account. The API calls were succeeding -- no errors, no auth failures. The data came back fine. It was the *wrong* data. The plugin was reading credentials from the macOS Keychain, and the Keychain was returning a token for Account A when the plugin expected Account B.
 
 The root cause turned out to be a behavior of macOS Keychain that is not well-documented and causes subtle, silent bugs: the Keychain allows multiple entries with the same service name but different account (`acct`) attributes, and when you query by service name alone, it returns whichever entry it finds first. No warning. No error. The wrong credentials.
 

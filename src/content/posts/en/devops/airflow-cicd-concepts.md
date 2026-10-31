@@ -20,7 +20,7 @@ source_content_hash: ad74aab52b375b8874aa84207167a49b72adbe190576d2b6fcc0635fd55
 expanded: true
 ---
 
-When I first started working with Airflow, the relationship between DAGs, ETL code, Docker images, and deployments was confusing. What gets restarted when? Which changes are hot-reloaded? Why does a DAG change deploy instantly but a requirements.txt change needs a full rebuild? A kitchen analogy helped me understand the architecture, and knowing which changes need restarts versus which are picked up automatically saved me from unnecessary downtime.
+How do DAGs, ETL code, Docker images, and deployments fit together in Airflow? What gets restarted when? Which changes are hot-reloaded? Why does a DAG change deploy instantly but a requirements.txt change needs a full rebuild? A kitchen analogy helps explain which changes need restarts versus which are picked up automatically.
 
 ## DAGs vs ETL: Recipes vs Cooking
 

@@ -23,9 +23,9 @@ source_content_hash: b3b96e74bf7b47bd126cd82b76fd4ca111671770595ba3adcdf030e0137
 expanded: true
 ---
 
-I was refactoring a block creation service in a NestJS app when the question hit me: should the service talk to TypeORM directly through `DataSource`, or should I keep the repository layer in between? The service was already 400 lines long and growing. Every new feature meant more TypeORM imports, more `EntityManager` chains, and test files that looked like they were mocking the entire ORM. Something had to give.
+I was refactoring a block creation service in a NestJS app when the question hit me: should the service talk to TypeORM directly through `DataSource`, or should I keep the repository layer in between?
 
-This is one of those architectural decisions that every NestJS/TypeORM team faces eventually. Pick the wrong pattern for your context, and you either drown in boilerplate or end up with untestable god-object services. Here's how I thought through it, and where I landed.
+This is one of those architectural decisions that every NestJS/TypeORM team faces eventually. A pattern that does not fit the context can add boilerplate or produce god-object services that are difficult to test. Here's how I thought through it, and where I landed.
 
 ## The Two Approaches
 
@@ -123,7 +123,7 @@ When I need to make this call on a new project, I run through this matrix:
 | Development speed  | Faster (less files)      | Slower (more structure) |
 | Maintainability    | Requires discipline      | Enforced by structure   |
 
-If most of your answers fall in one column, that's your pattern.
+If most answers fall in one column, that column is one option to consider.
 
 ## The Middle Ground: Thin Repositories
 
@@ -182,7 +182,7 @@ Most mature ecosystems lean toward a repository layer. Rails is the notable exce
 
 ## Takeaway
 
-There's no universal answer here — it depends on your team size, project maturity, and tolerance for boilerplate. But if I had to give one recommendation: **start with thin repositories**. They add minimal overhead (~50 lines per entity), keep your services testable, and give you an escape hatch if you ever need to change ORMs. The key is consistency — pick one approach and stick to it across the entire project.
+There's no universal answer here — it depends on your team size, project maturity, and tolerance for boilerplate. The compromise I settled on was **thin repositories**. They add minimal overhead (~50 lines per entity), keep your services testable, and give you an escape hatch if you ever need to change ORMs. The key is consistency — pick one approach and stick to it across the entire project.
 
 ## References
 

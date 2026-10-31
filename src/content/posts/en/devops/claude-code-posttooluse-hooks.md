@@ -73,14 +73,14 @@ These are the things that tripped me up and are worth knowing before writing you
 
 **Double-counting footgun.** A `^Skill$` → `track-skill-usage.py` hook in both global and project configs causes every skill invocation to increment the counter twice. Existing counts become ~2x inflated. The fix: keep the hook in global config only; remove from project `settings.local.json`.
 
-**Execute permissions are optional (but set them anyway).** Hook scripts invoked as `python3 ~/.claude/scripts/script.py` don't need execute permission — Python reads the file directly. The shebang line is decorative in this case. But set `chmod +x` for consistency and in case you ever invoke the script directly.
+**Execute permissions depend on invocation.** Hook scripts invoked as `python3 ~/.claude/scripts/script.py` don't need execute permission — Python reads the file directly. The shebang line is decorative in this case. Setting `chmod +x` keeps permissions consistent and supports direct invocation if needed.
 
 ## Design Decisions
 
 Several choices in this implementation are intentional:
 
-- **Counter, not log** — O(1) file size is sufficient for frequency analysis. You don't need individual invocation records.
-- **Double safety** — `|| true` in the hook command plus bare `except: pass` in Python means hooks never block Claude. A failing hook should be invisible to the user.
+- **Counter, not log** — O(1) file size is sufficient for frequency analysis. This frequency analysis does not need individual invocation records.
+- **Double safety** — `|| true` in the hook command plus bare `except: pass` in Python means hooks never block Claude. This tracker keeps hook failures invisible to the user.
 - **No dependencies** — Python stdlib only (`json`, `sys`, `os`). No pip installs, no virtual environment.
 - **Portable** — The script lives in both `~/.claude/scripts/` (live) and `global-claude-setup/scripts/` (bootstrap), so it's available on fresh machines after running the setup.
 
@@ -89,7 +89,7 @@ Several choices in this implementation are intentional:
 - Matcher is a regex tested against `tool_name` — use `^Skill$` to match only skill invocations
 - Multiple PostToolUse entries can coexist; all matching entries fire
 - Hook commands run in the user's shell (zsh on macOS)
-- Always append `|| true` to prevent hook failures from blocking Claude
+- This tracker appends `|| true` so its failures do not block Claude
 - Keep hooks in global config only to avoid double-firing from merged configs
 
 ## Takeaway

@@ -21,7 +21,7 @@ source_content_hash: ba6b1f4ef9bbe26415c3c8541a9a1e828bdc81479a9bbb7ba956fb0c2cd
 expanded: true
 ---
 
-An Airflow worker host I set up ran fine for the first 12 hours. After that, `DockerOperator` tasks started failing with "authorization token has expired." The host had authenticated with ECR at startup, but the token expired before the next DAG run pulled a fresh image.
+`DockerOperator` tasks on an Airflow worker host I set up failed with "authorization token has expired." ECR authentication tokens expire after 12 hours, so a later DAG run can fail to pull an image unless the token is refreshed.
 
 AWS ECR authentication tokens have a hard 12-hour expiry. If your Docker host runs longer than that — which most production hosts do — you need automatic token refresh. A cron job is the simplest solution.
 

@@ -22,7 +22,7 @@ source_content_hash: 2c5d1934a9cdbfe06ac5a2099e4d9c75da4ca5f2d1be557b490aebd16b4
 expanded: true
 ---
 
-I was building a calendar sync feature that received thousands of event IDs from Google Calendar and needed to look them up in the application's own database. The query used TypeORM's `In([...])` operator, which worked fine in development with dozens of IDs. A sync for a heavy calendar user could return thousands of IDs though, and the ceiling I found while sizing that query was hard: beyond a few thousand IDs planning slows noticeably, and at 65,535 the query fails outright with a cryptic protocol-level error.
+I was building a calendar sync feature that received thousands of event IDs from Google Calendar and needed to look them up in the application's own database. The query used TypeORM's `In([...])` operator. A sync for a heavy calendar user could return thousands of IDs though, and the ceiling I found while sizing that query was hard: beyond a few thousand IDs planning slows noticeably, and at 65,535 the query fails outright with a cryptic protocol-level error.
 
 The cause is in PostgreSQL's wire protocol: the `Bind` message uses a 16-bit integer to encode the parameter count. That's a hard ceiling of 65,535 parameters per query. The practical limits turned out to be much lower.
 

@@ -36,8 +36,8 @@ import해서 `.delay()`를 호출하려던 줄에서 터졌더라고요. 그 한
 쓰는 의존성 트리를 통째로 끌고 들어온 거예요.
 
 API랑 worker가 따로 떨어진 microservices 구조에서는, task 함수를 그대로
-가져와서 호출하는 방식이 함정이에요. 표준 Celery 패턴이라고 하는 "task
-import 후 `.delay()` 호출"은 monolith에서나 잘 돌아가요. API는
+가져와서 호출하는 방식이 함정이에요. "task를 import한 뒤 `.delay()`로 호출하는
+패턴"은 API와 worker가 코드와 의존성을 공유할 때 자연스러운 방식이에요. API는
 async(FastAPI + asyncpg), worker는 sync(Celery + psycopg2)인 분리된
 구조에서는, task 함수를 import하는 순간 worker가 필요로 하는 의존성이 전부
 같이 따라와요.
@@ -71,8 +71,8 @@ import하는데, API 컨테이너에는 설치되어 있지 않아요. API가 �
 공유 interface 패키지가 매력적이었어요 -- 가벼운 공유 라이브러리에 task
 signature를 정의하고 API와 worker 둘 다 의존하게 하는 거예요. 하지만
 릴리스 주기가 다른 두 서비스 사이에서 공유 패키지를 유지하면 버전 관리
-복잡성이 생겨요. 한두 명의 팀에서는 타입 안전성의 이점 대비 오버헤드가
-가치 있지 않아요.
+복잡성이 생겨요. 팀이 작을 때는 타입 안전성의 이점과 패키지 유지 비용을
+함께 비교할 부분이에요.
 
 ## 해결책: send_task()
 

@@ -41,7 +41,7 @@ references:
     type: official
 ---
 
-폴리글랏 서비스 — Python, Go, Rust, TypeScript — 를 포함하는 개인 레포에 어떤 CI 시스템을 써야 할까요? 순진한 답은 "하나만 고르세요"예요. 더 나은 답은: 둘 다 쓰되, 각각이 설계된 목적에 맞게 사용하는 거예요.
+Python, Go, Rust, TypeScript 서비스를 담은 개인 레포에는 어떤 CI 시스템이 맞을까요? 한 가지 선택지는 두 도구를 각각 설계된 목적에 맞게 쓰는 거예요.
 
 ## 분할 원칙
 

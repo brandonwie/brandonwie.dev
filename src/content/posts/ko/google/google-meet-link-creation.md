@@ -87,7 +87,7 @@ event.conferenceData = {
 | 앱이 이미 캘린더 이벤트를 생성하는 경우 | 편승 — 해당 호출에 `createRequest` 포함          |
 | 독립적인 Meet 링크 (캘린더 이벤트 없음) | 임시 이벤트 — 생성, 링크 추출, 삭제              |
 
-편승 방식은 API 오버헤드가 제로예요(추가 호출 없음). Meet 링크가 삭제된 임시 이벤트가 아닌 실제 이벤트에 의미적으로 연결돼요. 이미 `events.insert()`나 `events.update()`를 호출하고 있다면, 임시 이벤트 패턴을 사용할 이유가 없어요.
+편승 방식은 API 오버헤드가 제로예요(추가 호출 없음). Meet 링크가 삭제된 임시 이벤트가 아닌 실제 이벤트에 의미적으로 연결돼요. 이미 `events.insert()`나 `events.update()`를 호출하고 있다면, 그 호출에 `conferenceData.createRequest`를 포함해 별도의 임시 이벤트 왕복을 줄일 수 있어요.
 
 ## Meet 링크 제거하기 (conferenceData = null)
 

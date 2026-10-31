@@ -24,7 +24,7 @@ source_content_hash: 71d45cf9035aad486170f25a6fcfd6576dc0a95e3a16b29e235bf3d7a6a
 expanded: true
 ---
 
-I was writing an `entrypoint.sh` for an Airflow Docker container and added `set -e` at the top for safety, so the script would exit immediately if any command failed. Then I wrote careful error handling for the AWS CLI calls, with custom error messages explaining what went wrong and which IAM permissions were needed. None of those error messages ever appeared. The script silently exited before reaching them.
+In an Airflow Docker container's `entrypoint.sh`, `set -e` can exit before custom AWS CLI error handling runs, skipping the messages that explain what went wrong and which IAM permissions are needed.
 
 The culprit is an interaction between `set -e` and command substitution that's well-documented but consistently surprising: when the command inside a `VAR=$(...)` assignment fails, `set -e` terminates the script at that line. Your `if` check on the next line never runs.
 
@@ -102,7 +102,7 @@ Both are needed for robust error handling in production scripts.
 | Production scripts with `set -e`  | Use `if ! VAR=$(cmd)`       |
 | Need to distinguish failure types | Use if-pattern + check `-z` |
 
-For throwaway scripts, the plain `VAR=$(cmd)` pattern is fine, since `set -e` gives you a reasonable safety net. But for production entrypoint scripts, CI scripts, or anything where users need actionable error messages, always use the if-pattern.
+For throwaway scripts, the plain `VAR=$(cmd)` pattern is fine, since `set -e` gives you a reasonable safety net. But for production entrypoint scripts, CI scripts, or anything where users need actionable error messages, the if-pattern provides explicit failure handling.
 
 ## Takeaway
 

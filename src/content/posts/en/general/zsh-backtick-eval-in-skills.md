@@ -25,14 +25,14 @@ references:
 source_content_hash: 12e2569c2da649958205f1210d0f0e1ab9a2dba5351d0a5a83c8874887064dac
 ---
 
-I was writing a Claude Code SKILL.md file -- a markdown document that defines instructions for Claude's `/wrap` command. The skill worked fine on my colleague's machine. On mine, every invocation printed two lines of errors to stderr before doing anything useful:
+I was writing a Claude Code SKILL.md file -- a markdown document that defines instructions for Claude's `/wrap` command. Every invocation printed two lines of errors to stderr before doing anything useful:
 
 ```text
 (eval):1: command not found: fixed
 (eval):2: command not found: 3.
 ```
 
-The errors were non-fatal. The skill still ran. But "non-fatal stderr noise on every invocation" is the kind of thing that erodes trust in tooling. I spent an hour tracking down the cause, and the answer was not where I expected.
+The errors were non-fatal. The skill still ran. But "non-fatal stderr noise on every invocation" is the kind of thing that erodes trust in tooling. I tracked down the cause, and the answer was not where I expected.
 
 ## The Culprit: Markdown Backticks Meet zsh
 

@@ -29,9 +29,8 @@ references:
 ---
 
 Airflow UI에서 "View Log"를 클릭했는데 task 로그 대신 빈 에러 페이지가
-나왔습니다. URL을 보니 `http://:8793/log/...`로 호스트가 비어 있었어요. 보안
-그룹이랑 네트워크 경로를 한 시간 동안 확인했는데, 알고 보니 문제는 네트워크가
-아니라 Airflow의 hostname 설정이었습니다.
+나왔습니다. URL을 보니 `http://:8793/log/...`로 호스트가 비어 있었어요. 처음엔
+네트워크 문제를 의심했는데, 알고 보니 Airflow의 hostname 설정이 문제였습니다.
 
 ## 이게 왜 중요한가요
 
@@ -142,8 +141,8 @@ http://:8793/log/dag_id=my_dag/...
 
 ## 실전 팁
 
-이 설정은 CeleryExecutor를 사용하는 모든 멀티 노드 Airflow 배포에 필요합니다.
-별도 EC2 인스턴스든 별도 Docker 호스트든 마찬가지입니다.
+위와 같이 CeleryExecutor 워커의 로컬 로그를 별도 머신에서 가져오는 구성이라면
+이 설정이 필요해요. 별도 EC2 인스턴스나 Docker 호스트가 그 예예요.
 
 단일 노드 Airflow(LocalExecutor), 관리형 Airflow(MWAA, Cloud Composer),
 KubernetesExecutor(Kubernetes API로 로그를 가져옴), S3/GCS 원격 로그

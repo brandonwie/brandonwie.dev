@@ -29,7 +29,7 @@ references:
 source_content_hash: d760abb213f1b5a1b43ffd3f3c9c15578eae6d644fdc957645fbc8e40dd195f2
 ---
 
-Our users kept refreshing the page to check if their calendar sync was done. We needed the server to push a "sync complete" notification in real time, but our NestJS backend ran on multiple ECS containers behind an ALB. So if a background job finishes on Container 2, how does User A, connected to Container 1, ever hear about it?
+We needed the server to push a "sync complete" notification in real time, but our NestJS backend ran on multiple ECS containers behind an ALB. So if a background job finishes on Container 2, how does User A, connected to Container 1, ever hear about it?
 
 Answering that took us through the whole path: how ALB handles the HTTP upgrade, how Redis Pub/Sub bridges containers, and what actually happens when a connection drops.
 
@@ -267,7 +267,7 @@ For single-container deployments:
 | Component           | Needed? | Why                                              |
 | ------------------- | ------- | ------------------------------------------------ |
 | ALB                 | Yes     | Routes public traffic to private container       |
-| Redis Adapter       | Yes     | Future-proofs for multi-container                |
+| Redis Adapter       | Optional | Prepares for future multi-container deployment   |
 | Sticky Sessions     | No      | Single container = all connections go same place |
 | Multiple containers | No      | Not needed until scale requires it               |
 
@@ -343,7 +343,7 @@ On paper the architecture looks heavy. The mental model turns out to be small on
 
 2. Redis Pub/Sub solves the multi-container broadcast problem. Every container subscribes once over a persistent TCP connection. When Container 2 publishes, Redis writes the message into Container 1's already-open socket, with no HTTP callbacks and no polling anywhere in the path. The Socket.io adapter takes care of serialization and room-scoped delivery.
 
-3. Add the Redis adapter even on a single container. The overhead is negligible, and it means scaling out later is a Terraform change instead of an application rewrite. Sticky sessions can wait until the HTTP polling fallback actually matters.
+3. If multi-container scaling is planned, adding the Redis adapter on a single container is one option. The overhead is negligible, and it means scaling out later is a Terraform change instead of an application rewrite. Sticky sessions can wait until the HTTP polling fallback actually matters.
 
 4. Know the three disconnect scenarios. A normal tab close sends a TCP FIN and is detected instantly. A network drop sends nothing and only surfaces through the ping/pong timeout after roughly 25 seconds. The ALB idle timeout at 60 seconds rarely fires, thanks to the heartbeat. Socket.io handles all three on its own, but knowing which one you are looking at makes production debugging much faster.
 

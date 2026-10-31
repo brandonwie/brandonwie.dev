@@ -123,7 +123,7 @@ The only form I could get to reproduce the silent bypass is the `Union` wrapper.
 
 ## When to Use
 
-- **Multiple routers share the same dependency.** Authentication and database sessions are the most common cases. If three or more routers call the same `Depends()` function, it's time for an `Annotated` type alias.
+- **Multiple routers share the same dependency.** Authentication and database sessions are the most common cases. If three or more routers call the same `Depends()` function, an `Annotated` type alias is one consolidation option.
 - **You want IDE autocomplete on the injected type.** `CurrentUser` gives you autocomplete for `KeycloakTokenClaims` fields, while bare `Depends()` gives you `Any`.
 - **The dependency requires consistent type conversion at the boundary**, such as `str` to `UUID`. Centralizing this in the type alias prevents inconsistencies.
 - **You plan to create variants.** `AdminUser`, `OptionalUser`, and `ServiceAccount` can all be defined as separate type aliases with different dependency functions.
@@ -161,4 +161,4 @@ The `Annotated[Type, Depends(func)]` pattern is FastAPI's recommended form for d
 
 The one rule to remember: **keep `Annotated` on the outside.** Writing `current_user: Optional[CurrentUser] = None` bypasses dependency injection entirely, because FastAPI only reads `Depends` metadata when `Annotated` is the outermost form. It won't warn you. The parameter just arrives as `None`, and the error shows up far from the actual cause. If the dependency really is optional, move the `Optional` inside the alias.
 
-For new FastAPI projects, create a `deps.py` file early and define your shared dependencies as `Annotated` type aliases from the start. It's much easier than retrofitting the pattern across existing routers later.
+For new FastAPI projects, a `deps.py` file can collect shared dependencies as `Annotated` type aliases from the start. Introducing that pattern early can be easier than retrofitting it across existing routers later.

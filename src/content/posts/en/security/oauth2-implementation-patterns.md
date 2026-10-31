@@ -36,7 +36,7 @@ references:
 source_content_hash: 96847b05828b3334cb0f5139080991323971e43a4dabce1211c30da016569c07
 ---
 
-A Slack OAuth connector I built ran quietly for months. The surprise came from a different integration entirely: Google started appending an undocumented `iss` parameter to OAuth callbacks, strict DTO validation rejected the unknown field, and the callback began returning a cryptic 400. No changelog, no deprecation notice, no mention in the discovery document. Welcome to OAuth 2.0 in production.
+I built a Slack OAuth connector. The surprise came from a different integration entirely: Google started appending an undocumented `iss` parameter to OAuth callbacks, strict DTO validation rejected the unknown field, and the callback began returning a cryptic 400. No changelog, no deprecation notice, no mention in the discovery document. Welcome to OAuth 2.0 in production.
 
 This post covers the practical patterns I've learned implementing OAuth flows against real providers: the authorization code flow, CSRF protection with state parameters, secure token storage, and how to handle the inevitable surprises when providers evolve their protocol without telling you.
 

@@ -85,7 +85,7 @@ This works for quick, one-off operations but has a significant drawback: the val
 
 ### Method 4: AWS Secrets Manager (Best for Production)
 
-For production environments, the gold standard is storing credentials in AWS Secrets Manager and having Terraform read them at plan/apply time.
+For production environments, one option is storing credentials in AWS Secrets Manager and having Terraform read them at plan/apply time.
 
 ```hcl
 data "aws_secretsmanager_secret_version" "rds_credentials" {
@@ -162,14 +162,14 @@ Five rules for keeping RDS credentials out of trouble:
 
 4. **Add terraform.tfvars to .gitignore** before creating the file. Adding it after means the file already exists in Git history even if you remove it later.
 
-5. **Use AWS Secrets Manager for production.** Environment variables are fine for CI/CD, but Secrets Manager adds encryption, access logging, and rotation capabilities that environment variables cannot provide.
+5. **AWS Secrets Manager is a production option.** Environment variables are fine for CI/CD, but Secrets Manager adds encryption, access logging, and rotation capabilities that environment variables cannot provide.
 
 ---
 
 ## Practical Takeaway
 
-The right method depends on where Terraform runs. For local development, a `.tfvars` file in `.gitignore` is the path of least resistance. For CI/CD, environment variables keep secrets out of files entirely. For production, AWS Secrets Manager provides the strongest guarantees.
+The right method depends on where Terraform runs. For local development, a `.tfvars` file in `.gitignore` is the path of least resistance. For CI/CD, environment variables keep secrets out of files entirely. For production, AWS Secrets Manager adds managed encryption, access logging, and optional rotation.
 
 Whatever method you choose, the `sensitive = true` flag on your variable declarations is non-negotiable. It costs nothing and prevents the most common credential leak vector: someone running `terraform plan` in a shared terminal or CI log and the password appearing in plaintext.
 
-Start with environment variables. Graduate to Secrets Manager when your team or compliance requirements demand it. And if you find hardcoded credentials in an existing Terraform repo, rotate them immediately -- removing them from the current code does not remove them from Git history.
+Environment variables and Secrets Manager support different workflows; team and compliance requirements can shape the choice. And if you find hardcoded credentials in an existing Terraform repo, rotate them immediately -- removing them from the current code does not remove them from Git history.

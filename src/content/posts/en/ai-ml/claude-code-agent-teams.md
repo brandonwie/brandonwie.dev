@@ -19,9 +19,9 @@ references:
     type: official
 ---
 
-I needed three independent code reviews running in parallel: security,
-performance, and test coverage. Separate terminal sessions could do the work,
-but they could not share task state or findings without manual coordination.
+Three independent code reviews can run in parallel: security,
+performance, and test coverage. Separate terminal sessions can do the work,
+but they cannot share task state or findings without manual coordination.
 
 Agent Teams formalize that pattern. One Claude Code session leads while
 independent teammates use their own context windows, a shared task list, and
@@ -116,7 +116,7 @@ Four patterns emerged from daily use that make teams productive rather than chao
 
 - Delegate mode (Shift+Tab) restricts the lead to coordination only, so it does not implement. This keeps the lead focused on task management and review.
 - Plan approval: teammates plan in read-only mode. The lead reviews the plan before authorizing implementation, which prevents wasted work from misunderstood requirements.
-- Task sizing: aim for 5-6 tasks per teammate. Fewer tasks underutilize the teammate; more cause context overflow.
+- Task sizing: about 5–6 tasks per teammate; fewer tended to underutilize a teammate, while more risked context overflow.
 - Quality hooks: `TeammateIdle` keeps teammates working instead of stopping early, and `TaskCompleted` prevents premature completion claims.
 
 ## Difficulties encountered

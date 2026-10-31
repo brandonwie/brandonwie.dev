@@ -20,9 +20,9 @@ source_content_hash: e78604a370af7efd182627905f84d3dda8be5dd1bebc91540b7d331c608
 expanded: true
 ---
 
-I was running an Amplitude ETL pipeline when I noticed duplicate records showing up in the refined data layer. The daily automated job was picking up files that I'd manually backfilled earlier that week — files that looked identical to regular exports because they shared the same naming convention, the same format, and the same S3 prefix. There was no way to tell automated data from manual backfill data after the fact.
+I was running an Amplitude ETL pipeline when I noticed duplicate records showing up in the refined data layer. The daily automated job was picking up files that I'd manually backfilled — files that looked identical to regular exports because they shared the same naming convention, the same format, and the same S3 prefix. There was no way to tell automated data from manual backfill data after the fact.
 
-This is a problem any data team hits when they need to recover missing data. The natural instinct is to drop the backfill files in the same bucket path as everything else. But once they're there, your automated pipeline treats them as new data and processes them again.
+This can happen when a data team needs to recover missing data. The natural instinct is to drop the backfill files in the same bucket path as everything else. But once they're there, your automated pipeline treats them as new data and processes them again.
 
 ## The Problem
 
@@ -154,7 +154,7 @@ The trade-off: tags require an additional API call per object to read (`GetObjec
 
 ## Takeaway
 
-When your ETL pipeline handles both automated and manual data, separate them at the storage level with distinct S3 prefixes. It's the cheapest possible solution — no code changes to the reader, no extra API calls, no database to maintain. The daily pipeline can't accidentally process backfill data because it never sees it.
+In the setup described here, automated and manual data use distinct S3 prefixes. For this setup, it is a low-overhead solution — no code changes to the reader, no extra API calls, no database to maintain. The daily pipeline can't accidentally process backfill data because it never sees it.
 
 ## References
 

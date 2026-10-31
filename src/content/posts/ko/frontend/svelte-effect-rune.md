@@ -154,8 +154,7 @@ cleanup 함수는 두 가지 상황에서 실행됩니다: effect의 다음 실�
 | 일회성 설정                    | `onMount()`  |
 
 가장 흔한 실수는 파생 값을 계산하는 데 `$effect`를 사용하는 것입니다.
-`$effect(() => { someVar = transform(otherVar) })`를 쓰고 있다면 멈추세요.
-`const someVar = $derived(transform(otherVar))`를 대신 사용하세요. `$effect`
+파생 값을 `$effect(() => { someVar = transform(otherVar) })`로 계산하는 대신 `const someVar = $derived(transform(otherVar))`를 써요. `$effect`
 버전은 불필요한 리렌더 사이클을 만듭니다.
 
 ## $effect를 사용하면 안 되는 경우

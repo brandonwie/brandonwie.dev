@@ -215,8 +215,8 @@ Triggers I'd watch for, with the same caveat as the matrix. These are the points
 ## When NOT to Use Each Strategy
 
 - **Full Git Repo on EC2.** Don't use if the repository contains secrets that can't be excluded via `.gitignore`, or if compliance requires immutable deployments with auditable image tags.
-- **Bake into Image.** Don't use if DAG iteration speed matters. Rebuilding and restarting containers for every change creates unacceptable feedback loops.
-- **Git-Sync Sidecar.** Don't use on plain EC2 or Docker Compose. The sidecar adds unnecessary complexity outside of Kubernetes.
+- **Bake into Image.** Rebuilding and restarting containers for every DAG change lengthens the feedback loop, which can be a cost when iteration speed matters.
+- **Git-Sync Sidecar.** On plain EC2 or Docker Compose, the sidecar adds complexity to manage.
 - **S3/EFS Sync.** Don't use if you need strict version control. S3 sync doesn't provide atomic updates or rollback guarantees the way Git does.
 
 ## Takeaway

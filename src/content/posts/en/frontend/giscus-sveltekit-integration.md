@@ -211,4 +211,4 @@ Giscus is a strong fit when:
 
 ## Takeaway
 
-Giscus gives you a comment system with no database, no server, and no tracking -- at the cost of requiring GitHub accounts. For a developer blog, that is not a cost at all. The integration is a single Svelte component with about 20 lines of script setup. The two things to watch for are localhost comment leaking (use a dev prefix or delete test comments) and the slug-based mapping strategy for multilingual sites (use the slug, not the pathname, to share threads across languages).
+Giscus gives you a comment system with no database, no server, and no tracking -- at the cost of requiring GitHub accounts. For this developer blog, that account requirement fit the intended audience. The integration is a single Svelte component with about 20 lines of script setup. The two things to watch for are localhost comment leaking (use a dev prefix or delete test comments) and the slug-based mapping strategy for multilingual sites (use the slug, not the pathname, to share threads across languages).

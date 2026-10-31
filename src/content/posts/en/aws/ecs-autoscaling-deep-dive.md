@@ -49,8 +49,8 @@ services that fail to scale when needed.
   proportional number of tasks needed to bring the metric back to target, which
   can add multiple tasks at once
 - **Cooldown asymmetry is not obvious** -- using the same cooldown for scale-in
-  and scale-out causes flapping; scale-in must be much longer (300s+) because
-  removing capacity too quickly leads to immediate scale-out again
+  and scale-out can cause flapping; the example uses a longer scale-in cooldown
+  (300s) because removing capacity too quickly can trigger immediate scale-out again
 - **Auto-scaling vs CloudWatch alarms confusion** -- both reference CPU
   thresholds but serve completely different purposes; alarms notify humans while
   scaling policies act automatically, and setting them to the same value defeats
@@ -571,8 +571,8 @@ completely different things:
 - CloudWatch alarms = send notifications to humans (SNS, PagerDuty)
 
 Setting them to the same threshold (e.g., both at 70%) means the alarm fires
-every time scaling happens, creating noise. Keep alarms 10-15% above the scaling
-target as a "scaling might not be enough" warning.
+every time scaling happens, creating noise. An alarm 10-15% above the scaling
+target is one possible "scaling might not be enough" warning configuration.
 
 ---
 

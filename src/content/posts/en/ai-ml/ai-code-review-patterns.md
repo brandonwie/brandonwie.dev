@@ -253,8 +253,7 @@ encountered. Recognizing them lets you triage AI feedback in seconds instead of
 minutes: check if the code has changed, check if the feature exists, verify
 whether the design is intentional, assess whether the concern is realistic.
 
-The most effective long-term mitigation is the same across all patterns:
-**write comments that explain WHY, not just WHAT.** AI reviewers (and human
+A recurring mitigation across these patterns is a comment explaining **why** a design choice exists, as well as **what** it does. AI reviewers (and human
 ones) cannot infer design intent from code alone. A one-line comment explaining
 the invariant, the pre-filter, or the intentional trade-off prevents the same
 false positive from surfacing on every future review.

@@ -22,7 +22,7 @@ references:
 source_content_hash: 29ba506429fb8aa2e78e1734b42c9f161b0e0888272c425006f14e0ed654d0c5
 ---
 
-My audio transcription daemon had been running for 9 days. It appeared perfectly healthy — start and stop callbacks fired normally, beep sounds played correctly, logs showed no errors. But every recording came back as digital silence. The daemon was transcribing nothing, and it had been doing so silently for days.
+My audio transcription daemon had been running for 9 days. It appeared perfectly healthy — start and stop callbacks fired normally, beep sounds played correctly, logs showed no errors. But every recording came back as digital silence. The daemon was transcribing nothing.
 
 ## The Problem: Stale USB Device Handles
 
@@ -85,7 +85,7 @@ If the test shows audio but the daemon does not, you have a stale handle.
 
 ## Building a Robust Daemon
 
-A production audio daemon should implement a health check: if N consecutive recordings produce dB below a threshold (e.g., -180 dB), auto-restart the audio stream. macOS CoreAudio exposes `kAudioDevicePropertyDeviceIsAlive` for device health monitoring, but `sounddevice` (the Python wrapper) does not expose this — you need to detect staleness through output analysis.
+One possible health check for this failure mode is to restart the audio stream after N consecutive recordings below a dB threshold (e.g., -180 dB). macOS CoreAudio exposes `kAudioDevicePropertyDeviceIsAlive` for device health monitoring, but `sounddevice` (the Python wrapper) does not expose this — you need to detect staleness through output analysis.
 
 ## When This Applies
 
@@ -98,4 +98,4 @@ For short-lived recording sessions, the handle will not go stale. For applicatio
 
 ## Key Takeaway
 
-PortAudio does not tell you when a USB device handle goes stale. It keeps delivering zero-filled buffers with no errors. If your long-running audio daemon starts producing silence, test the microphone independently — if the mic works but the daemon does not, restart the stream. Better yet, build a dB health check that auto-restarts before anyone notices.
+PortAudio does not tell you when a USB device handle goes stale. It keeps delivering zero-filled buffers with no errors. If your long-running audio daemon starts producing silence, test the microphone independently — if the mic works but the daemon does not, restart the stream. One option is a dB health check that auto-restarts before anyone notices.

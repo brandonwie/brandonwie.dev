@@ -208,7 +208,7 @@ Run the symlink health check:
 
 ## Takeaway
 
-If you manage dotfiles with GNU Stow, applications will silently break your symlinks during updates — and your detection script will silently lie to you about which packages are healthy unless you account for tree folding. Build a health check that walks ancestor directories before stat'ing the leaf, treats stow-owned ancestors as proof of link health, and re-stows from the canonical path after repo migrations. When real overwrites happen, `stow --adopt -R` repairs them. The workflow is: detect → adopt → review diff → commit or restore. Without periodic health checks — and without the tree-folding fix — your dotfiles repo gradually becomes a fiction that doesn't match your actual system configuration, and you don't find out until the next time you set up a fresh machine.
+If you manage dotfiles with GNU Stow, applications will silently break your symlinks during updates — and your detection script will silently lie to you about which packages are healthy unless you account for tree folding. Build a health check that walks ancestor directories before stat'ing the leaf, treats stow-owned ancestors as proof of link health, and re-stows from the canonical path after repo migrations. When real overwrites happen, `stow --adopt -R` repairs them. The workflow is: detect → adopt → review diff → commit or restore. Without periodic checks that account for tree folding, the repo and live configuration can diverge unnoticed, including during a later machine setup.
 
 ## References
 

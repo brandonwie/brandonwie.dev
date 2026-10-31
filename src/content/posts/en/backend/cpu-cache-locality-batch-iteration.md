@@ -119,7 +119,7 @@ Also skip this optimization when you only need a single field (one `.map()` is a
 
 ## Takeaway
 
-When extracting multiple fields from a large array, replace multiple `.map()` calls with a single `for...of` loop. The optimization isn't about reducing iteration count (though it does that too) — the bigger win is **temporal locality**: accessing all fields of an object while it's hot in L1 cache, rather than re-fetching it from slower memory on every pass. Use `for...of` over `forEach` on hot paths for more predictable V8 optimization.
+When extracting multiple fields from a large array, replace multiple `.map()` calls with a single `for...of` loop. The optimization isn't about reducing iteration count (though it does that too) — the bigger win is **temporal locality**: accessing all fields of an object while it's hot in L1 cache, rather than re-fetching it from slower memory on every pass. Using `for...of` rather than `forEach` on hot paths can provide more predictable V8 optimization.
 
 ## References
 

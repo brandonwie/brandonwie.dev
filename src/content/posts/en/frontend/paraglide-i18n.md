@@ -22,7 +22,7 @@ references:
 source_content_hash: 82c82ff13d6e82470f39057352a6e264ba2f399aaa564764cddb333424e7fc36
 ---
 
-I wanted to add Korean translations to my SvelteKit blog. The site is statically generated and deployed to Cloudflare Pages, so the i18n solution needed to resolve translations at build time -- not ship a runtime parser to the browser. I spent a day evaluating options and fighting with SSG compatibility before landing on Paraglide-JS. Here is everything I learned, including the gotchas the docs do not cover.
+I wanted to add Korean translations to my SvelteKit blog. The site is statically generated and deployed to Cloudflare Pages, so the i18n solution needed to resolve translations at build time -- not ship a runtime parser to the browser. I evaluated options and worked through SSG compatibility before landing on Paraglide-JS. Here is everything I learned, including the gotchas the docs do not cover.
 
 ---
 

@@ -198,4 +198,4 @@ alembic current
 
 ## 한 문장으로 정리
 
-`engine_from_config`를 `async_engine_from_config`로 바꾸고, sync migration runner를 `connection.run_sync()`로 감싸고, `NullPool`을 사용하고, `Base.metadata`를 건드리기 전에 모든 model을 import하세요. 이게 전체 레시피예요 — 나머지는 전부 이 네 단계 중 하나를 빠뜨렸을 때 생기는 결과를 디버깅하는 거예요.
+`engine_from_config`를 `async_engine_from_config`로 바꾸고, sync migration runner를 `connection.run_sync()`로 감싸고, `NullPool`을 사용하고, `Base.metadata`를 건드리기 전에 모든 model을 import하세요. 이 네 가지가 위 예시의 변경점이에요. 다른 함정들은 설정과 데이터베이스 동작에 따라 따로 살펴볼 부분이에요.

@@ -20,7 +20,7 @@ source_content_hash: 45b7531c3808a1d56cd96a487927a56e2eda12e41a3c267cd323050d94b
 expanded: true
 ---
 
-I was building an ETL pipeline that pulled data from S3, and every test run against real AWS cost money, required internet, and risked touching production buckets. I needed a way to iterate on S3-dependent code locally — fast, free, and completely isolated from production.
+I was building an ETL pipeline that pulled data from S3, and testing against real AWS incurs API costs, requires internet, and risks touching production buckets. I needed a way to iterate on S3-dependent code locally — fast, free, and completely isolated from production.
 
 MinIO solves this. It's a lightweight, S3-compatible object storage server that runs in a Docker container. Your code talks to MinIO the same way it talks to AWS S3, so you can develop and test locally without changing your application logic.
 

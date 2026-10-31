@@ -19,7 +19,7 @@ references:
 source_content_hash: 4935737440c88a76ba64b34c229740c7292581bbc583898735f4871dfb75b94a
 ---
 
-I spent two days debugging a calendar sync feature before I realized the Google Calendar API handles recurring event updates in three completely different ways. The dropdown that says "This event," "All events," or "This and following events" maps to three distinct API flows, and getting any of them wrong corrupts the entire series.
+While debugging a calendar sync feature, I realized the Google Calendar API handles recurring event updates in three completely different ways. The dropdown that says "This event," "All events," or "This and following events" maps to three distinct API flows, and getting any of them wrong corrupts the entire series.
 
 Here is what I wish I had known before I started.
 
@@ -165,4 +165,4 @@ Working with recurring events in the Google Calendar API comes down to seven pri
 6. `_R` sub-series are real series. PATCH them, never PUT, and always send the recurrence field when the local RRULE changed, otherwise provider state diverges from yours.
 7. Sync mirrors provider state; it never originates provider deletions. When data disappears on the provider, hunt your outbound write-back path, not the incoming sync.
 
-The Google Calendar API documentation covers these concepts, but it does not emphasize how much complexity hides behind that three-option dropdown. The split operation alone took me longer to implement correctly than the other two combined. If you are building a calendar integration, start with "All events" and "This event only," then get those working and tested before you tackle "This and following."
+The Google Calendar API documentation covers these concepts, but it does not emphasize how much complexity hides behind that three-option dropdown. The split operation alone took me longer to implement correctly than the other two combined. One possible sequence for a calendar integration is to start with "All events" and "This event only," get those working and tested, then tackle "This and following."

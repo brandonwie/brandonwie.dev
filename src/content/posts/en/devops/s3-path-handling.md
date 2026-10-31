@@ -26,7 +26,7 @@ source_content_hash: 55da52bfccfddf2434431bb00f35b244b2b088210e150d7139fd904a64b
 expanded: true
 ---
 
-I spent an embarrassing amount of time debugging why an ETL pipeline couldn't find files that clearly existed in S3. The `list_objects_v2` call returned zero results, the data was right there in the console, and everything looked correct. The root cause? A missing trailing slash in the S3 prefix.
+A missing trailing slash in an S3 prefix can make an ETL pipeline write malformed keys or return zero results from `list_objects_v2` without an error.
 
 S3 doesn't have real directories — it uses key prefixes that look like paths. But unlike real filesystems, S3 won't auto-correct `s3://bucket/prefix` to `s3://bucket/prefix/`. That missing slash silently produces malformed keys, and S3 returns empty results instead of errors.
 
@@ -214,7 +214,7 @@ This works on Linux and macOS, but `os.path.join` uses OS-specific separators. O
 
 ## Takeaway
 
-Normalize S3 prefixes once at the entry point, and every downstream key construction becomes correct by default. The `parse_s3_path` function is ~10 lines and eliminates an entire class of silent bugs. If your ETL pipeline accepts S3 URIs from configuration or user input, add this normalization — the debugging time it saves is worth far more than the implementation effort.
+For an ETL pipeline accepting S3 URIs from configuration or user input, normalizing prefixes once at the entry point gives the downstream examples a consistent trailing-slash convention. The ~10-line `parse_s3_path` function addresses the missing-slash bug without repeating the check in each caller. The tradeoff is the implementation effort now against time spent debugging malformed keys later.
 
 ## References
 

@@ -22,7 +22,7 @@ source_content_hash: 16aeae2e6f66b7b3a277dd4a45f9d753433518115d34624bff02a2a567c
 expanded: true
 ---
 
-After dealing with ECR token expiration for weeks — first with manual `docker login`, then with a cron job that still had a race condition — I found the right solution: AWS's ECR Credential Helper. Instead of storing tokens that expire, it fetches fresh tokens on-demand every time Docker needs to authenticate.
+After dealing with ECR token expiration — first with manual `docker login`, then with a cron job that still had a race condition — I found the right solution: AWS's ECR Credential Helper. Instead of storing tokens that expire, it fetches fresh tokens on-demand every time Docker needs to authenticate.
 
 The old approach stored a token at container startup, and that token expired after 12 hours. The credential helper flips this: no token is stored, and a fresh one is fetched at the exact moment Docker needs it.
 
@@ -133,7 +133,7 @@ The EC2 instance role needs these permissions:
 | Setup complexity | Simple                  | Slightly more     |
 | Maintenance      | High (cron, monitoring) | None              |
 
-The credential helper requires slightly more initial setup (install binary, configure `config.json`), but the zero-maintenance aspect is worth it. No cron jobs to monitor, no race conditions, no expired token incidents at 2 AM.
+The credential helper requires slightly more initial setup (install binary, configure `config.json`), but its zero-maintenance aspect is the tradeoff for that setup work. No cron jobs to monitor, no race conditions, no expired token incidents at 2 AM.
 
 ## When to Use This
 
@@ -153,7 +153,7 @@ The credential helper requires slightly more initial setup (install binary, conf
 
 ## Takeaway
 
-The ECR Credential Helper replaces cron-based token refresh with on-demand authentication. Install the binary, configure `~/.docker/config.json` with your exact registry URL, and forget about ECR token expiry. The setup takes five minutes and eliminates an entire class of production incidents — no more "authorization token has expired" failures at 2 AM.
+The ECR Credential Helper replaces cron-based token refresh with on-demand authentication. Install the binary, configure `~/.docker/config.json` with your exact registry URL, so Docker can request credentials on demand. The setup takes five minutes and eliminates an entire class of production incidents — no more "authorization token has expired" failures at 2 AM.
 
 ## References
 

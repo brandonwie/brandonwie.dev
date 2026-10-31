@@ -28,7 +28,7 @@ references:
 source_content_hash: 87a9466311f45e75547c31782a7df7e53aa96bce9f07deb8af5ba45ec3c5ac74
 ---
 
-I built a dashboard for a portfolio project and deployed it. Then I sent the link to someone and realized: the backend was not running. The dashboard loaded, showed empty charts, and threw network errors in the console. The person saw a broken app. That is the moment I decided every dashboard I build needs a demo mode that works without infrastructure.
+I built a dashboard for a portfolio project that needed to work without a backend. That called for a demo mode that works without infrastructure.
 
 The pattern I landed on goes beyond showing static mock data. It analyzes user input, selects an appropriate scenario, and simulates multi-stage pipeline processing with realistic delays. The result is a dashboard that feels alive even when no backend exists.
 
@@ -165,6 +165,6 @@ It does not fit situations where the demo could be mistaken for real functionali
 
 ## Takeaway
 
-A demo mode is not a nice-to-have for portfolio dashboards -- it is the difference between a visitor seeing a working application and seeing a broken one. The demo pipeline pattern gives you a structured approach: auto-detect the backend's absence, match user input to realistic scenarios, simulate multi-stage processing with visible state transitions, and keep widgets alive with periodic data generation.
+For the portfolio dashboard described here, demo mode keeps the UI usable when the backend is unavailable. The demo pipeline pattern gives you a structured approach: auto-detect the backend's absence, match user input to realistic scenarios, simulate multi-stage processing with visible state transitions, and keep widgets alive with periodic data generation.
 
 The investment is one React context provider, one custom hook, and a set of scenario definitions. The return is a dashboard that demonstrates your work regardless of whether the infrastructure behind it is running.

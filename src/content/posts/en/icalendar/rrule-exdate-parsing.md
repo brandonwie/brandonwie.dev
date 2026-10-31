@@ -202,7 +202,7 @@ The manual approach -- parse separately, combine in RRuleSet -- is more code, bu
 
 When the rrule JavaScript library produces occurrences at the current timestamp instead of expected dates, the first thing to check is the EXDATE line. If it contains a TZID parameter or appears before the RRULE line in the input, `rrulestr()` will silently fail.
 
-The fix is to never feed EXDATE lines to `rrulestr()`. Extract RRULE lines, parse them alone, parse EXDATE lines with your own timezone-aware code, and combine both in an `RRuleSet`. It is more manual work, but it eliminates an entire category of silent failures.
+This workaround keeps EXDATE lines out of `rrulestr()`. Extract RRULE lines, parse them alone, parse EXDATE lines with your own timezone-aware code, and combine both in an `RRuleSet`. It is more manual work, but it eliminates an entire category of silent failures.
 
 This workaround is specific to the `jkbrzt/rrule` JavaScript library. Python's `dateutil` and other implementations may handle EXDATE+TZID correctly. If your recurrence data never includes EXDATE lines, or if EXDATE lines are always in UTC format (no TZID), standard `rrulestr()` works fine.
 

@@ -20,7 +20,7 @@ source_content_hash: 81f4240e0c5d2418f9be62a13a29274fc0f18468a95449bd407858363f3
 expanded: true
 ---
 
-An ETL job I maintained kept reporting "missing hours" — but the data was right there in S3. The pipeline ran, checked for 24 hours of data, found only 23, and fired a Slack alert. The fix wasn't a code change; it was a schedule change.
+An ETL job I maintained kept reporting "missing hours" — but the data was right there in S3. The fix wasn't a code change; it was a schedule change.
 
 The ETL was running before the last hour of data had arrived. The root cause was a mismatch between when I scheduled the job and when the source system finished writing data.
 
@@ -89,7 +89,7 @@ This is where it gets tricky, especially for teams working across timezones.
 
 When I first set up this ETL, my instinct was to think in KST (Korea Standard Time), since KST is my local timezone. The logs showed data arriving at 10:48 KST, so scheduling at 12:00 KST seemed natural.
 
-**Wrong approach:**
+**Mixing KST observations and UTC scheduling:**
 
 ```text
 Last hour arrives: 10:48 KST (user observed in logs)
@@ -101,7 +101,7 @@ But:               Amplitude project uses UTC
 
 The numbers happen to line up here, but mixing timezones is asking for trouble — especially during daylight saving transitions or when onboarding new team members.
 
-**Correct approach:**
+**Using UTC consistently:**
 
 ```text
 Last hour arrives: 01:48 UTC (10:48 KST)
@@ -109,7 +109,7 @@ Schedule at:       03:00 UTC (12:00 KST)
 All times in UTC:  ✓ No timezone conversion needed
 ```
 
-Keep everything in UTC. Convert for human readability only at the display layer.
+Using UTC for the observations and schedule keeps the conversions in this example at the display layer.
 
 ### Validation Checklist
 
@@ -162,7 +162,7 @@ The same alert that was a false positive now serves as a real signal.
 
 ## Takeaway
 
-ETL schedule timing is about data arrival patterns, not convenience. Observe when your source system finishes writing data, add a buffer, keep everything in UTC, and validate with manual triggers before going to production. A schedule that's 48 minutes too early can turn a perfectly working pipeline into a daily false alarm.
+ETL schedule timing is about data arrival patterns, not convenience. The method described here combines observing when the source system finishes writing data, a buffer, UTC throughout, and manual-trigger validation before production. A schedule that's 48 minutes too early can turn a perfectly working pipeline into a daily false alarm.
 
 ## References
 

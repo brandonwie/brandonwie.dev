@@ -33,9 +33,9 @@ references:
 source_content_hash: 9221baac95cccd253103a70108d22ddc1cbc9bf3654a4e8b61ec4d744235a2cc
 ---
 
-Our first ECS deployment looked perfect in the GitHub Actions logs, green checkmarks everywhere. Then we checked the running service: it was still serving the old image. The task definition had been registered, but nobody told the ECS service to actually use it. That was the first of many "it works but not really" moments on our way to reliable container deployments.
+Registering a task definition does not make the ECS service use it. The service must be updated with the new revision ARN to deploy the new image.
 
-If you're deploying Docker containers to AWS and want to understand the full pipeline, from `docker build` to zero-downtime rolling updates with automatic rollback, this guide walks through every step, including the gotchas that the docs don't warn you about.
+This post follows an ECR/ECS deployment pipeline from `docker build` through rolling updates intended to support zero downtime and automatic rollback, with examples of the coordination problems along the way.
 
 ---
 
@@ -716,11 +716,11 @@ ECR/ECS deployment is a coordination problem more than a technical one. Each pie
 
 2. Tag images with git SHAs, not just `latest`. The `:latest` tag is convenient but makes rollbacks painful because you can't tell which version is running. Git SHA tags (`my-app:abc123def`) give you instant traceability from a running task to its source commit.
 
-3. Set health check grace periods generously. If your application takes 30 seconds to start (common for JVM or NestJS apps), a 10-second grace period creates an infinite deployment loop: ECS launches a task, kills it before it's ready, launches another, and kills it again. Set the grace period to at least 2x your worst-case startup time.
+3. Set health check grace periods generously. If your application takes 30 seconds to start (common for JVM or NestJS apps), a 10-second grace period creates an infinite deployment loop: ECS launches a task, kills it before it's ready, launches another, and kills it again. The grace period must exceed the worst-case startup time; 2x is one example margin.
 
 4. Handle SIGTERM in your application. ECS sends SIGTERM before terminating tasks during rolling updates. If your app doesn't handle this signal, in-flight requests get dropped. The Node.js graceful shutdown pattern above takes 10 lines and prevents data loss during deployments.
 
-The GitHub Actions workflow in this post is a production-ready starting point. Clone it, update the cluster/service names, and you have zero-downtime deployments with automatic rollback on failure.
+The GitHub Actions workflow illustrates a starting point for zero-downtime deployment with automatic rollback. Cluster and service names, application startup, health checks, and rollback behavior still need to be evaluated for the target environment.
 
 ---
 

@@ -47,7 +47,7 @@ source_content_hash: beaed96fe6f2b0d647ddfa861c48d8000e1b25c182dc68d6e68ae3103af
 expanded: true
 ---
 
-Every new Python project started with the same tedious setup ritual: install pyenv for version management, pip or poetry for packages, black for formatting, flake8 for linting, isort for import sorting, and mypy for type checking. Each tool had its own config format, update cycle, and quirks. Across multiple repositories (ETL pipelines, Airflow DAGs, services), no two projects had the same tooling setup.
+A Python project can need separate tools: pyenv for version management, pip or poetry for packages, black for formatting, flake8 for linting, isort for import sorting, and mypy for type checking. Each tool has its own config format, update cycle, and quirks. Inconsistent tooling across repositories (ETL pipelines, Airflow DAGs, services) made onboarding and maintenance painful.
 
 I consolidated everything into a five-tool stack that's fast, consistent, and mostly from a single ecosystem. Here's what it looks like and why each choice was made.
 
@@ -76,7 +76,7 @@ The first decision was package management. Poetry is the most popular choice, bu
 | Complexity  | Simple, pip-like      | More complex, all-in-one |
 | asdf compat | Excellent             | Can conflict with venv   |
 
-uv is simpler and dramatically faster. For ETL scripts and Airflow DAGs, Poetry's advanced features (dependency groups, plugin system) are overkill. And since uv comes from the same Astral ecosystem as Ruff, the tooling philosophy is consistent.
+uv is simpler and dramatically faster. The ETL scripts and Airflow DAGs described here did not need Poetry's advanced features (dependency groups, plugin system). And since uv comes from the same Astral ecosystem as Ruff, the tooling philosophy is consistent.
 
 ### Ruff (Not Black + Flake8 + isort)
 
@@ -86,7 +86,7 @@ The main difficulty was rule selection — Ruff implements 800+ lint rules from 
 
 ### ty (Not mypy)
 
-ty is Astral's type checker — 10-60x faster than mypy, same Rust foundation. It's still beta, and occasionally disagrees with mypy on edge cases (like `structlog` typing stubs). For compliance-critical codebases, mypy is still safer. For everything else, ty's speed makes it practical to run on every commit.
+ty is Astral's type checker — 10-60x faster than mypy, same Rust foundation. It's still beta, and occasionally disagrees with mypy on edge cases (like `structlog` typing stubs). For compliance-critical codebases, mypy is still safer. In this setup, ty's speed makes it practical to run on every commit.
 
 ## Setup
 

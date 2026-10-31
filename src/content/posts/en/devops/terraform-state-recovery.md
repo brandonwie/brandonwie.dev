@@ -31,7 +31,7 @@ source_content_hash: 1f512c4d1cb2d599a486b2fe48e326825028a280b9e75d1f1cd4a607838
 expanded: true
 ---
 
-I ran `terraform plan` and it wanted to destroy an actively-used RDS cluster. The state file had drifted from AWS reality. Resources existed in AWS that Terraform didn't know about, and Terraform's view of existing resources was outdated. Instead of panicking and running `apply`, I needed a systematic recovery process.
+I needed to recover Terraform state that had drifted from AWS reality. Resources existed in AWS that Terraform didn't know about, and Terraform's view of existing resources was outdated. That called for a systematic recovery process.
 
 Terraform state drift happens when the state file doesn't match what actually exists in your cloud provider. This can occur from manual console changes, failed applies, or state file corruption. The recovery process is methodical: back up first, assess the damage, import missing resources, and fix configuration drift.
 

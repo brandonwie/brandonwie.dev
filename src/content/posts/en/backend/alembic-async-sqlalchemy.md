@@ -197,5 +197,5 @@ alembic current
 
 Replace `engine_from_config` with `async_engine_from_config`, wrap your sync
 migration runner in `connection.run_sync()`, use `NullPool`, and import every
-model before touching `Base.metadata`. That is the entire recipe — everything
-else is debugging the consequences of missing one of those four steps.
+model before touching `Base.metadata`. Those are the four changes in the example above; the other pitfalls still
+depend on configuration and database behavior.

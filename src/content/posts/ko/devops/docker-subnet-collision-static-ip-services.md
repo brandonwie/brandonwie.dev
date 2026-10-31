@@ -25,7 +25,7 @@ references:
     type: official
 ---
 
-Typesense 클러스터를 `docker compose up`으로 실행했더니 `Pool overlaps with other one on this address space`라는 에러가 나왔어요. 어떤 네트워크가 충돌하는지도, 뭘 바꿔야 하는지도 알려주지 않더라고요. 5분이면 될 셋업이 한 시간짜리 디버깅이 됐어요.
+Typesense 클러스터를 `docker compose up`으로 실행했더니 `Pool overlaps with other one on this address space`라는 에러가 나왔어요. 어떤 네트워크가 충돌하는지도, 뭘 바꿔야 하는지도 알려주지 않더라고요.
 
 ## 왜 이런 일이 발생하는가
 

@@ -21,7 +21,7 @@ source_content_hash: 062d2fa28d3fded6e7f158f6dad8607ba18293a99f15f28b64554d901aa
 expanded: true
 ---
 
-I was setting up uv for a new ETL project and paused at `.gitignore`: should `uv.lock` be committed or ignored? The instinct from Python-land is to ignore dependency artifacts — `.venv/` is always gitignored, and `uv.lock` feels similar. But `uv.lock` isn't a virtual environment. It's a lockfile, and the answer has real consequences for build reproducibility.
+When setting up uv for a project, should `uv.lock` be committed or ignored? The instinct from Python-land is to ignore dependency artifacts — `.venv/` is always gitignored, and `uv.lock` feels similar. But `uv.lock` isn't a virtual environment. It's a lockfile, and the answer has real consequences for build reproducibility.
 
 ## Why This Gets Confusing
 
@@ -31,7 +31,7 @@ I was setting up uv for a new ETL project and paused at `.gitignore`: should `uv
 
 **CI/CD silent divergence** — Without a committed lockfile, `uv sync` in CI resolves dependencies fresh each run. Builds pass for weeks until a transitive dependency releases a breaking change, causing a mysterious failure with no code change in the repo.
 
-**Library vs application confusion** — For libraries, the answer is genuinely debatable, which makes teams think it's also debatable for applications. It's not.
+**Library vs application confusion** — For libraries, committing the lockfile is debatable. For applications, uv recommends committing it for reproducible installations.
 
 ## The Options
 
@@ -42,7 +42,7 @@ I was setting up uv for a new ETL project and paused at `.gitignore`: should `uv
 
 ## The Rule: Commit It
 
-For applications, always commit `uv.lock`. The reproducibility and safety benefits far outweigh the occasional merge conflict. Lock merge conflicts are trivially resolved by re-running `uv lock`.
+For applications, uv recommends committing `uv.lock` for reproducibility and safety. That comes with occasional merge conflicts, which can be resolved by re-running `uv lock`.
 
 Per [uv official documentation](https://docs.astral.sh/uv/concepts/projects/sync/):
 
@@ -91,7 +91,7 @@ For libraries, consumers generate their own lockfile based on the library's vers
 
 ## Takeaway
 
-Commit `uv.lock` for every Python application project. It's the equivalent of `package-lock.json` — not `.venv`. The one-time cost of a large initial diff and occasional merge conflicts is vastly outweighed by reproducible builds, CI/CD safety, and dependency drift detection. When merge conflicts occur, resolve them by running `uv lock` — it regenerates the lockfile from `pyproject.toml`.
+uv's documentation recommends committing `uv.lock` for application projects; it records the dependency resolution. It's the equivalent of `package-lock.json` — not `.venv`. The one-time cost of a large initial diff and occasional merge conflicts is vastly outweighed by reproducible builds, CI/CD safety, and dependency drift detection. When merge conflicts occur, resolve them by running `uv lock` — it regenerates the lockfile from `pyproject.toml`.
 
 ## References
 

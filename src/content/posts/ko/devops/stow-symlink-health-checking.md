@@ -210,7 +210,7 @@ symlink 상태 점검은 이럴 때 실행해요:
 
 ## 마무리
 
-GNU Stow로 dotfiles를 관리한다면, 앱들이 업데이트하면서 symlink를 조용히 깨뜨릴 거고 — tree folding을 고려하지 않는 한 감지 스크립트도 어떤 패키지가 정상인지 조용히 거짓말을 할 거예요. leaf를 stat하기 전에 조상 디렉토리를 walk하고, stow-owned 조상을 링크 정상의 증거로 취급하고, 저장소 마이그레이션 후에는 canonical path에서 다시 stow하는 health check를 만드세요. 진짜 덮어씌움이 발생하면 `stow --adopt -R`로 복구할 수 있어요. 워크플로우는: 감지 → adopt → diff 검토 → 커밋하거나 복원. 주기적인 health check 없이 — 그리고 tree-folding 수정 없이 — dotfiles 저장소는 점차 실제 시스템 설정과 맞지 않는 픽션이 되고, 다음에 새 머신을 셋업할 때까지 알아채지 못해요.
+GNU Stow로 dotfiles를 관리한다면, 앱들이 업데이트하면서 symlink를 조용히 깨뜨릴 거고 — tree folding을 고려하지 않는 한 감지 스크립트도 어떤 패키지가 정상인지 조용히 거짓말을 할 거예요. leaf를 stat하기 전에 조상 디렉토리를 walk하고, stow-owned 조상을 링크 정상의 증거로 취급하고, 저장소 마이그레이션 후에는 canonical path에서 다시 stow하는 health check를 만드세요. 진짜 덮어씌움이 발생하면 `stow --adopt -R`로 복구할 수 있어요. 워크플로우는: 감지 → adopt → diff 검토 → 커밋하거나 복원. tree folding을 고려한 주기적인 점검이 없으면 저장소와 실제 설정이 눈에 띄지 않게 어긋날 수 있어요. 나중에 새 머신을 설정할 때 드러날 수도 있고요.
 
 ## 참고 자료
 

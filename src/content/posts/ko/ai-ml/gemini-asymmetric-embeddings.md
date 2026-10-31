@@ -48,9 +48,9 @@ references:
 source_content_hash: cdf388f2797e34254605b4ccfba94741e7b21aba28840caa8d4b748858ff1390
 ---
 
-RAG 파이프라인을 만들고 있었는데 검색 품질이 영 별로였어요. "데이터베이스 마이그레이션 어떻게 처리하지?"라고 물으면 정확히 답이 되는 document 대신 관련성이 애매한 것들만 돌아왔어요. Query든 document든 똑같은 방식으로 호출 한 번에 아무 구분 없이 embedding하고 있었는데 그게 병목이었어요.
+RAG 파이프라인에서 query와 document는 역할이 달라요. 양쪽을 똑같은 방식으로 embedding하면 질문과 본문을 구분하지 못해요.
 
-양쪽을 다르게 인코딩하니까 해결됐어요. 어떻게 동작하는지, 그리고 제가 처음에 잘못 적었던 부분까지 같이 정리해볼게요.
+양쪽을 다르게 인코딩하는 방법과 제가 처음에 잘못 적었던 부분을 같이 정리해볼게요.
 
 먼저 모델 이야기부터요. 이 판이 꽤 바뀌었어요. 처음엔 `text-embedding-004`로 붙였는데 이 모델은 Google의 양쪽 surface 모두에서 정리되는 중이에요. Gemini API에서는 [2026년 1월에 종료됐고](https://ai.google.dev/gemini-api/docs/deprecations), Vertex AI 문서에는 2027-04-01 retirement로 올라가 있어요. 그래서 아래 코드는 같은 `task_type` 메커니즘을 이어받은 `gemini-embedding-001` 기준이에요. Vertex 기준 이 모델의 retirement 날짜는 "No sooner than May 20, 2028"이고요. 그런데 두 surface가 각자 다른 일정표를 써요. 같은 모델인데 Gemini API 쪽에는 2028-05-14 종료로 올라가 있어요. 그러니까 먼저 눈에 띈 날짜 말고, 실제로 호출하는 surface의 날짜를 확인하세요.
 
@@ -113,7 +113,7 @@ def prepare_document(content, title="none"):
     return f"title: {title} | text: {content}"
 ```
 
-Asymmetric이라는 본질은 같고 표현 위치만 달라진 거예요. 새 모델은 입력 한도가 8,192 토큰으로 늘었고 텍스트만이 아니라 멀티모달 입력도 받아요. 출력도 "already L2 normalized for non-default dimensions (unlike `gemini-embedding-001`)"이라서 위에서 말한 수동 정규화 단계가 사라져요. 지금 새로 파이프라인을 시작한다면 이쪽이 맞고 `task_type`은 이미 `gemini-embedding-001`로 만들어둔 인덱스를 유지할 때 쓰는 방식이에요.
+Asymmetric이라는 본질은 같고 표현 위치만 달라진 거예요. 새 모델은 입력 한도가 8,192 토큰으로 늘었고 텍스트만이 아니라 멀티모달 입력도 받아요. 출력도 "already L2 normalized for non-default dimensions (unlike `gemini-embedding-001`)"이라서 위에서 말한 수동 정규화 단계가 사라져요. 새 파이프라인이라면 이런 차이를 놓고 `gemini-embedding-2`를 검토할 수 있어요. `task_type`은 이미 `gemini-embedding-001`로 만든 인덱스를 유지할 때 쓰는 방식이에요.
 
 인덱싱 루프를 그대로 옮기기 전에 배치 동작 차이 하나는 꼭 확인하세요. Gemini API 쪽 [embeddings 가이드](https://ai.google.dev/gemini-api/docs/embeddings)를 보면 `gemini-embedding-001`은 문자열 리스트를 넣으면 각각의 embedding을 돌려주는데, `gemini-embedding-2`는 "produces a single aggregated embedding for multiple inputs"라서 여러 개를 한 번에 만들려면 Batch API를 쓰라고 안내해요. 리스트를 넣고 리스트를 받던 루프를 그대로 두면 배치 하나가 조용히 vector 하나로 뭉개져요.
 

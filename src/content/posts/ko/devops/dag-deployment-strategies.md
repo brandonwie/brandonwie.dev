@@ -250,10 +250,8 @@ Airflow가 이런 매트릭스를 공식으로 내놓지는 않아요. 정답표
 - **EC2 전체 Git Repo.** `.gitignore`로 걸러낼 수 없는 비밀이 repository에
   있다면 쓰지 마세요. 감사 가능한 이미지 태그를 남기는 불변 배포를 컴플라이언스가
   요구할 때도 마찬가지고요.
-- **Image에 포함.** DAG 반복 속도가 중요하면 쓰지 마세요. DAG를 고칠 때마다
-  리빌드하고 재시작하면 못 견딜 피드백 루프가 생겨요.
-- **Git-Sync Sidecar.** 일반 EC2나 Docker Compose 환경에서는 쓰지 마세요.
-  Kubernetes 밖에서 sidecar 패턴은 복잡성만 늘려요.
+- **Image에 포함.** DAG를 고칠 때마다 리빌드하고 재시작하면 피드백 루프가 길어져요. 반복 속도가 중요할 때는 이 점이 비용이 될 수 있어요.
+- **Git-Sync Sidecar.** 일반 EC2나 Docker Compose에서는 sidecar가 관리할 복잡성을 더해요.
 - **S3/EFS Sync.** 엄격한 버전 관리가 필요하면 쓰지 마세요. S3 sync에는 Git 같은
   원자적 업데이트나 롤백 보장이 없어요.
 

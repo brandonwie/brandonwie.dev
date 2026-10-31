@@ -23,7 +23,7 @@ references:
     type: authoritative
 ---
 
-When Andrej Karpathy published his "LLM Knowledge Bases" pattern in early April 2026, I had a strange experience reading it. Not "this is new and interesting" but "this is my system, described by someone who has never seen it." The three-layer architecture, the incremental compilation, the index files, the LLM doing all the bookkeeping — I had been running exactly this pattern for months. I call it 3B (Brandon's Binary Brain), and it has been the backbone of how I work across six projects.
+Andrej Karpathy's "LLM Knowledge Bases" pattern has much in common with my system, 3B (Brandon's Binary Brain): the three-layer architecture, the incremental compilation, the index files, and the LLM doing the bookkeeping.
 
 This post is not a summary of Karpathy's idea. You can read [his gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) for that. This is a comparison: what happens when you map an abstract pattern against a system that has been in daily production use, and what the divergences reveal about what actually matters.
 
@@ -92,7 +92,7 @@ Despite the divergences, the core mechanics are identical:
 
 **Health checks are essential.** Karpathy calls it "linting." 3B has `/doc-audit` for broken links and stale references, `validate:dates` for frontmatter consistency, and a frontmatter health check in every `/wrap` session. Without these, entropy wins. Dead links accumulate, entries contradict each other, and the knowledge base degrades silently.
 
-**Outputs should be filed back.** Karpathy: "good answers can be filed back into the wiki as new pages." This is exactly what 3B's enrichment tiers do — when a query produces a new insight, it gets appended to the relevant knowledge entry. Explorations compound.
+**Outputs can be filed back.** Karpathy: "good answers can be filed back into the wiki as new pages." This is exactly what 3B's enrichment tiers do — when a query produces a new insight, it gets appended to the relevant knowledge entry. Explorations compound.
 
 ## The Missing Piece in Karpathy's Pattern
 
@@ -112,8 +112,8 @@ Reading the gist surfaced two ideas I had not considered:
 
 ## Key Takeaway
 
-Karpathy described a general pattern. 3B is a specific instance. The pattern works — not because the architecture is clever, but because the LLM absorbs the maintenance burden that kills every human-maintained knowledge base.
+Karpathy described a general pattern. 3B is a specific instance. In these two systems, the LLM takes on maintenance work that can otherwise make a knowledge base difficult to sustain.
 
-The important choice is not whether to build one, but **what your atomic unit is**. Karpathy chose wiki pages. I chose Zettelkasten notes. Both work. Pick the unit that matches how you think about your domain: pages for deep research on one topic, atomic notes for cross-cutting professional knowledge across many projects.
+One useful distinction in this comparison is **the unit of knowledge**. Karpathy chose wiki pages. I chose Zettelkasten notes. Both work. The comparison suggests different fits: pages for deep research on one topic, and atomic notes for cross-cutting professional knowledge across many projects.
 
-If you want to start, [Karpathy's gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) is the right starting point. Paste it into your LLM agent, tell it about your domain, and let the system evolve. The schema will change. The conventions will shift. That is how it is supposed to work. My CLAUDE.md has been rewritten twelve times. The knowledge entries are permanent. The scaffolding is disposable.
+If you want to start, [Karpathy's gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) is one starting point: you can paste it into your LLM agent, describe your domain, and let the system evolve. The schema will change. The conventions will shift. That is how it is supposed to work. My CLAUDE.md has been rewritten twelve times. The knowledge entries are permanent. The scaffolding is disposable.

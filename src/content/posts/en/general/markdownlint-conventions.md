@@ -35,7 +35,7 @@ references:
 source_content_hash: 925a7e0fe6ee7a07b09a07131ce83ac5ec5cad82af9970fcdb68981a5e5bb276
 ---
 
-I ran markdownlint on a knowledge base with about 200 markdown files and got back 7,500 errors. Seven thousand five hundred. The repository had accumulated formatting debt over months: missing blank lines around lists, code blocks without language specifiers, duplicate headings, inconsistent table spacing. Every contributor applied their own conventions, and the result was a codebase where diffs were noisy, GitHub rendering was unpredictable, and no one could tell "correct" formatting from "works on my machine" formatting.
+I ran markdownlint on a knowledge base and got back 7,500 errors. Seven thousand five hundred. The repository had accumulated formatting debt: missing blank lines around lists, code blocks without language specifiers, duplicate headings, inconsistent table spacing. Every contributor applied their own conventions, and the result was a codebase where diffs were noisy, GitHub rendering was unpredictable, and no one could tell "correct" formatting from "works on my machine" formatting.
 
 This post covers the rules that matter most, the configuration decisions I made, two non-obvious traps that show up later in nested config scopes, a third where a wrapped issue reference becomes a heading, and a follow-up migration that replaced an 18-rule custom config with a one-line `extends:` plus five documented carve-outs.
 
@@ -286,7 +286,7 @@ This third-party preset (built on DavidAnson's lib) is opinionated for a differe
 - Adds GH001 (no-default-alt-text), GH002 (no-generic-link-text), GH003 (no-empty-alt-text)
 - Requires `.markdownlint-cli2.mjs` (function-based config) + npm install of `@github/markdownlint-github` + `markdownlint-cli2-formatter-pretty`
 
-Skip unless: publishing public OSS docs with images where accessibility enforcement matters. For prose-heavy private knowledge bases, the migration cost (estimated thousands of rewrite errors on 3B's content) outweighs the benefit.
+For 3B's prose-heavy private knowledge base, the estimated migration cost was thousands of rewrite errors. This preset targets public OSS docs with images where accessibility enforcement matters.
 
 ## Scope Warning: Root Config Doesn't Always Win
 

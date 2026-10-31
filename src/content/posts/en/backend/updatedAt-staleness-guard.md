@@ -25,7 +25,7 @@ source_content_hash: f8472d723499e53b67d9e646ada8c4740103bb523e991af8fdcc7ae9d60
 expanded: true
 ---
 
-I was debugging a calendar sync bug where a user's event kept reverting to its old title after they'd already updated it. The webhook from Google Calendar was arriving with stale data — data from before the user's edit — and the sync path was blindly overwriting the local record with it. The fix was a timestamp comparison that took ten lines of code, but the concept behind it applies to any system that processes asynchronous updates.
+I was debugging a calendar sync bug where stale webhook data could overwrite newer local changes. The fix was a timestamp comparison, and the concept behind it can apply when stale asynchronous updates can overwrite newer local changes.
 
 ## The Problem
 
@@ -126,7 +126,7 @@ Not every system needs a staleness guard. Skip it when:
 
 ## Takeaway
 
-When you process asynchronous updates, always compare the source's modification timestamp against your local record's timestamp before overwriting protected fields. The pattern is ten lines of code, works at the field level (not record level), and prevents the most common class of data corruption in webhook-driven systems. The one thing that will break it: an ORM that doesn't update `updatedAt` when you think it does — so verify your ORM's auto-timestamp behavior before trusting the guard.
+When stale asynchronous updates can overwrite local changes, one guard is to compare the source's modification timestamp against your local record's timestamp before overwriting protected fields. The pattern is ten lines of code, works at the field level (not record level), and prevents the most common class of data corruption in webhook-driven systems. One thing that will break it: an ORM that doesn't update `updatedAt` when you think it does — so verify your ORM's auto-timestamp behavior before trusting the guard.
 
 ## References
 

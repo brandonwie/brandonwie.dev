@@ -20,9 +20,9 @@ references:
 source_content_hash: 76ec9fec63e38d6be42a31406b9e136f0ee6272bb3aa9fa2262c716fe6256be7
 ---
 
-On an Airflow deployment I worked on, a pipeline ran `docker-compose pull` and then `docker-compose up -d` on the production host. Both commands exited clean, but the container came back on an old locally built image rather than the one just pushed to ECR. The cause sat in the Compose file: it used `build:` instead of `image:`, so `pull` had nothing to fetch and silently did nothing.
+When an Airflow deployment's Compose file uses only `build:` instead of `image:`, `docker-compose pull` has no image to fetch. Separating development builds from production image pulls makes that distinction explicit.
 
-This is one of those mistakes that wastes hours because everything _looks_ correct. This post covers the pattern that prevents it: separating your Docker Compose files into development (`build:`) and production (`image:`) configurations, along with CI/CD pipeline strategies for Airflow deployments on EC2.
+This is one of those mistakes that is easy to miss because everything _looks_ correct. This post covers the pattern that prevents it: separating your Docker Compose files into development (`build:`) and production (`image:`) configurations, along with CI/CD pipeline strategies for Airflow deployments on EC2.
 
 ---
 
@@ -293,11 +293,11 @@ The third gotcha follows directly from the second: never run `down -v` or `docke
 
 The `build:` vs `image:` distinction is the thing to get right first in Docker Compose CI/CD. Everything else follows from this separation:
 
-1. Always use separate Compose files for dev and prod. `docker-compose.yml` with `build:` for local development, `docker-compose.prod.yml` with `image:` for production. Mixing them leads to the silent failure where `pull` does nothing because the file says "build locally."
+1. This setup uses separate Compose files for dev and prod. `docker-compose.yml` with `build:` for local development, `docker-compose.prod.yml` with `image:` for production. Mixing them leads to the silent failure where `pull` does nothing because the file says "build locally."
 
 2. Inject the ECR registry URL via environment variable. The `ECR_REGISTRY` pattern keeps your Compose file portable, so the same file works for any AWS account or region. CI/CD writes it to `.env`, and Docker Compose interpolates it automatically.
 
-3. Use manual triggers for production deployments. `workflow_dispatch` with deployment type selection (`dags`, `images`, `all`) prevents accidental deployments from pushes to main. For a system like Airflow, this also lets you deploy DAG changes without rebuilding containers, a 30-second operation instead of a 2-minute one.
+3. This deployment uses manual triggers for production. `workflow_dispatch` with deployment type selection (`dags`, `images`, `all`) prevents accidental deployments from pushes to main. For a system like Airflow, this also lets you deploy DAG changes without rebuilding containers, a 30-second operation instead of a 2-minute one.
 
 4. Store secrets in AWS Secrets Manager, not in the repository. The CI/CD pipeline fetches secrets at deploy time and writes them to `.env` on the target server. This keeps credentials out of git history and makes rotation straightforward.
 

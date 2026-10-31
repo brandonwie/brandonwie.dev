@@ -25,7 +25,7 @@ references:
 source_content_hash: 387c1d977abb69c1904812ea1e6229fdd556c14236e942744a35531d48479c42
 ---
 
-I was building a RAG pipeline and kept running into the same frustrating pattern: vector search would find semantically related documents but miss the one that contained the exact keyword the user typed. Searching "kubernetes deployment YAML" returned articles about container orchestration concepts — relevant, but not the specific YAML reference the user wanted. Keyword search had the opposite problem. I needed both, and I needed them to work together.
+Vector search can find semantically related documents but miss exact keyword matches. Keyword search has the opposite problem: it can miss semantic relationships. A RAG pipeline can combine both.
 
 ## The Core Problem with Single-Method Retrieval
 
@@ -66,7 +66,7 @@ RRF_score = Σ (1 / (k + rank_i))
 
 Where `k` is a constant (typically 60) and `rank_i` is the document's position in each retrieval list. A document ranked #1 in vector search and #3 in BM25 gets a combined score of `1/61 + 1/63 = 0.0323`. A document ranked #1 in only one list gets `1/61 = 0.0164`.
 
-The key insight: documents appearing in multiple lists always score higher than documents appearing in only one. This naturally boosts results that satisfy both semantic and keyword criteria.
+In this example, the document appearing in both lists scores higher than the document appearing in only one. This naturally boosts results that satisfy both semantic and keyword criteria.
 
 ## The Write Path
 
@@ -88,11 +88,11 @@ The SHA256 dedup check matters more than it seems. Embedding API calls cost mone
 
 ## When This Architecture Makes Sense
 
-This level of complexity pays off when you have 1,000+ documents and need both semantic understanding and keyword precision. For RAG pipelines specifically, context quality directly impacts LLM response quality, so the retrieval layer deserves investment.
+The extra retrieval paths may be useful for collections of 1,000+ documents that need both semantic matching and keyword precision. For RAG pipelines specifically, context quality directly impacts LLM response quality, so the retrieval layer deserves investment.
 
-For smaller collections (under 1,000 documents), a single pgvector query with a keyword filter gets you 80% of the way there. For real-time search with sub-10ms latency requirements, RRF's overhead of running multiple retrievals and merging results adds too much. And if a managed service like Elasticsearch or Algolia already covers your needs, there's no reason to build this from scratch.
+For smaller collections (under 1,000 documents), a single pgvector query with a keyword filter may get you 80% of the way there. For real-time search with sub-10ms latency requirements, RRF's overhead of running multiple retrievals and merging results can be too much. And if a managed service like Elasticsearch or Algolia already covers your needs, there's no reason to build this from scratch.
 
 ## Takeaway
 
-Hybrid search isn't about picking the best retrieval method — it's about acknowledging that no single method covers every query type. Dense search handles semantics, sparse search handles keywords, fuzzy search handles typos, and RRF fuses them into a ranking that outperforms any individual component. The deployment environment dictates which sparse method you use (in-memory BM25 for stateful workers, managed Typesense for stateless APIs), but the fusion pattern stays the same.
+Hybrid search isn't about picking the best retrieval method — it's about acknowledging that no single method covers every query type. Dense search handles semantics, sparse search handles keywords, fuzzy search handles typos, and RRF can fuse them into a ranking that outperforms individual components. The deployment environment dictates which sparse method you use (in-memory BM25 for stateful workers, managed Typesense for stateless APIs), but the fusion pattern stays the same.
 

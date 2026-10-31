@@ -23,7 +23,7 @@ expanded: true
 
 I was building an ETL pipeline to backfill Amplitude event data into a data warehouse when `gzip.decompress()` started throwing cryptic errors. The files were named `*.json.gz`, so I assumed they were gzip-compressed JSON. They weren't. I spent an embarrassing amount of time debugging what turned out to be a double-layered compression format that Amplitude's documentation barely explains.
 
-If you're pulling data from the Amplitude Export API, this post will save you the hex-dump debugging session I had to do.
+The examples below show the nesting and the checks used to identify it.
 
 ## The Problem
 
@@ -138,7 +138,7 @@ Other analytics platforms (Mixpanel, Heap, PostHog) have their own export format
 
 ## Takeaway
 
-When Amplitude says `.json.gz`, they mean ZIP containing GZIP containing newline-delimited JSON. Always inspect magic bytes when a decompression library throws unexpected errors — the file extension might be lying. Build your reader to handle both the double nesting and the edge case of empty exports, and your ETL pipeline will handle Amplitude data without surprises.
+When Amplitude says `.json.gz`, they mean ZIP containing GZIP containing newline-delimited JSON. Always inspect magic bytes when a decompression library throws unexpected errors — the file extension might be lying. Together, the nesting logic and empty-export guard cover the two cases described here.
 
 ## References
 

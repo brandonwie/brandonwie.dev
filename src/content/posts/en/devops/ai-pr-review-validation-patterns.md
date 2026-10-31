@@ -26,7 +26,7 @@ references:
 
 ## Classification Framework
 
-Not every AI review comment deserves the same treatment. Some are genuine bugs, others are stylistic preferences, and some are flat-out wrong. A simple VALID/INVALID binary stopped being enough for me fairly quickly. I needed more granularity to keep triage fast.
+Not every AI review comment deserves the same treatment. Some are genuine bugs, others are stylistic preferences, and some are flat-out wrong. A simple VALID/INVALID binary does not capture those differences. I needed more granularity to keep triage fast.
 
 | Classification        | Criteria                                           | Action                             |
 | --------------------- | -------------------------------------------------- | ---------------------------------- |
@@ -37,7 +37,7 @@ Not every AI review comment deserves the same treatment. Some are genuine bugs, 
 | **OPTIONAL**          | Nice-to-have, stylistic, not urgent                | Ask user                           |
 | **INVALID**           | Wrong, misunderstood context, doesn't apply        | Document + add reinforcing comment |
 
-The two tiers I added later, GOOD-TO-HAVE and CONTROVERSIAL, turned out to matter most on release PRs. On a feature branch I can usually address everything. Triaging 19 findings on a develop-to-main merge is a different job, and there I had to separate "correct and worth the risk" from "correct but not worth touching right now." GOOD-TO-HAVE covers improvements where the fix is easy and the risk is low. CONTROVERSIAL is for findings where the AI has a valid point, but the cost of fixing outweighs the benefit in the current context: adding type guards to 27 test files during a release, say.
+The two tiers GOOD-TO-HAVE and CONTROVERSIAL turned out to matter most on release PRs. On a feature branch I can usually address everything. Triaging 19 findings on a develop-to-main merge is a different job, and there I had to separate "correct and worth the risk" from "correct but not worth touching right now." GOOD-TO-HAVE covers improvements where the fix is easy and the risk is low. CONTROVERSIAL is for findings where the AI has a valid point, but the cost of fixing outweighs the benefit in the current context: adding type guards for 27 occurrences in tests during a release, say.
 
 ## Common AI Confusion Patterns
 
@@ -285,7 +285,7 @@ sed -n '<claimed-line>p' <claimed-file>
 
 If the grep returns empty or the line shows different content, the finding is either hallucinated or comparing against a phantom version. Treat every unverified claim as INVALID until grep confirms it. This adds about 5 seconds per finding and catches cross-skill confusion that would otherwise drive 30+ minutes of wasted fix work.
 
-**Reviewer asymmetry (data point, same PR):** the 3b-forge plugin review on the same PR was grounded, with 4 of 5 findings valid. Plugin reviewers operating on the actual repo file structure produce higher-precision output than session-scope reviewers (Codex) when the session contains skill name collisions.
+**Reviewer asymmetry (data point, same PR):** the 3b-forge plugin review on the same PR was grounded, with 4 of 5 findings valid. On that PR, with skill name collisions in the session, the plugin review operating on the actual repo file structure had higher precision than the session-scope review (Codex).
 
 ### 14. Stale Local Read Under a Live Parallel-Lane Checkout
 
@@ -384,7 +384,7 @@ Two caveats I would not skip. Convergence is evidence of salience, not of truth.
 
 **Stats:** 14 items (6 CodeRabbit, 8 Claude Bot), 1 VALID BUG, 2 CONTROVERSIAL→FIX, 3 GTH→FIX, 1 SKIP, 6 INVALID, 1 DUP
 
-This was the PR where three new confusion patterns emerged at once. The Python project uses Celery with prefork workers, Pydantic v2 models, and a factory pattern for service initialization, which are three things AI reviewers consistently get wrong.
+This was the PR where three new confusion patterns emerged at once. The Python project uses Celery with prefork workers, Pydantic v2 models, and a factory pattern for service initialization, which were the three sources of reviewer confusion on this PR.
 
 **Key VALID BUG:**
 

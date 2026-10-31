@@ -31,11 +31,11 @@ references:
     type: authoritative
 ---
 
-제가 작업하던 캘린더 sync의 에러 로그에 파싱 실패 세 가지가 올라왔어요.
-`Invalid time zone: GMT+09:00`, Linux 사용자에게서 온
+외부 캘린더 형식은 세 가지 파싱 에러를 일으킬 수 있어요.
+`Invalid time zone: GMT+09:00`, GNOME Evolution의
 `unsupported RRULE parm: X-EVOLUTION-ENDDATE`, 그리고 삭제된 항목이 있는 Google
-Calendar 이벤트에서 온 `Unsupported RFC prop EXDATE`. 외부 캘린더 클라이언트는 셋 다
-다른데, 결국 같은 rrule.js 파서로 들어가고 그 파서는 깔끔한 RFC 5545 입력을 기대해요.
+Calendar 이벤트의 `Unsupported RFC prop EXDATE`예요. 결국 같은 rrule.js 파서로
+들어가고 그 파서는 깔끔한 RFC 5545 입력을 기대해요.
 
 현실 세계는 깔끔한 RFC 5545를 내놓지 않아요. Apple Calendar, GNOME Evolution,
 TripIt, 항공사 예약 앱 — 각자 iCalendar 표준을 자기 방식으로 해석해요. 백엔드에서
@@ -110,8 +110,7 @@ function normalizeTimezone(tz: string): string {
 매핑되는데, 볼 때마다 틀린 것처럼 읽혀요. IANA 타임존 theory 문서에서는 이 부호 반전
 설명을 찾지 못했고, 런타임에 직접 물어봐서 확인했어요.
 
-테이블에 없는 offset에서 `Etc/UTC`로 fallback하는 건 크래시를 막아줘요. 그 이벤트의
-결과는 틀리지만, sync 전체를 막는 치명적 에러보다는 틀린 게 나아요.
+테이블에 없는 offset에서 `Etc/UTC`로 fallback하는 건 크래시를 막아줘요. 그 이벤트의 결과는 틀리지만, 그 정확성을 포기하는 대신 sync 전체를 막는 치명적 에러를 피하는 절충이에요.
 
 ---
 
@@ -240,8 +239,7 @@ Google Calendar API -> 데이터베이스 -> RRULE 파싱
 
 외부 캘린더 데이터는 지저분하고, 앞으로도 계속 지저분할 거예요. Apple, GNOME, 여행 앱,
 심지어 Google 자신도 rrule 라이브러리가 기대하는 것과 다른 데이터를 만들어내요.
-더 나은 파서를 찾는 게 해법이 아니라, 어떤 파서에도 닿기 전에 데이터를 정규화하는 게
-해법이에요.
+여기서는 선택한 파서에 들어가기 전에 정규화 레이어로 외부 데이터를 맞췄어요.
 
 프로덕션에서 살아남은 여섯 가지 원칙이에요. 마지막 하나는 먼저 틀리고 나서야 알았어요:
 

@@ -23,9 +23,9 @@ references:
     type: official
 ---
 
-PR 하나를 보안, 성능, test coverage 세 방향에서 동시에 review해야 했어요.
+PR 하나를 보안, 성능, test coverage 세 방향에서 동시에 review할 수 있어요.
 terminal session을 따로 띄우면 작업은 병렬로 할 수 있지만 task 상태와 발견
-사항을 직접 옮겨야 했어요.
+사항을 직접 옮겨야 해요.
 
 Agent Teams는 이 흐름을 제품 기능으로 묶어요. 하나의 Claude Code session이
 lead가 되고, 각자 context window를 가진 팀원들이 shared task list와 직접
@@ -102,7 +102,7 @@ contract로 사용하면 안 돼요.
 
 - Delegate mode(Shift+Tab)로 lead를 조율과 review에 집중시켜요.
 - teammate가 read-only로 계획을 먼저 쓰고 lead가 승인한 뒤 구현해요.
-- teammate 한 명당 task 5~6개 정도로 나눠요.
+- teammate 한 명당 task 5~6개 정도로 나눠요. 더 적으면 teammate를 충분히 활용하지 못하고, 더 많으면 context overflow가 생길 수 있어요.
 - `TeammateIdle`과 `TaskCompleted` hook으로 조기 중단과 완료 오판을 막아요.
 
 ## 실제로 만난 실패들

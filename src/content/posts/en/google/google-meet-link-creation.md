@@ -101,7 +101,7 @@ This eliminates the create-extract-delete dance entirely. The Meet link comes ba
 | App already creates a calendar event             | Piggyback — include `createRequest` in that call  |
 | Standalone Meet link (no calendar event context) | Temp event — create, extract link, delete          |
 
-The piggyback approach has zero API overhead (no extra calls), and the Meet link is semantically tied to the actual event rather than orphaned from a deleted placeholder. If you are already calling `events.insert()` or `events.update()`, there is no reason to use the temp event pattern.
+The piggyback approach has zero API overhead (no extra calls), and the Meet link is semantically tied to the actual event rather than orphaned from a deleted placeholder. If you are already calling `events.insert()` or `events.update()`, including `conferenceData.createRequest` avoids the separate temporary-event round trip.
 
 ## Clearing Meet Links (conferenceData = null)
 
