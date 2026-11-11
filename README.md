@@ -49,8 +49,13 @@ pnpm preview
 English posts are synced from the B3 knowledge base:
 
 ```bash
-pnpm sync
+pnpm sync        # copy new posts into src/content/posts
+pnpm sync:check  # list posts whose B3 source note changed since the sync
 ```
+
+The sync is one-way: it reads the B3 checkout and never writes to it. This repo
+holds the publish state. A post file means the note is published, and its
+`source_content_hash` shows whether the source note changed.
 
 ### Translation Workflow
 
