@@ -8,6 +8,9 @@
  * (write access to the blog's src/content/posts only), and compares the 3B
  * tree before and after.
  *
+ * The symlink tests cover the layouts where the Deno write grant alone is not
+ * enough: Deno checks the pathname and follows a symlink below the posts root.
+ *
  * Run: deno test --no-check --allow-read --allow-write --allow-env --allow-run scripts/sync-from-3b.test.ts
  * (--no-check: deno.json sets browser libs, so a type-checked run cannot see the
  * Deno namespace; `deno run` does not type-check either.)
@@ -128,5 +131,106 @@ Deno.test('the removed --reconcile mode is refused and writes nothing', async ()
 		assertEquals(await snapshot(blog), {});
 	} finally {
 		await Deno.remove(tmp, { recursive: true });
+	}
+});
+
+// --- Symlink layouts (PR 77 review, round 1) ---------------------------------
+// Each test plants a symlink under the posts root that leads out of the posts
+// tree, runs the real script with the production write grant, and requires a
+// refusal (exit 1, "refused to write") and a byte-identical tree on the far
+// side of the link.
+
+/** A temp 3B root with one publishable note, and a blog root with an empty posts tree. */
+async function fixture() {
+	const tmp = await Deno.makeTempDir({ prefix: 'sync-one-way-' });
+	const threeB = join(tmp, 'b3');
+	const blog = join(tmp, 'blog');
+	const notePath = join(threeB, 'knowledge', 'devops', 'sample-note.md');
+	const posts = join(blog, 'src', 'content', 'posts');
+	await Deno.mkdir(dirname(notePath), { recursive: true });
+	await Deno.mkdir(posts, { recursive: true });
+	await Deno.writeTextFile(notePath, NOTE);
+	return { tmp, threeB, blog, notePath, posts };
+}
+
+function assertRefused(run: { code: number; text: string }) {
+	assertEquals(run.code, 1, run.text);
+	assert(run.text.includes('refused to write'), run.text);
+	assert(!run.text.includes('Synced:'), run.text);
+}
+
+Deno.test('sync refuses a post file that is a symlink into 3B', async () => {
+	const f = await fixture();
+	try {
+		const postDir = join(f.posts, 'en', 'devops');
+		await Deno.mkdir(postDir, { recursive: true });
+		await Deno.symlink(f.notePath, join(postDir, 'sample-note.md'));
+
+		const before = await snapshot(f.threeB);
+		assertRefused(await runSync(f.threeB, f.blog, ['--allow-missing-terms']));
+		assertEquals(await snapshot(f.threeB), before);
+	} finally {
+		await Deno.remove(f.tmp, { recursive: true });
+	}
+});
+
+Deno.test('sync refuses a posts/en directory that is a symlink into 3B', async () => {
+	const f = await fixture();
+	try {
+		await Deno.symlink(join(f.threeB, 'knowledge'), join(f.posts, 'en'));
+
+		const before = await snapshot(f.threeB);
+		assertRefused(await runSync(f.threeB, f.blog, ['--allow-missing-terms']));
+		assertEquals(await snapshot(f.threeB), before);
+	} finally {
+		await Deno.remove(f.tmp, { recursive: true });
+	}
+});
+
+Deno.test('sync refuses a posts root that resolves into 3B', async () => {
+	const f = await fixture();
+	try {
+		// The posts root itself is a link to a folder inside the 3B checkout, so
+		// the real destination overlaps 3B although no component below it is a link.
+		const inside = join(f.threeB, 'personal', 'posts');
+		await Deno.mkdir(inside, { recursive: true });
+		await Deno.remove(f.posts);
+		await Deno.symlink(inside, f.posts);
+
+		const before = await snapshot(f.threeB);
+		assertRefused(await runSync(f.threeB, f.blog, ['--allow-missing-terms']));
+		assertEquals(await snapshot(f.threeB), before);
+	} finally {
+		await Deno.remove(f.tmp, { recursive: true });
+	}
+});
+
+Deno.test('--rehash refuses a post file that is a symlink out of the posts tree', async () => {
+	const f = await fixture();
+	try {
+		// An expanded post with a stale hash, stored outside the posts tree and
+		// linked into it. --rehash would rewrite its hash line through the link.
+		const outside = join(f.tmp, 'outside');
+		const linked = join(outside, 'sample-note.md');
+		await Deno.mkdir(outside, { recursive: true });
+		await Deno.writeTextFile(
+			linked,
+			`---\ntitle: 'Sample Note'\nlang: en\nexpanded: true\nsource_content_hash: ${'0'.repeat(64)}\n---\n\nExpanded body.\n`,
+		);
+		const postDir = join(f.posts, 'en', 'devops');
+		await Deno.mkdir(postDir, { recursive: true });
+		await Deno.symlink(linked, join(postDir, 'sample-note.md'));
+		const allow = join(f.tmp, 'allow.txt');
+		await Deno.writeTextFile(allow, 'devops/sample-note.md\n');
+
+		const beforeOutside = await snapshot(outside);
+		const beforeThreeB = await snapshot(f.threeB);
+		const run = await runSync(f.threeB, f.blog, ['--rehash', `--allow=${allow}`]);
+		assertEquals(run.code, 1, run.text);
+		assert(run.text.includes('refused to write'), run.text);
+		assertEquals(await snapshot(outside), beforeOutside);
+		assertEquals(await snapshot(f.threeB), beforeThreeB);
+	} finally {
+		await Deno.remove(f.tmp, { recursive: true });
 	}
 });

@@ -22,9 +22,16 @@
  *   - published     = a post file exists for the note's category and slug
  *   - needs resync  = the post's source_content_hash differs from the hash of
  *                     the current source note; `pnpm sync:check` lists these
- * `pnpm sync` and `pnpm sync:rehash` grant write access to src/content/posts of
- * the current directory only, so Deno itself refuses a write anywhere else. Run
- * them from the checkout that BLOG_ROOT names (in a worktree: BLOG_ROOT="$PWD").
+ * Two guards keep a write inside the posts tree:
+ *   1. writePost() checks the real destination before every post write: the
+ *      real posts root must not overlap the 3B root, and no path component
+ *      below the posts root, the post file included, may be a symlink.
+ *   2. `pnpm sync` and `pnpm sync:rehash` grant write access to
+ *      src/content/posts of the current directory only. Deno checks the
+ *      pathname and follows symlinks, so this grant alone does not stop a
+ *      write through a symlink; guard 1 does.
+ * Run them from the checkout that BLOG_ROOT names (in a worktree:
+ * BLOG_ROOT="$PWD").
  *
  * G1 gate: every post is audited (scripts/lib/g1.ts) before any write. A post
  * with a finding is not written; exit code 1.
@@ -49,7 +56,7 @@ import {
 	parse as parseYaml,
 	stringify as stringifyYaml,
 } from 'https://deno.land/std@0.220.0/yaml/mod.ts';
-import { basename, dirname, join } from 'https://deno.land/std@0.220.0/path/mod.ts';
+import { basename, dirname, join, relative } from 'https://deno.land/std@0.220.0/path/mod.ts';
 import { auditG1, EMPTY_TERMS, parseTerms, type Terms } from './lib/g1.ts';
 
 // Configuration — all paths absolute so script works from any directory
@@ -114,7 +121,8 @@ function resolveBlogRoot(): string {
 	Deno.exit(1);
 }
 const BLOG_ROOT = resolveBlogRoot();
-const TARGET_DIR = join(BLOG_ROOT, 'src', 'content', 'posts', 'en');
+const POSTS_ROOT = join(BLOG_ROOT, 'src', 'content', 'posts');
+const TARGET_DIR = join(POSTS_ROOT, 'en');
 const EXCLUDED_CATEGORIES = ['moba']; // Company-specific content (backup filter)
 
 // ============================================================================
@@ -604,6 +612,71 @@ function setSourceHashInPlace(content: string, newHash: string): string | null {
 	return `${openDelim}${updatedFrontmatter}${closeDelim}${body}`;
 }
 
+/** True when one path is the other or lies inside it. Both must be real paths. */
+function pathsOverlap(a: string, b: string): boolean {
+	return a === b || a.startsWith(b + '/') || b.startsWith(a + '/');
+}
+
+/**
+ * Throw unless targetPath is a safe post destination. The Deno write grant
+ * checks the pathname only and follows symlinks, so a symlink under the posts
+ * root could send a write into the 3B checkout. Checks, all before any write:
+ *   - the real posts root does not overlap the real 3B root;
+ *   - targetPath is below the posts root;
+ *   - no existing component below the posts root is a symlink, the post file
+ *     included.
+ */
+async function assertSafePostPath(targetPath: string): Promise<void> {
+	let postsReal: string;
+	try {
+		postsReal = await Deno.realPath(POSTS_ROOT);
+	} catch {
+		throw new Error(`posts root does not exist: ${POSTS_ROOT}`);
+	}
+	let threeBReal: string | null = null;
+	try {
+		threeBReal = await Deno.realPath(THREEB_ROOT);
+	} catch (err) {
+		if (!(err instanceof Deno.errors.NotFound)) throw err;
+	}
+	if (threeBReal && pathsOverlap(postsReal, threeBReal)) {
+		throw new Error(`posts root ${postsReal} overlaps the 3B root ${threeBReal}`);
+	}
+	const rel = relative(POSTS_ROOT, targetPath);
+	if (rel === '' || rel.startsWith('..') || rel.startsWith('/')) {
+		throw new Error(`post path is outside the posts root: ${targetPath}`);
+	}
+	let current = POSTS_ROOT;
+	for (const part of rel.split('/')) {
+		current = join(current, part);
+		let info: Deno.FileInfo;
+		try {
+			info = await Deno.lstat(current);
+		} catch (err) {
+			if (err instanceof Deno.errors.NotFound) break; // nothing below exists yet
+			throw err;
+		}
+		if (info.isSymlink) throw new Error(`symlink in the post path: ${current}`);
+	}
+}
+
+/**
+ * The one place a post file is written (sync and --rehash). A refused
+ * destination stops the run with exit 1: nothing is created or written for it.
+ * ponytail: check-then-write, not atomic; a symlink planted between the check
+ * and the write is out of scope for a single-user local script.
+ */
+async function writePost(targetPath: string, content: string): Promise<void> {
+	try {
+		await assertSafePostPath(targetPath);
+	} catch (err) {
+		console.error(`Error: refused to write ${targetPath}: ${(err as Error).message}`);
+		Deno.exit(1);
+	}
+	await ensureDir(dirname(targetPath));
+	await Deno.writeTextFile(targetPath, content);
+}
+
 /**
  * --rehash mode: re-baseline source_content_hash for an allowlist of posts.
  *
@@ -701,7 +774,7 @@ async function rehashFormatOnly(allowPath: string, dryRun: boolean, verbose: boo
 				console.log(`⚠️  ${relativePath}: source_content_hash line not found — skipping`);
 				continue;
 			}
-			await Deno.writeTextFile(targetPath, updated);
+			await writePost(targetPath, updated);
 			console.log(`🔁 Rehashed: ${relativePath}`);
 		}
 		rehashed++;
@@ -942,8 +1015,7 @@ ${cleanedBody}
 		if (dryRun) {
 			console.log(`✅ Would sync: ${relativePath} → ${targetPath}`);
 		} else {
-			await ensureDir(dirname(targetPath));
-			await Deno.writeTextFile(targetPath, targetContent);
+			await writePost(targetPath, targetContent);
 
 			console.log(`✅ Synced: ${relativePath}`);
 		}
