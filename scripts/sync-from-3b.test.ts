@@ -234,3 +234,35 @@ Deno.test('--rehash refuses a post file that is a symlink out of the posts tree'
 		await Deno.remove(f.tmp, { recursive: true });
 	}
 });
+
+Deno.test(
+	'sync replaces a post that is a hard link to a 3B note and leaves the note alone',
+	async () => {
+		// PR 77 review, round 2. A hard link is a regular file, so the symlink checks
+		// accept it; a truncating write through it would rewrite the 3B note.
+		const f = await fixture();
+		try {
+			const postDir = join(f.posts, 'en', 'devops');
+			const postPath = join(postDir, 'sample-note.md');
+			await Deno.mkdir(postDir, { recursive: true });
+			await Deno.link(f.notePath, postPath);
+			assertEquals((await Deno.stat(f.notePath)).nlink, 2, 'the fixture is a hard link');
+
+			const before = await snapshot(f.threeB);
+			const run = await runSync(f.threeB, f.blog, ['--allow-missing-terms']);
+			assertEquals(await snapshot(f.threeB), before, run.text);
+
+			// The sync wrote the post as a new file: the two names no longer share bytes.
+			assertEquals(run.code, 0, run.text);
+			assertEquals((await Deno.stat(f.notePath)).nlink, 1);
+			const post = await Deno.readTextFile(postPath);
+			assert(/^source_content_hash: /m.test(post), 'the post is the synced post');
+			// No temp file is left beside the post.
+			const names = [];
+			for await (const e of Deno.readDir(postDir)) names.push(e.name);
+			assertEquals(names, ['sample-note.md']);
+		} finally {
+			await Deno.remove(f.tmp, { recursive: true });
+		}
+	},
+);

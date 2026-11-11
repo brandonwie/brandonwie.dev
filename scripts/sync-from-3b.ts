@@ -17,19 +17,27 @@
  *   --allow-missing-terms  Write even when the G1 deny list (BLOG_AUDIT_TERMS,
  *                else <3B>/.agent-ssot/config/blog-audit-terms.json) is missing.
  *
- * One-way: this script only READS the 3B checkout. No mode writes a file under
- * the 3B root (brandonwie/brandonwie.dev#76). Publish state lives in this repo:
+ * One-way: this script only READS the 3B checkout. No mode has a code path that
+ * targets a file under the 3B root (brandonwie/brandonwie.dev#76); the limits of
+ * that guarantee are listed with the guards below. Publish state lives in this
+ * repo:
  *   - published     = a post file exists for the note's category and slug
  *   - needs resync  = the post's source_content_hash differs from the hash of
  *                     the current source note; `pnpm sync:check` lists these
  * Two guards keep a write inside the posts tree:
  *   1. writePost() checks the real destination before every post write: the
  *      real posts root must not overlap the 3B root, and no path component
- *      below the posts root, the post file included, may be a symlink.
+ *      below the posts root, the post file included, may be a symlink. It
+ *      then writes a new file and renames it over the post, so an existing
+ *      file is never truncated: a post that is a hard link to a 3B note is
+ *      replaced, and the note keeps its bytes.
  *   2. `pnpm sync` and `pnpm sync:rehash` grant write access to
  *      src/content/posts of the current directory only. Deno checks the
  *      pathname and follows symlinks, so this grant alone does not stop a
  *      write through a symlink; guard 1 does.
+ * Limits: the checks and the write are not one atomic step, so a parent folder
+ * swapped for a symlink during a run is not caught; and --diff writes two
+ * files in the system temp folder under an unscoped write grant.
  * Run them from the checkout that BLOG_ROOT names (in a worktree:
  * BLOG_ROOT="$PWD").
  *
@@ -663,8 +671,16 @@ async function assertSafePostPath(targetPath: string): Promise<void> {
 /**
  * The one place a post file is written (sync and --rehash). A refused
  * destination stops the run with exit 1: nothing is created or written for it.
- * ponytail: check-then-write, not atomic; a symlink planted between the check
- * and the write is out of scope for a single-user local script.
+ *
+ * The content goes to a new private file beside the destination, which is then
+ * renamed over it. The write never opens or truncates the existing file, so a
+ * post that is a hard link to another file (a 3B note, for example) is
+ * replaced by a new file and the other name keeps its bytes. The rename also
+ * replaces the directory entry itself, so a link planted at the post path
+ * after the check is replaced, not followed.
+ * ponytail: the folder check and the write are not one atomic step; a parent
+ * folder swapped for a symlink during a run is out of scope for a single-user
+ * local script.
  */
 async function writePost(targetPath: string, content: string): Promise<void> {
 	try {
@@ -674,7 +690,15 @@ async function writePost(targetPath: string, content: string): Promise<void> {
 		Deno.exit(1);
 	}
 	await ensureDir(dirname(targetPath));
-	await Deno.writeTextFile(targetPath, content);
+	// createNew: fails when the name exists and never follows a link there.
+	const tempPath = `${targetPath}.tmp-${crypto.randomUUID()}`;
+	try {
+		await Deno.writeTextFile(tempPath, content, { createNew: true });
+		await Deno.rename(tempPath, targetPath);
+	} catch (err) {
+		await Deno.remove(tempPath).catch(() => {});
+		throw err;
+	}
 }
 
 /**
