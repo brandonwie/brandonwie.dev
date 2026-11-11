@@ -2,32 +2,53 @@
  * Sync content from 3B knowledge base to blog
  *
  * Usage:
- *   deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts
+ *   deno run --allow-read --allow-write=src/content/posts --allow-env scripts/sync-from-3b.ts
  *   deno run --allow-read --allow-env scripts/sync-from-3b.ts --check
  *   deno run --allow-read --allow-write --allow-env --allow-run scripts/sync-from-3b.ts --diff --slug=<slug>
- *   deno run --allow-read --allow-write --allow-env scripts/sync-from-3b.ts --reconcile
  *
  * Modes:
  *   (default)    Sync new + unexpanded posts. Never overwrites expanded posts.
  *   --check      Report hash mismatches for expanded posts (read-only).
  *   --diff       Show unified diff for a specific post (requires --slug=<slug>).
- *   --reconcile  Clear stale needs_resync flags from 3B source frontmatter.
- *                Writes only to source files; never touches blog posts.
  *   --rehash     Re-baseline source_content_hash for --allow=<file> posts.
  *                Writes only to blog post frontmatter; never touches sources.
- *   --dry-run    Preview what would sync (or reconcile) without writing.
- *   --verbose    Show skip / clear / keep reasons for each file.
+ *   --dry-run    Preview what would sync without writing.
+ *   --verbose    Show skip reasons for each file.
  *   --allow-missing-terms  Write even when the G1 deny list (BLOG_AUDIT_TERMS,
  *                else <3B>/.agent-ssot/config/blog-audit-terms.json) is missing.
  *
+ * One-way: this script only READS the 3B checkout. No mode has a code path that
+ * targets a file under the 3B root (brandonwie/brandonwie.dev#76); the limits of
+ * that guarantee are listed with the guards below. Publish state lives in this
+ * repo:
+ *   - published     = a post file exists for the note's category and slug
+ *   - needs resync  = the post's source_content_hash differs from the hash of
+ *                     the current source note; `pnpm sync:check` lists these
+ * Two guards keep a write inside the posts tree:
+ *   1. writePost() checks the real destination before every post write: the
+ *      real posts root must not overlap the 3B root, and no path component
+ *      below the posts root, the post file included, may be a symlink. It
+ *      then writes a new file and renames it over the post, so an existing
+ *      file is never truncated: a post that is a hard link to a 3B note is
+ *      replaced, and the note keeps its bytes.
+ *   2. `pnpm sync` and `pnpm sync:rehash` grant write access to
+ *      src/content/posts of the current directory only. Deno checks the
+ *      pathname and follows symlinks, so this grant alone does not stop a
+ *      write through a symlink; guard 1 does.
+ * Limits: the checks and the write are not one atomic step, so a parent folder
+ * swapped for a symlink during a run is not caught; and --diff writes two
+ * files in the system temp folder under an unscoped write grant.
+ * Run them from the checkout that BLOG_ROOT names (in a worktree:
+ * BLOG_ROOT="$PWD").
+ *
  * G1 gate: every post is audited (scripts/lib/g1.ts) before any write. A post
- * with a finding is not written and its source is not stamped; exit code 1.
+ * with a finding is not written; exit code 1.
  * The default mode, --dry-run and --check load the deny list; a malformed list
  * (bad JSON, or a section without its string array) fails all three. A missing
  * list stops a writing run unless --allow-missing-terms; --dry-run and --check
  * continue without it, and a dry run then previews STRUCTURAL G1 checks only
- * (no employer or identifier detection). --diff, --reconcile and --rehash do
- * not load the list and do not run the G1 gate.
+ * (no employer or identifier detection). --diff and --rehash do not load the
+ * list and do not run the G1 gate.
  *
  * This script:
  * 1. Reads markdown files from 3B knowledge directory
@@ -35,7 +56,6 @@
  * 3. Transforms frontmatter to blog format
  * 4. Protects expanded posts from overwrite (hash guard)
  * 5. Copies to src/content/posts/
- * 6. Updates source file with sync timestamps
  */
 
 import { walk } from 'https://deno.land/std@0.220.0/fs/walk.ts';
@@ -44,7 +64,7 @@ import {
 	parse as parseYaml,
 	stringify as stringifyYaml,
 } from 'https://deno.land/std@0.220.0/yaml/mod.ts';
-import { basename, dirname, join } from 'https://deno.land/std@0.220.0/path/mod.ts';
+import { basename, dirname, join, relative } from 'https://deno.land/std@0.220.0/path/mod.ts';
 import { auditG1, EMPTY_TERMS, parseTerms, type Terms } from './lib/g1.ts';
 
 // Configuration — all paths absolute so script works from any directory
@@ -109,19 +129,19 @@ function resolveBlogRoot(): string {
 	Deno.exit(1);
 }
 const BLOG_ROOT = resolveBlogRoot();
-const TARGET_DIR = join(BLOG_ROOT, 'src', 'content', 'posts', 'en');
+const POSTS_ROOT = join(BLOG_ROOT, 'src', 'content', 'posts');
+const TARGET_DIR = join(POSTS_ROOT, 'en');
 const EXCLUDED_CATEGORIES = ['moba']; // Company-specific content (backup filter)
 
 // ============================================================================
 // Types
 // ============================================================================
 
+// The note's publish intent. Older notes also carry published_at, last_synced
+// and needs_resync; this script no longer reads or writes them.
 interface BlogMeta {
 	publishable: boolean | 'review';
 	ready: boolean;
-	published_at: string | null;
-	last_synced: string | null;
-	needs_resync?: boolean;
 	exclude_reason: string | null;
 }
 
@@ -478,25 +498,6 @@ async function readExistingPost(targetPath: string): Promise<{
 }
 
 /**
- * Update source file with sync timestamps.
- *
- * Surgical: only the blog.last_synced / blog.published_at / blog.needs_resync
- * lines change; every other byte of the 3B source is preserved (see
- * clearNeedsResyncInPlace for why stringifyYaml is not used on 3B sources).
- */
-export async function updateSourceFile(
-	sourcePath: string,
-	content: string,
-	isFirstSync: boolean,
-	today = new Date().toISOString().split('T')[0],
-): Promise<void> {
-	let updated = upsertBlogKeyInPlace(content, 'last_synced', `"${today}"`);
-	if (isFirstSync) updated = upsertBlogKeyInPlace(updated, 'published_at', `"${today}"`);
-	updated = upsertBlogKeyInPlace(updated, 'needs_resync', 'false');
-	await Deno.writeTextFile(sourcePath, updated);
-}
-
-/**
  * Read and validate the deny list. `loaded` is false only when the file is
  * absent; bad JSON or a malformed section throws (parseTerms), in every mode.
  */
@@ -596,32 +597,15 @@ async function diffPost(slug: string, _verbose: boolean) {
 }
 
 /**
- * Surgically flip `needs_resync: true` → `needs_resync: false` inside the
- * YAML frontmatter only, preserving the rest of the file byte-for-byte.
+ * Surgically replace the `source_content_hash:` value inside the YAML
+ * frontmatter only, preserving the rest of the file byte-for-byte.
  *
  * WHY NOT stringifyYaml: round-tripping through the YAML serializer reformats
  * tags lists, normalizes date strings to ISO datetimes, and re-quotes strings —
- * producing 60+ line diffs for a 1-line semantic change. Surgical regex on
- * the frontmatter substring keeps the diff to exactly one line.
+ * producing 60+ line diffs for a 1-line semantic change. A regex on the
+ * frontmatter substring keeps the diff to exactly one line.
  *
- * Returns null if the file has no frontmatter or the flag was not found
- * (signals a no-op to the caller).
- */
-function clearNeedsResyncInPlace(content: string): string | null {
-	const match = content.match(/^(---\n)([\s\S]*?)(\n---\n)([\s\S]*)$/);
-	if (!match) return null;
-	const [, openDelim, frontmatterRaw, closeDelim, body] = match;
-	const updatedFrontmatter = frontmatterRaw.replace(/(\n\s+needs_resync:\s*)true\b/, '$1false');
-	if (updatedFrontmatter === frontmatterRaw) return null;
-	return `${openDelim}${updatedFrontmatter}${closeDelim}${body}`;
-}
-
-/**
- * Surgically replace the `source_content_hash:` value inside the YAML
- * frontmatter only, preserving the rest of the file byte-for-byte. Mirrors
- * clearNeedsResyncInPlace (regex on the frontmatter substring, never
- * stringifyYaml — see that helper's WHY note). source_content_hash is a
- * top-level key, so the indent matcher is `[ \t]*` (zero-or-more), not `\s+`.
+ * source_content_hash is a top-level key, so the indent matcher is `[ \t]*`.
  * Returns null if the field is absent (no-op signal to the caller).
  */
 function setSourceHashInPlace(content: string, newHash: string): string | null {
@@ -636,165 +620,84 @@ function setSourceHashInPlace(content: string, newHash: string): string | null {
 	return `${openDelim}${updatedFrontmatter}${closeDelim}${body}`;
 }
 
-/**
- * Set `key: value` as a direct child of the block-style `blog:` mapping in the
- * YAML frontmatter, preserving every other byte (including a trailing
- * `# comment` on the replaced line). Inserts `<indent>key: value` right after
- * the `blog:` line when the key is absent. `value` is raw YAML text.
- * Throws when there is no frontmatter or no block-style `blog:` mapping —
- * callers only reach this for synced entries, which always have one.
- */
-export function upsertBlogKeyInPlace(content: string, key: string, value: string): string {
-	const match = content.match(/^(---\n)([\s\S]*?)(\n---\n)([\s\S]*)$/);
-	if (!match) throw new Error(`upsertBlogKeyInPlace(${key}): no frontmatter`);
-	const [, openDelim, frontmatterRaw, closeDelim, body] = match;
-	const lines = frontmatterRaw.split('\n');
-	const blogIdx = lines.findIndex((l) => /^blog:[ \t]*(#.*)?$/.test(l));
-	if (blogIdx === -1) throw new Error(`upsertBlogKeyInPlace(${key}): no block-style blog: mapping`);
-
-	// The block runs until the next non-blank, non-indented line.
-	let end = blogIdx + 1;
-	while (end < lines.length && (lines[end].trim() === '' || /^[ \t]/.test(lines[end]))) end++;
-	const firstChild = lines.slice(blogIdx + 1, end).find((l) => l.trim() !== '');
-	const indent = firstChild?.match(/^[ \t]+/)?.[0] ?? '  ';
-
-	const keyLine = new RegExp(
-		`^(${indent}${key}:)[ \\t]*("[^"\\n]*"|'[^'\\n]*'|[^\\s#]*)([ \\t]+#.*)?$`,
-	);
-	let found = false;
-	for (let i = blogIdx + 1; i < end; i++) {
-		const m = lines[i].match(keyLine);
-		if (!m) continue;
-		lines[i] = `${m[1]} ${value}${m[3] ?? ''}`;
-		found = true;
-		break;
-	}
-	if (!found) lines.splice(blogIdx + 1, 0, `${indent}${key}: ${value}`);
-	return `${openDelim}${lines.join('\n')}${closeDelim}${body}`;
+/** True when one path is the other or lies inside it. Both must be real paths. */
+function pathsOverlap(a: string, b: string): boolean {
+	return a === b || a.startsWith(b + '/') || b.startsWith(a + '/');
 }
 
 /**
- * --reconcile mode: clear stale needs_resync flags.
- *
- * State invariant: `blog.needs_resync: true` is meaningless in two cases:
- *   1. `published_at` is null  → entry was never synced; "re-sync" makes no sense.
- *   2. content hash matches the synced blog post → already up to date.
- *
- * This pass walks the 3B source tree, finds entries with the flag set, and
- * clears it when one of those impossible-state conditions holds. Writes only
- * to 3B source frontmatter; never touches blog post content.
- *
- * Background: prior /wrap and /blog-publish flows could leave the flag set on
- * states the regular sync path can't reach (e.g. ready: false rejects sync
- * before the clearer runs; hash-mismatch merges update the blog post but not
- * the 3B source). This pass is the recovery / drift-cleanup invariant.
+ * Throw unless targetPath is a safe post destination. The Deno write grant
+ * checks the pathname only and follows symlinks, so a symlink under the posts
+ * root could send a write into the 3B checkout. Checks, all before any write:
+ *   - the real posts root does not overlap the real 3B root;
+ *   - targetPath is below the posts root;
+ *   - no existing component below the posts root is a symlink, the post file
+ *     included.
  */
-async function reconcileFlags(dryRun: boolean, verbose: boolean) {
-	console.log('🔄 Reconciling stale needs_resync flags...');
-	console.log(`   Mode: ${dryRun ? 'DRY RUN' : 'APPLY'}`);
-	console.log('');
-
-	let scanned = 0;
-	let cleared = 0;
-	let kept = 0;
-	const clearedFiles: { path: string; reason: string }[] = [];
-	const keptFiles: { path: string; reason: string }[] = [];
-
-	for await (const entry of walk(SOURCE_DIR, {
-		exts: ['.md'],
-		includeDirs: false,
-	})) {
-		if (basename(entry.path).startsWith('_')) continue;
-
-		const content = await Deno.readTextFile(entry.path);
-		const { frontmatter, body } = parseFrontmatter(content);
-
-		if (!frontmatter?.blog || frontmatter.blog.needs_resync !== true) {
-			continue;
-		}
-
-		scanned++;
-		const relativePath = entry.path.replace(SOURCE_DIR + '/', '');
-
-		// Reason 1: never published — flag is logically impossible
-		if (!frontmatter.blog.published_at) {
-			clearedFiles.push({
-				path: relativePath,
-				reason: 'never published (published_at is null)',
-			});
-
-			if (!dryRun) {
-				const updated = clearNeedsResyncInPlace(content);
-				if (updated !== null) {
-					await Deno.writeTextFile(entry.path, updated);
-				}
-			}
-			cleared++;
-			continue;
-		}
-
-		// Reason 2: hash matches synced post — already current
-		const category = dirname(relativePath).split('/')[0];
-		const targetPath = join(TARGET_DIR, category, basename(entry.path));
-		const existing = await readExistingPost(targetPath);
-
-		if (existing?.frontmatter?.source_content_hash) {
-			const cleanedBody = cleanBody(body);
-			const currentHash = await computeContentHash(cleanedBody);
-
-			if (currentHash === existing.frontmatter.source_content_hash) {
-				clearedFiles.push({
-					path: relativePath,
-					reason: 'hash matches synced post (already up to date)',
-				});
-
-				if (!dryRun) {
-					const updated = clearNeedsResyncInPlace(content);
-					if (updated !== null) {
-						await Deno.writeTextFile(entry.path, updated);
-					}
-				}
-				cleared++;
-				continue;
-			}
-		}
-
-		// Otherwise: legitimate flag — keep
-		keptFiles.push({
-			path: relativePath,
-			reason: existing
-				? 'hash mismatch (real resync pending)'
-				: 'no synced post yet (real first-publish pending)',
-		});
-		kept++;
+async function assertSafePostPath(targetPath: string): Promise<void> {
+	let postsReal: string;
+	try {
+		postsReal = await Deno.realPath(POSTS_ROOT);
+	} catch {
+		throw new Error(`posts root does not exist: ${POSTS_ROOT}`);
 	}
-
-	console.log('📋 Reconciliation Report');
-	console.log(`   Files with needs_resync: true scanned: ${scanned}`);
-	console.log(`   Cleared: ${cleared}`);
-	console.log(`   Kept (legitimate): ${kept}`);
-
-	if (clearedFiles.length > 0) {
-		console.log('');
-		console.log(`✅ ${dryRun ? 'Would clear' : 'Cleared'}:`);
-		for (const f of clearedFiles) {
-			console.log(`   - ${f.path}`);
-			if (verbose) console.log(`     reason: ${f.reason}`);
-		}
+	let threeBReal: string | null = null;
+	try {
+		threeBReal = await Deno.realPath(THREEB_ROOT);
+	} catch (err) {
+		if (!(err instanceof Deno.errors.NotFound)) throw err;
 	}
-
-	if (keptFiles.length > 0) {
-		console.log('');
-		console.log('🔒 Kept (legitimate flag):');
-		for (const f of keptFiles) {
-			console.log(`   - ${f.path}`);
-			if (verbose) console.log(`     reason: ${f.reason}`);
-		}
+	if (threeBReal && pathsOverlap(postsReal, threeBReal)) {
+		throw new Error(`posts root ${postsReal} overlaps the 3B root ${threeBReal}`);
 	}
+	const rel = relative(POSTS_ROOT, targetPath);
+	if (rel === '' || rel.startsWith('..') || rel.startsWith('/')) {
+		throw new Error(`post path is outside the posts root: ${targetPath}`);
+	}
+	let current = POSTS_ROOT;
+	for (const part of rel.split('/')) {
+		current = join(current, part);
+		let info: Deno.FileInfo;
+		try {
+			info = await Deno.lstat(current);
+		} catch (err) {
+			if (err instanceof Deno.errors.NotFound) break; // nothing below exists yet
+			throw err;
+		}
+		if (info.isSymlink) throw new Error(`symlink in the post path: ${current}`);
+	}
+}
 
-	if (dryRun && cleared > 0) {
-		console.log('');
-		console.log('Run without --dry-run to apply changes');
+/**
+ * The one place a post file is written (sync and --rehash). A refused
+ * destination stops the run with exit 1: nothing is created or written for it.
+ *
+ * The content goes to a new private file beside the destination, which is then
+ * renamed over it. The write never opens or truncates the existing file, so a
+ * post that is a hard link to another file (a 3B note, for example) is
+ * replaced by a new file and the other name keeps its bytes. The rename also
+ * replaces the directory entry itself, so a link planted at the post path
+ * after the check is replaced, not followed.
+ * ponytail: the folder check and the write are not one atomic step; a parent
+ * folder swapped for a symlink during a run is out of scope for a single-user
+ * local script.
+ */
+async function writePost(targetPath: string, content: string): Promise<void> {
+	try {
+		await assertSafePostPath(targetPath);
+	} catch (err) {
+		console.error(`Error: refused to write ${targetPath}: ${(err as Error).message}`);
+		Deno.exit(1);
+	}
+	await ensureDir(dirname(targetPath));
+	// createNew: fails when the name exists and never follows a link there.
+	const tempPath = `${targetPath}.tmp-${crypto.randomUUID()}`;
+	try {
+		await Deno.writeTextFile(tempPath, content, { createNew: true });
+		await Deno.rename(tempPath, targetPath);
+	} catch (err) {
+		await Deno.remove(tempPath).catch(() => {});
+		throw err;
 	}
 }
 
@@ -895,7 +798,7 @@ async function rehashFormatOnly(allowPath: string, dryRun: boolean, verbose: boo
 				console.log(`⚠️  ${relativePath}: source_content_hash line not found — skipping`);
 				continue;
 			}
-			await Deno.writeTextFile(targetPath, updated);
+			await writePost(targetPath, updated);
 			console.log(`🔁 Rehashed: ${relativePath}`);
 		}
 		rehashed++;
@@ -921,10 +824,18 @@ async function syncPosts() {
 	const verbose = args.includes('--verbose');
 	const checkOnly = args.includes('--check');
 	const diffMode = args.includes('--diff');
-	const reconcileMode = args.includes('--reconcile');
 	const rehashMode = args.includes('--rehash');
 	const slugArg = args.find((a) => a.startsWith('--slug='))?.split('=')[1];
 	const allowArg = args.find((a) => a.startsWith('--allow='))?.split('=')[1];
+
+	// --reconcile repaired needs_resync flags inside 3B notes. The sync is now
+	// one-way, so refuse it by name: an ignored flag would run a normal sync.
+	if (args.includes('--reconcile')) {
+		console.error(
+			'Error: --reconcile was removed. The sync no longer writes to 3B; run `pnpm sync:check` to list posts that are behind.',
+		);
+		Deno.exit(1);
+	}
 
 	// --diff mode: early exit to dedicated function
 	if (diffMode) {
@@ -934,12 +845,6 @@ async function syncPosts() {
 			Deno.exit(1);
 		}
 		await diffPost(slugArg, verbose);
-		return;
-	}
-
-	// --reconcile mode: clear stale needs_resync flags, then exit
-	if (reconcileMode) {
-		await reconcileFlags(dryRun, verbose);
 		return;
 	}
 
@@ -1117,7 +1022,7 @@ ${cleanedBody}
 
 		// --- G1 GATE ---
 		// Audit the exact frontmatter and body about to ship, before any write: a
-		// post with a finding is neither written nor stamped with published_at.
+		// post with a finding is not written.
 		const g1Findings = auditG1(
 			targetFrontmatter as unknown as Record<string, unknown>,
 			cleanedBody,
@@ -1134,12 +1039,7 @@ ${cleanedBody}
 		if (dryRun) {
 			console.log(`✅ Would sync: ${relativePath} → ${targetPath}`);
 		} else {
-			await ensureDir(dirname(targetPath));
-			await Deno.writeTextFile(targetPath, targetContent);
-
-			// Update source file with sync timestamps
-			const isFirstSync = !frontmatter.blog?.published_at;
-			await updateSourceFile(entry.path, content, isFirstSync);
+			await writePost(targetPath, targetContent);
 
 			console.log(`✅ Synced: ${relativePath}`);
 		}
