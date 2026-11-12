@@ -170,5 +170,16 @@
 	"clear_filters": "필터 지우기",
 	"tag_filter_remove": "{tag} 태그 필터 해제",
 	"full_text_unavailable": "지금은 본문 검색을 쓸 수 없습니다. 제목과 태그에서만 찾았습니다.",
-	"minutes_short": "{minutes}분"
+	"minutes_short": "{minutes}분",
+	"all_posts": "모든 글",
+	"category": "카테고리",
+	"tags": "태그",
+	"reading_time_label": "읽는 시간",
+	"share": "공유",
+	"email": "이메일",
+	"newer_post": "더 최근 글",
+	"older_post": "이전 글",
+	"more_in_category": "{category} 글 더 보기",
+	"post_navigation": "다른 글",
+	"code_copy": "복사"
 }

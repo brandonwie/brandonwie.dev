@@ -8,7 +8,9 @@ import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
 import { Fragment } from 'react';
 import { jsx, jsxs } from 'react/jsx-runtime';
 import matter from 'gray-matter';
+import type { Element, Root as HastRoot } from 'hast';
 import type { ReactElement } from 'react';
+import { SKIP, visit } from 'unist-util-visit';
 import { VFile } from 'vfile';
 import type { BundledLanguage } from 'shiki';
 
@@ -66,14 +68,13 @@ export const SHIKI_THEMES = { light: 'github-light', dark: 'github-dark' } as co
 
 /**
  * Stamps the fence language onto each highlighted `<pre>` as `data-language`,
- * so the client `CodeCopy` frame label can read `<language> · <n> lines`.
+ * which `rehypeCodeFrame` reads for the bar above the block.
  *
  * `this.options.lang` is the language Shiki actually highlighted with: the
  * fence id as written (`ts`, `typescript`, `bash`, ...) or, for a fence whose
  * language is not in SHIKI_LANGS, the `text` fallback. A fence with NO
- * language is never highlighted (no `defaultLanguage`), so it has no `.shiki`
- * `<pre>` and no frame label either. The attribute sits on `<pre>`, outside
- * `<code>`, so copied text is unaffected.
+ * language is never highlighted (no `defaultLanguage`), so it has no language
+ * to show.
  */
 // Typed through the plugin's own options: `shiki` and `@shikijs/rehype` resolve
 // different `@shikijs/types` patch versions, whose transformer types disagree.
@@ -83,6 +84,68 @@ const preLanguageAttribute: NonNullable<RehypeShikiOptions['transformers']>[numb
 		node.properties['data-language'] = this.options.lang;
 	},
 };
+
+/** Each h2 to h4 links to itself, so a reader can copy the address of a section. */
+function rehypeHeadingLinks() {
+	return (tree: HastRoot) => {
+		visit(tree, 'element', (node) => {
+			if (!/^h[234]$/.test(node.tagName) || typeof node.properties.id !== 'string') return;
+			// A link inside a link is invalid HTML: a heading that already has one stays as it is.
+			if (node.children.some((child) => child.type === 'element' && child.tagName === 'a')) return;
+			node.children = [
+				{
+					type: 'element',
+					tagName: 'a',
+					properties: { href: `#${node.properties.id}` },
+					children: node.children,
+				},
+			];
+		});
+	};
+}
+
+/**
+ * Wraps each code block in a figure with a bar above it: the language and a
+ * copy button. The button is server-rendered; `CodeCopy` gives it its action.
+ */
+function rehypeCodeFrame({ copyLabel }: { copyLabel: string }) {
+	return (tree: HastRoot) => {
+		visit(tree, 'element', (node, index, parent) => {
+			if (node.tagName !== 'pre' || !parent || index === undefined) return;
+			const language = node.properties['data-language'];
+			const frame: Element = {
+				type: 'element',
+				tagName: 'figure',
+				properties: { className: ['code'] },
+				children: [
+					{
+						type: 'element',
+						tagName: 'figcaption',
+						properties: {},
+						children: [
+							{
+								type: 'element',
+								tagName: 'span',
+								properties: {},
+								children: [{ type: 'text', value: typeof language === 'string' ? language : '' }],
+							},
+							{
+								type: 'element',
+								tagName: 'button',
+								properties: { type: 'button', className: ['code__copy'] },
+								children: [{ type: 'text', value: copyLabel }],
+							},
+						],
+					},
+					node,
+				],
+			};
+			parent.children[index] = frame;
+			// The `pre` is now inside the frame: do not visit it again.
+			return SKIP;
+		});
+	};
+}
 
 /**
  * Markdown to React elements.
@@ -101,6 +164,7 @@ const preLanguageAttribute: NonNullable<RehypeShikiOptions['transformers']>[numb
  */
 export async function renderMarkdown(
 	source: string | ParsedMarkdownSource,
+	{ copyLabel = 'Copy' }: { copyLabel?: string } = {},
 ): Promise<RenderedMarkdown> {
 	const { data: frontmatter, content: raw } = typeof source === 'string' ? matter(source) : source;
 	// Typography is applied to the SOURCE, before this pipeline parses it, with
@@ -130,7 +194,9 @@ export async function renderMarkdown(
 			langs: SHIKI_LANGS,
 			fallbackLanguage: 'text',
 			transformers: [preLanguageAttribute],
-		} satisfies RehypeShikiOptions);
+		} satisfies RehypeShikiOptions)
+		.use(rehypeHeadingLinks)
+		.use(rehypeCodeFrame, { copyLabel });
 
 	// Frontmatter is seeded onto the vfile BEFORE the transformers run, because
 	// remark-toc-extract reads `data.fm` and extends it.

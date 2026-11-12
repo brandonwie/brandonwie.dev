@@ -170,5 +170,16 @@
 	"clear_filters": "Clear filters",
 	"tag_filter_remove": "Remove the tag filter {tag}",
 	"full_text_unavailable": "Full-text search is not available now. These are title and tag matches only.",
-	"minutes_short": "{minutes} min"
+	"minutes_short": "{minutes} min",
+	"all_posts": "All posts",
+	"category": "Category",
+	"tags": "Tags",
+	"reading_time_label": "Reading time",
+	"share": "Share",
+	"email": "Email",
+	"newer_post": "Newer post",
+	"older_post": "Older post",
+	"more_in_category": "More in {category}",
+	"post_navigation": "More posts",
+	"code_copy": "Copy"
 }

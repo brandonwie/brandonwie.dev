@@ -14,10 +14,10 @@
 @import '../../src/app.css';
 @import './styles/shell.css';
 @import './styles/pages/index.css';
+@import './styles/pages/post.css';
 
 /* Pages not yet moved to the V2 design (issue 81). */
 @import './styles/legacy-terminal.css';
-@import './styles/pages/post-detail.css';
 @import './styles/pages/study-index.css';
 @import './styles/pages/study-course.css';
 @import './styles/pages/study-aws.css';

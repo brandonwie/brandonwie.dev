@@ -602,12 +602,6 @@
 	border-radius: 2px;
 	display: inline-block;
 }
-.line {
-	width: 16px;
-	height: 0;
-	display: inline-block;
-	vertical-align: middle;
-}
 .dot {
 	width: 8px;
 	height: 8px;

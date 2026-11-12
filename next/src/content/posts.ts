@@ -4,6 +4,7 @@ import { join, relative, sep } from 'node:path';
 import matter from 'gray-matter';
 import { cache } from 'react';
 
+import { articleCopy } from '../i18n/copy';
 import type { Locale } from '../i18n/locale';
 import { renderMarkdown, type Heading, type ParsedMarkdownSource } from '../markdown/pipeline';
 import { readingMinutes } from '../markdown/reading-time';
@@ -191,7 +192,7 @@ async function loadPostUncached(slug: string, locale: Locale): Promise<LoadedPos
 	const parsed = readParsedPost(file);
 	if (parsed.data.draft === true) return null;
 
-	const rendered = await renderMarkdown(parsed);
+	const rendered = await renderMarkdown(parsed, { copyLabel: articleCopy(locale).codeCopy });
 	const frontmatter = rendered.frontmatter as unknown as PostFrontmatter;
 
 	return {

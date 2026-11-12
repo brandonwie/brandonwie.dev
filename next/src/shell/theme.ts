@@ -13,6 +13,32 @@ export function currentTheme(): Theme {
 	return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+/**
+ * A colour token's value in the theme on screen, as written in `src/app.css`.
+ * Diagram libraries do colour maths and need a literal, not `light-dark()`.
+ */
+export function tokenColor(name: string): string {
+	const raw = getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
+	const pair = raw.match(/^light-dark\(\s*([^,\s]+)\s*,\s*([^,\s)]+)\s*\)$/);
+	return pair ? pair[currentTheme() === 'dark' ? 2 : 1] : raw;
+}
+
+/**
+ * Run `listener` when the theme on screen changes: the reader used the toggle,
+ * or the system preference changed while no choice is stored.
+ *
+ * @returns a function that stops listening
+ */
+export function onThemeChange(listener: () => void): () => void {
+	const system = window.matchMedia('(prefers-color-scheme: dark)');
+	window.addEventListener(THEME_CHANGE_EVENT, listener);
+	system.addEventListener('change', listener);
+	return () => {
+		window.removeEventListener(THEME_CHANGE_EVENT, listener);
+		system.removeEventListener('change', listener);
+	};
+}
+
 /** Flip the theme, remember the choice and tell listeners (diagrams, comments). */
 export function toggleTheme(): Theme {
 	const next: Theme = currentTheme() === 'dark' ? 'light' : 'dark';

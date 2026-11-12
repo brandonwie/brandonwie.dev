@@ -1,92 +1,76 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { Locale } from '@/i18n/locale';
 
-interface GiscusProps {
-	slug: string;
-	locale: Locale;
-	title: string;
+import type { Locale } from '@/i18n/locale';
+import { currentTheme, onThemeChange } from '@/shell/theme';
+
+const GISCUS_ORIGIN = 'https://giscus.app';
+
+function giscusTheme(): string {
+	return currentTheme() === 'dark' ? 'dark_dimmed' : 'light';
 }
 
 /**
- * Giscus Comments Component
+ * Comments through giscus, stored in GitHub Discussions (https://giscus.app).
  *
- * WHAT: Embeds GitHub Discussions-based comments using giscus.
- * WHY: Provides commenting without a database - comments stored in GitHub Discussions.
- * HOW: Dynamically loads giscus script with post slug as the discussion term.
- *
- * DESIGN DECISION: Uses slug (not pathname) for discussion mapping so that
- * /posts/my-post and /ko/posts/my-post share the same comment thread.
- *
- * PRERENDER CONTRACT (A13):
- * Emits a stable localized mount boundary (`#giscus-comments` with `data-giscus-mount="true"`,
- * `data-giscus-term={slug}`, `data-giscus-locale={locale}`) in the prerendered HTML without
- * the client runtime script or iframe. The script is injected on mount in the browser.
- *
- * REFERENCE: https://giscus.app
+ * The discussion is keyed by the post slug, not the path, so `/posts/x` and
+ * `/ko/posts/x` share one thread. The script is added on mount, so the static
+ * HTML holds no third-party request, and giscus loads its frame lazily.
  */
-export function Giscus({ slug, locale, title }: GiscusProps) {
-	const containerRef = useRef<HTMLDivElement>(null);
+export function Giscus({ slug, locale, title }: { slug: string; locale: Locale; title: string }) {
+	const container = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		const container = containerRef.current;
-		if (!container) return;
+		const mount = container.current;
+		if (!mount) return;
 
-		// Prevent duplicate script injection
-		if (container.querySelector('script[src="https://giscus.app/client.js"]')) {
-			return;
+		// An effect can run twice on one mount (development): add the script once.
+		if (!mount.querySelector('script')) {
+			const script = document.createElement('script');
+			script.src = `${GISCUS_ORIGIN}/client.js`;
+			script.async = true;
+			script.crossOrigin = 'anonymous';
+			script.dataset.repo = 'brandonwie/brandonwie.dev';
+			script.dataset.repoId = 'R_kgDORBkERA';
+			script.dataset.category = 'Blog Comments';
+			script.dataset.categoryId = 'DIC_kwDORBkERM4C1gHN';
+			script.dataset.mapping = 'specific';
+			script.dataset.term = slug;
+			script.dataset.strict = '0';
+			script.dataset.reactionsEnabled = '1';
+			script.dataset.emitMetadata = '0';
+			script.dataset.inputPosition = 'top';
+			script.dataset.theme = giscusTheme();
+			script.dataset.lang = locale;
+			script.dataset.loading = 'lazy';
+			mount.appendChild(script);
 		}
 
-		const script = document.createElement('script');
-		script.src = 'https://giscus.app/client.js';
-		script.async = true;
-		script.crossOrigin = 'anonymous';
-
-		// Configuration from giscus.app (matches src/lib/components/Giscus.svelte)
-		script.dataset.repo = 'brandonwie/brandonwie.dev';
-		script.dataset.repoId = 'R_kgDORBkERA';
-		script.dataset.category = 'Blog Comments';
-		script.dataset.categoryId = 'DIC_kwDORBkERM4C1gHN';
-		script.dataset.mapping = 'specific';
-		script.dataset.term = slug; // Shared between EN/KO versions
-		script.dataset.strict = '0';
-		script.dataset.reactionsEnabled = '1';
-		script.dataset.emitMetadata = '0';
-		script.dataset.inputPosition = 'top';
-		script.dataset.theme = 'dark_dimmed';
-		script.dataset.lang = locale;
-		script.dataset.loading = 'lazy';
-
-		container.appendChild(script);
+		return onThemeChange(() => {
+			const frame = mount.querySelector<HTMLIFrameElement>('iframe.giscus-frame');
+			if (!frame) return;
+			// The frame loads lazily, near the end of the post. Before that it takes
+			// no messages: the theme goes in its address instead.
+			if (frame.classList.contains('giscus-frame--loading')) {
+				const address = new URL(frame.src);
+				address.searchParams.set('theme', giscusTheme());
+				frame.src = address.href;
+				return;
+			}
+			frame.contentWindow?.postMessage(
+				{ giscus: { setConfig: { theme: giscusTheme() } } },
+				GISCUS_ORIGIN,
+			);
+		});
 	}, [slug, locale]);
 
 	return (
-		<section
-			className="term-frame comments-shell pg-post__comments"
-			aria-labelledby="comments-title"
-			data-pagefind-ignore
-		>
-			<h2 id="comments-title" className="term-frame__title">
+		<section className="comments" aria-labelledby="comments-title" data-pagefind-ignore>
+			<h2 id="comments-title" className="eyebrow">
 				{title}
-				<span className="dim" aria-hidden="true">
-					{' '}
-					· github discussions
-				</span>
 			</h2>
-			{/* A resolve log echoing the embed config above: decorative terminal output. */}
-			<p className="pg-post__log" aria-hidden="true">
-				repo <span className="text-crt-green">brandonwie/brandonwie.dev</span> · category &quot;Blog
-				Comments&quot; · term {slug}
-			</p>
-			<div
-				ref={containerRef}
-				className="giscus-container pg-post__mount"
-				id="giscus-comments"
-				data-giscus-mount="true"
-				data-giscus-term={slug}
-				data-giscus-locale={locale}
-			/>
+			<div ref={container} />
 		</section>
 	);
 }

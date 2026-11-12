@@ -11,9 +11,12 @@ function isTyping(target: EventTarget | null): boolean {
 	return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
-/** The control's name without its `[K]` hint. */
+/**
+ * The control's name without its `[K]` hint. `data-hotkey-label` names a control
+ * whose own text is not a description of the action (a link that shows a post title).
+ */
 function labelOf(element: HTMLElement): string {
-	const named = element.getAttribute('aria-label');
+	const named = element.dataset.hotkeyLabel ?? element.getAttribute('aria-label');
 	if (named) return named;
 	return Array.from(element.childNodes)
 		.filter((node) => !(node instanceof HTMLElement && node.classList.contains('hotkey')))
