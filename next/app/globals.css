@@ -13,11 +13,10 @@
 */
 @import '../../src/app.css';
 @import './styles/shell.css';
+@import './styles/pages/index.css';
 
 /* Pages not yet moved to the V2 design (issue 81). */
 @import './styles/legacy-terminal.css';
-@import './styles/pages/home.css';
-@import './styles/pages/posts-index.css';
 @import './styles/pages/post-detail.css';
 @import './styles/pages/study-index.css';
 @import './styles/pages/study-course.css';
@@ -26,8 +25,6 @@
 @import './styles/pages/system-3b.css';
 @import './styles/pages/projects.css';
 @import './styles/pages/contact.css';
-@import './styles/pages/search.css';
-@import './styles/pages/tags.css';
 @import './styles/pages/feed.css';
 @import './styles/pages/talk-deck.css';
 @import './styles/pages/talk-deck-slides.css';

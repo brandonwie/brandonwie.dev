@@ -14,18 +14,13 @@ import {
 } from '../../../src/lib/seo';
 
 export function homeJsonLd(locale: Locale): string {
-	const pageDescription =
-		locale === 'ko'
-			? '소프트웨어 엔지니어링 인사이트, 튜토리얼, 배움'
-			: 'Software engineering insights, tutorials, and learnings';
-
 	return JSON.stringify([
 		{
 			'@context': 'https://schema.org',
 			'@type': 'WebSite',
 			name: SITE_NAME,
 			url: SITE_URL,
-			description: pageDescription,
+			description: m.site_description({}, { locale }),
 			inLanguage: locale === 'ko' ? 'ko-KR' : 'en-US',
 			publisher: {
 				'@type': 'Person',
@@ -48,195 +43,19 @@ export function homeJsonLd(locale: Locale): string {
 	]);
 }
 
-export function generateHomeMetadata(locale: Locale): Metadata {
-	const title =
-		locale === 'ko' ? 'Brandon Wie | 풀스택 AI 엔지니어' : 'Brandon Wie | Full-stack AI Engineer';
-	const description =
-		locale === 'ko'
-			? '소프트웨어 엔지니어링 인사이트, 튜토리얼, 배움'
-			: 'Software engineering insights, tutorials, and learnings';
-	const canonicalUrl = absoluteUrl(locale === 'ko' ? '/ko' : '/');
-	const enUrl = absoluteUrl('/');
-	const koUrl = absoluteUrl('/ko');
-
-	return {
-		title,
-		description,
-		alternates: {
-			canonical: canonicalUrl,
-			languages: {
-				en: enUrl,
-				ko: koUrl,
-				'x-default': enUrl,
-			},
-		},
-		openGraph: {
-			type: 'website',
-			siteName: SITE_NAME,
-			title,
-			description,
-			url: canonicalUrl,
-			images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630 }],
-			locale: localeCode(locale),
-			alternateLocale: [localeCode(locale === 'ko' ? 'en' : 'ko')],
-		},
-		twitter: {
-			card: 'summary_large_image',
-			title,
-			description,
-			images: [DEFAULT_OG_IMAGE],
-			creator: '@BrandonWie',
-		},
-	};
-}
-
-export function postsListJsonLd(locale: Locale): string {
-	const pageTitle = locale === 'ko' ? '모든 글 | Brandon Wie' : 'All Posts | Brandon Wie';
-	const pageDescription =
-		locale === 'ko' ? 'Brandon Wie의 모든 블로그 글' : 'All blog posts by Brandon Wie';
-	const canonicalHref = absoluteUrl(locale === 'ko' ? '/ko/posts' : '/posts');
-
-	return JSON.stringify({
-		'@context': 'https://schema.org',
-		'@type': 'CollectionPage',
-		name: pageTitle,
-		description: pageDescription,
-		url: canonicalHref,
-		inLanguage: locale === 'ko' ? 'ko-KR' : 'en-US',
-	});
-}
-
-export function generatePostsListMetadata(locale: Locale): Metadata {
-	const title = locale === 'ko' ? '모든 글 | Brandon Wie' : 'All Posts | Brandon Wie';
-	const description =
-		locale === 'ko' ? 'Brandon Wie의 모든 블로그 글' : 'All blog posts by Brandon Wie';
-	const canonicalUrl = absoluteUrl(locale === 'ko' ? '/ko/posts' : '/posts');
-	const enUrl = absoluteUrl('/posts');
-	const koUrl = absoluteUrl('/ko/posts');
-
-	return {
-		title,
-		description,
-		alternates: {
-			canonical: canonicalUrl,
-			languages: {
-				en: enUrl,
-				ko: koUrl,
-				'x-default': enUrl,
-			},
-		},
-		openGraph: {
-			type: 'website',
-			siteName: SITE_NAME,
-			title,
-			description,
-			url: canonicalUrl,
-			images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630 }],
-			locale: localeCode(locale),
-			alternateLocale: [localeCode(locale === 'ko' ? 'en' : 'ko')],
-		},
-		twitter: {
-			card: 'summary_large_image',
-			title,
-			description,
-			images: [DEFAULT_OG_IMAGE],
-		},
-	};
-}
-
-export function generateTagsMetadata(locale: Locale): Metadata {
-	return generateStudySeoMetadata({
-		pageTitle: `${m.tags_meta_title({}, { locale })} | Brandon Wie`,
-		description: m.tags_meta_description({}, { locale }),
-		basePath: '/tags',
-		locale,
-	});
-}
-
-export function generateSearchMetadata(locale: Locale): Metadata {
-	const title = `${locale === 'ko' ? '검색' : 'Search'} | Brandon Wie`;
-	const description = m.site_description({}, { locale });
-	const canonicalUrl = absoluteUrl(locale === 'ko' ? '/ko/search' : '/search');
-	const enUrl = absoluteUrl('/search');
-	const koUrl = absoluteUrl('/ko/search');
-
-	return {
-		title,
-		description,
-		robots: 'noindex,follow',
-		alternates: {
-			canonical: canonicalUrl,
-			languages: {
-				en: enUrl,
-				ko: koUrl,
-				'x-default': enUrl,
-			},
-		},
-		openGraph: {
-			type: 'website',
-			siteName: SITE_NAME,
-			title,
-			description,
-			url: canonicalUrl,
-			images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630 }],
-			locale: localeCode(locale),
-			alternateLocale: [localeCode(locale === 'ko' ? 'en' : 'ko')],
-		},
-		twitter: {
-			card: 'summary_large_image',
-			title,
-			description,
-			images: [DEFAULT_OG_IMAGE],
-		},
-	};
-}
-
-export function generateAboutMetadata(locale: Locale): Metadata {
-	const content = getAboutContent(locale);
-	const title = `${content.metaTitle} | Brandon Wie`;
-	const description = content.metaDescription;
-	const canonicalUrl = absoluteUrl(locale === 'ko' ? '/ko/about' : '/about');
-	const enUrl = absoluteUrl('/about');
-	const koUrl = absoluteUrl('/ko/about');
-
-	return {
-		title,
-		description,
-		alternates: {
-			canonical: canonicalUrl,
-			languages: {
-				en: enUrl,
-				ko: koUrl,
-				'x-default': enUrl,
-			},
-		},
-		openGraph: {
-			type: 'website',
-			siteName: SITE_NAME,
-			title,
-			description,
-			url: canonicalUrl,
-			images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630 }],
-			locale: localeCode(locale),
-			alternateLocale: [localeCode(locale === 'ko' ? 'en' : 'ko')],
-		},
-		twitter: {
-			card: 'summary',
-			title,
-			description,
-			images: [DEFAULT_OG_IMAGE],
-		},
-	};
-}
-
 export interface StudySeoMetadataOptions {
 	pageTitle: string;
 	description: string;
+	/** The English path, `/` for the home page. The Korean twin is `/ko` plus this path. */
 	basePath: string;
 	locale?: Locale;
 	twitterCard?: 'summary' | 'summary_large_image';
 }
 
+/**
+ * Metadata for a page that exists in both locales: canonical URL, hreflang
+ * alternates, Open Graph and Twitter Card. Every page but a post uses it.
+ */
 export function generateStudySeoMetadata({
 	pageTitle,
 	description,
@@ -244,9 +63,10 @@ export function generateStudySeoMetadata({
 	locale = 'en',
 	twitterCard = 'summary_large_image',
 }: StudySeoMetadataOptions): Metadata {
-	const canonicalUrl = absoluteUrl(locale === 'ko' ? `/ko${basePath}` : basePath);
-	const enUrl = absoluteUrl(basePath);
-	const koUrl = absoluteUrl(`/ko${basePath}`);
+	const path = basePath === '/' ? '' : basePath;
+	const enUrl = absoluteUrl(path || '/');
+	const koUrl = absoluteUrl(`/ko${path}`);
+	const canonicalUrl = locale === 'ko' ? koUrl : enUrl;
 
 	return {
 		title: pageTitle,
@@ -274,11 +94,30 @@ export function generateStudySeoMetadata({
 			title: pageTitle,
 			description,
 			images: [DEFAULT_OG_IMAGE],
+			creator: '@BrandonWie',
 		},
 	};
 }
 
-export const generateStaticPageMetadata = generateStudySeoMetadata;
+export function generateHomeMetadata(locale: Locale): Metadata {
+	return generateStudySeoMetadata({
+		pageTitle: m.site_title({}, { locale }),
+		description: m.site_description({}, { locale }),
+		basePath: '/',
+		locale,
+	});
+}
+
+export function generateAboutMetadata(locale: Locale): Metadata {
+	const content = getAboutContent(locale);
+	return generateStudySeoMetadata({
+		pageTitle: `${content.metaTitle} | Brandon Wie`,
+		description: content.metaDescription,
+		basePath: '/about',
+		locale,
+		twitterCard: 'summary',
+	});
+}
 
 export function generateProjectsMetadata(locale: Locale): Metadata {
 	return generateStudySeoMetadata({

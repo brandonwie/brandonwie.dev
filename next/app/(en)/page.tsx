@@ -1,12 +1,10 @@
 import type { Metadata } from 'next';
 
-import { BlogHome } from '@/components/BlogHome';
-import { listPostsForLocale } from '@/content/post-list';
+import { PostIndex } from '@/components/PostIndex';
 import { generateHomeMetadata } from '@/seo/metadata';
 
 export const metadata: Metadata = generateHomeMetadata('en');
 
 export default function EnglishHomePage() {
-	const posts = listPostsForLocale('en');
-	return <BlogHome posts={posts} basePath="/" />;
+	return <PostIndex locale="en" />;
 }

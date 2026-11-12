@@ -92,6 +92,33 @@ export function shellCopy(locale: Locale) {
 
 export type ShellCopy = ReturnType<typeof shellCopy>;
 
+/**
+ * Copy for the post index on the home page. The count and tag templates keep
+ * their `{…}` slots: the filter fills them in the browser, where the numbers
+ * change.
+ */
+export function indexCopy(locale: Locale) {
+	return {
+		bio: m.blog_bio({}, { locale }),
+		aboutMore: m.about_more({}, { locale }),
+		minutes: (minutes: number) => m.minutes_short({ minutes }, { locale }),
+		filter: {
+			searchLabel: m.search_posts({}, { locale }),
+			searchHint: m.search_hint({}, { locale }),
+			categories: m.category_filter({}, { locale }),
+			all: m.all_categories({}, { locale }),
+			count: m.posts_count({ count: '{count}' }, { locale }),
+			countFiltered: m.posts_count_filtered({ shown: '{shown}', total: '{total}' }, { locale }),
+			none: m.posts_none({}, { locale }),
+			clear: m.clear_filters({}, { locale }),
+			removeTag: m.tag_filter_remove({ tag: '{tag}' }, { locale }),
+			fullTextUnavailable: m.full_text_unavailable({}, { locale }),
+		},
+	};
+}
+
+export type IndexCopy = ReturnType<typeof indexCopy>;
+
 export function articleCopy(locale: Locale) {
 	const scaffold = SLICE_1_SCAFFOLDING[locale];
 	return {
@@ -120,87 +147,6 @@ export function articleCopy(locale: Locale) {
 }
 
 export type ArticleCopy = ReturnType<typeof articleCopy>;
-
-export function homeCopy(locale: Locale) {
-	return {
-		pageTitle: m.site_title({}, { locale }),
-		pageDescription: m.site_description({}, { locale }),
-		tagline: m.blog_tagline({}, { locale }),
-		bio: m.blog_bio({}, { locale }),
-		projects: m.palette_nav_projects({}, { locale }),
-		posts: m.palette_nav_posts({}, { locale }),
-		about: m.palette_nav_about({}, { locale }),
-		heroStatsLabel: m.hero_stats_label({}, { locale }),
-		heroStatEventsLabel: m.hero_stat_events_label({}, { locale }),
-		heroStatPostsLabel: m.hero_stat_posts_label({}, { locale }),
-		heroStatServicesLabel: m.hero_stat_services_label({}, { locale }),
-		heroStatLanguagesLabel: m.hero_stat_languages_label({}, { locale }),
-		workSection: m.work_section({}, { locale }),
-		archcalendarSubtitle: m.archcalendar_subtitle({}, { locale }),
-		archcalendarDescription: m.archcalendar_description({}, { locale }),
-		system3bCardSubtitle: m.system_3b_card_subtitle({}, { locale }),
-		system3bTitle: m.system_3b_title({}, { locale }),
-		system3bCardDescription: m.system_3b_card_description({}, { locale }),
-		portfolioSubtitle: m.portfolio_subtitle({}, { locale }),
-		portfolioDescription: m.portfolio_description({}, { locale }),
-		recentPosts: m.recent_posts({}, { locale }),
-		seeAllPosts: (count: number) => m.see_all_posts({ count }, { locale }),
-		noPosts: m.no_posts({}, { locale }),
-	};
-}
-
-export type HomeCopy = ReturnType<typeof homeCopy>;
-
-export function postsListCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.posts_title({}, { locale })} | Brandon Wie`,
-		pageHeading: m.posts_title({}, { locale }),
-		pageDescription: m.posts_description({}, { locale }),
-		categoryFilter: m.category_filter({}, { locale }),
-		allCategories: m.all_categories({}, { locale }),
-		/** The count line's unfiltered label: `// 167 · all` / `// 167 · 전체` (B4). */
-		countAll: m.posts_count_all({}, { locale }),
-		noPosts: m.no_posts({}, { locale }),
-	};
-}
-
-export type PostsListCopy = ReturnType<typeof postsListCopy>;
-
-export function tagsCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.tags_meta_title({}, { locale })} | Brandon Wie`,
-		pageDescription: m.tags_meta_description({}, { locale }),
-		eyebrow: m.tags_eyebrow({}, { locale }),
-		title: m.tags_title({}, { locale }),
-		intro: (tags: number, posts: number) => m.tags_intro({ tags, posts }, { locale }),
-		empty: m.tags_empty({}, { locale }),
-		cloudHeading: m.tags_cloud_heading({}, { locale }),
-		allHeading: m.tags_all_heading({}, { locale }),
-		count: (count: number) => m.tags_count({ count }, { locale }),
-	};
-}
-
-export type TagsCopy = ReturnType<typeof tagsCopy>;
-
-export function searchCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.search_title({}, { locale })} | Brandon Wie`,
-		pageHeading: m.search_title({}, { locale }),
-		pageDescription: m.site_description({}, { locale }),
-		searchPlaceholder: m.search_placeholder({}, { locale }),
-		resultsCount: (count: number) => m.search_results_count({ count }, { locale }),
-		noResults: (query: string) => m.search_no_results({ query }, { locale }),
-		devNotice: m.search_dev_notice({}, { locale }),
-		loading: m.search_loading({}, { locale }),
-		resultsStatus: m.search_results_status({}, { locale }),
-		loadError:
-			locale === 'ko' ? '검색 인덱스를 불러오지 못했습니다.' : 'Failed to load search index.',
-		queryError:
-			locale === 'ko' ? '검색 중 오류가 발생했습니다.' : 'An error occurred while searching.',
-	};
-}
-
-export type SearchCopy = ReturnType<typeof searchCopy>;
 
 export function aboutCopy(locale: Locale) {
 	return {

@@ -160,5 +160,15 @@
 	"shortcuts_rows": "Next and previous post in the list",
 	"shortcuts_open": "Open the selected post",
 	"shortcuts_help": "Show this list",
-	"close": "Close"
+	"close": "Close",
+	"about_more": "More about me",
+	"search_posts": "Search posts",
+	"search_hint": "Search titles, tags and full text",
+	"posts_count": "{count} posts",
+	"posts_count_filtered": "{shown} of {total} posts",
+	"posts_none": "No posts match these filters.",
+	"clear_filters": "Clear filters",
+	"tag_filter_remove": "Remove the tag filter {tag}",
+	"full_text_unavailable": "Full-text search is not available now. These are title and tag matches only.",
+	"minutes_short": "{minutes} min"
 }

@@ -51,7 +51,19 @@ export function SiteHeader({
 					))}
 				</nav>
 				<div className="site-tools">
-					<AppLink className="site-tool" href={`${home}#search`} data-hotkey="/">
+					<AppLink
+						className="site-tool"
+						href={`${home}#search`}
+						data-hotkey="/"
+						onClick={(event) => {
+							// On the index the box is already here: focus it. From any other
+							// page the link opens the index, which focuses it on arrival.
+							const box = document.getElementById('search');
+							if (!box) return;
+							event.preventDefault();
+							box.focus();
+						}}
+					>
 						<span className="hotkey" aria-hidden="true">
 							[/]
 						</span>

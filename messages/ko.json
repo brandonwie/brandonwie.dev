@@ -160,5 +160,15 @@
 	"shortcuts_rows": "목록의 다음 글, 이전 글",
 	"shortcuts_open": "선택한 글 열기",
 	"shortcuts_help": "이 목록 보기",
-	"close": "닫기"
+	"close": "닫기",
+	"about_more": "소개 더 보기",
+	"search_posts": "글 검색",
+	"search_hint": "제목, 태그, 본문 검색",
+	"posts_count": "글 {count}개",
+	"posts_count_filtered": "{total}개 중 {shown}개",
+	"posts_none": "조건에 맞는 글이 없습니다.",
+	"clear_filters": "필터 지우기",
+	"tag_filter_remove": "{tag} 태그 필터 해제",
+	"full_text_unavailable": "지금은 본문 검색을 쓸 수 없습니다. 제목과 태그에서만 찾았습니다.",
+	"minutes_short": "{minutes}분"
 }

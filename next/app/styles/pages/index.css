@@ -1,0 +1,249 @@
+/* The home page: introduction, search and filters, one row per post. */
+@layer components {
+	.index__head {
+		display: grid;
+		gap: 0.75rem;
+		max-width: var(--measure);
+		margin-bottom: clamp(1.75rem, 4vw, 2.75rem);
+	}
+
+	.index__head h1 {
+		font-size: clamp(2rem, 1.5rem + 2.5vw, 3rem);
+		font-weight: 700;
+		line-height: 1.1;
+		letter-spacing: -0.025em;
+	}
+
+	.index__head p {
+		font-size: 1.0625rem;
+		line-height: 1.65;
+		color: var(--muted);
+		text-wrap: pretty;
+	}
+
+	.index__controls {
+		display: grid;
+		gap: 0.875rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.index__search {
+		position: relative;
+		display: block;
+	}
+
+	.index__search input {
+		width: 100%;
+		min-height: 3rem;
+		padding: 0 3rem 0 1rem;
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius);
+		background-color: var(--code-bg);
+		font-size: 1rem;
+		color: var(--ink);
+	}
+
+	.index__search input::placeholder {
+		color: var(--faint);
+		opacity: 1;
+	}
+
+	.index__search input:focus-visible {
+		outline-offset: 0;
+		border-color: var(--accent);
+	}
+
+	.index__search .kbd {
+		position: absolute;
+		top: 50%;
+		right: 0.875rem;
+		translate: 0 -50%;
+		pointer-events: none;
+	}
+
+	/* The hint would sit on top of the native clear button. */
+	.index__search input:not(:placeholder-shown) + .kbd {
+		display: none;
+	}
+
+	.index__tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+	}
+
+	.index__tabs button {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.4rem;
+		min-height: 2.25rem;
+		padding: 0 0.75rem;
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		font-size: 0.875rem;
+		font-weight: 500;
+		white-space: nowrap;
+		color: var(--muted);
+		cursor: pointer;
+	}
+
+	.index__tabs button span {
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		font-weight: 400;
+		color: var(--faint);
+	}
+
+	.index__tabs button:hover {
+		border-color: var(--line-strong);
+		color: var(--ink);
+	}
+
+	.index__tabs button[aria-pressed='true'] {
+		border-color: var(--ink);
+		background-color: var(--ink);
+		color: var(--bg);
+	}
+
+	.index__tabs button[aria-pressed='true'] span {
+		color: inherit;
+	}
+
+	.index__status {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.375rem 0.875rem;
+		min-height: 1.75rem;
+		font-size: 0.875rem;
+		color: var(--muted);
+	}
+
+	.index__status button {
+		cursor: pointer;
+	}
+
+	.index__note {
+		flex-basis: 100%;
+		color: var(--gold);
+	}
+
+	.index__year {
+		padding-block: 1.5rem 0.5rem;
+		border-bottom: 1px solid var(--line-strong);
+		font-family: var(--font-mono);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		letter-spacing: 0.06em;
+		color: var(--muted);
+	}
+
+	.index__list section:first-child .index__year {
+		padding-top: 0;
+	}
+
+	.index__list li {
+		border-bottom: 1px solid var(--line);
+	}
+
+	.index__row {
+		display: grid;
+		grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+		align-items: baseline;
+		gap: 0.25rem 1.25rem;
+		padding: 0.8125rem 0.5rem;
+		margin-inline: -0.5rem;
+		border-radius: 6px;
+	}
+
+	.index__row:hover,
+	.index__row:focus-visible {
+		background-color: var(--surface);
+	}
+
+	.index__row:focus-visible {
+		outline-offset: -2px;
+	}
+
+	.index__row time,
+	.index__meta {
+		font-family: var(--font-mono);
+		font-size: 0.8125rem;
+		white-space: nowrap;
+		color: var(--faint);
+	}
+
+	.index__title {
+		font-size: 1.0625rem;
+		font-weight: 500;
+		line-height: 1.4;
+		color: var(--ink);
+		text-wrap: pretty;
+	}
+
+	.index__row:hover .index__title {
+		color: var(--accent);
+	}
+
+	.index__title code {
+		font-size: 0.9em;
+	}
+
+	.index__meta {
+		display: flex;
+		gap: 1.25rem;
+	}
+
+	.index__meta span:last-child {
+		min-width: 3.25rem;
+		text-align: right;
+	}
+
+	.index__hit {
+		grid-column: 2 / -1;
+		font-size: 0.875rem;
+		line-height: 1.55;
+		color: var(--muted);
+	}
+
+	.index__hit mark {
+		border-radius: 2px;
+		background-color: color-mix(in srgb, var(--gold) 28%, transparent);
+		color: var(--ink);
+	}
+
+	/* Narrow screens: the title takes the full line, date and category sit under it. */
+	@media (width < 40rem) {
+		.index__row {
+			grid-template-columns: auto minmax(0, 1fr);
+			padding-block: 0.75rem;
+		}
+
+		.index__title {
+			grid-column: 1 / -1;
+			grid-row: 1;
+		}
+
+		.index__meta {
+			gap: 0.75rem;
+		}
+
+		.index__meta span:last-child {
+			min-width: 0;
+			margin-left: auto;
+		}
+
+		.index__hit {
+			grid-column: 1 / -1;
+		}
+
+		/* One scrolling line of tabs, reaching both screen edges. */
+		.index__tabs {
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			margin-inline: calc(var(--gutter) * -1);
+			padding-inline: var(--gutter);
+			scrollbar-width: none;
+		}
+	}
+}

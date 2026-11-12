@@ -8,12 +8,12 @@
  *   - `ink` and `muted` need 7:1 (body text)
  *   - every other text colour needs 4.5:1
  *   - `line-strong` needs 3:1 on `bg` (control boundaries)
- * The grounds are `bg`, `surface` and `surface-2`.
+ * The grounds are `bg`, `surface`, `surface-2` and `code-bg`.
  */
 import { readFileSync } from 'node:fs';
 
 const CSS = process.argv[2] ?? new URL('../src/app.css', import.meta.url);
-const GROUNDS = ['bg', 'surface', 'surface-2'];
+const GROUNDS = ['bg', 'surface', 'surface-2', 'code-bg'];
 const BODY = ['ink', 'muted'];
 const TEXT = [
 	'faint',

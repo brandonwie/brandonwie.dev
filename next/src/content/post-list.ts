@@ -1,54 +1,44 @@
 import { sourceDate } from './article-contract';
 import { listPublishedPosts, type Locale, type PublishedPost } from './posts';
 
-/**
- * Newest first by publish date. `listPublishedPosts` returns path order and the
- * sort is stable, so posts of the same day keep path order.
- */
-function newestFirst<T extends PublishedPost>(posts: readonly T[]): T[] {
-	const time = (post: T) => new Date(sourceDate(post.frontmatter.date) ?? '').getTime();
-	return [...posts].sort((a, b) => time(b) - time(a));
-}
-
 /** A published post plus the locale its source file came from. */
 export interface LocalizedPost extends PublishedPost {
-	/** `lang` in `src/routes/ko/posts/+page.ts`; absent from the other loaders. */
 	lang: Locale;
+	/** Publish date as `YYYY-MM-DD`. */
+	date: string;
 }
 
-/** Every published post in a locale, newest first. */
-export function listPostsForLocale(locale: Locale): PublishedPost[] {
-	return newestFirst(listPublishedPosts(locale));
+function localized(post: PublishedPost, lang: Locale): LocalizedPost {
+	return { ...post, lang, date: (sourceDate(post.frontmatter.date) ?? '').slice(0, 10) };
 }
 
 /**
- * Korean posts, then the English posts that have no Korean translation.
+ * Every post a locale shows, newest first by publish date.
  *
- * Ports `src/routes/ko/posts/+page.ts:20-49`. Two details are load-bearing and
- * easy to lose:
+ * Korean shows the Korean posts, then the English post for each slug that has
+ * no translation. The fallback is keyed by SLUG, not by path: a Korean post
+ * filed under a different category still replaces its English twin.
  *
- *   - The fallback is keyed by SLUG, not by path. A Korean post filed under a
- *     different category still suppresses its English twin.
- *   - Korean entries are pushed FIRST and the sort runs once over the joined
- *     array. Sorting each language separately, or concatenating after sorting,
- *     changes which of two same-date entries comes first.
+ * `listPublishedPosts` returns path order and the sort is stable, so posts of
+ * the same day keep path order.
  */
-export function listKoreanPostsWithEnglishFallback(): LocalizedPost[] {
-	const korean = listPublishedPosts('ko');
-	const koreanSlugs = new Set(korean.map((post) => post.slug));
-	const english = listPublishedPosts('en').filter((post) => !koreanSlugs.has(post.slug));
+export function listPosts(locale: Locale): LocalizedPost[] {
+	const english = listPublishedPosts('en').map((post) => localized(post, 'en'));
+	if (locale === 'en') return english.sort(newestFirst);
 
-	return newestFirst<LocalizedPost>([
-		...korean.map((post) => ({ ...post, lang: 'ko' as const })),
-		...english.map((post) => ({ ...post, lang: 'en' as const })),
-	]);
+	const korean = listPublishedPosts('ko').map((post) => localized(post, 'ko'));
+	const translated = new Set(korean.map((post) => post.slug));
+	return [...korean, ...english.filter((post) => !translated.has(post.slug))].sort(newestFirst);
+}
+
+function newestFirst(a: LocalizedPost, b: LocalizedPost): number {
+	return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;
 }
 
 /**
  * Published Korean post titles, keyed by slug.
  *
- * Ports `src/routes/ko/system/3b/+page.ts:16-21`, the seventeenth glob call
- * site. The Korean `/system/b3` page localizes its blog-series titles from the
+ * The Korean `/system/b3` page localizes its blog-series titles from the
  * Korean corpus rather than from the snapshot overlay, because the series
  * entries ARE posts: the Korean title of a translated post is the Korean title
  * of that series entry. Drafts are skipped for the same reason the lists skip
