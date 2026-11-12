@@ -1,4 +1,6 @@
+import { shellCopy } from '@/i18n/copy';
 import { DocumentShell } from '@/shell/document';
+import { Shortcuts } from '@/shell/Shortcuts';
 import { SiteShell } from '@/shell/site-shell';
 
 /**
@@ -8,7 +10,7 @@ import { SiteShell } from '@/shell/site-shell';
 export default function GlobalNotFound() {
 	return (
 		<DocumentShell lang="en" title="Page not found | Brandon Wie" standaloneHead>
-			<SiteShell locale="en" errorRoute>
+			<SiteShell locale="en" errorRoute extras={<Shortcuts copy={shellCopy('en').shortcuts} />}>
 				<section className="notice-page" aria-labelledby="notice-title">
 					<p className="eyebrow">404</p>
 					<h1 id="notice-title">Page not found</h1>

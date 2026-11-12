@@ -15,21 +15,14 @@
 	--color-surface: var(--surface);
 	--color-surface-2: var(--surface-2);
 	--color-line: var(--line);
-	--color-line-strong: var(--line-strong);
 	--color-ink: var(--ink);
 	--color-muted: var(--muted);
 	--color-faint: var(--faint);
 	--color-accent: var(--accent);
-	--color-accent-strong: var(--accent-strong);
-	--color-ok: var(--ok);
-	--color-warn: var(--warn);
 	--color-crit: var(--crit);
-	--color-love: var(--love);
 	--color-gold: var(--gold);
 	--color-rose: var(--rose);
-	--color-pine: var(--pine);
 	--color-foam: var(--foam);
-	--color-iris: var(--iris);
 
 	/* `--font-inter` and `--font-jbm` come from next/font (next/src/shell/fonts.ts).
 	   Neither face has Hangul, so Korean falls through to the system face. */
@@ -258,12 +251,6 @@
 		color: var(--accent);
 	}
 
-	.panel {
-		border: 1px solid var(--line);
-		border-radius: var(--radius);
-		background-color: var(--surface);
-	}
-
 	/*
 	  Long-form text. Sized and spaced for reading, not for density: 17 to 19 px,
 	  line height 1.75, a 44rem measure.
@@ -338,6 +325,12 @@
 
 	.prose strong {
 		font-weight: 650;
+	}
+
+	/* The real italic face. It is its own family (next/src/shell/fonts.ts), so its
+	   file loads only on a page that has italic text. */
+	.prose :is(em, i, cite) {
+		font-family: var(--font-inter-italic), var(--font-sans);
 	}
 
 	.prose :is(ul, ol) {
@@ -487,8 +480,7 @@
 		white-space: nowrap;
 	}
 
-	.prose mark,
-	.hit mark {
+	.prose mark {
 		border-radius: 2px;
 		background-color: color-mix(in srgb, var(--gold) 28%, transparent);
 		color: inherit;

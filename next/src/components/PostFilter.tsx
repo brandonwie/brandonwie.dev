@@ -128,13 +128,45 @@ export function PostFilter({
 	const input = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
-		const params = new URLSearchParams(window.location.search);
-		setQuery(params.get('q') ?? '');
-		setCategory(params.get('category') ?? '');
-		setTag(params.get('tag') ?? '');
+		function read(search: string) {
+			const params = new URLSearchParams(search);
+			setQuery(params.get('q') ?? '');
+			setCategory(params.get('category') ?? '');
+			setTag(params.get('tag') ?? '');
+		}
+		read(window.location.search);
 		setRestored(true);
 		// The header's search control links to `#search` from every other page.
 		if (window.location.hash === '#search') input.current?.focus();
+
+		// A link to this same page with another filter (the brand or "Posts" from
+		// a filtered list) does not mount the filter again, so the filter takes
+		// the click itself: one new history entry, then the list follows the
+		// address. It runs in the capture phase, before the router's own handler,
+		// which would add its entry after this component rewrote the current one.
+		// A link with a hash (`#search`, the skip link) only moves focus.
+		function onClick(event: MouseEvent) {
+			if (event.button !== 0) return;
+			if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+			const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+			if (!(link instanceof HTMLAnchorElement) || link.target || link.hash) return;
+			if (link.origin !== window.location.origin) return;
+			if (link.pathname !== window.location.pathname) return;
+			if (link.search === window.location.search) return;
+			event.preventDefault();
+			event.stopPropagation();
+			window.history.pushState(null, '', link.href);
+			window.scrollTo(0, 0);
+			read(link.search);
+		}
+		// Back and Forward between two filters of this page.
+		const onPopState = () => read(window.location.search);
+		document.addEventListener('click', onClick, true);
+		window.addEventListener('popstate', onPopState);
+		return () => {
+			document.removeEventListener('click', onClick, true);
+			window.removeEventListener('popstate', onPopState);
+		};
 	}, []);
 
 	useEffect(() => {

@@ -60,7 +60,8 @@ function moveRow(delta: 1 | -1): boolean {
 /**
  * Single-key shortcuts. A key clicks the control whose `data-hotkey` matches;
  * `j` and `k` walk a list of `data-row` links; `?` lists what the page offers.
- * Keys are ignored while typing and with a modifier held.
+ * Keys are ignored while typing, with a modifier held, and while an element
+ * with `data-shortcuts-off` is on the page.
  */
 export function Shortcuts({ copy }: { copy: ShellCopy['shortcuts'] }) {
 	const dialog = useRef<HTMLDialogElement>(null);
@@ -78,8 +79,18 @@ export function Shortcuts({ copy }: { copy: ShellCopy['shortcuts'] }) {
 		function onKeyDown(event: KeyboardEvent) {
 			if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
 			if (isTyping(event.target) || document.querySelector('dialog[open]')) return;
+			// A full-screen presentation owns the keyboard (the talk deck).
+			if (document.querySelector('[data-shortcuts-off]')) return;
 
-			const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+			// With a non-Latin input source (Korean 2-Set) a letter key reports a
+			// jamo, so the physical key names the letter.
+			const letter = /^Key([A-Z])$/.exec(event.code)?.[1];
+			const key =
+				letter && !/^[\x20-\x7e]$/.test(event.key)
+					? letter.toLowerCase()
+					: event.key.length === 1
+						? event.key.toLowerCase()
+						: event.key;
 			if (key === '?') {
 				event.preventDefault();
 				openHelp();

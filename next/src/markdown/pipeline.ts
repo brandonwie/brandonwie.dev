@@ -10,7 +10,7 @@ import { jsx, jsxs } from 'react/jsx-runtime';
 import matter from 'gray-matter';
 import type { Element, Root as HastRoot } from 'hast';
 import type { ReactElement } from 'react';
-import { SKIP, visit } from 'unist-util-visit';
+import { EXIT, SKIP, visit } from 'unist-util-visit';
 import { VFile } from 'vfile';
 import type { BundledLanguage } from 'shiki';
 
@@ -91,7 +91,13 @@ function rehypeHeadingLinks() {
 		visit(tree, 'element', (node) => {
 			if (!/^h[234]$/.test(node.tagName) || typeof node.properties.id !== 'string') return;
 			// A link inside a link is invalid HTML: a heading that already has one stays as it is.
-			if (node.children.some((child) => child.type === 'element' && child.tagName === 'a')) return;
+			let hasLink = false;
+			visit(node, 'element', (inner) => {
+				if (inner.tagName !== 'a') return;
+				hasLink = true;
+				return EXIT;
+			});
+			if (hasLink) return;
 			node.children = [
 				{
 					type: 'element',

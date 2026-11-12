@@ -100,7 +100,12 @@ const server = createServer((req, res) => {
 	}
 	const redirect = redirects.get(url.pathname);
 	if (redirect) {
-		res.writeHead(redirect.status, { location: redirect.to });
+		// As on Cloudflare Pages: the request's query string is kept, before any hash.
+		const [path, hash] = redirect.to.split('#');
+		const query = path.includes('?') ? '' : url.search;
+		res.writeHead(redirect.status, {
+			location: `${path}${query}${hash === undefined ? '' : `#${hash}`}`,
+		});
 		res.end();
 		return;
 	}

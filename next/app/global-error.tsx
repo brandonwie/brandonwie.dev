@@ -1,6 +1,8 @@
 'use client';
 
+import { shellCopy } from '@/i18n/copy';
 import { DocumentShell } from '@/shell/document';
+import { Shortcuts } from '@/shell/Shortcuts';
 import { SiteShell } from '@/shell/site-shell';
 
 export default function GlobalError({
@@ -11,7 +13,7 @@ export default function GlobalError({
 }) {
 	return (
 		<DocumentShell lang="en" title="Something went wrong | Brandon Wie" standaloneHead>
-			<SiteShell locale="en" errorRoute>
+			<SiteShell locale="en" errorRoute extras={<Shortcuts copy={shellCopy('en').shortcuts} />}>
 				<section className="notice-page" aria-labelledby="notice-title">
 					<p className="eyebrow">Error</p>
 					<h1 id="notice-title">Something went wrong</h1>

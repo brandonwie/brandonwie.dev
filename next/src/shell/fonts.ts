@@ -19,7 +19,8 @@ const inter = localFont({
 	],
 });
 
-// A separate family so the italic file downloads only on a page that has italic text.
+// A separate family, named by `.prose :is(em, i, cite)` in src/app.css, so the
+// italic file downloads only on a page that has italic text.
 const interItalic = localFont({
 	src: './fonts/Inter-Italic-Variable.woff2',
 	weight: '100 900',

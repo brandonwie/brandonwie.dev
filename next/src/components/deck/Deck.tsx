@@ -42,8 +42,8 @@
  *   and re-render; the history call mirrors Svelte exactly.
  * - `<svelte:window onkeydown>` → a window listener added in an effect. It
  *   claims a key only when focus is inside the deck or nowhere (body), so a
- *   key pressed on the shell's chrome (status line, title bar, footer,
- *   palette) keeps its own default and never moves the slide.
+ *   key pressed on the site's header or footer keeps its own default and
+ *   never moves the slide.
  * - `<svelte:head>` (title + robots) lives in the route's `generateMetadata`,
  *   not here — see `next/app/(en)/talks/my-career/page.tsx`.
  * - `{#key index}` remount → `key={current.id}` on the slide body: a new
@@ -185,8 +185,8 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 
 	useEffect(() => {
 		function onKeyDown(event: KeyboardEvent) {
-			// The site layout owns Cmd/Ctrl chords (palette, search). Only claim
-			// bare keys so the two handlers never collide.
+			// Chords with Cmd, Ctrl or Alt belong to the browser. Only claim bare
+			// keys.
 			if (event.metaKey || event.ctrlKey || event.altKey) return;
 
 			const target = event.target as HTMLElement | null;
@@ -194,9 +194,8 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 			// Only keys aimed at the deck: focus inside it, or on an element
 			// that encloses it. The enclosing case covers nothing focused (the
 			// event targets body or html) and the shell's `main#main-content`,
-			// which takes focus after "Skip to content". A key on the shell's
-			// chrome — a status-line link, the title bar, the footer, the
-			// palette — targets a sibling branch, not an ancestor, so it keeps
+			// which takes focus after "Skip to content". A key on a header or
+			// footer link targets a sibling branch, not an ancestor, so it keeps
 			// its own default and leaves the slide alone.
 			const root = rootRef.current;
 			const unfocused = target === document.body || target === document.documentElement;
@@ -269,6 +268,9 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 			ref={rootRef}
 			className={presenting ? 'deck is-presenting' : 'deck'}
 			data-scheme="dark"
+			// While presenting, a bare letter belongs to the talk (a clicker sends
+			// `b`), so the site's single-key shortcuts stand down (Shortcuts.tsx).
+			data-shortcuts-off={presenting ? '' : undefined}
 			role="application"
 			aria-label={title}
 		>
