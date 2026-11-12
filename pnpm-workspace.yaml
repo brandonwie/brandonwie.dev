@@ -15,7 +15,6 @@ packages:
 # publishing with SLSA provenance (checked 2026-10-19). Prune drops an entry
 # once the lockfile no longer resolves that version.
 minimumReleaseAgeExclude:
-  - satori@0.63.0
   - '@inlang/paraglide-js@2.29.1'
   - typescript-eslint@8.72.0
   - '@typescript-eslint/eslint-plugin@8.72.0'

@@ -14,9 +14,6 @@ graphify-out/
 # Build/lock artifacts (already gitignored but belt-and-suspenders)
 node_modules/
 
-# OG meta-images: auto-generated per blog post, no unique signal — the blog
-# post markdown itself carries the content. Avoids ~4M tokens of vision extraction.
-static/og/
-
-# SVG favicons / icon assets (no blog signal)
-static/favicon.svg
+# The share card and the favicon carry no blog signal.
+public/og.png
+public/favicon.svg

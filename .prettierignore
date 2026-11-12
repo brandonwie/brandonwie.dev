@@ -2,7 +2,6 @@ build/
 .svelte-kit/
 src/lib/paraglide/
 next/src/paraglide/
-resources/media/
 node_modules/
 src/content/posts/
 .claude/
