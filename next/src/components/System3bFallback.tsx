@@ -22,10 +22,7 @@ import { useGraphCopy } from './System3bLocale';
  * layout helper, which is what keeps dagre out of the prerendered shell — the
  * same reason the Svelte original inlined them.
  *
- * Phosphor Fade: one line per layer (index, name, count, ellipsised
- * description), with `[···]` before the loading note and `!` before the
- * failure note. The full description stays in the DOM (and in `title`), only
- * its overflow is clipped.
+ * One row per layer: name, node count and description.
  */
 export interface FallbackData {
 	nodes: SnapNode[];
@@ -59,24 +56,16 @@ export function System3bFallback({ state }: { state: 'loading' | 'failed' }) {
 	for (const n of nodes) countByLayer[n.layer] = (countByLayer[n.layer] ?? 0) + 1;
 
 	return (
-		<div className={failed ? 's3b-fallback failed' : 's3b-fallback'}>
-			<p className="s3b-fb__note">
-				<span className="s3b-fb__sig" aria-hidden="true">
-					{failed ? '!' : '[···]'}
-				</span>{' '}
-				{failed ? copy.unavailable : copy.loading}
-			</p>
+		<div className={failed ? 's3b-fallback s3b-fallback--failed' : 's3b-fallback'}>
+			<p className="s3b-fb__note">{failed ? copy.unavailable : copy.loading}</p>
 			<ol className="s3b-fb__list">
-				{layers.map((layer, i) => (
+				{layers.map((layer) => (
 					<li key={layer.id} className="s3b-fb__row">
-						<span className="s3b-fb__idx">{i + 1}.</span>
 						<span className="s3b-fb__name">{layer.name}</span>
 						<span className="s3b-fb__count">
 							{countByLayer[layer.id] ?? 0} {copy.nodesLabel}
 						</span>
-						<span className="s3b-fb__desc" title={layer.description}>
-							{layer.description}
-						</span>
+						<span className="s3b-fb__desc">{layer.description}</span>
 					</li>
 				))}
 			</ol>

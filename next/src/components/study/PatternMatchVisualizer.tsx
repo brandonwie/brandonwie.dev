@@ -205,9 +205,9 @@ export default function PatternMatchVisualizer({ copy }: { copy: PatternMatchCop
 	function cellClass(role: CellRole): string {
 		if (role === 'match') return 'fill-bg stroke-foam';
 		if (role === 'mismatch') return 'fill-bg stroke-gold';
-		if (role === 'shift') return 'fill-highlight-med stroke-gold';
-		if (role === 'skip') return 'fill-highlight-med stroke-line';
-		if (role === 'found') return 'fill-highlight-med stroke-accent';
+		if (role === 'shift') return 'fill-surface-2 stroke-gold';
+		if (role === 'skip') return 'fill-surface stroke-line';
+		if (role === 'found') return 'fill-surface-2 stroke-accent';
 		return 'fill-bg stroke-line';
 	}
 
@@ -222,15 +222,15 @@ export default function PatternMatchVisualizer({ copy }: { copy: PatternMatchCop
 	function legendClass(role: ActiveRole): string {
 		if (role === 'match') return 'border-foam text-foam';
 		if (role === 'mismatch') return 'border-gold text-gold';
-		if (role === 'shift') return 'border-gold bg-highlight-med text-gold';
-		if (role === 'skip') return 'border-line border-dashed bg-highlight-med text-faint';
-		return 'border-accent bg-highlight-med text-accent';
+		if (role === 'shift') return 'border-gold bg-surface text-gold';
+		if (role === 'skip') return 'border-line border-dashed bg-surface text-faint';
+		return 'border-accent bg-surface text-accent';
 	}
 
 	function entryClass(key: string): string {
 		if (!frame.tableBuilt) return 'border-line text-faint';
 		if (frame.tableKey === key) return 'border-gold text-gold';
-		return 'border-accent bg-highlight-med text-accent';
+		return 'border-accent bg-surface text-accent';
 	}
 
 	return (
@@ -380,7 +380,7 @@ export default function PatternMatchVisualizer({ copy }: { copy: PatternMatchCop
 					{LEGEND.map((role) => (
 						<span
 							key={role}
-							className={`border px-2.5 py-1 font-mono text-[11px] uppercase ${legendClass(role)}`}
+							className={`border px-2.5 py-1 font-mono text-xs uppercase ${legendClass(role)}`}
 						>
 							{copy.roleLabels[role]}
 						</span>

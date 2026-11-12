@@ -95,7 +95,7 @@ export default function TwoFourTreeVisualizer({ copy }: { copy: TwoFourVisualize
 	function rectClass(role: Role | undefined): string {
 		if (role === 'overflow' || role === 'underflow') return 'fill-bg stroke-crit';
 		if (role === 'transfer') return 'fill-bg stroke-foam';
-		if (role === 'promote' || role === 'fusion') return 'fill-highlight-med stroke-accent';
+		if (role === 'promote' || role === 'fusion') return 'fill-surface-2 stroke-accent';
 		return 'fill-bg stroke-line';
 	}
 

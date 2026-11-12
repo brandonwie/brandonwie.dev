@@ -13,60 +13,12 @@
    would erase a CSS opacity.
    =========================================================================== */
 
-/* The C11 graph port above lost Svelte's component scoping and therefore owns
-   generic `.title`, `.chip`, `.note`, `.name`, `.count`, and `.line` rules.
-   Deck slides reuse those source-local names. Restore the scoped boundary here
-   so graph-only dimensions, spacing, typography, and colors cannot leak into
-   either the live deck or print rendering. Slide-specific rules below still
-   supply their intentional values. */
-.deck .title,
-.print-deck .title,
-.deck .name,
-.print-deck .name {
-	color: inherit;
-}
+/* Slide chips are spans that take a box (padding, a fixed width and height),
+   which an inline span ignores. This was the one value the old graph-rule
+   reset block supplied that a slide still needs. */
 .deck .chip,
 .print-deck .chip {
 	display: inline-block;
-	gap: 0;
-	padding: 0;
-	font: inherit;
-	color: inherit;
-	text-decoration: inherit;
-	transition: none;
-}
-.deck .note,
-.print-deck .note {
-	margin: 0;
-	font-family: inherit;
-	font-size: inherit;
-	color: inherit;
-}
-.deck .count,
-.print-deck .count {
-	margin-left: 0;
-	color: inherit;
-	white-space: normal;
-}
-.deck .line,
-.print-deck .line {
-	width: auto;
-	height: auto;
-	display: inline;
-	vertical-align: baseline;
-}
-
-/* --- spike-only host chrome (deleted with the route at Slice 4) --- */
-.deck-spike__controls {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	margin: 1rem 0 1.5rem;
-}
-.deck-spike__step {
-	font-family: var(--font-mono);
-	font-size: 12px;
-	color: var(--faint);
 }
 
 /* --- from AccountSeparationSlide.svelte --- */
@@ -356,124 +308,11 @@
 	background: color-mix(in srgb, currentColor 4%, transparent);
 }
 
-/* --- from System3bPage.svelte: blog series --- */
-.series {
-	margin-top: 40px;
-}
-.series h2 {
-	font-size: 20px;
-	font-weight: 600;
-	color: var(--ink);
-	margin: 0 0 8px;
-}
-
-/* --- .chips / .chip (3B flow, deck slides) --- */
+/* --- .chips (deck slides) --- */
 .chips {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
-}
-.chip {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	padding: 7px 12px;
-	border: 1px solid var(--line2);
-	border-radius: 30px;
-	background: transparent;
-	font-family: var(--font-mono);
-	font-size: 12px;
-	color: var(--muted);
-	cursor: pointer;
-	transition:
-		color 0.2s,
-		border-color 0.2s,
-		background-color 0.2s;
-}
-.chip:hover {
-	border-color: var(--foam);
-	color: var(--foam);
-}
-
-/* --- .crumb (social feed, 3B flow) --- */
-.crumb {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	margin-bottom: 18px;
-	font-family: var(--font-mono);
-	font-size: 12px;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	color: var(--faint);
-}
-.crumb a {
-	color: var(--faint);
-	text-decoration: none;
-}
-.crumb a:hover {
-	color: var(--foam);
-}
-
-/* AWS study print stylesheet. Ported from the scoped `<style>` block of
-   `src/lib/components/study/AwsAiPractitionerStudyPage.svelte` (minus the
-   `:global()` wrappers): light, ink-friendly tokens with site chrome and the
-   jump/print aside hidden. On paper the terminal shell flattens: its chrome
-   (title bar, prompts, ~/.plan, status line) is hidden and the enclosure loses
-   its glass, bloom and scanlines. */
-@media print {
-	html:has([data-aws-study]) {
-		--bg: #ffffff !important;
-		--surface: #ffffff !important;
-		--ink: #111111 !important;
-		--muted: #333333 !important;
-		--faint: #555555 !important;
-		--line: #cccccc !important;
-		--line2: #cccccc !important;
-		--foam: #286983 !important;
-		--pine: #286983 !important;
-		--gold: #8a5300 !important;
-		--iris: #5f4b82 !important;
-		/* The study page is drawn in the shell inks, so those re-ink for paper
-		   too (on #fff: hi 18.88, worn 12.63, faint 7.46, amber 6.33, green
-		   6.11; line/off are rules only). */
-		--crt-glass: #ffffff !important;
-		--crt-hi: #111111 !important;
-		--crt-worn: #333333 !important;
-		--crt-faint: #555555 !important;
-		--crt-amber: #8a5300 !important;
-		--crt-green: #286983 !important;
-		--crt-line: #cccccc !important;
-		--crt-off: #cccccc !important;
-		color-scheme: light;
-	}
-	body:has([data-aws-study])
-		:is(.skip-link, .term-bar, .term-ghost, .term-ps1, .term-plan, .term-status),
-	[data-aws-study] [data-print-hide] {
-		display: none !important;
-	}
-	body:has([data-aws-study]) :is(.term-page, .term-crt, .term-glass, .term-body) {
-		max-width: none;
-		padding: 0;
-		border: 0;
-		border-radius: 0;
-		background: none;
-		box-shadow: none;
-		color: var(--ink);
-	}
-	/* The full-bleed flex column is a screen layout; paper keeps block flow. */
-	body:has([data-aws-study]) :is(.term-crt, .term-glass) {
-		display: block;
-		min-height: 0;
-	}
-	body:has([data-aws-study]) .term-glass::before,
-	body:has([data-aws-study]) .term-glass::after {
-		content: none;
-	}
-	[data-aws-study] article,
-	[data-aws-study] dl > div {
-		break-inside: avoid;
-	}
 }
 
 /* --- from TitleSlide.svelte (PR-B batch 1) --- */
@@ -2601,6 +2440,10 @@
 	padding-bottom: 0.3rem;
 	visibility: hidden;
 	opacity: 0;
+}
+/* Was supplied by a site-wide bare `.name` rule, now retired. */
+.learning .name {
+	font-weight: 600;
 }
 /* The date is the evidence, not a footnote — it is what puts the row inside
    the MOBA period. Quieter than the name, but not dismissed. */

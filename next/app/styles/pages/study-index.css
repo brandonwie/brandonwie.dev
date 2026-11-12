@@ -1,225 +1,212 @@
-/* Phosphor Fade page styles: study-index. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives and
-   study-course.css for the study base (`.pg-study`, `st-*`) this page uses. */
-
+/*
+  Study: the shared base for every study page (/study, /study/dsa-*,
+  /study/aws-ai-practitioner), then the /study course list.
+  study-course.css and study-aws.css add each course page's own parts.
+*/
 @layer components {
-	.pg-study-index {
-		--st-pane: 300px;
+	/*
+	  The visualizers size their labels with Tailwind's `text-xs` and `text-sm`.
+	  Inside the study root those steps are raised to the site minimum
+	  (0.8125rem) and given a reading line height.
+	*/
+	.study {
+		--text-xs: 0.8125rem;
+		--text-xs--line-height: 1.25rem;
+		--text-sm--line-height: 1.375rem;
+		display: grid;
+		gap: clamp(2.5rem, 6vw, 3.5rem);
+		min-width: 0;
 	}
 
-	/* "the approach" pane in the hero. */
-	.pg-study-index .si-about__h {
-		margin-bottom: 6px;
+	.study__head {
+		display: grid;
+		gap: 0.75rem;
+		max-width: var(--measure);
+	}
+
+	.study__head h1 {
+		font-size: clamp(1.875rem, 1.4rem + 2.2vw, 2.75rem);
 		font-weight: 700;
-		color: var(--crt-hi);
-	}
-	.pg-study-index .si-about__bd {
-		font-size: 12px;
-		line-height: 20px;
-		color: var(--crt-worn);
+		line-height: 1.15;
+		letter-spacing: -0.022em;
+		text-wrap: balance;
 	}
 
-	/* `ls -l courses/`: one link per row. Fixed px columns from lg (never
-	   space-padded strings: Hangul would break the grid); below lg the mode
-	   and meter columns drop and the title wraps under the slug. */
-	.pg-study-index .si-ls {
-		font-size: 12px;
-		line-height: 22px;
+	/* The site primitives are 0.75rem; the study pages keep 0.8125rem as the floor. */
+	.study .eyebrow,
+	.study .tag {
+		font-size: 0.8125rem;
 	}
-	.pg-study-index .si-ls__hd {
-		display: none;
+
+	.study__lede {
+		font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
+		line-height: 1.6;
+		color: var(--muted);
+		text-wrap: pretty;
 	}
-	.pg-study-index .si-ls__rows {
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-	.pg-study-index .si-ls__row {
+
+	.study__crumbs {
 		display: flex;
 		flex-wrap: wrap;
-		column-gap: 12px;
-		margin: 0 -6px;
-		padding: 0 6px;
-		color: var(--crt-worn);
-		text-decoration: none;
-	}
-	.pg-study-index .si-ls__rows li + li .si-ls__row {
-		margin-top: 4px;
-	}
-	.pg-study-index .si-ls__perm,
-	.pg-study-index .si-ls__mtr {
-		display: none;
-	}
-	.pg-study-index .si-ls__perm,
-	.pg-study-index .si-ls__dt,
-	.pg-study-index .si-ls__none {
-		color: var(--crt-faint);
-	}
-	.pg-study-index .si-ls__st {
-		color: var(--crt-amber);
-	}
-	.pg-study-index .si-ls__nm {
-		color: var(--crt-green);
-	}
-	.pg-study-index .si-ls__ti {
-		flex-basis: 100%;
-		min-width: 0;
-		color: var(--crt-hi);
-	}
-	.pg-study-index .si-ls__row:hover .si-ls__nm {
-		text-decoration: underline;
-	}
-	/* Row selection: `.term-sel` reverse video, meter included. */
-	.pg-study-index .si-ls__row:focus-visible,
-	.pg-study-index .si-ls__row:focus-visible span {
-		background: var(--crt-amber);
-		color: var(--crt-glass);
-	}
-	.pg-study-index .si-ls__tot {
-		margin-top: 6px;
-		color: var(--crt-faint);
+		gap: 0.5rem 1rem;
+		font-size: 0.875rem;
+		line-height: 1.5;
+		color: var(--muted);
 	}
 
-	/* Course frames: the whole frame is the link. */
-	.pg-study-index .si-grid {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 0 14px;
-		margin-top: 4px;
+	.study__crumbs a:hover {
+		color: var(--accent);
 	}
-	.pg-study-index .si-course {
-		display: block;
+
+	.study__section {
 		min-width: 0;
-		color: var(--crt-worn);
-		text-decoration: none;
+		scroll-margin-top: calc(var(--header-h) + 1.25rem);
 	}
-	.pg-study-index .si-course > :where(span) {
-		display: block;
+
+	.study__h2 {
+		margin-bottom: 1rem;
+		font-size: 1.5rem;
+		font-weight: 650;
+		line-height: 1.25;
+		letter-spacing: -0.012em;
 	}
-	.pg-study-index .si-course__stat {
-		font-size: 11px;
-		line-height: 16px;
-		letter-spacing: 0.12em;
+
+	.study__h2::first-letter {
 		text-transform: uppercase;
-		color: var(--crt-amber);
 	}
-	.pg-study-index .si-course h3 {
-		margin: 4px 0 8px;
-		font-size: 15px;
-		line-height: 24px;
-		font-weight: 700;
-		color: var(--crt-hi);
-	}
-	.pg-study-index .si-course__sum {
-		font-size: 12px;
-		line-height: 20px;
-	}
-	.pg-study-index .si-kv {
-		display: grid;
-		grid-template-columns: 72px minmax(0, 1fr);
-		gap: 10px;
-		margin-top: 10px;
-		font-size: 12px;
-		line-height: 20px;
-	}
-	.pg-study-index .si-kv__k {
-		color: var(--crt-faint);
-	}
-	.pg-study-index .si-kv__v {
-		color: var(--crt-green);
-	}
-	.pg-study-index .si-mods {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		column-gap: 12px;
-	}
-	.pg-study-index .si-mods i {
-		font-style: normal;
-		color: var(--crt-amber);
-	}
-	.pg-study-index .si-course__foot {
+
+	/* "On this page": in-page links under the course header. */
+	.study__toc {
 		display: flex;
 		flex-wrap: wrap;
-		justify-content: space-between;
-		gap: 0 12px;
-		margin-top: 12px;
-		padding-top: 8px;
-		border-top: 1px dashed var(--crt-line);
-		font-size: 12px;
-		line-height: 20px;
-		color: var(--crt-faint);
-	}
-	.pg-study-index .si-course__go {
-		color: var(--crt-green);
-	}
-	.pg-study-index .si-course:hover,
-	.pg-study-index .si-course:focus-visible {
-		border-color: var(--crt-amber);
-	}
-	.pg-study-index .si-course:hover h3,
-	.pg-study-index .si-course:focus-visible h3 {
-		color: var(--crt-green);
-		text-decoration: underline;
+		gap: 0.5rem 1.25rem;
+		font-size: 0.9375rem;
+		line-height: 1.5;
 	}
 
-	/* approach.txt: three `/` lines. */
-	.pg-study-index .si-approach ul {
+	/* Native form controls inside the visualizers. */
+	.study select {
+		min-height: 2.25rem;
+		border: 1px solid var(--line-strong);
+		border-radius: 6px;
+		background-color: var(--bg);
+		color: var(--ink);
+	}
+
+	.study .study-btn {
+		cursor: pointer;
+	}
+
+	/* `study-btn` is a utility, which beats this layer on colour and border. */
+	.study .study-btn:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+
+	/* The course list. */
+	.study__courses > li {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 6px 16px;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-		font-size: 12px;
-		line-height: 20px;
-	}
-	.pg-study-index .si-approach i {
-		margin-right: 8px;
-		font-style: normal;
-		color: var(--crt-amber);
+		gap: 0.5rem;
+		padding-block: 1.5rem;
+		border-top: 1px solid var(--line);
 	}
 
-	@media (width >= 48rem) {
-		.pg-study-index .si-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-		.pg-study-index .si-course.is-wide {
-			grid-column: 1 / -1;
-		}
-		.pg-study-index .si-course.is-wide .si-mods {
-			grid-template-columns: repeat(3, max-content);
-			column-gap: 32px;
-		}
-		.pg-study-index .si-approach ul {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
+	.study__courses > li:last-child {
+		border-bottom: 1px solid var(--line);
 	}
-	@media (width >= 64rem) {
-		.pg-study-index .si-ls__hd,
-		.pg-study-index .si-ls__row {
-			display: grid;
-			grid-template-columns: 30px 92px 78px 136px 156px minmax(0, 1fr);
-			column-gap: 12px;
-			white-space: nowrap;
+
+	.study__course-meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1rem;
+		font-family: var(--font-mono);
+		font-size: 0.8125rem;
+		line-height: 1.5;
+		color: var(--faint);
+	}
+
+	.study__status {
+		color: var(--ok);
+	}
+
+	.study__course h3 {
+		font-size: 1.25rem;
+		font-weight: 650;
+		line-height: 1.35;
+		letter-spacing: -0.01em;
+		text-wrap: balance;
+	}
+
+	.study__course-link {
+		color: var(--ink);
+	}
+
+	.study__course-link:hover {
+		color: var(--accent);
+	}
+
+	.study__course-sum {
+		max-width: var(--measure);
+		line-height: 1.65;
+		color: var(--muted);
+		text-wrap: pretty;
+	}
+
+	.study__tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+	}
+
+	.study__modules,
+	.study__course-note {
+		font-size: 0.875rem;
+		line-height: 1.55;
+		color: var(--muted);
+	}
+
+	/* The approach. */
+	.study__approach-lead {
+		font-size: 1.0625rem;
+		font-weight: 600;
+		line-height: 1.5;
+	}
+
+	.study__approach-body {
+		max-width: var(--measure);
+		margin-top: 0.5rem;
+		line-height: 1.65;
+		color: var(--muted);
+	}
+
+	.study__approach {
+		display: grid;
+		gap: 0.4rem;
+		max-width: var(--measure);
+		margin-top: 1rem;
+		padding-left: 1.25rem;
+		list-style: disc;
+		line-height: 1.6;
+	}
+
+	.study__approach li::marker {
+		color: var(--faint);
+	}
+
+	/* Paper: drop what only works on screen. post.css hides the site frame. */
+	@media print {
+		/* One token set: pinning the scheme prints dark ink on white. */
+		.study {
+			gap: 2rem;
+			color-scheme: light;
 		}
-		.pg-study-index .si-ls__hd {
-			margin: 0 -6px;
-			padding: 0 6px;
-			font-size: 11px;
-			letter-spacing: 0.08em;
-			text-transform: uppercase;
-			color: var(--crt-faint);
-		}
-		.pg-study-index .si-ls__perm,
-		.pg-study-index .si-ls__mtr {
-			display: inline;
-		}
-		.pg-study-index .si-ls__rows li + li .si-ls__row {
-			margin-top: 0;
-		}
-		.pg-study-index .si-ls__ti {
-			overflow: hidden;
-			text-overflow: ellipsis;
+
+		.study__crumbs,
+		.study [data-print-hide],
+		.study button,
+		.study select,
+		.study input {
+			display: none !important;
 		}
 	}
 }

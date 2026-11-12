@@ -132,8 +132,8 @@ export default function MstVisualizer({ copy }: { copy: MstCopy }) {
 	}
 
 	function vertexClass(role: VertexRole): string {
-		if (role === 'start') return 'fill-highlight-med stroke-gold';
-		if (role === 'visited') return 'fill-highlight-med stroke-accent';
+		if (role === 'start') return 'fill-surface-2 stroke-gold';
+		if (role === 'visited') return 'fill-surface-2 stroke-accent';
 		if (role === 'frontier') return 'fill-bg stroke-foam';
 		return 'fill-bg stroke-line';
 	}
@@ -292,7 +292,7 @@ export default function MstVisualizer({ copy }: { copy: MstCopy }) {
 					frame.mst.map((id) => (
 						<span
 							key={id}
-							className="border border-accent bg-highlight-med px-2.5 py-1 font-mono text-sm text-accent"
+							className="border border-accent bg-surface px-2.5 py-1 font-mono text-sm text-accent"
 						>
 							{edgeLabel(id)}
 						</span>

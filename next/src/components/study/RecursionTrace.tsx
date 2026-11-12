@@ -31,11 +31,11 @@ export default function RecursionTrace({ copy }: { copy: RecursionTraceCopy }) {
 							current.mode === 'unwind' || current.mode === 'done'
 								? 'border-gold border-dashed text-gold'
 								: current.mode === 'base' && index === current.frames.length - 1
-									? 'border-accent bg-highlight-med text-accent'
+									? 'border-accent bg-surface text-accent'
 									: 'border-line text-muted'
 						}`}
 					>
-						<span className="mr-2 text-[10px] uppercase text-faint">
+						<span className="mr-2 text-xs uppercase text-faint">
 							{current.mode === 'unwind' || current.mode === 'done'
 								? copy.frameLabels.return
 								: copy.frameLabels.call}

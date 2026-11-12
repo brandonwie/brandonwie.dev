@@ -111,10 +111,8 @@ const builtFrom = sequences.preorder;
 
 type NodeState = 'current' | 'visited' | 'unvisited';
 
-// Shell state inks (inside `.pg-study` the tokens resolve to the CRT inks:
-// gold → amber, accent → green, muted → worn, bg → glass). The current node
-// is reverse video: an amber fill with glass text. Visited is green, unvisited
-// is worn on a `--line` stroke.
+// The current node is reverse video: a gold fill with `--bg` text. Visited is
+// accent, unvisited is muted on a `--line` stroke.
 function circleClass(state: NodeState): string {
 	if (state === 'current') return 'fill-gold stroke-gold';
 	if (state === 'visited') return 'fill-bg stroke-accent';

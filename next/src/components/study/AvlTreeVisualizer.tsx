@@ -121,7 +121,7 @@ export default function AvlTreeVisualizer({ copy }: { copy: AvlVisualizerCopy })
 	function nodeClass(role: Role | undefined): string {
 		if (role === 'insert') return 'fill-bg stroke-foam';
 		if (role === 'imbalance' || role === 'remove') return 'fill-bg stroke-crit';
-		if (role === 'rotate' || role === 'balanced') return 'fill-highlight-med stroke-accent';
+		if (role === 'rotate' || role === 'balanced') return 'fill-surface-2 stroke-accent';
 		return 'fill-bg stroke-line';
 	}
 

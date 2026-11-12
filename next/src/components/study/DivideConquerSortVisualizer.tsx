@@ -66,8 +66,8 @@ export default function DivideConquerSortVisualizer({ copy }: { copy: DivideConq
 
 	function cellClass(mode: Mode): string {
 		if (mode === 'split') return 'fill-bg stroke-foam';
-		if (mode === 'merge') return 'fill-highlight-med stroke-accent';
-		if (mode === 'sorted') return 'fill-highlight-med stroke-foam';
+		if (mode === 'merge') return 'fill-surface-2 stroke-accent';
+		if (mode === 'sorted') return 'fill-surface-2 stroke-foam';
 		return 'fill-bg stroke-line';
 	}
 

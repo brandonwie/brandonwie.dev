@@ -8,12 +8,12 @@
  * receive `step` and animate themselves; the deck never touches their
  * internals.
  *
- * TWO VIEWS (Phosphor Fade, D8): presenting — the default, as in
- * production: a full-viewport overlay above all site chrome, no frames, no
- * prompt, the page never scrolls. Escape or `[ exit ]` switches to browsing —
- * the deck inside the terminal shell as a `deck play` prompt, the slide frame
- * and a rail frame (20-cell meter, label, controls) — and `[ present ]`
- * switches back. Keys, URL sync and print behave the same in both.
+ * TWO VIEWS (D8): presenting — the default, as in production: a
+ * full-viewport overlay above all site chrome, no frames, the page never
+ * scrolls. Escape or `exit` switches to browsing — the deck inside the site
+ * shell, a bordered slide stage and a bordered rail (progress bar, label,
+ * controls) — and `present` switches back. Keys, URL sync and print behave
+ * the same in both.
  *
  * STEP MODEL: a slide declares `steps: N`. ArrowRight walks steps first,
  * then moves to the next slide. Stepping backwards lands on the previous
@@ -50,12 +50,9 @@
  *   slide remounts, a step advance does not.
  */
 
-import { usePathname } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import type { DeckSlide } from '@/deck/types';
-import { TermPrompt } from '@/shell/TermPrompt';
-import { cwdFor } from '@/shell/terminal-path';
 
 /** A layout effect on the client and a passive one during the static export. */
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
@@ -69,20 +66,15 @@ function clamp(value: number, max: number): number {
 	return Math.min(Math.max(value, 0), Math.max(max, 0));
 }
 
-/** Two-digit slide numbers for the frame title (`slide 02/20`). */
-function pad(value: number): string {
-	return String(value).padStart(2, '0');
-}
-
 /**
- * `[███░░░…]` — one cell per slide, filled through the current one. The cells
- * are decoration; the progressbar role carries the position for assistive
- * tech, and the counter beside it says the same thing in text.
+ * A thin bar filled through the current slide. The bar is decoration; the
+ * progressbar role carries the position for assistive tech, and the counter
+ * beside it says the same thing in text.
  */
 function DeckMeter({ index, total }: { index: number; total: number }) {
 	return (
 		<div
-			className="deck-meter term-meter"
+			className="deck-meter"
 			role="progressbar"
 			aria-label="Slide progress"
 			aria-valuemin={1}
@@ -90,10 +82,7 @@ function DeckMeter({ index, total }: { index: number; total: number }) {
 			aria-valuenow={index + 1}
 			aria-valuetext={`${index + 1} / ${total}`}
 		>
-			<span aria-hidden="true">
-				{'█'.repeat(index + 1)}
-				<span className="off">{'░'.repeat(Math.max(total - index - 1, 0))}</span>
-			</span>
+			<span className="deck-meter__fill" style={{ width: `${((index + 1) / total) * 100}%` }} />
 		</div>
 	);
 }
@@ -101,13 +90,12 @@ function DeckMeter({ index, total }: { index: number; total: number }) {
 export default function Deck({ slides, title = 'Presentation' }: Props) {
 	const [index, setIndex] = useState(0);
 	const [step, setStep] = useState(0);
-	const cwd = cwdFor(usePathname() ?? '/');
 
 	// Presenting (D8): production's full-viewport overlay above every piece of
 	// site chrome. ON by default, so a fresh load or a deep link opens straight
 	// into it — and the static prerender renders it too, so the framed view
-	// never flashes first. Escape or `[ exit ]` turns it off for the shell
-	// view; `[ present ]` turns it back on.
+	// never flashes first. Escape or `exit` turns it off for the shell view;
+	// `present` turns it back on.
 	const [presenting, setPresenting] = useState(true);
 	const rootRef = useRef<HTMLDivElement>(null);
 
@@ -257,9 +245,10 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 	});
 
 	if (printMode) {
-		// PDF fallback: every slide, final step, no motion, one per page.
+		// PDF fallback: every slide, final step, no motion, one per page. Paper
+		// is white, so the slides take the light tokens (`data-scheme`, app.css).
 		return (
-			<div className="print-deck" tabIndex={-1}>
+			<div className="print-deck" data-scheme="light" tabIndex={-1}>
 				{slides.map((slide) => {
 					const Body = slide.component;
 					return (
@@ -273,57 +262,43 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 	}
 
 	const Body = current.component;
+	// The slides were designed dark: the deck pins the dark tokens in both site
+	// themes (`data-scheme`, app.css).
 	return (
 		<div
 			ref={rootRef}
 			className={presenting ? 'deck is-presenting' : 'deck'}
+			data-scheme="dark"
 			role="application"
 			aria-label={title}
 		>
-			{/* The URL query as a shell command; browsing only. */}
-			{!presenting && (
-				<TermPrompt
-					className="deck-ps1"
-					cwd={cwd}
-					command="deck play"
-					flags={`--page ${index + 1} --step ${step + 1}`}
-				/>
-			)}
-
-			{/* The slide frame (browsing only — presenting is frameless, like
-			    production). The shell's <main id="main-content"> is the
-			    skip-link target, so the stage keeps only its tabIndex landing.
-			    The body stays the stage's first element child; the frame title
-			    follows it in the DOM and is drawn into the border by CSS. */}
-			<div className={presenting ? 'deck-stage' : 'deck-stage term-frame'} tabIndex={-1}>
+			{/* The slide stage (bordered while browsing; presenting is frameless,
+			    like production). The shell's <main id="main-content"> is the
+			    skip-link target, so the stage keeps only its tabIndex landing. */}
+			<div className={presenting ? 'deck-stage' : 'deck-stage deck-stage--framed'} tabIndex={-1}>
 				<Body key={current.id} step={step} animate={true} />
-				{!presenting && (
-					<p className="term-frame__title deck-frame-title" aria-hidden="true">
-						slide {pad(index + 1)}/{pad(slides.length)} · {current.label}
-						{stepCount > 1 && (
-							<span className="dim">
-								{' '}
-								· step {step + 1}/{stepCount}
-							</span>
-						)}
-					</p>
-				)}
 			</div>
 
 			{/* Progress rail. Deliberately quiet: a presenter aid, not decoration. */}
 			<nav
-				className={presenting ? 'deck-rail' : 'deck-rail term-frame'}
+				className={presenting ? 'deck-rail' : 'deck-rail deck-rail--framed'}
 				aria-label="Slide navigation"
 			>
 				<DeckMeter index={index} total={slides.length} />
 				<div className="deck-meta">
-					<span className="deck-label">{current.label}</span>
+					<span className="eyebrow deck-label">{current.label}</span>
 
 					{/* Explicit controls rather than click-anywhere: the diagrams are
 					    the point of the deck, and a stray click on one should not
 					    advance it. */}
 					<div className="deck-controls">
-						<button type="button" onClick={prev} disabled={atStart} aria-label="Previous step">
+						<button
+							type="button"
+							className="button"
+							onClick={prev}
+							disabled={atStart}
+							aria-label="Previous step"
+						>
 							&larr; Prev
 						</button>
 						<span className="deck-count">
@@ -336,12 +311,18 @@ export default function Deck({ slides, title = 'Presentation' }: Props) {
 								</span>
 							)}
 						</span>
-						<button type="button" onClick={next} disabled={atEnd} aria-label="Next step">
+						<button
+							type="button"
+							className="button"
+							onClick={next}
+							disabled={atEnd}
+							aria-label="Next step"
+						>
 							Next &rarr;
 						</button>
 						<button
 							type="button"
-							className="deck-present"
+							className="button deck-present"
 							onClick={() => setPresenting(!presenting)}
 						>
 							{presenting ? 'exit' : 'present'}

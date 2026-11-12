@@ -104,7 +104,7 @@ export default function StackQueueVisualizer({ copy }: { copy: StackQueueVisuali
 								data-motion-flip={flipDuration}
 								className="border border-accent px-3 py-2 text-center font-mono text-sm text-accent"
 							>
-								<span className="mr-2 text-[10px] uppercase text-faint">
+								<span className="mr-2 text-xs uppercase text-faint">
 									{index === stackItems.length - 1 ? copy.stackRoles.top : copy.stackRoles.held}
 								</span>
 								{item.label}
@@ -135,7 +135,7 @@ export default function StackQueueVisualizer({ copy }: { copy: StackQueueVisuali
 								data-motion-flip={flipDuration}
 								className="min-w-16 border border-foam px-3 py-2 text-center font-mono text-sm text-foam"
 							>
-								<span className="block text-[10px] uppercase text-faint">
+								<span className="block text-xs uppercase text-faint">
 									{index === 0
 										? copy.queueRoles.front
 										: index === queueItems.length - 1

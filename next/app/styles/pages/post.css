@@ -134,7 +134,7 @@
 
 	.toc--inline summary span {
 		font-family: var(--font-mono);
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		font-weight: 400;
 		color: var(--faint);
 	}
@@ -296,10 +296,8 @@
 		}
 	}
 
-	/* Paper: the text only. */
+	/* Paper: the text only. The site frame is hidden in shell.css. */
 	@media print {
-		.site-header,
-		.site-footer,
 		.progress,
 		.post__crumbs,
 		.post__rail,
@@ -309,10 +307,6 @@
 		.comments,
 		.code__copy {
 			display: none !important;
-		}
-
-		.site-main {
-			padding: 0;
 		}
 
 		.prose pre {

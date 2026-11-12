@@ -16,14 +16,11 @@
 @import './styles/pages/index.css';
 @import './styles/pages/post.css';
 @import './styles/pages/about.css';
-
-/* Pages not yet moved to the V2 design (issue 81). */
-@import './styles/legacy-terminal.css';
 @import './styles/pages/study-index.css';
 @import './styles/pages/study-course.css';
 @import './styles/pages/study-aws.css';
 @import './styles/pages/system-index.css';
 @import './styles/pages/system-3b.css';
 @import './styles/pages/feed.css';
-@import './styles/pages/talk-deck.css';
-@import './styles/pages/talk-deck-slides.css';
+
+/* The talk deck imports its two stylesheets in its own route (talks/my-career). */

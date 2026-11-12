@@ -97,7 +97,7 @@
 	/* The `[K]` hint beside a control. Hidden where there is no keyboard to press. */
 	.hotkey {
 		font-family: var(--font-mono);
-		font-size: 0.75rem;
+		font-size: 0.8125rem;
 		font-weight: 400;
 		color: var(--faint);
 	}
@@ -279,6 +279,24 @@
 
 		.site-tools .hotkey {
 			display: none;
+		}
+	}
+
+	/* Paper: the page only, in the light colours whatever the theme on screen. */
+	@media print {
+		:root,
+		:root[data-theme] {
+			color-scheme: light;
+		}
+
+		.skip-link,
+		.site-header,
+		.site-footer {
+			display: none;
+		}
+
+		.site-main {
+			padding: 0;
 		}
 	}
 }
