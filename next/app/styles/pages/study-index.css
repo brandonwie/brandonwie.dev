@@ -193,12 +193,11 @@
 		color: var(--faint);
 	}
 
-	/* Paper: drop what only works on screen. post.css hides the site frame. */
+	/* Paper: drop what only works on screen. shell.css hides the site frame and
+	   prints every page in the light colours. */
 	@media print {
-		/* One token set: pinning the scheme prints dark ink on white. */
 		.study {
 			gap: 2rem;
-			color-scheme: light;
 		}
 
 		.study__crumbs,

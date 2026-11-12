@@ -296,6 +296,19 @@
 		}
 	}
 
+	/* Finger-sized targets where the contents list and the share actions are inline. */
+	@media (width < 48rem) {
+		.toc--inline a {
+			padding-block: 0.75rem;
+		}
+
+		.post__actions :is(a, button) {
+			display: inline-flex;
+			align-items: center;
+			min-height: 2.75rem;
+		}
+	}
+
 	/* Paper: the text only. The site frame is hidden in shell.css. */
 	@media print {
 		.progress,

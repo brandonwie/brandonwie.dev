@@ -248,7 +248,7 @@ export default function HeapVisualizer({ copy }: { copy: HeapVisualizerCopy }) {
 				</span>
 				<div className="mt-2 overflow-x-auto">
 					<KeyedMotion className="flex min-w-full gap-2">
-						<div className="min-h-16 min-w-[2.75rem] flex-1 border border-line border-dashed bg-bg p-1 text-center opacity-50">
+						<div className="min-h-16 min-w-[2.75rem] flex-1 border border-line border-dashed bg-bg p-1 text-center">
 							<span className="block font-mono text-xs text-faint">0</span>
 							<span className="mt-3 block font-mono text-xs text-faint">{copy.emptyLabel}</span>
 						</div>

@@ -64,7 +64,10 @@ export const SHIKI_LANGS: BundledLanguage[] = [
  * colours on every token as `--shiki-light` and `--shiki-dark`, and
  * `src/app.css` picks one with `light-dark()`.
  */
-export const SHIKI_THEMES = { light: 'github-light', dark: 'github-dark' } as const;
+// The `-default` GitHub themes: every token colour is at least 4.5:1 on the
+// code background of its theme (the older `github-light` and `github-dark`
+// drew comments and parameters under that).
+export const SHIKI_THEMES = { light: 'github-light-default', dark: 'github-dark-default' } as const;
 
 /**
  * Stamps the fence language onto each highlighted `<pre>` as `data-language`,

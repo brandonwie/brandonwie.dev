@@ -245,5 +245,9 @@
 			padding-inline: var(--gutter);
 			scrollbar-width: none;
 		}
+
+		.index__tabs button {
+			min-height: 2.75rem;
+		}
 	}
 }

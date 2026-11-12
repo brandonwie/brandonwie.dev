@@ -28,7 +28,8 @@ export default function BinarySearchVisualizer({ copy }: { copy: BinarySearchVis
 		if (state === 'mid') return 'border-gold border-dashed text-gold';
 		if (state === 'low' || state === 'high') return 'border-foam text-foam';
 		if (state === 'window') return 'border-line bg-bg text-muted';
-		return 'border-line opacity-35 text-faint';
+		// Ruled out: struck through, not faded, so the value stays readable.
+		return 'border-line border-dashed text-faint line-through';
 	}
 
 	return (

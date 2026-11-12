@@ -273,11 +273,22 @@
 		}
 
 		.site-nav a,
-		.site-tool {
+		.site-tool,
+		.site-footer__links a {
 			min-height: 2.75rem;
 		}
 
-		.site-tools .hotkey {
+		.site-footer__links a {
+			display: inline-flex;
+			align-items: center;
+		}
+	}
+
+	/* The header row has no room for the key hints under this width: with them a
+	   half-width window pushed the theme switch off the screen. The keys still
+	   work, and `?` lists them. */
+	@media (width < 62rem) {
+		.site-header .hotkey {
 			display: none;
 		}
 	}
