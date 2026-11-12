@@ -1,5 +1,5 @@
 import type { Locale, PostFrontmatter } from './posts';
-import { SITE_AUTHOR, SITE_URL, absoluteUrl } from '../../../src/lib/seo';
+import { DEFAULT_OG_IMAGE, SITE_AUTHOR, SITE_URL, absoluteUrl } from '../../../src/lib/seo';
 import { articlePath, sourceDate } from './article-contract';
 
 export function articleJsonLd(slug: string, meta: PostFrontmatter, locale: Locale): string {
@@ -10,7 +10,7 @@ export function articleJsonLd(slug: string, meta: PostFrontmatter, locale: Local
 		description: meta.description,
 		datePublished: sourceDate(meta.date),
 		dateModified: sourceDate(meta.updated || meta.date),
-		image: `${SITE_URL}/og/${slug}.png`,
+		image: DEFAULT_OG_IMAGE,
 		author: { '@type': 'Person', name: SITE_AUTHOR, url: SITE_URL },
 		mainEntityOfPage: { '@type': 'WebPage', '@id': absoluteUrl(articlePath(slug, locale)) },
 		publisher: { '@type': 'Person', name: SITE_AUTHOR, url: SITE_URL },

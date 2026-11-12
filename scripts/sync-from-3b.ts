@@ -385,7 +385,7 @@ function transformFrontmatter(
  *
  * IMPORTANT: Remove H1 title and first paragraph (description) from body.
  *
- * WHY: The blog page layout (src/routes/posts/[slug]/+page.svelte) renders
+ * WHY: The post page (next/src/content/article.tsx) renders
  * both `data.meta.title` as <h1> and `data.meta.description` as <p> from
  * frontmatter. If we keep these in the body, they appear twice on the page.
  *

@@ -24,11 +24,12 @@ export default function BinarySearchVisualizer({ copy }: { copy: BinarySearchVis
 	}
 
 	function cellClass(state: CellState): string {
-		if (state === 'found') return 'border-accent bg-highlight-med text-accent';
+		if (state === 'found') return 'border-accent bg-surface text-accent';
 		if (state === 'mid') return 'border-gold border-dashed text-gold';
 		if (state === 'low' || state === 'high') return 'border-foam text-foam';
 		if (state === 'window') return 'border-line bg-bg text-muted';
-		return 'border-line opacity-35 text-faint';
+		// Ruled out: struck through, not faded, so the value stays readable.
+		return 'border-line border-dashed text-faint line-through';
 	}
 
 	return (
@@ -56,8 +57,8 @@ export default function BinarySearchVisualizer({ copy }: { copy: BinarySearchVis
 								key={value}
 								className={`border p-2 text-center font-mono text-sm transition-all duration-200 motion-reduce:transition-none ${cellClass(state)}`}
 							>
-								<span className="block text-[10px] text-faint">{index}</span>
-								<span className="block text-[10px] uppercase">{copy.stateLabels[state]}</span>
+								<span className="block text-xs text-faint">{index}</span>
+								<span className="block text-xs uppercase">{copy.stateLabels[state]}</span>
 								<span>{value}</span>
 							</div>
 						);

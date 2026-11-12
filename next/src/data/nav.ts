@@ -1,52 +1,30 @@
 import type { Locale } from '../i18n/locale';
 
 /**
- * nav.ts — single source of truth for top-level site navigation.
- *
- * A port of `src/lib/data/nav.ts`. Drives the terminal shell (`@/shell`: status
- * line, title bar, `~/.plan` footer): the canonical link set, their
- * locale-aware hrefs, and the active-section
- * matcher. Keeping hrefs and active state here means every route inherits the
- * same chrome from one place instead of each page hand-rolling its own header.
- *
- * WHY THE LABELS ARE NOT HERE. The Svelte original stores
- * `label: (locale) => m.nav_about({}, { locale })` on each item. This port
- * keeps the messages out: `i18n/copy.ts`'s header states that it is "the only
- * place messages are read", because under `output: 'export'` every message call
- * must carry an explicit `{ locale }` and letting a second module read them
- * invites a call site that forgets. Labels resolve through
- * `shellCopy(locale).nav`, keyed by `NavKey`, and this module stays pure path
- * logic — which is also what lets the chrome suite assert `activeKey()` and
- * `pathForLocale()` without a DOM or a locale.
- *
- * Placed at `src/data/` beside `study.ts` and `system-snapshot.ts` rather than
- * the `src/lib/data/` the Svelte tree uses: this package has no `src/lib/`, and
- * inventing one for a single file would leave two conventions for data modules.
+ * Top-level navigation: the link set, locale-aware hrefs and the active-section
+ * matcher. Pure path logic; labels come from `shellCopy(locale).nav`.
  */
 
-export type NavKey = 'about' | 'posts' | 'study' | 'system';
+export type NavKey = 'posts' | 'study' | 'system' | 'about';
 
 export interface NavItem {
 	key: NavKey;
 	/** Canonical (en) path, without the locale prefix. */
 	path: string;
+	/** Single-key shortcut, shown beside the label in the header. */
+	hotkey: string;
 }
 
-/** Canonical nav, in bar order. `system` points at the real B3 destination. */
+/** Canonical nav, in header order. Posts are the home page. */
 export const NAV_ITEMS: readonly NavItem[] = [
-	{ key: 'about', path: '/about' },
-	{ key: 'posts', path: '/posts' },
-	{ key: 'study', path: '/study' },
-	{ key: 'system', path: '/system/b3' },
+	{ key: 'posts', path: '/', hotkey: 'p' },
+	{ key: 'study', path: '/study', hotkey: 's' },
+	{ key: 'system', path: '/system/b3', hotkey: 'b' },
+	{ key: 'about', path: '/about', hotkey: 'a' },
 ];
 
 /** Matches `/ko` as a path segment, so `/koala` is not treated as Korean. */
 const KO_PREFIX = /^\/ko(?:\/|$)/;
-
-/** Locale inferred from a pathname (`/ko` segment → ko, else en). */
-export function localeOf(pathname: string): Locale {
-	return KO_PREFIX.test(pathname) ? 'ko' : 'en';
-}
 
 /** Path prefix for a locale: '' for en, '/ko' for ko. */
 export function base(locale: Locale): string {
@@ -64,16 +42,7 @@ export function pathForLocale(pathname: string, locale: Locale): string {
 	return `${base(locale)}${path === '/' ? '' : path}` || '/';
 }
 
-/**
- * Route prefixes that exist in English only.
- *
- * Talks are delivered in one language, so they have no Korean twin. The Svelte
- * root layout emits hidden locale links so its crawler can reach every locale
- * variant, and pointing that crawler at a `/ko` path that does not exist fails
- * the build under `prerender.handleHttpError: 'fail'`. The Next candidate has
- * no crawler, so nothing here fails a build — but `LanguageToggle` still reads
- * this to avoid offering a switch to a page that does not exist.
- */
+// Talks are delivered in one language, so they have no Korean twin.
 const ENGLISH_ONLY_PREFIXES = ['/talks', '/_not-found'] as const;
 
 /** Whether a pathname has a counterpart in every locale. */
@@ -82,36 +51,28 @@ export function hasLocaleVariant(pathname: string): boolean {
 	return !ENGLISH_ONLY_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
-/** Locale-aware href for a nav item. */
-export function hrefFor(item: NavItem, locale: Locale): string {
-	return `${base(locale)}${item.path}`;
-}
-
-/** Locale-aware home href (logo target). */
+/** Locale-aware home href: the post index. */
 export function homeHref(locale: Locale): string {
 	return base(locale) || '/';
 }
 
-/** Locale-aware posts-list href (in-page back affordance). */
-export function postsHref(locale: Locale): string {
-	return `${base(locale)}/posts`;
+/** Locale-aware href for a nav item. */
+export function hrefFor(item: NavItem, locale: Locale): string {
+	return item.path === '/' ? homeHref(locale) : `${base(locale)}${item.path}`;
 }
 
-/** Locale-aware search href (header action). */
-export function searchHref(locale: Locale): string {
-	return `${base(locale)}/search`;
+/** Locale-aware href of one post. */
+export function postHref(slug: string, locale: Locale): string {
+	return `${base(locale)}/posts/${slug}`;
 }
 
 /**
- * Active nav section for a path. Locale-stripped, then matched on full path
- * segments so list and detail routes share a section (`/posts` and `/posts/x`
- * → posts; `/study/*` → study; `/system` and `/system/b3` → system) while
- * unrelated routes (`/postscript`, `/studyguide`) do not match. Home and search
- * → null.
+ * Active nav section for a path, matched on full path segments: the home page
+ * and every `/posts/*` page are `posts`; `/postscript` matches nothing.
  */
 export function activeKey(pathname: string): NavKey | null {
 	const p = stripLocale(pathname);
-	if (/^\/posts(?:\/|$)/.test(p)) return 'posts';
+	if (p === '/' || /^\/posts(?:\/|$)/.test(p)) return 'posts';
 	if (/^\/study(?:\/|$)/.test(p)) return 'study';
 	if (/^\/system(?:\/|$)/.test(p)) return 'system';
 	if (/^\/about(?:\/|$)/.test(p)) return 'about';

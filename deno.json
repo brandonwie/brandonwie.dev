@@ -17,7 +17,6 @@
 	"minimumDependencyAge": {
 		"age": "P1D",
 		"exclude": [
-			"npm:satori",
 			"npm:typescript-eslint",
 			"npm:wrangler",
 			"npm:@typescript-eslint/*",

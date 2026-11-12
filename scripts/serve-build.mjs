@@ -2,7 +2,10 @@
  * Serve a built static site tree locally (`pnpm preview` serves next/build).
  *
  * Resolution order, the shape of a static export:
- *   exact file -> `${rel}.html` -> `${rel}/index.html` -> 404.html
+ *   `_redirects` rule -> exact file -> `${rel}.html` -> `${rel}/index.html` -> 404.html
+ *
+ * `_redirects` is the Cloudflare Pages file. Only its plain `source destination
+ * status` rules are applied here, which is every rule this site has.
  *
  *   node scripts/serve-build.mjs <build-dir> [port]
  *   node scripts/serve-build.mjs next/build 4173
@@ -43,6 +46,7 @@ const TYPES = {
 	'.ttf': 'font/ttf',
 	'.wasm': 'application/wasm',
 	'.txt': 'text/plain; charset=utf-8',
+	'.md': 'text/markdown; charset=utf-8',
 	'.mp4': 'video/mp4',
 	'.webm': 'video/webm',
 };
@@ -72,6 +76,21 @@ function viewportPage(url) {
 <body><iframe id="frame" src="${safe}"></iframe></body></html>`;
 }
 
+/** `_redirects` rules as source path -> { to, status }. Cloudflare's default status is 302. */
+function readRedirects(dir) {
+	const file = join(dir, '_redirects');
+	const rules = new Map();
+	if (!existsSync(file)) return rules;
+	for (const line of readFileSync(file, 'utf8').split('\n')) {
+		const [from, to, status] = line.trim().split(/\s+/);
+		if (!from || !to || from.startsWith('#')) continue;
+		rules.set(from, { to, status: Number(status || 302) });
+	}
+	return rules;
+}
+
+const redirects = readRedirects(buildDir);
+
 const server = createServer((req, res) => {
 	const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
 	if (url.pathname === '/__viewport') {
@@ -79,16 +98,15 @@ const server = createServer((req, res) => {
 		res.end(viewportPage(url));
 		return;
 	}
-	if (url.pathname.startsWith('/__probe/')) {
-		const name = url.pathname.slice('/__probe/'.length);
-		const probe = join('scripts', 'capture', name);
-		if (!/^[a-z-]+\.js$/.test(name) || !existsSync(probe)) {
-			res.writeHead(404, { 'content-type': 'text/plain' });
-			res.end('no such probe');
-			return;
-		}
-		res.writeHead(200, { 'content-type': 'text/javascript' });
-		res.end(readFileSync(probe));
+	const redirect = redirects.get(url.pathname);
+	if (redirect) {
+		// As on Cloudflare Pages: the request's query string is kept, before any hash.
+		const [path, hash] = redirect.to.split('#');
+		const query = path.includes('?') ? '' : url.search;
+		res.writeHead(redirect.status, {
+			location: `${path}${query}${hash === undefined ? '' : `#${hash}`}`,
+		});
+		res.end();
 		return;
 	}
 

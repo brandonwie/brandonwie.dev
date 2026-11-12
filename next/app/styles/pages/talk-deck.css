@@ -1,8 +1,6 @@
-/* Phosphor Fade page styles: talk-deck (/talks/my-career). Owned by that
-   page's port; see next/app/globals.css (terminal shell) for the shared term-*
-   primitives. The deck chrome (type scale, stage, rail, print sheet) moved
-   here from globals.css; the per-slide blocks and the `.deck .title`-style
-   scoping guards stay there. */
+/* /talks/my-career: the deck chrome (type scale, stage, rail, print sheet).
+   Loaded by that route only (its page.tsx imports this file and
+   talk-deck-slides.css). The per-slide blocks live in talk-deck-slides.css. */
 
 @layer components {
 	/* --- Type scale the slides read (from Deck.svelte) ---------------------
@@ -24,20 +22,45 @@
 		--deck-meta: clamp(0.8rem, 1.15vw, 1rem);
 	}
 
-	/* --- Live deck: shell inks -------------------------------------------
+	/* --- Deck roots: self-contained -----------------------------------------
+	   The slides were designed dark. Deck.tsx puts `data-scheme="dark"` on the
+	   live deck and `data-scheme="light"` on the print deck, and `src/app.css`
+	   declares the colour tokens again on a `data-scheme` element, so the tokens
+	   below hold that scheme whatever the site theme. The slide styles still
+	   read the terminal-era names, so they are defined here from the V2 tokens.
+	   These roots must not redefine a V2 token: a custom property that reads
+	   `var(--bg)` on the element that also sets `--bg` reads its own value, so
+	   the token remap for the slides sits one level down, on the stage. */
+	.deck,
+	.print-deck {
+		--crt-glass: var(--bg);
+		--crt-hi: var(--ink);
+		--crt-worn: var(--ink);
+		--crt-faint: var(--faint);
+		--crt-line: var(--line);
+		--crt-amber: var(--accent);
+		--crt-green: var(--ok);
+		--font-term: var(--font-mono);
+	}
+
+	.deck {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		min-width: 0;
+		color: var(--ink);
+	}
+
+	/* --- Slide inks ---------------------------------------------------------
 	   The 20 slide bodies colour themselves with currentColor plus a few Rosé
 	   Pine tokens (`var(--muted)`, `var(--foam)`, `text-ink`, …). Their GSAP
 	   timelines target their own markup, so instead of editing 20 slides the
-	   tokens are re-pointed at the shell inks inside the live deck (the same
-	   remap the study visualizers use). The print deck keeps production's
-	   white-paper values. */
-	.deck {
+	   tokens are re-pointed at the deck inks inside the stage. The print deck
+	   keeps the plain tokens. */
+	.deck .deck-stage {
 		--bg: var(--crt-glass);
-		--bg2: var(--crt-glass);
 		--surface: var(--crt-glass);
-		--overlay: var(--crt-glass);
 		--line: var(--crt-line);
-		--line2: var(--crt-line);
 		--ink: var(--crt-hi);
 		--muted: var(--crt-worn);
 		--faint: var(--crt-faint);
@@ -50,34 +73,22 @@
 		--love: var(--crt-faint);
 		--crit: var(--crt-faint);
 		--color-bg: var(--crt-glass);
-		--color-bg2: var(--crt-glass);
 		--color-surface: var(--crt-glass);
-		--color-overlay: var(--crt-glass);
-		--color-highlight-med: var(--crt-glass);
 		--color-line: var(--crt-line);
-		--color-line2: var(--crt-line);
 		--color-ink: var(--crt-hi);
 		--color-muted: var(--crt-worn);
 		--color-faint: var(--crt-faint);
 		--color-foam: var(--crt-green);
-		--color-pine: var(--crt-green);
 		--color-accent: var(--crt-green);
 		--color-gold: var(--crt-amber);
 		--color-rose: var(--crt-amber);
-		--color-iris: var(--crt-hi);
-		--color-love: var(--crt-faint);
 		--color-crit: var(--crt-faint);
 		--font-sans: var(--font-term);
 		--font-mono: var(--font-term);
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-		color: var(--crt-hi);
+		font-family: var(--font-term);
 	}
 
-	/* --- Browsing: the deck inside the shell -------------------------------
-	   Slide frame + rail frame fill one viewport under the title bar; the
-	   ~/.plan footer sits below the fold. */
+	/* --- Browsing: the deck inside the site shell --------------------------- */
 	.deck .deck-stage {
 		container-type: inline-size;
 		display: grid;
@@ -86,147 +97,106 @@
 		min-height: max(380px, calc(100dvh - 290px));
 		padding: 34px clamp(16px, 4vw, 34px) 30px;
 		overflow-x: clip;
-		/* Slides were drawn on the document's unitless 1.5, not the shell's
-		   fixed 22px, which would overlap their clamp()-sized headlines. */
+		/* Slides were drawn on the document's unitless 1.5. */
 		line-height: 1.5;
 	}
 	.deck .deck-stage:focus {
 		outline: none;
 	}
-	.deck .deck-frame-title {
-		z-index: 1;
-		max-width: calc(100% - 24px);
-		margin: 0;
-		overflow: hidden;
-		white-space: nowrap;
-		text-overflow: ellipsis;
+
+	/* The deck is dark in both site themes; while browsing it sits in a dark
+	   box so a light page around it does not wash the slides out. */
+	.deck .deck-stage--framed,
+	.deck .deck-rail--framed {
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+		background-color: var(--bg);
 	}
 
-	.deck .deck-rail {
-		padding: 12px 16px;
+	.deck .deck-rail--framed {
+		padding: 0.75rem 1rem;
 	}
+
 	.deck-meter {
 		overflow: hidden;
-		white-space: nowrap;
-		letter-spacing: 3px;
-		line-height: 20px;
+		height: 4px;
+		border-radius: 999px;
+		background-color: var(--surface-2);
+	}
+	.deck-meter__fill {
+		display: block;
+		height: 100%;
+		border-radius: inherit;
+		background-color: var(--accent);
 	}
 	.deck-meta {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
-		gap: 8px 16px;
-		margin-top: 8px;
-		font-size: 13px;
-		line-height: 22px;
+		gap: 0.5rem 1rem;
+		margin-top: 0.625rem;
+		font-size: 0.875rem;
+		line-height: 1.5;
 		font-variant-numeric: tabular-nums;
-	}
-	.deck-label {
-		color: var(--crt-hi);
-	}
-	.deck-label::before {
-		content: '> ';
-		color: var(--crt-amber);
 	}
 	.deck-controls {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 8px 14px;
+		gap: 0.5rem 0.75rem;
 	}
 	.deck-count {
-		color: var(--crt-hi);
+		font-family: var(--font-mono);
+		color: var(--ink);
 	}
 	.deck-step {
 		margin-left: 1ch;
-		color: var(--crt-faint);
+		color: var(--muted);
 	}
-	/* Bracket buttons: green on a rule, amber hover, reverse-video focus. */
-	.deck-controls button {
-		border: 1px solid var(--crt-line);
-		background: none;
-		padding: 0 8px;
-		font: inherit;
-		color: var(--crt-green);
-		cursor: pointer;
-	}
-	.deck-controls button::before {
-		content: '[';
-		margin-right: 4px;
-		color: var(--crt-faint);
-	}
-	.deck-controls button::after {
-		content: ']';
-		margin-left: 4px;
-		color: var(--crt-faint);
-	}
-	.deck-controls button:hover:not(:disabled) {
-		border-color: var(--crt-amber);
-		color: var(--crt-hi);
-	}
-	.deck-controls button:focus-visible {
-		border-color: var(--crt-amber);
-		background: var(--crt-amber);
-		color: var(--crt-glass);
-	}
-	.deck-controls button:focus-visible::before,
-	.deck-controls button:focus-visible::after {
-		color: var(--crt-glass);
-	}
-	/* Inactive control: --off is below 4.5:1 on purpose (WCAG 1.4.3 exempts
+	/* Inactive control: dimmed below 4.5:1 on purpose (WCAG 1.4.3 exempts
 	   inactive UI components). */
-	.deck-controls button:disabled,
-	.deck-controls button:disabled::before,
-	.deck-controls button:disabled::after {
-		border-color: var(--crt-off);
-		color: var(--crt-off);
+	.deck-controls .button:disabled {
+		border-color: var(--line);
+		color: var(--faint);
 		cursor: default;
 	}
 
 	/* --- Presenting (D8): production's full-viewport overlay ---------------
-	   The default view. Above the title bar, ~/.plan and status line; the page
-	   does not scroll. The stage and rail render without their term-frame
-	   borders and titles (Deck.tsx drops the classes), and the chrome under
-	   the overlay is hidden, not just covered, so Tab cannot land on a link
-	   nobody can see. The shell's frames are stacking contexts (z-index 1),
-	   which would trap the overlay beneath the status line, so they drop
-	   theirs while the deck presents. z-index 40 stays under the ⌘K palette
-	   (50, portalled to body), which keeps working over the deck, and the
-	   skip link (100). */
+	   The default view, above the site header and footer; the page does not
+	   scroll. The stage and rail render without their frames (Deck.tsx drops
+	   the classes), and the chrome under the overlay is hidden, not just
+	   covered, so Tab cannot land on a link nobody can see. z-index 40 stays
+	   under the skip link (100). */
 	.deck.is-presenting {
 		position: fixed;
 		inset: 0;
 		z-index: 40;
+		gap: 0;
 		padding: 18px clamp(16px, 4vw, 48px) 14px;
-		background: var(--crt-glass);
+		background-color: var(--bg);
 		overflow: hidden;
 	}
 	.deck.is-presenting .deck-stage {
 		flex: 1;
 		min-height: 0;
 	}
-	:is(.term-bar, .term-body):has(.deck.is-presenting),
-	.term-glass:has(.deck.is-presenting) > .term-bar {
-		z-index: auto;
-	}
-	body:has(.deck.is-presenting)
-		:is(.term-bar, .term-ghost, .term-plan, .term-status, .term-ps1--idle) {
+	body:has(.deck.is-presenting) :is(.site-header, .site-footer) {
 		visibility: hidden;
 	}
 	/* `src/app.css` gives <html> `scrollbar-gutter: stable`. Where scrollbars
 	   are classic (Windows, Linux), that keeps a scrollbar-wide strip reserved
 	   even with overflow hidden, so the fixed overlay stopped short of the
-	   right edge (CI's DK-01 `covers=false`). Presenting is full-screen, so
-	   release the gutter while it lasts. */
+	   right edge. Presenting is full-screen, so release the gutter while it
+	   lasts. */
 	html:has(.deck.is-presenting) {
 		overflow: hidden;
 		scrollbar-gutter: auto;
 	}
 
-	/* --- ?print: white paper, outside the CRT ------------------------------
-	   Print is ink on paper, not phosphor, on screen and on paper alike: the
-	   shell chrome is hidden and the enclosure flattens around the print deck. */
+	/* --- ?print: white paper ------------------------------------------------
+	   Print is ink on paper, on screen and on paper alike: the site chrome is
+	   hidden and the main column drops its padding around the print deck. */
 	.print-deck {
 		background: #fff;
 		color: #111;
@@ -242,26 +212,13 @@
 	body:has(.print-deck) {
 		background: #fff;
 	}
-	body:has(.print-deck) :is(.term-bar, .term-ghost, .term-plan, .term-status, .term-ps1) {
+	body:has(.print-deck) :is(.site-header, .site-footer, .skip-link) {
 		display: none;
 	}
-	body:has(.print-deck) :is(.term-page, .term-crt, .term-glass, .term-body) {
+	body:has(.print-deck) .site-main {
 		max-width: none;
 		margin: 0;
 		padding: 0;
-		border: 0;
-		border-radius: 0;
-		background: none;
-		box-shadow: none;
-	}
-	/* The full-bleed flex column is a screen layout; paper keeps block flow. */
-	body:has(.print-deck) :is(.term-crt, .term-glass) {
-		display: block;
-		min-height: 0;
-	}
-	body:has(.print-deck) .term-glass::before,
-	body:has(.print-deck) .term-glass::after {
-		content: none;
 	}
 
 	@media print {

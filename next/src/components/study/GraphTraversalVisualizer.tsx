@@ -140,9 +140,8 @@ export default function GraphTraversalVisualizer({ copy }: { copy: GraphTraversa
 	const mode = frame.mode;
 	const currentMode = copy.modes[mode];
 
-	// Shell state inks (inside `.pg-study`: gold → amber, accent/foam → green,
-	// muted → worn, bg → glass). The current node and chip are reverse video
-	// (amber fill, glass text), visited is green, unvisited worn on `--line`.
+	// The current node and chip are reverse video (gold fill, `--bg` text),
+	// visited is accent, unvisited muted on `--line`.
 	function nodeClass(role: Role): string {
 		if (role === 'current') return 'fill-gold stroke-gold';
 		if (role === 'queued') return 'fill-bg stroke-foam';

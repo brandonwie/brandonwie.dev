@@ -1,7 +1,7 @@
 ---
 tags: [architecture, adr, renewal, decision, terminal, command-palette]
 created: 2026-06-04
-updated: 2026-06-04
+updated: 2026-11-12
 status: completed
 related:
   - ../improvements.md
@@ -12,7 +12,7 @@ when_used: Decide before any terminal-coupled renewal work (A11Y-2/3, UX-1/3, AR
 
 # ADR-0001 · Terminal view vs Cmd+P command palette as the primary power-user surface
 
-**Status:** Accepted — Option B (retire terminal → promote Cmd+P palette), 2026-06-04
+**Status:** Superseded by [ADR-0002](./0002-v2-text-first-blog.md) on 2026-11-12. Was: Accepted — Option B (retire terminal → promote Cmd+P palette), 2026-06-04
 **Decision owner:** Brandon
 **Supersedes:** — · **Backlog ref:** `improvements.md › PROD-2`
 

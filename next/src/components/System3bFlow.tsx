@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
 	Background,
 	Controls,
@@ -31,8 +31,9 @@ import {
 import System3bBandNode from './System3bBandNode';
 import System3bFitView from './System3bFitView';
 import System3bNode from './System3bNode';
+import { currentTheme, onThemeChange, tokenColor, type Theme } from '../shell/theme';
 import { useGraphCopy } from './System3bLocale';
-import { EdgeSample, MINIMAP_INK, edgeInk, kindGlyph } from './System3bTerm';
+import { EDGE_TOKENS, EdgeSample, edgeInk, kindGlyph } from './System3bTerm';
 
 /**
  * The interactive @xyflow/react graph (CLIENT-ONLY).
@@ -61,41 +62,47 @@ const nodeTypes = {
 
 const PRO_OPTIONS = { hideAttribution: true } as const;
 
-/**
- * Phosphor Fade canvas. The dot Background stays mounted (the xyflow suite
- * counts `.react-flow__background`) but draws nothing: the glass scanlines
- * already texture the canvas, so both of its colours are transparent.
- */
+/** The dot Background stays mounted but draws nothing: the canvas is plain. */
 const FLOW_CLEAR = 'transparent';
-const FLOW_GLASS = '#0d0b13'; // --crt-glass
-const FLOW_MASK = 'rgba(13, 11, 19, 0.6)'; // --crt-glass @ 0.6 opacity
 
 /**
  * Non-incident edges while a chip is hovered. The model dims to 0.1, which
- * vanishes against --crt-glass with these inks; the design lifts it to 0.2.
+ * vanishes against the page background with these inks; this lifts it to 0.2.
  */
 const DIM_OPACITY = 0.2;
+
+type Inks = Record<(typeof EDGE_TOKENS)[number], string>;
+
+/**
+ * Edge tokens as literals in the theme on screen. Edge strokes could take
+ * `var()`, but React Flow builds each arrow marker's element id from its colour,
+ * so markers need a literal; strokes use the same value to match them.
+ */
+function readInks(): Inks {
+	return Object.fromEntries(EDGE_TOKENS.map((t) => [t, tokenColor(t)])) as Inks;
+}
 
 /** Minimap box from the design (128x72); still pannable and zoomable. */
 const MINIMAP_SIZE = { width: 128, height: 72 } as const;
 
 /**
- * Re-ink one model edge in shell inks, keyed by its relation kind. Stroke
+ * Re-ink one model edge in theme inks, keyed by its relation kind. Stroke
  * width (the weight channel) is kept; nothing animates.
  */
-function toTerminalEdge(e: FlowEdge): FlowEdge {
+function toInkedEdge(e: FlowEdge, inks: Inks): FlowEdge {
 	const ink = edgeInk(String(e.data?.kind));
+	const stroke = inks[ink.token as keyof Inks];
 	const { strokeDasharray: _dash, ...rest } = e.style ?? {};
 	return {
 		...e,
 		animated: false,
 		style: {
 			...rest,
-			stroke: ink.stroke,
+			stroke,
 			...(ink.dash ? { strokeDasharray: ink.dash } : {}),
 			...(ink.round ? { strokeLinecap: 'round' as const } : {}),
 		},
-		markerEnd: e.markerEnd ? { ...e.markerEnd, color: ink.stroke } : e.markerEnd,
+		markerEnd: e.markerEnd ? { ...e.markerEnd, color: stroke } : e.markerEnd,
 	};
 }
 
@@ -107,7 +114,7 @@ export interface System3bFlowProps {
 
 function mmColor(n: Node): string {
 	if (n.type === 'band') return 'transparent';
-	return MINIMAP_INK.node;
+	return 'var(--faint)';
 }
 
 export default function System3bFlow({
@@ -118,6 +125,18 @@ export default function System3bFlow({
 	const copy = useGraphCopy();
 	const [expandedSubKey, setExpandedSubKey] = useState<string | null>(null);
 	const [hovered, setHovered] = useState<string | null>(null);
+	// This chunk never prerenders (ssr: false), so the DOM is there to read.
+	const [theme, setTheme] = useState<Theme>(currentTheme);
+	const [inks, setInks] = useState<Inks>(readInks);
+
+	useEffect(
+		() =>
+			onThemeChange(() => {
+				setTheme(currentTheme());
+				setInks(readInks());
+			}),
+		[],
+	);
 
 	const model: FlowModel = useMemo(
 		() =>
@@ -195,8 +214,8 @@ export default function System3bFlow({
 		return [...bands, ...chips] as unknown as Node[];
 	}, [model, laneMeta, expand, setHover]);
 
-	// Shell inks per relation kind; rebuilt with the model, not on hover.
-	const inkedEdges = useMemo(() => model.edges.map(toTerminalEdge), [model]);
+	// Theme inks per relation kind; rebuilt with the model or theme, not on hover.
+	const inkedEdges = useMemo(() => model.edges.map((e) => toInkedEdge(e, inks)), [model, inks]);
 
 	// Re-styles edges on hover (dims non-incident) without rebuilding nodes.
 	const flowEdges = useMemo<Edge[]>(
@@ -209,11 +228,11 @@ export default function System3bFlow({
 
 	return (
 		<div className="s3b-flow">
-			<div className="toolbar">
-				<span className="title">
+			<div className="s3b-flow__toolbar">
+				<span className="s3b-flow__title">
 					{expandedSubKey ? (
 						<>
-							<span className="crumb" aria-hidden="true">
+							<span className="s3b-flow__crumb" aria-hidden="true">
 								&#9656;
 							</span>{' '}
 							{expandedName}
@@ -224,11 +243,11 @@ export default function System3bFlow({
 				</span>
 				<div className="s3b-flow__spacer" />
 				{expandedSubKey ? (
-					<button type="button" className="btn" onClick={reset}>
+					<button type="button" className="button" onClick={reset}>
 						<span aria-hidden="true">&#8592;</span> {copy.back}
 					</button>
 				) : (
-					<span className="hint">{copy.expandHint}</span>
+					<span className="s3b-flow__hint">{copy.expandHint}</span>
 				)}
 			</div>
 
@@ -238,7 +257,7 @@ export default function System3bFlow({
 						nodes={flowNodes}
 						edges={flowEdges}
 						nodeTypes={nodeTypes}
-						colorMode="dark"
+						colorMode={theme}
 						fitView
 						nodesDraggable={false}
 						nodesConnectable={false}
@@ -253,11 +272,8 @@ export default function System3bFlow({
 							pannable
 							zoomable
 							nodeColor={mmColor}
-							nodeBorderRadius={0}
-							maskColor={FLOW_MASK}
-							maskStrokeColor={MINIMAP_INK.stroke}
+							nodeBorderRadius={2}
 							maskStrokeWidth={2}
-							bgColor={FLOW_GLASS}
 							style={MINIMAP_SIZE}
 						/>
 						<System3bFitView trigger={expandedSubKey} />

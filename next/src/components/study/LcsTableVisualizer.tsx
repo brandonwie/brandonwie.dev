@@ -215,9 +215,9 @@ export default function LcsTableVisualizer({ copy }: { copy: LcsTableCopy }) {
 	}, [frame, current]);
 
 	function cellClass(role: Role | null): string {
-		if (role === 'match') return 'fill-highlight-med stroke-foam';
+		if (role === 'match') return 'fill-surface-2 stroke-foam';
 		if (role === 'mismatch') return 'fill-bg stroke-accent';
-		if (role === 'backtrack' || role === 'answer') return 'fill-highlight-med stroke-gold';
+		if (role === 'backtrack' || role === 'answer') return 'fill-surface-2 stroke-gold';
 		return 'fill-bg stroke-line';
 	}
 
@@ -368,7 +368,7 @@ export default function LcsTableVisualizer({ copy }: { copy: LcsTableCopy }) {
 								className={`border px-2.5 py-1 font-mono text-sm ${
 									frame.justTook && index === frame.taken.length - 1
 										? 'border-gold text-gold'
-										: 'border-accent bg-highlight-med text-accent'
+										: 'border-accent bg-surface text-accent'
 								}`}
 							>
 								{char}

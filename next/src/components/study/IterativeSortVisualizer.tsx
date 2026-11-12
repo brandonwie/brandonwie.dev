@@ -42,8 +42,8 @@ export default function IterativeSortVisualizer({ copy }: { copy: IterativeSortC
 	}
 
 	function cellClass(state: CellState): string {
-		if (state === 'sorted') return 'fill-highlight-med stroke-foam';
-		if (state === 'swap') return 'fill-highlight-med stroke-accent';
+		if (state === 'sorted') return 'fill-surface-2 stroke-foam';
+		if (state === 'swap') return 'fill-surface-2 stroke-accent';
 		if (state === 'compare') return 'fill-bg stroke-foam';
 		return 'fill-bg stroke-line';
 	}

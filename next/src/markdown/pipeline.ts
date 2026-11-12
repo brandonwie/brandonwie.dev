@@ -8,19 +8,14 @@ import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
 import { Fragment } from 'react';
 import { jsx, jsxs } from 'react/jsx-runtime';
 import matter from 'gray-matter';
+import type { Element, Root as HastRoot } from 'hast';
 import type { ReactElement } from 'react';
+import { EXIT, SKIP, visit } from 'unist-util-visit';
 import { VFile } from 'vfile';
 import type { BundledLanguage } from 'shiki';
 
 import { remarkMermaidNode } from './plugins/remark-mermaid-node';
 import { educateSource } from './plugins/remark-smart-typography';
-// Framework-neutral and shared with the SvelteKit app rather than copied, so
-// the two stacks cannot drift while both exist. They move into this package
-// when SvelteKit is removed and `next/` collapses into the repository root.
-// remarkReadingTime is the exception: the Svelte-side plugin's word count
-// depends on remarkMermaidComponent's html-literal output, which this pipeline
-// does not produce -- see plugins/remark-reading-time.ts for the parity shim.
-import { remarkReadingTime } from './plugins/remark-reading-time';
 import { remarkTocExtract } from '../../../src/lib/plugins/remark-toc-extract.js';
 import Mermaid from '../components/Mermaid';
 
@@ -35,33 +30,12 @@ export interface RenderedMarkdown {
 	content: ReactElement;
 	/** Frontmatter, parsed separately and merged with what the plugins compute. */
 	frontmatter: Record<string, unknown>;
-	readingTime: number;
 	headings: Heading[];
 }
 
-export type ParsedMarkdownSource = Pick<matter.GrayMatterFile<string>, 'data' | 'content'> & {
-	/** The raw `---...---` frontmatter block, when the source had one. The
-	 * baseline's reading-time count included its words (mdsvex never stripped
-	 * fm before the remark chain); the parity plugin counts it from here. */
-	fmRaw?: string;
-};
+export type ParsedMarkdownSource = Pick<matter.GrayMatterFile<string>, 'data' | 'content'>;
 
-/**
- * The raw frontmatter block: an opening `---` at offset 0 through a closing
- * `---` on its own line (optionally at EOF). Anchoring the close to a line
- * start keeps a `key: ---` block scalar from terminating the block early,
- * and the `$` alternative keeps a delimiter at EOF without a trailing
- * newline in the match.
- */
-export function frontmatterRaw(source: string): string {
-	return source.match(/^---\r?\n[\s\S]*?\n---(?:\r?\n|$)/)?.[0] ?? '';
-}
-
-/**
- * Languages the SvelteKit build highlights (`svelte.config.js` getHighlighter).
- * Kept identical so a code block that highlighted before still highlights, and
- * one that fell back to plain text still falls back.
- */
+/** Languages the build highlights. A fence in any other language renders as plain text. */
 export const SHIKI_LANGS: BundledLanguage[] = [
 	'javascript',
 	'typescript',
@@ -86,24 +60,24 @@ export const SHIKI_LANGS: BundledLanguage[] = [
 ];
 
 /**
- * `text` appears in the SvelteKit highlighter's language list but is not a
- * bundled Shiki grammar -- it is the special plain-text language, always
- * available. It is the fallback below rather than a loaded grammar, which
- * preserves the existing behavior: an unknown language renders as plain text.
+ * One theme per colour scheme. With `defaultColor: false` Shiki writes both
+ * colours on every token as `--shiki-light` and `--shiki-dark`, and
+ * `src/app.css` picks one with `light-dark()`.
  */
-
-export const SHIKI_THEME = 'github-dark';
+// The `-default` GitHub themes: every token colour is at least 4.5:1 on the
+// code background of its theme (the older `github-light` and `github-dark`
+// drew comments and parameters under that).
+export const SHIKI_THEMES = { light: 'github-light-default', dark: 'github-dark-default' } as const;
 
 /**
  * Stamps the fence language onto each highlighted `<pre>` as `data-language`,
- * so the client `CodeCopy` frame label can read `<language> · <n> lines`.
+ * which `rehypeCodeFrame` reads for the bar above the block.
  *
  * `this.options.lang` is the language Shiki actually highlighted with: the
  * fence id as written (`ts`, `typescript`, `bash`, ...) or, for a fence whose
  * language is not in SHIKI_LANGS, the `text` fallback. A fence with NO
- * language is never highlighted (no `defaultLanguage`), so it has no `.shiki`
- * `<pre>` and no frame label either. The attribute sits on `<pre>`, outside
- * `<code>`, so copied text is unaffected.
+ * language is never highlighted (no `defaultLanguage`), so it has no language
+ * to show.
  */
 // Typed through the plugin's own options: `shiki` and `@shikijs/rehype` resolve
 // different `@shikijs/types` patch versions, whose transformer types disagree.
@@ -114,19 +88,84 @@ const preLanguageAttribute: NonNullable<RehypeShikiOptions['transformers']>[numb
 	},
 };
 
+/** Each h2 to h4 links to itself, so a reader can copy the address of a section. */
+function rehypeHeadingLinks() {
+	return (tree: HastRoot) => {
+		visit(tree, 'element', (node) => {
+			if (!/^h[234]$/.test(node.tagName) || typeof node.properties.id !== 'string') return;
+			// A link inside a link is invalid HTML: a heading that already has one stays as it is.
+			let hasLink = false;
+			visit(node, 'element', (inner) => {
+				if (inner.tagName !== 'a') return;
+				hasLink = true;
+				return EXIT;
+			});
+			if (hasLink) return;
+			node.children = [
+				{
+					type: 'element',
+					tagName: 'a',
+					properties: { href: `#${node.properties.id}` },
+					children: node.children,
+				},
+			];
+		});
+	};
+}
+
 /**
- * mdsvex replacement (plan.md Open Decision 6).
+ * Wraps each code block in a figure with a bar above it: the language and a
+ * copy button. The button is server-rendered; `CodeCopy` gives it its action.
+ */
+function rehypeCodeFrame({ copyLabel }: { copyLabel: string }) {
+	return (tree: HastRoot) => {
+		visit(tree, 'element', (node, index, parent) => {
+			if (node.tagName !== 'pre' || !parent || index === undefined) return;
+			const language = node.properties['data-language'];
+			const frame: Element = {
+				type: 'element',
+				tagName: 'figure',
+				properties: { className: ['code'] },
+				children: [
+					{
+						type: 'element',
+						tagName: 'figcaption',
+						properties: {},
+						children: [
+							{
+								type: 'element',
+								tagName: 'span',
+								properties: {},
+								children: [{ type: 'text', value: typeof language === 'string' ? language : '' }],
+							},
+							{
+								type: 'element',
+								tagName: 'button',
+								properties: { type: 'button', className: ['code__copy'] },
+								children: [{ type: 'text', value: copyLabel }],
+							},
+						],
+					},
+					node,
+				],
+			};
+			parent.children[index] = frame;
+			// The `pre` is now inside the frame: do not visit it again.
+			return SKIP;
+		});
+	};
+}
+
+/**
+ * Markdown to React elements.
  *
  * Order matters twice over:
  *
  *  1. Frontmatter is parsed BEFORE the tree is built, and seeded into
- *     `vFile.data.fm`, because `remark-reading-time` and `remark-toc-extract`
- *     read and extend that object. They are the two plugins that ported
- *     unchanged from the SvelteKit pipeline.
+ *     `vFile.data.fm`, because `remark-toc-extract` reads and extends that
+ *     object.
  *  2. `remarkMermaidNode` runs at the REMARK stage, so the highlighter never
- *     sees a mermaid fence. In the Svelte pipeline mdsvex ran Shiki before
- *     rehype; here `@shikijs/rehype` runs after `remark-rehype`. Either way the
- *     fence is gone before highlighting.
+ *     sees a mermaid fence.
  *
  * The result is HAST converted to React elements. Serializing to an HTML string
  * and using `dangerouslySetInnerHTML` would be simpler and would make the
@@ -134,32 +173,23 @@ const preLanguageAttribute: NonNullable<RehypeShikiOptions['transformers']>[numb
  */
 export async function renderMarkdown(
 	source: string | ParsedMarkdownSource,
+	{ copyLabel = 'Copy' }: { copyLabel?: string } = {},
 ): Promise<RenderedMarkdown> {
 	const { data: frontmatter, content: raw } = typeof source === 'string' ? matter(source) : source;
 	// Typography is applied to the SOURCE, before this pipeline parses it, with
 	// text nodes found by this pipeline's own parser configuration -- see
-	// `plugins/remark-smart-typography.ts`. Everything downstream, reading time
-	// and the heading list included, therefore sees the typeset text, which is
-	// the order mdsvex used when it ran smartypants before the user's remark
-	// plugins.
+	// `plugins/remark-smart-typography.ts`. Everything downstream, the heading
+	// list included, therefore sees the typeset text.
 	const content = educateSource(raw);
-	// mdsvex passed the `---` frontmatter block through the same remark chain,
-	// so the baseline's reading time counted title/description/tags words too.
-	// The parity plugin counts them from this seed -- see
-	// `plugins/remark-reading-time.ts` for the reproduction notes.
-	const fmRaw = educateSource(
-		typeof source === 'string' ? frontmatterRaw(source) : (source.fmRaw ?? ''),
-	);
 
 	const processor = unified()
 		.use(remarkParse)
 		.use(remarkMermaidNode)
 		// `singleTilde` defaults to true and turns a lone `~` between two inline
-		// code spans into <del> — mdsvex never parsed it, so Korean prose like
-		// `T00`~`T24` rendered struck-through on the candidate. GFM only needs
-		// the standard `~~` form for real strikethrough.
+		// code spans into <del>, so Korean prose like `T00`~`T24` rendered
+		// struck-through. GFM only needs the standard `~~` form for real
+		// strikethrough.
 		.use(remarkGfm, { singleTilde: false })
-		.use(remarkReadingTime)
 		.use(remarkTocExtract)
 		.use(remarkRehype, {
 			// Raw HTML stays fail-closed: raw HTML nodes in posts are dropped, never
@@ -168,17 +198,19 @@ export async function renderMarkdown(
 		})
 		.use(rehypeSlug)
 		.use(rehypeShiki, {
-			theme: SHIKI_THEME,
+			themes: SHIKI_THEMES,
+			defaultColor: false,
 			langs: SHIKI_LANGS,
 			fallbackLanguage: 'text',
 			transformers: [preLanguageAttribute],
-		} satisfies RehypeShikiOptions);
+		} satisfies RehypeShikiOptions)
+		.use(rehypeHeadingLinks)
+		.use(rehypeCodeFrame, { copyLabel });
 
 	// Frontmatter is seeded onto the vfile BEFORE the transformers run, because
-	// remark-reading-time and remark-toc-extract read `data.fm` and extend it.
+	// remark-toc-extract reads `data.fm` and extends it.
 	const vfile = new VFile({ value: content });
 	vfile.data.fm = { ...frontmatter };
-	vfile.data.fmRaw = fmRaw;
 
 	const hast = await processor.run(processor.parse(vfile), vfile);
 	const data = (vfile.data.fm ?? {}) as Record<string, unknown>;
@@ -195,7 +227,6 @@ export async function renderMarkdown(
 	return {
 		content: element,
 		frontmatter: data,
-		readingTime: Number(data.readingTime ?? 0),
 		headings: (data.headings as Heading[]) ?? [],
 	};
 }

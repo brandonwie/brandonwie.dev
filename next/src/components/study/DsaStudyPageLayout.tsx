@@ -1,8 +1,7 @@
-import { Children, Fragment, isValidElement, type ReactElement, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { AppLink } from '@/components/AppLink';
-import { TermPrompt } from '@/shell/TermPrompt';
-import { cwdFor } from '@/shell/terminal-path';
+import { shellCopy } from '@/i18n/copy';
 import StudyPageShell from './StudyPageShell';
 import StudyRoadmap from './StudyRoadmap';
 import type { DsaConceptCard, DsaModule, StudyLocale } from '../../data/study';
@@ -33,33 +32,16 @@ export interface DsaStudyContent {
 }
 
 /**
- * Number of panes in the `lab` slot. Each course passes its visualizers as one
- * fragment, so the count is the fragment's children; it feeds the decorative
- * `./lab --panes N` prompt and the `· N visualizers` label suffix only.
- */
-function countPanes(lab: ReactNode): number {
-	if (isValidElement(lab) && lab.type === Fragment) {
-		return Children.count((lab as ReactElement<{ children?: ReactNode }>).props.children);
-	}
-	return Children.count(lab);
-}
-
-/**
- * Shared layout for the four DSA course pages as a terminal session: a `pwd`
- * breadcrumb, a `cat README.md` hero with the "what's inside" pane,
- * `coverage.txt`, the module roadmap, the visual lab, concept notes and the
- * recall quiz. Each course keeps its thin wrapper for its content getter and
- * lab set.
+ * Shared layout for the four DSA course pages: a header with the coverage list
+ * and in-page links, then the module roadmap, the visual lab, concept notes and
+ * the recall quiz. Each course keeps its thin wrapper for its content getter
+ * and lab set.
  *
- * Headings: one `h1`; every section label is an `h2` (the roadmap's frame
- * title, `.sc-lbl` elsewhere); every card title an `h3`. The prompt lines are
- * decorative (`TermPrompt` is `aria-hidden`). The anchor ids `map`, `lab` and
- * `recall` stay because the inside pane links to them. Command, flag and file
- * names in prompts and frame suffixes are terminal syntax and stay English in
- * both locales.
+ * Headings: one `h1`; every section an `h2`; every card title an `h3` (the
+ * visualizers bring their own). The anchor ids `map`, `lab` and `recall` stay
+ * because the in-page links point at them.
  */
 export default function DsaStudyPageLayout({
-	slug,
 	locale = 'en',
 	content,
 	lab,
@@ -70,9 +52,6 @@ export default function DsaStudyPageLayout({
 	lab: ReactNode;
 }) {
 	const basePath = locale === 'ko' ? '/ko' : '';
-	const cwd = cwdFor(`${basePath}/study/${slug}`);
-	const panes = countPanes(lab);
-	const prompts = content.modules.reduce((total, module) => total + module.recall.length, 0);
 	const insideLinks = [
 		{ href: '#map', label: content.sections.map },
 		{ href: '#lab', label: content.sections.lab },
@@ -80,115 +59,73 @@ export default function DsaStudyPageLayout({
 	];
 
 	return (
-		<StudyPageShell className="pg-study-course">
-			<TermPrompt cwd={cwd} command="pwd" />
-			<div className="st-bc">
-				<AppLink href={basePath || '/'}>{`~${basePath}`}</AppLink>
-				<span className="st-bc__sep">/</span>
-				<AppLink href={`${basePath}/study`}>study</AppLink>
-				<span className="st-bc__sep">/</span>
-				<span className="st-bc__leaf">{slug}</span>
-			</div>
-
-			<div className="term-gap" />
-			<TermPrompt cwd={cwd} command="cat README.md" />
-			<section className="st-hero">
-				<div>
-					<p className="term-eyebrow">{content.eyebrow}</p>
-					<h1 className="term-ttl term-worn">{content.title}</h1>
-					<p className="st-lede">{content.subtitle}</p>
-				</div>
-				<aside className="term-frame st-inside">
-					<p className="term-frame__title">{content.sections.inside}</p>
-					<ul>
-						{insideLinks.map((link, index) => (
-							<li key={link.href}>
-								<a href={link.href} className="term-lnk">
-									<span className="n" aria-hidden="true">
-										[{index + 1}]
-									</span>
-									{link.label}
-								</a>
-							</li>
-						))}
-					</ul>
-				</aside>
-			</section>
-
-			<div className="term-frame sc-cov">
-				<p className="term-frame__title">
-					coverage.txt <span className="dim">· {content.coverage.length} lines</span>
+		<StudyPageShell className="course">
+			<header className="study__head">
+				<p className="study__crumbs" data-pagefind-ignore>
+					<AppLink href={`${basePath}/study`}>
+						<span aria-hidden="true">←</span> {shellCopy(locale).nav.study}
+					</AppLink>
 				</p>
-				<ol>
-					{content.coverage.map((item, index) => (
-						<li key={item}>
-							<span className="sc-cov__ln" aria-hidden="true">
-								{index + 1}
-							</span>
-							<span>{item}</span>
-						</li>
+				<p className="eyebrow">{content.eyebrow}</p>
+				<h1>{content.title}</h1>
+				<p className="study__lede">{content.subtitle}</p>
+				<ul className="course__coverage">
+					{content.coverage.map((item) => (
+						<li key={item}>{item}</li>
 					))}
-				</ol>
-			</div>
+				</ul>
+				<nav className="study__toc" aria-label={content.sections.inside} data-print-hide>
+					{insideLinks.map((link) => (
+						<a key={link.href} href={link.href} className="text-link">
+							{link.label}
+						</a>
+					))}
+				</nav>
+			</header>
 
-			<section id="map" className="st-sec scroll-mt-24">
-				<TermPrompt cwd={cwd} command="ls modules/" flags="--roadmap" />
-				<div className="term-frame">
-					<h2 className="term-frame__title">
-						{content.sections.map}{' '}
-						<span className="dim" aria-hidden="true">
-							· {content.modules.length} modules
-						</span>
-					</h2>
-					<StudyRoadmap modules={content.modules} ariaLabel={content.sections.map} />
-				</div>
+			<section id="map" className="study__section" aria-labelledby="course-map">
+				<h2 id="course-map" className="study__h2">
+					{content.sections.map}
+				</h2>
+				<StudyRoadmap modules={content.modules} ariaLabel={content.sections.map} />
 			</section>
 
-			<section id="lab" className="st-sec scroll-mt-24">
-				<TermPrompt cwd={cwd} command="./lab" flags={`--panes ${panes}`} />
-				<h2 className="sc-lbl">
+			<section id="lab" className="study__section" aria-labelledby="course-lab">
+				<h2 id="course-lab" className="study__h2">
 					{content.sections.lab}
-					<span aria-hidden="true"> · {panes} visualizers</span>
 				</h2>
-				<div className="sc-lab">{lab}</div>
+				<div className="course__lab">{lab}</div>
 			</section>
 
-			<section className="st-sec">
-				<TermPrompt cwd={cwd} command="cat notes/*.md" />
-				<h2 className="sc-lbl">
+			<section className="study__section" aria-labelledby="course-notes">
+				<h2 id="course-notes" className="study__h2">
 					{content.sections.notes}
-					<span aria-hidden="true"> · {content.concepts.length} files</span>
 				</h2>
-				<div className="sc-grid2">
-					{content.concepts.map((concept, index) => (
-						<article key={concept.title} className="term-frame sc-note">
-							<p className="term-frame__title" aria-hidden="true">
-								note {index + 1}/{content.concepts.length}
-							</p>
-							<h3 className="sc-h">{concept.title}</h3>
-							<p className="sc-small">{concept.body}</p>
-							<p className="sc-src">{concept.source}</p>
+				<div className="course__grid">
+					{content.concepts.map((concept) => (
+						<article key={concept.title} className="course__card">
+							<h3 className="course__h3">{concept.title}</h3>
+							<p className="course__body">{concept.body}</p>
+							<p className="course__source">{concept.source}</p>
 						</article>
 					))}
 				</div>
 			</section>
 
-			<section id="recall" className="st-sec scroll-mt-24">
-				<TermPrompt cwd={cwd} command="quiz" flags="--recall" />
-				<h2 className="sc-lbl">
+			<section id="recall" className="study__section" aria-labelledby="course-recall">
+				<h2 id="course-recall" className="study__h2">
 					{content.sections.recall}
-					<span aria-hidden="true"> · {prompts} prompts</span>
 				</h2>
-				<div className="sc-grid2">
+				<div className="course__grid">
 					{content.modules.map((module, index) => (
-						<div key={index} className="term-frame sc-rc">
-							<p className="term-frame__title">{module.kicker}</p>
-							<h3 className="sc-h">{module.title}</h3>
-							<div className="sc-rc__list">
+						<div key={index} className="course__card">
+							<p className="eyebrow">{module.kicker}</p>
+							<h3 className="course__h3">{module.title}</h3>
+							<div className="course__recall">
 								{module.recall.map((prompt) => (
 									<details key={prompt.q} className="study-recall">
 										<summary>{prompt.q}</summary>
-										<p className="sc-rc__a">{prompt.a}</p>
+										<p className="course__answer">{prompt.a}</p>
 									</details>
 								))}
 							</div>

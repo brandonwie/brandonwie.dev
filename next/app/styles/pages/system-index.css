@@ -1,76 +1,71 @@
-/* Phosphor Fade page styles: system-index. Owned by that page's port; see
-   next/app/globals.css (terminal shell) for the shared term-* primitives. */
+/* /system: introduction, then one row per child page. */
 @layer components {
-	.pg-system__intro {
-		margin-top: 10px;
-	}
-	.pg-system__intro .term-eyebrow {
-		margin: 0;
-	}
-	.pg-system__ttl {
-		display: inline-block;
-	}
-	.pg-system__lede {
-		margin: 8px 0 0;
-		color: var(--crt-worn);
-	}
-
-	/* ls -l: the three metadata columns size to content and the link takes the
-	   rest, so wider Hangul glyphs on /ko never push the row out of line. */
-	.pg-system__ls {
-		margin-top: 6px;
-	}
-	.pg-system__total {
-		margin: 0;
-		color: var(--crt-faint);
-	}
-	.pg-system__row {
+	.system {
 		display: grid;
-		grid-template-columns: max-content max-content max-content minmax(0, 1fr);
-		column-gap: 22px;
-		align-items: baseline;
-	}
-	.pg-system__perm,
-	.pg-system__own {
-		color: var(--crt-faint);
-	}
-	.pg-system__name {
-		color: var(--crt-amber);
-	}
-	.pg-system__cta {
-		justify-self: start;
-	}
-	.pg-system__arr {
-		color: var(--crt-amber);
-	}
-	/* Keyboard focus draws the row in reverse video (.term-sel): glass on amber
-	   8.90:1. The shell's amber outline stays as the focus ring. */
-	.pg-system__cta:focus-visible {
-		margin-left: -4px;
-		padding: 0 4px;
-		background: var(--crt-amber);
-		text-decoration: none;
-	}
-	.pg-system__cta:focus-visible,
-	.pg-system__cta:focus-visible .n,
-	.pg-system__cta:focus-visible .pg-system__arr {
-		color: var(--crt-glass);
+		gap: clamp(1.75rem, 4vw, 2.75rem);
+		max-width: var(--measure);
 	}
 
-	.pg-system__desc {
-		max-width: 76ch;
-		margin: 0;
+	.system__head {
+		display: grid;
+		gap: 0.75rem;
 	}
 
-	/* Phones: perm + owner drop to keep the entry name and link on one line. */
-	@media (width < 36rem) {
-		.pg-system__row {
-			grid-template-columns: max-content minmax(0, 1fr);
-			column-gap: 14px;
-		}
-		.pg-system__perm,
-		.pg-system__own {
-			display: none;
-		}
+	.system__head h1 {
+		font-size: clamp(1.875rem, 1.4rem + 2.2vw, 2.75rem);
+		font-weight: 700;
+		line-height: 1.15;
+		letter-spacing: -0.022em;
+		text-wrap: balance;
+	}
+
+	.system__lede {
+		font-size: 1.0625rem;
+		line-height: 1.65;
+		color: var(--muted);
+		text-wrap: pretty;
+	}
+
+	.system__list {
+		border-top: 1px solid var(--line-strong);
+	}
+
+	.system__list li {
+		border-bottom: 1px solid var(--line);
+	}
+
+	.system__row {
+		display: grid;
+		gap: 0.25rem;
+		padding: 0.875rem 0.5rem;
+		margin-inline: -0.5rem;
+		border-radius: 6px;
+	}
+
+	.system__row:hover,
+	.system__row:focus-visible {
+		background-color: var(--surface);
+	}
+
+	.system__row:focus-visible {
+		outline-offset: -2px;
+	}
+
+	.system__name {
+		font-size: 1.0625rem;
+		font-weight: 500;
+		line-height: 1.5;
+		color: var(--ink);
+	}
+
+	.system__row:hover .system__name {
+		color: var(--accent);
+	}
+
+	.system__desc {
+		font-size: 0.9375rem;
+		line-height: 1.6;
+		color: var(--muted);
+		text-wrap: pretty;
 	}
 }

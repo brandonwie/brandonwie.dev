@@ -8,9 +8,8 @@ import { kindGlyph } from './System3bTerm';
 /**
  * Custom @xyflow/react node for the /system/b3 graph.
  *
- * Renders a subsystem chip (expandable) or a leaf node. Phosphor Fade draws the
- * kind as an `ls -F`-style glyph instead of a colour dot, and the name wraps
- * instead of ellipsising. Click (expandable only) -> data.onExpand(subKey);
+ * Renders a subsystem chip (expandable) or a leaf node. The kind shows as a
+ * glyph (see the legend), and the name wraps instead of ellipsising. Click (expandable only) -> data.onExpand(subKey);
  * hover -> data.onHover(id). Handles are present but visually hidden so edges
  * can attach.
  *
@@ -37,7 +36,7 @@ export default function System3bNode({ id, data }: NodeProps) {
 			<Handle type="target" position={Position.Top} style={HANDLE_STYLE} />
 			<button
 				type="button"
-				className={expandable ? 's3b-node expandable' : 's3b-node'}
+				className={expandable ? 's3b-node s3b-node--expandable' : 's3b-node'}
 				onClick={click}
 				onMouseEnter={() => hover(id)}
 				onMouseLeave={() => hover(null)}

@@ -1,315 +1,147 @@
-/* Phosphor Fade page styles: about (/about, /ko/about — the approved v2
-   design). Owned by that page's port; see next/app/globals.css (terminal
-   shell) for the shared term-* primitives. The page no longer draws its own
-   enclosure: the crt-panel / crt-glass-inner / crt-film utilities in
-   src/app.css stay for the legacy build and are simply not used here. */
-
+/* About: one text column of short sections. */
 @layer components {
-	.pg-about {
-		display: block;
-		min-width: 0;
+	.about {
+		display: grid;
+		gap: clamp(2.5rem, 6vw, 3.5rem);
+		max-width: var(--measure);
 	}
 
-	/* whoami output: the loading line and the signal readout. */
-	.pg-about .ab-status {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: space-between;
-		gap: 0 16px;
-		margin-top: 6px;
-		font-size: 12px;
-		line-height: 20px;
-	}
-	.pg-about .ab-out {
-		color: var(--crt-faint);
-	}
-	.pg-about .ab-signal {
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: var(--crt-amber);
-	}
-	:lang(ko) .pg-about .ab-signal {
-		letter-spacing: 0.04em;
+	.about__head {
+		display: grid;
+		gap: 1rem;
 	}
 
-	/* Hero: ASCII portrait left, title block right (stacks below lg). */
-	.pg-about .ab-hero {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 22px;
-		margin-top: 18px;
-	}
-	.pg-about .ab-portrait {
-		min-width: 0;
-		margin: 0;
-		container-type: inline-size;
-	}
-	/* ASCII art, not a code block: none of the global `pre` chrome. */
-	.pg-about .ab-portrait pre {
-		margin: 0;
-		padding: 0;
-		border: 0;
-		border-radius: 0;
-		background: none;
-		box-shadow: none;
-		overflow: hidden;
-		font-family: var(--font-term);
-		/* 96 cols x 0.6em JetBrains Mono advance = 57.6em per line: shrink to fit
-		   the figure's width, capped at 8px. Dividing by 58 leaves a small margin
-		   so a wider fallback face cannot clip the last column before the web font
-		   swaps in. */
-		font-size: min(8px, calc(100cqi / 58));
-		line-height: 1;
-		color: var(--crt-amber);
-	}
-	.pg-about .ab-portrait figcaption {
-		margin-top: 10px;
-		font-size: 10px;
-		line-height: 16px;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: var(--crt-faint);
-	}
-	.pg-about .ab-lede {
-		margin-top: 12px;
-		color: var(--crt-worn);
-	}
-	.pg-about .ab-kv {
-		margin: 14px 0 0;
-		font-size: 12px;
-		line-height: 20px;
-	}
-	.pg-about .ab-kv > div {
-		display: grid;
-		grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
-		gap: 12px;
-	}
-	.pg-about .ab-kv dt {
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--crt-faint);
-	}
-	.pg-about .ab-kv dd {
-		margin: 0;
-		color: var(--crt-green);
-	}
-
-	.pg-about .ab-intro {
-		display: grid;
-		gap: 10px;
-		margin-top: 22px;
-		color: var(--crt-worn);
-	}
-	.pg-about .ab-sec {
-		margin-top: 22px;
-	}
-	.pg-about h3 {
-		margin: 0;
-		font-size: 13px;
-		line-height: 22px;
+	.about__head h1 {
+		font-size: clamp(1.875rem, 1.4rem + 2.2vw, 2.75rem);
 		font-weight: 700;
-		color: var(--crt-hi);
+		line-height: 1.15;
+		letter-spacing: -0.022em;
+		text-wrap: balance;
 	}
 
-	/* career.log: [years] + title/body rows. */
-	.pg-about .ab-log {
-		display: grid;
-		gap: 12px;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-	.pg-about .ab-log li {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 0 16px;
-	}
-	.pg-about .ab-log__yr {
-		color: var(--crt-amber);
-		white-space: nowrap;
-	}
-	.pg-about .ab-log p {
-		color: var(--crt-worn);
+	.about__lede {
+		font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
+		line-height: 1.6;
+		color: var(--muted);
+		text-wrap: pretty;
 	}
 
-	/* ls ~/now: three frames. */
-	.pg-about .ab-now {
+	.about__facts {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 0 14px;
-	}
-	.pg-about .ab-now .term-frame {
-		min-width: 0;
-		padding-top: 12px;
-	}
-	.pg-about .ab-now h3 {
-		color: var(--crt-amber);
-	}
-	.pg-about .ab-now p {
-		margin-top: 4px;
-		font-size: 12px;
-		line-height: 20px;
-		color: var(--crt-worn);
+		grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+		gap: 1.25rem 1.5rem;
+		padding-block: 1.25rem;
+		border-block: 1px solid var(--line);
 	}
 
-	/* top --operating-surface: name, block meter, percent. */
-	.pg-about .ab-top {
-		display: grid;
-		gap: 2px;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-		font-size: 12px;
-		line-height: 20px;
-	}
-	.pg-about .ab-top li {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) 44px;
-		column-gap: 12px;
-	}
-	.pg-about .ab-top__name {
-		grid-column: 1 / -1;
-		color: var(--crt-faint);
-	}
-	.pg-about .ab-meter {
-		min-width: 0;
-		overflow: hidden;
-		white-space: nowrap;
-	}
-	.pg-about .ab-meter__wide {
-		display: none;
-	}
-	.pg-about .ab-top__pct {
-		text-align: right;
-		color: var(--crt-amber);
-	}
-
-	/* ls ~/systems: numbered link cards. */
-	.pg-about .ab-sys {
-		display: grid;
-		gap: 12px;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-	.pg-about .ab-sys li + li {
-		padding-top: 12px;
-		border-top: 1px dashed var(--crt-line);
-	}
-	.pg-about .ab-sys__card {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 12px;
-		color: var(--crt-worn);
-		text-decoration: none;
-	}
-	.pg-about .ab-sys__card img {
-		width: 100%;
-		aspect-ratio: 16 / 9;
-		object-fit: cover;
-		border: 1px solid var(--crt-line);
-	}
-	.pg-about .ab-sys__card > span > span {
-		display: block;
-	}
-	.pg-about .ab-sys__kick {
-		font-size: 11px;
-		line-height: 16px;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: var(--crt-faint);
-	}
-	.pg-about .ab-n {
-		margin-right: 6px;
-		letter-spacing: 0;
-	}
-	.pg-about .ab-sys__card h3 {
-		margin-top: 2px;
-		color: var(--crt-green);
-	}
-	.pg-about .ab-sys__card:hover h3 {
-		text-decoration: underline;
-	}
-	.pg-about .ab-sys__body {
-		font-size: 12px;
-		line-height: 20px;
-	}
-
-	/* principles / learning. */
-	.pg-about .ab-list {
-		display: grid;
-		gap: 10px;
-	}
-	.pg-about .ab-list p,
-	.pg-about .ab-learn__body {
-		color: var(--crt-worn);
-	}
-	.pg-about .ab-kick {
-		font-size: 11px;
-		line-height: 16px;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: var(--crt-amber);
-	}
-	.pg-about .ab-learn__h {
-		margin-top: 2px;
-	}
-	.pg-about .ab-learn__items {
-		margin: 8px 0 0;
-		padding: 0;
-		list-style: none;
-		color: var(--crt-worn);
-	}
-	.pg-about .ab-learn__items li {
-		padding-left: 2ch;
-		text-indent: -2ch;
-	}
-	.pg-about .ab-learn__items li::before {
-		content: '- ';
-		color: var(--crt-amber);
-	}
-
-	/* links: lynx-numbered. */
-	.pg-about .ab-links {
+	.about__facts > div {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 4px 20px;
-		margin: 4px 0 0;
-		padding: 0;
-		list-style: none;
+		flex-direction: column-reverse;
+		gap: 0.25rem;
 	}
 
-	@media (width >= 40rem) {
-		.pg-about .ab-log li {
-			grid-template-columns: 110px minmax(0, 1fr);
-		}
-		.pg-about .ab-top li {
-			grid-template-columns: 170px minmax(0, 1fr) 44px;
-		}
-		.pg-about .ab-top__name {
-			grid-column: auto;
-		}
-		.pg-about .ab-sys__card {
-			grid-template-columns: 144px minmax(0, 1fr);
-		}
+	.about__facts dd {
+		font-size: 1.5rem;
+		font-weight: 650;
+		line-height: 1.2;
+		letter-spacing: -0.015em;
 	}
-	/* 50 cells need ~390px beside the name column: from md. */
-	@media (width >= 48rem) {
-		.pg-about .ab-meter__wide {
-			display: inline;
-		}
-		.pg-about .ab-meter__narrow {
-			display: none;
-		}
-		.pg-about .ab-now {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
+
+	.about__facts dt {
+		font-size: 0.875rem;
+		line-height: 1.45;
+		color: var(--muted);
 	}
-	@media (width >= 64rem) {
-		.pg-about .ab-hero {
-			grid-template-columns: 30rem minmax(0, 1fr);
-			gap: 28px;
-			align-items: start;
+
+	.about section {
+		scroll-margin-top: calc(var(--header-h) + 1.25rem);
+	}
+
+	.about h2 {
+		margin-bottom: 1rem;
+		font-size: 1.5rem;
+		font-weight: 650;
+		line-height: 1.25;
+		letter-spacing: -0.012em;
+		scroll-margin-top: calc(var(--header-h) + 1.25rem);
+	}
+
+	.about h3 {
+		font-size: 1.0625rem;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+
+	.about :is(li, section) > p,
+	.about li div > p {
+		line-height: 1.65;
+		color: var(--muted);
+		text-wrap: pretty;
+	}
+
+	.about__note {
+		margin-bottom: 1rem;
+	}
+
+	/* A label column and a text column: the career years, the project kinds. */
+	.about__rows > li,
+	.about__contact > li {
+		display: grid;
+		grid-template-columns: 9.5rem minmax(0, 1fr);
+		gap: 0.25rem 1.5rem;
+		padding-block: 1rem;
+		border-top: 1px solid var(--line);
+	}
+
+	.about__contact > li {
+		padding-block: 0.75rem;
+	}
+
+	.about__when {
+		padding-top: 0.125rem;
+		font-family: var(--font-mono);
+		font-size: 0.8125rem;
+		line-height: 1.6;
+		color: var(--faint);
+	}
+
+	.about__rows h3 + p,
+	.about__items h3 + p {
+		margin-top: 0.25rem;
+	}
+
+	.about__items {
+		display: grid;
+		gap: 1.25rem;
+	}
+
+	.about__items > li {
+		padding-left: 1rem;
+		border-left: 2px solid var(--line-strong);
+	}
+
+	.about .about__claim {
+		margin-block: 0.5rem 0.75rem;
+		font-size: 1.1875rem;
+		text-wrap: balance;
+	}
+
+	.about__list {
+		display: grid;
+		gap: 0.4rem;
+		padding-left: 1.25rem;
+		list-style: disc;
+		line-height: 1.6;
+	}
+
+	.about__list li::marker {
+		color: var(--faint);
+	}
+
+	@media (width < 40rem) {
+		.about__rows > li,
+		.about__contact > li {
+			grid-template-columns: 1fr;
 		}
 	}
 }

@@ -4,13 +4,10 @@ import { join, relative, sep } from 'node:path';
 import matter from 'gray-matter';
 import { cache } from 'react';
 
+import { articleCopy } from '../i18n/copy';
 import type { Locale } from '../i18n/locale';
-import {
-	frontmatterRaw,
-	renderMarkdown,
-	type Heading,
-	type ParsedMarkdownSource,
-} from '../markdown/pipeline';
+import { renderMarkdown, type Heading, type ParsedMarkdownSource } from '../markdown/pipeline';
+import { readingMinutes } from '../markdown/reading-time';
 
 /**
  * Post loading for the Next candidate.
@@ -42,10 +39,15 @@ import {
  */
 const CONTENT_ROOT = join(process.cwd(), '..', 'src/content/posts');
 
+interface ParsedPost extends ParsedMarkdownSource {
+	/** Minutes to read the body. The index and the post page both read it from here. */
+	readingTime: number;
+}
+
 interface PostSourceCacheEntry {
 	mtimeMs: number;
 	size: number;
-	parsed: ParsedMarkdownSource;
+	parsed: ParsedPost;
 }
 
 interface DirectoryStamp {
@@ -124,17 +126,16 @@ function listPostFiles(locale: Locale): string[] {
 }
 
 /** Process-local build cache, revalidated with a file-metadata freshness heuristic. */
-function readParsedPost(file: string): ParsedMarkdownSource {
+function readParsedPost(file: string): ParsedPost {
 	const { mtimeMs, size } = statSync(file);
 	const cached = postSourceCache.get(file);
 	if (cached?.mtimeMs === mtimeMs && cached.size === size) return cached.parsed;
 
-	const source = readFileSync(file, 'utf8');
-	const m = matter(source);
-	const parsed: ParsedMarkdownSource = {
+	const m = matter(readFileSync(file, 'utf8'));
+	const parsed: ParsedPost = {
 		data: m.data,
 		content: m.content,
-		fmRaw: frontmatterRaw(source),
+		readingTime: readingMinutes(m.content),
 	};
 	postSourceCache.set(file, { mtimeMs, size, parsed });
 	return parsed;
@@ -191,7 +192,7 @@ async function loadPostUncached(slug: string, locale: Locale): Promise<LoadedPos
 	const parsed = readParsedPost(file);
 	if (parsed.data.draft === true) return null;
 
-	const rendered = await renderMarkdown(parsed);
+	const rendered = await renderMarkdown(parsed, { copyLabel: articleCopy(locale).codeCopy });
 	const frontmatter = rendered.frontmatter as unknown as PostFrontmatter;
 
 	return {
@@ -199,7 +200,7 @@ async function loadPostUncached(slug: string, locale: Locale): Promise<LoadedPos
 		locale,
 		frontmatter,
 		content: rendered.content,
-		readingTime: rendered.readingTime,
+		readingTime: parsed.readingTime,
 		headings: rendered.headings,
 		hasKoreanTranslation: findPostFile(slug, 'ko') !== null,
 	};
@@ -212,6 +213,8 @@ export interface PublishedPost {
 	/** Path below the locale root, e.g. `backend/redis-caching-patterns.md`. */
 	relativePath: string;
 	frontmatter: PostFrontmatter;
+	/** Minutes to read the body. */
+	readingTime: number;
 }
 
 /**
@@ -239,6 +242,7 @@ export function listPublishedPosts(locale: Locale): PublishedPost[] {
 				slug: postSlugFrom(relativePath),
 				relativePath,
 				frontmatter: parsed.data as PostFrontmatter,
+				readingTime: parsed.readingTime,
 			}))
 	);
 }

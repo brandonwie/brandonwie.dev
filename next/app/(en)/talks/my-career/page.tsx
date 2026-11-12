@@ -22,6 +22,9 @@ import RetrievalRebuildSlide from '@/components/deck/RetrievalRebuildSlide';
 import TitleSlide from '@/components/deck/TitleSlide';
 import Deck from '@/components/deck/Deck';
 import type { DeckSlide } from '@/deck/types';
+// The deck's styles load on this route only.
+import '../../../styles/pages/talk-deck.css';
+import '../../../styles/pages/talk-deck-slides.css';
 
 /**
  * `/talks/my-career` — presentation deck route shell (PR-A).

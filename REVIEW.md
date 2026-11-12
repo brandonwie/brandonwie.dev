@@ -1,7 +1,7 @@
 ---
 tags: [personal, reference]
 created: 2026-10-09
-updated: 2026-10-29
+updated: 2026-11-12
 status: active
 ---
 
@@ -49,7 +49,7 @@ export in the `next/` workspace package (`output: 'export'`, `distDir: 'build'`,
 so the output and the Pages directory is `next/build/`). The stack is React 19,
 Tailwind CSS v4 through `@tailwindcss/postcss`, Paraglide-JS (compiled into
 `next/src/paraglide/`), an AST markdown pipeline under `next/src/markdown/`
-with Shiki, Fuse.js and Pagefind. pnpm manages packages; deno runs only the
+with Shiki and Pagefind. pnpm manages packages; deno runs only the
 B3 sync, snapshot, study-source and content-hash scripts under `scripts/`.
 
 Some inputs stay at the repository root and `next/` imports them on purpose:
@@ -61,13 +61,21 @@ tokens), `messages/{en,ko}.json`, `project.inlang/` and `public/` (every
 SvelteKit was retired after the 2026-09-20 cutover. A `.svelte` file, a Vite
 or Svelte config, or a Svelte package reappearing in a diff is a regression.
 
-- **Command palette** — item model and search in `next/src/palette/`
-  (`items.ts`, `fuzzy.ts`); the modal is
-  `next/src/components/palette/FuzzyFinder.tsx`.
+- **Design** — V2 is text-first, in light and dark from one token set, with no
+  images (`DESIGN.md`, `architecture/decisions/0002-v2-text-first-blog.md`).
+  A per-post image, a hex colour in a component or decoration that imitates a
+  terminal is a regression.
+- **Post index** — the home page lists every post
+  (`next/src/components/PostIndex.tsx`); `PostFilter.tsx` filters the rows and
+  keeps the filter in the address (`?q=`, `?category=`, `?tag=`).
+- **Shortcuts** — `next/src/shell/Shortcuts.tsx` turns a single key into a
+  click on the control that carries that `data-hotkey`. There is no command
+  palette.
 - **i18n** — `messages/{en,ko}.json` hold UI strings. Korean routes live under
   `next/app/(ko)/ko/`.
 - **Content** — `next/src/content/article.tsx` renders the shared EN/KO detail
-  page (JSON-LD Article, hreflang, Open Graph, reading progress). RSS
+  page (JSON-LD Article, hreflang, Open Graph, reading progress).
+  `scripts/build-markdown.mjs` writes each post as `.md` plus `llms.txt`. RSS
   (`next/app/(en)/rss.xml/`, `next/app/(ko)/ko/rss.xml/`) and
   `next/app/sitemap.xml/` are route handlers that run once at build time.
   Markdown renders as HAST converted to React elements, not an HTML string.
@@ -91,9 +99,9 @@ or Svelte config, or a Svelte package reappearing in a diff is a regression.
   equivalents for every interactive element.
 - **N6 XSS and injection.** The sinks under `next/src/components/` and
   `next/src/content/` are the JSON-LD `<script>` blocks (`article.tsx`,
-  `BlogHome.tsx`, `PostsListPage.tsx`), the hero and post-card cover HTML
-  (`article.tsx`, `PostCard.tsx`), Pagefind excerpts (`SearchPage.tsx`) and
-  Mermaid SVG (`Mermaid.tsx`). A new `dangerouslySetInnerHTML` or `innerHTML`
+  `PostIndex.tsx`), Pagefind excerpts (`PostFilter.tsx`), the theme script
+  before first paint (`next/src/shell/document.tsx`) and Mermaid SVG
+  (`Mermaid.tsx`). A new `dangerouslySetInnerHTML` or `innerHTML`
   use anywhere is a sink to review the same way. Injected values must be
   build-time content or the site's own schema, never user-controlled data.
 - **N7 i18n integrity.** New UI strings go into BOTH `messages/en.json` and
@@ -101,9 +109,10 @@ or Svelte config, or a Svelte package reappearing in a diff is a regression.
   messages, not hardcoded.
 - **N8 Tailwind v4.** Theme tokens live in `@theme {}` inside `src/app.css`
   (imported by `next/app/globals.css`). Tailwind runs through
-  `next/postcss.config.mjs`; there is no `tailwind.config.*`. Custom utilities
-  use `@utility`. Flag v3 patterns: `@tailwind base`, a JS config,
-  `@layer components` for utilities.
+  `next/postcss.config.mjs`; there is no `tailwind.config.*`. Colour tokens
+  are `light-dark()` values in `:root`; page styles are plain classes inside
+  `@layer components` under `next/app/styles/`. Flag v3 patterns:
+  `@tailwind base`, a JS config.
 
 ### Markdown and content changes
 
@@ -111,7 +120,8 @@ or Svelte config, or a Svelte package reappearing in a diff is a regression.
   `updated`, `tags`, `category`, `lang` and `draft`. KO posts add
   `source_lang`, `source_slug`, `source_updated` and `translation_date`.
   `readingTime` is never set by hand:
-  `next/src/markdown/plugins/remark-reading-time.ts` computes it at build time.
+  `next/src/markdown/reading-time.ts` computes it at build time. No field
+  names an image.
 - **C2 EN/KO parity.** A KO post's `source_slug` resolves to a real EN slug;
   `category` and `tags` stay consistent across the pair.
 - **C3 Mermaid.** Diagrams are standard `mermaid` code fences;
@@ -139,9 +149,11 @@ or Svelte config, or a Svelte package reappearing in a diff is a regression.
 - The thin root package plus the `next/` workspace package is the current
   layout. Collapsing `next/` into the root is a tracked follow-up, not a
   finding, and the root-level shared inputs above are imported on purpose.
-- Category filtering on `/posts` is client-side `useState` with no URL params,
-  a deliberate static-export choice. Do not suggest server-side or URL-based
-  filtering; it would force prerendering every category combination.
+- The index filter runs in the browser and lives in the address (`?q=`,
+  `?category=`, `?tag=`), read after load. Do not suggest moving it out of the
+  address or prerendering a page per category or tag.
+- One share card, `public/og.png`, serves every page. Do not ask for per-post
+  images.
 - Prerendered HTML and the Pagefind index under `next/build/` are expected
   build artifacts, not misconfiguration.
 - `deno.lock` and `pnpm-lock.yaml` coexist on purpose: deno runs the B3
@@ -167,7 +179,8 @@ hook (`.husky/pre-push`) runs the same set except the snapshot check, plus a
 | `src/lib/data/system-snapshot.json`      | `deno task snapshot:3b:check`                   |
 | Root `package.json` dependencies         | `deno install --frozen --node-modules-dir=none` |
 
-`build` is the Next build then Pagefind; `check` compiles Paraglide then runs
-`tsc --noEmit` in `next/`. CI has no test suite. A change to
+`build` is the Next build, then `scripts/build-markdown.mjs`, then Pagefind;
+`check` runs the contrast gate (`scripts/check-contrast.mjs`), compiles
+Paraglide, then runs `tsc --noEmit` in `next/`. CI has no test suite. A change to
 `scripts/audit-posts.ts` or `scripts/sync-from-3b.ts` runs the command in the
 header of its `.test.ts` file.

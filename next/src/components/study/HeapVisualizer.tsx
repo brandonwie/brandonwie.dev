@@ -196,9 +196,8 @@ export default function HeapVisualizer({ copy }: { copy: HeapVisualizerCopy }) {
 		return copy.statusLabels.settled;
 	}
 
-	// Shell state inks (inside `.pg-study`: gold → amber, foam → green,
-	// muted → worn, bg → glass). `new` is reverse video (amber fill, glass
-	// text), `swap` an amber dashed border, `min` (root) green, `set` worn.
+	// `new` is reverse video (gold fill, `--bg` text), `swap` a gold dashed
+	// border, `min` (root) foam, `set` muted.
 	function statusClass(status: NodeStatus): string {
 		if (status === 'inserted') return 'border-gold bg-gold text-bg';
 		if (status === 'swapped') return 'border-gold border-dashed bg-bg text-gold';
@@ -249,8 +248,8 @@ export default function HeapVisualizer({ copy }: { copy: HeapVisualizerCopy }) {
 				</span>
 				<div className="mt-2 overflow-x-auto">
 					<KeyedMotion className="flex min-w-full gap-2">
-						<div className="min-h-16 min-w-[2.75rem] flex-1 border border-line border-dashed bg-bg p-1 text-center opacity-50">
-							<span className="block font-mono text-[10px] text-faint">0</span>
+						<div className="min-h-16 min-w-[2.75rem] flex-1 border border-line border-dashed bg-bg p-1 text-center">
+							<span className="block font-mono text-xs text-faint">0</span>
 							<span className="mt-3 block font-mono text-xs text-faint">{copy.emptyLabel}</span>
 						</div>
 						{arrayCells.map((cell) => (
@@ -263,11 +262,11 @@ export default function HeapVisualizer({ copy }: { copy: HeapVisualizerCopy }) {
 								className={`min-h-16 min-w-[2.75rem] flex-1 border p-1 text-center font-mono text-sm motion-reduce:transition-none ${statusClass(cell.node.status)}`}
 							>
 								<span
-									className={`block text-[10px] ${cell.node.status === 'inserted' ? 'text-bg' : 'text-faint'}`}
+									className={`block text-xs ${cell.node.status === 'inserted' ? 'text-bg' : 'text-faint'}`}
 								>
 									{cell.index}
 								</span>
-								<span className="block text-[10px] uppercase">{statusLabel(cell.node.status)}</span>
+								<span className="block text-xs uppercase">{statusLabel(cell.node.status)}</span>
 								<span>{cell.node.value}</span>
 							</div>
 						))}

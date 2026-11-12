@@ -2,7 +2,7 @@ import * as m from '../paraglide/messages.js';
 import type { Locale } from './locale';
 
 /**
- * Locale-resolved UI copy for the Next candidate.
+ * Locale-resolved UI copy.
  *
  * WHY EVERY CALL PASSES `{ locale }`. Paraglide messages resolve as
  * `experimentalStaticLocale ?? options.locale ?? getLocale()`. Under
@@ -16,49 +16,13 @@ import type { Locale } from './locale';
  * EDITING A MESSAGE DURING `pnpm dev` REQUIRES A RESTART. The compile step runs
  * once per invocation and there is no watcher, so the dev server sees the
  * compiled output under `src/paraglide/` but never the `messages/*.json` it came
- * from. That is the cost of the CLI form the Step 1 spike proved; the Vite
- * plugin the Svelte side uses has no Next equivalent.
- *
- * SLICE_1_SCAFFOLDING is copy that exists only in this temporary shell and has
- * no message key on the Svelte side, because the Svelte site does not render
- * it: a breadcrumb label, a reading-time suffix. Adding permanent catalogue
- * keys for strings that Slice 3 deletes when it ports the real shell would
- * leave dead keys behind, so they stay here, named, until the surface that
- * owns them arrives.
- *
- * FOUR OF THOSE KEYS ARE NOW GONE. Slice 3 PR 2a ported the real header and
- * footer, so `brandLabel`, `article`, `footer` and `footerText` were deleted
- * rather than migrated: the header's brand label, the Slice 1 article link, and
- * the placeholder footer they described no longer exist. The chrome resolves
- * from the catalogue instead — every message the Svelte header, footer,
- * language toggle and nav reference already resolves in both `messages/en.json`
- * and `messages/ko.json`, so this cost no catalogue expansion. `commentsStatus`
- * was deleted in Slice 5: it told no-JS readers the Giscus runtime was still
- * unmigrated, which was no longer true once `Giscus.tsx` shipped — and the
- * baseline renders no status text at all. The remaining scaffolding keys
- * belong to the article surface.
+ * from.
  */
-const SLICE_1_SCAFFOLDING = {
-	en: {
-		breadcrumb: 'Breadcrumb',
-		readingTime: 'min read',
-		category: 'Category',
-		switchLabel: 'Read this article in Korean',
-		switchText: '한국어',
-	},
-	ko: {
-		breadcrumb: '현재 위치',
-		readingTime: '분 읽기',
-		category: '카테고리',
-		switchLabel: '이 글을 영어로 읽기',
-		switchText: 'English',
-	},
-} as const;
 
 /**
- * Locale-resolved copy for the global chrome: header, nav, footer and the
- * language toggle. One call site per message, each carrying `{ locale }` for
- * the reason this module's header gives.
+ * Locale-resolved copy for the site frame: header, footer, language and theme
+ * switches, and the shortcut list. One call site per message, each carrying
+ * `{ locale }` for the reason this module's header gives.
  *
  * `nav` is keyed by `NavKey` so `@/data/nav` can stay pure path logic with no
  * message imports. The keys are static property references, not `m[key]`, so
@@ -68,177 +32,86 @@ export function shellCopy(locale: Locale) {
 	return {
 		skip: m.skip_to_content({}, { locale }),
 		navigation: m.primary_navigation({}, { locale }),
-		home: m.palette_nav_home({}, { locale }),
 		search: m.search_title({}, { locale }),
 		nav: {
-			about: m.nav_about({}, { locale }),
 			posts: m.nav_posts({}, { locale }),
 			study: m.nav_study({}, { locale }),
 			system: m.nav_system({}, { locale }),
+			about: m.nav_about({}, { locale }),
 		},
-		navProjects: m.nav_projects({}, { locale }),
-		navTags: m.nav_tags({}, { locale }),
-		navContact: m.nav_contact({}, { locale }),
 		switchToEnglish: m.language_switch_to_english({}, { locale }),
 		switchToKorean: m.language_switch_to_korean({}, { locale }),
-		footerTagline: m.footer_tagline({}, { locale }),
+		theme: m.theme_toggle({}, { locale }),
 		footerNavigation: m.footer_navigation_label({}, { locale }),
-		footerColSite: m.footer_col_site({}, { locale }),
-		footerColMore: m.footer_col_more({}, { locale }),
-		footerColConnect: m.footer_col_connect({}, { locale }),
-		footerCopyPrimary: m.footer_copy_primary({}, { locale }),
-		footerCopySecondary: m.footer_copy_secondary({}, { locale }),
+		feed: m.social_feed_title({}, { locale }),
+		shortcuts: {
+			title: m.shortcuts_title({}, { locale }),
+			rows: m.shortcuts_rows({}, { locale }),
+			open: m.shortcuts_open({}, { locale }),
+			help: m.shortcuts_help({}, { locale }),
+			close: m.close({}, { locale }),
+		},
 	};
 }
 
 export type ShellCopy = ReturnType<typeof shellCopy>;
 
-export function articleCopy(locale: Locale) {
-	const scaffold = SLICE_1_SCAFFOLDING[locale];
+/**
+ * Copy for the post index on the home page. The count and tag templates keep
+ * their `{…}` slots: the filter fills them in the browser, where the numbers
+ * change.
+ */
+export function indexCopy(locale: Locale) {
 	return {
-		home: m.palette_nav_home({}, { locale }),
+		bio: m.blog_bio({}, { locale }),
+		aboutMore: m.about_more({}, { locale }),
+		minutes: (minutes: number) => m.minutes_short({ minutes }, { locale }),
+		filter: {
+			searchLabel: m.search_posts({}, { locale }),
+			searchHint: m.search_hint({}, { locale }),
+			categories: m.category_filter({}, { locale }),
+			all: m.all_categories({}, { locale }),
+			count: m.posts_count({ count: '{count}' }, { locale }),
+			countFiltered: m.posts_count_filtered({ shown: '{shown}', total: '{total}' }, { locale }),
+			none: m.posts_none({}, { locale }),
+			clear: m.clear_filters({}, { locale }),
+			removeTag: m.tag_filter_remove({ tag: '{tag}' }, { locale }),
+			fullTextUnavailable: m.full_text_unavailable({}, { locale }),
+		},
+	};
+}
+
+export type IndexCopy = ReturnType<typeof indexCopy>;
+
+/** Copy for a post page. */
+export function articleCopy(locale: Locale) {
+	return {
+		allPosts: m.all_posts({}, { locale }),
 		published: m.published({}, { locale }),
 		updated: m.updated({}, { locale }),
-		tags: m.nav_tags({}, { locale }),
+		readingTimeLabel: m.reading_time_label({}, { locale }),
+		readingTime: (minutes: number) => m.reading_time({ minutes }, { locale }),
+		category: m.category({}, { locale }),
+		tags: m.tags({}, { locale }),
 		translationNotice: m.translation_notice({}, { locale }),
 		viewInEnglish: m.view_in_english({}, { locale }),
 		toc: m.on_this_page({}, { locale }),
-		comments: m.comments_title({}, { locale }),
-		breadcrumb: scaffold.breadcrumb,
-		readingTime: scaffold.readingTime,
-		category: scaffold.category,
-		switchLabel: scaffold.switchLabel,
-		switchText: scaffold.switchText,
-		backToPosts: m.back_to_posts({}, { locale }),
 		readingProgress: m.reading_progress({}, { locale }),
+		share: m.share({}, { locale }),
+		email: m.email({}, { locale }),
 		copyLink: m.copy_link({}, { locale }),
 		copied: m.copied({}, { locale }),
-		codeCopy: locale === 'ko' ? '복사' : 'Copy',
-		codeCopied: m.copied({}, { locale }),
-		readingTimeWithMinutes: (minutes: number) => m.reading_time({ minutes }, { locale }),
+		codeCopy: m.code_copy({}, { locale }),
 		alsoPublishedOn: m.also_published_on({}, { locale }),
+		postNavigation: m.post_navigation({}, { locale }),
+		newer: m.newer_post({}, { locale }),
+		older: m.older_post({}, { locale }),
+		moreIn: (category: string) => m.more_in_category({ category }, { locale }),
+		comments: m.comments_title({}, { locale }),
 	};
 }
 
 export type ArticleCopy = ReturnType<typeof articleCopy>;
-
-export function homeCopy(locale: Locale) {
-	return {
-		pageTitle: m.site_title({}, { locale }),
-		pageDescription: m.site_description({}, { locale }),
-		tagline: m.blog_tagline({}, { locale }),
-		bio: m.blog_bio({}, { locale }),
-		projects: m.palette_nav_projects({}, { locale }),
-		posts: m.palette_nav_posts({}, { locale }),
-		about: m.palette_nav_about({}, { locale }),
-		heroStatsLabel: m.hero_stats_label({}, { locale }),
-		heroStatEventsLabel: m.hero_stat_events_label({}, { locale }),
-		heroStatPostsLabel: m.hero_stat_posts_label({}, { locale }),
-		heroStatServicesLabel: m.hero_stat_services_label({}, { locale }),
-		heroStatLanguagesLabel: m.hero_stat_languages_label({}, { locale }),
-		workSection: m.work_section({}, { locale }),
-		archcalendarSubtitle: m.archcalendar_subtitle({}, { locale }),
-		archcalendarDescription: m.archcalendar_description({}, { locale }),
-		system3bCardSubtitle: m.system_3b_card_subtitle({}, { locale }),
-		system3bTitle: m.system_3b_title({}, { locale }),
-		system3bCardDescription: m.system_3b_card_description({}, { locale }),
-		portfolioSubtitle: m.portfolio_subtitle({}, { locale }),
-		portfolioDescription: m.portfolio_description({}, { locale }),
-		recentPosts: m.recent_posts({}, { locale }),
-		seeAllPosts: (count: number) => m.see_all_posts({ count }, { locale }),
-		noPosts: m.no_posts({}, { locale }),
-	};
-}
-
-export type HomeCopy = ReturnType<typeof homeCopy>;
-
-export function postsListCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.posts_title({}, { locale })} | Brandon Wie`,
-		pageHeading: m.posts_title({}, { locale }),
-		pageDescription: m.posts_description({}, { locale }),
-		categoryFilter: m.category_filter({}, { locale }),
-		allCategories: m.all_categories({}, { locale }),
-		/** The count line's unfiltered label: `// 167 · all` / `// 167 · 전체` (B4). */
-		countAll: m.posts_count_all({}, { locale }),
-		noPosts: m.no_posts({}, { locale }),
-	};
-}
-
-export type PostsListCopy = ReturnType<typeof postsListCopy>;
-
-export function tagsCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.tags_meta_title({}, { locale })} | Brandon Wie`,
-		pageDescription: m.tags_meta_description({}, { locale }),
-		eyebrow: m.tags_eyebrow({}, { locale }),
-		title: m.tags_title({}, { locale }),
-		intro: (tags: number, posts: number) => m.tags_intro({ tags, posts }, { locale }),
-		empty: m.tags_empty({}, { locale }),
-		cloudHeading: m.tags_cloud_heading({}, { locale }),
-		allHeading: m.tags_all_heading({}, { locale }),
-		count: (count: number) => m.tags_count({ count }, { locale }),
-	};
-}
-
-export type TagsCopy = ReturnType<typeof tagsCopy>;
-
-export function searchCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.search_title({}, { locale })} | Brandon Wie`,
-		pageHeading: m.search_title({}, { locale }),
-		pageDescription: m.site_description({}, { locale }),
-		searchPlaceholder: m.search_placeholder({}, { locale }),
-		resultsCount: (count: number) => m.search_results_count({ count }, { locale }),
-		noResults: (query: string) => m.search_no_results({ query }, { locale }),
-		devNotice: m.search_dev_notice({}, { locale }),
-		loading: m.search_loading({}, { locale }),
-		resultsStatus: m.search_results_status({}, { locale }),
-		loadError:
-			locale === 'ko' ? '검색 인덱스를 불러오지 못했습니다.' : 'Failed to load search index.',
-		queryError:
-			locale === 'ko' ? '검색 중 오류가 발생했습니다.' : 'An error occurred while searching.',
-	};
-}
-
-export type SearchCopy = ReturnType<typeof searchCopy>;
-
-export function aboutCopy(locale: Locale) {
-	return {
-		backToHome: m.back_to_home({}, { locale }),
-		navAbout: m.nav_about({}, { locale }),
-		terminalSignal: m.about_terminal_signal({}, { locale }),
-		terminalLoading: m.about_terminal_loading({}, { locale }),
-		portraitCaption: m.about_portrait_caption({}, { locale }),
-	};
-}
-
-export type AboutCopy = ReturnType<typeof aboutCopy>;
-
-export function projectsCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.projects_meta_title({}, { locale })} | Brandon Wie`,
-		metaDescription: m.projects_meta_description({}, { locale }),
-		eyebrow: m.projects_eyebrow({}, { locale }),
-		title: m.projects_title({}, { locale }),
-		intro: m.projects_intro({}, { locale }),
-	};
-}
-
-export type ProjectsCopy = ReturnType<typeof projectsCopy>;
-
-export function contactCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.contact_meta_title({}, { locale })} | Brandon Wie`,
-		metaDescription: m.contact_meta_description({}, { locale }),
-		eyebrow: m.contact_eyebrow({}, { locale }),
-		title: m.contact_title({}, { locale }),
-		intro: m.contact_intro({}, { locale }),
-		channelsHeading: m.contact_channels_heading({}, { locale }),
-	};
-}
-
-export type ContactCopy = ReturnType<typeof contactCopy>;
 
 export function systemCopy(locale: Locale) {
 	return {

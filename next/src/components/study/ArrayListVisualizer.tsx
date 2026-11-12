@@ -123,7 +123,7 @@ export default function ArrayListVisualizer({ copy }: { copy: ArrayListVisualize
 	}
 
 	function statusClass(status: ItemStatus): string {
-		if (status === 'inserted') return 'border-accent bg-highlight-med text-accent';
+		if (status === 'inserted') return 'border-accent bg-surface text-accent';
 		if (status === 'shifted') return 'border-gold border-dashed text-gold';
 		if (status === 'copied') return 'border-foam border-double text-foam';
 		return 'border-line text-muted';
@@ -193,10 +193,10 @@ export default function ArrayListVisualizer({ copy }: { copy: ArrayListVisualize
 							data-motion-enter={`scale:${enterDuration}`}
 							className={`min-h-16 border bg-bg p-1 text-center font-mono text-sm motion-reduce:transition-none ${statusClass(item.status)}`}
 						>
-							<span className="block text-[10px] text-faint">
+							<span className="block text-xs text-faint">
 								{copy.indexPrefix} {slot}
 							</span>
-							<span className="block text-[10px] uppercase">{statusLabel(item.status)}</span>
+							<span className="block text-xs uppercase">{statusLabel(item.status)}</span>
 							<span>{item.label}</span>
 						</div>
 					))}
@@ -205,7 +205,7 @@ export default function ArrayListVisualizer({ copy }: { copy: ArrayListVisualize
 							key={`empty-${offset}`}
 							className="min-h-16 border border-line bg-bg p-1 text-center"
 						>
-							<span className="block font-mono text-[10px] text-faint">
+							<span className="block font-mono text-xs text-faint">
 								{copy.indexPrefix} {items.length + offset}
 							</span>
 							<span className="mt-3 block font-mono text-xs text-faint">{copy.emptyLabel}</span>

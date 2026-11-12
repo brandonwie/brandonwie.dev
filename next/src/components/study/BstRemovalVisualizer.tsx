@@ -92,9 +92,8 @@ export default function BstRemovalVisualizer({ copy }: { copy: BstRemovalCopy })
 		}
 	}
 
-	// Shell state inks (inside `.pg-study`: gold → amber, foam → green,
-	// faint → faint, muted → worn). Target and promoted are amber bold, the
-	// successor green bold, and the removed node faint with its edge dropped.
+	// Target and promoted are gold, the successor foam, and the removed node
+	// faint with its edge dropped.
 	function nodeClass(role: Role | null, removed: boolean): string {
 		if (removed) return 'fill-bg stroke-faint';
 		if (role === 'target') return 'fill-bg stroke-gold';

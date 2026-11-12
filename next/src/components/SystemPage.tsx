@@ -2,73 +2,39 @@ import { AppLink } from '@/components/AppLink';
 import { base } from '@/data/nav';
 import { systemCopy } from '@/i18n/copy';
 import type { Locale } from '@/i18n/locale';
-import { TermPrompt } from '@/shell/TermPrompt';
-import { cwdFor } from '@/shell/terminal-path';
 
 export interface SystemPageProps {
 	locale?: Locale;
 }
 
 /**
- * /system landing page as a terminal session: `cat index` prints the eyebrow,
- * title and intro, `ls -l` lists the one child route (the B3 hub), and
- * `cat b3/.description` prints the existing meta description.
+ * /system landing page: the title and intro, then one row linking to its only
+ * child route (the B3 hub) with that hub's description.
  *
  * The shell owns `<main id="main-content">`, so this renders a plain wrapper.
- * Prompt commands and the `ls -l` columns are terminal syntax and stay English
- * in both locales; every sentence comes from `systemCopy`.
  */
 export function SystemPage({ locale = 'en' }: SystemPageProps) {
 	const copy = systemCopy(locale);
-	const root = `${base(locale)}/system`;
-	const hubHref = `${root}/b3`;
-	const cwd = cwdFor(root);
+	const hubHref = `${base(locale)}/system/b3`;
 
 	return (
-		<div className="pg-system">
-			<TermPrompt cwd={cwd} command="cat index" flags={`--lang ${locale}`} />
-			<div className="pg-system__intro">
-				<p className="term-eyebrow">{copy.subtitle}</p>
-				<div className="term-worn pg-system__ttl">
-					<h1 className="term-ttl">{copy.title}</h1>
-				</div>
-				<p className="pg-system__lede">{copy.indexIntro}</p>
-			</div>
+		<div className="system">
+			<header className="system__head">
+				<p className="eyebrow">{copy.subtitle}</p>
+				<h1>{copy.title}</h1>
+				<p className="system__lede">{copy.indexIntro}</p>
+			</header>
 
-			<div className="term-gap" />
-			<TermPrompt cwd={cwd} command="ls -l" />
-			<div className="term-frame pg-system__ls">
-				<span className="term-frame__title" aria-hidden="true">
-					{cwd}/ <span className="dim">· 1 entry</span>
-				</span>
-				<p className="pg-system__total" aria-hidden="true">
-					total 1
-				</p>
-				<div className="pg-system__row">
-					<span className="pg-system__perm" aria-hidden="true">
-						drwxr-xr-x
-					</span>
-					<span className="pg-system__own" aria-hidden="true">
-						brandon
-					</span>
-					<span className="pg-system__name" aria-hidden="true">
-						b3/
-					</span>
-					<AppLink href={hubHref} className="term-lnk pg-system__cta">
-						<span className="n" aria-hidden="true">
-							[1]
+			<ul className="system__list">
+				<li>
+					<AppLink href={hubHref} className="system__row" data-row>
+						<span className="system__name">
+							{copy.openHub} <span aria-hidden="true">→</span>
 						</span>
-						{copy.openHub}{' '}
-						<span className="pg-system__arr" aria-hidden="true">
-							→
-						</span>
+						<span className="system__desc">{copy.pageDescription}</span>
 					</AppLink>
-				</div>
-			</div>
-
-			<div className="term-gap" />
-			<TermPrompt cwd={cwd} command="cat b3/.description" />
-			<p className="pg-system__desc">{copy.pageDescription}</p>
+				</li>
+			</ul>
 		</div>
 	);
 }

@@ -19,13 +19,12 @@ export function formatKoreanDate(dateStr: string): string {
 }
 
 /**
- * Format date for post cards and list pages (short month: "Sep 3, 2026" / "2026.09.03").
- * Evaluated with UTC timezone for cross-platform deterministic builds.
+ * Month and day for an index row under its year heading ("Sep 3" / "09.03").
+ * UTC for determinism.
  */
-export function formatDateShort(dateStr: string, locale: Locale): string {
-	if (locale === 'ko') return formatKoreanDate(dateStr);
+export function formatMonthDay(dateStr: string, locale: Locale): string {
+	if (locale === 'ko') return formatKoreanDate(dateStr).slice(5);
 	return new Date(dateStr).toLocaleDateString('en-US', {
-		year: 'numeric',
 		month: 'short',
 		day: 'numeric',
 		timeZone: 'UTC',
