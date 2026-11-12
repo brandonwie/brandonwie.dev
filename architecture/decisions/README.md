@@ -10,16 +10,16 @@ related:
 
 # Architecture Decision Records
 
-> **Historical (SvelteKit era).** This document describes the SvelteKit app as of June 2026. The site moved to a Next.js static export on 2026-09-20, so its file paths, routes and pipeline no longer match the code. Use the project `CLAUDE.md` as the current map, and re-check any item here against the Next.js code before acting on it.
+> ADR-0001 is historical (SvelteKit era, June 2026): its file paths, routes and pipeline no longer match the code. ADR-0002 describes the current site.
 
 ADRs for the brandonwie.dev renewal. Each records a non-trivial, hard-to-reverse
 decision: context, options with pros/cons, the chosen option + reasoning, and
 consequences. Numbered sequentially; never renumbered.
 
-| ADR                                           | Title                                                     | Status       |
-| --------------------------------------------- | --------------------------------------------------------- | ------------ |
-| [0001](./0001-terminal-vs-command-palette.md) | Terminal view vs Cmd+P command palette as primary surface | Accepted (B) |
-| [0002](./0002-v2-text-first-blog.md)          | V2: text-first blog, one index, two themes, no images     | Accepted (B) |
+| ADR                                           | Title                                                     | Status             |
+| --------------------------------------------- | --------------------------------------------------------- | ------------------ |
+| [0001](./0001-terminal-vs-command-palette.md) | Terminal view vs Cmd+P command palette as primary surface | Superseded by 0002 |
+| [0002](./0002-v2-text-first-blog.md)          | V2: text-first blog, one index, two themes, no images     | Accepted (B)       |
 
 ## Conventions
 

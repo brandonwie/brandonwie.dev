@@ -26,11 +26,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
 /** Matches `/ko` as a path segment, so `/koala` is not treated as Korean. */
 const KO_PREFIX = /^\/ko(?:\/|$)/;
 
-/** Locale inferred from a pathname (`/ko` segment → ko, else en). */
-export function localeOf(pathname: string): Locale {
-	return KO_PREFIX.test(pathname) ? 'ko' : 'en';
-}
-
 /** Path prefix for a locale: '' for en, '/ko' for ko. */
 export function base(locale: Locale): string {
 	return locale === 'ko' ? '/ko' : '';

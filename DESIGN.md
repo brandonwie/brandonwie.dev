@@ -160,18 +160,16 @@ components:
     textColor: '{colors.muted-dark}'
     typography: '{typography.label}'
     rounded: '{rounded.sm}'
-  panel:
+  row-hover:
     backgroundColor: '{colors.surface}'
     textColor: '{colors.ink}'
-    rounded: '{rounded.md}'
-  panel-dark:
+  row-hover-dark:
     backgroundColor: '{colors.surface-dark}'
     textColor: '{colors.ink-dark}'
-    rounded: '{rounded.md}'
-  row-hover:
+  control-hover:
     backgroundColor: '{colors.surface-2}'
     textColor: '{colors.ink}'
-  row-hover-dark:
+  control-hover-dark:
     backgroundColor: '{colors.surface-2-dark}'
     textColor: '{colors.ink-dark}'
   code-block:
@@ -235,22 +233,22 @@ the contrast of the tokens themselves with `node scripts/check-contrast.mjs`
 Each role has a light value and a dark value. The names below are the CSS
 custom properties.
 
-| Role          | Token             | Light     | Dark      | Use                                   |
-| ------------- | ----------------- | --------- | --------- | ------------------------------------- |
-| Page          | `--bg`            | `#FBFAF6` | `#141319` | The page                              |
-| Surface       | `--surface`       | `#F3F1EA` | `#1C1B23` | Panels, tags, table heads, code bars  |
-| Surface 2     | `--surface-2`     | `#E9E6DD` | `#272530` | Hover and pressed rows                |
-| Code          | `--code-bg`       | `#FFFFFF` | `#0F0E13` | Code blocks                           |
-| Line          | `--line`          | `#DCD8CE` | `#302E3B` | 1px dividers                          |
-| Line strong   | `--line-strong`   | `#8B877C` | `#6A6779` | An edge that is the only cue (inputs) |
-| Ink           | `--ink`           | `#1A1920` | `#EBE9F3` | Body text and headings                |
-| Muted         | `--muted`         | `#494653` | `#B9B5C9` | Secondary text                        |
-| Faint         | `--faint`         | `#676472` | `#938FA7` | Small labels and metadata             |
-| Accent        | `--accent`        | `#1D6076` | `#9CCFD8` | Links, focus, the active state        |
-| Accent strong | `--accent-strong` | `#134A5C` | `#C3E9EF` | A link under the pointer              |
-| OK            | `--ok`            | `#256B3C` | `#9FD6A7` | Success                               |
-| Warn          | `--warn`          | `#8A5700` | `#F6C177` | Warnings (`--gold`)                   |
-| Critical      | `--crit`          | `#A23B5C` | `#F0839F` | Errors (`--love`)                     |
+| Role          | Token             | Light     | Dark      | Use                                     |
+| ------------- | ----------------- | --------- | --------- | --------------------------------------- |
+| Page          | `--bg`            | `#FBFAF6` | `#141319` | The page                                |
+| Surface       | `--surface`       | `#F3F1EA` | `#1C1B23` | Keys, inline code, code bars, row hover |
+| Surface 2     | `--surface-2`     | `#E9E6DD` | `#272530` | Hover of a control on a surface         |
+| Code          | `--code-bg`       | `#FFFFFF` | `#0F0E13` | Code blocks                             |
+| Line          | `--line`          | `#DCD8CE` | `#302E3B` | 1px dividers                            |
+| Line strong   | `--line-strong`   | `#8B877C` | `#6A6779` | An edge that is the only cue (inputs)   |
+| Ink           | `--ink`           | `#1A1920` | `#EBE9F3` | Body text and headings                  |
+| Muted         | `--muted`         | `#494653` | `#B9B5C9` | Secondary text                          |
+| Faint         | `--faint`         | `#676472` | `#938FA7` | Small labels and metadata               |
+| Accent        | `--accent`        | `#1D6076` | `#9CCFD8` | Links, focus, the active state          |
+| Accent strong | `--accent-strong` | `#134A5C` | `#C3E9EF` | A link under the pointer                |
+| OK            | `--ok`            | `#256B3C` | `#9FD6A7` | Success                                 |
+| Warn          | `--warn`          | `#8A5700` | `#F6C177` | Warnings (`--gold`)                     |
+| Critical      | `--crit`          | `#A23B5C` | `#F0839F` | Errors (`--love`)                       |
 
 Contrast rules, enforced by `scripts/check-contrast.mjs`:
 
@@ -294,11 +292,12 @@ column.
 ## Elevation & Depth
 
 Flat. Surfaces are separated by 1px lines and by the surface colours. Nothing
-has a shadow or a glow. The sticky header blurs what scrolls under it.
+has a glow, and the shortcut dialog is the one element with a shadow, because
+it sits over the page. The sticky header blurs what scrolls under it.
 
 ## Shapes
 
-Panels, inputs and code blocks have an 8px radius, buttons 6px. Small inline
+Inputs, bordered boxes and code blocks have an 8px radius, buttons 6px. Small inline
 pieces (inline code, keys) have 4px. Tags are pills.
 
 ## Components
@@ -312,7 +311,6 @@ pieces (inline code, keys) have 4px. Tags are pills.
   accent under the pointer. There is no filled variant.
 - **kbd:** a key. The interface shows its single-key shortcuts next to the
   controls they trigger, and `?` lists them.
-- **panel:** a bordered surface for a group that needs to stand apart.
 - **code-block:** a figure with a bar (the language, a copy button) above the
   code. Syntax colours come from the GitHub light and dark themes.
 - **study-btn, study-card, study-recall:** the controls of the study

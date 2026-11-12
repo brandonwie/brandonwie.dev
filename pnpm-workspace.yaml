@@ -1,5 +1,5 @@
 # The repository root is a thin package: shared content (src/content/posts),
-# the 3B sync and snapshot scripts, and the verification harness. `next/` is
+# and the 3B sync and snapshot scripts. `next/` is
 # the Next.js app; it builds the site to `next/build`, the Cloudflare Pages
 # output directory.
 #

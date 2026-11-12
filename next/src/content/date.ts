@@ -32,20 +32,6 @@ export function formatMonthDay(dateStr: string, locale: Locale): string {
 }
 
 /**
- * Format date for post cards and list pages (short month: "Sep 3, 2026" / "2026.09.03").
- * Evaluated with UTC timezone for cross-platform deterministic builds.
- */
-export function formatDateShort(dateStr: string, locale: Locale): string {
-	if (locale === 'ko') return formatKoreanDate(dateStr);
-	return new Date(dateStr).toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-		timeZone: 'UTC',
-	});
-}
-
-/**
  * Format date for the post detail header (long month: "September 3, 2026" /
  * "2026.09.03"), matching SvelteKit's formatDateLong. UTC for determinism.
  */

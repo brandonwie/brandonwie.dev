@@ -26,7 +26,7 @@ images" **Supersedes:** the palette-first direction of
 - **Where:** the whole site (`next/`, `src/app.css`, `public/`, `scripts/`).
 - **What existed:** a dark-only "terminal" design. Every page drew shell
   prompts, ASCII frames and block meters around its content. Body text was
-  14px monospace. Finding a post took one of four surfaces: the home page (10
+  14px monospace. Finding a post took one of five surfaces: the home page (10
   posts), `/posts` with a category sidebar, `/tags`, `/search`, or the
   Cmd/Ctrl+K palette.
 - **Images:** no post had an image in its body. The repository still carried
@@ -46,7 +46,7 @@ images" **Supersedes:** the palette-first direction of
 
 | Option                                             | Pros                                              | Cons                                                                              | Chosen |
 | -------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------- | :----: |
-| A. Keep the terminal design, raise sizes           | Smallest change; keeps the signature look         | Decoration still competes with the text; four ways to find a post; no light theme |   ✗    |
+| A. Keep the terminal design, raise sizes           | Smallest change; keeps the signature look         | Decoration still competes with the text; five ways to find a post; no light theme |   ✗    |
 | B. Text-first V2: one index, two themes, no images | Readable; one way to find a post; far fewer parts | Loses the terminal identity; every page needs new styles                          |   ✅   |
 | C. B, but keep per-post share cards                | Distinct preview per post on social sites         | Keeps the generator, its fonts, two dependencies and 169 files to regenerate      |   ✗    |
 
@@ -55,8 +55,8 @@ images" **Supersedes:** the palette-first direction of
 Option B.
 
 1. **One index.** The home page lists every post in year groups. One search box
-   filters titles, descriptions and tags at once and adds full-text hits from
-   Pagefind. Category tabs and tag links filter the same list. The filter state
+   filters titles, categories and tags at once and adds full-text hits
+   (descriptions and bodies) from Pagefind. Category tabs and tag links filter the same list. The filter state
    lives in the address (`?q=`, `?category=`, `?tag=`). `/posts`, `/tags` and
    `/search` redirect to it.
 2. **No command palette.** Single keys replace it: `/` search, `j` `k` rows,
@@ -86,7 +86,8 @@ Option B.
 - **Cost:** readers who used Cmd/Ctrl+K must learn `/`. The header shows each
   key beside its control.
 - **Kept on purpose:** the talk deck stays a dark, animated presentation with
-  its four demo videos; its root carries `data-scheme="dark"`, which pins the
-  dark tokens in both site themes (`src/app.css`).
+  its two demo videos (each as mp4 and webm); its root carries
+  `data-scheme="dark"`, which pins the dark tokens in both site themes
+  (`src/app.css`). Its print view carries `data-scheme="light"`.
 - **Documents:** `DESIGN.md` holds the tokens and rules. `architecture/README.md`
   and `structure.yaml` stay historical (SvelteKit era).

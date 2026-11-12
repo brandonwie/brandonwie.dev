@@ -13,7 +13,7 @@ export type AppLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof L
  *
  * Matches SvelteKit's `data-sveltekit-preload-data="hover"` contract:
  * - When unhovered, `prefetch={false}` disables speculative viewport prefetching,
- *   preventing link-flooding on routes with many links (e.g. /tags, /posts).
+ *   preventing link-flooding on routes with many links (e.g. the home post index).
  * - On `onMouseEnter` or `onFocus`, `prefetch={null}` restores Next.js smart prefetch
  *   for the hovered/focused target ahead of the click.
  */

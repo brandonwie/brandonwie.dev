@@ -124,10 +124,6 @@ export function emptyFallbackReport(): FallbackReport {
 	return { kinds: [], edgeKinds: [] };
 }
 
-export function hasFallback(r: FallbackReport): boolean {
-	return r.kinds.length > 0 || r.edgeKinds.length > 0;
-}
-
 function kindStyleTracked(kind: string, report: FallbackReport): KindStyle {
 	const hit = KIND_STYLE[kind];
 	if (hit) return hit;

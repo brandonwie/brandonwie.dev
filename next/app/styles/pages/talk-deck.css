@@ -38,17 +38,9 @@
 		--crt-worn: var(--ink);
 		--crt-faint: var(--faint);
 		--crt-line: var(--line);
-		--crt-off: var(--surface-2);
 		--crt-amber: var(--accent);
 		--crt-green: var(--ok);
 		--font-term: var(--font-mono);
-		--bg2: var(--surface);
-		--panel: var(--surface);
-		--overlay: var(--surface-2);
-		--line2: var(--line-strong);
-		--highlight-low: var(--surface);
-		--highlight-med: var(--surface-2);
-		--highlight-high: var(--line);
 	}
 
 	.deck {
@@ -67,11 +59,8 @@
 	   keeps the plain tokens. */
 	.deck .deck-stage {
 		--bg: var(--crt-glass);
-		--bg2: var(--crt-glass);
 		--surface: var(--crt-glass);
-		--overlay: var(--crt-glass);
 		--line: var(--crt-line);
-		--line2: var(--crt-line);
 		--ink: var(--crt-hi);
 		--muted: var(--crt-worn);
 		--faint: var(--crt-faint);
@@ -84,22 +73,15 @@
 		--love: var(--crt-faint);
 		--crit: var(--crt-faint);
 		--color-bg: var(--crt-glass);
-		--color-bg2: var(--crt-glass);
 		--color-surface: var(--crt-glass);
-		--color-overlay: var(--crt-glass);
-		--color-highlight-med: var(--crt-glass);
 		--color-line: var(--crt-line);
-		--color-line2: var(--crt-line);
 		--color-ink: var(--crt-hi);
 		--color-muted: var(--crt-worn);
 		--color-faint: var(--crt-faint);
 		--color-foam: var(--crt-green);
-		--color-pine: var(--crt-green);
 		--color-accent: var(--crt-green);
 		--color-gold: var(--crt-amber);
 		--color-rose: var(--crt-amber);
-		--color-iris: var(--crt-hi);
-		--color-love: var(--crt-faint);
 		--color-crit: var(--crt-faint);
 		--font-sans: var(--font-term);
 		--font-mono: var(--font-term);
