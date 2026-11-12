@@ -1,6 +1,15 @@
 export const SITE_URL = 'https://brandonwie.dev';
 export const SITE_NAME = 'Brandon Wie';
 export const SITE_AUTHOR = 'Brandon Seokhyun Wie';
+
+/** Public profiles and the contact address. */
+export const SOCIAL = {
+	github: 'https://github.com/brandonwie',
+	linkedin: 'https://linkedin.com/in/brandonwie',
+	x: 'https://x.com/BrandonWie',
+	email: 'brandon@brandonwie.dev',
+} as const;
+
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default.png`;
 
 /** Root-relative fallback cover used when a post has no generated image yet. */

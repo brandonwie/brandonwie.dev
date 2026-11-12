@@ -12,7 +12,7 @@
 		"preview": "node scripts/serve-build.mjs next/build 4173",
 		"cf:preview": "pnpm build && wrangler pages dev next/build",
 		"search:preview": "corepack pnpm run build && corepack pnpm run preview",
-		"check": "pnpm check:next",
+		"check": "node scripts/check-contrast.mjs && pnpm check:next",
 		"check:next": "pnpm --filter brandonwie-dev-next check",
 		"sync": "deno run --allow-read --allow-write=src/content/posts --allow-env scripts/sync-from-3b.ts",
 		"sync:check": "deno run --allow-read --allow-env scripts/sync-from-3b.ts --check",
@@ -39,7 +39,6 @@
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@resvg/resvg-js": "^2.6.2",
-		"@tailwindcss/typography": "^0.5.20",
 		"@types/mdast": "^4.0.4",
 		"@types/node": "^26.6.5",
 		"eslint": "^10.13.0",

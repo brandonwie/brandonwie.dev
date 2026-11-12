@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 
 import { AppLink } from '@/components/AppLink';
-import { searchHref } from '@/data/nav';
+import { base } from '@/data/nav';
 import { searchCopy } from '@/i18n/copy';
 import { TermPrompt } from '@/shell/TermPrompt';
 import { cwdFor } from '@/shell/terminal-path';
@@ -222,7 +222,7 @@ export function SearchPage({ locale }: SearchPageProps) {
 		}
 	}
 
-	const cwd = cwdFor(searchHref(locale));
+	const cwd = cwdFor(`${base(locale)}/search`);
 	const initStatus = isDevMode ? (
 		<span className="text-crt-amber">skipped</span>
 	) : loadError ? (

@@ -3,40 +3,15 @@ import type { ReactNode } from 'react';
 
 import '../../app/globals.css';
 
-/**
- * Contract C13 — document shell and locale `lang` attribute.
- *
- * The SvelteKit original is two files with no Next equivalent:
- *
- *   `src/app.html`         the document template, including `<html lang="%lang%">`
- *   `src/hooks.server.ts`  a server hook that substitutes `%lang%` at prerender
- *
- * Next has no server hook under `output: 'export'`, and a root layout cannot
- * read the current route segment, so the locale is a parameter of this shell
- * and each root layout passes its own.
- *
- * Keeping the shell in ONE module rather than duplicating it per locale root
- * layout is deliberate: C13 exists because a shell element can disappear
- * silently, and two copies is the cheapest way to make that happen.
- */
-
-/** Locales the site publishes. `en` is unprefixed, `ko` lives under `/ko`. */
 import type { Locale } from '../i18n/locale';
+import { fontVariables } from './fonts';
+import { THEME_STORAGE_KEY } from './theme';
 
 export type { Locale };
 
-/**
- * Head elements the Metadata API owns.
- *
- * `icons` and `manifest` reproduce `app.html:5-6` exactly — same `rel`, same
- * `href`, same `type`. The file-based metadata conventions (`app/icon.svg`,
- * `app/manifest.webmanifest`) were rejected: they emit `/icon.svg` and
- * `/manifest.webmanifest`, which are different URLs from the baseline's
- * `/favicon.svg` and `/site.webmanifest` and would break the URL contract for
- * anything already linking to them.
- *
- * https://nextjs.org/docs/app/api-reference/functions/generate-metadata#icons
- */
+/** Page background per theme: the one colour the browser chrome reads before any stylesheet. */
+const THEME_COLOR = { light: '#fbfaf6', dark: '#141319' } as const;
+
 export const DOCUMENT_METADATA: Metadata = {
 	icons: {
 		icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
@@ -44,72 +19,24 @@ export const DOCUMENT_METADATA: Metadata = {
 	manifest: '/site.webmanifest',
 };
 
-/**
- * Head elements the Viewport API owns.
- *
- * `themeColor` and `colorScheme` moved out of `metadata` into `viewport` in
- * Next 14 and are exported separately.
- * https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- *
- * The values are `app.html:7-9` verbatim. `#13111c` is the page base, not a
- * Rosé Pine role value, so it is written literally here for the same reason
- * `src/app.css` writes it literally: it is the one colour the browser chrome
- * reads before any stylesheet loads.
- */
 export const DOCUMENT_VIEWPORT: Viewport = {
 	width: 'device-width',
 	initialScale: 1,
-	colorScheme: 'dark',
-	themeColor: '#13111c',
+	colorScheme: 'light dark',
+	themeColor: [
+		{ media: '(prefers-color-scheme: light)', color: THEME_COLOR.light },
+		{ media: '(prefers-color-scheme: dark)', color: THEME_COLOR.dark },
+	],
 };
 
-/**
- * The Google Fonts stylesheet, kept rather than replaced by `next/font`.
- *
- * C13 accepts either mechanism provided the choice is recorded. Keeping the
- * link is the parity-preserving option: `next/font` self-hosts, which drops
- * both preconnect hints and introduces a `/_next/static/media/*` stylesheet the
- * baseline does not have — four shell-field differences on every one of the 366
- * pages, each needing an exception-ledger approval, in exchange for a
- * performance gain that is nobody's acceptance criterion in this migration.
- * `next/font` stays available as a post-cutover optimisation.
- *
- * The URL is `app.html:10-15` byte-for-byte, so the comparator's
- * `link:preconnect:*` and `link:stylesheet:*` shell keys match the baseline.
- */
-const FONT_STYLESHEET =
-	'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap';
+// Runs before first paint so a stored choice never flashes the other theme.
+const THEME_INIT = `try{var t=localStorage.getItem('${THEME_STORAGE_KEY}');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}`;
 
 /**
- * Prefetch — the recorded decision for `data-sveltekit-preload-data="hover"`.
+ * The document shell. One instance per locale root layout; the error routes
+ * have no Metadata API and pass `standaloneHead` to get the same head tags.
  *
- * That attribute is SvelteKit-only and has no Next attribute equivalent, so it
- * is DROPPED from `<body>`. Instead, intra-locale navigation uses `AppLink`
- * with hover/focus-triggered prefetch (`prefetch={active ? null : false}`),
- * matching SvelteKit's hover preload contract without link-flooding on routes
- * with many links.
- *
- * Cross-root navigations (such as LanguageToggle crossing `(en)` and `(ko)`)
- * retain native anchors and full page reload.
- *
- * This dropped the `body:preload-data` shell key the migration comparator
- * captured on all 366 baseline pages; the exception ledger approved it.
- */
-export const PREFETCH_DECISION = 'hover-prefetch-app-link' as const;
-
-/**
- * The document shell. One instance per locale root layout.
- *
- * `<head>` is written explicitly because the Metadata API has no representation
- * for `rel="preconnect"` or a third-party `rel="stylesheet"`. Next's guidance
- * against a manual `<head>` is about `<title>` and `<meta>`, which are handled
- * by the exports above and are not placed here.
- * https://nextjs.org/docs/app/api-reference/file-conventions/layout#root-layout
- *
- * `<body>` takes the children directly. SvelteKit wrapped them in
- * `<div style="display: contents">` (`app.html:19`); `display: contents`
- * removes the box from the layout and the accessibility tree, so dropping the
- * wrapper leaves the rendered document structure unchanged.
+ * @param standaloneHead - write the icon, manifest and theme tags by hand
  */
 export function DocumentShell({
 	lang,
@@ -123,20 +50,28 @@ export function DocumentShell({
 	standaloneHead?: boolean;
 }) {
 	return (
-		<html lang={lang}>
+		// The inline script sets `data-theme` before hydration, so the attribute may differ.
+		<html lang={lang} className={fontVariables} suppressHydrationWarning>
 			<head>
 				{title ? <title>{title}</title> : null}
 				{standaloneHead ? (
 					<>
-						<meta name="color-scheme" content="dark" />
-						<meta name="theme-color" content="#13111c" />
+						<meta name="color-scheme" content="light dark" />
+						<meta
+							name="theme-color"
+							media="(prefers-color-scheme: light)"
+							content={THEME_COLOR.light}
+						/>
+						<meta
+							name="theme-color"
+							media="(prefers-color-scheme: dark)"
+							content={THEME_COLOR.dark}
+						/>
 						<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 						<link rel="manifest" href="/site.webmanifest" />
 					</>
 				) : null}
-				<link rel="preconnect" href="https://fonts.googleapis.com" />
-				<link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-				<link href={FONT_STYLESHEET} rel="stylesheet" />
+				<script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
 			</head>
 			<body>{children}</body>
 		</html>

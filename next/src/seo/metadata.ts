@@ -8,6 +8,7 @@ import {
 	SITE_AUTHOR,
 	SITE_NAME,
 	SITE_URL,
+	SOCIAL,
 	absoluteUrl,
 	localeCode,
 } from '../../../src/lib/seo';
@@ -42,11 +43,7 @@ export function homeJsonLd(locale: Locale): string {
 				'@type': 'Organization',
 				name: 'Playtag Inc.',
 			},
-			sameAs: [
-				'https://github.com/brandonwie',
-				'https://linkedin.com/in/brandonwie',
-				'https://x.com/BrandonWie',
-			],
+			sameAs: [SOCIAL.github, SOCIAL.linkedin, SOCIAL.x],
 		},
 	]);
 }

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { postsHref } from '@/data/nav';
+import { homeHref as postsHref } from '@/data/nav';
 import type { Locale } from '@/i18n/locale';
 
 function useOptionalRouter() {

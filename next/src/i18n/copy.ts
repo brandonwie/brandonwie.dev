@@ -56,9 +56,9 @@ const SLICE_1_SCAFFOLDING = {
 } as const;
 
 /**
- * Locale-resolved copy for the global chrome: header, nav, footer and the
- * language toggle. One call site per message, each carrying `{ locale }` for
- * the reason this module's header gives.
+ * Locale-resolved copy for the site frame: header, footer, language and theme
+ * switches, and the shortcut list. One call site per message, each carrying
+ * `{ locale }` for the reason this module's header gives.
  *
  * `nav` is keyed by `NavKey` so `@/data/nav` can stay pure path logic with no
  * message imports. The keys are static property references, not `m[key]`, so
@@ -68,26 +68,25 @@ export function shellCopy(locale: Locale) {
 	return {
 		skip: m.skip_to_content({}, { locale }),
 		navigation: m.primary_navigation({}, { locale }),
-		home: m.palette_nav_home({}, { locale }),
 		search: m.search_title({}, { locale }),
 		nav: {
-			about: m.nav_about({}, { locale }),
 			posts: m.nav_posts({}, { locale }),
 			study: m.nav_study({}, { locale }),
 			system: m.nav_system({}, { locale }),
+			about: m.nav_about({}, { locale }),
 		},
-		navProjects: m.nav_projects({}, { locale }),
-		navTags: m.nav_tags({}, { locale }),
-		navContact: m.nav_contact({}, { locale }),
 		switchToEnglish: m.language_switch_to_english({}, { locale }),
 		switchToKorean: m.language_switch_to_korean({}, { locale }),
-		footerTagline: m.footer_tagline({}, { locale }),
+		theme: m.theme_toggle({}, { locale }),
 		footerNavigation: m.footer_navigation_label({}, { locale }),
-		footerColSite: m.footer_col_site({}, { locale }),
-		footerColMore: m.footer_col_more({}, { locale }),
-		footerColConnect: m.footer_col_connect({}, { locale }),
-		footerCopyPrimary: m.footer_copy_primary({}, { locale }),
-		footerCopySecondary: m.footer_copy_secondary({}, { locale }),
+		feed: m.social_feed_title({}, { locale }),
+		shortcuts: {
+			title: m.shortcuts_title({}, { locale }),
+			rows: m.shortcuts_rows({}, { locale }),
+			open: m.shortcuts_open({}, { locale }),
+			help: m.shortcuts_help({}, { locale }),
+			close: m.close({}, { locale }),
+		},
 	};
 }
 
