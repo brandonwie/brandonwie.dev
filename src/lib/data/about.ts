@@ -1,9 +1,10 @@
+import { SOCIAL } from '../seo';
+
 export type AboutLocale = 'en' | 'ko';
 
 export interface AboutMetric {
 	value: string;
 	label: string;
-	tone: 'accent' | 'foam' | 'gold' | 'rose';
 }
 
 export interface AboutTimelineItem {
@@ -22,15 +23,20 @@ export interface AboutSystem {
 	kicker: string;
 	body: string;
 	href: string;
-	image: string;
-	alt: string;
 }
 
 export interface AboutLink {
 	label: string;
 	href: string;
-	external?: boolean;
 }
+
+/** The same in both locales: the names are proper nouns. */
+const CONTACT_LINKS: AboutLink[] = [
+	{ label: 'Email', href: `mailto:${SOCIAL.email}` },
+	{ label: 'GitHub', href: SOCIAL.github },
+	{ label: 'LinkedIn', href: SOCIAL.linkedin },
+	{ label: 'X', href: SOCIAL.x },
+];
 
 export interface AboutContent {
 	metaTitle: string;
@@ -40,15 +46,16 @@ export interface AboutContent {
 	subtitle: string;
 	intro: string[];
 	metrics: AboutMetric[];
-	visualCaption: string;
-	visualLayers: string[];
 	sections: {
 		arc: string;
 		now: string;
 		systems: string;
 		principles: string;
 		learning: string;
+		contact: string;
 	};
+	systemsIntro: string;
+	contactIntro: string;
 	timeline: AboutTimelineItem[];
 	now: AboutPrinciple[];
 	systems: AboutSystem[];
@@ -76,26 +83,21 @@ const content: Record<AboutLocale, AboutContent> = {
 			'The through-line is not a title. It is the way I work: trace the system, name the tradeoffs, verify with tests and logs, then write down what changed my mind.',
 		],
 		metrics: [
-			{ value: 'Seoul', label: 'Korean / English', tone: 'accent' },
-			{ value: '7M', label: 'calendar events synced at MOBA', tone: 'foam' },
-			{ value: '5-20x', label: 'MOBA sync throughput gains', tone: 'gold' },
-			{ value: '2019', label: 'software switch from film', tone: 'rose' },
-		],
-		visualCaption: 'Current operating surface',
-		visualLayers: [
-			'Backend systems',
-			'AWS / Terraform',
-			'AI video analytics',
-			'Agent workflows',
-			'B3 knowledge layer',
+			{ value: 'Seoul', label: 'Korean / English' },
+			{ value: '7M', label: 'calendar events synced at MOBA' },
+			{ value: '5-20x', label: 'MOBA sync throughput gains' },
+			{ value: '2019', label: 'software switch from film' },
 		],
 		sections: {
-			arc: 'career arc',
-			now: 'what I build now',
-			systems: 'personal systems',
-			principles: 'operating principles',
-			learning: 'learning edge',
+			arc: 'Career arc',
+			now: 'What I build now',
+			systems: 'Projects',
+			principles: 'Operating principles',
+			learning: 'Learning edge',
+			contact: 'Contact',
 		},
+		systemsIntro: 'Systems I build and maintain outside the day job.',
+		contactIntro: 'The best ways to reach me.',
 		timeline: [
 			{
 				year: '2004-2012',
@@ -143,24 +145,18 @@ const content: Record<AboutLocale, AboutContent> = {
 				kicker: "Brandon's Binary Brain",
 				body: 'A version-controlled personal operating system for notes, agent rules, skills, reviewer loops, and decision memory.',
 				href: '/system/b3',
-				image: '/og/claude-code-agent-teams.png',
-				alt: 'Generated topic image for Claude Code agent team workflows',
 			},
 			{
 				title: 'Crucio',
 				kicker: 'AI knowledge platform',
 				body: 'A personal AI system for model experimentation, knowledge workflows, and pipeline inspection.',
 				href: 'https://crucio.brandonwie.dev',
-				image: '/og/ai-code-review-patterns.png',
-				alt: 'Generated topic image for AI code review patterns',
 			},
 			{
 				title: 'brandonwie.dev',
 				kicker: 'public learning surface',
 				body: 'The place where production notes become essays after the evidence is strong enough to share.',
 				href: '/',
-				image: '/og/paraglide-i18n.png',
-				alt: 'Generated topic image for the Paraglide i18n system used by this site',
 			},
 		],
 		principles: [
@@ -188,12 +184,7 @@ const content: Record<AboutLocale, AboutContent> = {
 				'Operating systems, concurrency, and lower-level systems depth',
 			],
 		},
-		links: [
-			{ label: 'Read the system map', href: '/system/b3' },
-			{ label: 'LinkedIn', href: 'https://linkedin.com/in/brandonwie', external: true },
-			{ label: 'GitHub', href: 'https://github.com/brandonwie', external: true },
-			{ label: 'Email', href: 'mailto:brandon@brandonwie.dev' },
-		],
+		links: CONTACT_LINKS,
 	},
 	ko: {
 		metaTitle: 'Brandon Wie 소개',
@@ -208,26 +199,21 @@ const content: Record<AboutLocale, AboutContent> = {
 			'저를 설명하는 중심은 직함보다 일하는 방식에 가깝습니다. 시스템을 추적하고, 트레이드오프를 이름 붙이고, 테스트와 로그로 확인한 뒤, 생각이 바뀐 지점을 기록합니다.',
 		],
 		metrics: [
-			{ value: 'Seoul', label: 'Korean / English', tone: 'accent' },
-			{ value: '700만', label: 'MOBA에서 동기화한 캘린더 이벤트', tone: 'foam' },
-			{ value: '5-20x', label: 'MOBA 동기화 처리량 개선', tone: 'gold' },
-			{ value: '2019', label: '영화에서 소프트웨어로 전환', tone: 'rose' },
-		],
-		visualCaption: '현재 작업 표면',
-		visualLayers: [
-			'Backend systems',
-			'AWS / Terraform',
-			'AI video analytics',
-			'Agent workflows',
-			'B3 knowledge layer',
+			{ value: 'Seoul', label: 'Korean / English' },
+			{ value: '700만', label: 'MOBA에서 동기화한 캘린더 이벤트' },
+			{ value: '5-20x', label: 'MOBA 동기화 처리량 개선' },
+			{ value: '2019', label: '영화에서 소프트웨어로 전환' },
 		],
 		sections: {
 			arc: '커리어 흐름',
 			now: '지금 만드는 것',
-			systems: '개인 시스템',
+			systems: '프로젝트',
 			principles: '작업 원칙',
 			learning: '다음 학습 지점',
+			contact: '연락',
 		},
+		systemsIntro: '회사 일 밖에서 만들고 유지하는 시스템들입니다.',
+		contactIntro: '가장 편한 연락 방법입니다.',
 		timeline: [
 			{
 				year: '2004-2012',
@@ -275,24 +261,18 @@ const content: Record<AboutLocale, AboutContent> = {
 				kicker: "Brandon's Binary Brain",
 				body: '노트, 에이전트 규칙, 스킬, 리뷰 루프, 결정 기억을 버전 관리하는 개인 운영체제입니다.',
 				href: '/ko/system/b3',
-				image: '/og/claude-code-agent-teams.png',
-				alt: 'Claude Code 에이전트 팀 워크플로를 표현한 생성 이미지',
 			},
 			{
 				title: 'Crucio',
 				kicker: 'AI knowledge platform',
 				body: '모델 실험, 지식 워크플로, 파이프라인 점검을 위한 개인 AI 시스템입니다.',
 				href: 'https://crucio.brandonwie.dev',
-				image: '/og/ai-code-review-patterns.png',
-				alt: 'AI 코드 리뷰 패턴을 표현한 생성 이미지',
 			},
 			{
 				title: 'brandonwie.dev',
 				kicker: 'public learning surface',
 				body: '프로덕션 노트가 충분한 근거를 갖춘 뒤 공개 글이 되는 장소입니다.',
 				href: '/ko',
-				image: '/og/paraglide-i18n.png',
-				alt: '이 사이트의 Paraglide i18n 시스템을 표현한 생성 이미지',
 			},
 		],
 		principles: [
@@ -320,12 +300,7 @@ const content: Record<AboutLocale, AboutContent> = {
 				'운영체제, 동시성, 더 낮은 레벨의 시스템 이해',
 			],
 		},
-		links: [
-			{ label: 'B3 시스템 보기', href: '/ko/system/b3' },
-			{ label: 'LinkedIn', href: 'https://linkedin.com/in/brandonwie', external: true },
-			{ label: 'GitHub', href: 'https://github.com/brandonwie', external: true },
-			{ label: 'Email', href: 'mailto:brandon@brandonwie.dev' },
-		],
+		links: CONTACT_LINKS,
 	},
 };
 

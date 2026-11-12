@@ -113,43 +113,6 @@ export function articleCopy(locale: Locale) {
 
 export type ArticleCopy = ReturnType<typeof articleCopy>;
 
-export function aboutCopy(locale: Locale) {
-	return {
-		backToHome: m.back_to_home({}, { locale }),
-		navAbout: m.nav_about({}, { locale }),
-		terminalSignal: m.about_terminal_signal({}, { locale }),
-		terminalLoading: m.about_terminal_loading({}, { locale }),
-		portraitCaption: m.about_portrait_caption({}, { locale }),
-	};
-}
-
-export type AboutCopy = ReturnType<typeof aboutCopy>;
-
-export function projectsCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.projects_meta_title({}, { locale })} | Brandon Wie`,
-		metaDescription: m.projects_meta_description({}, { locale }),
-		eyebrow: m.projects_eyebrow({}, { locale }),
-		title: m.projects_title({}, { locale }),
-		intro: m.projects_intro({}, { locale }),
-	};
-}
-
-export type ProjectsCopy = ReturnType<typeof projectsCopy>;
-
-export function contactCopy(locale: Locale) {
-	return {
-		pageTitle: `${m.contact_meta_title({}, { locale })} | Brandon Wie`,
-		metaDescription: m.contact_meta_description({}, { locale }),
-		eyebrow: m.contact_eyebrow({}, { locale }),
-		title: m.contact_title({}, { locale }),
-		intro: m.contact_intro({}, { locale }),
-		channelsHeading: m.contact_channels_heading({}, { locale }),
-	};
-}
-
-export type ContactCopy = ReturnType<typeof contactCopy>;
-
 export function systemCopy(locale: Locale) {
 	return {
 		pageTitle: `${m.system_3b_title({}, { locale })} | Brandon Wie`,

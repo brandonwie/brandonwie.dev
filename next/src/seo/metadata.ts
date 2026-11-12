@@ -119,24 +119,6 @@ export function generateAboutMetadata(locale: Locale): Metadata {
 	});
 }
 
-export function generateProjectsMetadata(locale: Locale): Metadata {
-	return generateStudySeoMetadata({
-		pageTitle: `${m.projects_meta_title({}, { locale })} | Brandon Wie`,
-		description: m.projects_meta_description({}, { locale }),
-		basePath: '/projects',
-		locale,
-	});
-}
-
-export function generateContactMetadata(locale: Locale): Metadata {
-	return generateStudySeoMetadata({
-		pageTitle: `${m.contact_meta_title({}, { locale })} | Brandon Wie`,
-		description: m.contact_meta_description({}, { locale }),
-		basePath: '/contact',
-		locale,
-	});
-}
-
 export function generateSystemMetadata(locale: Locale): Metadata {
 	return generateStudySeoMetadata({
 		pageTitle: `${m.system_3b_title({}, { locale })} | Brandon Wie`,

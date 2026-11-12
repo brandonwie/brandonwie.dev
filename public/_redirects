@@ -12,3 +12,7 @@
 /ko/tags /ko 301
 /search /#search 301
 /ko/search /ko#search 301
+/projects /about#projects 301
+/ko/projects /ko/about#projects 301
+/contact /about#contact 301
+/ko/contact /ko/about#contact 301
