@@ -97,6 +97,8 @@ export async function generateArticleMetadata(slug: string, locale: Locale): Pro
 				...(post.hasKoreanTranslation ? { ko: koreanUrl } : {}),
 				'x-default': englishUrl,
 			},
+			// The post as Markdown, written into the export by scripts/build-markdown.mjs.
+			types: { 'text/markdown': `${canonicalUrl}.md` },
 		},
 		openGraph: {
 			title: meta.title,
@@ -186,6 +188,9 @@ export async function Article({ slug, locale }: { slug: string; locale: Locale }
 				</li>
 				<li>
 					<a href={share.email}>{copy.email}</a>
+				</li>
+				<li>
+					<a href={`${articlePath(slug, contentLocale)}.md`}>Markdown</a>
 				</li>
 			</ul>
 		</div>

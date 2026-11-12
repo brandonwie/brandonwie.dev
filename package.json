@@ -8,7 +8,7 @@
 		"prepare": "husky",
 		"dev": "pnpm --filter brandonwie-dev-next dev --port 5173",
 		"build": "pnpm build:next",
-		"build:next": "pnpm --filter brandonwie-dev-next build && pagefind --site next/build",
+		"build:next": "pnpm --filter brandonwie-dev-next build && node scripts/build-markdown.mjs next/build && pagefind --site next/build",
 		"preview": "node scripts/serve-build.mjs next/build 4173",
 		"cf:preview": "pnpm build && wrangler pages dev next/build",
 		"search:preview": "corepack pnpm run build && corepack pnpm run preview",
