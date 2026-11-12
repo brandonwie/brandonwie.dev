@@ -1,6 +1,6 @@
 ---
 title: Linux Fundamentals
-description: '1. [Cgroups (Control Groups)](#cgroups-control-groups)'
+description: 'Essential Linux concepts for containers: cgroups, snapshotters, permissions and ACLs.'
 date: 2026-01-23T00:00:00.000Z
 updated: '2026-03-22'
 tags:
