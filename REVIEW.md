@@ -33,7 +33,7 @@ result) and a suggested fix. Tag a priority from P1 to P5:
 | Priority | Level                              | Meaning in this repository                                                                                                                                                                                    |
 | -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | P1       | Critical                           | Immediate action required: the build, static export or deploy fails, or the site does not work. Security holes, leaked secrets, and any data loss or corruption are always P1, whatever the size of the diff. |
-| P2       | High                               | A major feature or service is degraded: wrong behavior a reader or a search engine will hit on the post index, a post page, the Korean routes, the feeds, the sitemap or the page metadata.                   |
+| P2       | High                               | A major feature or service is degraded, such as a major regression in the post index, post pages, Korean routes, study pages, feeds, sitemap or page metadata.                                                |
 | P3       | Medium                             | Limited impact: an edge case, a narrow regression, or a risk to the next change.                                                                                                                              |
 | P4       | Low                                | Minor inconvenience or a standard request with low operational impact, such as wording or a document that disagrees with the code.                                                                            |
 | P5       | Trivial, planning or informational | No immediate function or operational impact: a backlog note to pick up when there is spare capacity.                                                                                                          |
@@ -42,8 +42,8 @@ P1, P2 and P3 findings block the merge. The author fixes them, pushes, and the
 new head is reviewed again, with no cap on the number of review rounds. When a
 review of the current head shows no P1, P2 or P3 finding, the PR is mergeable,
 even if the reviewer does not call it ready. Never close a PR because a review
-did not call it ready. P4 and P5 findings do not block: they go into one
-fix-forward issue per PR.
+did not call it ready. P4 and P5 findings do not block. After merge, the author
+records any remaining P4 or P5 findings in one fix-forward issue for that PR.
 
 If nothing meets the bar, say so in one line rather than padding the review. A
 PR that is purely cosmetic (whitespace, formatter output) or entirely
